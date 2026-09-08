@@ -1,21 +1,26 @@
-# shadcn/ui monorepo template
+# Sniptide
 
-This is a Next.js monorepo template with shadcn/ui.
+A small Next.js monorepo powered by Bun, Turborepo, Biome, and Drizzle.
 
-## Adding components
-
-To add components to your app, run the following command at the root of your `web` app:
+## Development
 
 ```bash
-pnpm dlx shadcn@latest add button -c apps/web
+bun install
+bun dev
 ```
 
-This will place the ui components in the `packages/ui/src/components` directory.
+Useful checks:
 
-## Using components
-
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
+```bash
+bun run build
+bun run lint
+bun run typecheck
+bun run format
 ```
+
+## Workspace
+
+- `apps/web` — Next.js application
+- `packages/db` — Drizzle database package
+- `packages/ui` — shared UI components
+- `packages/typescript` — shared TypeScript configuration
