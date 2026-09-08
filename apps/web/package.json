@@ -13,20 +13,19 @@
   },
   "dependencies": {
     "@workspace/ui": "workspace:*",
-    "lucide-react": "^1.43.0",
-    "next": "16.2.6",
-    "next-themes": "^0.4.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "lucide-react": "catalog:ui",
+    "next": "catalog:runtime",
+    "next-themes": "catalog:runtime",
+    "react": "catalog:runtime",
+    "react-dom": "catalog:runtime"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@workspace/eslint-config": "workspace:^",
-    "@workspace/typescript-config": "workspace:*",
-    "eslint": "^9",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "catalog:ui",
+    "@types/node": "catalog:tooling",
+    "@types/react": "catalog:tooling",
+    "@types/react-dom": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "eslint": "catalog:tooling",
+    "typescript": "catalog:tooling"
   }
 }
