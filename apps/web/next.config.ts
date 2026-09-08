@@ -1,7 +1,8 @@
-import type { NextConfig } from "next"
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@workspace/ui"],
-}
+  serverExternalPackages: ["drizzle-orm"],
+  transpilePackages: ["@workspace/db", "@workspace/ui"],
+};
 
-export default nextConfig
+export default nextConfig;
