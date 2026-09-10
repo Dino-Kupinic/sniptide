@@ -1,0 +1,23 @@
+{
+  "name": "@workspace/auth",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-auth": "catalog:runtime"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
