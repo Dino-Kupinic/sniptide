@@ -11,13 +11,13 @@
   },
   "dependencies": {
     "@libsql/client": "catalog:runtime",
-    "@types/node": "^26.5.0",
-    "dotenv": "^17.4.2",
+    "@types/node": "catalog:tooling",
+    "dotenv": "catalog:runtime",
     "drizzle-orm": "catalog:runtime",
-    "wrangler": "^4.130.0"
+    "wrangler": "catalog:tooling"
   },
   "devDependencies": {
-    "drizzle-kit": "^1.0.0-rc.4"
+    "drizzle-kit": "catalog:tooling"
   },
   "exports": {
     ".": "./src/index.ts"
