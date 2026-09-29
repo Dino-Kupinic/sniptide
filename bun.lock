@@ -51,6 +51,7 @@
       "dependencies": {
         "@libsql/client": "catalog:runtime",
         "@types/node": "catalog:tooling",
+        "@workspace/auth": "workspace:*",
         "dotenv": "catalog:runtime",
         "drizzle-orm": "catalog:runtime",
         "wrangler": "catalog:tooling",
