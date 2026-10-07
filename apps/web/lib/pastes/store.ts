@@ -1,6 +1,6 @@
 import "server-only"
 
-import { seedPastes, seedShares, seedStarred } from "./seed"
+import { seedPastes, seedShares, seedStarred, VIEW_HISTORY_DAYS } from "./seed"
 import type { Expiry, Paste, PasteInput, Share, SharingInput } from "./types"
 
 // In-memory paste store standing in for the D1 tables until they exist. It lives on globalThis
@@ -160,7 +160,7 @@ export async function createPaste(input: PasteInput) {
     owner: null,
     views: 0,
     uniqueViews: 0,
-    viewsByDay: Array(14).fill(0),
+    viewsByDay: Array(VIEW_HISTORY_DAYS).fill(0),
     createdAt: now,
     updatedAt: now,
     expiresAt: resolveExpiry(input.expiry, null, now),

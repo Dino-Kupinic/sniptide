@@ -213,7 +213,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
                 {formatNumber(paste.uniqueViews)} unique
               </span>
             </p>
-            <ViewsSparkline values={paste.viewsByDay} />
+            <ViewsSparkline values={paste.viewsByDay.slice(-14)} />
           </section>
 
           <section

@@ -38,6 +38,7 @@ export interface Paste {
   owner: Person | null
   views: number
   uniqueViews: number
+  // Oldest first, today last.
   viewsByDay: number[]
   createdAt: number
   updatedAt: number

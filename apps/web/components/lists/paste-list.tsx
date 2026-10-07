@@ -32,7 +32,7 @@ import {
 
 const PAGE_SIZE = 10
 
-type Sort = "updated" | "views" | "expires" | "title"
+export type Sort = "updated" | "views" | "expires" | "title"
 const sortOptions: { value: Sort; label: string }[] = [
   { value: "updated", label: "Last updated" },
   { value: "views", label: "Most viewed" },
@@ -106,6 +106,7 @@ export function PasteList({
   mode,
   collections,
   actions,
+  initialSort = "updated",
 }: {
   title: string
   rows: PasteRow[]
@@ -114,13 +115,14 @@ export function PasteList({
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
   actions?: React.ReactNode
+  initialSort?: Sort
 }) {
   const [query, setQuery] = React.useState("")
   const [languages, setLanguages] = React.useState<string[]>([])
   const [visibility, setVisibility] = React.useState<string[]>([])
   const [inCollections, setInCollections] = React.useState<string[]>([])
   const [owner, setOwner] = React.useState<"all" | "mine" | "shared">("all")
-  const [sort, setSort] = React.useState<Sort>("updated")
+  const [sort, setSort] = React.useState<Sort>(initialSort)
   const [view, setView] = React.useState<"list" | "grid">("list")
   const [page, setPage] = React.useState(1)
 
