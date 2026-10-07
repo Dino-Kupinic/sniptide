@@ -5,26 +5,23 @@ import { Button } from "@workspace/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import { Kbd } from "@workspace/ui/components/kbd"
 import { Progress } from "@workspace/ui/components/progress"
 import { cn } from "@workspace/ui/lib/utils"
-import { ChevronsUpDownIcon, LogOutIcon, PlusIcon, SettingsIcon, UserIcon } from "lucide-react"
+import { ChevronsUpDownIcon, PlusIcon, SettingsIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Logo } from "@/components/logo"
 import type { Collection, NavCounts, ViewerSummary } from "@/lib/mock-data"
-import { primaryNav } from "./nav-config"
+import { AccountMenuItems } from "./account-menu"
+import { isActivePath, primaryNav } from "./nav-config"
 
 export interface SidebarProps {
   viewer: ViewerSummary
   counts: NavCounts
   collections: Collection[]
-  onNavigate?: () => void
 }
 
 const markerClass: Record<Collection["marker"], string> = {
@@ -34,26 +31,22 @@ const markerClass: Record<Collection["marker"], string> = {
   "outline-foreground": "border-2 border-foreground",
 }
 
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`)
-}
-
 const navItemClass =
   "flex h-8 items-center gap-2.5 px-2.5 text-sm text-foreground/85 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-[active=true]:bg-muted data-[active=true]:font-medium data-[active=true]:text-foreground [&_svg]:size-4 [&_svg]:shrink-0"
 
-export function Sidebar({ viewer, counts, collections, onNavigate }: SidebarProps) {
+export function Sidebar({ viewer, counts, collections }: SidebarProps) {
   const pathname = usePathname()
 
   return (
     <div className="flex h-full flex-col gap-4 p-2 pt-4">
-      <Link href="/dashboard" onClick={onNavigate} className="px-2 outline-none">
+      <Link href="/dashboard" className="px-2 outline-none">
         <Logo />
       </Link>
 
       <Button
         size="lg"
         className="h-9 justify-start gap-2 px-3"
-        render={<Link href="/new" onClick={onNavigate} />}
+        render={<Link href="/new" />}
         nativeButton={false}
       >
         <PlusIcon />
@@ -66,8 +59,7 @@ export function Sidebar({ viewer, counts, collections, onNavigate }: SidebarProp
           <Link
             key={item.href}
             href={item.href}
-            onClick={onNavigate}
-            data-active={isActive(pathname, item.href)}
+            data-active={isActivePath(pathname, item.href)}
             className={navItemClass}
           >
             <item.icon />
@@ -98,8 +90,7 @@ export function Sidebar({ viewer, counts, collections, onNavigate }: SidebarProp
           <Link
             key={collection.slug}
             href={`/collections/${collection.slug}`}
-            onClick={onNavigate}
-            data-active={isActive(pathname, `/collections/${collection.slug}`)}
+            data-active={isActivePath(pathname, `/collections/${collection.slug}`)}
             className={cn(navItemClass, "font-mono text-[13px]")}
           >
             <span
@@ -114,8 +105,7 @@ export function Sidebar({ viewer, counts, collections, onNavigate }: SidebarProp
       <div className="mt-auto flex flex-col gap-2">
         <Link
           href="/settings"
-          onClick={onNavigate}
-          data-active={isActive(pathname, "/settings")}
+          data-active={isActivePath(pathname, "/settings")}
           className={navItemClass}
         >
           <SettingsIcon />
@@ -144,20 +134,7 @@ export function Sidebar({ viewer, counts, collections, onNavigate }: SidebarProp
             <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" className="w-(--anchor-width)">
-            <DropdownMenuLabel>{viewer.email}</DropdownMenuLabel>
-            <DropdownMenuItem render={<Link href="/settings" onClick={onNavigate} />}>
-              <UserIcon />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem render={<Link href="/settings" onClick={onNavigate} />}>
-              <SettingsIcon />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon />
-              Sign out
-            </DropdownMenuItem>
+            <AccountMenuItems email={viewer.email} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

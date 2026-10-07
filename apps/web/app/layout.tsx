@@ -1,3 +1,4 @@
+import type { Viewport } from "next"
 import { Inter, JetBrains_Mono, Stack_Sans_Notch } from "next/font/google"
 
 import "@workspace/ui/globals.css"
@@ -19,6 +20,11 @@ const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+// viewport-fit=cover lets the mobile tab bar pad itself past the home indicator.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+}
 
 export default function RootLayout({
   children,
