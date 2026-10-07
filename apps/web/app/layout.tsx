@@ -1,17 +1,21 @@
-import { Geist, Geist_Mono, IBM_Plex_Sans } from "next/font/google"
+import { Inter, JetBrains_Mono, Stack_Sans_Notch } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { cn } from "@workspace/ui/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
 
-const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" })
+const fontHeading = Stack_Sans_Notch({
+  subsets: ["latin"],
+  weight: "700",
+  variable: "--font-heading",
+})
 
-const ibmPlexSans = IBM_Plex_Sans({
+const fontSans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 })
 
-const fontMono = Geist_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
@@ -26,11 +30,10 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={cn(
-        "antialiased",
+        "antialiased font-sans",
+        fontSans.variable,
         fontMono.variable,
-        "font-sans",
-        ibmPlexSans.variable,
-        geistHeading.variable,
+        fontHeading.variable,
       )}
     >
       <body>

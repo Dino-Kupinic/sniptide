@@ -1,0 +1,4 @@
+# Copy to .dev.vars for `next dev` and `bun run preview`. Production values are set with
+# `wrangler secret put BETTER_AUTH_SECRET`.
+BETTER_AUTH_SECRET=replace-with-a-long-random-secret
+BETTER_AUTH_URL=http://localhost:3000

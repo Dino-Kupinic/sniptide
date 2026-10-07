@@ -11,11 +11,11 @@
   },
   "catalogs": {
     "runtime": {
-      "@libsql/client": "^0.15.15",
+      "@better-auth/drizzle-adapter": "^1.7.3",
+      "@opennextjs/cloudflare": "^1.20.9",
       "better-auth": "^1.7.3",
-      "drizzle-orm": "^1.0.0-beta.21",
-      "dotenv": "^17.4.2",
-      "next": "16.2.6",
+      "drizzle-orm": "1.0.0-rc.4",
+      "next": "16.3.8",
       "next-themes": "^0.4.6",
       "react": "19.2.8",
       "react-dom": "19.2.8",
@@ -39,8 +39,8 @@
       "@types/node": "^26.5.0",
       "@types/react": "^19",
       "@types/react-dom": "^19",
-      "drizzle-kit": "^1.0.0-rc.4",
-      "eslint": "^9",
+      "dotenv": "^17.4.2",
+      "drizzle-kit": "1.0.0-rc.4",
       "turbo": "^2.9.18",
       "typescript": "^5",
       "wrangler": "^4.130.0"
