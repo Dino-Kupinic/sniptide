@@ -42,12 +42,16 @@ export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-// Mobile screens that draw their own header (Settings, New paste) or take over the bottom of
-// the screen with their own actions (New paste), per the Paper mobile artboards.
+// Mobile screens that draw their own header (Settings, New paste, Paste detail) or take over the
+// bottom of the screen with their own actions, per the Paper mobile artboards.
 export function mobileChrome(pathname: string) {
+  // Paste detail and edit (/pastes/<slug>…) have their own back header and bottom actions.
+  const pasteScreen = /^\/pastes\/[^/]+/.test(pathname)
+  const editor = isActivePath(pathname, "/new") || pasteScreen
+
   return {
-    topBar: !["/settings", "/new"].some((href) => isActivePath(pathname, href)),
-    tabBar: !isActivePath(pathname, "/new"),
+    topBar: !editor && !isActivePath(pathname, "/settings"),
+    tabBar: !editor,
   }
 }
 
