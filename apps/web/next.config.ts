@@ -1,8 +1,11 @@
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["drizzle-orm"],
-  transpilePackages: ["@workspace/db", "@workspace/ui"],
+  transpilePackages: ["@workspace/auth", "@workspace/db", "@workspace/ui"],
 }
 
 export default nextConfig
+
+// Exposes the wrangler.jsonc bindings (D1, vars, .dev.vars) to `next dev` via getCloudflareContext.
+initOpenNextCloudflareForDev()

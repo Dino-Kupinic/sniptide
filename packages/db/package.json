@@ -6,21 +6,24 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply sniptide --local --config ../../apps/web/wrangler.jsonc",
+    "db:migrate:remote": "wrangler d1 migrations apply sniptide --remote --config ../../apps/web/wrangler.jsonc"
   },
   "dependencies": {
-    "@libsql/client": "catalog:runtime",
-    "@types/node": "catalog:tooling",
-    "@workspace/auth": "workspace:*",
-    "dotenv": "catalog:runtime",
-    "drizzle-orm": "catalog:runtime",
-    "wrangler": "catalog:tooling"
+    "drizzle-orm": "catalog:runtime"
   },
   "devDependencies": {
-    "drizzle-kit": "catalog:tooling"
+    "@cloudflare/workers-types": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "dotenv": "catalog:tooling",
+    "drizzle-kit": "catalog:tooling",
+    "typescript": "catalog:tooling",
+    "wrangler": "catalog:tooling"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
   }
 }

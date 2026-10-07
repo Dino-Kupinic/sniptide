@@ -7,26 +7,34 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv --include-runtime false cloudflare-env.d.ts",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "catalog:runtime",
+    "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",
+    "better-auth": "catalog:runtime",
     "lucide-react": "catalog:ui",
     "next": "catalog:runtime",
     "next-themes": "catalog:runtime",
     "react": "catalog:runtime",
-    "react-dom": "catalog:runtime"
+    "react-dom": "catalog:runtime",
+    "server-only": "catalog:runtime"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "catalog:tooling",
     "@tailwindcss/postcss": "catalog:ui",
     "@types/node": "catalog:tooling",
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
-    "eslint": "catalog:tooling",
-    "typescript": "catalog:tooling"
+    "typescript": "catalog:tooling",
+    "wrangler": "catalog:tooling"
   }
 }
