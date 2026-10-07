@@ -2,3 +2,10 @@
 # `wrangler secret put BETTER_AUTH_SECRET`.
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 BETTER_AUTH_URL=http://localhost:3000
+
+# Optional OAuth apps. Leave unset to show the GitHub / Google buttons as disabled.
+# Callback URLs: <BETTER_AUTH_URL>/api/auth/callback/github and /api/auth/callback/google
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

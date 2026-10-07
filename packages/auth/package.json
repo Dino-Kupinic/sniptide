@@ -11,7 +11,8 @@
   "dependencies": {
     "@better-auth/drizzle-adapter": "catalog:runtime",
     "@workspace/db": "workspace:*",
-    "better-auth": "catalog:runtime"
+    "better-auth": "catalog:runtime",
+    "zod": "catalog:runtime"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:tooling",
@@ -19,6 +20,7 @@
     "typescript": "catalog:tooling"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./username": "./src/username.ts"
   }
 }

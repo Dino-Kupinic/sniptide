@@ -12,6 +12,10 @@ bun --filter @workspace/db db:migrate:local        # create the local D1 databas
 bun dev
 ```
 
+GitHub and Google sign-in are optional: set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` and
+`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in `.dev.vars` (or with `wrangler secret put` in
+production) to turn them on. Until then their buttons render disabled.
+
 `next dev` gets the D1 binding and `.dev.vars` through `initOpenNextCloudflareForDev()` in
 `apps/web/next.config.ts`, so local dev and the deployed Worker read the same `wrangler.jsonc`.
 

@@ -1,18 +1,28 @@
-// Generated from better-auth's core tables (sqlite, snake_case columns). Regenerate when adding auth plugins.
+// Generated from better-auth's core tables plus the username plugin (sqlite, snake_case columns).
+// Regenerate when adding auth plugins.
 import { defineRelationsPart } from "drizzle-orm"
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 
-export const user = sqliteTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
-  image: text("image"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .$onUpdate(() => new Date())
-    .notNull(),
-})
+export const user = sqliteTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
+    image: text("image"),
+    // From better-auth's username plugin: the normalized handle behind sniptide.com/@username.
+    // Unique through an index rather than a column constraint, so adding it stays a plain ALTER
+    // TABLE instead of a table rebuild (which would cascade-delete sessions on D1).
+    username: text("username"),
+    displayUsername: text("display_username"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("user_username_unique").on(table.username)],
+)
 
 export const session = sqliteTable(
   "session",

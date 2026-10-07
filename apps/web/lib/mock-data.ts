@@ -6,6 +6,7 @@ export type Visibility = "public" | "unlisted" | "private"
 export interface ViewerSummary {
   name: string
   email: string
+  username: string | null
   initials: string
   storageUsedMb: number
   storageLimitMb: number
@@ -23,10 +24,7 @@ export interface Collection {
   marker: "filled-primary" | "filled-foreground" | "outline-primary" | "outline-foreground"
 }
 
-export const viewer: ViewerSummary = {
-  name: "Dino Kupinic",
-  email: "dino@sniptide.com",
-  initials: "DK",
+export const viewerStorage: Pick<ViewerSummary, "storageUsedMb" | "storageLimitMb"> = {
   storageUsedMb: 38.2,
   storageLimitMb: 100,
 }
