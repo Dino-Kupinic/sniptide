@@ -1,12 +1,13 @@
-import { PagePlaceholder } from "@/components/page-header"
+import { SharedList } from "@/components/lists/shared-list"
+import { toSharedRow } from "@/lib/pastes/rows"
+import { listShared } from "@/lib/pastes/store"
+import { getSiteOrigin } from "@/lib/site"
 
 export const metadata = { title: "Shared with me · Sniptide" }
 
-export default function Page() {
-  return (
-    <PagePlaceholder
-      title="Shared with me"
-      description="Pastes shared with you land here in step 4."
-    />
-  )
+export default async function Page() {
+  const [entries, { origin, host }] = await Promise.all([listShared(), getSiteOrigin()])
+  const rows = await Promise.all(entries.map(({ paste, share }) => toSharedRow(paste, share)))
+
+  return <SharedList rows={rows} origin={origin} host={host} />
 }
