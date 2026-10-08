@@ -5,6 +5,7 @@ import { cookies } from "next/headers"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { collections } from "@/lib/mock-data"
+import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
 import * as store from "./store"
 import { unlockCookieName, unlockToken } from "./unlock"
@@ -61,7 +62,10 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
 
   const data = parsed.data
   if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
-    return { ok: false, error: `sniptide.com/${data.slug} is taken or not allowed.` }
+    return {
+      ok: false,
+      error: `${(await getSiteOrigin()).host}/${data.slug} is taken or not allowed.`,
+    }
   }
   // On edit an empty password means "keep the current one"; a new paste needs a real one.
   const current = editing ? await store.getPaste(editing) : null

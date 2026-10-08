@@ -1,10 +1,12 @@
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { getSocialProviders } from "@/lib/auth"
+import { getSiteOrigin } from "@/lib/site"
 
 export const metadata = { title: "Sign in · Sniptide" }
 
 export default async function Page() {
+  const { host } = await getSiteOrigin()
   return (
     <AuthScreen
       title="Welcome back"
@@ -13,7 +15,7 @@ export default async function Page() {
       pitch={{
         title: ["Short links", "for your code."],
         body: "Paste code, choose when it expires, and share the link. Every paste shows how often it was opened.",
-        link: "sniptide.com/k7Qe2x",
+        link: `${host}/k7Qe2x`,
         note: "expires in 6 days",
       }}
     >

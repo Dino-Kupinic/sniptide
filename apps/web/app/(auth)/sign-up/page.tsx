@@ -1,10 +1,12 @@
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getSocialProviders } from "@/lib/auth"
+import { getSiteOrigin } from "@/lib/site"
 
 export const metadata = { title: "Create account · Sniptide" }
 
 export default async function Page() {
+  const { host } = await getSiteOrigin()
   return (
     <AuthScreen
       title="Create account"
@@ -13,7 +15,7 @@ export default async function Page() {
       pitch={{
         title: ["A profile for", "your public pastes."],
         body: "Public pastes are listed on your profile. Private and unlisted pastes are only visible through their link.",
-        link: "sniptide.com/@you",
+        link: `${host}/@you`,
         note: "your public profile",
       }}
     >
