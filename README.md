@@ -43,14 +43,20 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
 - **Persistent storage:** a volume mounted at `/data` (holds `sniptide.db`).
 - **Environment variables:**
   - `BETTER_AUTH_SECRET`: a long random string (`openssl rand -hex 32`)
-  - `BETTER_AUTH_URL`: `https://sniptide.com`
+  - `BETTER_AUTH_URL`: `https://app.sniptide.com`
+  - `SHARE_URL`: `https://sniptide.com` (share links' domain, see below)
   - optional: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
     `GOOGLE_CLIENT_SECRET`
-- **Domain:** `https://sniptide.com`.
+- **Domain:** `https://app.sniptide.com`.
 
 `DATABASE_URL` defaults to `file:/data/sniptide.db` in the image. Back up the `/data` volume
 (Coolify can schedule volume backups). SQLite runs in WAL mode, so a manual copy should include
 `sniptide.db-wal` too, or be taken with the app stopped.
+
+sniptide.com itself is the website (`Dino-Kupinic/sniptide-web`). It proxies share links
+(`sniptide.com/<slug>`, `/<slug>/raw`) to this app and redirects app pages to app.sniptide.com, so
+share links stay short while the app runs on its subdomain. Self-hosted instances skip all of this:
+leave `SHARE_URL` unset and the app serves everything, share links included, on its own domain.
 
 Cloudflare handles DNS and proxies the domain to the server (orange cloud), with SSL/TLS set to
 **Full (strict)**.
