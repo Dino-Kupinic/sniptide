@@ -7,7 +7,7 @@ import { nextCookies } from "better-auth/next-js"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
-import { parsePreferences } from "@/lib/preferences"
+import { parsePreferences } from "@/lib/preferences-schema"
 
 // OAuth apps are optional: set both halves in .dev.vars or with `wrangler secret put` to turn a
 // provider on. They are not in wrangler.jsonc, so the generated CloudflareEnv doesn't know them.

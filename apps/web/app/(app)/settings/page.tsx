@@ -2,7 +2,7 @@ import { type SettingsTab, SettingsView } from "@/components/settings/settings-v
 import { requireSession } from "@/lib/auth"
 import { collections, viewerStorage } from "@/lib/mock-data"
 import { listTrash, navCounts } from "@/lib/pastes/store"
-import { parsePreferences } from "@/lib/preferences"
+import { parsePreferences } from "@/lib/preferences-schema"
 import { viewerFromUser } from "@/lib/viewer"
 
 export const metadata = { title: "Settings · Sniptide" }

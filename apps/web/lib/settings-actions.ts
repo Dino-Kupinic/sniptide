@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { z } from "zod"
 import { getAuth, getSession } from "@/lib/auth"
-import { type Preferences, parsePreferences, preferencesSchema } from "@/lib/preferences"
+import type { Preferences } from "@/lib/preferences"
+import { parsePreferences, preferencesSchema } from "@/lib/preferences-schema"
 
 type Result = { ok: true } | { ok: false; error: string }
 

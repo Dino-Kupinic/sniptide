@@ -1,7 +1,7 @@
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { requireSession } from "@/lib/auth"
 import { getDashboardData } from "@/lib/pastes/dashboard"
-import { parsePreferences } from "@/lib/preferences"
+import { parsePreferences } from "@/lib/preferences-schema"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
