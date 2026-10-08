@@ -1,7 +1,7 @@
 name: CI
 
-# Checks every pull request and every push to main. The deploy workflow waits for this one
-# to pass on main before it ships.
+# Checks every pull request and every push to main. Deploys happen in Coolify, which builds
+# the Dockerfile from main.
 on:
   pull_request:
   push:
@@ -26,7 +26,7 @@ jobs:
         with:
           bun-version-file: package.json
 
-      # Next, wrangler and OpenNext run on Node; package.json asks for 24+.
+      # Next runs on Node; package.json asks for 24+.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -39,8 +39,8 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
 
-      # Runs `next build` and bundles the Worker exactly as the deploy does, so OpenNext
-      # breakage shows up in the PR rather than at deploy time. No Cloudflare credentials needed.
-      - name: Build the Worker
-        working-directory: apps/web
-        run: bunx opennextjs-cloudflare build
+      - run: bun run build
+
+      # Builds the same image Coolify deploys, so a broken Dockerfile shows up in the PR.
+      - name: Build the Docker image
+        run: docker build --tag sniptide:ci .

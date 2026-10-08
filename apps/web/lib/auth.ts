@@ -1,22 +1,12 @@
 import "server-only"
 
-import { getCloudflareContext } from "@opennextjs/cloudflare"
 import { createAuth, type OAuthCredentials } from "@workspace/auth"
-import { createDb } from "@workspace/db"
 import { nextCookies } from "better-auth/next-js"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
+import { getDb } from "@/lib/db"
 import { parsePreferences } from "@/lib/preferences"
-
-// OAuth apps are optional: set both halves in .dev.vars or with `wrangler secret put` to turn a
-// provider on. They are not in wrangler.jsonc, so the generated CloudflareEnv doesn't know them.
-type OAuthEnv = Partial<
-  Record<
-    "GITHUB_CLIENT_ID" | "GITHUB_CLIENT_SECRET" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET",
-    string
-  >
->
 
 export type SocialProvider = "github" | "google"
 
@@ -24,31 +14,36 @@ function credentials(clientId?: string, clientSecret?: string): OAuthCredentials
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
 }
 
-const getOAuthCredentials = cache(async () => {
-  const { env } = await getCloudflareContext({ async: true })
-  const oauth = env as OAuthEnv
-
+// OAuth apps are optional: set both halves (GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET, …) in
+// .env.local or in Coolify to turn a provider on.
+function getOAuthCredentials() {
   return {
-    github: credentials(oauth.GITHUB_CLIENT_ID, oauth.GITHUB_CLIENT_SECRET),
-    google: credentials(oauth.GOOGLE_CLIENT_ID, oauth.GOOGLE_CLIENT_SECRET),
+    github: credentials(process.env.GITHUB_CLIENT_ID, process.env.GITHUB_CLIENT_SECRET),
+    google: credentials(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET),
   }
-})
+}
 
-// Bindings only exist inside a request on Workers, so the auth instance is built per request.
-export const getAuth = cache(async () => {
-  const { env } = await getCloudflareContext({ async: true })
+let auth: ReturnType<typeof createAuth> | undefined
 
-  return createAuth({
-    db: createDb(env.DB),
-    secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL,
-    ...(await getOAuthCredentials()),
+// One auth instance per server process, built on first use so `next build` doesn't need the
+// secret. Async to keep call sites unchanged from the per-request Workers version.
+export async function getAuth() {
+  const secret = process.env.BETTER_AUTH_SECRET
+  if (!secret) throw new Error("BETTER_AUTH_SECRET is not set")
+
+  auth ??= createAuth({
+    db: getDb(),
+    secret,
+    baseURL: process.env.BETTER_AUTH_URL,
+    trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
+    ...getOAuthCredentials(),
     plugins: [nextCookies()],
   })
-})
+  return auth
+}
 
 export async function getSocialProviders(): Promise<SocialProvider[]> {
-  const configured = await getOAuthCredentials()
+  const configured = getOAuthCredentials()
 
   return (["github", "google"] as const).filter((provider) => configured[provider])
 }

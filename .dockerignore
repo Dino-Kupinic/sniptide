@@ -1,0 +1,14 @@
+**/node_modules
+**/.next
+**/.open-next
+**/.wrangler
+**/.turbo
+**/data
+**/*.db*
+**/.env*
+!**/.env.example
+**/.dev.vars*
+.git
+.github
+.idea
+.claude

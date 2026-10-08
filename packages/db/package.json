@@ -8,22 +8,22 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply sniptide --local --config ../../apps/web/wrangler.jsonc",
-    "db:migrate:remote": "wrangler d1 migrations apply sniptide --remote --config ../../apps/web/wrangler.jsonc"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@libsql/client": "catalog:runtime",
     "drizzle-orm": "catalog:runtime"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:tooling",
+    "@types/node": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
     "dotenv": "catalog:tooling",
     "drizzle-kit": "catalog:tooling",
-    "typescript": "catalog:tooling",
-    "wrangler": "catalog:tooling"
+    "typescript": "catalog:tooling"
   },
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./migrate": "./src/migrate.ts"
   }
 }

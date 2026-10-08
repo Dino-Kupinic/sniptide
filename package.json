@@ -12,7 +12,7 @@
   "catalogs": {
     "runtime": {
       "@better-auth/drizzle-adapter": "^1.7.3",
-      "@opennextjs/cloudflare": "^1.20.9",
+      "@libsql/client": "^0.15.15",
       "better-auth": "^1.7.3",
       "drizzle-orm": "1.0.0-rc.4",
       "next": "16.3.8",
@@ -34,7 +34,6 @@
     },
     "tooling": {
       "@biomejs/biome": "2.5.12",
-      "@cloudflare/workers-types": "^5.20260908.1",
       "@turbo/gen": "^2.9.15",
       "@types/node": "^26.5.0",
       "@types/react": "^19",
@@ -42,8 +41,7 @@
       "dotenv": "^17.4.2",
       "drizzle-kit": "1.0.0-rc.4",
       "turbo": "^2.9.18",
-      "typescript": "^5",
-      "wrangler": "^4.130.0"
+      "typescript": "^5"
     }
   },
   "devDependencies": {

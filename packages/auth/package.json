@@ -15,7 +15,7 @@
     "zod": "catalog:runtime"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:tooling",
+    "@types/node": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
     "typescript": "catalog:tooling"
   },
