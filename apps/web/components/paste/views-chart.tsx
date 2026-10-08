@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 
 // Bar sparkline from the paste detail "Views" card: primary bars with today in ink.
 export function ViewsSparkline({ values, className }: { values: number[]; className?: string }) {

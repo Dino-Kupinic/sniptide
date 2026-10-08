@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 
 // Phone sizes come from the Paper mobile artboards (46px fields, 16px text so iOS doesn't zoom
 // on focus); lg and up uses the 40px desktop fields.

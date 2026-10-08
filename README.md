@@ -82,5 +82,11 @@ bun run format
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
 - `packages/auth`: better-auth setup on the Drizzle adapter
 - `packages/db`: Drizzle schema, libSQL client and migrations
-- `packages/ui`: shared shadcn (Base UI) components and the Sniptide theme
+- `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
+  theme. Published to npm for the website repo; see `packages/ui/README.md`
 - `packages/typescript`: shared TypeScript configuration
+
+## License
+
+[AGPL-3.0](LICENSE). You can self-host and modify Sniptide; if you run a modified version as a
+network service, you have to publish your changes under the same license.

@@ -1,6 +1,6 @@
 "use client"
 
-import { SegmentedControl } from "@workspace/ui/components/segmented-control"
+import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   Table,
   TableBody,
@@ -8,8 +8,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/table"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"

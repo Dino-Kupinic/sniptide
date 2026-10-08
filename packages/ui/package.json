@@ -1,33 +1,50 @@
 {
-  "name": "@workspace/ui",
-  "version": "0.0.0",
+  "name": "@sniptide/ui",
+  "version": "0.1.0",
+  "description": "Sniptide's shared React components and Tailwind theme, used by the app and the website.",
+  "license": "AGPL-3.0-only",
   "type": "module",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dino-Kupinic/sniptide.git",
+    "directory": "packages/ui"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "postcss.config.mjs",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
   "dependencies": {
     "@base-ui/react": "catalog:ui",
+    "@tailwindcss/postcss": "catalog:ui",
     "class-variance-authority": "catalog:ui",
     "cn": "catalog:ui",
     "lucide-react": "catalog:ui",
-    "next-themes": "catalog:runtime",
-    "react": "catalog:runtime",
-    "react-dom": "catalog:runtime",
     "shadcn": "catalog:ui",
-    "tw-animate-css": "catalog:ui",
-    "zod": "catalog:runtime"
+    "tailwindcss": "catalog:ui",
+    "tw-animate-css": "catalog:ui"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "catalog:ui",
     "@turbo/gen": "catalog:tooling",
     "@types/node": "catalog:tooling",
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
-    "tailwindcss": "catalog:ui",
+    "react": "catalog:runtime",
+    "react-dom": "catalog:runtime",
     "typescript": "catalog:tooling"
   },
   "exports": {

@@ -1,8 +1,8 @@
 "use client"
 
-import { Kbd } from "@workspace/ui/components/kbd"
-import { Separator } from "@workspace/ui/components/separator"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip"
+import { Kbd } from "@sniptide/ui/components/kbd"
+import { Separator } from "@sniptide/ui/components/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { BellIcon, ChevronRightIcon, PanelLeftIcon, SearchIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"

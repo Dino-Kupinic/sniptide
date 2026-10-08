@@ -1,4 +1,4 @@
-import { Badge } from "@workspace/ui/components/badge"
+import { Badge } from "@sniptide/ui/components/badge"
 import type { Paste } from "@/lib/pastes/types"
 
 // Burn-after-read wins over visibility, as in the paste tables of the designs.

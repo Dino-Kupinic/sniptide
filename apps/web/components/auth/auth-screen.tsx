@@ -1,6 +1,6 @@
+import { Logo } from "@sniptide/ui/components/logo"
+import { Stripes } from "@sniptide/ui/components/stripes"
 import type * as React from "react"
-import { Logo } from "@/components/logo"
-import { Stripes } from "./stripes"
 
 export interface Pitch {
   title: [string, string]

@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 
 // Line-numbered code in JetBrains Mono, monochrome like the Paper designs. Each line is its own
 // row so a wrapped line keeps its number aligned with its first visual line.

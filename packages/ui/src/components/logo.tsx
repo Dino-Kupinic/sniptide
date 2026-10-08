@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 
 // Sniptide mark from the Paper brand page. Fills follow the theme so it works in dark mode.
 export function LogoMark({ className }: { className?: string }) {

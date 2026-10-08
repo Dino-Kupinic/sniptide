@@ -4,7 +4,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@workspace/ui/components/dropdown-menu"
+} from "@sniptide/ui/components/dropdown-menu"
 import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

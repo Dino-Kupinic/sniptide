@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 import { formatNumber } from "@/lib/format"
 
 // Bar chart from the dashboard artboard: primary bars capped with three thin ink rules, the

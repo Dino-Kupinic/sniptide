@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
 import {
   Dialog,
   DialogClose,
@@ -8,8 +8,8 @@ import {
   DialogDescription,
   DialogTitle,
   DialogTrigger,
-} from "@workspace/ui/components/dialog"
-import { Input } from "@workspace/ui/components/input"
+} from "@sniptide/ui/components/dialog"
+import { Input } from "@sniptide/ui/components/input"
 import { DownloadIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"

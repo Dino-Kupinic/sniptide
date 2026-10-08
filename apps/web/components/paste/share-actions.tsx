@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
 import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react"
 import { useCopy } from "./copy-button"
 

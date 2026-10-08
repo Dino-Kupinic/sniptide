@@ -1,14 +1,14 @@
 "use client"
 
-import { SegmentedControl } from "@workspace/ui/components/segmented-control"
+import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@workspace/ui/components/select"
-import { Switch } from "@workspace/ui/components/switch"
+} from "@sniptide/ui/components/select"
+import { Switch } from "@sniptide/ui/components/switch"
 import { useTheme } from "next-themes"
 import * as React from "react"
 import type { Preferences } from "@/lib/preferences"

@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
+} from "@sniptide/ui/components/dropdown-menu"
 import {
   CopyIcon,
   ExternalLinkIcon,

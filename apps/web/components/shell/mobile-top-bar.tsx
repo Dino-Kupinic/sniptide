@@ -1,14 +1,14 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
+} from "@sniptide/ui/components/dropdown-menu"
+import { Logo } from "@sniptide/ui/components/logo"
 import { SearchIcon } from "lucide-react"
 import Link from "next/link"
-import { Logo } from "@/components/logo"
 import type { ViewerSummary } from "@/lib/mock-data"
 import { AccountMenuItems } from "./account-menu"
 

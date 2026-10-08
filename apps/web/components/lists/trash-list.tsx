@@ -8,8 +8,8 @@ import {
   AlertDialogFooter,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@workspace/ui/components/alert-dialog"
-import { Button } from "@workspace/ui/components/button"
+} from "@sniptide/ui/components/alert-dialog"
+import { Button } from "@sniptide/ui/components/button"
 import {
   Table,
   TableBody,
@@ -17,8 +17,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/table"
+import { cn } from "@sniptide/ui/lib/utils"
 import { Trash2Icon } from "lucide-react"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
