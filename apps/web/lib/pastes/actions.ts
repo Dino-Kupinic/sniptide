@@ -153,3 +153,59 @@ export async function unlockPaste(slug: string, password: string) {
   })
   return { ok: true as const }
 }
+
+const gistSchema = z.object({
+  description: z.string().nullable(),
+  files: z.record(
+    z.string(),
+    z.object({
+      filename: z.string(),
+      content: z.string().optional(),
+      truncated: z.boolean().optional(),
+    }),
+  ),
+})
+
+// Copies a public GitHub gist into a new unlisted paste. Accepts a gist URL or its id.
+export async function importGist(input: string): Promise<SavePasteResult> {
+  await assertSignedIn()
+
+  const id = input.trim().match(/([0-9a-f]{20,40})\/?(?:#.*)?$/i)?.[1]
+  if (!id) return { ok: false, error: "Paste a gist link like gist.github.com/you/1a2b3c…" }
+
+  const response = await fetch(`https://api.github.com/gists/${id}`, {
+    headers: { accept: "application/vnd.github+json", "user-agent": "sniptide" },
+  })
+  if (response.status === 404)
+    return { ok: false, error: "That gist doesn't exist or isn't public." }
+  if (!response.ok) return { ok: false, error: "GitHub didn't answer. Try again in a minute." }
+
+  const gist = gistSchema.safeParse(await response.json())
+  if (!gist.success) return { ok: false, error: "That gist couldn't be read." }
+
+  const files = Object.values(gist.data.files)
+    .filter((file) => file.content !== undefined && !file.truncated)
+    .slice(0, 10)
+    .map((file) => ({
+      name: file.filename,
+      content: file.content ?? "",
+      language: detectLanguage(file.filename).id,
+    }))
+  if (files.length === 0)
+    return { ok: false, error: "That gist has no files small enough to import." }
+
+  const paste = await store.createPaste({
+    title: gist.data.description?.trim() || files[0]?.name || "Imported gist",
+    description: `Imported from gist ${id}`,
+    files,
+    visibility: "unlisted",
+    expiry: "never",
+    slug: "",
+    collection: null,
+    password: null,
+    burnAfterRead: false,
+  })
+
+  revalidatePath("/", "layout")
+  return { ok: true, slug: paste.slug }
+}
