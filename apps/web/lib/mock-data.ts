@@ -29,12 +29,6 @@ export const viewerStorage: Pick<ViewerSummary, "storageUsedMb" | "storageLimitM
   storageLimitMb: 100,
 }
 
-export const navCounts: NavCounts = {
-  pastes: 248,
-  starred: 12,
-  shared: 5,
-}
-
 export const collections: Collection[] = [
   { slug: "api-snippets", name: "api-snippets", marker: "filled-primary" },
   { slug: "dotfiles", name: "dotfiles", marker: "filled-foreground" },

@@ -4,7 +4,10 @@ import { Kbd } from "@workspace/ui/components/kbd"
 import { Separator } from "@workspace/ui/components/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip"
 import { BellIcon, ChevronRightIcon, PanelLeftIcon, SearchIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
+import * as React from "react"
+import { useBreadcrumb } from "./breadcrumb"
 import { pageTitles } from "./nav-config"
 
 const iconButtonClass =
@@ -21,6 +24,7 @@ export function TopBar({
   const pathname = usePathname()
   const section = pathname.split("/")[1] ?? ""
   const title = pageTitles[section] ?? "Workspace"
+  const trail = useBreadcrumb() ?? [{ label: "Workspace" }, { label: title }]
 
   return (
     <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 lg:flex">
@@ -38,10 +42,31 @@ export function TopBar({
 
       <Separator orientation="vertical" className="my-4" />
 
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Workspace</span>
-        <ChevronRightIcon className="size-3.5 text-muted-foreground" />
-        <span aria-current="page">{title}</span>
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
+        {trail.map((crumb, index) => {
+          const last = index === trail.length - 1
+          return (
+            <React.Fragment key={`${crumb.label}-${index}`}>
+              {index > 0 ? (
+                <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              ) : null}
+              {last ? (
+                <span aria-current="page" className="truncate">
+                  {crumb.label}
+                </span>
+              ) : crumb.href ? (
+                <Link
+                  href={crumb.href}
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span className="shrink-0 text-muted-foreground">{crumb.label}</span>
+              )}
+            </React.Fragment>
+          )
+        })}
       </nav>
 
       <div className="ml-auto flex items-center gap-2">

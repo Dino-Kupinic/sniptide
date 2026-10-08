@@ -4,6 +4,7 @@ import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { cn } from "@workspace/ui/lib/utils"
 import { usePathname } from "next/navigation"
 import * as React from "react"
+import { BreadcrumbProvider } from "./breadcrumb"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
 import { Sidebar, type SidebarProps } from "./sidebar"
@@ -34,40 +35,42 @@ export function AppShell({
 
   return (
     <TooltipProvider delay={300}>
-      <div className="flex min-h-svh bg-background lg:bg-sidebar">
-        <aside
-          aria-label="Sidebar"
-          className={cn(
-            "sticky top-0 hidden h-svh w-64 shrink-0 overflow-y-auto lg:block",
-            collapsed && "lg:hidden",
-          )}
-        >
-          <Sidebar {...sidebarProps} />
-        </aside>
-
-        <div
-          className={cn(
-            "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
-            collapsed && "lg:ml-2",
-          )}
-        >
-          <TopBar
-            onToggleSidebar={() => setCollapsed((value) => !value)}
-            sidebarOpen={!collapsed}
-          />
-          {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
-          <main
+      <BreadcrumbProvider>
+        <div className="flex min-h-svh bg-background lg:bg-sidebar">
+          <aside
+            aria-label="Sidebar"
             className={cn(
-              "flex-1",
-              chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+              "sticky top-0 hidden h-svh w-64 shrink-0 overflow-y-auto lg:block",
+              collapsed && "lg:hidden",
             )}
           >
-            {children}
-          </main>
-        </div>
+            <Sidebar {...sidebarProps} />
+          </aside>
 
-        {chrome.tabBar ? <TabBar /> : null}
-      </div>
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
+              collapsed && "lg:ml-2",
+            )}
+          >
+            <TopBar
+              onToggleSidebar={() => setCollapsed((value) => !value)}
+              sidebarOpen={!collapsed}
+            />
+            {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
+            <main
+              className={cn(
+                "flex-1",
+                chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+              )}
+            >
+              {children}
+            </main>
+          </div>
+
+          {chrome.tabBar ? <TabBar /> : null}
+        </div>
+      </BreadcrumbProvider>
     </TooltipProvider>
   )
 }
