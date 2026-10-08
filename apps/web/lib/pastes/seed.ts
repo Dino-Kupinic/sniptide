@@ -152,7 +152,11 @@ const crontab = `# m h dom mon dow command
 15 3 * * * /usr/local/bin/backup.sh >> /var/log/pg-backup.log 2>&1
 `
 
-function views(total: number, days = 14) {
+// 60 days of daily views: the detail page charts the last 14, the dashboard compares the last
+// 7 or 30 days with the period before.
+export const VIEW_HISTORY_DAYS = 60
+
+function views(total: number, days = VIEW_HISTORY_DAYS) {
   // A deterministic, gently rising curve that sums to roughly `total`.
   const weights = Array.from({ length: days }, (_, day) => 0.6 + ((day * 7) % 5) / 6 + day / days)
   const sum = weights.reduce((a, b) => a + b, 0)
