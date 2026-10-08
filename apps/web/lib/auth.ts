@@ -6,7 +6,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
 import { getDb } from "@/lib/db"
-import { parsePreferences } from "@/lib/preferences"
+import { parsePreferences } from "@/lib/preferences-schema"
 
 export type SocialProvider = "github" | "google"
 
