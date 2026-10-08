@@ -10,7 +10,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # npm provenance
+  id-token: write # npm Trusted Publishing (no token) and provenance
 
 jobs:
   publish:
@@ -28,6 +28,9 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
 
+      # Trusted Publishing needs npm 11.5.1 or newer.
+      - run: npm install --global npm@latest
+
       - run: bun install --frozen-lockfile
 
       - name: Check whether this version is already published
@@ -43,12 +46,10 @@ jobs:
           fi
 
       # Bun packs the tarball so catalog: and workspace: versions are resolved; npm publishes it
-      # with provenance.
+      # through Trusted Publishing (configured on npmjs.com for this workflow), with provenance.
       - name: Pack and publish
         if: steps.check.outputs.publish == 'true'
         working-directory: packages/ui
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           bun pm pack --destination "$RUNNER_TEMP"
           npm publish "$RUNNER_TEMP"/sniptide-ui-*.tgz --provenance --access public
