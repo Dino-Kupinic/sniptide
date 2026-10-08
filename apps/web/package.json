@@ -7,15 +7,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv --include-runtime false cloudflare-env.d.ts",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "catalog:runtime",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",
@@ -29,13 +25,11 @@
     "zod": "catalog:runtime"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:tooling",
     "@tailwindcss/postcss": "catalog:ui",
     "@types/node": "catalog:tooling",
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
-    "typescript": "catalog:tooling",
-    "wrangler": "catalog:tooling"
+    "typescript": "catalog:tooling"
   }
 }

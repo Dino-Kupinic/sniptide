@@ -10,17 +10,16 @@
         "name": "next"
       }
     ],
-    "types": ["@cloudflare/workers-types", "node"]
+    "types": ["node"]
   },
   "include": [
     "next-env.d.ts",
     "next.config.ts",
-    "cloudflare-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     "**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".open-next"]
+  "exclude": ["node_modules"]
 }

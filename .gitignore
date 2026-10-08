@@ -45,8 +45,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# cloudflare
+# local SQLite database (apps/web/data/)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# cloudflare (from the Workers setup; kept so old local state stays ignored)
 .open-next/
 .wrangler/
 .dev.vars*
-!.dev.vars.example

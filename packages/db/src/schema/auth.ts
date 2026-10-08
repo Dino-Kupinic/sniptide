@@ -13,7 +13,7 @@ export const user = sqliteTable(
     image: text("image"),
     // From better-auth's username plugin: the normalized handle behind sniptide.com/@username.
     // Unique through an index rather than a column constraint, so adding it stays a plain ALTER
-    // TABLE instead of a table rebuild (which would cascade-delete sessions on D1).
+    // TABLE instead of a table rebuild (which would cascade-delete sessions).
     username: text("username"),
     displayUsername: text("display_username"),
     // JSON blob of editor and paste-default settings (see apps/web/lib/preferences.ts).
