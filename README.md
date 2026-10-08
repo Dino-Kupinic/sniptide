@@ -69,6 +69,21 @@ docker run -p 3000:3000 -v sniptide-data:/data \
   -e BETTER_AUTH_SECRET=$(openssl rand -hex 32) -e BETTER_AUTH_URL=http://localhost:3000 sniptide
 ```
 
+## Self-hosting
+
+Sniptide runs as one container with SQLite on a volume; see **Deploy** for the image, port,
+volume and environment variables. Set `BETTER_AUTH_URL` to the URL people open the app at.
+
+Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
+separate domain, for example a short one:
+
+1. Point that domain at the same container too (a second domain on the Coolify resource, or another
+   `server_name`/host rule in your reverse proxy).
+2. Set `SHARE_URL=https://short.example` on the app.
+
+Copied links then use the share domain. On it, share pages and raw files are served as usual, and
+app pages (`/`, `/sign-in`, `/dashboard`, …) redirect to `BETTER_AUTH_URL` (`apps/web/proxy.ts`).
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
