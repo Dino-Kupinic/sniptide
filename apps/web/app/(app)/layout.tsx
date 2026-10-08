@@ -1,9 +1,13 @@
 import { AppShell } from "@/components/shell/app-shell"
-import { collections, navCounts, viewer } from "@/lib/mock-data"
+import { requireSession } from "@/lib/auth"
+import { collections, navCounts } from "@/lib/mock-data"
+import { viewerFromUser } from "@/lib/viewer"
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await requireSession()
+
   return (
-    <AppShell viewer={viewer} counts={navCounts} collections={collections}>
+    <AppShell viewer={viewerFromUser(session.user)} counts={navCounts} collections={collections}>
       {children}
     </AppShell>
   )

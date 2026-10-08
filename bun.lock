@@ -26,6 +26,7 @@
         "react": "catalog:runtime",
         "react-dom": "catalog:runtime",
         "server-only": "catalog:runtime",
+        "zod": "catalog:runtime",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "catalog:tooling",
@@ -45,6 +46,7 @@
         "@better-auth/drizzle-adapter": "catalog:runtime",
         "@workspace/db": "workspace:*",
         "better-auth": "catalog:runtime",
+        "zod": "catalog:runtime",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "catalog:tooling",

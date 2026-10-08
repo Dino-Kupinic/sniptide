@@ -25,7 +25,8 @@
     "next-themes": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
-    "server-only": "catalog:runtime"
+    "server-only": "catalog:runtime",
+    "zod": "catalog:runtime"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:tooling",
