@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { PasteEditor } from "@/components/paste/paste-editor"
 import { SetBreadcrumb } from "@/components/shell/breadcrumb"
+import { getPreferences } from "@/lib/auth"
 import { formatDateTime } from "@/lib/format"
 import { collections } from "@/lib/mock-data"
 import { getPaste, getShare } from "@/lib/pastes/store"
@@ -15,7 +16,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
   const paste = await getPaste(slug)
   if (!paste) notFound()
 
-  const share = await getShare(slug)
+  const [share, preferences] = await Promise.all([getShare(slug), getPreferences()])
   if (paste.owner && share?.access !== "edit") notFound()
 
   return (
@@ -30,6 +31,8 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
       <PasteEditor
         editing={slug}
         collections={collections}
+        indentation={preferences.indentation}
+        secretDetection={preferences.secretDetection}
         currentExpiry={
           paste.expiresAt ? `expires ${formatDateTime(paste.expiresAt)}` : "never expires"
         }

@@ -24,6 +24,8 @@ import type { Collection } from "@/lib/mock-data"
 import { checkSlug, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
+import { indentUnit, type Preferences } from "@/lib/preferences"
+import { findSecrets } from "@/lib/secrets"
 
 export interface EditorFile {
   id: string
@@ -98,6 +100,8 @@ export function PasteEditor({
   editing,
   currentExpiry,
   collections,
+  indentation = "2",
+  secretDetection = true,
 }: {
   initial: EditorInitial
   // Slug of the paste being edited; omitted for a new paste.
@@ -105,6 +109,9 @@ export function PasteEditor({
   // Human label for the current expiry when editing ("Oct 12, 09:24").
   currentExpiry?: string
   collections: Collection[]
+  // From the viewer's Settings: what Tab inserts, and whether to warn about pasted secrets.
+  indentation?: Preferences["indentation"]
+  secretDetection?: boolean
 }) {
   const router = useRouter()
   const [title, setTitle] = React.useState(initial.title)
@@ -133,6 +140,10 @@ export function PasteEditor({
   const language = detectLanguage(active?.name ?? "")
   const totalBytes = files.reduce((size, file) => size + byteLength(file.content), 0)
   const lineCount = (active?.content ?? "").split("\n").length
+  const secret = React.useMemo(
+    () => (secretDetection ? findSecrets(files) : null),
+    [files, secretDetection],
+  )
 
   function updateActive(patch: Partial<EditorFile>) {
     setFiles((current) =>
@@ -163,15 +174,16 @@ export function PasteEditor({
   }
 
   function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Tab indents with two spaces instead of leaving the editor; Escape then Tab still moves on.
+    // Tab indents (by the Settings indentation) instead of leaving the editor.
     if (event.key !== "Tab" || event.shiftKey) return
     event.preventDefault()
     const textarea = event.currentTarget
     const { selectionStart, selectionEnd, value } = textarea
-    const next = `${value.slice(0, selectionStart)}  ${value.slice(selectionEnd)}`
+    const unit = indentUnit(indentation)
+    const next = `${value.slice(0, selectionStart)}${unit}${value.slice(selectionEnd)}`
     updateActive({ content: next })
     requestAnimationFrame(() => {
-      textarea.selectionStart = textarea.selectionEnd = selectionStart + 2
+      textarea.selectionStart = textarea.selectionEnd = selectionStart + unit.length
     })
   }
 
@@ -435,6 +447,15 @@ export function PasteEditor({
             </div>
           )}
 
+          {secret ? (
+            <p
+              role="status"
+              className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-primary"
+            >
+              Line {secret.line} of {secret.file} looks like {secret.name}. Anyone with the link can
+              read it, so remove it or keep the paste private.
+            </p>
+          ) : null}
           <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
             <span className="flex items-center gap-2">
               Detected

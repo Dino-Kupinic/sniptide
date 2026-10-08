@@ -14,6 +14,7 @@ import { SettingRow, ShareLinkField, SharingPanel } from "@/components/paste/sha
 import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
 import { SetBreadcrumb } from "@/components/shell/breadcrumb"
+import { getPreferences } from "@/lib/auth"
 import {
   byteLength,
   formatBytes,
@@ -25,6 +26,7 @@ import {
 import { collections } from "@/lib/mock-data"
 import { getPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
+import { indentLabel } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
@@ -41,10 +43,11 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
   const paste = await getPaste(slug)
   if (!paste) notFound()
 
-  const [starred, share, { origin, host }] = await Promise.all([
+  const [starred, share, { origin, host }, preferences] = await Promise.all([
     isStarred(slug),
     getShare(slug),
     getSiteOrigin(),
+    getPreferences(),
   ])
   if (share && !share.seen) await markShareSeen(slug)
 
@@ -162,10 +165,11 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
           slug={slug}
           files={paste.files}
           rawAllowed={paste.allowRaw}
+          lineNumbers={preferences.lineNumbers}
           className="mx-4 hidden min-h-[612px] flex-1 lg:mx-0 lg:flex"
           footer={
             <>
-              <span>UTF-8 · LF · 2 spaces</span>
+              <span>UTF-8 · LF · {indentLabel(preferences.indentation)}</span>
               <span>
                 Revision {revision} of {revision}
               </span>
@@ -176,6 +180,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
           slug={slug}
           files={paste.files}
           rawAllowed={paste.allowRaw}
+          lineNumbers={preferences.lineNumbers}
           collapseAt={6}
           className="mx-4 lg:hidden"
           bodyClassName="bg-sidebar"

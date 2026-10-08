@@ -1,6 +1,6 @@
 "use client"
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
 import {
   DropdownMenu,
@@ -125,6 +125,7 @@ export function Sidebar({ viewer, counts, collections }: SidebarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2.5 p-1.5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
             <Avatar>
+              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
               <AvatarFallback>{viewer.initials}</AvatarFallback>
             </Avatar>
             <span className="flex min-w-0 flex-col">

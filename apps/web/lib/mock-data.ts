@@ -7,6 +7,7 @@ export interface ViewerSummary {
   name: string
   email: string
   username: string | null
+  image: string | null
   initials: string
   storageUsedMb: number
   storageLimitMb: number

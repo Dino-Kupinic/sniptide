@@ -50,12 +50,12 @@ const visibilityLabels: Record<Visibility, string> = {
 }
 
 // Browser storage is only a convenience here: a lost draft costs a re-paste, nothing more.
-function readDraft(): Draft {
+function readDraft(fallback: Draft): Draft {
   try {
     const stored = window.localStorage.getItem(DRAFT_KEY)
-    return stored ? { ...emptyDraft, ...JSON.parse(stored) } : emptyDraft
+    return stored ? { ...fallback, ...JSON.parse(stored) } : fallback
   } catch {
-    return emptyDraft
+    return fallback
   }
 }
 
@@ -81,9 +81,15 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
 }
 
 // "Quick paste" composer on the dashboard: one file, the common options, Cmd+Enter to create.
-export function QuickPaste() {
+export function QuickPaste({
+  defaults,
+}: {
+  // Paste defaults from Settings, used for a fresh draft.
+  defaults?: Pick<Draft, "expiry" | "visibility" | "burnAfterRead">
+}) {
   const router = useRouter()
-  const [draft, setDraft] = React.useState<Draft>(emptyDraft)
+  const fresh = React.useMemo(() => ({ ...emptyDraft, ...defaults }), [defaults])
+  const [draft, setDraft] = React.useState<Draft>(fresh)
   const [saved, setSaved] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
@@ -92,9 +98,9 @@ export function QuickPaste() {
   const lines = draft.content.split("\n").length
 
   React.useEffect(() => {
-    setDraft(readDraft())
+    setDraft(readDraft(fresh))
     loaded.current = true
-  }, [])
+  }, [fresh])
 
   React.useEffect(() => {
     if (!loaded.current) return

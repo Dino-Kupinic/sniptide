@@ -6,11 +6,13 @@ export function CodeBlock({
   content,
   wrap = false,
   maxLines,
+  lineNumbers = true,
   className,
 }: {
   content: string
   wrap?: boolean
   maxLines?: number
+  lineNumbers?: boolean
   className?: string
 }) {
   const lines = content.replace(/\n$/, "").split("\n")
@@ -23,6 +25,7 @@ export function CodeBlock({
         {visible.map((line, index) => (
           <li key={index} className="flex gap-[18px]">
             <span
+              hidden={!lineNumbers}
               aria-hidden="true"
               style={{ minWidth: gutter }}
               className="shrink-0 text-right text-muted-foreground/60 select-none"
