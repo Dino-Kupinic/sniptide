@@ -8,6 +8,7 @@ import { USERNAME_PATTERN } from "@workspace/auth/username"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { useSiteHost } from "@/components/site-host"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
@@ -48,6 +49,7 @@ function useUsernameAvailability(username: string) {
 }
 
 export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] }) {
+  const host = useSiteHost()
   const router = useRouter()
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
@@ -111,7 +113,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
               )}
             >
               <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-3 font-mono text-xs text-muted-foreground">
-                sniptide.com/@
+                {host}/@
               </span>
               <input
                 id="username"

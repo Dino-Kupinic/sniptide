@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 import { CodeBlock } from "@/components/paste/code-block"
 import { LanguageMarker } from "@/components/paste/language-marker"
+import { useSiteHost } from "@/components/site-host"
 import { byteLength, formatBytes } from "@/lib/format"
 import type { Collection } from "@/lib/mock-data"
 import { checkSlug, savePaste } from "@/lib/pastes/actions"
@@ -113,6 +114,7 @@ export function PasteEditor({
   indentation?: Preferences["indentation"]
   secretDetection?: boolean
 }) {
+  const host = useSiteHost()
   const router = useRouter()
   const [title, setTitle] = React.useState(initial.title)
   const [description, setDescription] = React.useState(initial.description)
@@ -190,7 +192,7 @@ export function PasteEditor({
   function submit() {
     setError(null)
     if (slugStatus === "taken") {
-      setError(`sniptide.com/${slug} is taken. Pick another custom link.`)
+      setError(`${host}/${slug} is taken. Pick another custom link.`)
       return
     }
 
@@ -657,6 +659,7 @@ function SlugInput({
   onChange: (value: string) => void
   status: ReturnType<typeof useSlugStatus>
 }) {
+  const host = useSiteHost()
   return (
     <div className="flex flex-col gap-1">
       <div
@@ -666,7 +669,7 @@ function SlugInput({
         )}
       >
         <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-2.5 font-mono text-xs text-muted-foreground">
-          sniptide.com/
+          {host}/
         </span>
         <input
           aria-label="Custom link"

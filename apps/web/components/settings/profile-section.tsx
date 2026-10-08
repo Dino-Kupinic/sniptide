@@ -7,6 +7,7 @@ import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
 import { USERNAME_PATTERN } from "@workspace/auth/username"
 import * as React from "react"
+import { useSiteHost } from "@/components/site-host"
 import { authClient } from "@/lib/auth-client"
 import { updateAvatar, updateProfile } from "@/lib/settings-actions"
 import { SaveStatus, SettingsSection } from "./section"
@@ -69,6 +70,7 @@ function useUsernameCheck(username: string, current: string) {
 }
 
 export function ProfileSection({ profile }: { profile: ProfileState }) {
+  const host = useSiteHost()
   const [name, setName] = React.useState(profile.name)
   const [username, setUsername] = React.useState(profile.username)
   const [image, setImage] = React.useState(profile.image)
@@ -175,7 +177,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
               )}
             >
               <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-3 font-mono text-xs text-muted-foreground">
-                sniptide.com/@
+                {host}/@
               </span>
               <input
                 id="settings-username"
