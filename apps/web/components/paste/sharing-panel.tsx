@@ -1,16 +1,16 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
-import { Input } from "@workspace/ui/components/input"
-import { SegmentedControl } from "@workspace/ui/components/segmented-control"
-import { Switch } from "@workspace/ui/components/switch"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/dropdown-menu"
+import { Input } from "@sniptide/ui/components/input"
+import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { Switch } from "@sniptide/ui/components/switch"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon } from "lucide-react"
 import * as React from "react"
 import { updateSharing } from "@/lib/pastes/actions"

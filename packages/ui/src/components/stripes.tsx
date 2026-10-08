@@ -1,4 +1,4 @@
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 
 // Barcode stripes from the Paper auth screens' brand panel (720×900 artboard units).
 const ink: [number, number, number?, number?][] = [

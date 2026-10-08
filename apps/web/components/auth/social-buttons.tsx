@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
 import * as React from "react"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"

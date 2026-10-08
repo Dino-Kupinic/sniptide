@@ -1,8 +1,8 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
-import { Progress } from "@workspace/ui/components/progress"
-import { cn } from "@workspace/ui/lib/utils"
+import { Button } from "@sniptide/ui/components/button"
+import { Progress } from "@sniptide/ui/components/progress"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronRightIcon, KeyRoundIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

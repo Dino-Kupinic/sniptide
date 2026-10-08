@@ -1,8 +1,8 @@
 import type { Viewport } from "next"
 import { Inter, JetBrains_Mono, Stack_Sans_Notch } from "next/font/google"
 
-import "@workspace/ui/globals.css"
-import { cn } from "@workspace/ui/lib/utils"
+import "@sniptide/ui/globals.css"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
 
 const fontHeading = Stack_Sans_Notch({

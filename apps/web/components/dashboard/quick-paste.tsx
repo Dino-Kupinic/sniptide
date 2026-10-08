@@ -1,15 +1,15 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
-import { Switch } from "@workspace/ui/components/switch"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/dropdown-menu"
+import { Switch } from "@sniptide/ui/components/switch"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"

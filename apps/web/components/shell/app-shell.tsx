@@ -1,7 +1,7 @@
 "use client"
 
-import { TooltipProvider } from "@workspace/ui/components/tooltip"
-import { cn } from "@workspace/ui/lib/utils"
+import { TooltipProvider } from "@sniptide/ui/components/tooltip"
+import { cn } from "@sniptide/ui/lib/utils"
 import { usePathname } from "next/navigation"
 import * as React from "react"
 import { BreadcrumbProvider } from "./breadcrumb"

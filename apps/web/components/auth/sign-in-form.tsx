@@ -1,8 +1,8 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
-import { Label } from "@workspace/ui/components/label"
+import { Button } from "@sniptide/ui/components/button"
+import { Input } from "@sniptide/ui/components/input"
+import { Label } from "@sniptide/ui/components/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"

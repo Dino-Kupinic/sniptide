@@ -1,0 +1,54 @@
+name: Publish @sniptide/ui
+
+# Publishes packages/ui to npm when main carries a version that isn't on the registry yet.
+# Bump "version" in packages/ui/package.json to release; the website picks it up from npm.
+on:
+  push:
+    branches: [main]
+    paths: [packages/ui/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: bun install --frozen-lockfile
+
+      - name: Check whether this version is already published
+        id: check
+        working-directory: packages/ui
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@sniptide/ui@$version" version >/dev/null 2>&1; then
+            echo "@sniptide/ui@$version is already on npm, nothing to do."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Bun packs the tarball so catalog: and workspace: versions are resolved; npm publishes it
+      # with provenance.
+      - name: Pack and publish
+        if: steps.check.outputs.publish == 'true'
+        working-directory: packages/ui
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          bun pm pack --destination "$RUNNER_TEMP"
+          npm publish "$RUNNER_TEMP"/sniptide-ui-*.tgz --provenance --access public

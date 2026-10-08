@@ -8,9 +8,9 @@ import {
   AlertDialogFooter,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@workspace/ui/components/alert-dialog"
-import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
+} from "@sniptide/ui/components/alert-dialog"
+import { Button } from "@sniptide/ui/components/button"
+import { Input } from "@sniptide/ui/components/input"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { authClient } from "@/lib/auth-client"

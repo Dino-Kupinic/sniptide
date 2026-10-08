@@ -14,7 +14,7 @@
   "dependencies": {
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
-    "@workspace/ui": "workspace:*",
+    "@sniptide/ui": "workspace:*",
     "better-auth": "catalog:runtime",
     "lucide-react": "catalog:ui",
     "next": "catalog:runtime",

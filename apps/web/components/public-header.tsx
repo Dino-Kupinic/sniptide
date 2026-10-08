@@ -1,6 +1,6 @@
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
+import { Logo } from "@sniptide/ui/components/logo"
 import Link from "next/link"
-import { Logo } from "@/components/logo"
 
 // Header for pages visitors see without signing in (the public share page).
 export function PublicHeader({ signedIn }: { signedIn: boolean }) {

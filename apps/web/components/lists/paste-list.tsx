@@ -1,6 +1,6 @@
 "use client"
 
-import { Badge } from "@workspace/ui/components/badge"
+import { Badge } from "@sniptide/ui/components/badge"
 import {
   Table,
   TableBody,
@@ -8,8 +8,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@workspace/ui/components/table"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/table"
+import { cn } from "@sniptide/ui/lib/utils"
 import { StarIcon } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"

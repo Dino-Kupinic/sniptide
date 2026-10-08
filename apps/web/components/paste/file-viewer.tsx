@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@workspace/ui/lib/utils"
+import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react"
 import * as React from "react"
 import { CodeBlock } from "./code-block"

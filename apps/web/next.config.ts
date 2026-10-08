@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@libsql/client", "libsql"],
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },
-  transpilePackages: ["@workspace/auth", "@workspace/db", "@workspace/ui"],
+  transpilePackages: ["@workspace/auth", "@workspace/db", "@sniptide/ui"],
 }
 
 export default nextConfig

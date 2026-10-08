@@ -1,18 +1,18 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
-import { Kbd } from "@workspace/ui/components/kbd"
-import { SegmentedControl } from "@workspace/ui/components/segmented-control"
+import { Button } from "@sniptide/ui/components/button"
+import { Input } from "@sniptide/ui/components/input"
+import { Kbd } from "@sniptide/ui/components/kbd"
+import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@workspace/ui/components/select"
-import { Switch } from "@workspace/ui/components/switch"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/select"
+import { Switch } from "@sniptide/ui/components/switch"
+import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, EyeIcon, EyeOffIcon, PlusIcon, XIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

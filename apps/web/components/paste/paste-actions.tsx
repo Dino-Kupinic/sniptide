@@ -1,14 +1,14 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/dropdown-menu"
+import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
   FileCodeIcon,

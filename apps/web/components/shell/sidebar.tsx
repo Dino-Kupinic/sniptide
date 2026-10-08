@@ -1,19 +1,19 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar"
-import { Button } from "@workspace/ui/components/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
-import { Kbd } from "@workspace/ui/components/kbd"
-import { Progress } from "@workspace/ui/components/progress"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/dropdown-menu"
+import { Kbd } from "@sniptide/ui/components/kbd"
+import { Logo } from "@sniptide/ui/components/logo"
+import { Progress } from "@sniptide/ui/components/progress"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronsUpDownIcon, PlusIcon, SettingsIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Logo } from "@/components/logo"
 import type { Collection, NavCounts, ViewerSummary } from "@/lib/mock-data"
 import { AccountMenuItems } from "./account-menu"
 import { isActivePath, primaryNav } from "./nav-config"

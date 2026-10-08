@@ -3,7 +3,6 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
-@source "../../../apps/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
 
 /* Sniptide palette, taken from the Paper designs. Corners are square everywhere (--radius: 0). */

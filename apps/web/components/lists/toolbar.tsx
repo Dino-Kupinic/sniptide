@@ -9,8 +9,8 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@workspace/ui/components/dropdown-menu"
-import { cn } from "@workspace/ui/lib/utils"
+} from "@sniptide/ui/components/dropdown-menu"
+import { cn } from "@sniptide/ui/lib/utils"
 import {
   ChevronDownIcon,
   ChevronLeftIcon,

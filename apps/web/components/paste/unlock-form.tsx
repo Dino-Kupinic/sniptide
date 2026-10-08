@@ -1,7 +1,7 @@
 "use client"
 
-import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
+import { Button } from "@sniptide/ui/components/button"
+import { Input } from "@sniptide/ui/components/input"
 import { LockIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
