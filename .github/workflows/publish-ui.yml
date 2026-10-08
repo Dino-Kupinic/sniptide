@@ -1,7 +1,8 @@
 name: Publish @sniptide/ui
 
-# Publishes packages/ui to npm when main carries a version that isn't on the registry yet.
-# Bump "version" in packages/ui/package.json to release; the website picks it up from npm.
+# Stages packages/ui on npm when main carries a version that isn't on the registry yet. A
+# maintainer then approves it with 2FA (`npm stage list @sniptide/ui`, `npm stage approve <id>`)
+# and the website picks it up from npm. Bump "version" in packages/ui/package.json to release.
 on:
   push:
     branches: [main]
@@ -46,10 +47,11 @@ jobs:
           fi
 
       # Bun packs the tarball so catalog: and workspace: versions are resolved; npm publishes it
-      # through Trusted Publishing (configured on npmjs.com for this workflow), with provenance.
+      # through Trusted Publishing (configured on npmjs.com for this workflow, with permission to
+      # stage only), with provenance.
       - name: Pack and publish
         if: steps.check.outputs.publish == 'true'
         working-directory: packages/ui
         run: |
           bun pm pack --destination "$RUNNER_TEMP"
-          npm publish "$RUNNER_TEMP"/sniptide-ui-*.tgz --provenance --access public
+          npm stage publish "$RUNNER_TEMP"/sniptide-ui-*.tgz --provenance --access public

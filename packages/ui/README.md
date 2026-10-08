@@ -36,8 +36,13 @@ by Tailwind's automatic source detection.
 
 ## Releasing
 
-Bump `version` in `package.json` and merge to `main`. The `Publish @sniptide/ui` workflow
-publishes any version that isn't on npm yet.
+Bump `version` in `package.json` and merge to `main`. The `Publish @sniptide/ui` workflow stages
+any version that isn't on npm yet (Trusted Publishing, no token). Approve it with 2FA to publish:
+
+```bash
+npm stage list @sniptide/ui
+npm stage approve <stage-id>
+```
 
 ## License
 
