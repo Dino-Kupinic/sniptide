@@ -1,6 +1,7 @@
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { requireSession } from "@/lib/auth"
 import { getDashboardData } from "@/lib/pastes/dashboard"
+import { parsePreferences } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
@@ -14,5 +15,19 @@ export default async function Page() {
   ])
   const firstName = viewerFromUser(session.user).name.split(/[\s._-]/)[0] || "there"
 
-  return <Dashboard data={data} firstName={firstName} origin={origin} host={host} />
+  const preferences = parsePreferences(session.user.preferences)
+
+  return (
+    <Dashboard
+      data={data}
+      firstName={firstName}
+      origin={origin}
+      host={host}
+      defaults={{
+        expiry: preferences.defaultExpiry,
+        visibility: preferences.defaultVisibility,
+        burnAfterRead: preferences.defaultBurnAfterRead,
+      }}
+    />
+  )
 }

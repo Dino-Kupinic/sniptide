@@ -16,6 +16,8 @@ export const user = sqliteTable(
     // TABLE instead of a table rebuild (which would cascade-delete sessions on D1).
     username: text("username"),
     displayUsername: text("display_username"),
+    // JSON blob of editor and paste-default settings (see apps/web/lib/preferences.ts).
+    preferences: text("preferences"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .$onUpdate(() => new Date())

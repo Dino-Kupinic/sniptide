@@ -1,6 +1,6 @@
 "use client"
 
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +36,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <Avatar className="size-9 font-heading text-[13px] font-bold">
+              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
               <AvatarFallback>{viewer.initials}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>

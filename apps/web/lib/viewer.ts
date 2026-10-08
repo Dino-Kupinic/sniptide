@@ -6,6 +6,7 @@ interface SessionUser {
   email: string
   username?: string | null
   displayUsername?: string | null
+  image?: string | null
 }
 
 export function initialsFor(name: string) {
@@ -20,12 +21,13 @@ export function initialsFor(name: string) {
 
 // Builds the shell's viewer from the signed-in user. Storage stays mocked until pastes exist.
 export function viewerFromUser(user: SessionUser): ViewerSummary {
-  const name = user.displayUsername || user.name || user.username || user.email
+  const name = user.name || user.displayUsername || user.username || user.email
 
   return {
     name,
     email: user.email,
     username: user.username ?? null,
+    image: user.image ?? null,
     initials: initialsFor(name),
     ...viewerStorage,
   }

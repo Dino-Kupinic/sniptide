@@ -41,6 +41,13 @@ export function createAuth({
     emailAndPassword: {
       enabled: true,
     },
+    user: {
+      additionalFields: {
+        // Settings page preferences as JSON; parsed and validated in the web app.
+        preferences: { type: "string", required: false, input: true },
+      },
+      deleteUser: { enabled: true },
+    },
     socialProviders: {
       ...(github ? { github } : {}),
       ...(google ? { google } : {}),

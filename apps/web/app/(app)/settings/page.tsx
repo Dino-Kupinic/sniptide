@@ -1,12 +1,42 @@
-import { PagePlaceholder } from "@/components/page-header"
+import { type SettingsTab, SettingsView } from "@/components/settings/settings-view"
+import { requireSession } from "@/lib/auth"
+import { collections, viewerStorage } from "@/lib/mock-data"
+import { listTrash, navCounts } from "@/lib/pastes/store"
+import { parsePreferences } from "@/lib/preferences"
+import { viewerFromUser } from "@/lib/viewer"
 
 export const metadata = { title: "Settings · Sniptide" }
 
-export default function Page() {
+const tabs: SettingsTab[] = ["general", "defaults", "api", "billing"]
+
+export default async function Page({ searchParams }: PageProps<"/settings">) {
+  const [session, counts, trash, { tab }] = await Promise.all([
+    requireSession(),
+    navCounts(),
+    listTrash(),
+    searchParams,
+  ])
+  const viewer = viewerFromUser(session.user)
+
   return (
-    <PagePlaceholder
-      title="Settings"
-      description="Account and profile settings land here in step 6."
+    <SettingsView
+      initialTab={tabs.find((candidate) => candidate === tab) ?? "general"}
+      profile={{
+        name: session.user.name,
+        username: session.user.username ?? "",
+        email: session.user.email,
+        emailVerified: session.user.emailVerified,
+        image: session.user.image ?? null,
+        initials: viewer.initials,
+      }}
+      preferences={parsePreferences(session.user.preferences)}
+      counts={{
+        shared: counts.shared,
+        collections: collections.length,
+        trash: trash.length,
+        pastes: counts.pastes,
+      }}
+      storage={{ usedMb: viewerStorage.storageUsedMb, limitMb: viewerStorage.storageLimitMb }}
     />
   )
 }

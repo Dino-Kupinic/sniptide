@@ -25,6 +25,7 @@ export function FileViewer({
   footer,
   collapseAt,
   rawAllowed = true,
+  lineNumbers = true,
   className,
   bodyClassName,
 }: {
@@ -33,6 +34,7 @@ export function FileViewer({
   footer?: React.ReactNode
   collapseAt?: number
   rawAllowed?: boolean
+  lineNumbers?: boolean
   className?: string
   bodyClassName?: string
 }) {
@@ -111,6 +113,7 @@ export function FileViewer({
         content={active.content}
         wrap={wrap || collapseAt !== undefined}
         maxLines={collapsed ? collapseAt : undefined}
+        lineNumbers={lineNumbers}
         className={cn("flex-1", bodyClassName)}
       />
 
