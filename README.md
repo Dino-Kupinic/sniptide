@@ -44,6 +44,23 @@ bun run deploy
 
 Run `bun run cf-typegen` in `apps/web` after changing bindings in `wrangler.jsonc`.
 
+## CI/CD
+
+GitHub Actions runs two workflows:
+
+- **CI** (`.github/workflows/ci.yml`), on every pull request and push to `main`: `biome ci`,
+  lint, typecheck, and the OpenNext Worker build (which runs `next build`).
+- **Deploy** (`.github/workflows/deploy.yml`), after CI passes on a push to `main`, or by hand
+  from the Actions tab: applies D1 migrations to production, then builds and deploys the Worker.
+
+Deploy needs two repository secrets, scoped to a `production` environment:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`: a token with **Workers Scripts: Edit** and **D1: Edit** on the account
+
+Worker secrets (`BETTER_AUTH_SECRET`, OAuth credentials) stay in Cloudflare and are set once with
+`wrangler secret put`; the workflow never sees them.
+
 ## Checks
 
 ```bash

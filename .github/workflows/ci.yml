@@ -1,0 +1,46 @@
+name: CI
+
+# Checks every pull request and every push to main. The deploy workflow waits for this one
+# to pass on main before it ships.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # Next, wrangler and OpenNext run on Node; package.json asks for 24+.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: bun install --frozen-lockfile
+
+      # Formatting, lint rules and import order in one pass, without writing.
+      - run: bunx biome ci .
+
+      - run: bun run lint
+      - run: bun run typecheck
+
+      # Runs `next build` and bundles the Worker exactly as the deploy does, so OpenNext
+      # breakage shows up in the PR rather than at deploy time. No Cloudflare credentials needed.
+      - name: Build the Worker
+        working-directory: apps/web
+        run: bunx opennextjs-cloudflare build
