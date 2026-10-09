@@ -1,13 +1,12 @@
-import { type Client, createClient } from "@libsql/client"
-import { drizzle } from "drizzle-orm/libsql"
+import { drizzle } from "drizzle-orm/postgres-js"
+import postgres from "postgres"
 import { relations } from "./schema"
 
-// SQLite through libSQL. In production DATABASE_URL points at a file on the server's volume
-// (file:/data/sniptide.db); a libsql:// URL would work too if the data ever moves to Turso.
-export function createDb(url: string, authToken?: string) {
-  const client = createClient({ url, authToken })
-  return Object.assign(drizzle({ client, relations }), { $sqlite: client })
+// Postgres through postgres.js. DATABASE_URL is a regular connection string
+// (postgres://user:password@host:5432/sniptide).
+export function createDb(url: string) {
+  const client = postgres(url, { max: 10 })
+  return Object.assign(drizzle({ client, relations }), { $client: client })
 }
 
 export type Database = ReturnType<typeof createDb>
-export type { Client }

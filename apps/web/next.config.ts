@@ -6,8 +6,6 @@ const nextConfig: NextConfig = {
   // repo root so the workspace packages are included.
   output: "standalone",
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
-  // libSQL loads a native SQLite binding at runtime; leave it to Node instead of bundling.
-  serverExternalPackages: ["@libsql/client", "libsql"],
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },
   transpilePackages: ["@workspace/auth", "@workspace/db", "@sniptide/ui"],

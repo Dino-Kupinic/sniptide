@@ -1,13 +1,14 @@
 import "dotenv/config"
 import { defineConfig } from "drizzle-kit"
 
-// `generate` only needs the schema. `migrate` and `studio` open DATABASE_URL, which defaults to
-// the web app's local database. The app also applies pending migrations itself on startup.
+// `generate` only needs the schema. `migrate` and `studio` connect to DATABASE_URL (the local
+// Postgres from docker-compose.yml by default). The app also applies pending migrations itself
+// on startup.
 export default defineConfig({
   out: "./migrations",
   schema: "./src/schema/index.ts",
-  dialect: "turso",
+  dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "file:../../apps/web/data/sniptide.db",
+    url: process.env.DATABASE_URL ?? "postgres://sniptide:sniptide@localhost:5432/sniptide",
   },
 })

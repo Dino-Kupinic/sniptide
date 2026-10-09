@@ -1,18 +1,19 @@
 # Sniptide
 
 Code snippet sharing at sniptide.com. A Bun + Turborepo monorepo with one Next.js app, run as a
-Docker container on Coolify with Cloudflare in front, backed by SQLite (libSQL).
+Docker container on Coolify with Cloudflare in front, backed by Postgres.
 
 ## Setup
 
 ```bash
 bun install
 cp apps/web/.env.example apps/web/.env.local   # then set BETTER_AUTH_SECRET
+docker compose up -d db                        # local Postgres on localhost:5432
 bun dev
 ```
 
 The app applies database migrations itself when it starts (`apps/web/instrumentation.ts`), so the
-local database at `apps/web/data/sniptide.db` is created and kept current by `bun dev`.
+local database is set up and kept current by `bun dev`.
 
 GitHub and Google sign-in are optional: set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` and
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` to turn them on. Until then their buttons render
@@ -40,18 +41,16 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
 
 - **Source:** this repository, branch `main`, build pack **Dockerfile**, auto-deploy on push.
 - **Port:** `3000`. **Health check:** `GET /api/health`.
-- **Persistent storage:** a volume mounted at `/data` (holds `sniptide.db`).
+- **Database:** a Postgres resource in the same Coolify project (Postgres 17); use its internal
+  connection URL as `DATABASE_URL` and turn on its scheduled backups.
 - **Environment variables:**
+  - `DATABASE_URL`: `postgres://…` from the Postgres resource
   - `BETTER_AUTH_SECRET`: a long random string (`openssl rand -hex 32`)
   - `BETTER_AUTH_URL`: `https://app.sniptide.com`
   - `SHARE_URL`: `https://sniptide.com` (share links' domain, see below)
   - optional: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
     `GOOGLE_CLIENT_SECRET`
 - **Domain:** `https://app.sniptide.com`.
-
-`DATABASE_URL` defaults to `file:/data/sniptide.db` in the image. Back up the `/data` volume
-(Coolify can schedule volume backups). SQLite runs in WAL mode, so a manual copy should include
-`sniptide.db-wal` too, or be taken with the app stopped.
 
 sniptide.com itself is the website (`Dino-Kupinic/sniptide-web`). It proxies share links
 (`sniptide.com/<slug>`, `/<slug>/raw`) to this app and redirects app pages to app.sniptide.com, so
@@ -61,18 +60,24 @@ leave `SHARE_URL` unset and the app serves everything, share links included, on 
 Cloudflare handles DNS and proxies the domain to the server (orange cloud), with SSL/TLS set to
 **Full (strict)**.
 
-To try the production image locally:
+To try the production image locally with its database:
 
 ```bash
-docker build -t sniptide .
-docker run -p 3000:3000 -v sniptide-data:/data \
-  -e BETTER_AUTH_SECRET=$(openssl rand -hex 32) -e BETTER_AUTH_URL=http://localhost:3000 sniptide
+BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose --profile app up -d --build
 ```
 
 ## Self-hosting
 
-Sniptide runs as one container with SQLite on a volume; see **Deploy** for the image, port,
-volume and environment variables. Set `BETTER_AUTH_URL` to the URL people open the app at.
+Sniptide is the app container plus Postgres. `docker-compose.yml` runs both:
+
+```bash
+export BETTER_AUTH_SECRET=$(openssl rand -hex 32)   # keep it; sessions depend on it
+export BETTER_AUTH_URL=https://paste.example.com     # the URL people open
+docker compose --profile app up -d
+```
+
+Put your reverse proxy (or Coolify) in front of port 3000, and back up the `postgres` volume
+(for example with `pg_dump`). Set `POSTGRES_PASSWORD` to change the database password.
 
 Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
 separate domain, for example a short one:
@@ -102,7 +107,7 @@ bun run format
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
 - `packages/auth`: better-auth setup on the Drizzle adapter
-- `packages/db`: Drizzle schema, libSQL client and migrations
+- `packages/db`: Drizzle schema, Postgres client and migrations
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
   theme. Published to npm for the website repo; see `packages/ui/README.md`
 - `packages/typescript`: shared TypeScript configuration

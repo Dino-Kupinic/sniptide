@@ -14,7 +14,7 @@ import { getDb } from "@/lib/db"
 import { hashPassword } from "./passwords"
 import type { Expiry, Paste, PasteInput, Person, Share, SharingInput } from "./types"
 
-// Pastes in SQLite (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
+// Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
 // signed-in viewer sees their own pastes in the app, and anyone can open a paste's public link
 // (subject to visibility, password and expiry, see ./access.ts).
 
@@ -64,6 +64,17 @@ async function requireViewerId() {
 
 function utcDay(time: number) {
   return Math.floor(time / DAY)
+}
+
+// The tables store timestamps; the screens work in epoch milliseconds.
+function ms(date: Date): number
+function ms(date: Date | null): number | null
+function ms(date: Date | null) {
+  return date ? date.getTime() : null
+}
+
+function at(time: number | null) {
+  return time === null ? null : new Date(time)
 }
 
 function initials(name: string) {
@@ -144,13 +155,13 @@ async function hydrate(records: PasteRecord[], viewer: string | null): Promise<P
       views: record.views,
       uniqueViews: record.uniqueViews,
       viewsByDay,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-      expiresAt: record.expiresAt,
-      deletedAt: record.deletedAt,
+      createdAt: ms(record.createdAt),
+      updatedAt: ms(record.updatedAt),
+      expiresAt: ms(record.expiresAt),
+      deletedAt: ms(record.deletedAt),
       revisions: revisions
         .filter((revision) => revision.pasteId === record.id)
-        .map(({ message, createdAt }) => ({ message, createdAt })),
+        .map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
     }
   })
 }
@@ -171,8 +182,8 @@ export function expiresAtFor(expiry: Expiry, from = Date.now()) {
   return expiry === "never" ? null : from + EXPIRY_MS[expiry]
 }
 
-function resolveExpiry(expiry: Expiry | "keep", current: number | null, from: number) {
-  return expiry === "keep" ? current : expiresAtFor(expiry, from)
+function resolveExpiry(expiry: Expiry | "keep", current: Date | null, from: number) {
+  return expiry === "keep" ? current : at(expiresAtFor(expiry, from))
 }
 
 export function isExpired(paste: Paste) {
@@ -186,7 +197,7 @@ async function purgeTrash(owner: string) {
       and(
         eq(pasteTable.ownerId, owner),
         isNotNull(pasteTable.deletedAt),
-        lt(pasteTable.deletedAt, Date.now() - TRASH_DAYS * DAY),
+        lt(pasteTable.deletedAt, new Date(Date.now() - TRASH_DAYS * DAY)),
       ),
     )
 }
@@ -265,11 +276,11 @@ export async function navCounts() {
   const db = getDb()
   const [[own], [starred]] = await Promise.all([
     db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
       .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
     db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`count(*)::int` })
       .from(pasteStar)
       .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
       .where(and(eq(pasteStar.userId, viewer), isNull(pasteTable.deletedAt))),
@@ -300,27 +311,27 @@ export async function createPaste(input: PasteInput) {
     while (await findRecord(slug))
   }
 
-  const db = getDb()
-  const now = Date.now()
+  const now = new Date()
   const id = crypto.randomUUID()
-  await db.batch([
-    db.insert(pasteTable).values({
+  const passwordHash = input.password ? await hashPassword(input.password) : null
+  await getDb().transaction(async (tx) => {
+    await tx.insert(pasteTable).values({
       id,
       slug,
       ownerId: owner,
       title: input.title,
       description: input.description,
       visibility: input.visibility,
-      passwordHash: input.password ? await hashPassword(input.password) : null,
+      passwordHash,
       burnAfterRead: input.burnAfterRead,
       collection: input.collection,
       createdAt: now,
       updatedAt: now,
-      expiresAt: resolveExpiry(input.expiry, null, now),
-    }),
-    db.insert(pasteFile).values(fileRows(id, input.files)),
-    db.insert(pasteRevision).values({ pasteId: id, message: "Created", createdAt: now }),
-  ])
+      expiresAt: resolveExpiry(input.expiry, null, now.getTime()),
+    })
+    await tx.insert(pasteFile).values(fileRows(id, input.files))
+    await tx.insert(pasteRevision).values({ pasteId: id, message: "Created", createdAt: now })
+  })
 
   return { slug }
 }
@@ -329,8 +340,7 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
   const record = await findOwned(slug)
   if (!record || record.deletedAt) return null
 
-  const db = getDb()
-  const now = Date.now()
+  const now = new Date()
   // An empty password on edit keeps the existing one; the client never sees it.
   const passwordHash =
     input.password === ""
@@ -339,8 +349,8 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
         ? await hashPassword(input.password)
         : null
 
-  await db.batch([
-    db
+  await getDb().transaction(async (tx) => {
+    await tx
       .update(pasteTable)
       .set({
         slug: input.slug || slug,
@@ -350,14 +360,14 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
         passwordHash,
         burnAfterRead: input.burnAfterRead,
         collection: input.collection,
-        expiresAt: resolveExpiry(input.expiry, record.expiresAt, now),
+        expiresAt: resolveExpiry(input.expiry, record.expiresAt, now.getTime()),
         updatedAt: now,
       })
-      .where(eq(pasteTable.id, record.id)),
-    db.delete(pasteFile).where(eq(pasteFile.pasteId, record.id)),
-    db.insert(pasteFile).values(fileRows(record.id, input.files)),
-    db.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: now }),
-  ])
+      .where(eq(pasteTable.id, record.id))
+    await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
+    await tx.insert(pasteFile).values(fileRows(record.id, input.files))
+    await tx.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: now })
+  })
 
   return { slug: input.slug || slug }
 }
@@ -374,7 +384,7 @@ export async function updateSharing(slug: string, input: SharingInput) {
       ...(password !== undefined
         ? { passwordHash: password ? await hashPassword(password) : null }
         : {}),
-      ...(expiry ? { expiresAt: expiresAtFor(expiry) } : {}),
+      ...(expiry ? { expiresAt: at(expiresAtFor(expiry)) } : {}),
     })
     .where(eq(pasteTable.id, record.id))
   return { slug }
@@ -387,10 +397,7 @@ export async function setStarred(slug: string, starred: boolean) {
 
   const db = getDb()
   if (starred) {
-    await db
-      .insert(pasteStar)
-      .values({ userId: viewer, pasteId: record.id, createdAt: Date.now() })
-      .onConflictDoNothing()
+    await db.insert(pasteStar).values({ userId: viewer, pasteId: record.id }).onConflictDoNothing()
   } else {
     await db
       .delete(pasteStar)
@@ -403,7 +410,7 @@ export async function trashPaste(slug: string) {
   if (!record) return
   await getDb()
     .update(pasteTable)
-    .set({ deletedAt: Date.now() })
+    .set({ deletedAt: new Date() })
     .where(eq(pasteTable.id, record.id))
 }
 
@@ -432,23 +439,22 @@ export async function recordView(slug: string) {
   const record = await findRecord(slug)
   if (!record || record.deletedAt) return
 
-  const db = getDb()
-  const now = Date.now()
-  await db.batch([
-    db
+  const now = new Date()
+  await getDb().transaction(async (tx) => {
+    await tx
       .update(pasteTable)
       .set({
         views: sql`${pasteTable.views} + 1`,
         uniqueViews: sql`${pasteTable.uniqueViews} + 1`,
         ...(record.burnAfterRead ? { deletedAt: now } : {}),
       })
-      .where(eq(pasteTable.id, record.id)),
-    db
+      .where(eq(pasteTable.id, record.id))
+    await tx
       .insert(pasteViewDay)
-      .values({ pasteId: record.id, day: utcDay(now), views: 1 })
+      .values({ pasteId: record.id, day: utcDay(now.getTime()), views: 1 })
       .onConflictDoUpdate({
         target: [pasteViewDay.pasteId, pasteViewDay.day],
         set: { views: sql`${pasteViewDay.views} + 1` },
-      }),
-  ])
+      })
+  })
 }

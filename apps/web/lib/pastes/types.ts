@@ -1,4 +1,4 @@
-// Shapes the paste screens read, built from the SQLite tables in ./store.ts.
+// Shapes the paste screens read, built from the Postgres tables in ./store.ts.
 
 export type Visibility = "public" | "unlisted" | "private"
 export type Expiry = "1h" | "1d" | "1w" | "1m" | "never"

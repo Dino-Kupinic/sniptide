@@ -31,7 +31,7 @@ export function createAuth({
   plugins = [],
 }: AuthConfig) {
   return betterAuth({
-    database: drizzleAdapter(db, { provider: "sqlite", schema }),
+    database: drizzleAdapter(db, { provider: "pg", schema }),
     secret,
     baseURL,
     trustedOrigins: trustedOrigins

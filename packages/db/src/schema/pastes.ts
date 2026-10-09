@@ -1,11 +1,27 @@
-// Pastes and everything hanging off them. Times are epoch milliseconds, like the auth tables.
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+// Pastes and everything hanging off them.
+import {
+  boolean,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
-export const paste = sqliteTable(
+export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
+
+const time = (name: string) => timestamp(name, { withTimezone: true })
+
+export const paste = pgTable(
   "paste",
   {
-    id: text("id").primaryKey(),
+    id: uuid("id").primaryKey().defaultRandom(),
     // The public link (sniptide.com/<slug>). Can change on edit; everything else points at id.
     slug: text("slug").notNull(),
     ownerId: text("owner_id")
@@ -13,19 +29,19 @@ export const paste = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
-    visibility: text("visibility", { enum: ["public", "unlisted", "private"] }).notNull(),
+    visibility: visibility("visibility").notNull(),
     // scrypt hash ("salt:hash", hex), never the password itself.
     passwordHash: text("password_hash"),
-    burnAfterRead: integer("burn_after_read", { mode: "boolean" }).notNull().default(false),
-    allowRaw: integer("allow_raw", { mode: "boolean" }).notNull().default(true),
+    burnAfterRead: boolean("burn_after_read").notNull().default(false),
+    allowRaw: boolean("allow_raw").notNull().default(true),
     collection: text("collection"),
     views: integer("views").notNull().default(0),
     uniqueViews: integer("unique_views").notNull().default(0),
-    createdAt: integer("created_at").notNull(),
-    updatedAt: integer("updated_at").notNull(),
-    expiresAt: integer("expires_at"),
+    createdAt: time("created_at").notNull().defaultNow(),
+    updatedAt: time("updated_at").notNull().defaultNow(),
+    expiresAt: time("expires_at"),
     // Set while the paste is in the trash.
-    deletedAt: integer("deleted_at"),
+    deletedAt: time("deleted_at"),
   },
   (table) => [
     uniqueIndex("paste_slug_unique").on(table.slug),
@@ -33,11 +49,11 @@ export const paste = sqliteTable(
   ],
 )
 
-export const pasteFile = sqliteTable(
+export const pasteFile = pgTable(
   "paste_file",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    pasteId: text("paste_id")
+    id: serial("id").primaryKey(),
+    pasteId: uuid("paste_id")
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
@@ -48,24 +64,24 @@ export const pasteFile = sqliteTable(
   (table) => [index("paste_file_paste_idx").on(table.pasteId, table.position)],
 )
 
-export const pasteRevision = sqliteTable(
+export const pasteRevision = pgTable(
   "paste_revision",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    pasteId: text("paste_id")
+    id: serial("id").primaryKey(),
+    pasteId: uuid("paste_id")
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
     message: text("message").notNull(),
-    createdAt: integer("created_at").notNull(),
+    createdAt: time("created_at").notNull().defaultNow(),
   },
   (table) => [index("paste_revision_paste_idx").on(table.pasteId, table.createdAt)],
 )
 
 // Views per paste per UTC day (days since the epoch), for the charts.
-export const pasteViewDay = sqliteTable(
+export const pasteViewDay = pgTable(
   "paste_view_day",
   {
-    pasteId: text("paste_id")
+    pasteId: uuid("paste_id")
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
     day: integer("day").notNull(),
@@ -74,16 +90,16 @@ export const pasteViewDay = sqliteTable(
   (table) => [primaryKey({ columns: [table.pasteId, table.day] })],
 )
 
-export const pasteStar = sqliteTable(
+export const pasteStar = pgTable(
   "paste_star",
   {
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    pasteId: text("paste_id")
+    pasteId: uuid("paste_id")
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
-    createdAt: integer("created_at").notNull(),
+    createdAt: time("created_at").notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.pasteId] })],
 )
