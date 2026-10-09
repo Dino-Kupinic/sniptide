@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth"
 import { collections } from "@/lib/mock-data"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
+import { verifyPassword } from "./passwords"
 import * as store from "./store"
 import { unlockCookieName, unlockToken } from "./unlock"
 
@@ -139,16 +140,16 @@ export async function emptyTrash() {
   revalidatePath("/", "layout")
 }
 
-// Password gate on the public page. The cookie holds a hash of slug and password, so it stops
-// working when the password changes and can't be minted without knowing it.
+// Password gate on the public page. The cookie holds a hash of the slug and the stored password
+// hash, so it stops working when the password changes and can't be minted from outside.
 export async function unlockPaste(slug: string, password: string) {
   const paste = await store.getPaste(slug)
-  if (!paste?.password || paste.password !== password) {
+  if (!paste?.password || !(await verifyPassword(password, paste.password))) {
     return { ok: false as const, error: "That password isn't right." }
   }
 
   const jar = await cookies()
-  jar.set(unlockCookieName(slug), await unlockToken(slug, password), {
+  jar.set(unlockCookieName(slug), await unlockToken(slug, paste.password), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

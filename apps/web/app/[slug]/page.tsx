@@ -11,7 +11,6 @@ import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import { checkAccess } from "@/lib/pastes/access"
-import { workspaceOwner } from "@/lib/pastes/seed"
 import { getPaste, recordView } from "@/lib/pastes/store"
 
 const avatarTone = {
@@ -52,11 +51,12 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
     )
   }
 
-  // Visits from the workspace itself don't count as views (or burn the paste).
-  const burning = paste.burnAfterRead && !signedIn
-  if (!signedIn) await recordView(slug)
+  // The owner's own visits don't count as views (or burn the paste).
+  const owned = access.status === "ok" && access.owned
+  const burning = paste.burnAfterRead && !owned
+  if (!owned) await recordView(slug)
 
-  const owner = paste.owner ?? workspaceOwner
+  const owner = paste.author
   const first = paste.files[0]
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const bytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
