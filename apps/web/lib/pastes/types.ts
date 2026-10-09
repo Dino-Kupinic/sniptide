@@ -1,5 +1,4 @@
-// Shapes the paste screens read. They mirror what the D1 paste tables will hold, so the
-// in-memory store in ./store.ts can be swapped for queries without touching the pages.
+// Shapes the paste screens read, built from the SQLite tables in ./store.ts.
 
 export type Visibility = "public" | "unlisted" | "private"
 export type Expiry = "1h" | "1d" | "1w" | "1m" | "never"
@@ -30,12 +29,15 @@ export interface Paste {
   description: string
   files: PasteFile[]
   visibility: Visibility
+  // The stored password hash; set means the paste is password-protected.
   password: string | null
   burnAfterRead: boolean
   allowRaw: boolean
   collection: string | null
   // null means the signed-in viewer owns it.
   owner: Person | null
+  // Who owns it, whoever is looking.
+  author: Person
   views: number
   uniqueViews: number
   // Oldest first, today last.

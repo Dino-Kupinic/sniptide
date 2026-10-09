@@ -1,8 +1,7 @@
 import "server-only"
 
 import { type PasteRow, toRow } from "./rows"
-import { VIEW_HISTORY_DAYS } from "./seed"
-import { isExpired, listOwnPastes } from "./store"
+import { isExpired, listOwnPastes, VIEW_HISTORY_DAYS } from "./store"
 
 const DAY = 86_400_000
 const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" })
