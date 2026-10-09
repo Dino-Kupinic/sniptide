@@ -12,10 +12,11 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@sniptide/ui": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
-    "@sniptide/ui": "workspace:*",
     "better-auth": "catalog:runtime",
+    "drizzle-orm": "catalog:runtime",
     "lucide-react": "catalog:ui",
     "next": "catalog:runtime",
     "next-themes": "catalog:runtime",
