@@ -8,7 +8,7 @@ import {
   pasteViewDay,
   user,
 } from "@workspace/db/schema"
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm"
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
@@ -312,19 +312,65 @@ async function canOpenLink(record: PasteRecord, viewer: string | null) {
   return "ok" as const
 }
 
+// Counts a visit from the public page and, for a burn-after-read paste, claims it: the first
+// visitor's UPDATE moves it to the trash and every other concurrent one matches no row, so only
+// one reader ever gets the content. Returns the updated row, or null when this visit lost.
+//
+// A burned paste sits in the owner's trash, where they can restore it, until the trash purge
+// removes it after TRASH_DAYS. It stays out of reach of every public read in the meantime.
+async function claimVisit(id: string) {
+  const now = new Date()
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .update(pasteTable)
+      .set({
+        views: sql`${pasteTable.views} + 1`,
+        uniqueViews: sql`${pasteTable.uniqueViews} + 1`,
+        deletedAt: sql`CASE WHEN ${pasteTable.burnAfterRead} THEN ${now.toISOString()}::timestamptz ELSE ${pasteTable.deletedAt} END`,
+      })
+      .where(
+        and(
+          eq(pasteTable.id, id),
+          isNull(pasteTable.deletedAt),
+          or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, now)),
+        ),
+      )
+      .returning()
+    if (!row) return null
+
+    await tx
+      .insert(pasteViewDay)
+      .values({ pasteId: id, day: utcDay(now.getTime()), views: 1 })
+      .onConflictDoUpdate({
+        target: [pasteViewDay.pasteId, pasteViewDay.day],
+        set: { views: sql`${pasteViewDay.views} + 1` },
+      })
+    return row
+  })
+}
+
 // A paste by its public link (the share page and its raw files). Returns the content only when
-// the visitor may see it.
-export async function readSharedPaste(slug: string): Promise<SharedRead> {
-  const record = await findLiveRecord(slug)
-  if (!record) return { status: "missing" }
+// the visitor may see it. `visit` marks the share page opening it: that counts a view for anyone
+// but the owner and burns a burn-after-read paste, so a visitor who loses that race gets
+// "missing" instead of a copy.
+export async function readSharedPaste(
+  slug: string,
+  options: { visit?: boolean } = {},
+): Promise<SharedRead> {
+  const found = await findLiveRecord(slug)
+  if (!found) return { status: "missing" }
 
   const viewer = await viewerId()
-  const verdict = await canOpenLink(record, viewer)
+  const verdict = await canOpenLink(found, viewer)
   if (verdict !== "ok") return { status: verdict }
+
+  const owned = found.ownerId === viewer
+  const record = options.visit && !owned ? await claimVisit(found.id) : found
+  if (!record) return { status: "missing" }
 
   const [paste] = await hydrate([record], viewer)
   if (!paste) return { status: "missing" }
-  return { status: "ok", paste, owned: record.ownerId === viewer, signedIn: viewer !== null }
+  return { status: "ok", paste, owned, signedIn: viewer !== null }
 }
 
 // The stored password hash of a paste someone could be asked to unlock, for the unlock route.
@@ -494,30 +540,4 @@ export async function emptyTrash() {
   await getDb()
     .delete(pasteTable)
     .where(and(eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
-}
-
-// Counts a visit from the public page. Burn-after-read pastes go to the trash after the first
-// view that isn't the owner's.
-export async function recordView(slug: string) {
-  const record = await findRecord(slug)
-  if (!record || record.deletedAt) return
-
-  const now = new Date()
-  await getDb().transaction(async (tx) => {
-    await tx
-      .update(pasteTable)
-      .set({
-        views: sql`${pasteTable.views} + 1`,
-        uniqueViews: sql`${pasteTable.uniqueViews} + 1`,
-        ...(record.burnAfterRead ? { deletedAt: now } : {}),
-      })
-      .where(eq(pasteTable.id, record.id))
-    await tx
-      .insert(pasteViewDay)
-      .values({ pasteId: record.id, day: utcDay(now.getTime()), views: 1 })
-      .onConflictDoUpdate({
-        target: [pasteViewDay.pasteId, pasteViewDay.day],
-        set: { views: sql`${pasteViewDay.views} + 1` },
-      })
-  })
 }

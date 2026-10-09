@@ -1,6 +1,6 @@
 import path from "node:path"
 import { migrateDb } from "@workspace/db/migrate"
-import { paste, pasteFile, pasteStar, rateLimit, user } from "@workspace/db/schema"
+import { paste, pasteFile, pasteStar, pasteViewDay, rateLimit, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "@/lib/pastes/passwords"
@@ -95,4 +95,16 @@ export async function unlock(slug: string) {
 
 export async function starCount() {
   return (await getDb().select().from(pasteStar)).length
+}
+
+export async function pasteRow(slug: string) {
+  const [row] = await getDb().select().from(paste).where(eq(paste.slug, slug))
+  return row
+}
+
+export async function viewDayTotal(slug: string) {
+  const row = await pasteRow(slug)
+  if (!row) return 0
+  const days = await getDb().select().from(pasteViewDay).where(eq(pasteViewDay.pasteId, row.id))
+  return days.reduce((total, day) => total + day.views, 0)
 }
