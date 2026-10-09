@@ -9,7 +9,7 @@ import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
-import { readSharedPaste, recordView } from "@/lib/pastes/store"
+import { readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
 const avatarTone = {
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 // Public page for a paste at sniptide.com/<slug>, from the "Share page (public)" artboards.
 export default async function Page({ params }: PageProps<"/[slug]">) {
   const { slug } = await params
-  const read = await readSharedPaste(slug)
+  const read = await readSharedPaste(slug, { visit: true })
   if (read.status === "missing") notFound()
 
   if (read.status === "locked") {
@@ -49,17 +49,19 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
     )
   }
 
-  // The owner's own visits don't count as views (or burn the paste).
+  // The owner's own visits don't count as views (or burn the paste); readSharedPaste did both for
+  // everyone else.
   const { paste, owned, signedIn } = read
   const burning = paste.burnAfterRead && !owned
-  if (!owned) await recordView(slug)
+  // A burned paste is gone once this page has loaded, so there is no raw file to link to.
+  const rawAllowed = paste.allowRaw && !burning
 
   const owner = paste.author
   const first = paste.files[0]
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const bytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const rawHref =
-    paste.allowRaw && first ? `/${slug}/raw?file=${encodeURIComponent(first.name)}` : undefined
+    rawAllowed && first ? `/${slug}/raw?file=${encodeURIComponent(first.name)}` : undefined
   const expires = burning
     ? "Deleted after this view"
     : paste.expiresAt
@@ -129,7 +131,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
             <FileViewer
               slug={slug}
               files={paste.files}
-              rawAllowed={paste.allowRaw}
+              rawAllowed={rawAllowed}
               bodyClassName="bg-sidebar"
             />
           )}
@@ -137,7 +139,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
         <FileViewer
           slug={slug}
           files={paste.files}
-          rawAllowed={paste.allowRaw}
+          rawAllowed={rawAllowed}
           collapseAt={6}
           className="lg:hidden"
           bodyClassName="bg-sidebar"

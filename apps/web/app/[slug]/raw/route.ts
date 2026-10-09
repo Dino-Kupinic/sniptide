@@ -8,9 +8,13 @@ export async function GET(request: Request, { params }: RouteContext<"/[slug]/ra
   if (read.status === "missing") return new Response("Not found", { status: 404 })
   if (read.status === "locked")
     return new Response("This paste is password protected", { status: 401 })
-  const { paste, signedIn } = read
-  if (!paste.allowRaw && !signedIn)
+  // The owner can always download their own paste. Everyone else needs raw access to be on, and
+  // a burn-after-read paste is only ever handed out once, by its page, so it has no raw files.
+  const { paste, owned } = read
+  if (!owned && !paste.allowRaw)
     return new Response("Raw access is off for this paste", { status: 403 })
+  if (!owned && paste.burnAfterRead)
+    return new Response("This paste burns after reading, so it has no raw link", { status: 403 })
 
   const url = new URL(request.url)
   const name = url.searchParams.get("file")
