@@ -1,0 +1,3 @@
+[test]
+# Mocks the Next-only modules (server-only, next/headers, the session) before any test imports.
+preload = ["./test/setup.ts"]

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers"
 import { verifyPassword } from "@/lib/pastes/passwords"
-import { getPaste } from "@/lib/pastes/store"
+import { getUnlockHash } from "@/lib/pastes/store"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
 
 // Password gate on the public page. The cookie holds a hash of the slug and the stored password
@@ -13,13 +13,13 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/u
   const body = await request.json().catch(() => null)
   const password = typeof body?.password === "string" ? body.password : ""
 
-  const paste = await getPaste(slug)
-  if (!paste?.password || !(await verifyPassword(password, paste.password))) {
+  const hash = await getUnlockHash(slug)
+  if (!hash || !(await verifyPassword(password, hash))) {
     return Response.json({ ok: false, error: "That password isn't right." }, { status: 401 })
   }
 
   const jar = await cookies()
-  jar.set(unlockCookieName(slug), await unlockToken(slug, paste.password), {
+  jar.set(unlockCookieName(slug), await unlockToken(slug, hash), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

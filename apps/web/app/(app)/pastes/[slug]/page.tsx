@@ -24,13 +24,13 @@ import {
   timeAgo,
 } from "@/lib/format"
 import { collections } from "@/lib/mock-data"
-import { getPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
+import { getOwnPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
 import { indentLabel } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
-  const paste = await getPaste((await params).slug)
+  const paste = await getOwnPaste((await params).slug)
   return { title: paste ? `${paste.title} · Sniptide` : "Paste not found · Sniptide" }
 }
 
@@ -40,7 +40,7 @@ function expiresLabel(paste: Paste) {
 
 export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
   const { slug } = await params
-  const paste = await getPaste(slug)
+  const paste = await getOwnPaste(slug)
   if (!paste) notFound()
 
   const [starred, share, { origin, host }, preferences] = await Promise.all([
