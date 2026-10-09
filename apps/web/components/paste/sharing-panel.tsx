@@ -102,7 +102,7 @@ export function SharingPanel({
     <>
       <SettingRow label="Expires" list={list}>
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring/40 lg:font-medium">
+          <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40 lg:font-medium">
             <span className={cn(list && "text-muted-foreground")}>{state.expiresLabel}</span>
             <ChevronDownIcon className="size-3.5 text-muted-foreground" />
           </DropdownMenuTrigger>

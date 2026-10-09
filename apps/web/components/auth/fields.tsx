@@ -34,4 +34,4 @@ export function SwitchPrompt({
 }
 
 export const inlineLinkClass =
-  "font-medium text-foreground underline underline-offset-2 outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring/40"
+  "font-medium text-foreground underline underline-offset-2 outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40"

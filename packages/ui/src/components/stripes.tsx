@@ -1,7 +1,9 @@
 import { cn } from "@sniptide/ui/lib/utils"
 
+type Bar = [number, number, number?, number?]
+
 // Barcode stripes from the Paper auth screens' brand panel (720×900 artboard units).
-const ink: [number, number, number?, number?][] = [
+const ink: Bar[] = [
   [0, 1],
   [5, 2],
   [11, 3],
@@ -33,13 +35,28 @@ const ink: [number, number, number?, number?][] = [
   [474, 4],
 ]
 
-const accent: [number, number, number?, number?][] = [
+const accent: Bar[] = [
   [68, 72, 420, 480],
   [404, 16],
   [488, 24],
   [584, 48],
   [668, 48],
 ]
+
+// Hairlines are the thin 1-4 unit bars, blocks the wide ones. Dark mode dims the hairlines and
+// lightens the blocks the way the brand's inverse logo does.
+const hairlines = ink.filter(([, width]) => width <= 4)
+const blocks = ink.filter(([, width]) => width > 4)
+
+function Bars({ bars, className }: { bars: Bar[]; className: string }) {
+  return (
+    <g className={className}>
+      {bars.map(([x, width, y = 0, height = 900]) => (
+        <rect key={x} x={x} y={y} width={width} height={height} />
+      ))}
+    </g>
+  )
+}
 
 export function Stripes({ className }: { className?: string }) {
   return (
@@ -50,16 +67,9 @@ export function Stripes({ className }: { className?: string }) {
       preserveAspectRatio="xMinYMid slice"
       className={cn("absolute", className)}
     >
-      <g className="fill-foreground">
-        {ink.map(([x, width, y = 0, height = 900]) => (
-          <rect key={x} x={x} y={y} width={width} height={height} />
-        ))}
-      </g>
-      <g className="fill-primary">
-        {accent.map(([x, width, y = 0, height = 900]) => (
-          <rect key={x} x={x} y={y} width={width} height={height} />
-        ))}
-      </g>
+      <Bars bars={hairlines} className="fill-logo-hatch" />
+      <Bars bars={blocks} className="fill-logo-ink" />
+      <Bars bars={accent} className="fill-logo-blue" />
     </svg>
   )
 }

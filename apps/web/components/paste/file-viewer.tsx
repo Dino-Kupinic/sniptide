@@ -85,7 +85,7 @@ export function FileViewer({
             type="button"
             aria-pressed={wrap}
             onClick={() => setWrap((value) => !value)}
-            className={cn(toolClass, wrap && "text-primary")}
+            className={cn(toolClass, wrap && "text-link")}
           >
             Wrap
           </button>

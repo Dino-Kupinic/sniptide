@@ -63,7 +63,7 @@ export function AuthScreen({
           </p>
           <p className="text-sm leading-[21px] text-foreground/80">{pitch.body}</p>
           <div className="flex items-center justify-between bg-muted px-3 py-2.5">
-            <span className="font-mono text-[13px] text-primary">{pitch.link}</span>
+            <span className="font-mono text-[13px] text-link">{pitch.link}</span>
             <span className="text-xs text-muted-foreground">{pitch.note}</span>
           </div>
         </div>

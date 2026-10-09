@@ -118,7 +118,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
         </div>
 
         {burning ? (
-          <p className="border border-primary bg-primary/5 px-3 py-2 text-[13px] text-primary">
+          <p className="border border-primary bg-primary/5 px-3 py-2 text-[13px] text-link">
             This paste was set to burn after reading. It's gone once you leave this page, so copy
             what you need now.
           </p>
@@ -156,7 +156,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
               Shared with Sniptide.{" "}
               <a
                 href={`${getAppOrigin()}/sign-up`}
-                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                className="inline-flex items-center gap-1 font-medium text-link hover:underline"
               >
                 Create a free account
                 <ArrowRightIcon className="size-3.5" />

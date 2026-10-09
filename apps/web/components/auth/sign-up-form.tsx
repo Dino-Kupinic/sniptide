@@ -135,7 +135,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
                 aria-live="polite"
                 className={cn(
                   "shrink-0 pr-3 text-xs font-medium",
-                  availability === "available" && "text-primary",
+                  availability === "available" && "text-link",
                   (availability === "taken" || availability === "invalid") && "text-destructive",
                   availability === "checking" && "text-muted-foreground",
                 )}

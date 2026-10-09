@@ -110,7 +110,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
           <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted-foreground">
             <a
               href={`/${paste.slug}`}
-              className="hidden font-mono text-primary hover:underline lg:inline"
+              className="hidden font-mono text-link hover:underline lg:inline"
             >
               {host}/{paste.slug}
             </a>

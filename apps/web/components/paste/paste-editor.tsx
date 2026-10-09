@@ -261,7 +261,7 @@ export function PasteEditor({
           type="button"
           onClick={() => setPreview((value) => !value)}
           aria-pressed={preview}
-          className={cn("text-[15px] text-muted-foreground", preview && "text-primary")}
+          className={cn("text-[15px] text-muted-foreground", preview && "text-link")}
         >
           {preview ? "Edit" : "Preview"}
         </button>
@@ -452,7 +452,7 @@ export function PasteEditor({
           {secret ? (
             <p
               role="status"
-              className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-primary"
+              className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-link"
             >
               Line {secret.line} of {secret.file} looks like {secret.name}. Anyone with the link can
               read it, so remove it or keep the paste private.
@@ -684,7 +684,7 @@ function SlugInput({
         {status === "ok" ? (
           <CheckIcon
             aria-label="Available"
-            className="mr-2.5 size-[15px] text-primary"
+            className="mr-2.5 size-[15px] text-link"
             strokeWidth={2.5}
           />
         ) : null}

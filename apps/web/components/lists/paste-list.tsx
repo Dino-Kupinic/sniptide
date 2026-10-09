@@ -301,7 +301,7 @@ export function PasteList({
                   <TableCell
                     className={cn(
                       "pl-7 text-[13px] text-foreground/80",
-                      row.expiresSoon && "text-primary",
+                      row.expiresSoon && "text-link",
                     )}
                   >
                     {row.expiresLabel}
@@ -315,7 +315,7 @@ export function PasteList({
                         type="button"
                         aria-label={`Unstar ${row.title}`}
                         onClick={() => setStarred(row.slug, false)}
-                        className="relative z-10 inline-flex size-7 items-center justify-center text-primary outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                        className="relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
                       >
                         <StarIcon className="size-4 fill-current" />
                       </button>
@@ -348,7 +348,7 @@ export function PasteList({
                   <span
                     className={cn(
                       "truncate font-mono text-xs text-muted-foreground",
-                      row.expiresSoon && "text-primary",
+                      row.expiresSoon && "text-link",
                     )}
                   >
                     {row.owner ? `@${row.owner.username}` : `${host}/${row.slug}`}
@@ -399,7 +399,7 @@ function EmptyState({
     <div className="flex flex-col items-center gap-3 border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
       {text}
       {!filtering && mode !== "starred" ? (
-        <Link href="/new" className="font-medium text-primary hover:underline">
+        <Link href="/new" className="font-medium text-link hover:underline">
           Create a paste
         </Link>
       ) : null}

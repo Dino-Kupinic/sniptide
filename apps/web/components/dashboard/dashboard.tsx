@@ -81,7 +81,7 @@ function Stat({
           <span
             className={cn(
               "text-xs",
-              noteTone === "primary" ? "font-medium text-primary" : "text-muted-foreground",
+              noteTone === "primary" ? "font-medium text-link" : "text-muted-foreground",
             )}
           >
             {note}
@@ -185,7 +185,7 @@ export function Dashboard({
             data.expiringSoon > 0 ? (
               <Link
                 href="/pastes?sort=expires"
-                className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                className="font-medium text-foreground underline underline-offset-2 hover:text-link"
               >
                 Review
               </Link>
@@ -261,7 +261,7 @@ export function Dashboard({
           </div>
           <Link
             href="/pastes"
-            className="flex items-center gap-1 text-sm font-medium hover:text-primary lg:text-[13px]"
+            className="flex items-center gap-1 text-sm font-medium hover:text-link lg:text-[13px]"
           >
             View all
             <ArrowRightIcon className="size-3.5" />
@@ -271,7 +271,7 @@ export function Dashboard({
         {recent.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             No {tab === "all" ? "" : `${tab} `}pastes yet.{" "}
-            <Link href="/new" className="font-medium text-primary hover:underline">
+            <Link href="/new" className="font-medium text-link hover:underline">
               Create one
             </Link>
           </p>
@@ -347,10 +347,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
               {formatNumber(row.views)}
             </TableCell>
             <TableCell
-              className={cn(
-                "pl-7 text-[13px] text-foreground/80",
-                row.expiresSoon && "text-primary",
-              )}
+              className={cn("pl-7 text-[13px] text-foreground/80", row.expiresSoon && "text-link")}
             >
               {row.expiresLabel}
             </TableCell>
