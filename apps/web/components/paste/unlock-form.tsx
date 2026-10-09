@@ -5,7 +5,6 @@ import { Input } from "@sniptide/ui/components/input"
 import { LockIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { unlockPaste } from "@/lib/pastes/actions"
 
 export function UnlockForm({ slug }: { slug: string }) {
   const router = useRouter()
@@ -19,8 +18,13 @@ export function UnlockForm({ slug }: { slug: string }) {
         event.preventDefault()
         const password = String(new FormData(event.currentTarget).get("password"))
         startTransition(async () => {
-          const result = await unlockPaste(slug, password)
-          if (!result.ok) return setError(result.error)
+          const response = await fetch(`/${encodeURIComponent(slug)}/unlock`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ password }),
+          }).catch(() => null)
+          if (!response) return setError("Couldn't reach the server. Try again.")
+          if (!response.ok) return setError("That password isn't right.")
           router.refresh()
         })
       }}
