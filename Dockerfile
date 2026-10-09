@@ -28,9 +28,11 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     MIGRATIONS_DIR=/app/migrations
 
-# The standalone server, its static assets, and the SQL migrations applied on startup.
+# The standalone server, its static assets, the files in public/ (the standalone output leaves
+# them out), and the SQL migrations applied on startup.
 COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
 COPY --from=build --chown=node:node /app/packages/db/migrations ./migrations
 
 # Data lives in Postgres: set DATABASE_URL (see docker-compose.yml).

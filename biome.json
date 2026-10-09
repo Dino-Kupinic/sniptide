@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/migrations", "!.idea"]
+    "includes": ["**", "!**/migrations", "!.idea", "!apps/web/app/icon0.svg"]
   },
   "formatter": {
     "enabled": true,
