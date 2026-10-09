@@ -26,7 +26,6 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    DATABASE_URL=file:/data/sniptide.db \
     MIGRATIONS_DIR=/app/migrations
 
 # The standalone server, its static assets, and the SQL migrations applied on startup.
@@ -34,9 +33,7 @@ COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /app/packages/db/migrations ./migrations
 
-# SQLite lives on a volume; mount persistent storage at /data.
-RUN mkdir -p /data && chown node:node /data
-VOLUME /data
+# Data lives in Postgres: set DATABASE_URL (see docker-compose.yml).
 USER node
 
 EXPOSE 3000

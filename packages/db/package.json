@@ -11,8 +11,8 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@libsql/client": "catalog:runtime",
-    "drizzle-orm": "catalog:runtime"
+    "drizzle-orm": "catalog:runtime",
+    "postgres": "catalog:runtime"
   },
   "devDependencies": {
     "@types/node": "catalog:tooling",
