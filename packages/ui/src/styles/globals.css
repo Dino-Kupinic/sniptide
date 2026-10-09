@@ -40,7 +40,6 @@
   --sidebar-border: #e8e8e8;
   --sidebar-ring: #2a26ec;
   --logo-ink: #1b1919;
-  --logo-blue: #2a26ec;
   --logo-hatch: #000000;
   --link: #2a26ec;
 }
@@ -52,7 +51,7 @@
   --card-foreground: #f4f4f4;
   --popover: #232121;
   --popover-foreground: #f4f4f4;
-  --primary: #4b48f0;
+  --primary: #1b17c6;
   --primary-foreground: #ffffff;
   --secondary: #2c2a2a;
   --secondary-foreground: #f4f4f4;
@@ -63,23 +62,23 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: #3a3737;
   --input: #3a3737;
-  --ring: #4b48f0;
-  --chart-1: #4b48f0;
+  --ring: #8b89ff;
+  --chart-1: #1b17c6;
   --chart-2: #f4f4f4;
   --chart-3: #a3a3a3;
   --chart-4: #6b6b6b;
   --chart-5: #3a3737;
   --sidebar: #151313;
   --sidebar-foreground: #f4f4f4;
-  --sidebar-primary: #4b48f0;
+  --sidebar-primary: #1b17c6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #2c2a2a;
   --sidebar-accent-foreground: #f4f4f4;
   --sidebar-border: #3a3737;
-  --sidebar-ring: #4b48f0;
-  /* The inverse logo from the Paper brand page: light grey blocks, a deeper blue, dim hatching. */
+  --sidebar-ring: #8b89ff;
+  /* Primary is the logo's blue. The inverse logo from the Paper brand page also has light grey
+     blocks and dim hatching. */
   --logo-ink: #dfdfdf;
-  --logo-blue: #1b17c6;
   --logo-hatch: #535151;
   /* The dark primary is too dim for text on the dark surfaces, so links get a lighter blue. */
   --link: #8b89ff;
@@ -125,7 +124,6 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-logo-ink: var(--logo-ink);
-  --color-logo-blue: var(--logo-blue);
   --color-logo-hatch: var(--logo-hatch);
   --color-link: var(--link);
   --font-sans: var(--font-sans);
