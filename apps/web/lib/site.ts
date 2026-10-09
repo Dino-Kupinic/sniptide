@@ -21,3 +21,16 @@ export async function getSiteOrigin() {
 
   return { origin: `${protocol}://${host}`, host }
 }
+
+// Origin of the app's own pages (sign-in, dashboard, new paste). Empty when they live on the same
+// domain as share links, so hrefs stay relative; with SHARE_URL set it's BETTER_AUTH_URL's origin.
+// Share pages link there with plain <a> tags: on sniptide.com a client-side <Link> would prefetch
+// pages that redirect cross-origin (blocked by CORS) or fetch RSC payloads from the site's own
+// Next app, which the share page's router can't read.
+export function getAppOrigin() {
+  const { SHARE_URL: shareUrl, BETTER_AUTH_URL: appUrl } = process.env
+  if (!shareUrl || !appUrl) return ""
+
+  const app = new URL(appUrl)
+  return app.host === new URL(shareUrl).host ? "" : app.origin
+}

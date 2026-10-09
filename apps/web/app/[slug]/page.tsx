@@ -1,7 +1,6 @@
 import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CodeBlock } from "@/components/paste/code-block"
 import { FileViewer } from "@/components/paste/file-viewer"
@@ -12,6 +11,7 @@ import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import { checkAccess } from "@/lib/pastes/access"
 import { getPaste, recordView } from "@/lib/pastes/store"
+import { getAppOrigin } from "@/lib/site"
 
 const avatarTone = {
   primary: "bg-primary text-primary-foreground",
@@ -154,13 +154,13 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           {signedIn ? null : (
             <p className="text-center text-[13px] text-muted-foreground lg:text-left">
               Shared with Sniptide.{" "}
-              <Link
-                href="/sign-up"
+              <a
+                href={`${getAppOrigin()}/sign-up`}
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
                 Create a free account
                 <ArrowRightIcon className="size-3.5" />
-              </Link>
+              </a>
             </p>
           )}
         </div>
