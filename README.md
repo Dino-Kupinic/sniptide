@@ -48,6 +48,8 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
   - `BETTER_AUTH_SECRET`: a long random string (`openssl rand -hex 32`)
   - `BETTER_AUTH_URL`: `https://app.sniptide.com`
   - `SHARE_URL`: `https://sniptide.com` (share links' domain, see below)
+  - `COOKIE_DOMAIN`: `sniptide.com`, so the landing page can see the session and send signed-in
+    visitors to the app. Leave unset on a single domain.
   - optional: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
     `GOOGLE_CLIENT_SECRET`
 - **Domain:** `https://app.sniptide.com`.

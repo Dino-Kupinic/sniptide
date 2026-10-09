@@ -15,6 +15,9 @@ export interface AuthConfig {
   secret: string
   baseURL?: string
   trustedOrigins?: string
+  // Domain to share the session cookie across subdomains (sniptide.com for app.sniptide.com and
+  // the landing page). Leave unset to keep the cookie on the app's own host.
+  cookieDomain?: string
   // Providers without credentials are left out, so the sign-in page can hide or disable them.
   github?: OAuthCredentials
   google?: OAuthCredentials
@@ -26,6 +29,7 @@ export function createAuth({
   secret,
   baseURL,
   trustedOrigins,
+  cookieDomain,
   github,
   google,
   plugins = [],
@@ -38,6 +42,9 @@ export function createAuth({
       ?.split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
+    advanced: cookieDomain
+      ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } }
+      : undefined,
     emailAndPassword: {
       enabled: true,
     },
