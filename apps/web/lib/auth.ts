@@ -36,6 +36,7 @@ export async function getAuth() {
     secret,
     baseURL: process.env.BETTER_AUTH_URL,
     trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
+    cookieDomain: process.env.COOKIE_DOMAIN,
     ...getOAuthCredentials(),
     plugins: [nextCookies()],
   })
