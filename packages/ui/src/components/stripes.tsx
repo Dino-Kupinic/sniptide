@@ -69,7 +69,7 @@ export function Stripes({ className }: { className?: string }) {
     >
       <Bars bars={hairlines} className="fill-logo-hatch" />
       <Bars bars={blocks} className="fill-logo-ink" />
-      <Bars bars={accent} className="fill-logo-blue" />
+      <Bars bars={accent} className="fill-primary" />
     </svg>
   )
 }
