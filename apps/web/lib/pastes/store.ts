@@ -247,19 +247,33 @@ export async function getShare(_slug: string): Promise<(Share & { seen: boolean 
 
 export async function markShareSeen(_slug: string) {}
 
-export async function listStarred() {
-  const viewer = await viewerId()
-  if (!viewer) return []
+// Whether the viewer may open this paste right now: their own, or one whose public link is open
+// to them. Stars never widen that, so they are checked against it when made and when listed.
+async function viewerMayRead(record: PasteRecord, viewer: string | null) {
+  if (record.deletedAt) return false
+  if (record.ownerId === viewer) return true
+  return !recordExpired(record) && (await canOpenLink(record, viewer)) === "ok"
+}
+
+// The viewer's starred pastes that they can still read; one that has since gone private, expired
+// or been locked behind a new password drops out of the list (and the count) without losing the star.
+async function starredRecords(viewer: string) {
   const rows = await getDb()
     .select({ paste: pasteTable })
     .from(pasteStar)
     .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
     .where(and(eq(pasteStar.userId, viewer), isNull(pasteTable.deletedAt)))
     .orderBy(desc(pasteTable.updatedAt))
-  return hydrate(
-    rows.map((row) => row.paste),
-    viewer,
+  const readable = await Promise.all(
+    rows.map(async ({ paste }) => ((await viewerMayRead(paste, viewer)) ? paste : null)),
   )
+  return readable.filter((record) => record !== null)
+}
+
+export async function listStarred() {
+  const viewer = await viewerId()
+  if (!viewer) return []
+  return hydrate(await starredRecords(viewer), viewer)
 }
 
 export async function isStarred(slug: string) {
@@ -337,18 +351,14 @@ export async function navCounts() {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()
-  const [[own], [starred]] = await Promise.all([
+  const [[own], starred] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
       .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(pasteStar)
-      .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
-      .where(and(eq(pasteStar.userId, viewer), isNull(pasteTable.deletedAt))),
+    starredRecords(viewer),
   ])
-  return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared: 0 }
+  return { pastes: own?.count ?? 0, starred: starred.length, shared: 0 }
 }
 
 export async function isSlugAvailable(slug: string, except?: string) {
@@ -460,6 +470,9 @@ export async function setStarred(slug: string, starred: boolean) {
 
   const db = getDb()
   if (starred) {
+    // Starring a paste you can't open would put its title in your list. Quietly do nothing, as
+    // for a paste that doesn't exist. Taking a star off is always allowed.
+    if (!(await viewerMayRead(record, viewer))) return
     await db.insert(pasteStar).values({ userId: viewer, pasteId: record.id }).onConflictDoNothing()
   } else {
     await db
