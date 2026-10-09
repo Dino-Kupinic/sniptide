@@ -1,4 +1,4 @@
-import type { Viewport } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter, JetBrains_Mono, Stack_Sans_Notch } from "next/font/google"
 
 import "@sniptide/ui/globals.css"
@@ -20,6 +20,11 @@ const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+// Name shown when the app is added to an iOS home screen.
+export const metadata: Metadata = {
+  other: { "apple-mobile-web-app-title": "Sniptide" },
+}
 
 // viewport-fit=cover lets the mobile tab bar pad itself past the home indicator.
 export const viewport: Viewport = {
