@@ -24,7 +24,10 @@ export function UnlockForm({ slug }: { slug: string }) {
             body: JSON.stringify({ password }),
           }).catch(() => null)
           if (!response) return setError("Couldn't reach the server. Try again.")
-          if (!response.ok) return setError("That password isn't right.")
+          if (!response.ok) {
+            const body = await response.json().catch(() => null)
+            return setError(body?.error ?? "That password isn't right.")
+          }
           router.refresh()
         })
       }}

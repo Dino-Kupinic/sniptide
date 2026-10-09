@@ -4,16 +4,16 @@ import { SetBreadcrumb } from "@/components/shell/breadcrumb"
 import { getPreferences } from "@/lib/auth"
 import { formatDateTime } from "@/lib/format"
 import { collections } from "@/lib/mock-data"
-import { getPaste, getShare } from "@/lib/pastes/store"
+import { getOwnPaste, getShare } from "@/lib/pastes/store"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edit">) {
-  const paste = await getPaste((await params).slug)
+  const paste = await getOwnPaste((await params).slug)
   return { title: paste ? `Edit ${paste.title} · Sniptide` : "Paste not found · Sniptide" }
 }
 
 export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">) {
   const { slug } = await params
-  const paste = await getPaste(slug)
+  const paste = await getOwnPaste(slug)
   if (!paste) notFound()
 
   const [share, preferences] = await Promise.all([getShare(slug), getPreferences()])

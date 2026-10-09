@@ -2,7 +2,7 @@ import { PasteEditor } from "@/components/paste/paste-editor"
 import { SetBreadcrumb } from "@/components/shell/breadcrumb"
 import { getPreferences } from "@/lib/auth"
 import { collections } from "@/lib/mock-data"
-import { getPaste } from "@/lib/pastes/store"
+import { getOwnPaste } from "@/lib/pastes/store"
 
 export const metadata = { title: "New paste · Sniptide" }
 
@@ -10,7 +10,7 @@ export const metadata = { title: "New paste · Sniptide" }
 export default async function Page({ searchParams }: PageProps<"/new">) {
   const from = (await searchParams).from
   const [source, preferences] = await Promise.all([
-    typeof from === "string" ? getPaste(from) : null,
+    typeof from === "string" ? getOwnPaste(from) : null,
     getPreferences(),
   ])
 

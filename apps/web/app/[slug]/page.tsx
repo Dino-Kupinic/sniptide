@@ -9,8 +9,7 @@ import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
-import { checkAccess } from "@/lib/pastes/access"
-import { getPaste, recordView } from "@/lib/pastes/store"
+import { readSharedPaste, recordView } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
 const avatarTone = {
@@ -20,8 +19,10 @@ const avatarTone = {
 }
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">) {
-  const paste = await getPaste((await params).slug)
-  if (!paste || paste.visibility === "private" || paste.password) return { title: "Sniptide" }
+  const read = await readSharedPaste((await params).slug)
+  // A title is content too: show it only on pastes anyone with the link may already read.
+  if (read.status !== "ok" || read.paste.burnAfterRead) return { title: "Sniptide" }
+  const { paste } = read
 
   return {
     title: `${paste.title} · Sniptide`,
@@ -33,13 +34,10 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 // Public page for a paste at sniptide.com/<slug>, from the "Share page (public)" artboards.
 export default async function Page({ params }: PageProps<"/[slug]">) {
   const { slug } = await params
-  const paste = await getPaste(slug)
-  const access = await checkAccess(paste)
-  if (!paste || access.status === "missing") notFound()
+  const read = await readSharedPaste(slug)
+  if (read.status === "missing") notFound()
 
-  const signedIn = access.status === "ok" && access.signedIn
-
-  if (access.status === "locked") {
+  if (read.status === "locked") {
     return (
       <div className="flex min-h-svh flex-col">
         <PublicHeader signedIn={false} />
@@ -52,7 +50,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   }
 
   // The owner's own visits don't count as views (or burn the paste).
-  const owned = access.status === "ok" && access.owned
+  const { paste, owned, signedIn } = read
   const burning = paste.burnAfterRead && !owned
   if (!owned) await recordView(slug)
 

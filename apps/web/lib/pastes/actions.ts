@@ -66,7 +66,7 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
     }
   }
   // On edit an empty password means "keep the current one"; a new paste needs a real one.
-  const current = editing ? await store.getPaste(editing) : null
+  const current = editing ? await store.getOwnPaste(editing) : null
   if (data.password === "" && !current?.password) {
     return { ok: false, error: "Enter a password or turn password protection off." }
   }

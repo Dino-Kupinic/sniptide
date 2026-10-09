@@ -10,7 +10,7 @@
         "name": "next"
       }
     ],
-    "types": ["node"]
+    "types": ["node", "bun"]
   },
   "include": [
     "next-env.d.ts",

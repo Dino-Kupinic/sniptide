@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@sniptide/ui": "workspace:*",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:ui",
+    "@types/bun": "catalog:tooling",
     "@types/node": "catalog:tooling",
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",

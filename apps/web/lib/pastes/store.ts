@@ -9,14 +9,21 @@ import {
   user,
 } from "@workspace/db/schema"
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm"
+import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "./passwords"
 import type { Expiry, Paste, PasteInput, Person, Share, SharingInput } from "./types"
+import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
 // signed-in viewer sees their own pastes in the app, and anyone can open a paste's public link
-// (subject to visibility, password and expiry, see ./access.ts).
+// (subject to visibility, password and expiry).
+//
+// Reading a paste's content goes through two functions, and each checks who is asking before it
+// loads anything: `getOwnPaste` for the app's own screens and `readSharedPaste` for its public
+// link. Don't add a read that skips them; a page that fetches first and checks later still sends
+// the data to the client.
 
 const DAY = 86_400_000
 export const TRASH_DAYS = 30
@@ -186,8 +193,12 @@ function resolveExpiry(expiry: Expiry | "keep", current: Date | null, from: numb
   return expiry === "keep" ? current : at(expiresAtFor(expiry, from))
 }
 
-export function isExpired(paste: Paste) {
+export function isExpired(paste: Pick<Paste, "expiresAt">) {
   return paste.expiresAt !== null && paste.expiresAt <= Date.now()
+}
+
+function recordExpired(record: PasteRecord) {
+  return isExpired({ expiresAt: ms(record.expiresAt) })
 }
 
 async function purgeTrash(owner: string) {
@@ -262,12 +273,64 @@ export async function isStarred(slug: string) {
   return Boolean(row)
 }
 
-// Any paste by its link, for the public page and raw files; access rules live in ./access.ts.
-export async function getPaste(slug: string) {
-  const record = await findRecord(slug)
-  if (!record || record.deletedAt) return null
-  const [paste] = await hydrate([record], await viewerId())
+// One of the viewer's own pastes, for the app's screens (detail, edit, duplicate). Anyone else's
+// paste, a trashed one and a missing one all come back as null.
+export async function getOwnPaste(slug: string) {
+  const viewer = await viewerId()
+  if (!viewer) return null
+  const [record] = await getDb()
+    .select()
+    .from(pasteTable)
+    .where(
+      and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
+    )
+  if (!record) return null
+  const [paste] = await hydrate([record], viewer)
   return paste ?? null
+}
+
+export type SharedRead =
+  | { status: "ok"; paste: Paste; owned: boolean; signedIn: boolean }
+  | { status: "locked" }
+  | { status: "missing" }
+
+// A live paste (not trashed, not expired) by its link, or null.
+async function findLiveRecord(slug: string) {
+  const record = await findRecord(slug)
+  return record && !record.deletedAt && !recordExpired(record) ? record : null
+}
+
+// Whether the visitor may open the paste's public link: its owner always can; everyone else needs
+// a public or unlisted paste and, if it has one, the password (proved by the unlock cookie).
+async function canOpenLink(record: PasteRecord, viewer: string | null) {
+  if (record.ownerId === viewer) return "ok" as const
+  if (record.visibility === "private") return "missing" as const
+  if (record.passwordHash) {
+    const cookie = (await cookies()).get(unlockCookieName(record.slug))?.value
+    if (cookie !== (await unlockToken(record.slug, record.passwordHash))) return "locked" as const
+  }
+  return "ok" as const
+}
+
+// A paste by its public link (the share page and its raw files). Returns the content only when
+// the visitor may see it.
+export async function readSharedPaste(slug: string): Promise<SharedRead> {
+  const record = await findLiveRecord(slug)
+  if (!record) return { status: "missing" }
+
+  const viewer = await viewerId()
+  const verdict = await canOpenLink(record, viewer)
+  if (verdict !== "ok") return { status: verdict }
+
+  const [paste] = await hydrate([record], viewer)
+  if (!paste) return { status: "missing" }
+  return { status: "ok", paste, owned: record.ownerId === viewer, signedIn: viewer !== null }
+}
+
+// The stored password hash of a paste someone could be asked to unlock, for the unlock route.
+export async function getUnlockHash(slug: string) {
+  const record = await findLiveRecord(slug)
+  return record && record.visibility !== "private" ? record.passwordHash : null
 }
 
 export async function navCounts() {
