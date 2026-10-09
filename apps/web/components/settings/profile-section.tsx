@@ -194,7 +194,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
                 aria-live="polite"
                 className={cn(
                   "shrink-0 pr-3 text-xs font-medium",
-                  usernameStatus === "available" ? "text-primary" : "text-destructive",
+                  usernameStatus === "available" ? "text-link" : "text-destructive",
                 )}
               >
                 {usernameStatus === "available"
@@ -221,7 +221,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
             <span
               className={cn(
                 "text-xs font-medium",
-                profile.emailVerified ? "text-primary" : "text-muted-foreground",
+                profile.emailVerified ? "text-link" : "text-muted-foreground",
               )}
             >
               {profile.emailVerified ? "Verified" : "Not verified"}

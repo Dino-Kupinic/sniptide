@@ -1,6 +1,7 @@
 import { cn } from "@sniptide/ui/lib/utils"
 
-// Sniptide mark from the Paper brand page. Fills follow the theme so it works in dark mode.
+// Sniptide mark from the Paper brand page. The logo-* tokens switch to the brand's inverse
+// colors in dark mode.
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg
@@ -9,10 +10,12 @@ export function LogoMark({ className }: { className?: string }) {
       aria-hidden="true"
       className={cn("size-7 shrink-0", className)}
     >
-      <g className="fill-foreground">
+      <g className="fill-logo-ink">
         <rect x="0" y="0" width="80" height="32" />
         <rect x="43.6" y="96" width="80" height="32" />
         <rect x="123.6" y="128" width="36.4" height="32" />
+      </g>
+      <g className="fill-logo-hatch">
         <rect x="0" y="64" width="4" height="64" />
         <rect x="6" y="64" width="3" height="64" />
         <rect x="10" y="64" width="2" height="64" />
@@ -26,7 +29,7 @@ export function LogoMark({ className }: { className?: string }) {
         <rect x="80" y="156" width="43.6" height="4" />
         <rect x="80" y="151" width="43.6" height="3" />
       </g>
-      <g className="fill-primary">
+      <g className="fill-logo-blue">
         <rect x="80" y="0" width="80" height="32" />
         <rect x="0" y="32" width="36.4" height="32" />
         <rect x="80" y="64" width="80" height="32" />

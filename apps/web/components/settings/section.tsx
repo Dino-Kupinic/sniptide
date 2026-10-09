@@ -55,7 +55,7 @@ export function SaveStatus({ status }: { status: { ok: boolean; message: string 
   return (
     <p
       role={status.ok ? "status" : "alert"}
-      className={status.ok ? "text-[13px] text-primary" : "text-[13px] text-destructive"}
+      className={status.ok ? "text-[13px] text-link" : "text-[13px] text-destructive"}
     >
       {status.message}
     </p>
