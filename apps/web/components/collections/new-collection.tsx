@@ -5,13 +5,16 @@ import { createCollection } from "@/lib/collections/actions"
 import { CollectionNameDialog } from "./name-dialog"
 
 // The "New collection" dialog. Its trigger lives with the caller (the sidebar's + button, the
-// Collections page), so this only takes the open state.
+// Collections page, a paste's "Add to collection" menu), so this only takes the open state. By
+// default it opens the new collection; `onCreated` replaces that.
 export function NewCollectionDialog({
   open,
   onOpenChange,
+  onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onCreated?: (slug: string) => void
 }) {
   const router = useRouter()
 
@@ -25,7 +28,10 @@ export function NewCollectionDialog({
       pendingLabel="Creating…"
       onSubmit={async (name) => {
         const result = await createCollection(name)
-        if (result.ok) router.push(`/collections/${result.slug}`)
+        if (result.ok) {
+          if (onCreated) onCreated(result.slug)
+          else router.push(`/collections/${result.slug}`)
+        }
         return result
       }}
     />

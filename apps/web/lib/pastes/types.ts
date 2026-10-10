@@ -88,6 +88,26 @@ export interface NavCounts {
   shared: number
 }
 
+// A paste as the sidebar lists it: just enough for its row and its ⋯ menu.
+export interface SidebarPaste {
+  slug: string
+  title: string
+  // The viewer's own paste, so it can be renamed, filed and deleted from the sidebar.
+  owned: boolean
+  starred: boolean
+  collection: string | null
+}
+
+export interface SidebarData {
+  counts: NavCounts
+  // The viewer's most recently updated pastes, and the first of their starred ones.
+  recent: SidebarPaste[]
+  starred: SidebarPaste[]
+}
+
+export const SIDEBAR_RECENT = 8
+export const SIDEBAR_STARRED = 3
+
 export interface SharingInput {
   visibility?: Visibility
   expiry?: Expiry

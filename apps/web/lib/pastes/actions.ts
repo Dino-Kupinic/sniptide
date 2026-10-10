@@ -114,6 +114,27 @@ export async function setStarred(slug: string, starred: boolean) {
   revalidatePath("/", "layout")
 }
 
+export async function renamePaste(slug: string, title: string) {
+  await assertSignedIn()
+  const parsed = pasteSchema.shape.title.safeParse(title)
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check the title." }
+  }
+  await store.renamePaste(slug, parsed.data)
+  revalidatePath("/", "layout")
+  return { ok: true as const }
+}
+
+export async function setPasteCollection(slug: string, collection: string | null) {
+  await assertSignedIn()
+  if (collection !== null && !(await collectionExists(collection))) {
+    return { ok: false as const, error: "That collection no longer exists." }
+  }
+  await store.setPasteCollection(slug, collection)
+  revalidatePath("/", "layout")
+  return { ok: true as const }
+}
+
 export async function trashPaste(slug: string) {
   await assertSignedIn()
   await store.trashPaste(slug)

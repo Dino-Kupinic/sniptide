@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import * as store from "./store"
-import { MAX_COLLECTIONS, MAX_NAME_LENGTH } from "./types"
+import { HUES, ICONS, MAX_COLLECTIONS, MAX_NAME_LENGTH } from "./types"
 
 async function assertSignedIn() {
   if (!(await getSession())) throw new Error("Sign in to change collections.")
@@ -47,6 +47,13 @@ export async function createCollection(name: string) {
 
 export async function renameCollection(slug: string, name: string) {
   return save(name, (next) => store.renameCollection(slug, next))
+}
+
+export async function setCollectionIcon(slug: string, icon: string, hue: string) {
+  await assertSignedIn()
+  const parsed = z.object({ icon: z.enum(ICONS), hue: z.enum(HUES) }).parse({ icon, hue })
+  await store.setCollectionIcon(slug, parsed.icon, parsed.hue)
+  revalidatePath("/", "layout")
 }
 
 export async function deleteCollection(slug: string) {
