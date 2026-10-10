@@ -1,10 +1,16 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@sniptide/ui/components/dropdown-menu"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ClockIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -23,6 +29,7 @@ import {
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
+import { LanguageMarker } from "@/components/paste/language-marker"
 import {
   type PanelSection,
   SidePanel,
@@ -35,7 +42,7 @@ import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
-import { detectLanguage } from "@/lib/pastes/languages"
+import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
@@ -209,8 +216,8 @@ export function PasteEditor({
 
   const panelSections: PanelSection[] = [
     {
-      id: "visibility",
-      label: "Visibility",
+      id: "access",
+      label: "Visibility & expiry",
       icon: EyeIcon,
       content: (
         <>
@@ -221,20 +228,16 @@ export function PasteEditor({
             options={visibilityOptions}
           />
           <p className="text-xs text-muted-foreground">{visibilityHelp[visibility]}</p>
+          <div className="mt-1 flex flex-col gap-2">
+            <span className="text-muted-foreground">Expires after</span>
+            <ExpiryChips
+              value={expiry}
+              onChange={setExpiry}
+              options={expiryOptions}
+              currentExpiry={currentExpiry}
+            />
+          </div>
         </>
-      ),
-    },
-    {
-      id: "expires",
-      label: "Expires",
-      icon: ClockIcon,
-      content: (
-        <ExpiryChips
-          value={expiry}
-          onChange={setExpiry}
-          options={expiryOptions}
-          currentExpiry={currentExpiry}
-        />
       ),
     },
     {
@@ -416,12 +419,30 @@ export function PasteEditor({
               </p>
             ) : null}
             <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-              <span className="flex items-center gap-2">
-                Detected
-                <span className="bg-muted px-1.5 py-px font-medium text-foreground">
-                  {language.name}
-                </span>
-              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label={`Language: ${language.name}`}
+                  className="-ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+                >
+                  <LanguageMarker language={language.id} />
+                  <span className="font-medium text-foreground">{language.name}</span>
+                  <ChevronDownIcon className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="max-h-80 min-w-44 overflow-y-auto">
+                  {languages.map((option) => (
+                    <DropdownMenuItem
+                      key={option.id}
+                      onClick={() => {
+                        if (active) updateActive({ name: renameForLanguage(active.name, option) })
+                      }}
+                    >
+                      <LanguageMarker language={option.id} />
+                      {option.name}
+                      {option.id === language.id ? <CheckIcon className="ml-auto" /> : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <span className="tabular-nums">
                 <span className="hidden sm:inline">
                   Ln {cursor.line}, Col {cursor.column} ·{" "}
@@ -431,7 +452,7 @@ export function PasteEditor({
             </div>
           </div>
 
-          <SidePanel label="Options" sections={panelSections} />
+          <SidePanel label="Options" sections={panelSections} defaultOpen={["access"]} />
         </div>
       </SidePanelProvider>
 

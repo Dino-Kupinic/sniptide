@@ -154,7 +154,7 @@ export function SidePanel({
               </button>
             </h2>
             {expanded ? (
-              <div id={contentId} className="flex flex-col gap-3 px-3.5 pt-1 pb-4 text-[13px]">
+              <div id={contentId} className="flex flex-col gap-3 px-3.5 pt-3 pb-4 text-[13px]">
                 {section.content}
               </div>
             ) : null}
