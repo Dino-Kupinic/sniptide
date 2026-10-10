@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/migrations", "!.idea", "!apps/web/app/icon0.svg"]
+    "includes": [
+      "**",
+      "!**/migrations",
+      "!.idea",
+      "!apps/web/app/icon0.svg",
+      "!packages/ui/src/styles/shadcn.css"
+    ]
   },
   "formatter": {
     "enabled": true,
