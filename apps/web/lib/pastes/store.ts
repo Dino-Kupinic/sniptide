@@ -287,6 +287,18 @@ export async function isStarred(slug: string) {
   return Boolean(row)
 }
 
+// Slugs of every paste the viewer has starred, so a list marks its rows with one query.
+export async function starredSlugs() {
+  const viewer = await viewerId()
+  if (!viewer) return new Set<string>()
+  const rows = await getDb()
+    .select({ slug: pasteTable.slug })
+    .from(pasteStar)
+    .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
+    .where(eq(pasteStar.userId, viewer))
+  return new Set(rows.map((row) => row.slug))
+}
+
 // One of the viewer's own pastes, for the app's screens (detail, edit, duplicate). Anyone else's
 // paste, a trashed one and a missing one all come back as null.
 export async function getOwnPaste(slug: string) {
