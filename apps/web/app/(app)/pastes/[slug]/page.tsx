@@ -23,6 +23,7 @@ import {
   lineCount,
   timeAgo,
 } from "@/lib/format"
+import { highlightFiles } from "@/lib/highlight/highlight"
 import { collections } from "@/lib/mock-data"
 import { getOwnPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
@@ -54,7 +55,8 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
   const owned = !paste.owner
   const canEdit = owned || share?.access === "edit"
   const url = `${origin}/${paste.slug}`
-  const first = paste.files[0]
+  const files = await highlightFiles(paste.files)
+  const first = files[0]
   const totalBytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const collection = collections.find((c) => c.slug === paste.collection)
@@ -163,7 +165,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
       <div className="flex flex-col gap-5 pt-4 lg:flex-row lg:items-start lg:pt-0">
         <FileViewer
           slug={slug}
-          files={paste.files}
+          files={files}
           rawAllowed={paste.allowRaw}
           lineNumbers={preferences.lineNumbers}
           className="mx-4 hidden min-h-[612px] flex-1 lg:mx-0 lg:flex"
@@ -178,7 +180,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
         />
         <FileViewer
           slug={slug}
-          files={paste.files}
+          files={files}
           rawAllowed={paste.allowRaw}
           lineNumbers={preferences.lineNumbers}
           collapseAt={6}

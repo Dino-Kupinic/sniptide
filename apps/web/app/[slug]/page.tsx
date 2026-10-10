@@ -9,6 +9,7 @@ import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
+import { highlightFiles } from "@/lib/highlight/highlight"
 import { readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
@@ -57,7 +58,8 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   const rawAllowed = paste.allowRaw && !burning
 
   const owner = paste.author
-  const first = paste.files[0]
+  const files = await highlightFiles(paste.files)
+  const first = files[0]
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const bytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const rawHref =
@@ -126,11 +128,15 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 
         <div className="hidden flex-col gap-4 lg:flex">
           {paste.files.length === 1 && first ? (
-            <CodeBlock content={first.content} className="border border-border bg-sidebar py-5" />
+            <CodeBlock
+              content={first.content}
+              highlighted={first.lines}
+              className="border border-border bg-sidebar py-5"
+            />
           ) : (
             <FileViewer
               slug={slug}
-              files={paste.files}
+              files={files}
               rawAllowed={rawAllowed}
               bodyClassName="bg-sidebar"
             />
@@ -138,7 +144,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
         </div>
         <FileViewer
           slug={slug}
-          files={paste.files}
+          files={files}
           rawAllowed={rawAllowed}
           collapseAt={6}
           className="lg:hidden"
