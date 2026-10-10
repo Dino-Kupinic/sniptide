@@ -296,7 +296,7 @@ function recordExpired(record: PasteRecord) {
 
 export async function purgeTrash(owner: string) {
   await getDb().execute(
-    sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE owner_id = ${owner} AND deleted_at < ${new Date(Date.now() - TRASH_DAYS * DAY)} ORDER BY deleted_at, id LIMIT 500 FOR UPDATE SKIP LOCKED)`,
+    sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE owner_id = ${owner} AND deleted_at < ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()} ORDER BY deleted_at, id LIMIT 500 FOR UPDATE SKIP LOCKED)`,
   )
 }
 
@@ -321,7 +321,7 @@ export async function listTrash() {
     .where(
       and(
         eq(pasteTable.ownerId, viewer),
-        sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY)}`,
+        sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()}`,
       ),
     )
     .orderBy(desc(pasteTable.deletedAt))

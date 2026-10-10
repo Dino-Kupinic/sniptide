@@ -46,7 +46,8 @@ describeDb("app routes", () => {
     await seedPaste({ slug: "pub", owner: "owner", visibility: "public" })
   })
 
-  const params = (slug: string) => ({ params: Promise.resolve({ slug }) }) as never
+  const params = (slug: string) =>
+    ({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) }) as never
 
   for (const [who, id] of [
     ["anonymous", null],

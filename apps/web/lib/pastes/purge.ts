@@ -21,7 +21,7 @@ export async function purgeStaleData(now = new Date()) {
   const budget = envInteger("PURGE_TIME_BUDGET_MS", 2000, 100, 60000)
   const batch = envInteger("PURGE_BATCH_SIZE", 500, 1, 5000)
   const retention = envInteger("VIEW_HISTORY_RETENTION_DAYS", 90, 60, 3650)
-  const cutoff = new Date(now.getTime() - 30 * DAY)
+  const cutoff = new Date(now.getTime() - 30 * DAY).toISOString()
   const day = Math.floor(now.getTime() / DAY) - retention
   const totals = { trashed: 0, expired: 0 }
   let history = 0
@@ -44,7 +44,7 @@ export async function purgeStaleData(now = new Date()) {
           sql`DELETE FROM paste_view_day WHERE (paste_id, day) IN (SELECT paste_id, day FROM paste_view_day WHERE day < ${day} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
         )
         const limits = await tx.execute(
-          sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY)} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
+          sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY).toISOString()} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
         const auth = await tx.execute(
           sql`DELETE FROM auth_rate_limit WHERE id IN (SELECT id FROM auth_rate_limit WHERE last_request < ${now.getTime() - DAY} ORDER BY last_request LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
