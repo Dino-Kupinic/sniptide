@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { collectionExists } from "@/lib/collections/store"
+import { getConfig } from "@/lib/config"
+import { byteLength, formatLimit } from "@/lib/format"
 import { hit, type Limit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
@@ -157,35 +159,83 @@ export async function emptyTrash() {
   revalidatePath("/", "layout")
 }
 
+const GIST_LINK = /([0-9a-f]{20,40})\/?(?:#.*)?$/i
+const RAW_HOST = "gist.githubusercontent.com"
+const MAX_NAME = 120
+
 const gistSchema = z.object({
   description: z.string().nullable(),
+  updated_at: z.string().optional(),
+  owner: z.object({ login: z.string() }).nullish(),
   files: z.record(
     z.string(),
     z.object({
       filename: z.string(),
+      size: z.number().optional(),
+      raw_url: z.string().optional(),
       content: z.string().optional(),
       truncated: z.boolean().optional(),
     }),
   ),
 })
 
-// Copies a public GitHub gist into a new unlisted paste. Accepts a gist URL or its id. The copy
-// goes through the same checks as a paste saved in the editor.
-export async function importGist(input: string): Promise<SavePasteResult> {
-  const user = await assertSignedIn()
+type GistFile = {
+  name: string
+  size: number
+  // Inline text, when GitHub sent the whole file.
+  content: string | null
+  // Where to fetch the whole file when GitHub marked it truncated (over 1 MB inline).
+  rawUrl: string | null
+  // Why the file can't be imported, or null.
+  skipped: string | null
+}
 
-  const id = input.trim().match(/([0-9a-f]{20,40})\/?(?:#.*)?$/i)?.[1]
-  if (!id) return { ok: false, error: "Paste a gist link like gist.github.com/you/1a2b3c…" }
+type Gist = {
+  id: string
+  owner: string | null
+  description: string | null
+  updatedAt: string | null
+  files: GistFile[]
+}
 
-  const tooOften = await limited(limits.gist(user), limits.create(user))
-  if (tooOften) return { ok: false, error: tooOften }
+function isRawUrl(value: string | undefined): value is string {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" && url.hostname === RAW_HOST
+  } catch {
+    return false
+  }
+}
 
-  const token = process.env.GITHUB_TOKEN
+function describeFile(file: z.infer<typeof gistSchema>["files"][string], limit: number): GistFile {
+  const inline = file.content !== undefined && !file.truncated
+  const size = inline ? byteLength(file.content ?? "") : (file.size ?? 0)
+  const rawUrl = !inline && isRawUrl(file.raw_url) ? file.raw_url : null
+
+  let skipped: string | null = null
+  if (file.filename.length > MAX_NAME) skipped = `Name is over ${MAX_NAME} characters, left out.`
+  else if (size > limit) skipped = `Over the ${formatLimit(limit)} limit, left out.`
+  else if (!inline && !rawUrl) skipped = "Couldn't be read, left out."
+
+  return {
+    name: file.filename,
+    size,
+    content: inline ? (file.content ?? "") : null,
+    rawUrl,
+    skipped,
+  }
+}
+
+type FetchGist = { ok: true; gist: Gist } | { ok: false; error: string }
+
+async function fetchGist(id: string): Promise<FetchGist> {
+  const { githubToken, maxPasteBytes } = getConfig()
   const response = await fetch(`https://api.github.com/gists/${id}`, {
     headers: {
       accept: "application/vnd.github+json",
       "user-agent": "sniptide",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(githubToken ? { authorization: `Bearer ${githubToken}` } : {}),
     },
     signal: AbortSignal.timeout(10_000),
   }).catch(() => null)
@@ -196,17 +246,125 @@ export async function importGist(input: string): Promise<SavePasteResult> {
   const gist = gistSchema.safeParse(await response.json().catch(() => null))
   if (!gist.success) return { ok: false, error: "That gist couldn't be read." }
 
-  const files = Object.values(gist.data.files)
-    .filter((file) => file.content !== undefined && !file.truncated)
-    .map((file) => ({ name: file.filename, content: file.content ?? "" }))
-  if (files.length === 0)
-    return { ok: false, error: "That gist has no files small enough to import." }
+  const files = Object.values(gist.data.files).map((file) => describeFile(file, maxPasteBytes))
+  if (files.length === 0) return { ok: false, error: "That gist has no files." }
+
+  return {
+    ok: true,
+    gist: {
+      id,
+      owner: gist.data.owner?.login ?? null,
+      description: gist.data.description?.trim() || null,
+      updatedAt: gist.data.updated_at ?? null,
+      files,
+    },
+  }
+}
+
+// The whole text of a file GitHub only sent part of, or null when it can't be fetched or turns
+// out bigger than the limit.
+async function fetchRaw(url: string, limit: number) {
+  const response = await fetch(url, { signal: AbortSignal.timeout(10_000) }).catch(() => null)
+  if (!response?.ok) return null
+  const text = await response.text().catch(() => null)
+  return text !== null && byteLength(text) <= limit ? text : null
+}
+
+export type GistPreview = {
+  id: string
+  owner: string | null
+  title: string
+  updatedAt: string | null
+  // The paste size limit, in bytes and as the label the UI shows ("1 MB").
+  limitBytes: number
+  limitLabel: string
+  files: { name: string; size: number; skipped: string | null }[]
+}
+export type GistPreviewResult = { ok: true; gist: GistPreview } | { ok: false; error: string }
+
+// Reads a public GitHub gist (a gist URL or its id) and describes its files. Saves nothing.
+export async function previewGist(input: string): Promise<GistPreviewResult> {
+  const user = await assertSignedIn()
+
+  const id = input.trim().match(GIST_LINK)?.[1]
+  if (!id) return { ok: false, error: "Paste a gist link like gist.github.com/you/1a2b3c…" }
+
+  const tooOften = await limited(limits.gist(user))
+  if (tooOften) return { ok: false, error: tooOften }
+
+  const result = await fetchGist(id)
+  if (!result.ok) return result
+
+  const { maxPasteBytes } = getConfig()
+  const { gist } = result
+  return {
+    ok: true,
+    gist: {
+      id: gist.id,
+      owner: gist.owner,
+      title: gist.description ?? gist.files[0]?.name ?? "Imported gist",
+      updatedAt: gist.updatedAt,
+      limitBytes: maxPasteBytes,
+      limitLabel: formatLimit(maxPasteBytes),
+      files: gist.files.map(({ name, size, skipped }) => ({ name, size, skipped })),
+    },
+  }
+}
+
+const importSchema = z.object({
+  id: z.string().regex(/^[0-9a-f]{20,40}$/i),
+  files: z
+    .array(z.string())
+    .min(1, "Pick at least one file.")
+    .max(10, "A paste can hold up to 10 files."),
+  visibility: z.enum(VISIBILITIES),
+})
+
+// Copies the chosen files of a public GitHub gist into a new paste. The gist is read again, so
+// what's saved is what GitHub has now, and it goes through the same checks as a paste saved in
+// the editor.
+export async function importGist(input: z.input<typeof importSchema>): Promise<SavePasteResult> {
+  const user = await assertSignedIn()
+
+  const choice = importSchema.safeParse(input)
+  if (!choice.success) {
+    return {
+      ok: false,
+      error: choice.error.issues[0]?.message ?? "Check the import and try again.",
+    }
+  }
+  const { id, files: names, visibility } = choice.data
+
+  const tooOften = await limited(limits.create(user))
+  if (tooOften) return { ok: false, error: tooOften }
+
+  const result = await fetchGist(id)
+  if (!result.ok) return result
+  const { gist } = result
+
+  const chosen: GistFile[] = []
+  for (const name of new Set(names)) {
+    const file = gist.files.find((candidate) => candidate.name === name)
+    if (!file) return { ok: false, error: "That gist changed. Paste the link again to re-read it." }
+    if (file.skipped) return { ok: false, error: `${file.name}: ${file.skipped}` }
+    chosen.push(file)
+  }
+
+  const { maxPasteBytes } = getConfig()
+  const files = await Promise.all(
+    chosen.map(async (file) => ({
+      name: file.name,
+      content: file.content ?? (file.rawUrl ? await fetchRaw(file.rawUrl, maxPasteBytes) : null),
+    })),
+  )
+  const unread = files.find((file) => file.content === null)
+  if (unread) return { ok: false, error: `${unread.name} couldn't be read from GitHub.` }
 
   const parsed = pasteSchema.safeParse({
-    title: (gist.data.description?.trim() || files[0]?.name || "Imported gist").slice(0, 120),
+    title: (gist.description || files[0]?.name || "Imported gist").slice(0, MAX_NAME),
     description: `Imported from gist ${id}`,
-    files: files.slice(0, 10),
-    visibility: "unlisted",
+    files: files.map((file) => ({ name: file.name, content: file.content ?? "" })),
+    visibility,
     expiry: "never",
     slug: "",
     collection: null,

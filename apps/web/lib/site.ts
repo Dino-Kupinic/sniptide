@@ -1,13 +1,14 @@
 import "server-only"
 
 import { headers } from "next/headers"
+import { getConfig } from "@/lib/config"
 
 // Origin that share links use. SHARE_URL pins it when share links live on a different domain than
 // the app (sniptide.com/k7Qe2x while the dashboard runs on app.sniptide.com). Without it, it's the
 // origin of the current request: localhost:3000/k7Qe2x in dev, the instance's own domain when
 // self-hosted.
 export async function getSiteOrigin() {
-  const shareUrl = process.env.SHARE_URL
+  const { shareUrl } = getConfig()
   if (shareUrl) {
     const url = new URL(shareUrl)
     return { origin: url.origin, host: url.host }
@@ -28,7 +29,7 @@ export async function getSiteOrigin() {
 // pages that redirect cross-origin (blocked by CORS) or fetch RSC payloads from the site's own
 // Next app, which the share page's router can't read.
 export function getAppOrigin() {
-  const { SHARE_URL: shareUrl, BETTER_AUTH_URL: appUrl } = process.env
+  const { shareUrl, appUrl } = getConfig()
   if (!shareUrl || !appUrl) return ""
 
   const app = new URL(appUrl)
