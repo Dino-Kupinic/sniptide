@@ -10,3 +10,14 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) for every commi
 pull request title: `type(scope): description`, with an imperative, lowercase description (for
 example `feat(web): add paste collections`). A husky `commit-msg` hook runs commitlint, and
 `.github/workflows/pr-title.yml` checks PR titles. See `CONTRIBUTING.md` for the allowed types.
+
+# Project Management
+
+Before coding, find or create the Linear issue (team WRK). Use its gitBranchName for the branch so the PR links automatically.
+PR title keeps the repo’s Conventional Commits format with the ID at the end: 
+
+<example>
+feat(web): add paste collections (WRK-64).
+</example>
+
+Set the issue to In Progress when you start. When the PR opens, set In Review and comment the PR link. Verify Done after merge.
