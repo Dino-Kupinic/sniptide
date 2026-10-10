@@ -1,10 +1,16 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@sniptide/ui/components/dropdown-menu"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { cn } from "@sniptide/ui/lib/utils"
-import { EyeIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -23,12 +29,20 @@ import {
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
+import { LanguageMarker } from "@/components/paste/language-marker"
+import {
+  type PanelSection,
+  SidePanel,
+  SidePanelProvider,
+  SidePanelToggle,
+} from "@/components/paste/side-panel"
+import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
-import { detectLanguage } from "@/lib/pastes/languages"
+import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
@@ -90,6 +104,7 @@ export function PasteEditor({
   const [pending, startTransition] = React.useTransition()
   const [mobileMore, setMobileMore] = React.useState(false)
   const formRef = React.useRef<HTMLFormElement>(null)
+  const formId = React.useId()
   const slugStatus = useSlugStatus(slug, editing)
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
@@ -199,9 +214,76 @@ export function PasteEditor({
     />
   ) : null
 
+  const panelSections: PanelSection[] = [
+    {
+      id: "access",
+      label: "Visibility & expiry",
+      icon: EyeIcon,
+      content: (
+        <>
+          <SegmentedControl
+            aria-label="Visibility"
+            value={visibility}
+            onValueChange={setVisibility}
+            options={visibilityOptions}
+          />
+          <p className="text-xs text-muted-foreground">{visibilityHelp[visibility]}</p>
+          <div className="mt-1 flex flex-col gap-2">
+            <span className="text-muted-foreground">Expires after</span>
+            <ExpiryChips
+              value={expiry}
+              onChange={setExpiry}
+              options={expiryOptions}
+              currentExpiry={currentExpiry}
+            />
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "slug",
+      label: "Custom link",
+      icon: LinkIcon,
+      content: <SlugInput value={slug} onChange={setSlug} status={slugStatus} />,
+    },
+    {
+      id: "collection",
+      label: "Collection",
+      icon: FolderIcon,
+      marked: collection !== null,
+      content: (
+        <CollectionSelect value={collection} onChange={setCollection} collections={collections} />
+      ),
+    },
+    {
+      id: "protection",
+      label: "Protection",
+      icon: LockIcon,
+      marked: passwordOn || burnAfterRead,
+      content: (
+        <>
+          <ToggleRow
+            label="Password"
+            description="Visitors must enter it to view"
+            checked={passwordOn}
+            onCheckedChange={setPasswordOn}
+          />
+          {passwordField}
+          <ToggleRow
+            label="Burn after reading"
+            description="Deleted after the first view"
+            checked={burnAfterRead}
+            onCheckedChange={setBurnAfterRead}
+          />
+        </>
+      ),
+    },
+  ]
+
   return (
     <form
       ref={formRef}
+      id={formId}
       onSubmit={(event) => {
         event.preventDefault()
         submit()
@@ -224,55 +306,45 @@ export function PasteEditor({
         </button>
       </div>
 
-      <div className="flex flex-col gap-1 px-4 pb-4 lg:flex-row lg:items-end lg:justify-between lg:gap-6 lg:p-0">
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="hidden text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase lg:block">
-            {editing ? "Edit paste" : "New paste"}
-          </span>
-          <input
-            aria-label="Title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Untitled paste"
-            maxLength={120}
-            required
-            className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-primary outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
-          />
-          <input
-            aria-label="Description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Add a description (optional)"
-            maxLength={280}
-            className="w-full bg-transparent text-[15px] leading-5 outline-none placeholder:text-muted-foreground lg:text-[13px] lg:leading-[18px]"
-          />
-        </div>
-        <div className="hidden shrink-0 items-center gap-2 lg:flex">
-          <Button
-            variant="ghost"
-            size="lg"
-            className="text-[13px]"
-            render={<Link href={cancelHref} />}
-            nativeButton={false}
-          >
-            {editing ? "Cancel" : "Discard"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            aria-pressed={preview}
-            onClick={() => setPreview((value) => !value)}
-            className="text-[13px]"
-          >
-            <EyeIcon />
-            {preview ? "Edit" : "Preview"}
-          </Button>
-          <Button type="submit" size="lg" disabled={pending} className="gap-2 text-[13px]">
-            {pending ? "Saving…" : submitLabel}
-            <Kbd className="bg-primary-foreground/20 text-primary-foreground">⌘↵</Kbd>
-          </Button>
-        </div>
+      <HeaderTitle>{editing ? "Edit paste" : "New paste"}</HeaderTitle>
+      <HeaderActions>
+        <Button variant="ghost" size="lg" render={<Link href={cancelHref} />} nativeButton={false}>
+          {editing ? "Cancel" : "Discard"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          aria-pressed={preview}
+          onClick={() => setPreview((value) => !value)}
+        >
+          <EyeIcon />
+          {preview ? "Edit" : "Preview"}
+        </Button>
+        <Button type="submit" form={formId} size="lg" disabled={pending} className="gap-2">
+          {pending ? "Saving…" : submitLabel}
+          <Kbd className="bg-primary-foreground/20 text-primary-foreground">⌘↵</Kbd>
+        </Button>
+      </HeaderActions>
+
+      <div className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
+        <input
+          aria-label="Title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Untitled paste"
+          maxLength={120}
+          required
+          className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-primary outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
+        />
+        <input
+          aria-label="Description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Add a description (optional)"
+          maxLength={280}
+          className="w-full bg-transparent text-[15px] leading-5 outline-none placeholder:text-muted-foreground lg:text-sm lg:leading-5"
+        />
       </div>
 
       {error ? (
@@ -284,130 +356,109 @@ export function PasteEditor({
         </p>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
-        <div className="mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
-          <FileTabs
-            files={files}
-            activeId={active?.id}
-            onSelect={setActiveId}
-            onRename={(id, name) =>
-              setFiles((current) => current.map((f) => (f.id === id ? { ...f, name } : f)))
-            }
-            onRemove={removeFile}
-            onAdd={addFile}
-          />
-
-          {preview ? (
-            <CodeBlock
-              content={active?.content || " "}
-              highlighted={previewLines}
-              wrap
-              className="flex-1"
+      <SidePanelProvider>
+        <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
+          <div className="mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
+            <FileTabs
+              files={files}
+              activeId={active?.id}
+              onSelect={setActiveId}
+              onRename={(id, name) =>
+                setFiles((current) => current.map((f) => (f.id === id ? { ...f, name } : f)))
+              }
+              onRemove={removeFile}
+              onAdd={addFile}
+              trailing={<SidePanelToggle />}
             />
-          ) : (
-            <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
-              <div
-                aria-hidden="true"
-                className="hidden shrink-0 text-right text-muted-foreground/60 select-none lg:block"
-              >
-                {Array.from({ length: lineCount }, (_, index) => (
-                  <div key={index}>{index + 1}</div>
-                ))}
-              </div>
-              <HighlightedTextarea
-                aria-label={`Contents of ${active?.name ?? "file"}`}
-                lines={lines}
-                value={active?.content ?? ""}
-                onChange={(event) => {
-                  updateActive({ content: event.target.value })
-                  trackCursor(event.target)
-                }}
-                onSelect={(event) => trackCursor(event.currentTarget)}
-                onKeyDown={onEditorKeyDown}
-                spellCheck={false}
-                autoCapitalize="off"
-                autoCorrect="off"
-                placeholder="Paste or type code…"
-                rows={Math.max(lineCount, 12)}
-                wrap="off"
-                metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
+
+            {preview ? (
+              <CodeBlock
+                content={active?.content || " "}
+                highlighted={previewLines}
+                wrap
+                className="flex-1"
               />
+            ) : (
+              <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
+                <div
+                  aria-hidden="true"
+                  className="hidden shrink-0 text-right text-muted-foreground/60 select-none lg:block"
+                >
+                  {Array.from({ length: lineCount }, (_, index) => (
+                    <div key={index}>{index + 1}</div>
+                  ))}
+                </div>
+                <HighlightedTextarea
+                  aria-label={`Contents of ${active?.name ?? "file"}`}
+                  lines={lines}
+                  value={active?.content ?? ""}
+                  onChange={(event) => {
+                    updateActive({ content: event.target.value })
+                    trackCursor(event.target)
+                  }}
+                  onSelect={(event) => trackCursor(event.currentTarget)}
+                  onKeyDown={onEditorKeyDown}
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  placeholder="Paste or type code…"
+                  rows={Math.max(lineCount, 12)}
+                  wrap="off"
+                  metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
+                />
+              </div>
+            )}
+
+            {secret ? (
+              <p
+                role="status"
+                className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-link"
+              >
+                Line {secret.line} of {secret.file} looks like {secret.name}. Anyone with the link
+                can read it, so remove it or keep the paste private.
+              </p>
+            ) : null}
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label={`Language: ${language.name}`}
+                  className="-ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+                >
+                  <LanguageMarker language={language.id} />
+                  <span className="font-medium text-foreground">{language.name}</span>
+                  <ChevronDownIcon className="size-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="top"
+                  align="start"
+                  className="max-h-80 min-w-44 overflow-y-auto"
+                >
+                  {languages.map((option) => (
+                    <DropdownMenuItem
+                      key={option.id}
+                      onClick={() => {
+                        if (active) updateActive({ name: renameForLanguage(active.name, option) })
+                      }}
+                    >
+                      <LanguageMarker language={option.id} />
+                      {option.name}
+                      {option.id === language.id ? <CheckIcon className="ml-auto" /> : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="tabular-nums">
+                <span className="hidden sm:inline">
+                  Ln {cursor.line}, Col {cursor.column} ·{" "}
+                </span>
+                {files.length} {files.length === 1 ? "file" : "files"} · {formatBytes(totalBytes)}
+              </span>
             </div>
-          )}
-
-          {secret ? (
-            <p
-              role="status"
-              className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-link"
-            >
-              Line {secret.line} of {secret.file} looks like {secret.name}. Anyone with the link can
-              read it, so remove it or keep the paste private.
-            </p>
-          ) : null}
-          <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-            <span className="flex items-center gap-2">
-              Detected
-              <span className="bg-muted px-1.5 py-px font-medium text-foreground">
-                {language.name}
-              </span>
-            </span>
-            <span className="tabular-nums">
-              <span className="hidden sm:inline">
-                Ln {cursor.line}, Col {cursor.column} ·{" "}
-              </span>
-              {files.length} {files.length === 1 ? "file" : "files"} · {formatBytes(totalBytes)}
-            </span>
           </div>
-        </div>
 
-        {/* Desktop options panel */}
-        <div className="hidden w-[340px] shrink-0 flex-col gap-[18px] border border-border p-4 lg:flex">
-          <h2 className="text-sm font-semibold">Options</h2>
-          <OptionGroup label="Visibility" id="visibility-label">
-            <SegmentedControl
-              aria-labelledby="visibility-label"
-              value={visibility}
-              onValueChange={setVisibility}
-              options={visibilityOptions}
-            />
-            <p className="text-xs text-muted-foreground">{visibilityHelp[visibility]}</p>
-          </OptionGroup>
-          <OptionGroup label="Expires after" id="expiry-label">
-            <ExpiryChips
-              value={expiry}
-              onChange={setExpiry}
-              options={expiryOptions}
-              currentExpiry={currentExpiry}
-            />
-          </OptionGroup>
-          <OptionGroup label="Custom link" id="slug-label">
-            <SlugInput value={slug} onChange={setSlug} status={slugStatus} />
-          </OptionGroup>
-          <OptionGroup label="Collection" id="collection-label">
-            <CollectionSelect
-              value={collection}
-              onChange={setCollection}
-              collections={collections}
-            />
-          </OptionGroup>
-          <div className="h-px bg-border" />
-          <div className="flex flex-col gap-3">
-            <ToggleRow
-              label="Password"
-              description="Visitors must enter it to view"
-              checked={passwordOn}
-              onCheckedChange={setPasswordOn}
-            />
-            {passwordField}
-            <ToggleRow
-              label="Burn after read"
-              description="Delete after the first view"
-              checked={burnAfterRead}
-              onCheckedChange={setBurnAfterRead}
-            />
-          </div>
+          <SidePanel label="Options" sections={panelSections} defaultOpen={["access"]} />
         </div>
-      </div>
+      </SidePanelProvider>
 
       {/* Mobile bottom panel */}
       <div className="sticky bottom-0 z-20 mt-6 flex flex-col gap-4 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgb(0_0_0/0.04)] lg:hidden">

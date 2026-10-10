@@ -11,11 +11,19 @@ import { Input } from "@sniptide/ui/components/input"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ChevronDownIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  EyeIcon,
+  HistoryIcon,
+  LinkIcon,
+  ShieldIcon,
+  UsersIcon,
+} from "lucide-react"
 import * as React from "react"
 import { updateSharing } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { useCopy } from "./copy-button"
+import { type PanelSection, SidePanel } from "./side-panel"
 
 export interface SharingState {
   slug: string
@@ -54,20 +62,15 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
   )
 }
 
-// "Sharing" card on the paste detail page. Each control saves on change through a server
-// action; the page re-renders with the stored values afterwards.
-// Sharing controls for the paste detail page. The "card" variant is the desktop sidebar card;
-// "list" is the mobile settings list, which takes extra read-only rows as children. Each control
-// saves on change through a server action and the page re-renders with the stored values.
-export function SharingPanel({
-  state,
-  variant = "card",
-  children,
-}: {
-  state: SharingState
-  variant?: "card" | "list"
-  children?: React.ReactNode
-}) {
+const visibilityHelp: Record<Visibility, string> = {
+  private: "Only you and people you invite can open it.",
+  unlisted: "Anyone with the link can view. Hidden from search.",
+  public: "Listed on your profile and open to anyone.",
+}
+
+// The sharing controls, shared by the desktop side panel and the mobile settings list. Each
+// control saves on change through a server action and the page re-renders with the stored values.
+function useSharingControls(state: SharingState, list: boolean) {
   const [visibility, setVisibility] = React.useState(state.visibility)
   const [hasPassword, setHasPassword] = React.useState(state.hasPassword)
   const [settingPassword, setSettingPassword] = React.useState(false)
@@ -75,7 +78,6 @@ export function SharingPanel({
   const [burnAfterRead, setBurnAfterRead] = React.useState(state.burnAfterRead)
   const [allowRaw, setAllowRaw] = React.useState(state.allowRaw)
   const [pending, startTransition] = React.useTransition()
-  const list = variant === "list"
 
   function save(input: Parameters<typeof updateSharing>[1]) {
     startTransition(() => updateSharing(state.slug, input))
@@ -98,24 +100,29 @@ export function SharingPanel({
     />
   )
 
-  const rows = (
+  const expiry = (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "flex items-center gap-1.5 outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
+          !list && "h-9 w-full justify-between border border-border px-2.5 hover:text-foreground",
+        )}
+      >
+        <span className={cn(list && "text-muted-foreground")}>{state.expiresLabel}</span>
+        <ChevronDownIcon className="size-3.5 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {expiryChoices.map((choice) => (
+          <DropdownMenuItem key={choice.value} onClick={() => save({ expiry: choice.value })}>
+            {choice.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  const protection = (
     <>
-      <SettingRow label="Expires" list={list}>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40 lg:font-medium">
-            <span className={cn(list && "text-muted-foreground")}>{state.expiresLabel}</span>
-            <ChevronDownIcon className="size-3.5 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {expiryChoices.map((choice) => (
-              <DropdownMenuItem key={choice.value} onClick={() => save({ expiry: choice.value })}>
-                {choice.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SettingRow>
-      {list ? children : null}
       <SettingRow label="Password" list={list}>
         <Switch
           aria-label="Password"
@@ -166,9 +173,9 @@ export function SharingPanel({
           Change password
         </button>
       ) : null}
-      <SettingRow label="Burn after read" list={list}>
+      <SettingRow label="Burn after reading" list={list}>
         <Switch
-          aria-label="Burn after read"
+          aria-label="Burn after reading"
           checked={burnAfterRead}
           onCheckedChange={(checked) => {
             setBurnAfterRead(checked)
@@ -195,30 +202,100 @@ export function SharingPanel({
     </p>
   )
 
-  if (list) {
-    return (
-      <section aria-label="Sharing" className="flex flex-col gap-3">
-        {visibilityControl}
-        <div className="flex flex-col divide-y divide-border border border-border text-[15px]">
-          {rows}
-        </div>
-        {status}
-      </section>
-    )
+  return {
+    visibility,
+    visibilityControl,
+    expiry,
+    protection,
+    status,
+    protectedNow: hasPassword || burnAfterRead,
   }
+}
+
+// The paste detail page's side panel: Sharing and Access for the owner (or a note on who shared
+// it), then Views and Revisions, which the server renders and passes in.
+export function PasteDetailPanel({
+  state,
+  sharedNote,
+  views,
+  revisions,
+}: {
+  state?: SharingState
+  sharedNote?: React.ReactNode
+  views: React.ReactNode
+  revisions: React.ReactNode
+}) {
+  const rest: PanelSection[] = [
+    { id: "views", label: "Views", icon: EyeIcon, content: views },
+    { id: "revisions", label: "Revisions", icon: HistoryIcon, content: revisions },
+  ]
+  if (state) return <OwnerPanel state={state} rest={rest} />
+
+  const shared: PanelSection[] = sharedNote
+    ? [{ id: "shared", label: "Shared with you", icon: UsersIcon, content: sharedNote }]
+    : []
+  return <SidePanel label="Paste details" sections={[...shared, ...rest]} />
+}
+
+function OwnerPanel({ state, rest }: { state: SharingState; rest: PanelSection[] }) {
+  const controls = useSharingControls(state, false)
+  const sections: PanelSection[] = [
+    {
+      id: "sharing",
+      label: "Sharing",
+      icon: LinkIcon,
+      content: (
+        <>
+          <ShareLinkField url={state.url} />
+          {controls.visibilityControl}
+          <p className="text-xs text-muted-foreground">{visibilityHelp[controls.visibility]}</p>
+          {controls.status}
+        </>
+      ),
+    },
+    {
+      id: "access",
+      label: "Access",
+      icon: ShieldIcon,
+      marked: controls.protectedNow,
+      content: (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted-foreground">Expires</span>
+            {controls.expiry}
+          </div>
+          <div className="flex flex-col gap-2.5">{controls.protection}</div>
+        </>
+      ),
+    },
+    ...rest,
+  ]
+
+  return <SidePanel label="Paste details" sections={sections} />
+}
+
+// The mobile settings list on the paste detail page; takes extra read-only rows as children,
+// shown under Expires.
+export function SharingPanel({
+  state,
+  children,
+}: {
+  state: SharingState
+  children?: React.ReactNode
+}) {
+  const controls = useSharingControls(state, true)
 
   return (
-    <section
-      aria-labelledby="sharing-heading"
-      className="flex flex-col gap-3.5 border border-border p-4"
-    >
-      <h2 id="sharing-heading" className="text-sm font-semibold">
-        Sharing
-      </h2>
-      <ShareLinkField url={state.url} />
-      {visibilityControl}
-      <div className="flex flex-col gap-2.5 text-[13px]">{rows}</div>
-      {status}
+    <section aria-label="Sharing" className="flex flex-col gap-3">
+      {controls.visibilityControl}
+      <div className="flex flex-col divide-y divide-border border border-border text-[15px]">
+        <SettingRow label="Expires" list>
+          {controls.expiry}
+        </SettingRow>
+        {children}
+        {controls.protection}
+      </div>
+      {controls.status}
     </section>
   )
 }

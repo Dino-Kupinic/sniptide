@@ -4,9 +4,9 @@ import { TooltipProvider } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
 import { usePathname } from "next/navigation"
 import * as React from "react"
-import { BreadcrumbProvider } from "./breadcrumb"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
+import { HeaderSlotsProvider } from "./page-header"
 import { Sidebar, type SidebarProps } from "./sidebar"
 import {
   type SectionId,
@@ -83,7 +83,7 @@ export function AppShell({
 
   return (
     <TooltipProvider delay={300}>
-      <BreadcrumbProvider>
+      <HeaderSlotsProvider>
         <div className="flex min-h-svh bg-background lg:bg-sidebar">
           <aside
             aria-label="Sidebar"
@@ -100,7 +100,12 @@ export function AppShell({
                 releaseToCollapse && "opacity-50",
               )}
             >
-              <Sidebar {...sidebarProps} closed={layout.closed} onToggleSection={toggleSection} />
+              <Sidebar
+                {...sidebarProps}
+                closed={layout.closed}
+                onToggleSection={toggleSection}
+                onToggleSidebar={toggleSidebar}
+              />
             </div>
             <ResizeHandle
               width={width}
@@ -139,7 +144,7 @@ export function AppShell({
 
           {chrome.tabBar ? <TabBar /> : null}
         </div>
-      </BreadcrumbProvider>
+      </HeaderSlotsProvider>
     </TooltipProvider>
   )
 }

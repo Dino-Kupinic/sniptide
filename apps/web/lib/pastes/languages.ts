@@ -79,6 +79,21 @@ export function detectLanguage(filename: string): Language {
   )
 }
 
+// The file name for `filename` written in `language`, used when the language is picked by hand
+// (the language comes from the name, so picking one renames the file). Keeps the base name and
+// swaps the extension; languages known by a whole name (Dockerfile) take that name.
+export function renameForLanguage(filename: string, language: Language): string {
+  const name = filename.trim()
+  if (detectLanguage(name).id === language.id) return name
+  if (language.id === "docker") return "Dockerfile"
+  if (language.id === "nginx") return "nginx.conf"
+
+  const known = languages.some((candidate) => candidate.filenames?.includes(name))
+  const dot = name.lastIndexOf(".")
+  const base = known ? "untitled" : dot > 0 ? name.slice(0, dot) : name || "untitled"
+  return `${base}.${language.extensions[0]}`
+}
+
 export const markerClass: Record<Marker, string> = {
   "filled-primary": "bg-primary",
   "filled-foreground": "bg-foreground",

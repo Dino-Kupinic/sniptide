@@ -20,6 +20,7 @@ export function FileTabs({
   onRename,
   onRemove,
   onAdd,
+  trailing,
 }: {
   files: EditorFile[]
   activeId: string | undefined
@@ -28,6 +29,8 @@ export function FileTabs({
   onRemove: (id: string) => void
   // Adds a file and returns its id, which then opens for renaming.
   onAdd: () => string
+  // Pinned to the right end of the bar (the side panel toggle).
+  trailing?: React.ReactNode
 }) {
   const [renamingId, setRenamingId] = React.useState<string | null>(null)
 
@@ -114,6 +117,11 @@ export function FileTabs({
           <PlusIcon className="size-3.5" />
           <span className="hidden lg:inline">Add file</span>
         </button>
+      ) : null}
+      {trailing ? (
+        <div className="sticky right-0 ml-auto flex shrink-0 items-center bg-sidebar pr-1.5">
+          {trailing}
+        </div>
       ) : null}
     </div>
   )
