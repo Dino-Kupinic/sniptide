@@ -30,8 +30,12 @@ import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
+import { enforceBudget } from "./budget"
 import { hashPassword } from "./passwords"
 import { TRASH_DAYS } from "./purge"
+
+export { PasteBudgetError } from "./budget"
+
 import { parsePasteInput } from "./schema"
 import type {
   Expiry,
@@ -226,8 +230,19 @@ async function summarize(
 
 // The full Paste for one record the viewer may read: its summary plus every file's content and
 // the revision history.
-async function hydrate(record: PasteRecord, viewer: string | null): Promise<Paste | null> {
+async function hydrate(
+  record: PasteRecord,
+  viewer: string | null,
+  requestedRevisionPage = 1,
+): Promise<Paste | null> {
   const db = getDb()
+  const [revisionTotal] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(pasteRevision)
+    .where(eq(pasteRevision.pasteId, record.id))
+  const revisionCount = revisionTotal?.count ?? 0
+  const revisionPageCount = Math.max(1, Math.ceil(revisionCount / 20))
+  const revisionPage = Math.min(Math.max(1, requestedRevisionPage), revisionPageCount)
   const [[summary], files, revisions] = await Promise.all([
     summarize([record], viewer, true),
     db.select().from(pasteFile).where(eq(pasteFile.pasteId, record.id)).orderBy(pasteFile.position),
@@ -235,12 +250,17 @@ async function hydrate(record: PasteRecord, viewer: string | null): Promise<Past
       .select()
       .from(pasteRevision)
       .where(eq(pasteRevision.pasteId, record.id))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id)),
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+      .limit(20)
+      .offset((revisionPage - 1) * 20),
   ])
   if (!summary) return null
 
   return {
     ...summary,
+    revisionCount,
+    revisionPage,
+    revisionPageCount,
     files: files.map(({ name, language, content }) => ({ name, language, content })),
     revisions: revisions.map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
   }
@@ -275,15 +295,9 @@ function recordExpired(record: PasteRecord) {
 }
 
 export async function purgeTrash(owner: string) {
-  await getDb()
-    .delete(pasteTable)
-    .where(
-      and(
-        eq(pasteTable.ownerId, owner),
-        isNotNull(pasteTable.deletedAt),
-        lt(pasteTable.deletedAt, new Date(Date.now() - TRASH_DAYS * DAY)),
-      ),
-    )
+  await getDb().execute(
+    sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE owner_id = ${owner} AND deleted_at < ${new Date(Date.now() - TRASH_DAYS * DAY)} ORDER BY deleted_at, id LIMIT 500 FOR UPDATE SKIP LOCKED)`,
+  )
 }
 
 export async function listOwnPastes() {
@@ -304,7 +318,12 @@ export async function listTrash() {
   const records = await getDb()
     .select()
     .from(pasteTable)
-    .where(and(eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
+    .where(
+      and(
+        eq(pasteTable.ownerId, viewer),
+        sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY)}`,
+      ),
+    )
     .orderBy(desc(pasteTable.deletedAt))
   return summarize(records, viewer)
 }
@@ -424,7 +443,7 @@ export async function starredSlugs(slugs?: string[]) {
 
 // One of the viewer's own pastes, for the app's screens (detail, edit, duplicate). Anyone else's
 // paste, a trashed one and a missing one all come back as null.
-export async function getOwnPaste(slug: string) {
+export const getOwnPaste = cache(async (slug: string, revisionPage = 1) => {
   const viewer = await viewerId()
   if (!viewer) return null
   const [record] = await getDb()
@@ -434,8 +453,21 @@ export async function getOwnPaste(slug: string) {
       and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
     )
   if (!record) return null
-  return hydrate(record, viewer)
-}
+  return hydrate(record, viewer, revisionPage)
+})
+
+// Metadata never needs content, view history or revision rows.
+export const getOwnMeta = cache(async (slug: string) => {
+  const owner = await viewerId()
+  if (!owner) return null
+  const [row] = await getDb()
+    .select({ title: pasteTable.title })
+    .from(pasteTable)
+    .where(
+      and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, owner), isNull(pasteTable.deletedAt)),
+    )
+  return row ?? null
+})
 
 export type SharedRead =
   | { status: "ok"; paste: SharedPaste; owned: boolean; signedIn: boolean }
@@ -621,7 +653,7 @@ export async function navCounts(): Promise<NavCounts> {
   return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared: 0 }
 }
 
-export async function sidebarData(): Promise<SidebarData> {
+export const sidebarData = cache(async (): Promise<SidebarData> => {
   const viewer = await viewerId()
   if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
   const db = getDb()
@@ -658,7 +690,7 @@ export async function sidebarData(): Promise<SidebarData> {
     recent: recent.map(row),
     starred: starred.map(row),
   }
-}
+})
 
 // The dashboard can hydrate its bounded recent selections without exposing the SQL layer.
 export async function summarizePastes(records: PasteRecord[], viewer: string) {
@@ -692,13 +724,16 @@ export async function createPaste(input: PasteInput) {
   const now = new Date()
   const id = crypto.randomUUID()
   const passwordHash = data.password ? await hashPassword(data.password) : null
+  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   await getDb().transaction(async (tx) => {
+    await enforceBudget(tx, owner, bytes)
     await tx.insert(pasteTable).values({
       id,
       slug,
       ownerId: owner,
       title: data.title,
       description: data.description,
+      bytes,
       visibility: data.visibility,
       passwordHash,
       burnAfterRead: data.burnAfterRead,
@@ -728,10 +763,13 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
         ? await hashPassword(data.password)
         : null
 
+  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   await getDb().transaction(async (tx) => {
+    await enforceBudget(tx, record.ownerId, bytes, record.id)
     await tx
       .update(pasteTable)
       .set({
+        bytes,
         slug: data.slug || slug,
         title: data.title,
         description: data.description,

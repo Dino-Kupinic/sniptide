@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
@@ -5,7 +6,7 @@ export const dynamic = "force-dynamic"
 // For Coolify's health check: the server is up and the database answers.
 export async function GET() {
   try {
-    await getDb().$client`select 1`
+    await getDb().execute(sql`select 1`)
     return Response.json({ ok: true })
   } catch {
     return Response.json({ ok: false }, { status: 503 })

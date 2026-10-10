@@ -76,13 +76,18 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
     })),
   }
 
-  const paste = editing
-    ? await store.updatePaste(editing, payload, "Edited")
-    : await store.createPaste(payload)
-  if (!paste) return { ok: false, error: "That paste no longer exists." }
+  try {
+    const paste = editing
+      ? await store.updatePaste(editing, payload, "Edited")
+      : await store.createPaste(payload)
+    if (!paste) return { ok: false, error: "That paste no longer exists." }
 
-  revalidatePath("/", "layout")
-  return { ok: true, slug: paste.slug }
+    revalidatePath("/", "layout")
+    return { ok: true, slug: paste.slug }
+  } catch (error) {
+    if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
+    throw error
+  }
 }
 
 // Answers "not available" while limited; saving checks the slug again anyway.
@@ -220,14 +225,19 @@ export async function importGist(input: string): Promise<SavePasteResult> {
     }
   }
 
-  const paste = await store.createPaste({
-    ...parsed.data,
-    files: parsed.data.files.map((file) => ({
-      ...file,
-      language: detectLanguage(file.name).id,
-    })),
-  })
+  try {
+    const paste = await store.createPaste({
+      ...parsed.data,
+      files: parsed.data.files.map((file) => ({
+        ...file,
+        language: detectLanguage(file.name).id,
+      })),
+    })
 
-  revalidatePath("/", "layout")
-  return { ok: true, slug: paste.slug }
+    revalidatePath("/", "layout")
+    return { ok: true, slug: paste.slug }
+  } catch (error) {
+    if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
+    throw error
+  }
 }

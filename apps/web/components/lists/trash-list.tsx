@@ -264,7 +264,17 @@ export function TrashList({
           <Pagination
             page={pagination.page}
             pageCount={pagination.pageCount}
-            onChange={(page) => update({ page })}
+            onChange={(page) =>
+              update({
+                page,
+                cursor:
+                  page === pagination.page + 1
+                    ? pagination.nextCursor
+                    : page === pagination.page - 1
+                      ? pagination.previousCursor
+                      : undefined,
+              })
+            }
           />
         </div>
       ) : null}

@@ -10,3 +10,13 @@ export async function register() {
     await startBackgroundJobs()
   }
 }
+
+export const onRequestError: import("next").Instrumentation.onRequestError = (
+  _error,
+  _request,
+  context,
+) => {
+  console.error(
+    JSON.stringify({ event: "request_error", route: context.routePath, type: context.routeType }),
+  )
+}

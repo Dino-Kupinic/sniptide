@@ -1,10 +1,30 @@
 import "server-only"
 
 import { pasteFile, paste as pasteTable } from "@workspace/db/schema"
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import { DAY } from "@/lib/time"
+import { cursorKey, decodeCursor, encodeCursor } from "./cursor"
 import { PASTE_PAGE_SIZE, type PasteListQuery } from "./list-query"
+import { TRASH_DAYS } from "./purge"
 import { purgeTrash, readableStarsWhere, summarizePastes } from "./store"
 
 export interface PasteListScope {
@@ -37,7 +57,9 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
       ? await readableStarsWhere(viewer)
       : and(
           eq(pasteTable.ownerId, viewer),
-          scope.mode === "trash" ? isNotNull(pasteTable.deletedAt) : isNull(pasteTable.deletedAt),
+          scope.mode === "trash"
+            ? gte(pasteTable.deletedAt, new Date(Date.now() - TRASH_DAYS * DAY))
+            : isNull(pasteTable.deletedAt),
           scope.mode === "collection"
             ? eq(pasteTable.collection, scope.collection ?? "")
             : undefined,
@@ -50,7 +72,10 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
   const filters = and(
     base,
     query.q
-      ? sql`(strpos(lower(${pasteTable.title}), lower(${query.q})) > 0 or strpos(lower(${pasteTable.slug}), lower(${query.q})) > 0)`
+      ? or(
+          ilike(pasteTable.title, `%${query.q.replace(/[\\%_]/g, "\\$&")}%`),
+          ilike(pasteTable.slug, `%${query.q.replace(/[\\%_]/g, "\\$&")}%`),
+        )
       : undefined,
     query.languages.length ? inArray(firstLanguage, query.languages) : undefined,
     visibility.length ? or(...visibility) : undefined,
@@ -63,9 +88,21 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
         ? ne(pasteTable.ownerId, viewer)
         : undefined,
   )
+  const filtered = Boolean(
+    query.q ||
+      query.languages.length ||
+      query.visibility.length ||
+      query.collections.length ||
+      query.owner !== "all",
+  )
+  const allCount = db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(base)
+  // Materialize the promise once: awaiting a Drizzle builder twice executes it twice.
+  const allResult = Promise.resolve(allCount)
   const [[all], [matching], facets] = await Promise.all([
-    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(base),
-    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(filters),
+    allResult,
+    filtered
+      ? db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(filters)
+      : allResult,
     db.selectDistinct({ language: firstLanguage }).from(pasteTable).where(base),
   ])
   const total = matching?.count ?? 0
@@ -77,20 +114,125 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
     expires: asc(pasteTable.expiresAt),
     title: asc(sql`lower(${pasteTable.title})`),
   }
-  const records = await db
-    .select()
-    .from(pasteTable)
-    .where(filters)
-    .orderBy(
-      scope.mode === "trash" ? desc(pasteTable.deletedAt) : orders[query.sort],
-      pasteTable.id,
+  const key = cursorKey(viewer, scope, query)
+  let cursor = decodeCursor(query.cursor, key, page)
+  const title = sql<string>`lower(${pasteTable.title})`
+  const rawColumn =
+    scope.mode === "trash"
+      ? pasteTable.deletedAt
+      : query.sort === "updated"
+        ? pasteTable.updatedAt
+        : query.sort === "views"
+          ? pasteTable.views
+          : query.sort === "title"
+            ? title
+            : pasteTable.expiresAt
+  const column = sql`${rawColumn}`
+  // PostgreSQL timestamps may contain microseconds that JavaScript Date would truncate.
+  const cursorTimestamp =
+    scope.mode === "trash" || query.sort === "updated" || query.sort === "expires"
+      ? sql<
+          string | null
+        >`to_char(${rawColumn} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`
+      : sql<null>`null`
+  // Validate types before binding values to timestamp/integer columns. Bad cursors fall back
+  // to the numbered-page path; access filters always remain in the SQL predicate.
+  if (
+    cursor &&
+    (scope.mode === "trash" || query.sort === "updated" || query.sort === "expires") &&
+    !(
+      (cursor.value === null && query.sort === "expires") ||
+      (typeof cursor.value === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(cursor.value) &&
+        Number.isFinite(Date.parse(cursor.value)) &&
+        new Date(cursor.value).toISOString().slice(0, 23) === cursor.value.slice(0, 23))
     )
+  )
+    cursor = null
+  if (
+    cursor &&
+    query.sort === "views" &&
+    scope.mode !== "trash" &&
+    typeof cursor.value !== "number"
+  )
+    cursor = null
+  if (
+    cursor &&
+    query.sort === "title" &&
+    scope.mode !== "trash" &&
+    typeof cursor.value !== "string"
+  )
+    cursor = null
+  const ascending = scope.mode !== "trash" && (query.sort === "title" || query.sort === "expires")
+  const before = cursor?.direction === "before"
+  let seek: SQL | undefined
+  if (cursor) {
+    const id = before ? lt(pasteTable.id, cursor.id) : gt(pasteTable.id, cursor.id)
+    const nullsLast = query.sort === "expires" && scope.mode !== "trash"
+    if (cursor.value === null)
+      seek = before ? or(isNotNull(column), and(isNull(column), id)) : and(isNull(column), id)
+    else {
+      const compare = ascending !== before ? gt(column, cursor.value) : lt(column, cursor.value)
+      seek = or(
+        compare,
+        and(eq(column, cursor.value), id),
+        nullsLast && !before ? isNull(column) : undefined,
+      )
+    }
+  }
+  const order = scope.mode === "trash" ? desc(pasteTable.deletedAt) : orders[query.sort]
+  const reversed =
+    query.sort === "expires" && scope.mode !== "trash"
+      ? sql`${column} DESC NULLS FIRST`
+      : ascending
+        ? desc(column)
+        : asc(column)
+  let records = await db
+    .select({ ...getTableColumns(pasteTable), cursorTitle: title, cursorTimestamp })
+    .from(pasteTable)
+    .where(and(filters, seek))
+    .orderBy(before ? reversed : order, before ? desc(pasteTable.id) : asc(pasteTable.id))
     .limit(PASTE_PAGE_SIZE)
-    .offset((page - 1) * PASTE_PAGE_SIZE)
+    .offset(cursor ? 0 : (page - 1) * PASTE_PAGE_SIZE)
+  if (cursor && !records.length && total > 0) {
+    records = await db
+      .select({ ...getTableColumns(pasteTable), cursorTitle: title, cursorTimestamp })
+      .from(pasteTable)
+      .where(filters)
+      .orderBy(order, asc(pasteTable.id))
+      .limit(PASTE_PAGE_SIZE)
+      .offset((page - 1) * PASTE_PAGE_SIZE)
+  } else if (before) records = records.reverse()
+  const token = (
+    row: (typeof records)[number] | undefined,
+    direction: "before" | "after",
+    targetPage: number,
+  ) => {
+    if (!row) return undefined
+    const value =
+      scope.mode === "trash"
+        ? row.cursorTimestamp
+        : query.sort === "updated"
+          ? row.cursorTimestamp
+          : query.sort === "views"
+            ? row.views
+            : query.sort === "title"
+              ? row.cursorTitle
+              : row.cursorTimestamp
+    return encodeCursor({ id: row.id, value, direction, page: targetPage, key })
+  }
+
   return {
     pastes: await summarizePastes(records, viewer),
     query: { ...query, page },
-    pagination: { page, pageCount, total, totalAll: all?.count ?? 0 },
+    pagination: {
+      page,
+      pageCount,
+      total,
+      totalAll: all?.count ?? 0,
+      nextCursor: page < pageCount ? token(records.at(-1), "after", page + 1) : undefined,
+      previousCursor: page > 1 ? token(records[0], "before", page - 1) : undefined,
+    },
     languageOptions: facets.map((row) => row.language).sort(),
   }
 }

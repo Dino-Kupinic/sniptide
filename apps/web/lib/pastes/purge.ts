@@ -1,47 +1,111 @@
 import "server-only"
 
-import { authRateLimit, paste, rateLimit } from "@workspace/db/schema"
-import { lt, sql } from "drizzle-orm"
+import { performance } from "node:perf_hooks"
+import { envInteger } from "@workspace/db/config"
+import { sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { recordMaintenance, recordMetric } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 
-// How long a trashed (or burned) paste stays restorable before it's deleted for good.
 export const TRASH_DAYS = 30
-// How long an expired paste stays in its owner's list before it's deleted for good.
 export const EXPIRED_DAYS = 30
-const PURGE_EVERY_MS = 3_600_000
-// Any fixed number, shared by every instance, so only one of them purges at a time.
 const PURGE_LOCK = 0x5e1d_7a1d
-
-// Deletes what nobody can read any more: pastes trashed or burned more than TRASH_DAYS ago, pastes
-// expired more than EXPIRED_DAYS ago (files, revisions, stars and view counts cascade), and rate
-// limit counters whose windows ended over a day ago. Returns null when another instance holds the
-// lock.
-export async function purgeStaleData(now = new Date()) {
-  return getDb().transaction(async (tx) => {
-    const [lock] = await tx.execute<{ locked: boolean }>(
-      sql`SELECT pg_try_advisory_xact_lock(${PURGE_LOCK}) AS locked`,
-    )
-    if (!lock?.locked) return null
-
-    const trashed = await tx
-      .delete(paste)
-      .where(lt(paste.deletedAt, new Date(now.getTime() - TRASH_DAYS * DAY)))
-      .returning({ id: paste.id })
-    const expired = await tx
-      .delete(paste)
-      .where(lt(paste.expiresAt, new Date(now.getTime() - EXPIRED_DAYS * DAY)))
-      .returning({ id: paste.id })
-    await tx.delete(rateLimit).where(lt(rateLimit.windowStart, new Date(now.getTime() - DAY)))
-    await tx.delete(authRateLimit).where(lt(authRateLimit.lastRequest, now.getTime() - DAY))
-    return { trashed: trashed.length, expired: expired.length }
-  })
+const globalJobs = globalThis as typeof globalThis & {
+  __sniptidePurgeTimer?: ReturnType<typeof setInterval>
 }
 
-// Runs the purge at startup and then hourly, without keeping the process alive.
+// Each batch commits independently. The time budget bounds a run; one in-flight batch can
+// exceed it up to the database deadline. Other replicas use the same transaction lock.
+export async function purgeStaleData(now = new Date()) {
+  const started = performance.now()
+  const budget = envInteger("PURGE_TIME_BUDGET_MS", 2000, 100, 60000)
+  const batch = envInteger("PURGE_BATCH_SIZE", 500, 1, 5000)
+  const retention = envInteger("VIEW_HISTORY_RETENTION_DAYS", 90, 60, 3650)
+  const cutoff = new Date(now.getTime() - 30 * DAY)
+  const day = Math.floor(now.getTime() / DAY) - retention
+  const totals = { trashed: 0, expired: 0 }
+  let history = 0
+  let batches = 0
+  let exhausted = false
+  try {
+    do {
+      const result = await getDb().transaction(async (tx) => {
+        const [lock] = await tx.execute<{ locked: boolean }>(
+          sql`SELECT pg_try_advisory_xact_lock(${PURGE_LOCK}) AS locked`,
+        )
+        if (!lock?.locked) return null
+        const trashed = await tx.execute(
+          sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE deleted_at < ${cutoff} ORDER BY deleted_at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+        )
+        const expired = await tx.execute(
+          sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE expires_at < ${cutoff} ORDER BY expires_at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+        )
+        const days = await tx.execute(
+          sql`DELETE FROM paste_view_day WHERE (paste_id, day) IN (SELECT paste_id, day FROM paste_view_day WHERE day < ${day} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
+        )
+        const limits = await tx.execute(
+          sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY)} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
+        )
+        const auth = await tx.execute(
+          sql`DELETE FROM auth_rate_limit WHERE id IN (SELECT id FROM auth_rate_limit WHERE last_request < ${now.getTime() - DAY} ORDER BY last_request LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+        )
+        return {
+          trashed: trashed.length,
+          expired: expired.length,
+          days: days.length,
+          full: [trashed, expired, days, limits, auth].some((rows) => rows.length === batch),
+        }
+      })
+      if (!result) return batches ? totals : null
+      batches++
+      totals.trashed += result.trashed
+      totals.expired += result.expired
+      history += result.days
+      if (!result.full) {
+        exhausted = true
+        break
+      }
+    } while (performance.now() - started < budget)
+    return totals
+  } finally {
+    const durationMs = performance.now() - started
+    recordMetric("maintenance:purge", durationMs)
+    recordMaintenance({
+      lastRunAt: Date.now(),
+      durationMs,
+      batches,
+      ...totals,
+      historyRows: history,
+      exhausted,
+    })
+    console.info(
+      JSON.stringify({
+        event: "purge",
+        durationMs,
+        batches,
+        ...totals,
+        historyRows: history,
+        exhausted,
+      }),
+    )
+  }
+}
+
 export function schedulePurge() {
-  const run = () =>
-    purgeStaleData().catch((error: unknown) => console.error("Paste purge failed", error))
+  if (globalJobs.__sniptidePurgeTimer) return
+  let running = false
+  const run = async () => {
+    if (running) return
+    running = true
+    try {
+      await purgeStaleData()
+    } catch (error) {
+      console.error("Paste purge failed", error)
+    } finally {
+      running = false
+    }
+  }
   void run()
-  setInterval(run, PURGE_EVERY_MS).unref()
+  globalJobs.__sniptidePurgeTimer = setInterval(run, 3_600_000)
+  globalJobs.__sniptidePurgeTimer.unref()
 }

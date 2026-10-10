@@ -60,6 +60,9 @@ export interface PasteSummary {
 export interface Paste extends PasteSummary {
   files: PasteFile[]
   revisions: Revision[]
+  revisionCount: number
+  revisionPage: number
+  revisionPageCount: number
 }
 
 // Public reads carry the fields the share page renders, without owner-only history or hashes.
