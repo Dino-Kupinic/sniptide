@@ -4,6 +4,7 @@ import { paste, pasteFile, pasteStar, pasteViewDay, rateLimit, user } from "@wor
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "@/lib/pastes/passwords"
+import type { Visibility } from "@/lib/pastes/types"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
 import { request } from "./request"
 
@@ -52,7 +53,7 @@ interface SeedPaste {
   owner: string
   title?: string
   content?: string
-  visibility?: "public" | "unlisted" | "private"
+  visibility?: Visibility
   password?: string
   burnAfterRead?: boolean
   allowRaw?: boolean

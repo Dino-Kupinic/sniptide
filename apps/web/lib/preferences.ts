@@ -2,12 +2,14 @@
 // imported by client components, so it stays free of zod; parsing and validation live in
 // ./preferences-schema.ts, which only runs on the server.
 
+import type { Expiry, Visibility } from "@/lib/pastes/types"
+
 export interface Preferences {
   indentation: "2" | "4" | "tab"
   lineNumbers: boolean
   secretDetection: boolean
-  defaultVisibility: "public" | "unlisted" | "private"
-  defaultExpiry: "1h" | "1d" | "1w" | "1m" | "never"
+  defaultVisibility: Visibility
+  defaultExpiry: Expiry
   defaultBurnAfterRead: boolean
 }
 

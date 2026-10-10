@@ -1,8 +1,6 @@
 // Placeholder data for building the UI before the paste tables exist. Shapes mirror what the
 // app will read from the database, so screens can switch to real queries without changing their props.
 
-export type Visibility = "public" | "unlisted" | "private"
-
 export interface ViewerSummary {
   name: string
   email: string
