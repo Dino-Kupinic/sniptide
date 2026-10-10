@@ -1,0 +1,21 @@
+name: PR title
+
+# Pull requests are squash-merged, so the title becomes the commit on main and has to follow
+# Conventional Commits (see CONTRIBUTING.md). A separate workflow so that editing a title reruns
+# only this check, not the build.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  title:
+    name: Conventional commit title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

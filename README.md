@@ -19,6 +19,11 @@ GitHub and Google sign-in are optional: set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SE
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` to turn them on. Until then their buttons render
 disabled.
 
+## Contributing
+
+Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
+`fix:`, `docs:`, …), enforced by a git hook and a CI check. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Database
 
 The schema lives in `packages/db/src/schema`. After changing it:
