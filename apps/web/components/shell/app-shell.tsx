@@ -2,7 +2,6 @@
 
 import { TooltipProvider } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { PanelLeftIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 import * as React from "react"
 import { BreadcrumbProvider } from "./breadcrumb"
@@ -118,15 +117,6 @@ export function AppShell({
                 }
               }}
             />
-            {releaseToCollapse ? (
-              <div
-                role="status"
-                className="pointer-events-none absolute top-1/2 left-full z-40 ml-4 flex items-center gap-2 bg-foreground px-3 py-2 font-mono text-xs whitespace-nowrap text-background"
-              >
-                <PanelLeftIcon className="size-4" />
-                {Math.round(width)} px · release to collapse
-              </div>
-            ) : null}
           </aside>
 
           <div

@@ -1,6 +1,7 @@
 "use client"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@sniptide/ui/components/popover"
+import { ChevronDownIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { createCollection } from "@/lib/collections/actions"
@@ -40,16 +41,19 @@ export function NewCollectionDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="New collection"
-      description="Group related pastes under one name. You can file a paste in a collection when you create or edit it."
-      submitLabel="Create"
+      description="Group related pastes under one name."
+      submitLabel="Create collection"
       pendingLabel="Creating…"
+      label="Name"
+      placeholder="e.g. api-snippets"
       leading={
         <Popover>
           <PopoverTrigger
             aria-label="Choose an icon"
-            className="flex size-10 shrink-0 items-center justify-center border border-input outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
+            className="flex h-10 shrink-0 items-center gap-1 border border-input px-2.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
           >
-            <CollectionIcon icon={look.icon} hue={look.hue} className="size-4" />
+            <CollectionIcon icon={look.icon} hue={look.hue} className="size-3.5" />
+            <ChevronDownIcon className="size-3 text-muted-foreground" />
           </PopoverTrigger>
           <PopoverContent className="w-72">
             <IconOptions
