@@ -1,5 +1,16 @@
-import type { ViewerSummary } from "@/lib/mock-data"
+import { initials } from "@/lib/format"
 import { viewerStorage } from "@/lib/mock-data"
+
+// The signed-in account as the shell shows it.
+export interface ViewerSummary {
+  name: string
+  email: string
+  username: string | null
+  image: string | null
+  initials: string
+  storageUsedMb: number
+  storageLimitMb: number
+}
 
 interface SessionUser {
   name: string
@@ -7,16 +18,6 @@ interface SessionUser {
   username?: string | null
   displayUsername?: string | null
   image?: string | null
-}
-
-export function initialsFor(name: string) {
-  const [first = "", second] = name
-    .trim()
-    .split(/[\s._-]+/)
-    .filter(Boolean)
-  const letters = second ? `${first.charAt(0)}${second.charAt(0)}` : first.slice(0, 2)
-
-  return letters.toUpperCase() || "?"
 }
 
 // Builds the shell's viewer from the signed-in user. Storage stays mocked until pastes exist.
@@ -28,7 +29,7 @@ export function viewerFromUser(user: SessionUser): ViewerSummary {
     email: user.email,
     username: user.username ?? null,
     image: user.image ?? null,
-    initials: initialsFor(name),
+    initials: initials(name),
     ...viewerStorage,
   }
 }

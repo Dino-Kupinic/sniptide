@@ -1,14 +1,12 @@
 import "server-only"
 
 import { byteLength, formatBytes, formatDate, timeAgo, timeUntil } from "@/lib/format"
+import { DAY, HOUR } from "@/lib/time"
 import { starredSlugs, TRASH_DAYS } from "./store"
 import type { Access, Paste, Person, Share } from "./types"
 
 // Serializable rows for the paste tables. Labels are computed here on the server so the client
 // tables only filter, sort and paginate.
-
-const HOUR = 3_600_000
-const DAY = 24 * HOUR
 
 export interface PasteRow {
   slug: string

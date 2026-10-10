@@ -1,21 +1,7 @@
 // Placeholder data for building the UI before the paste tables exist. Shapes mirror what the
 // app will read from the database, so screens can switch to real queries without changing their props.
 
-export interface ViewerSummary {
-  name: string
-  email: string
-  username: string | null
-  image: string | null
-  initials: string
-  storageUsedMb: number
-  storageLimitMb: number
-}
-
-export interface NavCounts {
-  pastes: number
-  starred: number
-  shared: number
-}
+import type { ViewerSummary } from "@/lib/viewer"
 
 export interface Collection {
   slug: string

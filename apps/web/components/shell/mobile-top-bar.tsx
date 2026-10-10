@@ -9,7 +9,7 @@ import {
 import { Logo } from "@sniptide/ui/components/logo"
 import { SearchIcon } from "lucide-react"
 import Link from "next/link"
-import type { ViewerSummary } from "@/lib/mock-data"
+import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 
 // Top bar below lg, from the Paper mobile artboards: wordmark, search, account avatar.

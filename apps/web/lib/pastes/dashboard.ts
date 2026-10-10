@@ -1,9 +1,9 @@
 import "server-only"
 
+import { DAY } from "@/lib/time"
 import { type PasteRow, toRows } from "./rows"
 import { isExpired, listOwnPastes, VIEW_HISTORY_DAYS } from "./store"
 
-const DAY = 86_400_000
 const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" })
 const shortDate = new Intl.DateTimeFormat("en-US", {
   month: "short",
