@@ -15,7 +15,7 @@ function SheetContent({
 }: SheetPrimitive.Popup.Props & { side?: "left" | "right" }) {
   return (
     <SheetPrimitive.Portal>
-      <SheetPrimitive.Backdrop className="fixed inset-0 z-40 bg-foreground/30 transition-opacity data-ending-style:opacity-0 data-starting-style:opacity-0" />
+      <SheetPrimitive.Backdrop className="fixed inset-0 z-40 bg-foreground/30 transition-opacity dark:bg-black/60 data-ending-style:opacity-0 data-starting-style:opacity-0" />
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}
