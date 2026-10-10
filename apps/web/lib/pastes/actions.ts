@@ -7,6 +7,7 @@ import { collections } from "@/lib/mock-data"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
 import * as store from "./store"
+import { EXPIRIES, VISIBILITIES } from "./types"
 
 async function assertSignedIn() {
   if (!(await getSession())) throw new Error("Sign in to change pastes.")
@@ -35,8 +36,8 @@ const pasteSchema = z.object({
       (files) => files.reduce((size, file) => size + file.content.length, 0) <= MAX_BYTES,
       "Pastes are limited to 512 KB.",
     ),
-  visibility: z.enum(["public", "unlisted", "private"]),
-  expiry: z.enum(["1h", "1d", "1w", "1m", "never", "keep"]),
+  visibility: z.enum(VISIBILITIES),
+  expiry: z.enum([...EXPIRIES, "keep"]),
   slug: z.string().trim(),
   collection: z
     .string()
@@ -94,8 +95,8 @@ export async function checkSlug(slug: string, except?: string) {
 }
 
 const sharingSchema = z.object({
-  visibility: z.enum(["public", "unlisted", "private"]).optional(),
-  expiry: z.enum(["1h", "1d", "1w", "1m", "never"]).optional(),
+  visibility: z.enum(VISIBILITIES).optional(),
+  expiry: z.enum(EXPIRIES).optional(),
   password: z.string().min(1).max(200).nullable().optional(),
   burnAfterRead: z.boolean().optional(),
   allowRaw: z.boolean().optional(),
