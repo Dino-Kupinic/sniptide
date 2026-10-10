@@ -1,40 +1,37 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import { Input } from "@sniptide/ui/components/input"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@sniptide/ui/components/select"
-import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, EyeIcon, EyeOffIcon, PlusIcon, XIcon } from "lucide-react"
+import { EyeIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { CodeBlock } from "@/components/paste/code-block"
+import {
+  CollectionSelect,
+  ExpiryChips,
+  expiryOptions,
+  OptionGroup,
+  PasswordInput,
+  SlugInput,
+  ToggleRow,
+  useSlugStatus,
+  visibilityHelp,
+  visibilityOptions,
+} from "@/components/paste/editor-options"
+import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
-import { LanguageMarker } from "@/components/paste/language-marker"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
-import { checkSlug, savePaste } from "@/lib/pastes/actions"
+import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
-
-export interface EditorFile {
-  id: string
-  name: string
-  content: string
-}
 
 export interface EditorInitial {
   title: string
@@ -48,54 +45,10 @@ export interface EditorInitial {
   burnAfterRead: boolean
 }
 
-const visibilityOptions: { value: Visibility; label: string }[] = [
-  { value: "private", label: "Private" },
-  { value: "unlisted", label: "Unlisted" },
-  { value: "public", label: "Public" },
-]
-
-const visibilityHelp: Record<Visibility, string> = {
-  private: "Only you and people you invite can open it.",
-  unlisted: "Anyone with the link can open it. It isn't listed on your profile.",
-  public: "Listed on your profile and open to anyone.",
-}
-
-const expiryOptions: { value: Expiry; label: string }[] = [
-  { value: "1h", label: "1h" },
-  { value: "1d", label: "1d" },
-  { value: "1w", label: "1w" },
-  { value: "1m", label: "1m" },
-  { value: "never", label: "Never" },
-]
-
-const NO_COLLECTION = "none"
-
 let fileCounter = 0
 function newFile(name: string, content = ""): EditorFile {
   fileCounter += 1
   return { id: `file-${fileCounter}`, name, content }
-}
-
-function useSlugStatus(slug: string, except?: string) {
-  const [status, setStatus] = React.useState<"idle" | "checking" | "ok" | "taken">("idle")
-
-  React.useEffect(() => {
-    if (!slug || slug === except) return setStatus("idle")
-
-    setStatus("checking")
-    let cancelled = false
-    const timer = setTimeout(async () => {
-      const available = await checkSlug(slug, except)
-      if (!cancelled) setStatus(available ? "ok" : "taken")
-    }, 350)
-
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [slug, except])
-
-  return status
 }
 
 export function PasteEditor({
@@ -124,7 +77,6 @@ export function PasteEditor({
     initial.files.map((file) => newFile(file.name, file.content)),
   )
   const [activeId, setActiveId] = React.useState(() => files[0]?.id ?? "")
-  const [renamingId, setRenamingId] = React.useState<string | null>(null)
   const [preview, setPreview] = React.useState(false)
   const [visibility, setVisibility] = React.useState(initial.visibility)
   const [expiry, setExpiry] = React.useState(initial.expiry)
@@ -162,8 +114,8 @@ export function PasteEditor({
     const file = newFile(`untitled-${files.length + 1}.txt`)
     setFiles((current) => [...current, file])
     setActiveId(file.id)
-    setRenamingId(file.id)
     setPreview(false)
+    return file.id
   }
 
   function removeFile(id: string) {
@@ -334,93 +286,16 @@ export function PasteEditor({
 
       <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
         <div className="mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
-          <div
-            role="tablist"
-            aria-label="Files"
-            className="flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar"
-          >
-            {files.map((file) => {
-              const selected = file.id === active?.id
-              return (
-                <div
-                  key={file.id}
-                  className={cn(
-                    "flex shrink-0 items-center gap-2 border-r border-border px-3.5",
-                    selected && "bg-background shadow-[inset_0_2px_0_var(--primary)]",
-                  )}
-                >
-                  <LanguageMarker language={detectLanguage(file.name).id} />
-                  {renamingId === file.id ? (
-                    <input
-                      // biome-ignore lint/a11y/noAutofocus: renaming starts right after the user asks for it
-                      autoFocus
-                      aria-label="File name"
-                      defaultValue={file.name}
-                      onFocus={(event) => {
-                        // Select the name without its extension, like a file manager would.
-                        const dot = file.name.lastIndexOf(".")
-                        event.currentTarget.setSelectionRange(0, dot > 0 ? dot : file.name.length)
-                      }}
-                      onBlur={(event) => {
-                        const name = event.target.value.trim()
-                        if (name)
-                          setFiles((current) =>
-                            current.map((f) => (f.id === file.id ? { ...f, name } : f)),
-                          )
-                        setRenamingId(null)
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault()
-                          event.currentTarget.blur()
-                        }
-                        if (event.key === "Escape") setRenamingId(null)
-                      }}
-                      className="w-36 bg-transparent font-mono text-[13px] outline-none"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={selected}
-                      aria-describedby="rename-hint"
-                      onClick={() => setActiveId(file.id)}
-                      onDoubleClick={() => setRenamingId(file.id)}
-                      className={cn(
-                        "font-mono text-[13px] outline-none focus-visible:underline",
-                        selected ? "text-foreground" : "text-muted-foreground",
-                      )}
-                    >
-                      {file.name}
-                    </button>
-                  )}
-                  {selected && files.length > 1 ? (
-                    <button
-                      type="button"
-                      aria-label={`Remove ${file.name}`}
-                      onClick={() => removeFile(file.id)}
-                      className="text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-                    >
-                      <XIcon className="size-3" strokeWidth={2.5} />
-                    </button>
-                  ) : null}
-                </div>
-              )
-            })}
-            <span id="rename-hint" className="sr-only">
-              Double-click to rename
-            </span>
-            {files.length < 10 ? (
-              <button
-                type="button"
-                onClick={addFile}
-                className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-              >
-                <PlusIcon className="size-3.5" />
-                <span className="hidden lg:inline">Add file</span>
-              </button>
-            ) : null}
-          </div>
+          <FileTabs
+            files={files}
+            activeId={active?.id}
+            onSelect={setActiveId}
+            onRename={(id, name) =>
+              setFiles((current) => current.map((f) => (f.id === id ? { ...f, name } : f)))
+            }
+            onRemove={removeFile}
+            onAdd={addFile}
+          />
 
           {preview ? (
             <CodeBlock
@@ -596,248 +471,5 @@ export function PasteEditor({
         </Button>
       </div>
     </form>
-  )
-}
-
-function OptionGroup({
-  label,
-  id,
-  children,
-}: {
-  label: string
-  id: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <span id={id} className="text-[13px] leading-[18px] font-medium">
-        {label}
-      </span>
-      {children}
-    </div>
-  )
-}
-
-function ExpiryChips({
-  value,
-  onChange,
-  options,
-  currentExpiry,
-}: {
-  value: Expiry | "keep"
-  onChange: (value: Expiry | "keep") => void
-  options: { value: Expiry; label: string }[]
-  currentExpiry?: string
-}) {
-  const all: { value: Expiry | "keep"; label: string }[] = currentExpiry
-    ? [{ value: "keep", label: "Keep" }, ...options]
-    : options
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div role="radiogroup" aria-label="Expires after" className="flex flex-wrap gap-1.5">
-        {all.map((option) => (
-          // biome-ignore lint/a11y/useSemanticElements: styled chips acting as a radio group
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "border border-border px-2.5 py-[5px] text-[13px] leading-[18px] text-foreground/80 outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40",
-              value === option.value &&
-                "border-foreground bg-foreground font-medium text-background hover:border-foreground",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-      {currentExpiry && value === "keep" ? (
-        <p className="text-xs text-muted-foreground">Currently {currentExpiry}.</p>
-      ) : null}
-    </div>
-  )
-}
-
-function SlugInput({
-  value,
-  onChange,
-  status,
-}: {
-  value: string
-  onChange: (value: string) => void
-  status: ReturnType<typeof useSlugStatus>
-}) {
-  const host = useSiteHost()
-  return (
-    <div className="flex flex-col gap-1">
-      <div
-        className={cn(
-          "flex h-[34px] items-center border border-input focus-within:border-primary",
-          status === "taken" && "border-destructive",
-        )}
-      >
-        <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-2.5 font-mono text-xs text-muted-foreground">
-          {host}/
-        </span>
-        <input
-          aria-label="Custom link"
-          value={value}
-          onChange={(event) => onChange(event.target.value.replace(/[^A-Za-z0-9_-]/g, ""))}
-          placeholder="random"
-          maxLength={40}
-          spellCheck={false}
-          autoCapitalize="none"
-          className="h-full min-w-0 flex-1 bg-transparent px-2.5 font-mono text-base outline-none placeholder:text-muted-foreground lg:text-xs"
-        />
-        {status === "ok" ? (
-          <CheckIcon
-            aria-label="Available"
-            className="mr-2.5 size-[15px] text-link"
-            strokeWidth={2.5}
-          />
-        ) : null}
-        {status === "taken" ? (
-          <XIcon
-            aria-label="Taken"
-            className="mr-2.5 size-[15px] text-destructive"
-            strokeWidth={2.5}
-          />
-        ) : null}
-      </div>
-      {status === "taken" ? (
-        <p className="text-xs text-destructive">That link is taken or reserved.</p>
-      ) : null}
-    </div>
-  )
-}
-
-function CollectionSelect({
-  value,
-  onChange,
-  collections,
-}: {
-  value: string | null
-  onChange: (value: string | null) => void
-  collections: Collection[]
-}) {
-  if (collections.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        No collections yet.{" "}
-        <a
-          href="/collections"
-          target="_blank"
-          rel="noopener"
-          className="font-medium text-link hover:underline"
-        >
-          Create one
-        </a>{" "}
-        to file pastes under it.
-      </p>
-    )
-  }
-
-  return (
-    <Select
-      value={value ?? NO_COLLECTION}
-      onValueChange={(next) => onChange(next === NO_COLLECTION ? null : (next as string))}
-      items={[
-        { value: NO_COLLECTION, label: "No collection" },
-        ...collections.map((c) => ({ value: c.slug, label: c.name })),
-      ]}
-    >
-      <SelectTrigger
-        aria-label="Collection"
-        className="h-[34px] w-full px-2.5 font-mono text-[13px]"
-      >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={NO_COLLECTION} className="font-sans text-muted-foreground">
-          No collection
-        </SelectItem>
-        {collections.map((c) => (
-          <SelectItem key={c.slug} value={c.slug} className="font-mono text-[13px]">
-            {c.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
-export function ToggleRow({
-  label,
-  description,
-  checked,
-  onCheckedChange,
-  large = false,
-  disabled,
-}: {
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-  large?: boolean
-  disabled?: boolean
-}) {
-  const id = React.useId()
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex flex-col">
-        <span
-          id={id}
-          className={cn(
-            "text-[13px] leading-[18px] font-medium",
-            large && "text-[15px] leading-5 font-normal",
-          )}
-        >
-          {label}
-        </span>
-        {description ? <span className="text-xs text-muted-foreground">{description}</span> : null}
-      </div>
-      <Switch
-        aria-labelledby={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        disabled={disabled}
-      />
-    </div>
-  )
-}
-
-function PasswordInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-}) {
-  const [visible, setVisible] = React.useState(false)
-  return (
-    <div className="relative">
-      <Input
-        aria-label="Paste password"
-        type={visible ? "text" : "password"}
-        autoComplete="new-password"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="h-[34px] pr-9 text-base lg:text-sm"
-      />
-      <button
-        type="button"
-        aria-label={visible ? "Hide password" : "Show password"}
-        onClick={() => setVisible((current) => !current)}
-        className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-      >
-        {visible ? <EyeOffIcon className="size-[15px]" /> : <EyeIcon className="size-[15px]" />}
-      </button>
-    </div>
   )
 }
