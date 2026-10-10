@@ -4,7 +4,6 @@ import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { userAgent } from "next/server"
-import { CodeBlock } from "@/components/paste/code-block"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { LanguageLabel } from "@/components/paste/language-marker"
 import { RevealPaste } from "@/components/paste/reveal-paste"
@@ -12,7 +11,7 @@ import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
-import { readSharedPaste } from "@/lib/pastes/store"
+import { readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
 const avatarTone = {
@@ -22,15 +21,13 @@ const avatarTone = {
 }
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">) {
-  const read = await readSharedPaste((await params).slug)
-  // A title is content too: show it only on pastes anyone with the link may already read.
-  if (read.status !== "ok" || read.paste.burnAfterRead) return { title: "Sniptide" }
-  const { paste } = read
+  const meta = await readSharedMeta((await params).slug)
+  if (!meta) return { title: "Sniptide" }
 
   return {
-    title: `${paste.title} · Sniptide`,
+    title: `${meta.title} · Sniptide`,
     // Unlisted pastes are reachable by link only, so keep them out of search engines.
-    robots: paste.visibility === "public" ? undefined : { index: false, follow: false },
+    robots: meta.visibility === "public" ? undefined : { index: false, follow: false },
   }
 }
 
@@ -73,6 +70,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 
   const owner = paste.author
   const first = paste.files[0]
+  const single = paste.files.length === 1
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const bytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const rawHref =
@@ -132,25 +130,13 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           ) : null}
         </div>
 
-        <div className="hidden flex-col gap-4 lg:flex">
-          {paste.files.length === 1 && first ? (
-            <CodeBlock content={first.content} className="border border-border bg-sidebar py-5" />
-          ) : (
-            <FileViewer
-              slug={slug}
-              files={paste.files}
-              rawAllowed={rawAllowed}
-              bodyClassName="bg-sidebar"
-            />
-          )}
-        </div>
         <FileViewer
           slug={slug}
           files={paste.files}
           rawAllowed={rawAllowed}
           collapseAt={6}
-          className="lg:hidden"
-          bodyClassName="bg-sidebar"
+          headerClassName={single ? "lg:hidden" : undefined}
+          bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
         />
 
         <div className="mt-auto flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between">

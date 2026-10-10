@@ -17,8 +17,9 @@ const toolClass =
   "inline-flex h-8 items-center gap-1.5 px-2.5 text-[13px] text-foreground/85 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
 
 // Code card on the paste pages: file tabs (or the single file name), Raw / Wrap / Download /
-// Copy, the code, and an optional footer. `collapseAt` shows the first lines with a
-// "Show full file" button, as on the mobile artboards.
+// Copy, the code, and an optional footer. `collapseAt` shows only the first lines below the lg
+// breakpoint, wrapped, with a "Show full file" button, as on the mobile artboards. The collapse
+// is CSS-only so the same render serves desktop and mobile.
 export function FileViewer({
   slug,
   files,
@@ -27,7 +28,9 @@ export function FileViewer({
   rawAllowed = true,
   lineNumbers = true,
   className,
+  headerClassName,
   bodyClassName,
+  footerClassName,
 }: {
   slug: string
   files: ViewerFile[]
@@ -36,7 +39,9 @@ export function FileViewer({
   rawAllowed?: boolean
   lineNumbers?: boolean
   className?: string
+  headerClassName?: string
   bodyClassName?: string
+  footerClassName?: string
 }) {
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
   const [wrap, setWrap] = React.useState(false)
@@ -51,7 +56,12 @@ export function FileViewer({
 
   return (
     <div className={cn("flex min-w-0 flex-col border border-border", className)}>
-      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border pr-1.5">
+      <div
+        className={cn(
+          "flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border pr-1.5",
+          headerClassName,
+        )}
+      >
         <div role="tablist" aria-label="Files" className="flex h-full min-w-0 overflow-x-auto">
           {files.map((file) => {
             const selected = file.name === active.name
@@ -111,8 +121,8 @@ export function FileViewer({
 
       <CodeBlock
         content={active.content}
-        wrap={wrap || collapseAt !== undefined}
-        maxLines={collapsed ? collapseAt : undefined}
+        wrap={wrap || (collapseAt !== undefined && "mobile")}
+        mobileMaxLines={collapsed ? collapseAt : undefined}
         lineNumbers={lineNumbers}
         className={cn("flex-1", bodyClassName)}
       />
@@ -121,14 +131,19 @@ export function FileViewer({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="h-11 border-t border-border text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+          className="h-11 border-t border-border text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 lg:hidden"
         >
           Show full file
         </button>
       ) : null}
 
       {footer ? (
-        <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground",
+            footerClassName,
+          )}
+        >
           {footer}
         </div>
       ) : null}

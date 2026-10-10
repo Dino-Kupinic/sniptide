@@ -10,6 +10,7 @@ import {
 } from "@workspace/db/schema"
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm"
 import { cookies } from "next/headers"
+import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "./passwords"
@@ -398,6 +399,10 @@ async function findLiveRecord(slug: string) {
   return record && !record.deletedAt && !recordExpired(record) ? record : null
 }
 
+// Memoized per server render, so the share page and its generateMetadata share one lookup. Only
+// for reads: a burn claim still re-checks the row in its own UPDATE.
+const findSharedRecord = cache(findLiveRecord)
+
 // Whether the visitor may open the paste's public link: its owner always can; everyone else needs
 // a public or unlisted paste and, if it has one, the password (proved by the unlock cookie).
 async function canOpenLink(record: PasteRecord, viewer: string | null) {
@@ -459,7 +464,7 @@ export async function readSharedPaste(
   slug: string,
   options: { visit?: boolean; reveal?: boolean } = {},
 ): Promise<SharedRead> {
-  const found = await findLiveRecord(slug)
+  const found = await findSharedRecord(slug)
   if (!found) return { status: "missing" }
 
   const viewer = await viewerId()
@@ -476,6 +481,15 @@ export async function readSharedPaste(
   const [paste] = await hydrate([record], viewer)
   if (!paste) return { status: "missing" }
   return { status: "ok", paste, owned, signedIn: viewer !== null }
+}
+
+// The share page's title and indexing, without loading files or counting a view. A title is
+// content too, so it's null for burn-after-read pastes and for pastes the visitor can't open.
+export async function readSharedMeta(slug: string) {
+  const record = await findSharedRecord(slug)
+  if (!record || record.burnAfterRead) return null
+  if ((await canOpenLink(record, await viewerId())) !== "ok") return null
+  return { title: record.title, visibility: record.visibility }
 }
 
 // The stored password hash of a paste someone could be asked to unlock, for the unlock route.

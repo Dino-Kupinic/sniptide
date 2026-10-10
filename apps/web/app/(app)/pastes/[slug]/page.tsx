@@ -166,7 +166,10 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
           files={paste.files}
           rawAllowed={paste.allowRaw}
           lineNumbers={preferences.lineNumbers}
-          className="mx-4 hidden min-h-[612px] flex-1 lg:mx-0 lg:flex"
+          collapseAt={6}
+          className="mx-4 lg:mx-0 lg:min-h-[612px] lg:flex-1"
+          bodyClassName="max-lg:bg-sidebar"
+          footerClassName="hidden lg:flex"
           footer={
             <>
               <span>UTF-8 · LF · {indentLabel(preferences.indentation)}</span>
@@ -175,15 +178,6 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
               </span>
             </>
           }
-        />
-        <FileViewer
-          slug={slug}
-          files={paste.files}
-          rawAllowed={paste.allowRaw}
-          lineNumbers={preferences.lineNumbers}
-          collapseAt={6}
-          className="mx-4 lg:hidden"
-          bodyClassName="bg-sidebar"
         />
 
         <div className="flex w-full shrink-0 flex-col gap-4 lg:w-[340px]">
