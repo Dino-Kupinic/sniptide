@@ -24,7 +24,9 @@ import type {
   Person,
   Share,
   SharingInput,
+  SidebarData,
 } from "./types"
+import { SIDEBAR_RECENT, SIDEBAR_STARRED } from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
@@ -446,6 +448,39 @@ export async function navCounts(): Promise<NavCounts> {
   return { pastes: own?.count ?? 0, starred: starred.length, shared: 0 }
 }
 
+// Everything the sidebar lists: the counts, the latest pastes and the first starred ones.
+export async function sidebarData(): Promise<SidebarData> {
+  const viewer = await viewerId()
+  if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
+  const db = getDb()
+  const [[own], recent, starred, starSlugs] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pasteTable)
+      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
+    db
+      .select()
+      .from(pasteTable)
+      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
+      .orderBy(desc(pasteTable.updatedAt))
+      .limit(SIDEBAR_RECENT),
+    starredRecords(viewer),
+    starredSlugs(),
+  ])
+  const row = (record: PasteRecord) => ({
+    slug: record.slug,
+    title: record.title,
+    owned: record.ownerId === viewer,
+    starred: starSlugs.has(record.slug),
+    collection: record.ownerId === viewer ? record.collection : null,
+  })
+  return {
+    counts: { pastes: own?.count ?? 0, starred: starred.length, shared: 0 },
+    recent: recent.map(row),
+    starred: starred.slice(0, SIDEBAR_STARRED).map(row),
+  }
+}
+
 export async function isSlugAvailable(slug: string, except?: string) {
   if (!SLUG_PATTERN.test(slug) || RESERVED.has(slug.toLowerCase())) return false
   return slug === except || !(await findRecord(slug))
@@ -564,6 +599,21 @@ export async function setStarred(slug: string, starred: boolean) {
       .delete(pasteStar)
       .where(and(eq(pasteStar.userId, viewer), eq(pasteStar.pasteId, record.id)))
   }
+}
+
+// Changes only the title; the paste keeps its place in the "recent" order.
+export async function renamePaste(slug: string, title: string) {
+  const record = await findOwned(slug)
+  if (!record || record.deletedAt) return
+  await getDb().update(pasteTable).set({ title }).where(eq(pasteTable.id, record.id))
+}
+
+// Files the paste in a collection, or takes it out of its collection with null. The caller
+// checks that the collection exists.
+export async function setPasteCollection(slug: string, collection: string | null) {
+  const record = await findOwned(slug)
+  if (!record || record.deletedAt) return
+  await getDb().update(pasteTable).set({ collection }).where(eq(pasteTable.id, record.id))
 }
 
 export async function trashPaste(slug: string) {

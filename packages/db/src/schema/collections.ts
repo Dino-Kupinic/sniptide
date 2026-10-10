@@ -13,8 +13,10 @@ export const collection = pgTable(
     // once made, so renaming a collection only changes its name.
     slug: text("slug").notNull(),
     name: text("name").notNull(),
-    // Which dot the sidebar draws beside it.
-    marker: text("marker").notNull(),
+    // The square icon the sidebar draws beside it, and its color. Both are names the app knows
+    // (apps/web/lib/collections/types.ts), not raw SVG or hex.
+    icon: text("icon").notNull().default("square"),
+    hue: text("hue").notNull().default("blue"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

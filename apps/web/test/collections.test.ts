@@ -1,10 +1,15 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { collection } from "@workspace/db/schema"
-import { createCollection, deleteCollection, renameCollection } from "@/lib/collections/actions"
+import {
+  createCollection,
+  deleteCollection,
+  renameCollection,
+  setCollectionIcon,
+} from "@/lib/collections/actions"
 import { collectionExists, getCollection, listCollections, slugify } from "@/lib/collections/store"
 import { MAX_COLLECTIONS } from "@/lib/collections/types"
 import { getDb } from "@/lib/db"
-import { savePaste } from "@/lib/pastes/actions"
+import { savePaste, setPasteCollection } from "@/lib/pastes/actions"
 import { listOwnPastes } from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -74,7 +79,6 @@ describeDb("collections", () => {
           ownerId: "ada",
           slug: `c${i}`,
           name: `c${i}`,
-          marker: "filled-primary",
         })),
       )
     expect((await createCollection("one more")).ok).toBe(false)
@@ -157,5 +161,51 @@ describeDb("collections", () => {
     signInAs("bob")
     expect((await savePaste(paste("notes"))).ok).toBe(false)
     expect((await savePaste(paste(null))).ok).toBe(true)
+  })
+
+  test("new ones start as a square, each in the next hue", async () => {
+    await createCollection("one")
+    await createCollection("two")
+    const [one, two] = await listCollections()
+    expect(one).toMatchObject({ icon: "square", hue: "blue" })
+    expect(two).toMatchObject({ icon: "square", hue: "sky" })
+  })
+
+  test("the New collection dialog's icon and hue are kept, and only known ones", async () => {
+    await createCollection("picked", { icon: "steps", hue: "pink" })
+    expect(await getCollection("picked")).toMatchObject({ icon: "steps", hue: "pink" })
+    await expect(createCollection("bad", { icon: "steps", hue: "#000" })).rejects.toThrow()
+    expect(await getCollection("bad")).toBeNull()
+  })
+
+  test("the icon and hue can be changed, only to known ones, and only by the owner", async () => {
+    await createCollection("notes")
+    await setCollectionIcon("notes", "grid", "teal")
+    expect(await getCollection("notes")).toMatchObject({ icon: "grid", hue: "teal" })
+
+    await expect(setCollectionIcon("notes", "<svg>", "teal")).rejects.toThrow()
+    await expect(setCollectionIcon("notes", "grid", "#ff0000")).rejects.toThrow()
+
+    signInAs("bob")
+    await setCollectionIcon("notes", "corner", "red")
+    signInAs("ada")
+    expect(await getCollection("notes")).toMatchObject({ icon: "grid", hue: "teal" })
+  })
+
+  test("a paste can be filed and unfiled from the sidebar", async () => {
+    await createCollection("notes")
+    await seedPaste({ slug: "p1", owner: "ada" })
+
+    expect((await setPasteCollection("p1", "notes")).ok).toBe(true)
+    expect((await pasteRow("p1"))?.collection).toBe("notes")
+    expect((await setPasteCollection("p1", "nope")).ok).toBe(false)
+    expect((await pasteRow("p1"))?.collection).toBe("notes")
+    expect((await setPasteCollection("p1", null)).ok).toBe(true)
+    expect((await pasteRow("p1"))?.collection).toBeNull()
+
+    // Someone else's paste stays where it is, even in a collection of the same name.
+    await seedPaste({ slug: "bobs", owner: "bob" })
+    await setPasteCollection("bobs", "notes")
+    expect((await pasteRow("bobs"))?.collection).toBeNull()
   })
 })

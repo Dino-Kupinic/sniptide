@@ -23,6 +23,9 @@ export function CollectionNameDialog({
   submitLabel,
   pendingLabel,
   initialName = "",
+  label,
+  placeholder = "api-snippets",
+  leading,
   onSubmit,
 }: {
   open: boolean
@@ -32,8 +35,14 @@ export function CollectionNameDialog({
   submitLabel: string
   pendingLabel: string
   initialName?: string
+  // A visible label above the name field; without one the field is labelled for screen readers.
+  label?: string
+  placeholder?: string
+  // Shown before the name field, like New collection's icon button.
+  leading?: React.ReactNode
   onSubmit: (name: string) => Promise<CollectionActionResult>
 }) {
+  const nameId = React.useId()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
@@ -60,20 +69,29 @@ export function CollectionNameDialog({
             })
           }}
         >
-          <Input
-            key={initialName}
-            name="name"
-            aria-label="Collection name"
-            placeholder="api-snippets"
-            defaultValue={initialName}
-            maxLength={MAX_NAME_LENGTH}
-            autoComplete="off"
-            required
-            autoFocus
-            onFocus={(event) => event.currentTarget.select()}
-            aria-invalid={Boolean(error)}
-            className="h-10 font-mono text-base lg:text-[13px]"
-          />
+          {label ? (
+            <label htmlFor={nameId} className="-mb-1 text-sm font-medium">
+              {label}
+            </label>
+          ) : null}
+          <div className="flex gap-2">
+            {leading}
+            <Input
+              key={initialName}
+              id={nameId}
+              name="name"
+              aria-label={label ? undefined : "Collection name"}
+              placeholder={placeholder}
+              defaultValue={initialName}
+              maxLength={MAX_NAME_LENGTH}
+              autoComplete="off"
+              required
+              autoFocus
+              onFocus={(event) => event.currentTarget.select()}
+              aria-invalid={Boolean(error)}
+              className="h-10 min-w-0 flex-1 font-mono text-base lg:text-[13px]"
+            />
+          </div>
           {error ? (
             <p role="alert" className="text-[13px] text-destructive">
               {error}

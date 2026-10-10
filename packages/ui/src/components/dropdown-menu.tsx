@@ -2,7 +2,7 @@
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "cn"
-import { CheckIcon } from "lucide-react"
+import { CheckIcon, ChevronRightIcon } from "lucide-react"
 import type * as React from "react"
 
 const DropdownMenu = MenuPrimitive.Root
@@ -100,6 +100,29 @@ function DropdownMenuLabel({ className, ...props }: React.ComponentProps<"div">)
   return <div className={cn("px-3 py-1.5 text-xs text-muted-foreground", className)} {...props} />
 }
 
+// A nested menu: wrap a DropdownMenuSubTrigger and a DropdownMenuContent in DropdownMenuSub.
+const DropdownMenuSub = MenuPrimitive.SubmenuRoot
+
+function DropdownMenuSubTrigger({
+  className,
+  children,
+  ...props
+}: MenuPrimitive.SubmenuTrigger.Props) {
+  return (
+    <MenuPrimitive.SubmenuTrigger
+      data-slot="dropdown-menu-sub-trigger"
+      className={cn(
+        "flex h-8 cursor-default items-center gap-2 px-3 text-sm outline-none select-none data-highlighted:bg-muted data-popup-open:bg-muted [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <ChevronRightIcon className="ml-auto" />
+    </MenuPrimitive.SubmenuTrigger>
+  )
+}
+
 function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
   return <MenuPrimitive.Separator className={cn("my-1 h-px bg-border", className)} {...props} />
 }
@@ -114,5 +137,7 @@ export {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 }

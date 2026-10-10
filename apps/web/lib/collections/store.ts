@@ -4,7 +4,15 @@ import { collection as collectionTable, paste as pasteTable } from "@workspace/d
 import { and, eq, isNull, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
-import { type Collection, MARKERS, MAX_COLLECTIONS } from "./types"
+import {
+  type Collection,
+  type CollectionIcon,
+  defaultHue,
+  HUES,
+  type Hue,
+  ICONS,
+  MAX_COLLECTIONS,
+} from "./types"
 
 // Collections group a user's own pastes. Each belongs to one account and is only ever read or
 // changed through the signed-in viewer; a paste points at one by its slug (paste.collection).
@@ -36,11 +44,13 @@ export function slugify(name: string) {
 function toCollection(row: {
   slug: string
   name: string
-  marker: string
+  icon: string
+  hue: string
   pasteCount: number
 }): Collection {
-  const marker = MARKERS.find((candidate) => candidate === row.marker) ?? MARKERS[0]
-  return { slug: row.slug, name: row.name, marker, pasteCount: row.pasteCount }
+  const icon = ICONS.find((candidate) => candidate === row.icon) ?? ICONS[0]
+  const hue = HUES.find((candidate) => candidate === row.hue) ?? "blue"
+  return { slug: row.slug, name: row.name, icon, hue, pasteCount: row.pasteCount }
 }
 
 // The viewer's collections, oldest first, with how many live pastes each holds.
@@ -51,7 +61,8 @@ export async function listCollections(): Promise<Collection[]> {
     .select({
       slug: collectionTable.slug,
       name: collectionTable.name,
-      marker: collectionTable.marker,
+      icon: collectionTable.icon,
+      hue: collectionTable.hue,
       pasteCount: sql<number>`count(${pasteTable.id})::int`,
     })
     .from(collectionTable)
@@ -94,7 +105,10 @@ function sameName(a: string, b: string) {
   return a.localeCompare(b, undefined, { sensitivity: "accent" }) === 0
 }
 
-export async function createCollection(name: string): Promise<CollectionResult> {
+export async function createCollection(
+  name: string,
+  look?: { icon: CollectionIcon; hue: Hue },
+): Promise<CollectionResult> {
   const owner = await requireViewerId()
   const db = getDb()
 
@@ -109,13 +123,13 @@ export async function createCollection(name: string): Promise<CollectionResult> 
   // slug first, so a conflict moves on to the next number instead of failing.
   const base = slugify(name)
   const taken = new Set(existing.map((row) => row.slug))
-  const marker = MARKERS[existing.length % MARKERS.length] ?? MARKERS[0]
+  const { icon, hue } = look ?? { icon: "square" as const, hue: defaultHue(existing.length) }
   for (let attempt = 1; attempt <= 10; attempt++) {
     const slug = attempt === 1 ? base : `${base.slice(0, 36)}-${attempt}`
     if (taken.has(slug)) continue
     const [row] = await db
       .insert(collectionTable)
-      .values({ ownerId: owner, slug, name, marker })
+      .values({ ownerId: owner, slug, name, icon, hue })
       .onConflictDoNothing()
       .returning()
     if (row) return { status: "ok", collection: toCollection({ ...row, pasteCount: 0 }) }
@@ -142,6 +156,14 @@ export async function renameCollection(slug: string, name: string): Promise<Coll
     .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
   const renamed = await getCollection(slug)
   return renamed ? { status: "ok", collection: renamed } : { status: "missing" }
+}
+
+export async function setCollectionIcon(slug: string, icon: CollectionIcon, hue: Hue) {
+  const owner = await requireViewerId()
+  await getDb()
+    .update(collectionTable)
+    .set({ icon, hue })
+    .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
 }
 
 // Deletes the collection and takes its pastes out of it; the pastes themselves stay, trashed ones

@@ -1,9 +1,8 @@
 "use client"
 
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { Separator } from "@sniptide/ui/components/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
-import { BellIcon, ChevronRightIcon, PanelLeftIcon, SearchIcon } from "lucide-react"
+import { BellIcon, ChevronRightIcon, PanelLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as React from "react"
@@ -70,14 +69,6 @@ export function TopBar({
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          className="flex h-9 w-72 items-center gap-2 border border-border px-3 text-sm text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
-        >
-          <SearchIcon className="size-4" />
-          Search pastes, slugs, code…
-          <Kbd className="ml-auto">⌘K</Kbd>
-        </button>
         <button
           type="button"
           aria-label="Notifications"

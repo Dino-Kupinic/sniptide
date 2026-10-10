@@ -9,7 +9,7 @@ import { ListHeader } from "@/components/lists/toolbar"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { CollectionMenu } from "./collection-menu"
-import { CollectionMarker } from "./marker"
+import { CollectionIcon } from "./icon"
 import { NewCollectionDialog } from "./new-collection"
 
 // The Collections page: every collection with its paste count, and the way to make a new one.
@@ -51,7 +51,7 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
               key={collection.slug}
               className={cn("relative flex items-center gap-3 px-4 py-3 hover:bg-muted/50")}
             >
-              <CollectionMarker marker={collection.marker} />
+              <CollectionIcon icon={collection.icon} hue={collection.hue} />
               <Link
                 href={`/collections/${collection.slug}`}
                 className="min-w-0 flex-1 truncate font-mono text-[13px] outline-none after:absolute after:inset-0 focus-visible:underline"
@@ -71,7 +71,11 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
         </ul>
       )}
 
-      <NewCollectionDialog open={creating} onOpenChange={setCreating} />
+      <NewCollectionDialog
+        existing={collections.length}
+        open={creating}
+        onOpenChange={setCreating}
+      />
     </div>
   )
 }
