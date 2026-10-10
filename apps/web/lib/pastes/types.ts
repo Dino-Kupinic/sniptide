@@ -73,6 +73,13 @@ export interface PasteInput {
   burnAfterRead: boolean
 }
 
+// The sidebar's counts next to My pastes, Starred and Shared with me.
+export interface NavCounts {
+  pastes: number
+  starred: number
+  shared: number
+}
+
 export interface SharingInput {
   visibility?: Visibility
   expiry?: Expiry
