@@ -21,6 +21,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./username": "./src/username.ts"
+    "./username": "./src/username.ts",
+    "./user-fields": "./src/user-fields.ts"
   }
 }

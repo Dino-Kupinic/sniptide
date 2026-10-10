@@ -3,6 +3,7 @@ import type { Database } from "@workspace/db"
 import * as schema from "@workspace/db/schema"
 import { type BetterAuthPlugin, betterAuth } from "better-auth"
 import { username } from "better-auth/plugins/username"
+import { boundUserFields } from "./user-fields"
 import { USERNAME_PATTERN } from "./username"
 
 export interface OAuthCredentials {
@@ -63,6 +64,12 @@ export function createAuth({
         preferences: { type: "string", required: false, input: true },
       },
       deleteUser: { enabled: true },
+    },
+    databaseHooks: {
+      user: {
+        create: { before: async (user) => ({ data: boundUserFields(user, "create") }) },
+        update: { before: async (user) => ({ data: boundUserFields(user, "update") }) },
+      },
     },
     socialProviders: {
       ...(github ? { github } : {}),
