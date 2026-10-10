@@ -15,7 +15,16 @@ import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { hashPassword } from "./passwords"
-import type { Expiry, NavCounts, Paste, PasteInput, Person, Share, SharingInput } from "./types"
+import type {
+  Expiry,
+  NavCounts,
+  Paste,
+  PasteInput,
+  PasteSummary,
+  Person,
+  Share,
+  SharingInput,
+} from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
@@ -85,22 +94,25 @@ function at(time: number | null) {
   return time === null ? null : new Date(time)
 }
 
-// Turns paste rows into the Paste shape the screens read, loading files, revisions, view
-// history and authors in one query each.
-async function hydrate(records: PasteRecord[], viewer: string | null): Promise<Paste[]> {
+// Turns paste rows into the summaries the lists read: view history, authors, and each paste's
+// first language and total size, in one query each. File contents and revisions stay unloaded.
+async function summarize(records: PasteRecord[], viewer: string | null): Promise<PasteSummary[]> {
   if (records.length === 0) return []
   const db = getDb()
   const ids = records.map((record) => record.id)
   const today = utcDay(Date.now())
   const firstDay = today - VIEW_HISTORY_DAYS + 1
 
-  const [files, revisions, days, authors] = await Promise.all([
-    db.select().from(pasteFile).where(inArray(pasteFile.pasteId, ids)).orderBy(pasteFile.position),
+  const [files, days, authors] = await Promise.all([
     db
-      .select()
-      .from(pasteRevision)
-      .where(inArray(pasteRevision.pasteId, ids))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id)),
+      .select({
+        pasteId: pasteFile.pasteId,
+        language: pasteFile.language,
+        bytes: sql<number>`octet_length(${pasteFile.content})::int`,
+      })
+      .from(pasteFile)
+      .where(inArray(pasteFile.pasteId, ids))
+      .orderBy(pasteFile.position),
     db
       .select()
       .from(pasteViewDay)
@@ -139,14 +151,14 @@ async function hydrate(records: PasteRecord[], viewer: string | null): Promise<P
       initials: "?",
       tone: "muted",
     }
+    const own = files.filter((file) => file.pasteId === record.id)
 
     return {
       slug: record.slug,
       title: record.title,
       description: record.description,
-      files: files
-        .filter((file) => file.pasteId === record.id)
-        .map(({ name, language, content }) => ({ name, language, content })),
+      language: own[0]?.language ?? "text",
+      bytes: own.reduce((size, file) => size + file.bytes, 0),
       visibility: record.visibility,
       password: record.passwordHash,
       burnAfterRead: record.burnAfterRead,
@@ -161,11 +173,30 @@ async function hydrate(records: PasteRecord[], viewer: string | null): Promise<P
       updatedAt: ms(record.updatedAt),
       expiresAt: ms(record.expiresAt),
       deletedAt: ms(record.deletedAt),
-      revisions: revisions
-        .filter((revision) => revision.pasteId === record.id)
-        .map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
     }
   })
+}
+
+// The full Paste for one record the viewer may read: its summary plus every file's content and
+// the revision history.
+async function hydrate(record: PasteRecord, viewer: string | null): Promise<Paste | null> {
+  const db = getDb()
+  const [[summary], files, revisions] = await Promise.all([
+    summarize([record], viewer),
+    db.select().from(pasteFile).where(eq(pasteFile.pasteId, record.id)).orderBy(pasteFile.position),
+    db
+      .select()
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, record.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id)),
+  ])
+  if (!summary) return null
+
+  return {
+    ...summary,
+    files: files.map(({ name, language, content }) => ({ name, language, content })),
+    revisions: revisions.map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
+  }
 }
 
 async function findRecord(slug: string) {
@@ -216,7 +247,7 @@ export async function listOwnPastes() {
     .from(pasteTable)
     .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
     .orderBy(desc(pasteTable.updatedAt))
-  return hydrate(records, viewer)
+  return summarize(records, viewer)
 }
 
 export async function listTrash() {
@@ -228,11 +259,13 @@ export async function listTrash() {
     .from(pasteTable)
     .where(and(eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
     .orderBy(desc(pasteTable.deletedAt))
-  return hydrate(records, viewer)
+  return summarize(records, viewer)
 }
 
 // Sharing pastes with other accounts isn't built yet; "Shared with me" stays empty until then.
-export async function listShared(): Promise<{ share: Share & { seen: boolean }; paste: Paste }[]> {
+export async function listShared(): Promise<
+  { share: Share & { seen: boolean }; paste: PasteSummary }[]
+> {
   return []
 }
 
@@ -268,7 +301,7 @@ async function starredRecords(viewer: string) {
 export async function listStarred() {
   const viewer = await viewerId()
   if (!viewer) return []
-  return hydrate(await starredRecords(viewer), viewer)
+  return summarize(await starredRecords(viewer), viewer)
 }
 
 export async function isStarred(slug: string) {
@@ -306,8 +339,7 @@ export async function getOwnPaste(slug: string) {
       and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
     )
   if (!record) return null
-  const [paste] = await hydrate([record], viewer)
-  return paste ?? null
+  return hydrate(record, viewer)
 }
 
 export type SharedRead =
@@ -389,7 +421,7 @@ export async function readSharedPaste(
   const record = options.visit && !owned ? await claimVisit(found.id) : found
   if (!record) return { status: "missing" }
 
-  const [paste] = await hydrate([record], viewer)
+  const paste = await hydrate(record, viewer)
   if (!paste) return { status: "missing" }
   return { status: "ok", paste, owned, signedIn: viewer !== null }
 }
