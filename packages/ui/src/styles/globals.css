@@ -42,6 +42,19 @@
   --logo-ink: #1b1919;
   --logo-hatch: #000000;
   --link: #2a26ec;
+  /* Code colours. Keywords are the brand blue; the rest stay muted enough that blue still leads.
+     All clear 4.5:1 on the code backgrounds (white, --sidebar). */
+  --syntax-foreground: #1b1919;
+  --syntax-keyword: #2a26ec;
+  --syntax-string: #047857;
+  --syntax-constant: #b45309;
+  --syntax-function: #6d28d9;
+  --syntax-type: #0e7490;
+  --syntax-property: #be123c;
+  --syntax-comment: #6b6b6b;
+  --syntax-punctuation: #4a4747;
+  --syntax-link: #2a26ec;
+  --syntax-invalid: oklch(0.577 0.245 27.325);
 }
 
 .dark {
@@ -82,6 +95,19 @@
   --logo-hatch: #535151;
   /* The dark primary is too dim for text on the dark surfaces, so links get a lighter blue. */
   --link: #8b89ff;
+  /* Keywords use the lighter blue for the same reason as links; the rest are the light palette
+     lifted to read on the dark surfaces. */
+  --syntax-foreground: #f4f4f4;
+  --syntax-keyword: #8b89ff;
+  --syntax-string: #5fd3a8;
+  --syntax-constant: #f5b971;
+  --syntax-function: #c4b5fd;
+  --syntax-type: #67d4e8;
+  --syntax-property: #fb9fb1;
+  --syntax-comment: #8a8a8a;
+  --syntax-punctuation: #b0b0b0;
+  --syntax-link: #8b89ff;
+  --syntax-invalid: oklch(0.704 0.191 22.216);
 }
 
 @theme inline {

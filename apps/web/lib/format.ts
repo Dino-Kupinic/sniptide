@@ -1,9 +1,7 @@
 // Display helpers for paste metadata. They run on the server, so relative times are computed
 // once per render and handed to client components as strings.
 
-const MINUTE = 60_000
-const HOUR = 60 * MINUTE
-const DAY = 24 * HOUR
+import { DAY, HOUR, MINUTE } from "@/lib/time"
 
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
 const dateTimeFormat = new Intl.DateTimeFormat("en-US", {
@@ -61,6 +59,19 @@ export function formatBytes(bytes: number) {
 
 export function byteLength(text: string) {
   return new TextEncoder().encode(text).length
+}
+
+// "JD" for "Jane Doe" or "jane.doe", "JA" for "jane": first and last word, else the first two
+// letters.
+export function initials(name: string) {
+  const words = name
+    .trim()
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+  const first = words[0] ?? ""
+  const last = words.length > 1 ? words.at(-1) : undefined
+  const letters = last ? `${first.charAt(0)}${last.charAt(0)}` : first.slice(0, 2)
+  return letters.toUpperCase() || "?"
 }
 
 export function lineCount(text: string) {

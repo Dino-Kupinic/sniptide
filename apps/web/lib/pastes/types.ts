@@ -1,7 +1,12 @@
 // Shapes the paste screens read, built from the Postgres tables in ./store.ts.
 
-export type Visibility = "public" | "unlisted" | "private"
-export type Expiry = "1h" | "1d" | "1w" | "1m" | "never"
+// The values themselves, for the schemas that check input. The database's visibility enum
+// (packages/db/src/schema/pastes.ts) holds the same three.
+export const VISIBILITIES = ["public", "unlisted", "private"] as const
+export const EXPIRIES = ["1h", "1d", "1w", "1m", "never"] as const
+
+export type Visibility = (typeof VISIBILITIES)[number]
+export type Expiry = (typeof EXPIRIES)[number]
 export type Access = "edit" | "view"
 
 export interface PasteFile {
@@ -66,6 +71,13 @@ export interface PasteInput {
   collection: string | null
   password: string | null
   burnAfterRead: boolean
+}
+
+// The sidebar's counts next to My pastes, Starred and Shared with me.
+export interface NavCounts {
+  pastes: number
+  starred: number
+  shared: number
 }
 
 export interface SharingInput {

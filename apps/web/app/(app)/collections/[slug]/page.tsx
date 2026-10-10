@@ -3,7 +3,7 @@ import { CollectionMenu } from "@/components/collections/collection-menu"
 import { PasteList } from "@/components/lists/paste-list"
 import { SetBreadcrumb } from "@/components/shell/breadcrumb"
 import { getCollection } from "@/lib/collections/store"
-import { toRow } from "@/lib/pastes/rows"
+import { toRows } from "@/lib/pastes/rows"
 import { listOwnPastes } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -21,9 +21,7 @@ export default async function Page({ params }: PageProps<"/collections/[slug]">)
   ])
   if (!collection) notFound()
 
-  const rows = await Promise.all(
-    pastes.filter((paste) => paste.collection === slug).map((paste) => toRow(paste)),
-  )
+  const rows = await toRows(pastes.filter((paste) => paste.collection === slug))
 
   return (
     <>

@@ -3,6 +3,7 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react"
 import * as React from "react"
+import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
 import { useCopy } from "./copy-button"
 import { LanguageMarker } from "./language-marker"
@@ -11,6 +12,8 @@ interface ViewerFile {
   name: string
   language: string
   content: string
+  // Syntax-coloured lines from highlightFiles; plain code without them.
+  lines?: HighlightedLines
 }
 
 const toolClass =
@@ -111,6 +114,7 @@ export function FileViewer({
 
       <CodeBlock
         content={active.content}
+        highlighted={active.lines}
         wrap={wrap || collapseAt !== undefined}
         maxLines={collapsed ? collapseAt : undefined}
         lineNumbers={lineNumbers}

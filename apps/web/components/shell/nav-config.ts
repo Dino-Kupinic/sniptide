@@ -7,7 +7,7 @@ import {
   Trash2Icon,
   UsersIcon,
 } from "lucide-react"
-import type { NavCounts } from "@/lib/mock-data"
+import type { NavCounts } from "@/lib/pastes/types"
 
 export interface NavItem {
   href: string

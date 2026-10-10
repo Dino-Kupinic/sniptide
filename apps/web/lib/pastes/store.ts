@@ -12,8 +12,10 @@ import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, or, sql } from 
 import { cookies } from "next/headers"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import { initials } from "@/lib/format"
+import { DAY } from "@/lib/time"
 import { hashPassword } from "./passwords"
-import type { Expiry, Paste, PasteInput, Person, Share, SharingInput } from "./types"
+import type { Expiry, NavCounts, Paste, PasteInput, Person, Share, SharingInput } from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
@@ -25,7 +27,6 @@ import { unlockCookieName, unlockToken } from "./unlock"
 // link. Don't add a read that skips them; a page that fetches first and checks later still sends
 // the data to the client.
 
-const DAY = 86_400_000
 export const TRASH_DAYS = 30
 // How many days of views the charts show.
 export const VIEW_HISTORY_DAYS = 60
@@ -82,12 +83,6 @@ function ms(date: Date | null) {
 
 function at(time: number | null) {
   return time === null ? null : new Date(time)
-}
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  const letters = parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : name.slice(0, 2)
-  return letters.toUpperCase() || "?"
 }
 
 // Turns paste rows into the Paste shape the screens read, loading files, revisions, view
@@ -287,6 +282,18 @@ export async function isStarred(slug: string) {
   return Boolean(row)
 }
 
+// Slugs of every paste the viewer has starred, so a list marks its rows with one query.
+export async function starredSlugs() {
+  const viewer = await viewerId()
+  if (!viewer) return new Set<string>()
+  const rows = await getDb()
+    .select({ slug: pasteTable.slug })
+    .from(pasteStar)
+    .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
+    .where(eq(pasteStar.userId, viewer))
+  return new Set(rows.map((row) => row.slug))
+}
+
 // One of the viewer's own pastes, for the app's screens (detail, edit, duplicate). Anyone else's
 // paste, a trashed one and a missing one all come back as null.
 export async function getOwnPaste(slug: string) {
@@ -393,7 +400,7 @@ export async function getUnlockHash(slug: string) {
   return record && record.visibility !== "private" ? record.passwordHash : null
 }
 
-export async function navCounts() {
+export async function navCounts(): Promise<NavCounts> {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()

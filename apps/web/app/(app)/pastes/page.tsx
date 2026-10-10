@@ -1,7 +1,7 @@
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { PasteList, type Sort } from "@/components/lists/paste-list"
 import { listCollections } from "@/lib/collections/store"
-import { toRow } from "@/lib/pastes/rows"
+import { toRows } from "@/lib/pastes/rows"
 import { listOwnPastes } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -18,7 +18,7 @@ export default async function Page({ searchParams }: PageProps<"/pastes">) {
     getSiteOrigin(),
     listCollections(),
   ])
-  const rows = await Promise.all(pastes.map((paste) => toRow(paste)))
+  const rows = await toRows(pastes)
 
   return (
     <PasteList

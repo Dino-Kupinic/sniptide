@@ -1,14 +1,12 @@
 import "server-only"
 
 import { byteLength, formatBytes, formatDate, timeAgo, timeUntil } from "@/lib/format"
-import { isStarred, TRASH_DAYS } from "./store"
+import { DAY, HOUR } from "@/lib/time"
+import { starredSlugs, TRASH_DAYS } from "./store"
 import type { Access, Paste, Person, Share } from "./types"
 
 // Serializable rows for the paste tables. Labels are computed here on the server so the client
 // tables only filter, sort and paginate.
-
-const HOUR = 3_600_000
-const DAY = 24 * HOUR
 
 export interface PasteRow {
   slug: string
@@ -55,8 +53,7 @@ function expiresLabel(paste: Paste, now: number) {
   return timeUntil(paste.expiresAt, now)
 }
 
-export async function toRow(paste: Paste, canEdit = !paste.owner): Promise<PasteRow> {
-  const now = Date.now()
+function toRow(paste: Paste, starred: ReadonlySet<string>, now: number, canEdit = !paste.owner) {
   return {
     slug: paste.slug,
     title: paste.title,
@@ -71,23 +68,31 @@ export async function toRow(paste: Paste, canEdit = !paste.owner): Promise<Paste
     updatedLabel: timeAgo(paste.updatedAt, now),
     // A collection belongs to the paste's owner, so a starred paste shows none.
     collection: paste.owner ? null : paste.collection,
-    starred: await isStarred(paste.slug),
+    starred: starred.has(paste.slug),
     owner: paste.owner,
     canEdit,
-  }
+  } satisfies PasteRow
 }
 
-export async function toSharedRow(
-  paste: Paste,
-  share: Share & { seen: boolean },
-): Promise<SharedRow> {
-  return {
-    ...(await toRow(paste, share.access === "edit")),
+// Rows for a paste list. The viewer's stars load once for the whole list.
+export async function toRows(pastes: Paste[]): Promise<PasteRow[]> {
+  const starred = await starredSlugs()
+  const now = Date.now()
+  return pastes.map((paste) => toRow(paste, starred, now))
+}
+
+export async function toSharedRows(
+  entries: { paste: Paste; share: Share & { seen: boolean } }[],
+): Promise<SharedRow[]> {
+  const starred = await starredSlugs()
+  const now = Date.now()
+  return entries.map(({ paste, share }) => ({
+    ...toRow(paste, starred, now, share.access === "edit"),
     access: share.access,
     sharedAt: share.sharedAt,
-    sharedLabel: timeAgo(share.sharedAt),
+    sharedLabel: timeAgo(share.sharedAt, now),
     unseen: !share.seen,
-  }
+  }))
 }
 
 export function toTrashRow(paste: Paste): TrashRow {
