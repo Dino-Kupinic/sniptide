@@ -52,12 +52,14 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
     visitors to the app. Leave unset on a single domain.
   - optional: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
     `GOOGLE_CLIENT_SECRET`
+  - `CLIENT_IP_SOURCE`: `cloudflare`, so rate limits key on the `CF-Connecting-IP` Cloudflare
+    sets (the default, `direct`, would see only the proxy's address)
   - optional: `SHARE_PROXY_SECRET`, a random string shared with the website so it can pass the
     visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
 
-Rate limits key on the visitor's IP from `CF-Connecting-IP`, which Cloudflare sets. Set
-`CLIENT_IP_HEADER` to use another header (see `apps/web/.env.example`).
+`CLIENT_IP_SOURCE=cloudflare` is only safe while the origin accepts traffic from Cloudflare alone;
+otherwise anyone who reaches the server directly can send their own `CF-Connecting-IP`.
 
 sniptide.com itself is the website (`Dino-Kupinic/sniptide-web`). It proxies share links
 (`sniptide.com/<slug>`, `/<slug>/raw`) to this app and redirects app pages to app.sniptide.com, so
@@ -86,9 +88,20 @@ docker compose --profile app up -d
 Put your reverse proxy (or Coolify) in front of port 3000, and back up the `postgres` volume
 (for example with `pg_dump`). Set `POSTGRES_PASSWORD` to change the database password.
 
-Rate limits need the visitor's IP from a header your proxy controls. `docker-compose.yml` uses
-`CLIENT_IP_HEADER=x-forwarded-for` (the last hop your proxy appended); behind Cloudflare, set it to
-`cf-connecting-ip`.
+Rate limits (sign-in, password-protected pastes) count per visitor IP. Tell the app where that
+comes from with `CLIENT_IP_SOURCE`:
+
+| What's in front of the app | Settings |
+| --- | --- |
+| Nothing: people connect to port 3000 | `CLIENT_IP_SOURCE=direct` (the default) |
+| A reverse proxy that appends to `X-Forwarded-For` (nginx, Caddy, Traefik, Coolify) | `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private` (or the proxy's addresses), or `TRUSTED_PROXY_HOPS=<number of proxies>` |
+| A reverse proxy that sets `X-Real-IP` | `CLIENT_IP_SOURCE=x-real-ip` |
+| Cloudflare, with the origin closed to everything else | `CLIENT_IP_SOURCE=cloudflare` |
+
+`direct` can't be fooled by headers, but behind a proxy it sees only the proxy's address, so every
+visitor shares one limit until you pick the matching source. A header-based source is only safe
+if clients can't reach the app without passing through whatever sets that header. Details are in
+`apps/web/.env.example`.
 
 Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
 separate domain, for example a short one:

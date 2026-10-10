@@ -24,8 +24,13 @@ function attempt(slug: string, password: string, client = "203.0.113.1", body?: 
 }
 
 describeDb("unlocking a paste", () => {
-  afterAll(resetDatabase)
+  afterAll(async () => {
+    delete process.env.CLIENT_IP_SOURCE
+    await resetDatabase()
+  })
   beforeEach(async () => {
+    // These requests come through one proxy that appends to X-Forwarded-For.
+    process.env.CLIENT_IP_SOURCE = "x-forwarded-for"
     await resetDatabase()
     await seedUser("owner")
     await seedPaste({ slug: "pw", owner: "owner", password: PASSWORD })
@@ -92,6 +97,7 @@ describeDb("unlocking a paste", () => {
   })
 
   test("behind Cloudflare, the visitor is CF-Connecting-IP however X-Forwarded-For varies", async () => {
+    process.env.CLIENT_IP_SOURCE = "cloudflare"
     for (let guess = 0; guess < 8; guess++) {
       await POST(
         new Request("http://x/pw/unlock", {
