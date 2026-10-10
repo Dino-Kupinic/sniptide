@@ -59,37 +59,37 @@
 }
 
 .dark {
-  --background: #1b1919;
+  --background: #121111;
   --foreground: #f4f4f4;
-  --card: #232121;
+  --card: #1a1919;
   --card-foreground: #f4f4f4;
-  --popover: #232121;
+  --popover: #1a1919;
   --popover-foreground: #f4f4f4;
-  --primary: #322dfc;
+  --primary: #3a36ff;
   --primary-foreground: #ffffff;
-  --secondary: #2c2a2a;
+  --secondary: #242222;
   --secondary-foreground: #f4f4f4;
-  --muted: #2c2a2a;
+  --muted: #242222;
   --muted-foreground: #a3a3a3;
-  --accent: #2c2a2a;
+  --accent: #242222;
   --accent-foreground: #f4f4f4;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: #3a3737;
-  --input: #3a3737;
-  --ring: #322dfc;
-  --chart-1: #322dfc;
+  --border: #2f2c2c;
+  --input: #2f2c2c;
+  --ring: #3a36ff;
+  --chart-1: #3a36ff;
   --chart-2: #f4f4f4;
   --chart-3: #a3a3a3;
   --chart-4: #6b6b6b;
-  --chart-5: #3a3737;
-  --sidebar: #151313;
+  --chart-5: #2f2c2c;
+  --sidebar: #0c0b0b;
   --sidebar-foreground: #f4f4f4;
-  --sidebar-primary: #322dfc;
+  --sidebar-primary: #3a36ff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #2c2a2a;
+  --sidebar-accent: #242222;
   --sidebar-accent-foreground: #f4f4f4;
-  --sidebar-border: #3a3737;
-  --sidebar-ring: #322dfc;
+  --sidebar-border: #2f2c2c;
+  --sidebar-ring: #3a36ff;
   /* The inverse logo from the Paper brand page: its own deep blue, light grey blocks and dim
      hatching. */
   --logo-primary: #1b17c6;
@@ -97,11 +97,11 @@
   --logo-hatch: #535151;
   /* One accent for buttons, links, focus rings and code keywords, a touch lighter than the
      logo's blue. */
-  --link: #322dfc;
+  --link: #3a36ff;
   /* Keywords share the accent blue; the rest are the light palette lifted to read on the dark
      surfaces. */
   --syntax-foreground: #f4f4f4;
-  --syntax-keyword: #322dfc;
+  --syntax-keyword: #3a36ff;
   --syntax-string: #5fd3a8;
   --syntax-constant: #f5b971;
   --syntax-function: #c4b5fd;
@@ -109,7 +109,7 @@
   --syntax-property: #fb9fb1;
   --syntax-comment: #8a8a8a;
   --syntax-punctuation: #b0b0b0;
-  --syntax-link: #322dfc;
+  --syntax-link: #3a36ff;
   --syntax-invalid: oklch(0.704 0.191 22.216);
 }
 
