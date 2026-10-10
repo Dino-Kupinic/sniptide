@@ -13,7 +13,7 @@ export function UnlockForm({ slug }: { slug: string }) {
 
   return (
     <form
-      className="flex w-full max-w-sm flex-col gap-4 border border-foreground bg-background p-6 shadow-[8px_8px_0_0_var(--foreground)]"
+      className="flex w-full max-w-sm flex-col gap-4 border border-offset-shadow bg-background p-6 shadow-[8px_8px_0_0_var(--offset-shadow)]"
       onSubmit={(event) => {
         event.preventDefault()
         const password = String(new FormData(event.currentTarget).get("password"))

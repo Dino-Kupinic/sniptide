@@ -39,6 +39,8 @@
   --sidebar-accent-foreground: #1b1919;
   --sidebar-border: #e8e8e8;
   --sidebar-ring: #2a26ec;
+  /* The hard offset shadow (and its border) on menus, dialogs and cards. */
+  --offset-shadow: #1b1919;
   --logo-primary: #2a26ec;
   --logo-ink: #1b1919;
   --logo-hatch: #000000;
@@ -90,6 +92,8 @@
   --sidebar-accent-foreground: #f4f4f4;
   --sidebar-border: #2f2c2c;
   --sidebar-ring: #3a36ff;
+  /* A mid grey: white offset shadows glare on the dark surfaces. */
+  --offset-shadow: #4a4646;
   /* The inverse logo from the Paper brand page: its own deep blue, light grey blocks and dim
      hatching. */
   --logo-primary: #1b17c6;
@@ -152,6 +156,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-offset-shadow: var(--offset-shadow);
   --color-logo-primary: var(--logo-primary);
   --color-logo-ink: var(--logo-ink);
   --color-logo-hatch: var(--logo-hatch);
