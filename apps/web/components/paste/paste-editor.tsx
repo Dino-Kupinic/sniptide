@@ -428,7 +428,11 @@ export function PasteEditor({
                   <span className="font-medium text-foreground">{language.name}</span>
                   <ChevronDownIcon className="size-3" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="start" className="max-h-80 min-w-44 overflow-y-auto">
+                <DropdownMenuContent
+                  side="top"
+                  align="start"
+                  className="max-h-80 min-w-44 overflow-y-auto"
+                >
                   {languages.map((option) => (
                     <DropdownMenuItem
                       key={option.id}
