@@ -127,9 +127,9 @@ async function loadViewsByDay(ids: string[]) {
 
   const byPaste = new Map<string, number[]>()
   for (const day of days) {
-    let views = byPaste.get(day.pasteId)
-    if (!views) byPaste.set(day.pasteId, (views = Array<number>(VIEW_HISTORY_DAYS).fill(0)))
+    const views = byPaste.get(day.pasteId) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0)
     views[day.day - firstDay] = day.views
+    byPaste.set(day.pasteId, views)
   }
   return (id: string) => byPaste.get(id) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0)
 }
