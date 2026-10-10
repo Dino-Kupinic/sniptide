@@ -2,8 +2,9 @@ import { notFound } from "next/navigation"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { PasteList } from "@/components/lists/paste-list"
 import { getCollection } from "@/lib/collections/store"
+import { parsePasteListQuery } from "@/lib/pastes/list-query"
+import { listPastePage } from "@/lib/pastes/lists"
 import { toRows } from "@/lib/pastes/rows"
-import { listOwnPastes } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/collections/[slug]">) {
@@ -11,16 +12,17 @@ export async function generateMetadata({ params }: PageProps<"/collections/[slug
   return { title: `${collection?.name ?? "Collection"} · Sniptide` }
 }
 
-export default async function Page({ params }: PageProps<"/collections/[slug]">) {
+export default async function Page({ params, searchParams }: PageProps<"/collections/[slug]">) {
   const { slug } = await params
-  const [collection, pastes, { origin, host }] = await Promise.all([
+  const query = parsePasteListQuery(await searchParams)
+  const [collection, data, { origin, host }] = await Promise.all([
     getCollection(slug),
-    listOwnPastes(),
+    listPastePage({ mode: "collection", collection: slug }, query),
     getSiteOrigin(),
   ])
   if (!collection) notFound()
 
-  const rows = await toRows(pastes.filter((paste) => paste.collection === slug))
+  const rows = await toRows(data.pastes)
 
   return (
     <PasteList
@@ -30,6 +32,9 @@ export default async function Page({ params }: PageProps<"/collections/[slug]">)
       origin={origin}
       host={host}
       collections={[]}
+      query={data.query}
+      pagination={data.pagination}
+      languageOptions={data.languageOptions}
       actions={<CollectionMenu collection={collection} afterDelete="/collections" />}
     />
   )

@@ -1,6 +1,6 @@
 import "server-only"
 
-import { collection as collectionTable, paste as pasteTable } from "@workspace/db/schema"
+import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
 import { and, eq, isNull, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
@@ -105,57 +105,69 @@ function sameName(a: string, b: string) {
   return a.localeCompare(b, undefined, { sensitivity: "accent" }) === 0
 }
 
+// Lock the owner's row before checking names/counts. Every create and rename takes the same
+// database lock, so concurrent requests across app instances see each other's committed changes.
 export async function createCollection(
   name: string,
   look?: { icon: CollectionIcon; hue: Hue },
 ): Promise<CollectionResult> {
   const owner = await requireViewerId()
-  const db = getDb()
+  return getDb().transaction(async (tx) => {
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
+    const existing = await tx
+      .select({ slug: collectionTable.slug, name: collectionTable.name })
+      .from(collectionTable)
+      .where(eq(collectionTable.ownerId, owner))
+    if (existing.length >= MAX_COLLECTIONS) return { status: "limit" }
+    if (existing.some((row) => sameName(row.name, name))) return { status: "duplicate" }
 
-  const existing = await db
-    .select({ slug: collectionTable.slug, name: collectionTable.name })
-    .from(collectionTable)
-    .where(eq(collectionTable.ownerId, owner))
-  if (existing.length >= MAX_COLLECTIONS) return { status: "limit" }
-  if (existing.some((row) => sameName(row.name, name))) return { status: "duplicate" }
-
-  // Names that slug alike ("a b" and "a-b") get a numbered link. A concurrent create can take the
-  // slug first, so a conflict moves on to the next number instead of failing.
-  const base = slugify(name)
-  const taken = new Set(existing.map((row) => row.slug))
-  const { icon, hue } = look ?? { icon: "square" as const, hue: defaultHue(existing.length) }
-  for (let attempt = 1; attempt <= 10; attempt++) {
-    const slug = attempt === 1 ? base : `${base.slice(0, 36)}-${attempt}`
-    if (taken.has(slug)) continue
-    const [row] = await db
-      .insert(collectionTable)
-      .values({ ownerId: owner, slug, name, icon, hue })
-      .onConflictDoNothing()
-      .returning()
-    if (row) return { status: "ok", collection: toCollection({ ...row, pasteCount: 0 }) }
-  }
-  return { status: "duplicate" }
+    const base = slugify(name)
+    const taken = new Set(existing.map((row) => row.slug))
+    const { icon, hue } = look ?? { icon: "square" as const, hue: defaultHue(existing.length) }
+    for (let attempt = 1; attempt <= MAX_COLLECTIONS + 1; attempt++) {
+      const slug = attempt === 1 ? base : `${base.slice(0, 36)}-${attempt}`
+      if (taken.has(slug)) continue
+      const [row] = await tx
+        .insert(collectionTable)
+        .values({ ownerId: owner, slug, name, icon, hue })
+        .onConflictDoNothing()
+        .returning()
+      if (row) return { status: "ok", collection: toCollection({ ...row, pasteCount: 0 }) }
+    }
+    return { status: "duplicate" }
+  })
 }
 
 export async function renameCollection(slug: string, name: string): Promise<CollectionResult> {
   const owner = await requireViewerId()
-  const db = getDb()
-
-  const all = await db
-    .select({ slug: collectionTable.slug, name: collectionTable.name })
-    .from(collectionTable)
-    .where(eq(collectionTable.ownerId, owner))
-  if (!all.some((row) => row.slug === slug)) return { status: "missing" }
-  if (all.some((row) => row.slug !== slug && sameName(row.name, name))) {
-    return { status: "duplicate" }
-  }
-
-  await db
-    .update(collectionTable)
-    .set({ name })
-    .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
-  const renamed = await getCollection(slug)
-  return renamed ? { status: "ok", collection: renamed } : { status: "missing" }
+  return getDb().transaction(async (tx) => {
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
+    const all = await tx
+      .select({ slug: collectionTable.slug, name: collectionTable.name })
+      .from(collectionTable)
+      .where(eq(collectionTable.ownerId, owner))
+    if (!all.some((row) => row.slug === slug)) return { status: "missing" }
+    if (all.some((row) => row.slug !== slug && sameName(row.name, name))) {
+      return { status: "duplicate" }
+    }
+    const [row] = await tx
+      .update(collectionTable)
+      .set({ name })
+      .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
+      .returning()
+    if (!row) return { status: "missing" }
+    const [count] = await tx
+      .select({ value: sql<number>`count(*)::int` })
+      .from(pasteTable)
+      .where(
+        and(
+          eq(pasteTable.ownerId, owner),
+          eq(pasteTable.collection, slug),
+          isNull(pasteTable.deletedAt),
+        ),
+      )
+    return { status: "ok", collection: toCollection({ ...row, pasteCount: count?.value ?? 0 }) }
+  })
 }
 
 export async function setCollectionIcon(slug: string, icon: CollectionIcon, hue: Hue) {

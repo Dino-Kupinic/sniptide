@@ -8,7 +8,7 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "bun src/migrate-cli.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:runtime",

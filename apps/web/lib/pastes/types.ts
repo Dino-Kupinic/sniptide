@@ -62,6 +62,20 @@ export interface Paste extends PasteSummary {
   revisions: Revision[]
 }
 
+// Public reads carry the fields the share page renders, without owner-only history or hashes.
+export type SharedPaste = Pick<
+  Paste,
+  | "slug"
+  | "title"
+  | "files"
+  | "author"
+  | "updatedAt"
+  | "expiresAt"
+  | "views"
+  | "burnAfterRead"
+  | "allowRaw"
+>
+
 export interface Share {
   slug: string
   access: Access

@@ -20,7 +20,6 @@ import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marke
 import { formatNumber } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow } from "@/lib/pastes/rows"
-import { DAY } from "@/lib/time"
 import { QuickPaste } from "./quick-paste"
 import { ViewsBarChart } from "./views-chart"
 
@@ -112,9 +111,7 @@ export function Dashboard({
   const views = sum(data.dailyViews.slice(-days))
   const previousViews = sum(data.dailyViews.slice(-2 * days, -days))
   const viewsTrend = trend(views, previousViews)
-  // Captured once per mount so the "new this week" count doesn't drift between renders.
-  const [now] = React.useState(() => Date.now())
-  const created = data.pasteCreatedAt.filter((time) => time > now - days * DAY).length
+  const created = data.newPastes[range]
 
   // The chart always shows at least a week so a single day still has context.
   const chartDays = Math.max(7, days)

@@ -33,7 +33,9 @@ bun --filter @workspace/db db:generate   # drizzle-kit writes packages/db/migrat
 ```
 
 The next start of the app (locally or in production) applies the new migration.
-`bun --filter @workspace/db db:migrate` applies them without starting the app. Auth tables are
+`bun --filter @workspace/db db:migrate` applies them without starting the app. Both entry points acquire the same Postgres advisory
+lock before reading migration state, so simultaneous app starts and manual migrations run in
+sequence. A failure rolls back the migration transaction and releases the lock. Auth tables are
 generated from better-auth's core schema (`packages/db/src/schema/auth.ts`); regenerate them when
 adding better-auth plugins.
 

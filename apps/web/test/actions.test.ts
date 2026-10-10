@@ -60,6 +60,16 @@ describeDb("paste actions", () => {
       expect(await pasteCount()).toBe(0)
     })
 
+    test("gist and editor saves reject non-ASCII content above the byte limit", async () => {
+      const big = "é".repeat(300 * 1024)
+      serveGist({ description: "utf8", files: { "a.txt": { filename: "a.txt", content: big } } })
+      expect(await importGist(GIST)).toEqual({ ok: false, error: "Pastes are limited to 512 KB." })
+      const editor = input("utf8")
+      editor.files = [{ name: "a.txt", content: big }]
+      expect(await savePaste(editor)).toEqual({ ok: false, error: "Pastes are limited to 512 KB." })
+      expect(await pasteCount()).toBe(0)
+    })
+
     test("refuses file names longer than the editor allows", async () => {
       const name = `${"n".repeat(200)}.txt`
       serveGist({ description: null, files: { [name]: { filename: name, content: "hi" } } })
