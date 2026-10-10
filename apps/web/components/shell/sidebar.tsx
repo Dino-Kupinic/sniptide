@@ -71,7 +71,10 @@ export function Sidebar({
 
   return (
     <div className="flex min-h-full flex-col gap-3 px-2 py-3">
-      <Link href="/dashboard" className="px-2 py-1.5 outline-none">
+      <Link
+        href="/dashboard"
+        className="self-start px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      >
         <Logo />
       </Link>
 
@@ -93,7 +96,7 @@ export function Sidebar({
       >
         <PlusIcon />
         New paste
-        <Kbd className="ml-auto">⌘N</Kbd>
+        <Kbd className="ml-auto border border-white/30">⌘N</Kbd>
       </Button>
 
       <nav aria-label="Main" className="flex flex-col gap-0.5">
@@ -355,6 +358,11 @@ function PasteRow({
       >
         {paste.title}
       </Link>
+      <PasteMenu
+        paste={{ ...paste, starred }}
+        collections={collections}
+        className={cn(iconButtonClass, revealClass)}
+      />
       <button
         type="button"
         aria-label={starred ? `Unstar ${paste.title}` : `Star ${paste.title}`}
@@ -367,11 +375,6 @@ function PasteRow({
       >
         <StarIcon className={cn(starred && "fill-primary text-primary")} />
       </button>
-      <PasteMenu
-        paste={{ ...paste, starred }}
-        collections={collections}
-        className={cn(iconButtonClass, revealClass)}
-      />
     </div>
   )
 }

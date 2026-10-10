@@ -2,12 +2,13 @@
 
 import { Separator } from "@sniptide/ui/components/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
-import { BellIcon, ChevronRightIcon, PanelLeftIcon } from "lucide-react"
+import { ChevronRightIcon, PanelLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as React from "react"
 import { useBreadcrumb } from "./breadcrumb"
 import { pageTitles } from "./nav-config"
+import { NotificationsMenu } from "./notifications-menu"
 
 const iconButtonClass =
   "inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
@@ -69,13 +70,7 @@ export function TopBar({
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Notifications"
-          className={`${iconButtonClass} border border-border`}
-        >
-          <BellIcon />
-        </button>
+        <NotificationsMenu className={`${iconButtonClass} border border-border`} />
       </div>
     </header>
   )

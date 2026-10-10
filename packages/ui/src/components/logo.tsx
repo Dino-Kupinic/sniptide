@@ -29,7 +29,7 @@ export function LogoMark({ className }: { className?: string }) {
         <rect x="80" y="156" width="43.6" height="4" />
         <rect x="80" y="151" width="43.6" height="3" />
       </g>
-      <g className="fill-primary">
+      <g className="fill-logo-primary">
         <rect x="80" y="0" width="80" height="32" />
         <rect x="0" y="32" width="36.4" height="32" />
         <rect x="80" y="64" width="80" height="32" />
