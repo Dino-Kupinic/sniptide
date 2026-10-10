@@ -33,6 +33,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       SHARE_URL: ${SHARE_URL:-}
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-x-forwarded-for}
     ports:
       - "3000:3000"
     profiles: [app]

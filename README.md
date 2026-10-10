@@ -52,7 +52,12 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
     visitors to the app. Leave unset on a single domain.
   - optional: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
     `GOOGLE_CLIENT_SECRET`
+  - optional: `SHARE_PROXY_SECRET`, a random string shared with the website so it can pass the
+    visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
+
+Rate limits key on the visitor's IP from `CF-Connecting-IP`, which Cloudflare sets. Set
+`CLIENT_IP_HEADER` to use another header (see `apps/web/.env.example`).
 
 sniptide.com itself is the website (`Dino-Kupinic/sniptide-web`). It proxies share links
 (`sniptide.com/<slug>`, `/<slug>/raw`) to this app and redirects app pages to app.sniptide.com, so
@@ -80,6 +85,10 @@ docker compose --profile app up -d
 
 Put your reverse proxy (or Coolify) in front of port 3000, and back up the `postgres` volume
 (for example with `pg_dump`). Set `POSTGRES_PASSWORD` to change the database password.
+
+Rate limits need the visitor's IP from a header your proxy controls. `docker-compose.yml` uses
+`CLIENT_IP_HEADER=x-forwarded-for` (the last hop your proxy appended); behind Cloudflare, set it to
+`cf-connecting-ip`.
 
 Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
 separate domain, for example a short one:

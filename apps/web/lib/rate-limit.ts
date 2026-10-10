@@ -58,10 +58,3 @@ export async function refund(limits: Limit[]) {
       .where(eq(rateLimit.key, key))
   }
 }
-
-// Who is asking, as far as the proxy in front of the app tells us. The last address in
-// X-Forwarded-For is the one our own proxy appended; earlier ones are whatever the client sent.
-export function clientAddress(headers: Headers) {
-  const forwarded = headers.get("x-forwarded-for")?.split(",").at(-1)?.trim()
-  return forwarded || headers.get("x-real-ip")?.trim() || "unknown"
-}

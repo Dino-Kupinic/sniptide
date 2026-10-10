@@ -91,6 +91,32 @@ describeDb("unlocking a paste", () => {
     expect((await attempt("pw", "again", "203.0.113.7")).status).toBe(429)
   })
 
+  test("behind Cloudflare, the visitor is CF-Connecting-IP however X-Forwarded-For varies", async () => {
+    for (let guess = 0; guess < 8; guess++) {
+      await POST(
+        new Request("http://x/pw/unlock", {
+          method: "POST",
+          headers: {
+            "cf-connecting-ip": "198.51.100.23",
+            "x-forwarded-for": `198.51.100.${guess}, 172.70.1.${guess}`,
+          },
+          body: JSON.stringify({ password: `wrong-${guess}` }),
+        }),
+        { params: Promise.resolve({ slug: "pw" }) } as never,
+      )
+    }
+
+    const limited = await POST(
+      new Request("http://x/pw/unlock", {
+        method: "POST",
+        headers: { "cf-connecting-ip": "198.51.100.23", "x-forwarded-for": "10.0.0.1" },
+        body: JSON.stringify({ password: PASSWORD }),
+      }),
+      { params: Promise.resolve({ slug: "pw" }) } as never,
+    )
+    expect(limited.status).toBe(429)
+  })
+
   test("right passwords are not held against the visitor", async () => {
     for (let round = 0; round < 15; round++) {
       expect((await attempt("pw", PASSWORD)).status).toBe(200)
