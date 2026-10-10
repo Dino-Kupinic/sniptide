@@ -10,3 +10,16 @@ export async function migrateOnStartup() {
     process.env.MIGRATIONS_DIR ?? path.join(process.cwd(), "../../packages/db/migrations")
   await migrateDb(getDb(), folder)
 }
+
+// Checks the client-IP settings, so a bad CLIENT_IP_SOURCE stops the server here, and starts
+// recording each request's TCP peer for the "direct" source and the fallbacks.
+export async function setUpClientIp() {
+  const { clientIpConfig, recordPeerAddresses } = await import("@/lib/client-ip")
+  clientIpConfig()
+  recordPeerAddresses()
+}
+
+export async function startBackgroundJobs() {
+  const { schedulePurge } = await import("@/lib/pastes/purge")
+  schedulePurge()
+}

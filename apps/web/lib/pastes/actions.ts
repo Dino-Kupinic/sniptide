@@ -4,13 +4,37 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { collectionExists } from "@/lib/collections/store"
+import { hit, type Limit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
 import * as store from "./store"
 import { EXPIRIES, VISIBILITIES } from "./types"
 
 async function assertSignedIn() {
-  if (!(await getSession())) throw new Error("Sign in to change pastes.")
+  const session = await getSession()
+  if (!session) throw new Error("Sign in to change pastes.")
+  return session.user.id
+}
+
+const HOUR = 60 * 60
+
+// Per-account limits, so one account can't fill the database or spend the server's GitHub quota.
+const limits = {
+  create: (user: string): Limit => ({ key: `paste:create:${user}`, max: 30, windowSeconds: HOUR }),
+  edit: (user: string): Limit => ({ key: `paste:edit:${user}`, max: 240, windowSeconds: HOUR }),
+  gist: (user: string): Limit => ({ key: `paste:gist:${user}`, max: 20, windowSeconds: HOUR }),
+  slugCheck: (user: string): Limit => ({
+    key: `paste:slug-check:${user}`,
+    max: 600,
+    windowSeconds: HOUR,
+  }),
+}
+
+async function limited(...checks: Limit[]) {
+  const result = await hit(checks)
+  if (result.allowed) return null
+  const minutes = Math.ceil(result.retryAfterSeconds / 60)
+  return `You're doing that too often. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`
 }
 
 const MAX_BYTES = 512 * 1024
@@ -49,12 +73,14 @@ export type SavePasteResult = { ok: true; slug: string } | { ok: false; error: s
 
 // Creates a paste, or updates `editing` when given. Returns the slug to navigate to.
 export async function savePaste(input: SavePasteInput, editing?: string): Promise<SavePasteResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the paste and try again." }
   }
+  const tooOften = await limited(editing ? limits.edit(user) : limits.create(user))
+  if (tooOften) return { ok: false, error: tooOften }
 
   const data = parsed.data
   if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
@@ -89,8 +115,10 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
   return { ok: true, slug: paste.slug }
 }
 
+// Answers "not available" while limited; saving checks the slug again anyway.
 export async function checkSlug(slug: string, except?: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
+  if (await limited(limits.slugCheck(user))) return false
   return store.isSlugAvailable(slug, except)
 }
 
@@ -171,44 +199,63 @@ const gistSchema = z.object({
   ),
 })
 
-// Copies a public GitHub gist into a new unlisted paste. Accepts a gist URL or its id.
+// Copies a public GitHub gist into a new unlisted paste. Accepts a gist URL or its id. The copy
+// goes through the same checks as a paste saved in the editor.
 export async function importGist(input: string): Promise<SavePasteResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
 
   const id = input.trim().match(/([0-9a-f]{20,40})\/?(?:#.*)?$/i)?.[1]
   if (!id) return { ok: false, error: "Paste a gist link like gist.github.com/you/1a2b3c…" }
 
-  const response = await fetch(`https://api.github.com/gists/${id}`, {
-    headers: { accept: "application/vnd.github+json", "user-agent": "sniptide" },
-  })
-  if (response.status === 404)
-    return { ok: false, error: "That gist doesn't exist or isn't public." }
-  if (!response.ok) return { ok: false, error: "GitHub didn't answer. Try again in a minute." }
+  const tooOften = await limited(limits.gist(user), limits.create(user))
+  if (tooOften) return { ok: false, error: tooOften }
 
-  const gist = gistSchema.safeParse(await response.json())
+  const token = process.env.GITHUB_TOKEN
+  const response = await fetch(`https://api.github.com/gists/${id}`, {
+    headers: {
+      accept: "application/vnd.github+json",
+      "user-agent": "sniptide",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null)
+  if (response?.status === 404)
+    return { ok: false, error: "That gist doesn't exist or isn't public." }
+  if (!response?.ok) return { ok: false, error: "GitHub didn't answer. Try again in a minute." }
+
+  const gist = gistSchema.safeParse(await response.json().catch(() => null))
   if (!gist.success) return { ok: false, error: "That gist couldn't be read." }
 
   const files = Object.values(gist.data.files)
     .filter((file) => file.content !== undefined && !file.truncated)
-    .slice(0, 10)
-    .map((file) => ({
-      name: file.filename,
-      content: file.content ?? "",
-      language: detectLanguage(file.filename).id,
-    }))
+    .map((file) => ({ name: file.filename, content: file.content ?? "" }))
   if (files.length === 0)
     return { ok: false, error: "That gist has no files small enough to import." }
 
-  const paste = await store.createPaste({
-    title: gist.data.description?.trim() || files[0]?.name || "Imported gist",
+  const parsed = pasteSchema.safeParse({
+    title: (gist.data.description?.trim() || files[0]?.name || "Imported gist").slice(0, 120),
     description: `Imported from gist ${id}`,
-    files,
+    files: files.slice(0, 10),
     visibility: "unlisted",
     expiry: "never",
     slug: "",
     collection: null,
     password: null,
     burnAfterRead: false,
+  } satisfies SavePasteInput)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "That gist couldn't be imported.",
+    }
+  }
+
+  const paste = await store.createPaste({
+    ...parsed.data,
+    files: parsed.data.files.map((file) => ({
+      ...file,
+      language: detectLanguage(file.name).id,
+    })),
   })
 
   revalidatePath("/", "layout")

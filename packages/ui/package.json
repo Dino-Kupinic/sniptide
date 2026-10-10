@@ -33,7 +33,6 @@
     "class-variance-authority": "catalog:ui",
     "cn": "catalog:ui",
     "lucide-react": "catalog:ui",
-    "shadcn": "catalog:ui",
     "tailwindcss": "catalog:ui",
     "tw-animate-css": "catalog:ui"
   },
@@ -45,6 +44,7 @@
     "@workspace/typescript": "workspace:*",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
+    "shadcn": "catalog:ui",
     "typescript": "catalog:tooling"
   },
   "exports": {

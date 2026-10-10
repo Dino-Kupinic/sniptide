@@ -1,6 +1,14 @@
 import path from "node:path"
 import { migrateDb } from "@workspace/db/migrate"
-import { paste, pasteFile, pasteStar, pasteViewDay, rateLimit, user } from "@workspace/db/schema"
+import {
+  authRateLimit,
+  paste,
+  pasteFile,
+  pasteStar,
+  pasteViewDay,
+  rateLimit,
+  user,
+} from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "@/lib/pastes/passwords"
@@ -37,8 +45,10 @@ export async function resetDatabase() {
   // Everything else cascades from the accounts.
   await getDb().delete(user)
   await getDb().delete(rateLimit)
+  await getDb().delete(authRateLimit)
   request.viewer = null
   request.cookies.clear()
+  request.headers = new Headers()
 }
 
 export async function seedUser(id: string) {

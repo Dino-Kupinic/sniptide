@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { byteLength } from "@/lib/format"
+import { getDashboardData } from "@/lib/pastes/dashboard"
 import { listOwnPastes, listTrash } from "@/lib/pastes/store"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -32,5 +33,18 @@ describeDb("paste lists", () => {
     const [summary] = await listTrash()
     expect(summary?.slug).toBe("gone")
     expect(summary?.bytes).toBe(3)
+  })
+
+  test("the dashboard sends the newest five of each tab, not every paste", async () => {
+    for (let index = 0; index < 8; index++) {
+      await seedPaste({ slug: `pub${index}`, owner: "owner", visibility: "public" })
+    }
+    await seedPaste({ slug: "priv", owner: "owner", visibility: "private" })
+
+    const data = await getDashboardData()
+    expect(data.totalPastes).toBe(9)
+    const slugs = data.recent.map((row) => row.slug)
+    expect(slugs).toHaveLength(6)
+    expect(slugs).toContain("priv")
   })
 })

@@ -4,6 +4,8 @@ import { DAY } from "@/lib/time"
 import { type PasteRow, toRows } from "./rows"
 import { isExpired, listOwnPastes, VIEW_HISTORY_DAYS } from "./store"
 
+// Rows the dashboard's recent table shows per tab (all, public, unlisted, private).
+const RECENT_ROWS = 5
 const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" })
 const shortDate = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -22,7 +24,20 @@ export interface DashboardData {
   activeLinks: number
   passwordProtected: number
   expiringSoon: number
+  // The newest RECENT_ROWS of each tab, newest first.
   recent: PasteRow[]
+}
+
+// Enough rows for every tab of the recent table without sending the whole list.
+function recentRows(rows: PasteRow[]) {
+  const tabs = [
+    () => true,
+    ...(["public", "unlisted", "private"] as const).map(
+      (visibility) => (row: PasteRow) => row.visibility === visibility && !row.burnAfterRead,
+    ),
+  ]
+  const kept = new Set(tabs.flatMap((matches) => rows.filter(matches).slice(0, RECENT_ROWS)))
+  return rows.filter((row) => kept.has(row))
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -51,6 +66,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     expiringSoon: pastes.filter(
       (paste) => paste.expiresAt && paste.expiresAt > now && paste.expiresAt - now < 2 * DAY,
     ).length,
-    recent: await toRows(pastes),
+    recent: recentRows(await toRows(pastes)),
   }
 }

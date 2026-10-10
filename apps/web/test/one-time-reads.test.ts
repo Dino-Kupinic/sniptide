@@ -1,11 +1,13 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import SharePage from "@/app/[slug]/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
+import { POST as revealRoute } from "@/app/[slug]/reveal/route"
 import { readSharedPaste } from "@/lib/pastes/store"
 import {
   hasDatabase,
   marker,
   pasteRow,
+  request,
   resetDatabase,
   seedPaste,
   seedUser,
@@ -14,7 +16,8 @@ import {
 } from "./harness"
 
 // A burn-after-read paste is handed to exactly one reader, whichever way they ask and however many
-// ask at once; and "Allow raw access" holds for everyone but the owner.
+// ask at once, and only when they ask for it: opening the share page alone, as link previews do,
+// never uses it up. "Allow raw access" holds for everyone but the owner.
 
 const describeDb = hasDatabase ? describe : describe.skip
 
@@ -27,6 +30,15 @@ function renders(value: unknown, slug: string, seen = new WeakSet<object>()): bo
   if (typeof value !== "object" || value === null || seen.has(value)) return false
   seen.add(value)
   return Object.values(value).some((child) => renders(child, slug, seen))
+}
+
+async function reveal(slug: string) {
+  const response = await revealRoute(
+    new Request(`http://x/${slug}/reveal`, { method: "POST" }),
+    params(slug),
+  )
+  if (response.status === 404) return "404"
+  return (await response.text()).includes(marker(slug)) ? "content" : "empty"
 }
 
 async function page(slug: string) {
@@ -48,8 +60,31 @@ describeDb("one-time reads", () => {
     await seedPaste({ slug: "plain", owner: "owner", visibility: "public" })
   })
 
+  test("opening the share page shows a sealed paste and doesn't use it up", async () => {
+    for (let visit = 0; visit < 3; visit++) expect(await page("burn")).toBe("empty")
+
+    const row = await pasteRow("burn")
+    expect(row?.views).toBe(0)
+    expect(row?.deletedAt).toBeNull()
+  })
+
+  test("link previews and crawlers that open the page don't use it up either", async () => {
+    request.headers = new Headers({ "user-agent": "Slackbot-LinkExpanding 1.0" })
+    expect(await page("burn")).toBe("empty")
+    expect(await reveal("burn")).toBe("content")
+  })
+
+  test("crawlers don't count as views of an ordinary paste", async () => {
+    request.headers = new Headers({
+      "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)",
+    })
+    expect(await page("plain")).toBe("content")
+    expect((await pasteRow("plain"))?.views).toBe(0)
+  })
+
   test("the first reader of a burn-after-read paste gets it and the second gets nothing", async () => {
-    expect(await page("burn")).toBe("content")
+    expect(await reveal("burn")).toBe("content")
+    expect(await reveal("burn")).toBe("404")
     expect(await page("burn")).toBe("404")
 
     const row = await pasteRow("burn")
@@ -58,7 +93,7 @@ describeDb("one-time reads", () => {
   })
 
   test("only one of many simultaneous readers gets a burn-after-read paste", async () => {
-    const outcomes = await Promise.all(Array.from({ length: 8 }, () => page("burn")))
+    const outcomes = await Promise.all(Array.from({ length: 8 }, () => reveal("burn")))
 
     expect(outcomes.filter((outcome) => outcome === "content")).toHaveLength(1)
     expect(outcomes.filter((outcome) => outcome === "404")).toHaveLength(7)
@@ -66,10 +101,21 @@ describeDb("one-time reads", () => {
     expect(await viewDayTotal("burn")).toBe(1)
   })
 
+  test("a password-protected one can't be revealed before it is unlocked", async () => {
+    await seedPaste({ slug: "burnpw", owner: "owner", burnAfterRead: true, password: "pw-123" })
+    const response = await revealRoute(
+      new Request("http://x/burnpw/reveal", { method: "POST" }),
+      params("burnpw"),
+    )
+    expect(response.status).toBe(401)
+    expect(await response.text()).not.toContain(marker("burnpw"))
+    expect((await pasteRow("burnpw"))?.deletedAt).toBeNull()
+  })
+
   test("the same holds when signed-in readers race", async () => {
     signInAs("other")
     const reads = await Promise.all(
-      Array.from({ length: 8 }, () => readSharedPaste("burn", { visit: true })),
+      Array.from({ length: 8 }, () => readSharedPaste("burn", { reveal: true })),
     )
 
     expect(reads.filter((read) => read.status === "ok")).toHaveLength(1)
@@ -97,11 +143,11 @@ describeDb("one-time reads", () => {
     // Asking for it raw did not use it up.
     expect((await pasteRow("burnraw"))?.deletedAt).toBeNull()
     signInAs(null)
-    expect(await page("burnraw")).toBe("content")
+    expect(await reveal("burnraw")).toBe("content")
   })
 
   test("a burned paste has no raw route either", async () => {
-    await page("burnraw")
+    await reveal("burnraw")
     const response = await rawRequest("burnraw")
     expect(response.status).toBe(404)
     expect(await response.text()).not.toContain(marker("burnraw"))

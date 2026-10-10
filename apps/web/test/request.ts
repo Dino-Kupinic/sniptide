@@ -3,4 +3,5 @@
 export const request = {
   viewer: null as string | null,
   cookies: new Map<string, string>(),
+  headers: new Headers(),
 }

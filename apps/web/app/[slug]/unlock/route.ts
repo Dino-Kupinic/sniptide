@@ -1,8 +1,9 @@
 import { cookies } from "next/headers"
+import { clientAddress } from "@/lib/client-ip"
 import { verifyPassword } from "@/lib/pastes/passwords"
 import { getUnlockHash } from "@/lib/pastes/store"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
-import { clientAddress, hit, type Limit, refund } from "@/lib/rate-limit"
+import { hit, type Limit, refund } from "@/lib/rate-limit"
 
 // The longest password a paste can have (see the save schema) and the most this route will read.
 const MAX_PASSWORD_LENGTH = 200

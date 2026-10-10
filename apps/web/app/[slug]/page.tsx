@@ -1,16 +1,18 @@
 import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
+import { headers } from "next/headers"
 import { notFound } from "next/navigation"
-import { CodeBlock } from "@/components/paste/code-block"
+import { userAgent } from "next/server"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { LanguageLabel } from "@/components/paste/language-marker"
+import { RevealPaste } from "@/components/paste/reveal-paste"
 import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
-import { readSharedPaste } from "@/lib/pastes/store"
+import { readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
 const avatarTone = {
@@ -20,23 +22,36 @@ const avatarTone = {
 }
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">) {
-  const read = await readSharedPaste((await params).slug)
-  // A title is content too: show it only on pastes anyone with the link may already read.
-  if (read.status !== "ok" || read.paste.burnAfterRead) return { title: "Sniptide" }
-  const { paste } = read
+  const meta = await readSharedMeta((await params).slug)
+  if (!meta) return { title: "Sniptide" }
 
   return {
-    title: `${paste.title} · Sniptide`,
+    title: `${meta.title} · Sniptide`,
     // Unlisted pastes are reachable by link only, so keep them out of search engines.
-    robots: paste.visibility === "public" ? undefined : { index: false, follow: false },
+    robots: meta.visibility === "public" ? undefined : { index: false, follow: false },
   }
 }
 
 // Public page for a paste at sniptide.com/<slug>, from the "Share page (public)" artboards.
 export default async function Page({ params }: PageProps<"/[slug]">) {
   const { slug } = await params
-  const read = await readSharedPaste(slug, { visit: true })
+  // Crawlers and link unfurlers don't count as views.
+  const { isBot } = userAgent({ headers: await headers() })
+  const read = await readSharedPaste(slug, { visit: !isBot })
   if (read.status === "missing") notFound()
+
+  if (read.status === "sealed") {
+    return (
+      <div className="flex min-h-svh flex-col">
+        <PublicHeader signedIn={read.signedIn} />
+        <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col justify-center gap-6 px-4 pt-4 pb-6 lg:pt-12">
+          <RevealPaste slug={slug} />
+          {read.signedIn ? null : <SignUpPrompt />}
+        </main>
+        <StripeBand />
+      </div>
+    )
+  }
 
   if (read.status === "locked") {
     return (
@@ -50,22 +65,20 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
     )
   }
 
-  // The owner's own visits don't count as views (or burn the paste); readSharedPaste did both for
-  // everyone else.
-  const { paste, owned, signedIn } = read
-  const burning = paste.burnAfterRead && !owned
-  // A burned paste is gone once this page has loaded, so there is no raw file to link to.
-  const rawAllowed = paste.allowRaw && !burning
+  // Only the owner gets here with a burn-after-read paste; everyone else sees it sealed above.
+  const { paste, signedIn } = read
+  const rawAllowed = paste.allowRaw
 
   const owner = paste.author
   const files = await highlightFiles(paste.files)
   const first = files[0]
+  const single = files.length === 1
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const bytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const rawHref =
     rawAllowed && first ? `/${slug}/raw?file=${encodeURIComponent(first.name)}` : undefined
-  const expires = burning
-    ? "Deleted after this view"
+  const expires = paste.burnAfterRead
+    ? "Deleted after one view"
     : paste.expiresAt
       ? `Expires ${timeUntil(paste.expiresAt)}`
       : null
@@ -119,36 +132,13 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           ) : null}
         </div>
 
-        {burning ? (
-          <p className="border border-primary bg-primary/5 px-3 py-2 text-[13px] text-link">
-            This paste was set to burn after reading. It's gone once you leave this page, so copy
-            what you need now.
-          </p>
-        ) : null}
-
-        <div className="hidden flex-col gap-4 lg:flex">
-          {paste.files.length === 1 && first ? (
-            <CodeBlock
-              content={first.content}
-              highlighted={first.lines}
-              className="border border-border bg-sidebar py-5"
-            />
-          ) : (
-            <FileViewer
-              slug={slug}
-              files={files}
-              rawAllowed={rawAllowed}
-              bodyClassName="bg-sidebar"
-            />
-          )}
-        </div>
         <FileViewer
           slug={slug}
           files={files}
           rawAllowed={rawAllowed}
           collapseAt={6}
-          className="lg:hidden"
-          bodyClassName="bg-sidebar"
+          headerClassName={single ? "lg:hidden" : undefined}
+          bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
         />
 
         <div className="mt-auto flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between">
@@ -157,23 +147,27 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
               <ShareActions rawHref={rawHref} content={first.content} compact />
             </div>
           ) : null}
-          {signedIn ? null : (
-            <p className="text-center text-[13px] text-muted-foreground lg:text-left">
-              Shared with Sniptide.{" "}
-              <a
-                href={`${getAppOrigin()}/sign-up`}
-                className="inline-flex items-center gap-1 font-medium text-link hover:underline"
-              >
-                Create a free account
-                <ArrowRightIcon className="size-3.5" />
-              </a>
-            </p>
-          )}
+          {signedIn ? null : <SignUpPrompt />}
         </div>
       </main>
 
       <StripeBand />
     </div>
+  )
+}
+
+function SignUpPrompt() {
+  return (
+    <p className="text-center text-[13px] text-muted-foreground lg:text-left">
+      Shared with Sniptide.{" "}
+      <a
+        href={`${getAppOrigin()}/sign-up`}
+        className="inline-flex items-center gap-1 font-medium text-link hover:underline"
+      >
+        Create a free account
+        <ArrowRightIcon className="size-3.5" />
+      </a>
+    </p>
   )
 }
 

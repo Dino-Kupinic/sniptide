@@ -10,11 +10,13 @@ import {
 } from "@workspace/db/schema"
 import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
 import { cookies } from "next/headers"
+import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { hashPassword } from "./passwords"
+import { TRASH_DAYS } from "./purge"
 import type {
   Expiry,
   NavCounts,
@@ -38,7 +40,7 @@ import { unlockCookieName, unlockToken } from "./unlock"
 // link. Don't add a read that skips them; a page that fetches first and checks later still sends
 // the data to the client.
 
-export const TRASH_DAYS = 30
+export { TRASH_DAYS }
 // How many days of views the charts show.
 export const VIEW_HISTORY_DAYS = 60
 
@@ -346,6 +348,8 @@ export async function getOwnPaste(slug: string) {
 
 export type SharedRead =
   | { status: "ok"; paste: Paste; owned: boolean; signedIn: boolean }
+  // A burn-after-read paste someone else owns, before they ask for it with `reveal`.
+  | { status: "sealed"; signedIn: boolean }
   | { status: "locked" }
   | { status: "missing" }
 
@@ -354,6 +358,10 @@ async function findLiveRecord(slug: string) {
   const record = await findRecord(slug)
   return record && !record.deletedAt && !recordExpired(record) ? record : null
 }
+
+// Memoized per server render, so the share page and its generateMetadata share one lookup. Only
+// for reads: a burn claim still re-checks the row in its own UPDATE.
+const findSharedRecord = cache(findLiveRecord)
 
 // Whether the visitor may open the paste's public link: its owner always can; everyone else needs
 // a public or unlisted paste and, if it has one, the password (proved by the unlock cookie).
@@ -405,14 +413,18 @@ async function claimVisit(id: string) {
 }
 
 // A paste by its public link (the share page and its raw files). Returns the content only when
-// the visitor may see it. `visit` marks the share page opening it: that counts a view for anyone
-// but the owner and burns a burn-after-read paste, so a visitor who loses that race gets
-// "missing" instead of a copy.
+// the visitor may see it. `visit` marks the share page opening it, which counts a view for anyone
+// but the owner.
+//
+// A burn-after-read paste comes back "sealed" to everyone but its owner unless `reveal` is set,
+// which only the reveal route does, on an explicit POST from the visitor. Link previews, mail
+// scanners and prefetches only ever GET the page, so they can't use it up. Revealing counts the
+// view and burns the paste; a visitor who loses that race gets "missing" instead of a copy.
 export async function readSharedPaste(
   slug: string,
-  options: { visit?: boolean } = {},
+  options: { visit?: boolean; reveal?: boolean } = {},
 ): Promise<SharedRead> {
-  const found = await findLiveRecord(slug)
+  const found = await findSharedRecord(slug)
   if (!found) return { status: "missing" }
 
   const viewer = await viewerId()
@@ -420,12 +432,24 @@ export async function readSharedPaste(
   if (verdict !== "ok") return { status: verdict }
 
   const owned = found.ownerId === viewer
-  const record = options.visit && !owned ? await claimVisit(found.id) : found
+  const sealed = found.burnAfterRead && !owned
+  if (sealed && !options.reveal) return { status: "sealed", signedIn: viewer !== null }
+
+  const record = (sealed || options.visit) && !owned ? await claimVisit(found.id) : found
   if (!record) return { status: "missing" }
 
   const paste = await hydrate(record, viewer)
   if (!paste) return { status: "missing" }
   return { status: "ok", paste, owned, signedIn: viewer !== null }
+}
+
+// The share page's title and indexing, without loading files or counting a view. A title is
+// content too, so it's null for burn-after-read pastes and for pastes the visitor can't open.
+export async function readSharedMeta(slug: string) {
+  const record = await findSharedRecord(slug)
+  if (!record || record.burnAfterRead) return null
+  if ((await canOpenLink(record, await viewerId())) !== "ok") return null
+  return { title: record.title, visibility: record.visibility }
 }
 
 // The stored password hash of a paste someone could be asked to unlock, for the unlock route.

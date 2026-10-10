@@ -33,6 +33,12 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       SHARE_URL: ${SHARE_URL:-}
+      # Where rate limits get the visitor's IP (see apps/web/.env.example). "direct" is right when
+      # people reach port 3000 itself; behind a reverse proxy use x-forwarded-for with
+      # TRUSTED_PROXIES (or x-real-ip), and behind Cloudflare only, cloudflare.
+      CLIENT_IP_SOURCE: ${CLIENT_IP_SOURCE:-direct}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-}
     ports:
       - "3000:3000"
     profiles: [app]
