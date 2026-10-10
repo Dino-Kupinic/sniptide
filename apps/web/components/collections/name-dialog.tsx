@@ -23,6 +23,7 @@ export function CollectionNameDialog({
   submitLabel,
   pendingLabel,
   initialName = "",
+  leading,
   onSubmit,
 }: {
   open: boolean
@@ -32,6 +33,8 @@ export function CollectionNameDialog({
   submitLabel: string
   pendingLabel: string
   initialName?: string
+  // Shown before the name field, like New collection's icon button.
+  leading?: React.ReactNode
   onSubmit: (name: string) => Promise<CollectionActionResult>
 }) {
   const [error, setError] = React.useState<string | null>(null)
@@ -60,20 +63,23 @@ export function CollectionNameDialog({
             })
           }}
         >
-          <Input
-            key={initialName}
-            name="name"
-            aria-label="Collection name"
-            placeholder="api-snippets"
-            defaultValue={initialName}
-            maxLength={MAX_NAME_LENGTH}
-            autoComplete="off"
-            required
-            autoFocus
-            onFocus={(event) => event.currentTarget.select()}
-            aria-invalid={Boolean(error)}
-            className="h-10 font-mono text-base lg:text-[13px]"
-          />
+          <div className="flex gap-2">
+            {leading}
+            <Input
+              key={initialName}
+              name="name"
+              aria-label="Collection name"
+              placeholder="api-snippets"
+              defaultValue={initialName}
+              maxLength={MAX_NAME_LENGTH}
+              autoComplete="off"
+              required
+              autoFocus
+              onFocus={(event) => event.currentTarget.select()}
+              aria-invalid={Boolean(error)}
+              className="h-10 min-w-0 flex-1 font-mono text-base lg:text-[13px]"
+            />
+          </div>
           {error ? (
             <p role="alert" className="text-[13px] text-destructive">
               {error}

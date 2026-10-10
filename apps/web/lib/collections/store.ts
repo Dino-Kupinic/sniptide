@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db"
 import {
   type Collection,
   type CollectionIcon,
+  defaultHue,
   HUES,
   type Hue,
   ICONS,
@@ -104,7 +105,10 @@ function sameName(a: string, b: string) {
   return a.localeCompare(b, undefined, { sensitivity: "accent" }) === 0
 }
 
-export async function createCollection(name: string): Promise<CollectionResult> {
+export async function createCollection(
+  name: string,
+  look?: { icon: CollectionIcon; hue: Hue },
+): Promise<CollectionResult> {
   const owner = await requireViewerId()
   const db = getDb()
 
@@ -119,14 +123,13 @@ export async function createCollection(name: string): Promise<CollectionResult> 
   // slug first, so a conflict moves on to the next number instead of failing.
   const base = slugify(name)
   const taken = new Set(existing.map((row) => row.slug))
-  // New collections start as a solid square, each in the next hue, so neighbors tell apart.
-  const hue = HUES[(existing.length + 1) % HUES.length] ?? "blue"
+  const { icon, hue } = look ?? { icon: "square" as const, hue: defaultHue(existing.length) }
   for (let attempt = 1; attempt <= 10; attempt++) {
     const slug = attempt === 1 ? base : `${base.slice(0, 36)}-${attempt}`
     if (taken.has(slug)) continue
     const [row] = await db
       .insert(collectionTable)
-      .values({ ownerId: owner, slug, name, icon: "square", hue })
+      .values({ ownerId: owner, slug, name, icon, hue })
       .onConflictDoNothing()
       .returning()
     if (row) return { status: "ok", collection: toCollection({ ...row, pasteCount: 0 }) }

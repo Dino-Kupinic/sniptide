@@ -87,7 +87,7 @@ export function Sidebar({
 
       <Button
         size="lg"
-        className="h-9 shrink-0 justify-start gap-2 pr-2.5 pl-3"
+        className="h-9 shrink-0 justify-start gap-2 pr-1.5 pl-3"
         render={<Link href="/new" />}
         nativeButton={false}
       >
@@ -183,7 +183,11 @@ export function Sidebar({
           </div>
         ))}
       </Section>
-      <NewCollectionDialog open={creating} onOpenChange={setCreating} />
+      <NewCollectionDialog
+        existing={collections.length}
+        open={creating}
+        onOpenChange={setCreating}
+      />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="mt-auto flex shrink-0 items-center gap-2.5 p-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
@@ -207,7 +211,13 @@ export function Sidebar({
 
 // "More" under Dashboard: the pages that used to be top-level, in a dropdown.
 function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
-  const active = isActivePath(pathname, "/shared") || isActivePath(pathname, "/trash")
+  // On one of its pages, the row reads as that page instead of "More".
+  const current = isActivePath(pathname, "/shared")
+    ? "Shared with me"
+    : isActivePath(pathname, "/trash")
+      ? "Trash"
+      : null
+  const active = current !== null
 
   return (
     <DropdownMenu>
@@ -219,7 +229,7 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
         )}
       >
         <ChevronRightIcon className="transition-transform group-data-popup-open:rotate-90" />
-        More
+        {current ?? "More"}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-(--anchor-width)">
         <DropdownMenuItem

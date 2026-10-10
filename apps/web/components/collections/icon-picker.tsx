@@ -84,58 +84,77 @@ export function CollectionIconPicker({
           </p>
         ) : null}
 
-        <div className="flex flex-col gap-2 px-3 pt-3 pb-1">
-          <p id={`${collection.slug}-icon`} className="text-xs font-medium text-muted-foreground">
-            Icon
-          </p>
-          <fieldset
-            aria-labelledby={`${collection.slug}-icon`}
-            className="m-0 grid min-w-0 grid-cols-6 gap-1 border-0 p-0"
-          >
-            {ICONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-label={option}
-                aria-pressed={option === icon}
-                onClick={() => pick({ icon: option })}
-                className={cn(
-                  "flex size-10 items-center justify-center border border-transparent outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:border-current aria-pressed:bg-current/5",
-                  hueClass[hue],
-                )}
-              >
-                <CollectionIcon icon={option} hue={hue} className="size-4" />
-              </button>
-            ))}
-          </fieldset>
-        </div>
-
-        <div className="flex flex-col gap-2 p-3">
-          <p id={`${collection.slug}-hue`} className="text-xs font-medium text-muted-foreground">
-            Color
-          </p>
-          <fieldset
-            aria-labelledby={`${collection.slug}-hue`}
-            className="m-0 flex min-w-0 justify-between border-0 p-0"
-          >
-            {HUES.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-label={hueLabel[option]}
-                aria-pressed={option === hue}
-                onClick={() => pick({ hue: option })}
-                className={cn(
-                  "flex size-6 items-center justify-center border-2 border-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:border-current",
-                  hueClass[option],
-                )}
-              >
-                <span className={cn("bg-current", option === hue ? "size-4" : "size-[18px]")} />
-              </button>
-            ))}
-          </fieldset>
-        </div>
+        <IconOptions icon={icon} hue={hue} onPick={pick} />
       </PopoverContent>
     </Popover>
+  )
+}
+
+// The twelve icons and ten hues, for the picker above and for the New collection dialog.
+export function IconOptions({
+  icon,
+  hue,
+  onPick,
+}: {
+  icon: Collection["icon"]
+  hue: Collection["hue"]
+  onPick: (next: { icon?: Collection["icon"]; hue?: Collection["hue"] }) => void
+}) {
+  const id = React.useId()
+
+  return (
+    <>
+      <div className="flex flex-col gap-2 px-3 pt-3 pb-1">
+        <p id={`${id}-icon`} className="text-xs font-medium text-muted-foreground">
+          Icon
+        </p>
+        <fieldset
+          aria-labelledby={`${id}-icon`}
+          className="m-0 grid min-w-0 grid-cols-6 gap-1 border-0 p-0"
+        >
+          {ICONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-label={option}
+              aria-pressed={option === icon}
+              onClick={() => onPick({ icon: option })}
+              className={cn(
+                "flex size-10 items-center justify-center border border-transparent outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:border-current aria-pressed:bg-current/5",
+                hueClass[hue],
+              )}
+            >
+              <CollectionIcon icon={option} hue={hue} className="size-4" />
+            </button>
+          ))}
+        </fieldset>
+      </div>
+
+      <div className="flex flex-col gap-2 p-3">
+        <p id={`${id}-hue`} className="text-xs font-medium text-muted-foreground">
+          Color
+        </p>
+        <fieldset
+          aria-labelledby={`${id}-hue`}
+          className="m-0 flex min-w-0 justify-between border-0 p-0"
+        >
+          {HUES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-label={hueLabel[option]}
+              aria-pressed={option === hue}
+              onClick={() => onPick({ hue: option })}
+              className={cn(
+                "flex size-6 items-center justify-center border-2 border-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:border-current",
+                hueClass[option],
+              )}
+            >
+              <span className={cn("bg-current", option === hue ? "size-4" : "size-[18px]")} />
+            </button>
+          ))}
+        </fieldset>
+      </div>
+    </>
   )
 }

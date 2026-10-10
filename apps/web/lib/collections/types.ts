@@ -36,6 +36,9 @@ export const HUES = [
 
 export type Hue = (typeof HUES)[number]
 
+// New collections start as a solid square, each in the next hue, so neighbors tell apart.
+export const defaultHue = (existing: number): Hue => HUES[(existing + 1) % HUES.length] ?? "blue"
+
 export interface Collection {
   slug: string
   name: string

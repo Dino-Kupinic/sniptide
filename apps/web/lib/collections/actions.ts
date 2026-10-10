@@ -41,8 +41,12 @@ async function save(
   return { ok: true, slug: result.collection.slug }
 }
 
-export async function createCollection(name: string) {
-  return save(name, store.createCollection)
+const lookSchema = z.object({ icon: z.enum(ICONS), hue: z.enum(HUES) })
+
+// `look` is the icon and hue picked in the New collection dialog; without it the store picks.
+export async function createCollection(name: string, look?: { icon: string; hue: string }) {
+  const parsed = look ? lookSchema.parse(look) : undefined
+  return save(name, (next) => store.createCollection(next, parsed))
 }
 
 export async function renameCollection(slug: string, name: string) {
@@ -51,7 +55,7 @@ export async function renameCollection(slug: string, name: string) {
 
 export async function setCollectionIcon(slug: string, icon: string, hue: string) {
   await assertSignedIn()
-  const parsed = z.object({ icon: z.enum(ICONS), hue: z.enum(HUES) }).parse({ icon, hue })
+  const parsed = lookSchema.parse({ icon, hue })
   await store.setCollectionIcon(slug, parsed.icon, parsed.hue)
   revalidatePath("/", "layout")
 }

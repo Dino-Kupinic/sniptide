@@ -71,7 +71,11 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
         </ul>
       )}
 
-      <NewCollectionDialog open={creating} onOpenChange={setCreating} />
+      <NewCollectionDialog
+        existing={collections.length}
+        open={creating}
+        onOpenChange={setCreating}
+      />
     </div>
   )
 }

@@ -171,6 +171,13 @@ describeDb("collections", () => {
     expect(two).toMatchObject({ icon: "square", hue: "sky" })
   })
 
+  test("the New collection dialog's icon and hue are kept, and only known ones", async () => {
+    await createCollection("picked", { icon: "steps", hue: "pink" })
+    expect(await getCollection("picked")).toMatchObject({ icon: "steps", hue: "pink" })
+    await expect(createCollection("bad", { icon: "steps", hue: "#000" })).rejects.toThrow()
+    expect(await getCollection("bad")).toBeNull()
+  })
+
   test("the icon and hue can be changed, only to known ones, and only by the owner", async () => {
     await createCollection("notes")
     await setCollectionIcon("notes", "grid", "teal")

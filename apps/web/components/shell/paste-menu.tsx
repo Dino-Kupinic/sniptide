@@ -150,6 +150,7 @@ export function PasteMenu({
         <>
           <RenamePasteDialog paste={paste} open={renaming} onOpenChange={setRenaming} />
           <NewCollectionDialog
+            existing={collections.length}
             open={creating}
             onOpenChange={setCreating}
             onCreated={(slug) => fileIn(slug)}
