@@ -27,6 +27,8 @@ mock.module("next/headers", () => ({
   headers: async () => request.headers,
 }))
 
+mock.module("next/cache", () => ({ revalidatePath: () => {} }))
+
 // Brings the test database up to date once, before the first test file.
 if (process.env.TEST_DATABASE_URL) {
   const { migrate } = await import("./harness")
