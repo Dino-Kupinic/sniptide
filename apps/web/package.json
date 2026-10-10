@@ -16,6 +16,7 @@
     "@sniptide/ui": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@shikijs/langs": "catalog:runtime",
     "better-auth": "catalog:runtime",
     "drizzle-orm": "catalog:runtime",
     "lucide-react": "catalog:ui",

@@ -13,7 +13,9 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { LanguageMarker } from "@/components/paste/language-marker"
+import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
@@ -96,6 +98,7 @@ export function QuickPaste({
   const loaded = React.useRef(false)
   const language = detectLanguage(draft.name)
   const lines = draft.content.split("\n").length
+  const highlighted = useHighlight(draft.content, draft.name)
 
   React.useEffect(() => {
     setDraft(readDraft(fresh))
@@ -191,15 +194,16 @@ export function QuickPaste({
             </div>
           ))}
         </div>
-        <textarea
+        <HighlightedTextarea
           aria-label="Code"
+          lines={highlighted}
           value={draft.content}
           onChange={(event) => update({ content: event.target.value })}
           placeholder="Paste code here…"
           spellCheck={false}
           wrap="off"
           rows={Math.max(lines, 12)}
-          className="min-w-0 flex-1 resize-none bg-transparent leading-[21px] whitespace-pre caret-primary outline-none placeholder:text-muted-foreground"
+          metricsClassName="leading-[21px]"
         />
       </div>
 

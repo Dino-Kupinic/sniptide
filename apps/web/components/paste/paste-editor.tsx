@@ -18,9 +18,11 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { CodeBlock } from "@/components/paste/code-block"
+import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { LanguageMarker } from "@/components/paste/language-marker"
 import { useSiteHost } from "@/components/site-host"
 import { byteLength, formatBytes } from "@/lib/format"
+import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Collection } from "@/lib/mock-data"
 import { checkSlug, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage } from "@/lib/pastes/languages"
@@ -142,6 +144,9 @@ export function PasteEditor({
   const language = detectLanguage(active?.name ?? "")
   const totalBytes = files.reduce((size, file) => size + byteLength(file.content), 0)
   const lineCount = (active?.content ?? "").split("\n").length
+  const lines = useHighlight(active?.content ?? "", active?.name ?? "")
+  // The code view drops one trailing newline; the textarea shows it as an empty last line.
+  const previewLines = active?.content.endsWith("\n") ? lines?.slice(0, -1) : lines
   const secret = React.useMemo(
     () => (secretDetection ? findSecrets(files) : null),
     [files, secretDetection],
@@ -418,7 +423,12 @@ export function PasteEditor({
           </div>
 
           {preview ? (
-            <CodeBlock content={active?.content || " "} wrap className="flex-1" />
+            <CodeBlock
+              content={active?.content || " "}
+              highlighted={previewLines}
+              wrap
+              className="flex-1"
+            />
           ) : (
             <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
               <div
@@ -429,8 +439,9 @@ export function PasteEditor({
                   <div key={index}>{index + 1}</div>
                 ))}
               </div>
-              <textarea
+              <HighlightedTextarea
                 aria-label={`Contents of ${active?.name ?? "file"}`}
+                lines={lines}
                 value={active?.content ?? ""}
                 onChange={(event) => {
                   updateActive({ content: event.target.value })
@@ -444,7 +455,7 @@ export function PasteEditor({
                 placeholder="Paste or type code…"
                 rows={Math.max(lineCount, 12)}
                 wrap="off"
-                className="min-w-0 flex-1 resize-none bg-transparent text-base leading-[22px] whitespace-pre text-foreground caret-primary outline-none placeholder:text-muted-foreground lg:text-[13px] lg:leading-[22px]"
+                metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
               />
             </div>
           )}

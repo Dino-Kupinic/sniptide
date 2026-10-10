@@ -16,7 +16,7 @@ const roleClass: Record<HighlightRole, string> = {
   invalid: "text-(color:--syntax-invalid)",
 }
 
-function renderToken(token: HighlightedToken, index: number) {
+export function renderToken(token: HighlightedToken, index: number) {
   if (typeof token === "string") return token
   return (
     <span key={index} className={roleClass[token[1]]}>
