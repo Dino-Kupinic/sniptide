@@ -37,7 +37,7 @@ export function mobileChrome(pathname: string) {
   }
 }
 
-// Breadcrumb titles for the top bar, keyed by the first path segment.
+// Titles for the top bar, keyed by the first path segment.
 export const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
   pastes: "My pastes",
@@ -47,4 +47,12 @@ export const pageTitles: Record<string, string> = {
   new: "New paste",
   settings: "Settings",
   collections: "Collections",
+}
+
+// The top bar's title for a route. Deeper routes (a paste, a collection) name themselves with
+// <HeaderTitle>, so they get no section title to flash before it.
+export function pageTitle(pathname: string) {
+  const [section = "", ...rest] = pathname.split("/").filter(Boolean)
+  if (rest.length > 0) return ""
+  return pageTitles[section] ?? ""
 }

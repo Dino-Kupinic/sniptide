@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { PasteList } from "@/components/lists/paste-list"
-import { SetBreadcrumb } from "@/components/shell/breadcrumb"
 import { getCollection } from "@/lib/collections/store"
 import { toRows } from "@/lib/pastes/rows"
 import { listOwnPastes } from "@/lib/pastes/store"
@@ -24,19 +23,14 @@ export default async function Page({ params }: PageProps<"/collections/[slug]">)
   const rows = await toRows(pastes.filter((paste) => paste.collection === slug))
 
   return (
-    <>
-      <SetBreadcrumb
-        trail={[{ label: "Collections", href: "/collections" }, { label: collection.name }]}
-      />
-      <PasteList
-        title={collection.name}
-        mode="collection"
-        rows={rows}
-        origin={origin}
-        host={host}
-        collections={[]}
-        actions={<CollectionMenu collection={collection} afterDelete="/collections" />}
-      />
-    </>
+    <PasteList
+      title={collection.name}
+      mode="collection"
+      rows={rows}
+      origin={origin}
+      host={host}
+      collections={[]}
+      actions={<CollectionMenu collection={collection} afterDelete="/collections" />}
+    />
   )
 }
