@@ -20,8 +20,8 @@ import * as React from "react"
 import { CodeBlock } from "@/components/paste/code-block"
 import { LanguageMarker } from "@/components/paste/language-marker"
 import { useSiteHost } from "@/components/site-host"
+import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes } from "@/lib/format"
-import type { Collection } from "@/lib/mock-data"
 import { checkSlug, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
@@ -712,6 +712,23 @@ function CollectionSelect({
   onChange: (value: string | null) => void
   collections: Collection[]
 }) {
+  if (collections.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        No collections yet.{" "}
+        <a
+          href="/collections"
+          target="_blank"
+          rel="noopener"
+          className="font-medium text-link hover:underline"
+        >
+          Create one
+        </a>{" "}
+        to file pastes under it.
+      </p>
+    )
+  }
+
   return (
     <Select
       value={value ?? NO_COLLECTION}

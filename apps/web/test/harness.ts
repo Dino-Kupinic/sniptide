@@ -56,6 +56,7 @@ interface SeedPaste {
   password?: string
   burnAfterRead?: boolean
   allowRaw?: boolean
+  collection?: string
   expiresAt?: Date
   deletedAt?: Date
 }
@@ -74,6 +75,7 @@ export async function seedPaste(input: SeedPaste) {
     passwordHash: input.password ? await hashPassword(input.password) : null,
     burnAfterRead: input.burnAfterRead ?? false,
     allowRaw: input.allowRaw ?? true,
+    collection: input.collection ?? null,
     expiresAt: input.expiresAt ?? null,
     deletedAt: input.deletedAt ?? null,
   })

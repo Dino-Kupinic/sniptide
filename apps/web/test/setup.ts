@@ -16,6 +16,8 @@ mock.module("@/lib/auth", () => ({
   }),
 }))
 
+mock.module("next/cache", () => ({ revalidatePath: () => {} }))
+
 mock.module("next/headers", () => ({
   cookies: async () => ({
     get: (name: string) => {

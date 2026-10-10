@@ -14,7 +14,11 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronsUpDownIcon, PlusIcon, SettingsIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import type { Collection, NavCounts, ViewerSummary } from "@/lib/mock-data"
+import * as React from "react"
+import { CollectionMarker } from "@/components/collections/marker"
+import { NewCollectionDialog } from "@/components/collections/new-collection"
+import type { Collection } from "@/lib/collections/types"
+import type { NavCounts, ViewerSummary } from "@/lib/mock-data"
 import { AccountMenuItems } from "./account-menu"
 import { isActivePath, primaryNav } from "./nav-config"
 
@@ -24,18 +28,12 @@ export interface SidebarProps {
   collections: Collection[]
 }
 
-const markerClass: Record<Collection["marker"], string> = {
-  "filled-primary": "bg-primary",
-  "filled-foreground": "bg-foreground",
-  "outline-primary": "border-2 border-primary",
-  "outline-foreground": "border-2 border-foreground",
-}
-
 const navItemClass =
   "flex h-8 items-center gap-2.5 px-2.5 text-sm text-foreground/85 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-[active=true]:bg-muted data-[active=true]:font-medium data-[active=true]:text-foreground [&_svg]:size-4 [&_svg]:shrink-0"
 
 export function Sidebar({ viewer, counts, collections }: SidebarProps) {
   const pathname = usePathname()
+  const [creating, setCreating] = React.useState(false)
 
   return (
     <div className="flex h-full flex-col gap-4 p-2 pt-4">
@@ -76,11 +74,14 @@ export function Sidebar({ viewer, counts, collections }: SidebarProps) {
       <section aria-labelledby="sidebar-collections" className="flex flex-col gap-0.5">
         <div className="flex h-8 items-center justify-between px-2.5">
           <h2 id="sidebar-collections" className="text-xs text-muted-foreground">
-            Collections
+            <Link href="/collections" className="outline-none hover:text-foreground">
+              Collections
+            </Link>
           </h2>
           <button
             type="button"
             aria-label="New collection"
+            onClick={() => setCreating(true)}
             className="text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <PlusIcon className="size-4" />
@@ -93,13 +94,14 @@ export function Sidebar({ viewer, counts, collections }: SidebarProps) {
             data-active={isActivePath(pathname, `/collections/${collection.slug}`)}
             className={cn(navItemClass, "font-mono text-[13px]")}
           >
-            <span
-              aria-hidden="true"
-              className={cn("size-2 shrink-0", markerClass[collection.marker])}
-            />
-            {collection.name}
+            <CollectionMarker marker={collection.marker} />
+            <span className="truncate">{collection.name}</span>
           </Link>
         ))}
+        {collections.length === 0 ? (
+          <p className="px-2.5 py-1 text-xs text-muted-foreground">No collections yet.</p>
+        ) : null}
+        <NewCollectionDialog open={creating} onOpenChange={setCreating} />
       </section>
 
       <div className="mt-auto flex flex-col gap-2">

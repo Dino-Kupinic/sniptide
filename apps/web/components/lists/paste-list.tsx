@@ -14,8 +14,8 @@ import { StarIcon } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
-import type { Collection } from "@/lib/mock-data"
 import { setStarred } from "@/lib/pastes/actions"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { RowMenu } from "./row-menu"
@@ -212,7 +212,7 @@ export function PasteList({
               selected={visibility}
               onChange={setVisibility}
             />
-            {mode === "collection" ? null : (
+            {mode === "collection" || collections.length === 0 ? null : (
               <FilterMenu
                 label="Collection"
                 options={collections.map((c) => ({

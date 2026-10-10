@@ -69,7 +69,8 @@ export async function toRow(paste: Paste, canEdit = !paste.owner): Promise<Paste
     expiresAt: paste.expiresAt,
     updatedAt: paste.updatedAt,
     updatedLabel: timeAgo(paste.updatedAt, now),
-    collection: paste.collection,
+    // A collection belongs to the paste's owner, so a starred paste shows none.
+    collection: paste.owner ? null : paste.collection,
     starred: await isStarred(paste.slug),
     owner: paste.owner,
     canEdit,
