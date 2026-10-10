@@ -23,6 +23,8 @@ import {
   XIcon,
 } from "lucide-react"
 import type * as React from "react"
+import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
+import { formatNumber } from "@/lib/format"
 
 export function SearchField({
   value,
@@ -307,7 +309,8 @@ export function Pagination({
   )
 }
 
-// Page title row: big uppercase title with the count beside it on mobile, actions on desktop.
+// Page title row: big uppercase title with the count beside it on mobile. On desktop the title
+// and count also name the top bar, and the page's actions move up into it.
 export function ListHeader({
   title,
   count,
@@ -320,21 +323,27 @@ export function ListHeader({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1 lg:flex-row lg:items-end lg:justify-between lg:gap-4">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
-            {title}
-          </h1>
-          {count !== undefined ? (
-            <span className="text-sm text-muted-foreground tabular-nums lg:hidden">{count}</span>
-          ) : null}
-        </div>
-        {description ? (
-          <p className="hidden text-sm text-muted-foreground lg:block">{description}</p>
+    <div className="flex flex-col gap-1">
+      <HeaderTitle>
+        <span className="truncate">{title}</span>
+        {count !== undefined ? (
+          <span className="bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
+            {formatNumber(count)}
+          </span>
+        ) : null}
+      </HeaderTitle>
+      {actions ? <HeaderActions>{actions}</HeaderActions> : null}
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+          {title}
+        </h1>
+        {count !== undefined ? (
+          <span className="text-sm text-muted-foreground tabular-nums lg:hidden">{count}</span>
         ) : null}
       </div>
-      {actions ? <div className="hidden items-center gap-2 lg:flex">{actions}</div> : null}
+      {description ? (
+        <p className="hidden text-sm text-muted-foreground lg:block">{description}</p>
+      ) : null}
     </div>
   )
 }

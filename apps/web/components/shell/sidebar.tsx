@@ -38,6 +38,7 @@ import { AccountMenuItems } from "./account-menu"
 import { isActivePath } from "./nav-config"
 import { PasteMenu } from "./paste-menu"
 import type { SectionId } from "./sidebar-state"
+import { SidebarToggle } from "./top-bar"
 
 export interface SidebarProps {
   viewer: ViewerSummary
@@ -61,9 +62,11 @@ export function Sidebar({
   collections,
   closed,
   onToggleSection,
+  onToggleSidebar,
 }: SidebarProps & {
   closed: SectionId[]
   onToggleSection: (section: SectionId) => void
+  onToggleSidebar: () => void
 }) {
   const pathname = usePathname()
   const [creating, setCreating] = React.useState(false)
@@ -71,12 +74,15 @@ export function Sidebar({
 
   return (
     <div className="flex min-h-full flex-col gap-3 px-2 py-3">
-      <Link
-        href="/dashboard"
-        className="self-start px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-      >
-        <Logo />
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href="/dashboard"
+          className="px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        >
+          <Logo />
+        </Link>
+        <SidebarToggle onToggle={onToggleSidebar} open />
+      </div>
 
       {/* Search isn't built yet; the field holds its place in the layout. */}
       <button
@@ -179,7 +185,7 @@ export function Sidebar({
             <CollectionIconPicker collection={collection} />
             <Link
               href={`/collections/${collection.slug}`}
-              className="min-w-0 flex-1 truncate font-mono text-[13px] outline-none after:absolute after:inset-0 focus-visible:underline"
+              className="min-w-0 flex-1 truncate outline-none after:absolute after:inset-0 focus-visible:underline"
             >
               {collection.name}
             </Link>
@@ -373,7 +379,7 @@ function PasteRow({
         }}
         className={cn(iconButtonClass, !(alwaysShowStar && starred) && revealClass)}
       >
-        <StarIcon className={cn(starred && "fill-primary text-primary")} />
+        <StarIcon className={cn(starred && "fill-link text-link")} />
       </button>
     </div>
   )

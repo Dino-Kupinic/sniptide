@@ -79,7 +79,7 @@
   --border: #2f2c2c;
   --input: #2f2c2c;
   --ring: #3a36ff;
-  --chart-1: #3a36ff;
+  --chart-1: #6aa3ff;
   --chart-2: #f4f4f4;
   --chart-3: #a3a3a3;
   --chart-4: #6b6b6b;
@@ -99,13 +99,14 @@
   --logo-primary: #1b17c6;
   --logo-ink: #dfdfdf;
   --logo-hatch: #535151;
-  /* One accent for buttons, links, focus rings and code keywords, a touch lighter than the
-     logo's blue. */
-  --link: #3a36ff;
-  /* Keywords share the accent blue; the rest are the light palette lifted to read on the dark
+  /* Two blues in dark mode. The deep #3a36ff fills buttons (white on it is 6.7:1) but is too
+     dark to read as text on these surfaces (2.8:1), so links, code keywords, stars, blue
+     collection icons and chart bars use a lighter blue (7.5:1). */
+  --link: #6aa3ff;
+  /* Keywords share the link blue; the rest are the light palette lifted to read on the dark
      surfaces. */
   --syntax-foreground: #f4f4f4;
-  --syntax-keyword: #3a36ff;
+  --syntax-keyword: #6aa3ff;
   --syntax-string: #5fd3a8;
   --syntax-constant: #f5b971;
   --syntax-function: #c4b5fd;
@@ -113,7 +114,7 @@
   --syntax-property: #fb9fb1;
   --syntax-comment: #8a8a8a;
   --syntax-punctuation: #b0b0b0;
-  --syntax-link: #3a36ff;
+  --syntax-link: #6aa3ff;
   --syntax-invalid: oklch(0.704 0.191 22.216);
 }
 

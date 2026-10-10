@@ -71,10 +71,10 @@ const shapes: Record<Icon, React.ReactNode> = {
   corner: <path d="M2 2h12v4H6v8H2z" />,
 }
 
-// Ink and blue follow the theme (foreground and primary), so they hold up in dark mode.
+// Ink and blue follow the theme (foreground and the link blue), so they hold up in dark mode.
 export const hueClass: Record<Hue, string> = {
   ink: "text-foreground",
-  blue: "text-primary",
+  blue: "text-link",
   sky: "text-[#2E90FA]",
   teal: "text-[#0E9384]",
   green: "text-[#3E9B3E]",

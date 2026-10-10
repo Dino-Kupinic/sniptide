@@ -1,12 +1,14 @@
 "use client"
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react"
+import { CheckIcon, CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "lucide-react"
 import * as React from "react"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
 import { useCopy } from "./copy-button"
 import { LanguageMarker } from "./language-marker"
+import { panelToolClass, SidePanelToggle } from "./side-panel"
 
 interface ViewerFile {
   name: string
@@ -16,11 +18,9 @@ interface ViewerFile {
   lines?: HighlightedLines
 }
 
-const toolClass =
-  "inline-flex h-8 items-center gap-1.5 px-2.5 text-[13px] text-foreground/85 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
-
-// Code card on the paste pages: file tabs (or the single file name), Raw / Wrap / Download /
-// Copy, the code, and an optional footer. `collapseAt` shows only the first lines below the lg
+// Code card on the paste pages: file tabs (or the single file name), icon buttons for Wrap /
+// Raw / Download / Copy (named in tooltips), the side panel toggle, the code, and an optional
+// footer. `collapseAt` shows only the first lines below the lg
 // breakpoint, wrapped, with a "Show full file" button, as on the mobile artboards. The collapse
 // is CSS-only so the same render serves desktop and mobile.
 export function FileViewer({
@@ -30,6 +30,7 @@ export function FileViewer({
   collapseAt,
   rawAllowed = true,
   lineNumbers = true,
+  panelToggle = false,
   className,
   headerClassName,
   bodyClassName,
@@ -41,6 +42,8 @@ export function FileViewer({
   collapseAt?: number
   rawAllowed?: boolean
   lineNumbers?: boolean
+  // Shows the side panel toggle; needs a SidePanelProvider around the card and its panel.
+  panelToggle?: boolean
   className?: string
   headerClassName?: string
   bodyClassName?: string
@@ -88,37 +91,50 @@ export function FileViewer({
             )
           })}
         </div>
-        <div className="flex shrink-0 items-center">
-          {rawAllowed ? (
-            <a href={rawHref} className={toolClass}>
-              Raw
-            </a>
-          ) : null}
-          <button
-            type="button"
-            aria-pressed={wrap}
-            onClick={() => setWrap((value) => !value)}
-            className={cn(toolClass, wrap && "text-link")}
-          >
-            Wrap
-          </button>
-          {rawAllowed ? (
-            <a
-              href={`${rawHref}&download=1`}
-              aria-label={`Download ${active.name}`}
-              className={cn(toolClass, "hidden lg:inline-flex")}
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Tool label={wrap ? "Don't wrap lines" : "Wrap lines"}>
+            <button
+              type="button"
+              aria-label="Wrap lines"
+              aria-pressed={wrap}
+              onClick={() => setWrap((value) => !value)}
+              className={panelToolClass}
             >
-              <DownloadIcon />
-            </a>
+              <WrapTextIcon />
+            </button>
+          </Tool>
+          {rawAllowed ? (
+            <Tool label="View raw">
+              <a href={rawHref} aria-label="View raw" className={panelToolClass}>
+                <FileCodeIcon />
+              </a>
+            </Tool>
           ) : null}
-          <button
-            type="button"
-            onClick={() => copy(active.content)}
-            className={cn(toolClass, "hidden bg-muted lg:inline-flex")}
-          >
-            {copied ? <CheckIcon /> : <CopyIcon />}
-            <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
-          </button>
+          {rawAllowed ? (
+            <Tool label="Download">
+              <a
+                href={`${rawHref}&download=1`}
+                aria-label={`Download ${active.name}`}
+                className={cn(panelToolClass, "hidden lg:inline-flex")}
+              >
+                <DownloadIcon />
+              </a>
+            </Tool>
+          ) : null}
+          <Tool label={copied ? "Copied" : "Copy"}>
+            <button
+              type="button"
+              aria-label="Copy file contents"
+              onClick={() => copy(active.content)}
+              className={cn(panelToolClass, "hidden lg:inline-flex")}
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </button>
+          </Tool>
+          <span aria-live="polite" className="sr-only">
+            {copied ? "Copied" : ""}
+          </span>
+          {panelToggle ? <SidePanelToggle /> : null}
         </div>
       </div>
 
@@ -152,5 +168,14 @@ export function FileViewer({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function Tool({ label, children }: { label: string; children: React.ReactElement }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   )
 }

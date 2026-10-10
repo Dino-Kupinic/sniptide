@@ -1,7 +1,7 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { formatNumber } from "@/lib/format"
 
-// Bar chart from the dashboard artboard: primary bars capped with three thin ink rules, the
+// Bar chart from the dashboard artboard: blue bars capped with three thin ink rules, the
 // peak day in ink with its value above it. Thirty-day ranges drop the caps and most labels.
 export function ViewsBarChart({
   values,
@@ -48,7 +48,7 @@ export function ViewsBarChart({
                   <span className="h-[3px] shrink-0 bg-foreground" />
                 </>
               )}
-              <span className={cn("flex-1", index === peak ? "bg-foreground" : "bg-primary")} />
+              <span className={cn("flex-1", index === peak ? "bg-foreground" : "bg-link")} />
             </div>
           </div>
         ))}

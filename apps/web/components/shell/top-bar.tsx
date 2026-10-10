@@ -1,19 +1,19 @@
 "use client"
 
-import { Separator } from "@sniptide/ui/components/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
-import { ChevronRightIcon, PanelLeftIcon } from "lucide-react"
-import Link from "next/link"
+import { PanelLeftIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
-import * as React from "react"
-import { useBreadcrumb } from "./breadcrumb"
-import { pageTitles } from "./nav-config"
+import { pageTitle } from "./nav-config"
 import { NotificationsMenu } from "./notifications-menu"
+import { useHeaderSlotRefs } from "./page-header"
 
 const iconButtonClass =
   "inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
 
-// Desktop top bar (lg and up). Below lg the shell shows MobileTopBar instead.
+// Desktop top bar (lg and up): the page title on the left, the page's own actions on the right,
+// then the bell. There is no breadcrumb; the sidebar already marks where you are. The sidebar
+// toggle lives next to the logo, and moves in here only while the sidebar is hidden.
+// Below lg the shell shows MobileTopBar instead.
 export function TopBar({
   onToggleSidebar,
   sidebarOpen,
@@ -22,56 +22,53 @@ export function TopBar({
   sidebarOpen: boolean
 }) {
   const pathname = usePathname()
-  const section = pathname.split("/")[1] ?? ""
-  const title = pageTitles[section] ?? "Workspace"
-  const trail = useBreadcrumb() ?? [{ label: "Workspace" }, { label: title }]
+  const { setTitle, setActions } = useHeaderSlotRefs()
 
   return (
-    <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 lg:flex">
-      <Tooltip>
-        <TooltipTrigger
-          className={iconButtonClass}
-          onClick={onToggleSidebar}
-          aria-label="Toggle sidebar"
-          aria-expanded={sidebarOpen}
-        >
-          <PanelLeftIcon />
-        </TooltipTrigger>
-        <TooltipContent side="bottom">⌘B</TooltipContent>
-      </Tooltip>
+    <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6 lg:flex">
+      {sidebarOpen ? null : (
+        <>
+          <SidebarToggle onToggle={onToggleSidebar} open={false} className="-ml-2" />
+          <span aria-hidden="true" className="h-5 w-px bg-border" />
+        </>
+      )}
 
-      <Separator orientation="vertical" className="my-4" />
-
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-sm">
-        {trail.map((crumb, index) => {
-          const last = index === trail.length - 1
-          return (
-            <React.Fragment key={`${crumb.label}-${index}`}>
-              {index > 0 ? (
-                <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              ) : null}
-              {last ? (
-                <span aria-current="page" className="truncate">
-                  {crumb.label}
-                </span>
-              ) : crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  className="shrink-0 text-muted-foreground hover:text-foreground"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="shrink-0 text-muted-foreground">{crumb.label}</span>
-              )}
-            </React.Fragment>
-          )
-        })}
-      </nav>
-
-      <div className="ml-auto flex items-center gap-2">
-        <NotificationsMenu className={`${iconButtonClass} border border-border`} />
+      <div
+        ref={setTitle}
+        className="group/title flex min-w-0 flex-1 items-center text-[15px] font-semibold"
+      >
+        <span className="truncate group-has-data-header-title/title:hidden">
+          {pageTitle(pathname)}
+        </span>
       </div>
+
+      <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
+      <span aria-hidden="true" className="h-5 w-px bg-border" />
+      <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>
+  )
+}
+
+export function SidebarToggle({
+  onToggle,
+  open,
+  className,
+}: {
+  onToggle: () => void
+  open: boolean
+  className?: string
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        className={`${iconButtonClass} text-foreground/75 hover:text-foreground ${className ?? ""}`}
+        onClick={onToggle}
+        aria-label={open ? "Hide sidebar" : "Show sidebar"}
+        aria-expanded={open}
+      >
+        <PanelLeftIcon />
+      </TooltipTrigger>
+      <TooltipContent side="bottom">⌘B</TooltipContent>
+    </Tooltip>
   )
 }
