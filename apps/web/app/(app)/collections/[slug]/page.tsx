@@ -18,9 +18,7 @@ export default async function Page({ params }: PageProps<"/collections/[slug]">)
   if (!collection) notFound()
 
   const [pastes, { origin, host }] = await Promise.all([listOwnPastes(), getSiteOrigin()])
-  const rows = await Promise.all(
-    pastes.filter((paste) => paste.collection === slug).map((paste) => toRow(paste)),
-  )
+  const rows = pastes.filter((paste) => paste.collection === slug).map((paste) => toRow(paste))
 
   return (
     <>

@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: PageProps<"/pastes">) {
   const requested = (await searchParams).sort
   const initialSort = sorts.find((sort) => sort === requested) ?? "updated"
   const [pastes, { origin, host }] = await Promise.all([listOwnPastes(), getSiteOrigin()])
-  const rows = await Promise.all(pastes.map((paste) => toRow(paste)))
+  const rows = pastes.map((paste) => toRow(paste))
 
   return (
     <PasteList

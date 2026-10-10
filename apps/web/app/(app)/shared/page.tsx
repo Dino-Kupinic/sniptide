@@ -7,7 +7,7 @@ export const metadata = { title: "Shared with me · Sniptide" }
 
 export default async function Page() {
   const [entries, { origin, host }] = await Promise.all([listShared(), getSiteOrigin()])
-  const rows = await Promise.all(entries.map(({ paste, share }) => toSharedRow(paste, share)))
+  const rows = entries.map(({ paste, share }) => toSharedRow(paste, share))
 
   return <SharedList rows={rows} origin={origin} host={host} />
 }

@@ -49,6 +49,30 @@ export interface Paste {
   revisions: Revision[]
 }
 
+// A paste as the lists and the dashboard show it: no file contents, revisions or password hash.
+export interface PasteSummary {
+  slug: string
+  title: string
+  visibility: Visibility
+  hasPassword: boolean
+  burnAfterRead: boolean
+  collection: string | null
+  // null means the signed-in viewer owns it.
+  owner: Person | null
+  views: number
+  // Oldest first, today last.
+  viewsByDay: number[]
+  createdAt: number
+  updatedAt: number
+  expiresAt: number | null
+  deletedAt: number | null
+  // The first file's language, and the files' total size in UTF-8 bytes.
+  language: string
+  bytes: number
+  // Whether the signed-in viewer starred it.
+  starred: boolean
+}
+
 export interface Share {
   slug: string
   access: Access
