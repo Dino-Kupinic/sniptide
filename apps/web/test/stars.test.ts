@@ -2,7 +2,8 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { listStarred, navCounts, setStarred } from "@/lib/pastes/store"
+import { toRows } from "@/lib/pastes/rows"
+import { listOwnPastes, listStarred, navCounts, setStarred } from "@/lib/pastes/store"
 import {
   hasDatabase,
   resetDatabase,
@@ -99,6 +100,17 @@ describeDb("starring", () => {
 
     expect(await titles()).toEqual(["title-of-priv"])
     expect((await navCounts()).starred).toBe(1)
+  })
+
+  test("list rows mark exactly the viewer's starred pastes", async () => {
+    signInAs("other")
+    await setStarred("pub", true)
+    signInAs("owner")
+    await setStarred("unl", true)
+
+    const rows = await toRows(await listOwnPastes())
+    const starred = rows.filter((row) => row.starred).map((row) => row.slug)
+    expect(starred).toEqual(["unl"])
   })
 
   test("a star can always be taken off", async () => {

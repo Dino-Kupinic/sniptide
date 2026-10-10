@@ -20,13 +20,13 @@ import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marke
 import { formatNumber } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow } from "@/lib/pastes/rows"
+import { DAY } from "@/lib/time"
 import { QuickPaste } from "./quick-paste"
 import { ViewsBarChart } from "./views-chart"
 
 type Range = "1" | "7" | "30"
 type Tab = "all" | "public" | "unlisted" | "private"
 
-const DAY = 86_400_000
 const rangeLabels: Record<Range, string> = { "1": "today", "7": "this week", "30": "this month" }
 
 function sum(values: number[]) {

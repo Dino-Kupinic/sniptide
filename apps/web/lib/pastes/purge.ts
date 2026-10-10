@@ -3,8 +3,8 @@ import "server-only"
 import { authRateLimit, paste, rateLimit } from "@workspace/db/schema"
 import { lt, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { DAY } from "@/lib/time"
 
-const DAY = 86_400_000
 // How long a trashed (or burned) paste stays restorable before it's deleted for good.
 export const TRASH_DAYS = 30
 // How long an expired paste stays in its owner's list before it's deleted for good.

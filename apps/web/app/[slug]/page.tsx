@@ -11,6 +11,7 @@ import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
+import { highlightFiles } from "@/lib/highlight/highlight"
 import { readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
@@ -69,8 +70,9 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   const rawAllowed = paste.allowRaw
 
   const owner = paste.author
-  const first = paste.files[0]
-  const single = paste.files.length === 1
+  const files = await highlightFiles(paste.files)
+  const first = files[0]
+  const single = files.length === 1
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
   const bytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const rawHref =
@@ -132,7 +134,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 
         <FileViewer
           slug={slug}
-          files={paste.files}
+          files={files}
           rawAllowed={rawAllowed}
           collapseAt={6}
           headerClassName={single ? "lg:hidden" : undefined}

@@ -8,14 +8,27 @@ import {
   pasteViewDay,
   user,
 } from "@workspace/db/schema"
-import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm"
+import { and, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
 import { cookies } from "next/headers"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import { initials } from "@/lib/format"
+import { DAY } from "@/lib/time"
 import { hashPassword } from "./passwords"
 import { TRASH_DAYS } from "./purge"
-import type { Expiry, Paste, PasteInput, PasteSummary, Person, Share, SharingInput } from "./types"
+import type {
+  Expiry,
+  NavCounts,
+  Paste,
+  PasteInput,
+  PasteSummary,
+  Person,
+  Share,
+  SharingInput,
+  SidebarData,
+} from "./types"
+import { SIDEBAR_RECENT, SIDEBAR_STARRED } from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
@@ -26,8 +39,6 @@ import { unlockCookieName, unlockToken } from "./unlock"
 // loads anything: `getOwnPaste` for the app's own screens and `readSharedPaste` for its public
 // link. Don't add a read that skips them; a page that fetches first and checks later still sends
 // the data to the client.
-
-const DAY = 86_400_000
 
 export { TRASH_DAYS }
 // How many days of views the charts show.
@@ -87,27 +98,41 @@ function at(time: number | null) {
   return time === null ? null : new Date(time)
 }
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  const letters = parts.length > 1 ? `${parts[0]?.[0]}${parts.at(-1)?.[0]}` : name.slice(0, 2)
-  return letters.toUpperCase() || "?"
-}
+// Turns paste rows into the summaries the lists read: view history, authors, and each paste's
+// first language and total size, in one query each. File contents and revisions stay unloaded.
+async function summarize(records: PasteRecord[], viewer: string | null): Promise<PasteSummary[]> {
+  if (records.length === 0) return []
+  const db = getDb()
+  const ids = records.map((record) => record.id)
+  const today = utcDay(Date.now())
+  const firstDay = today - VIEW_HISTORY_DAYS + 1
 
-const unknownAuthor: Person = { username: "unknown", name: "Unknown", initials: "?", tone: "muted" }
+  const [files, days, authors] = await Promise.all([
+    db
+      .select({
+        pasteId: pasteFile.pasteId,
+        language: pasteFile.language,
+        bytes: sql<number>`octet_length(${pasteFile.content})::int`,
+      })
+      .from(pasteFile)
+      .where(inArray(pasteFile.pasteId, ids))
+      .orderBy(pasteFile.position),
+    db
+      .select()
+      .from(pasteViewDay)
+      .where(and(inArray(pasteViewDay.pasteId, ids), gte(pasteViewDay.day, firstDay))),
+    db
+      .select({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        displayUsername: user.displayUsername,
+      })
+      .from(user)
+      .where(inArray(user.id, [...new Set(records.map((record) => record.ownerId))])),
+  ])
 
-// The owners of `records`, by id.
-async function loadAuthors(records: PasteRecord[]) {
-  const authors = await getDb()
-    .select({
-      id: user.id,
-      name: user.name,
-      username: user.username,
-      displayUsername: user.displayUsername,
-    })
-    .from(user)
-    .where(inArray(user.id, [...new Set(records.map((record) => record.ownerId))]))
-
-  return new Map<string, Person>(
+  const people = new Map<string, Person>(
     authors.map((author) => [
       author.id,
       {
@@ -118,54 +143,26 @@ async function loadAuthors(records: PasteRecord[]) {
       },
     ]),
   )
-}
-
-// Views per day over the last VIEW_HISTORY_DAYS, oldest first, for each paste id.
-async function loadViewsByDay(ids: string[]) {
-  const firstDay = utcDay(Date.now()) - VIEW_HISTORY_DAYS + 1
-  const days = await getDb()
-    .select()
-    .from(pasteViewDay)
-    .where(and(inArray(pasteViewDay.pasteId, ids), gte(pasteViewDay.day, firstDay)))
-
-  const byPaste = new Map<string, number[]>()
-  for (const day of days) {
-    const views = byPaste.get(day.pasteId) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0)
-    views[day.day - firstDay] = day.views
-    byPaste.set(day.pasteId, views)
-  }
-  return (id: string) => byPaste.get(id) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0)
-}
-
-// Turns paste rows into the Paste shape the screens read, loading files, revisions, view
-// history and authors in one query each.
-async function hydrate(records: PasteRecord[], viewer: string | null): Promise<Paste[]> {
-  if (records.length === 0) return []
-  const db = getDb()
-  const ids = records.map((record) => record.id)
-
-  const [files, revisions, viewsByDayOf, people] = await Promise.all([
-    db.select().from(pasteFile).where(inArray(pasteFile.pasteId, ids)).orderBy(pasteFile.position),
-    db
-      .select()
-      .from(pasteRevision)
-      .where(inArray(pasteRevision.pasteId, ids))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id)),
-    loadViewsByDay(ids),
-    loadAuthors(records),
-  ])
 
   return records.map((record) => {
-    const viewsByDay = viewsByDayOf(record.id)
-    const author = people.get(record.ownerId) ?? unknownAuthor
+    const viewsByDay = Array<number>(VIEW_HISTORY_DAYS).fill(0)
+    for (const day of days) {
+      if (day.pasteId === record.id) viewsByDay[day.day - firstDay] = day.views
+    }
+    const author = people.get(record.ownerId) ?? {
+      username: "unknown",
+      name: "Unknown",
+      initials: "?",
+      tone: "muted",
+    }
+    const own = files.filter((file) => file.pasteId === record.id)
 
     return {
       slug: record.slug,
       title: record.title,
       description: record.description,
-      files: files
-        .filter((file) => file.pasteId === record.id)
-        .map(({ name, language, content }) => ({ name, language, content })),
+      language: own[0]?.language ?? "text",
+      bytes: own.reduce((size, file) => size + file.bytes, 0),
       visibility: record.visibility,
       password: record.passwordHash,
       burnAfterRead: record.burnAfterRead,
@@ -180,61 +177,30 @@ async function hydrate(records: PasteRecord[], viewer: string | null): Promise<P
       updatedAt: ms(record.updatedAt),
       expiresAt: ms(record.expiresAt),
       deletedAt: ms(record.deletedAt),
-      revisions: revisions
-        .filter((revision) => revision.pasteId === record.id)
-        .map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
     }
   })
 }
 
-// The lighter shape for lists and the dashboard: file contents are summed in SQL instead of
-// loaded, and the viewer's stars come in one query rather than one per paste.
-async function summarize(records: PasteRecord[], viewer: string | null): Promise<PasteSummary[]> {
-  if (records.length === 0) return []
+// The full Paste for one record the viewer may read: its summary plus every file's content and
+// the revision history.
+async function hydrate(record: PasteRecord, viewer: string | null): Promise<Paste | null> {
   const db = getDb()
-  const ids = records.map((record) => record.id)
-
-  const [files, viewsByDayOf, people, stars] = await Promise.all([
+  const [[summary], files, revisions] = await Promise.all([
+    summarize([record], viewer),
+    db.select().from(pasteFile).where(eq(pasteFile.pasteId, record.id)).orderBy(pasteFile.position),
     db
-      .select({
-        pasteId: pasteFile.pasteId,
-        language: sql<string>`(array_agg(${pasteFile.language} order by ${pasteFile.position}))[1]`,
-        bytes: sql<number>`coalesce(sum(octet_length(${pasteFile.content})), 0)::int`,
-      })
-      .from(pasteFile)
-      .where(inArray(pasteFile.pasteId, ids))
-      .groupBy(pasteFile.pasteId),
-    loadViewsByDay(ids),
-    loadAuthors(records),
-    viewer
-      ? db
-          .select({ pasteId: pasteStar.pasteId })
-          .from(pasteStar)
-          .where(and(eq(pasteStar.userId, viewer), inArray(pasteStar.pasteId, ids)))
-      : [],
+      .select()
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, record.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id)),
   ])
+  if (!summary) return null
 
-  const fileInfo = new Map(files.map((file) => [file.pasteId, file]))
-  const starred = new Set(stars.map((star) => star.pasteId))
-
-  return records.map((record) => ({
-    slug: record.slug,
-    title: record.title,
-    visibility: record.visibility,
-    hasPassword: record.passwordHash !== null,
-    burnAfterRead: record.burnAfterRead,
-    collection: record.collection,
-    owner: record.ownerId === viewer ? null : (people.get(record.ownerId) ?? unknownAuthor),
-    views: record.views,
-    viewsByDay: viewsByDayOf(record.id),
-    createdAt: ms(record.createdAt),
-    updatedAt: ms(record.updatedAt),
-    expiresAt: ms(record.expiresAt),
-    deletedAt: ms(record.deletedAt),
-    language: fileInfo.get(record.id)?.language ?? "text",
-    bytes: fileInfo.get(record.id)?.bytes ?? 0,
-    starred: starred.has(record.id),
-  }))
+  return {
+    ...summary,
+    files: files.map(({ name, language, content }) => ({ name, language, content })),
+    revisions: revisions.map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
+  }
 }
 
 async function findRecord(slug: string) {
@@ -323,34 +289,15 @@ async function viewerMayRead(record: PasteRecord, viewer: string | null) {
 
 // The viewer's starred pastes that they can still read; one that has since gone private, expired
 // or been locked behind a new password drops out of the list (and the count) without losing the star.
-// SQL keeps only live pastes the viewer owns or can open by link; just the password-protected ones
-// left over need the unlock cookie checked.
 async function starredRecords(viewer: string) {
-  const now = new Date()
   const rows = await getDb()
     .select({ paste: pasteTable })
     .from(pasteStar)
     .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
-    .where(
-      and(
-        eq(pasteStar.userId, viewer),
-        isNull(pasteTable.deletedAt),
-        or(
-          eq(pasteTable.ownerId, viewer),
-          and(
-            ne(pasteTable.visibility, "private"),
-            or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, now)),
-          ),
-        ),
-      ),
-    )
+    .where(and(eq(pasteStar.userId, viewer), isNull(pasteTable.deletedAt)))
     .orderBy(desc(pasteTable.updatedAt))
   const readable = await Promise.all(
-    rows.map(async ({ paste }) =>
-      paste.ownerId === viewer || !paste.passwordHash || (await viewerMayRead(paste, viewer))
-        ? paste
-        : null,
-    ),
+    rows.map(async ({ paste }) => ((await viewerMayRead(paste, viewer)) ? paste : null)),
   )
   return readable.filter((record) => record !== null)
 }
@@ -372,6 +319,18 @@ export async function isStarred(slug: string) {
   return Boolean(row)
 }
 
+// Slugs of every paste the viewer has starred, so a list marks its rows with one query.
+export async function starredSlugs() {
+  const viewer = await viewerId()
+  if (!viewer) return new Set<string>()
+  const rows = await getDb()
+    .select({ slug: pasteTable.slug })
+    .from(pasteStar)
+    .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
+    .where(eq(pasteStar.userId, viewer))
+  return new Set(rows.map((row) => row.slug))
+}
+
 // One of the viewer's own pastes, for the app's screens (detail, edit, duplicate). Anyone else's
 // paste, a trashed one and a missing one all come back as null.
 export async function getOwnPaste(slug: string) {
@@ -384,8 +343,7 @@ export async function getOwnPaste(slug: string) {
       and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
     )
   if (!record) return null
-  const [paste] = await hydrate([record], viewer)
-  return paste ?? null
+  return hydrate(record, viewer)
 }
 
 export type SharedRead =
@@ -480,7 +438,7 @@ export async function readSharedPaste(
   const record = (sealed || options.visit) && !owned ? await claimVisit(found.id) : found
   if (!record) return { status: "missing" }
 
-  const [paste] = await hydrate([record], viewer)
+  const paste = await hydrate(record, viewer)
   if (!paste) return { status: "missing" }
   return { status: "ok", paste, owned, signedIn: viewer !== null }
 }
@@ -500,7 +458,7 @@ export async function getUnlockHash(slug: string) {
   return record && record.visibility !== "private" ? record.passwordHash : null
 }
 
-export async function navCounts() {
+export async function navCounts(): Promise<NavCounts> {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()
@@ -512,6 +470,39 @@ export async function navCounts() {
     starredRecords(viewer),
   ])
   return { pastes: own?.count ?? 0, starred: starred.length, shared: 0 }
+}
+
+// Everything the sidebar lists: the counts, the latest pastes and the first starred ones.
+export async function sidebarData(): Promise<SidebarData> {
+  const viewer = await viewerId()
+  if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
+  const db = getDb()
+  const [[own], recent, starred, starSlugs] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pasteTable)
+      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
+    db
+      .select()
+      .from(pasteTable)
+      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
+      .orderBy(desc(pasteTable.updatedAt))
+      .limit(SIDEBAR_RECENT),
+    starredRecords(viewer),
+    starredSlugs(),
+  ])
+  const row = (record: PasteRecord) => ({
+    slug: record.slug,
+    title: record.title,
+    owned: record.ownerId === viewer,
+    starred: starSlugs.has(record.slug),
+    collection: record.ownerId === viewer ? record.collection : null,
+  })
+  return {
+    counts: { pastes: own?.count ?? 0, starred: starred.length, shared: 0 },
+    recent: recent.map(row),
+    starred: starred.slice(0, SIDEBAR_STARRED).map(row),
+  }
 }
 
 export async function isSlugAvailable(slug: string, except?: string) {
@@ -632,6 +623,21 @@ export async function setStarred(slug: string, starred: boolean) {
       .delete(pasteStar)
       .where(and(eq(pasteStar.userId, viewer), eq(pasteStar.pasteId, record.id)))
   }
+}
+
+// Changes only the title; the paste keeps its place in the "recent" order.
+export async function renamePaste(slug: string, title: string) {
+  const record = await findOwned(slug)
+  if (!record || record.deletedAt) return
+  await getDb().update(pasteTable).set({ title }).where(eq(pasteTable.id, record.id))
+}
+
+// Files the paste in a collection, or takes it out of its collection with null. The caller
+// checks that the collection exists.
+export async function setPasteCollection(slug: string, collection: string | null) {
+  const record = await findOwned(slug)
+  if (!record || record.deletedAt) return
+  await getDb().update(pasteTable).set({ collection }).where(eq(pasteTable.id, record.id))
 }
 
 export async function trashPaste(slug: string) {

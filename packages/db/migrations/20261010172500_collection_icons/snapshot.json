@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b0b639b1-84a7-4382-9d05-29eff9d1d18d",
+  "id": "59dfb5c7-6e64-4d0f-8ba1-7e4762a6da5d",
   "prevIds": [
-    "453031dd-73e4-4600-ae45-324b951ecc08"
+    "4d0b95cc-e546-4200-b3ff-eeb6e011180e"
   ],
   "ddl": [
     {
@@ -42,6 +42,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "collection",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "paste",
       "entityType": "tables",
       "schema": "public"
@@ -67,12 +73,6 @@
     {
       "isRlsEnabled": false,
       "name": "paste_view_day",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "auth_rate_limit",
       "entityType": "tables",
       "schema": "public"
     },
@@ -574,6 +574,97 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "slug",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'square'",
+      "generated": null,
+      "identity": null,
+      "name": "icon",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'blue'",
+      "generated": null,
+      "identity": null,
+      "name": "hue",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "paste"
     },
     {
@@ -987,58 +1078,6 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "key",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "count",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "bigint",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "last_request",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
       "name": "key",
       "entityType": "columns",
       "schema": "public",
@@ -1153,6 +1192,62 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "verification"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "slug",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "collection_owner_slug_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "collection"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "collection_owner_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "collection"
     },
     {
       "nameExplicit": true,
@@ -1292,6 +1387,23 @@
       "entityType": "fks",
       "schema": "public",
       "table": "session"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "collection_owner_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "collection"
     },
     {
       "nameExplicit": false,
@@ -1462,6 +1574,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "collection_pkey",
+      "schema": "public",
+      "table": "collection",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "paste_pkey",
       "schema": "public",
       "table": "paste",
@@ -1485,16 +1607,6 @@
       "name": "paste_revision_pkey",
       "schema": "public",
       "table": "paste_revision",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "auth_rate_limit_pkey",
-      "schema": "public",
-      "table": "auth_rate_limit",
       "entityType": "pks"
     },
     {
@@ -1527,17 +1639,6 @@
       "name": "user_email_key",
       "schema": "public",
       "table": "user",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "key"
-      ],
-      "nullsNotDistinct": false,
-      "name": "auth_rate_limit_key_key",
-      "schema": "public",
-      "table": "auth_rate_limit",
       "entityType": "uniques"
     }
   ],

@@ -1,6 +1,7 @@
 import { type SettingsTab, SettingsView } from "@/components/settings/settings-view"
 import { requireSession } from "@/lib/auth"
-import { collections, viewerStorage } from "@/lib/mock-data"
+import { listCollections } from "@/lib/collections/store"
+import { viewerStorage } from "@/lib/mock-data"
 import { listTrash, navCounts } from "@/lib/pastes/store"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { viewerFromUser } from "@/lib/viewer"
@@ -10,10 +11,11 @@ export const metadata = { title: "Settings · Sniptide" }
 const tabs: SettingsTab[] = ["general", "defaults", "api", "billing"]
 
 export default async function Page({ searchParams }: PageProps<"/settings">) {
-  const [session, counts, trash, { tab }] = await Promise.all([
+  const [session, counts, trash, collections, { tab }] = await Promise.all([
     requireSession(),
     navCounts(),
     listTrash(),
+    listCollections(),
     searchParams,
   ])
   const viewer = viewerFromUser(session.user)

@@ -2,8 +2,8 @@ import { notFound } from "next/navigation"
 import { PasteEditor } from "@/components/paste/paste-editor"
 import { SetBreadcrumb } from "@/components/shell/breadcrumb"
 import { getPreferences } from "@/lib/auth"
+import { listCollections } from "@/lib/collections/store"
 import { formatDateTime } from "@/lib/format"
-import { collections } from "@/lib/mock-data"
 import { getOwnPaste, getShare } from "@/lib/pastes/store"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edit">) {
@@ -16,7 +16,11 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
   const paste = await getOwnPaste(slug)
   if (!paste) notFound()
 
-  const [share, preferences] = await Promise.all([getShare(slug), getPreferences()])
+  const [share, preferences, collections] = await Promise.all([
+    getShare(slug),
+    getPreferences(),
+    listCollections(),
+  ])
   if (paste.owner && share?.access !== "edit") notFound()
 
   return (

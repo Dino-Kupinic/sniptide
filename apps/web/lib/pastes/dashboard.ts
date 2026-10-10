@@ -1,9 +1,9 @@
 import "server-only"
 
-import { type PasteRow, toRow } from "./rows"
+import { DAY } from "@/lib/time"
+import { type PasteRow, toRows } from "./rows"
 import { isExpired, listOwnPastes, VIEW_HISTORY_DAYS } from "./store"
 
-const DAY = 86_400_000
 // Rows the dashboard's recent table shows per tab (all, public, unlisted, private).
 const RECENT_ROWS = 5
 const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" })
@@ -62,10 +62,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     pasteCreatedAt: pastes.map((paste) => paste.createdAt),
     totalPastes: pastes.length,
     activeLinks: live.length,
-    passwordProtected: live.filter((paste) => paste.hasPassword).length,
+    passwordProtected: live.filter((paste) => paste.password).length,
     expiringSoon: pastes.filter(
       (paste) => paste.expiresAt && paste.expiresAt > now && paste.expiresAt - now < 2 * DAY,
     ).length,
-    recent: recentRows(pastes.map((paste) => toRow(paste))),
+    recent: recentRows(await toRows(pastes)),
   }
 }

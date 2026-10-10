@@ -15,6 +15,7 @@ import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
 import { SetBreadcrumb } from "@/components/shell/breadcrumb"
 import { getPreferences } from "@/lib/auth"
+import { listCollections } from "@/lib/collections/store"
 import {
   byteLength,
   formatBytes,
@@ -23,7 +24,7 @@ import {
   lineCount,
   timeAgo,
 } from "@/lib/format"
-import { collections } from "@/lib/mock-data"
+import { highlightFiles } from "@/lib/highlight/highlight"
 import { getOwnPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
 import { indentLabel } from "@/lib/preferences"
@@ -43,21 +44,23 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
   const paste = await getOwnPaste(slug)
   if (!paste) notFound()
 
-  const [starred, share, { origin, host }, preferences] = await Promise.all([
+  const [starred, share, { origin, host }, preferences, collections] = await Promise.all([
     isStarred(slug),
     getShare(slug),
     getSiteOrigin(),
     getPreferences(),
+    listCollections(),
   ])
   if (share && !share.seen) await markShareSeen(slug)
 
   const owned = !paste.owner
   const canEdit = owned || share?.access === "edit"
   const url = `${origin}/${paste.slug}`
-  const first = paste.files[0]
+  const files = await highlightFiles(paste.files)
+  const first = files[0]
   const totalBytes = paste.files.reduce((size, file) => size + byteLength(file.content), 0)
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
-  const collection = collections.find((c) => c.slug === paste.collection)
+  const collection = owned ? collections.find((c) => c.slug === paste.collection) : undefined
   const parent = owned
     ? { label: "My pastes", href: "/pastes" }
     : { label: "Shared with me", href: "/shared" }
@@ -163,7 +166,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
       <div className="flex flex-col gap-5 pt-4 lg:flex-row lg:items-start lg:pt-0">
         <FileViewer
           slug={slug}
-          files={paste.files}
+          files={files}
           rawAllowed={paste.allowRaw}
           lineNumbers={preferences.lineNumbers}
           collapseAt={6}

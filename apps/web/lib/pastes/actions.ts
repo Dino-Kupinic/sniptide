@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
-import { collections } from "@/lib/mock-data"
+import { collectionExists } from "@/lib/collections/store"
 import { hit, type Limit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
 import * as store from "./store"
+import { EXPIRIES, VISIBILITIES } from "./types"
 
 async function assertSignedIn() {
   const session = await getSession()
@@ -59,13 +60,10 @@ const pasteSchema = z.object({
       (files) => files.reduce((size, file) => size + file.content.length, 0) <= MAX_BYTES,
       "Pastes are limited to 512 KB.",
     ),
-  visibility: z.enum(["public", "unlisted", "private"]),
-  expiry: z.enum(["1h", "1d", "1w", "1m", "never", "keep"]),
+  visibility: z.enum(VISIBILITIES),
+  expiry: z.enum([...EXPIRIES, "keep"]),
   slug: z.string().trim(),
-  collection: z
-    .string()
-    .nullable()
-    .refine((slug) => slug === null || collections.some((c) => c.slug === slug)),
+  collection: z.string().nullable(),
   password: z.string().max(200).nullable(),
   burnAfterRead: z.boolean(),
 })
@@ -90,6 +88,9 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
       ok: false,
       error: `${(await getSiteOrigin()).host}/${data.slug} is taken or not allowed.`,
     }
+  }
+  if (data.collection !== null && !(await collectionExists(data.collection))) {
+    return { ok: false, error: "That collection no longer exists." }
   }
   // On edit an empty password means "keep the current one"; a new paste needs a real one.
   const current = editing ? await store.getOwnPaste(editing) : null
@@ -122,8 +123,8 @@ export async function checkSlug(slug: string, except?: string) {
 }
 
 const sharingSchema = z.object({
-  visibility: z.enum(["public", "unlisted", "private"]).optional(),
-  expiry: z.enum(["1h", "1d", "1w", "1m", "never"]).optional(),
+  visibility: z.enum(VISIBILITIES).optional(),
+  expiry: z.enum(EXPIRIES).optional(),
   password: z.string().min(1).max(200).nullable().optional(),
   burnAfterRead: z.boolean().optional(),
   allowRaw: z.boolean().optional(),
@@ -139,6 +140,27 @@ export async function setStarred(slug: string, starred: boolean) {
   await assertSignedIn()
   await store.setStarred(slug, starred)
   revalidatePath("/", "layout")
+}
+
+export async function renamePaste(slug: string, title: string) {
+  await assertSignedIn()
+  const parsed = pasteSchema.shape.title.safeParse(title)
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check the title." }
+  }
+  await store.renamePaste(slug, parsed.data)
+  revalidatePath("/", "layout")
+  return { ok: true as const }
+}
+
+export async function setPasteCollection(slug: string, collection: string | null) {
+  await assertSignedIn()
+  if (collection !== null && !(await collectionExists(collection))) {
+    return { ok: false as const, error: "That collection no longer exists." }
+  }
+  await store.setPasteCollection(slug, collection)
+  revalidatePath("/", "layout")
+  return { ok: true as const }
 }
 
 export async function trashPaste(slug: string) {

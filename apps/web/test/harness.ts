@@ -12,6 +12,7 @@ import {
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "@/lib/pastes/passwords"
+import type { Visibility } from "@/lib/pastes/types"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
 import { request } from "./request"
 
@@ -62,10 +63,11 @@ interface SeedPaste {
   owner: string
   title?: string
   content?: string
-  visibility?: "public" | "unlisted" | "private"
+  visibility?: Visibility
   password?: string
   burnAfterRead?: boolean
   allowRaw?: boolean
+  collection?: string
   expiresAt?: Date
   deletedAt?: Date
 }
@@ -84,6 +86,7 @@ export async function seedPaste(input: SeedPaste) {
     passwordHash: input.password ? await hashPassword(input.password) : null,
     burnAfterRead: input.burnAfterRead ?? false,
     allowRaw: input.allowRaw ?? true,
+    collection: input.collection ?? null,
     expiresAt: input.expiresAt ?? null,
     deletedAt: input.deletedAt ?? null,
   })

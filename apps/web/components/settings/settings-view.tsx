@@ -89,7 +89,7 @@ export function SettingsView({
         <nav className="flex flex-col divide-y divide-border border border-border text-[15px]">
           {[
             { href: "/shared", label: "Shared with me", count: counts.shared },
-            { href: "/collections/api-snippets", label: "Collections", count: counts.collections },
+            { href: "/collections", label: "Collections", count: counts.collections },
             { href: "/trash", label: "Trash", count: counts.trash },
           ].map((item) => (
             <Link
