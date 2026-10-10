@@ -1,0 +1,327 @@
+{
+  "run": "repeat",
+  "rate": 20,
+  "durationSeconds": 60,
+  "warmupSeconds": 15,
+  "dataset": {
+    "pastes": 100000,
+    "accounts": 40,
+    "largeAccountPastes": 10000
+  },
+  "metrics": {
+    "read_latency{kind:search,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 35.4895,
+        "max": 348.77,
+        "p(95)": 96.43719999999983,
+        "p(99)": 151.64364999999998,
+        "avg": 46.42274166666666,
+        "min": 28.011
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "read_latency{kind:shared,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 13.398190871369293,
+        "min": 6.32,
+        "med": 8.388,
+        "max": 113.932,
+        "p(95)": 35.813,
+        "p(99)": 83.10699999999999
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "read_requests{scenario:reads}": {
+      "contains": "default",
+      "values": {
+        "count": 1201,
+        "rate": 15.777734106924877
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      },
+      "type": "counter"
+    },
+    "read_latency{kind:deep,scenario:reads}": {
+      "contains": "time",
+      "values": {
+        "avg": 50.16955000000001,
+        "min": 36.583,
+        "med": 42.334,
+        "max": 189.894,
+        "p(95)": 92.61474999999996,
+        "p(99)": 155.58793
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "read_latency{scenario:reads}": {
+      "contains": "time",
+      "values": {
+        "min": 2.501,
+        "med": 28.878,
+        "max": 348.77,
+        "p(95)": 70.978,
+        "p(99)": 160.435,
+        "avg": 30.44943047460451
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        },
+        "p(99)<1000": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "read_latency{kind:collection,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 36.28730833333335,
+        "min": 22.849,
+        "med": 27.8545,
+        "max": 230.53,
+        "p(95)": 71.1433,
+        "p(99)": 189.30082000000002
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "dropped_iterations{scenario:reads}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count==0": {
+          "ok": true
+        }
+      }
+    },
+    "read_latency{kind:hot,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 11.991325,
+        "min": 8.318,
+        "med": 10.247,
+        "max": 31.346,
+        "p(95)": 18.944149999999965,
+        "p(99)": 31.09539
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "read_failed{scenario:reads}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 1201
+      },
+      "thresholds": {
+        "rate<0.005": {
+          "ok": true
+        }
+      }
+    },
+    "read_latency{kind:raw,scenario:reads}": {
+      "values": {
+        "min": 2.501,
+        "med": 3.16,
+        "max": 8.652,
+        "p(95)": 5.254649999999997,
+        "p(99)": 7.0772699999999995,
+        "avg": 3.3764250000000002
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "cursor_seeks{scenario:reads}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 105,
+        "rate": 1.3794022324955137
+      },
+      "thresholds": {
+        "count>0": {
+          "ok": true
+        }
+      }
+    },
+    "read_correct{scenario:reads}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 1201,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate==1": {
+          "ok": true
+        }
+      }
+    },
+    "read_latency{kind:list,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 27.508,
+        "med": 39.881,
+        "max": 213.824,
+        "p(95)": 74.58534999999995,
+        "p(99)": 199.40652999999995,
+        "avg": 45.36601666666666
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "read_latency{kind:dashboard,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 195.21590999999995,
+        "avg": 39.11909166666667,
+        "min": 25.632,
+        "med": 30.554499999999997,
+        "max": 213.16,
+        "p(95)": 73.52044999999995
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    },
+    "read_latency{kind:cursor,scenario:reads}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 27.127,
+        "med": 32.788,
+        "max": 293.026,
+        "p(95)": 109.6060999999999,
+        "p(99)": 224.09491999999995,
+        "avg": 45.107558333333365
+      },
+      "thresholds": {
+        "p(95)<500": {
+          "ok": true
+        }
+      }
+    }
+  },
+  "telemetry": {
+    "before": {
+      "uptimeSeconds": 234.761815167,
+      "memory": {
+        "rss": 74874880,
+        "heapTotal": 460488704,
+        "heapUsed": 243601864,
+        "external": 9148872,
+        "arrayBuffers": 5272876
+      },
+      "cpu": {
+        "user": 22947153,
+        "system": 2634597
+      },
+      "eventLoop": {
+        "p99Ms": 33.652735,
+        "maxMs": 615.514111
+      },
+      "database": {
+        "bytes": 222020387,
+        "connections": 1,
+        "lock_waiters": 0,
+        "active_connections": 1
+      },
+      "purgeBacklog": {
+        "pastes": 0
+      },
+      "maintenance": {
+        "lastRunAt": 1791675766545,
+        "durationMs": 163.00237500000003,
+        "batches": 1,
+        "trashed": 0,
+        "expired": 0,
+        "historyRows": 0,
+        "exhausted": true
+      }
+    },
+    "after": {
+      "uptimeSeconds": 311.287325959,
+      "memory": {
+        "rss": 415449088,
+        "heapTotal": 469745664,
+        "heapUsed": 119009128,
+        "external": 7318063,
+        "arrayBuffers": 3442067
+      },
+      "cpu": {
+        "user": 39095747,
+        "system": 4642897
+      },
+      "eventLoop": {
+        "p99Ms": 32.735231,
+        "maxMs": 615.514111
+      },
+      "database": {
+        "bytes": 222020387,
+        "connections": 10,
+        "lock_waiters": 0,
+        "active_connections": 1
+      },
+      "purgeBacklog": {
+        "pastes": 0
+      },
+      "maintenance": {
+        "lastRunAt": 1791675766545,
+        "durationMs": 163.00237500000003,
+        "batches": 1,
+        "trashed": 0,
+        "expired": 0,
+        "historyRows": 0,
+        "exhausted": true
+      }
+    }
+  }
+}

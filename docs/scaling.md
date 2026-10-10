@@ -143,5 +143,6 @@ first/deep/adjacent pages, search (including one-character terms), charts, edits
 burn reveals, and purge with concurrent reads. Include a rolling deploy's connection overlap.
 Begin at tens of reads per second and compare request p95/p99, SQL latency, queueing, locks, heap,
 event-loop delay, response bytes, and cleanup throughput. Agree on latency/error budgets before
-running the exercise. No load-test results are claimed by this change. Counts/facets and hot-paste
+running the exercise. The [read-load suite](../apps/web/load/README.md) seeds this workload and records a baseline.
+The [local baseline](load-testing/baseline.md) is a reproducibility check; staging measurements are required for capacity claims. Counts/facets and hot-paste
 view updates are the next redesign candidates if those measurements show pressure.

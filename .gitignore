@@ -56,3 +56,6 @@ data/
 .open-next/
 .wrangler/
 .dev.vars*
+
+# Local load-test fixtures/results may contain operational telemetry.
+/apps/web/load/artifacts/
