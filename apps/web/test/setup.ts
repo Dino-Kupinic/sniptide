@@ -24,7 +24,7 @@ mock.module("next/headers", () => ({
     },
     set: (name: string, value: string) => void request.cookies.set(name, value),
   }),
-  headers: async () => new Headers(),
+  headers: async () => request.headers,
 }))
 
 // Brings the test database up to date once, before the first test file.

@@ -305,6 +305,8 @@ export async function getOwnPaste(slug: string) {
 
 export type SharedRead =
   | { status: "ok"; paste: Paste; owned: boolean; signedIn: boolean }
+  // A burn-after-read paste someone else owns, before they ask for it with `reveal`.
+  | { status: "sealed"; signedIn: boolean }
   | { status: "locked" }
   | { status: "missing" }
 
@@ -364,12 +366,16 @@ async function claimVisit(id: string) {
 }
 
 // A paste by its public link (the share page and its raw files). Returns the content only when
-// the visitor may see it. `visit` marks the share page opening it: that counts a view for anyone
-// but the owner and burns a burn-after-read paste, so a visitor who loses that race gets
-// "missing" instead of a copy.
+// the visitor may see it. `visit` marks the share page opening it, which counts a view for anyone
+// but the owner.
+//
+// A burn-after-read paste comes back "sealed" to everyone but its owner unless `reveal` is set,
+// which only the reveal route does, on an explicit POST from the visitor. Link previews, mail
+// scanners and prefetches only ever GET the page, so they can't use it up. Revealing counts the
+// view and burns the paste; a visitor who loses that race gets "missing" instead of a copy.
 export async function readSharedPaste(
   slug: string,
-  options: { visit?: boolean } = {},
+  options: { visit?: boolean; reveal?: boolean } = {},
 ): Promise<SharedRead> {
   const found = await findLiveRecord(slug)
   if (!found) return { status: "missing" }
@@ -379,7 +385,10 @@ export async function readSharedPaste(
   if (verdict !== "ok") return { status: verdict }
 
   const owned = found.ownerId === viewer
-  const record = options.visit && !owned ? await claimVisit(found.id) : found
+  const sealed = found.burnAfterRead && !owned
+  if (sealed && !options.reveal) return { status: "sealed", signedIn: viewer !== null }
+
+  const record = (sealed || options.visit) && !owned ? await claimVisit(found.id) : found
   if (!record) return { status: "missing" }
 
   const [paste] = await hydrate([record], viewer)

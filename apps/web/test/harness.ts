@@ -47,6 +47,7 @@ export async function resetDatabase() {
   await getDb().delete(authRateLimit)
   request.viewer = null
   request.cookies.clear()
+  request.headers = new Headers()
 }
 
 export async function seedUser(id: string) {
