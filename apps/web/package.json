@@ -24,6 +24,7 @@
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
     "server-only": "catalog:runtime",
+    "shiki": "catalog:runtime",
     "zod": "catalog:runtime"
   },
   "devDependencies": {
