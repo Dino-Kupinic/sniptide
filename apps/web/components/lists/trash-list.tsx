@@ -23,8 +23,10 @@ import { Trash2Icon } from "lucide-react"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
+import { PASTE_PAGE_SIZE, type PageInfo, type PasteListQuery } from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
-import { ListHeader, SearchField } from "./toolbar"
+import { ListHeader, Pagination, SearchField } from "./toolbar"
+import { useListQuery } from "./use-list-query"
 
 function ConfirmDelete({
   title,
@@ -90,24 +92,22 @@ export function TrashList({
   rows,
   sizeLabel,
   host,
+  query: serverQuery,
+  pagination,
 }: {
   rows: TrashRow[]
   sizeLabel: string
   host: string
+  query: PasteListQuery
+  pagination: PageInfo
 }) {
-  const [query, setQuery] = React.useState("")
-  const needle = query.trim().toLowerCase()
-  const filtered = rows.filter(
-    (row) =>
-      !needle ||
-      row.title.toLowerCase().includes(needle) ||
-      row.slug.toLowerCase().includes(needle),
-  )
+  const { query, update, pending } = useListQuery(serverQuery)
+  const start = (pagination.page - 1) * PASTE_PAGE_SIZE
 
   const emptyButton = (variant: "desktop" | "mobile") => (
     <ConfirmDelete
       title="Empty trash?"
-      description={`${rows.length} ${rows.length === 1 ? "paste" : "pastes"} will be deleted for good. This can't be undone.`}
+      description={`${pagination.totalAll} ${pagination.totalAll === 1 ? "paste" : "pastes"} will be deleted for good. This can't be undone.`}
       confirmLabel="Empty trash"
       onConfirm={emptyTrash}
       trigger={
@@ -115,7 +115,7 @@ export function TrashList({
           <Button
             variant="outline"
             size="lg"
-            disabled={rows.length === 0}
+            disabled={pagination.totalAll === 0}
             className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
           >
             <Trash2Icon />
@@ -124,7 +124,7 @@ export function TrashList({
         ) : (
           <button
             type="button"
-            disabled={rows.length === 0}
+            disabled={pagination.totalAll === 0}
             className="shrink-0 text-sm text-destructive disabled:opacity-50"
           >
             Empty trash
@@ -135,16 +135,20 @@ export function TrashList({
   )
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
+    <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         title="Trash"
-        count={rows.length}
+        count={pagination.totalAll}
         description="Deleted pastes stay here for 30 days. Their links stop working right away."
         actions={emptyButton("desktop")}
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query} onChange={setQuery} placeholder="Search deleted pastes" />
+        <SearchField
+          value={query.q}
+          onChange={(q) => update({ q }, true)}
+          placeholder="Search deleted pastes"
+        />
         <div className="flex items-center justify-between gap-4 border border-border bg-sidebar px-4 py-3 text-[13px] text-foreground/80">
           <p>Deleted pastes are kept for 30 days. Their links no longer work.</p>
           {emptyButton("mobile")}
@@ -152,9 +156,9 @@ export function TrashList({
       </div>
 
       <div className="flex flex-col lg:border lg:border-border">
-        {filtered.length === 0 ? (
+        {pagination.total === 0 ? (
           <p className="px-4 py-14 text-center text-sm text-muted-foreground">
-            {query ? "No deleted pastes match." : "Trash is empty."}
+            {query.q ? "No deleted pastes match." : "Trash is empty."}
           </p>
         ) : (
           <>
@@ -171,7 +175,7 @@ export function TrashList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((row) => (
+                {rows.map((row) => (
                   <TableRow key={row.slug} className="border-border/60">
                     <TableCell className="truncate">
                       <span className="block truncate text-sm text-foreground/70">{row.title}</span>
@@ -225,7 +229,7 @@ export function TrashList({
             </Table>
 
             <ul className="flex flex-col lg:hidden">
-              {filtered.map((row) => (
+              {rows.map((row) => (
                 <li key={row.slug} className="flex items-center gap-3 border-b border-border py-3">
                   <LanguageMarker language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -247,11 +251,23 @@ export function TrashList({
             </ul>
 
             <p className="hidden border-t border-border px-4 py-3 text-[13px] text-muted-foreground lg:block">
-              {rows.length} {rows.length === 1 ? "paste" : "pastes"} · {sizeLabel}
+              {pagination.totalAll} {pagination.totalAll === 1 ? "paste" : "pastes"} · {sizeLabel}
             </p>
           </>
         )}
       </div>
+      {pagination.total > 0 ? (
+        <div className="flex items-center justify-between gap-3 text-[13px] text-muted-foreground">
+          <span>
+            Showing {start + 1}–{start + rows.length} of {pagination.total}
+          </span>
+          <Pagination
+            page={pagination.page}
+            pageCount={pagination.pageCount}
+            onChange={(page) => update({ page })}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

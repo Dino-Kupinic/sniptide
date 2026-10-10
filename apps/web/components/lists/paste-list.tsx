@@ -17,6 +17,13 @@ import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marke
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
+import {
+  PASTE_PAGE_SIZE,
+  type PageInfo,
+  type PasteListQuery,
+  type PasteSort,
+  type VisibilityFilter,
+} from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { RowMenu } from "./row-menu"
 import {
@@ -26,13 +33,11 @@ import {
   QuickChips,
   SearchField,
   SortMenu,
-  usePaged,
   ViewToggle,
 } from "./toolbar"
+import { useListQuery } from "./use-list-query"
 
-const PAGE_SIZE = 10
-
-export type Sort = "updated" | "views" | "expires" | "title"
+export type Sort = PasteSort
 const sortOptions: { value: Sort; label: string }[] = [
   { value: "updated", label: "Last updated" },
   { value: "views", label: "Most viewed" },
@@ -40,25 +45,12 @@ const sortOptions: { value: Sort; label: string }[] = [
   { value: "title", label: "Title" },
 ]
 
-const sorters: Record<Sort, (a: PasteRow, b: PasteRow) => number> = {
-  updated: (a, b) => b.updatedAt - a.updatedAt,
-  views: (a, b) => b.views - a.views,
-  expires: (a, b) =>
-    (a.expiresAt ?? Number.POSITIVE_INFINITY) - (b.expiresAt ?? Number.POSITIVE_INFINITY),
-  title: (a, b) => a.title.localeCompare(b.title),
-}
-
-type VisibilityFilter = "public" | "unlisted" | "private" | "burn"
 const visibilityOptions: { value: VisibilityFilter; label: string }[] = [
   { value: "public", label: "Public" },
   { value: "unlisted", label: "Unlisted" },
   { value: "private", label: "Private" },
   { value: "burn", label: "Burn after read" },
 ]
-
-function visibilityOf(row: PasteRow): VisibilityFilter {
-  return row.burnAfterRead ? "burn" : row.visibility
-}
 
 export function RowBadge({
   row,
@@ -96,8 +88,7 @@ export function RowBadge({
   )
 }
 
-// The table behind My pastes, Starred and collection pages. Filters, sorting and paging run on
-// the client over rows the server prepared.
+// The table renders one authorized page. Filters, sorting and paging are URL-driven server reads.
 export function PasteList({
   title,
   rows,
@@ -106,7 +97,9 @@ export function PasteList({
   mode,
   collections,
   actions,
-  initialSort = "updated",
+  query: serverQuery,
+  pagination,
+  languageOptions,
 }: {
   title: string
   rows: PasteRow[]
@@ -115,54 +108,25 @@ export function PasteList({
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
   actions?: React.ReactNode
-  initialSort?: Sort
+  query: PasteListQuery
+  pagination: PageInfo
+  languageOptions: string[]
 }) {
-  const [query, setQuery] = React.useState("")
-  const [languages, setLanguages] = React.useState<string[]>([])
-  const [visibility, setVisibility] = React.useState<string[]>([])
-  const [inCollections, setInCollections] = React.useState<string[]>([])
-  const [owner, setOwner] = React.useState<"all" | "mine" | "shared">("all")
-  const [sort, setSort] = React.useState<Sort>(initialSort)
+  const { query, update, pending } = useListQuery(serverQuery)
+  const { languages, visibility, collections: inCollections, owner, sort } = query
   const [view, setView] = React.useState<"list" | "grid">("list")
-  const [page, setPage] = React.useState(1)
-
-  const filtered = React.useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return rows
-      .filter(
-        (row) =>
-          !needle ||
-          row.title.toLowerCase().includes(needle) ||
-          row.slug.toLowerCase().includes(needle),
-      )
-      .filter((row) => languages.length === 0 || languages.includes(row.language))
-      .filter((row) => visibility.length === 0 || visibility.includes(visibilityOf(row)))
-      .filter(
-        (row) =>
-          inCollections.length === 0 ||
-          (row.collection !== null && inCollections.includes(row.collection)),
-      )
-      .filter((row) => owner === "all" || (owner === "mine" ? !row.owner : Boolean(row.owner)))
-      .sort(sorters[sort])
-  }, [rows, query, languages, visibility, inCollections, owner, sort])
-
-  // Any filter change starts over at page 1.
-  React.useEffect(() => setPage(1), [query, languages, visibility, inCollections, owner, sort])
-
-  const paged = usePaged(filtered, page, PAGE_SIZE)
-  const languageOptions = [...new Set(rows.map((row) => row.language))]
-    .sort()
-    .map((id) => ({ value: id, label: <LanguageLabel language={id} /> }))
   const filtering = Boolean(
-    query || languages.length || visibility.length || inCollections.length || owner !== "all",
+    query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
+  const start = (pagination.page - 1) * PASTE_PAGE_SIZE
+  const range = `${start + 1}–${start + rows.length}`
 
   const quick =
     mode === "starred" ? (
       <QuickChips
         label="Show"
         value={owner}
-        onChange={setOwner}
+        onChange={(owner) => update({ owner })}
         options={[
           { value: "all", label: "All" },
           { value: "mine", label: "Mine" },
@@ -173,16 +137,16 @@ export function PasteList({
       <QuickChips
         label="Visibility"
         value={(visibility.length === 1 ? visibility[0] : "all") as "all" | VisibilityFilter}
-        onChange={(next) => setVisibility(next === "all" ? [] : [next])}
+        onChange={(next) => update({ visibility: next === "all" ? [] : [next] })}
         options={[{ value: "all", label: "All" }, ...visibilityOptions]}
       />
     )
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
+    <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         title={title}
-        count={rows.length}
+        count={pagination.totalAll}
         actions={
           <>
             <ViewToggle value={view} onChange={setView} />
@@ -192,25 +156,28 @@ export function PasteList({
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query} onChange={setQuery} />
+        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
         {quick}
       </div>
 
       <div className="flex flex-col lg:border lg:border-border">
         <div className="hidden items-center justify-between gap-3 p-3 lg:flex">
           <div className="flex flex-wrap items-center gap-2">
-            <SearchField value={query} onChange={setQuery} />
+            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label="Language"
-              options={languageOptions}
+              options={languageOptions.map((id) => ({
+                value: id,
+                label: <LanguageLabel language={id} />,
+              }))}
               selected={languages}
-              onChange={setLanguages}
+              onChange={(languages) => update({ languages })}
             />
             <FilterMenu
               label="Visibility"
               options={visibilityOptions}
               selected={visibility}
-              onChange={setVisibility}
+              onChange={(visibility) => update({ visibility: visibility as VisibilityFilter[] })}
             />
             {mode === "collection" || collections.length === 0 ? null : (
               <FilterMenu
@@ -220,18 +187,18 @@ export function PasteList({
                   label: <span className="font-mono">{c.name}</span>,
                 }))}
                 selected={inCollections}
-                onChange={setInCollections}
+                onChange={(collections) => update({ collections })}
               />
             )}
           </div>
-          <SortMenu value={sort} options={sortOptions} onChange={setSort} />
+          <SortMenu value={sort} options={sortOptions} onChange={(sort) => update({ sort })} />
         </div>
 
-        {filtered.length === 0 ? (
+        {pagination.total === 0 ? (
           <EmptyState filtering={filtering} mode={mode} />
         ) : view === "grid" ? (
           <ul className="hidden grid-cols-3 gap-3 border-t border-border p-3 lg:grid">
-            {paged.items.map((row) => (
+            {rows.map((row) => (
               <li
                 key={row.slug}
                 className="relative flex flex-col gap-3 border border-border p-4 hover:border-foreground/40"
@@ -275,7 +242,7 @@ export function PasteList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.items.map((row) => (
+              {rows.map((row) => (
                 <TableRow key={row.slug} className="relative border-border/60">
                   <TableCell className="truncate">
                     <Link
@@ -330,9 +297,9 @@ export function PasteList({
         )}
 
         {/* Mobile list */}
-        {filtered.length > 0 ? (
+        {pagination.total > 0 ? (
           <ul className="flex flex-col lg:hidden">
-            {paged.items.map((row) => (
+            {rows.map((row) => (
               <li
                 key={row.slug}
                 className="relative flex items-center gap-3 border-b border-border py-3"
@@ -366,13 +333,17 @@ export function PasteList({
           </ul>
         ) : null}
 
-        {filtered.length > 0 ? (
+        {pagination.total > 0 ? (
           <div className="flex items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
             <span className="text-[13px] text-muted-foreground">
-              Showing {paged.range} of {filtered.length}
-              {filtering ? ` (filtered from ${rows.length})` : ""}
+              Showing {range} of {pagination.total}
+              {filtering ? ` (filtered from ${pagination.totalAll})` : ""}
             </span>
-            <Pagination page={paged.page} pageCount={paged.pageCount} onChange={setPage} />
+            <Pagination
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              onChange={(page) => update({ page })}
+            />
           </div>
         ) : null}
       </div>

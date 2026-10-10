@@ -7,6 +7,7 @@ import { collectionExists } from "@/lib/collections/store"
 import { hit, type Limit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
+import { pasteSchema } from "./schema"
 import * as store from "./store"
 import { EXPIRIES, VISIBILITIES } from "./types"
 
@@ -36,37 +37,6 @@ async function limited(...checks: Limit[]) {
   const minutes = Math.ceil(result.retryAfterSeconds / 60)
   return `You're doing that too often. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`
 }
-
-const MAX_BYTES = 512 * 1024
-
-const pasteSchema = z.object({
-  title: z.string().trim().min(1, "Give the paste a title.").max(120),
-  description: z.string().trim().max(280),
-  files: z
-    .array(
-      z.object({
-        name: z.string().trim().min(1, "Every file needs a name.").max(120),
-        content: z.string(),
-      }),
-    )
-    .min(1)
-    .max(10, "A paste can hold up to 10 files.")
-    .refine((files) => files.some((file) => file.content.trim()), "Paste some code first.")
-    .refine(
-      (files) => new Set(files.map((file) => file.name)).size === files.length,
-      "File names must be unique.",
-    )
-    .refine(
-      (files) => files.reduce((size, file) => size + file.content.length, 0) <= MAX_BYTES,
-      "Pastes are limited to 512 KB.",
-    ),
-  visibility: z.enum(VISIBILITIES),
-  expiry: z.enum([...EXPIRIES, "keep"]),
-  slug: z.string().trim(),
-  collection: z.string().nullable(),
-  password: z.string().max(200).nullable(),
-  burnAfterRead: z.boolean(),
-})
 
 export type SavePasteInput = z.input<typeof pasteSchema>
 export type SavePasteResult = { ok: true; slug: string } | { ok: false; error: string }

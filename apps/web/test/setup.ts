@@ -37,6 +37,7 @@ mock.module("next/cache", () => ({ revalidatePath: () => {} }))
 
 mock.module("next/headers", () => ({
   cookies: async () => ({
+    getAll: () => [...request.cookies].map(([name, value]) => ({ name, value })),
     get: (name: string) => {
       const value = request.cookies.get(name)
       return value === undefined ? undefined : { name, value }

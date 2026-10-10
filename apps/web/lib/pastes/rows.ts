@@ -6,7 +6,7 @@ import { starredSlugs, TRASH_DAYS } from "./store"
 import type { Access, PasteSummary, Person, Share } from "./types"
 
 // Serializable rows for the paste tables. Labels are computed here on the server so the client
-// tables only filter, sort and paginate.
+// tables receive only the fields they render.
 
 export interface PasteRow {
   slug: string
@@ -81,7 +81,7 @@ function toRow(
 
 // Rows for a paste list. The viewer's stars load once for the whole list.
 export async function toRows(pastes: PasteSummary[]): Promise<PasteRow[]> {
-  const starred = await starredSlugs()
+  const starred = await starredSlugs(pastes.map((paste) => paste.slug))
   const now = Date.now()
   return pastes.map((paste) => toRow(paste, starred, now))
 }

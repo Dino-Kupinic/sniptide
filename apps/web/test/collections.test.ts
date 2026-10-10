@@ -208,4 +208,32 @@ describeDb("collections", () => {
     await setPasteCollection("bobs", "notes")
     expect((await pasteRow("bobs"))?.collection).toBeNull()
   })
+  test("concurrent creates keep names unique and respect the account limit", async () => {
+    const same = await Promise.all(Array.from({ length: 8 }, () => createCollection("Same name")))
+    expect(same.filter((result) => result.ok)).toHaveLength(1)
+    await getDb()
+      .insert(collection)
+      .values(
+        Array.from({ length: MAX_COLLECTIONS - 2 }, (_, i) => ({
+          ownerId: "ada",
+          slug: `seed-${i}`,
+          name: `Seed ${i}`,
+        })),
+      )
+    const last = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => createCollection(`Last ${i}`)),
+    )
+    expect(last.filter((result) => result.ok)).toHaveLength(1)
+    expect(await names()).toHaveLength(MAX_COLLECTIONS)
+  })
+
+  test("concurrent renames cannot claim the same name", async () => {
+    await createCollection("one")
+    await createCollection("two")
+    const results = await Promise.all([
+      renameCollection("one", "shared name"),
+      renameCollection("two", "SHARED NAME"),
+    ])
+    expect(results.filter((result) => result.ok)).toHaveLength(1)
+  })
 })

@@ -2,7 +2,8 @@ import { type SettingsTab, SettingsView } from "@/components/settings/settings-v
 import { requireSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { viewerStorage } from "@/lib/mock-data"
-import { listTrash, navCounts } from "@/lib/pastes/store"
+import { trashTotals } from "@/lib/pastes/lists"
+import { navCounts } from "@/lib/pastes/store"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { viewerFromUser } from "@/lib/viewer"
 
@@ -14,7 +15,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
   const [session, counts, trash, collections, { tab }] = await Promise.all([
     requireSession(),
     navCounts(),
-    listTrash(),
+    trashTotals(),
     listCollections(),
     searchParams,
   ])
@@ -35,7 +36,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
       counts={{
         shared: counts.shared,
         collections: collections.length,
-        trash: trash.length,
+        trash: trash.count,
         pastes: counts.pastes,
       }}
       storage={{ usedMb: viewerStorage.storageUsedMb, limitMb: viewerStorage.storageLimitMb }}
