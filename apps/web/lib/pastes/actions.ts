@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
-import { collections } from "@/lib/mock-data"
+import { collectionExists } from "@/lib/collections/store"
 import { getSiteOrigin } from "@/lib/site"
 import { detectLanguage } from "./languages"
 import * as store from "./store"
@@ -39,10 +39,7 @@ const pasteSchema = z.object({
   visibility: z.enum(VISIBILITIES),
   expiry: z.enum([...EXPIRIES, "keep"]),
   slug: z.string().trim(),
-  collection: z
-    .string()
-    .nullable()
-    .refine((slug) => slug === null || collections.some((c) => c.slug === slug)),
+  collection: z.string().nullable(),
   password: z.string().max(200).nullable(),
   burnAfterRead: z.boolean(),
 })
@@ -65,6 +62,9 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
       ok: false,
       error: `${(await getSiteOrigin()).host}/${data.slug} is taken or not allowed.`,
     }
+  }
+  if (data.collection !== null && !(await collectionExists(data.collection))) {
+    return { ok: false, error: "That collection no longer exists." }
   }
   // On edit an empty password means "keep the current one"; a new paste needs a real one.
   const current = editing ? await store.getOwnPaste(editing) : null

@@ -71,7 +71,8 @@ function toRow(
     expiresAt: paste.expiresAt,
     updatedAt: paste.updatedAt,
     updatedLabel: timeAgo(paste.updatedAt, now),
-    collection: paste.collection,
+    // A collection belongs to the paste's owner, so a starred paste shows none.
+    collection: paste.owner ? null : paste.collection,
     starred: starred.has(paste.slug),
     owner: paste.owner,
     canEdit,

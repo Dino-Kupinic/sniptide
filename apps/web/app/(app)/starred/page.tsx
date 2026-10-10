@@ -1,6 +1,6 @@
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { PasteList } from "@/components/lists/paste-list"
-import { collections } from "@/lib/mock-data"
+import { listCollections } from "@/lib/collections/store"
 import { toRows } from "@/lib/pastes/rows"
 import { listStarred } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
@@ -8,7 +8,11 @@ import { getSiteOrigin } from "@/lib/site"
 export const metadata = { title: "Starred · Sniptide" }
 
 export default async function Page() {
-  const [pastes, { origin, host }] = await Promise.all([listStarred(), getSiteOrigin()])
+  const [pastes, { origin, host }, collections] = await Promise.all([
+    listStarred(),
+    getSiteOrigin(),
+    listCollections(),
+  ])
   // Only your own starred pastes are editable until sharing with edit access exists.
   const rows = await toRows(pastes)
 
