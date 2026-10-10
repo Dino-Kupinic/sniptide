@@ -98,9 +98,6 @@ export function Sidebar({ viewer, counts, collections }: SidebarProps) {
             <span className="truncate">{collection.name}</span>
           </Link>
         ))}
-        {collections.length === 0 ? (
-          <p className="px-2.5 py-1 text-xs text-muted-foreground">No collections yet.</p>
-        ) : null}
         <NewCollectionDialog open={creating} onOpenChange={setCreating} />
       </section>
 
