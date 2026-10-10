@@ -28,11 +28,14 @@ export interface Revision {
   createdAt: number
 }
 
-export interface Paste {
+// What the lists read: a paste without its file contents or revision history.
+export interface PasteSummary {
   slug: string
   title: string
   description: string
-  files: PasteFile[]
+  // The first file's language, and the size of all files together in bytes.
+  language: string
+  bytes: number
   visibility: Visibility
   // The stored password hash; set means the paste is password-protected.
   password: string | null
@@ -51,6 +54,11 @@ export interface Paste {
   updatedAt: number
   expiresAt: number | null
   deletedAt: number | null
+}
+
+// One paste in full, for the screens that show or edit its content.
+export interface Paste extends PasteSummary {
+  files: PasteFile[]
   revisions: Revision[]
 }
 

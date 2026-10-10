@@ -1,9 +1,9 @@
 import "server-only"
 
-import { byteLength, formatBytes, formatDate, timeAgo, timeUntil } from "@/lib/format"
+import { formatBytes, formatDate, timeAgo, timeUntil } from "@/lib/format"
 import { DAY, HOUR } from "@/lib/time"
 import { starredSlugs, TRASH_DAYS } from "./store"
-import type { Access, Paste, Person, Share } from "./types"
+import type { Access, PasteSummary, Person, Share } from "./types"
 
 // Serializable rows for the paste tables. Labels are computed here on the server so the client
 // tables only filter, sort and paginate.
@@ -12,7 +12,7 @@ export interface PasteRow {
   slug: string
   title: string
   language: string
-  visibility: Paste["visibility"]
+  visibility: PasteSummary["visibility"]
   burnAfterRead: boolean
   views: number
   expiresLabel: string
@@ -47,17 +47,22 @@ export interface TrashRow {
   bytes: number
 }
 
-function expiresLabel(paste: Paste, now: number) {
+function expiresLabel(paste: PasteSummary, now: number) {
   if (paste.burnAfterRead) return "after 1 view"
   if (!paste.expiresAt) return "Never"
   return timeUntil(paste.expiresAt, now)
 }
 
-function toRow(paste: Paste, starred: ReadonlySet<string>, now: number, canEdit = !paste.owner) {
+function toRow(
+  paste: PasteSummary,
+  starred: ReadonlySet<string>,
+  now: number,
+  canEdit = !paste.owner,
+) {
   return {
     slug: paste.slug,
     title: paste.title,
-    language: paste.files[0]?.language ?? "text",
+    language: paste.language,
     visibility: paste.visibility,
     burnAfterRead: paste.burnAfterRead,
     views: paste.views,
@@ -74,14 +79,14 @@ function toRow(paste: Paste, starred: ReadonlySet<string>, now: number, canEdit 
 }
 
 // Rows for a paste list. The viewer's stars load once for the whole list.
-export async function toRows(pastes: Paste[]): Promise<PasteRow[]> {
+export async function toRows(pastes: PasteSummary[]): Promise<PasteRow[]> {
   const starred = await starredSlugs()
   const now = Date.now()
   return pastes.map((paste) => toRow(paste, starred, now))
 }
 
 export async function toSharedRows(
-  entries: { paste: Paste; share: Share & { seen: boolean } }[],
+  entries: { paste: PasteSummary; share: Share & { seen: boolean } }[],
 ): Promise<SharedRow[]> {
   const starred = await starredSlugs()
   const now = Date.now()
@@ -94,7 +99,7 @@ export async function toSharedRows(
   }))
 }
 
-export function toTrashRow(paste: Paste): TrashRow {
+export function toTrashRow(paste: PasteSummary): TrashRow {
   const now = Date.now()
   const deletedAt = paste.deletedAt ?? now
   const goneAt = deletedAt + TRASH_DAYS * DAY
@@ -104,13 +109,13 @@ export function toTrashRow(paste: Paste): TrashRow {
   return {
     slug: paste.slug,
     title: paste.title,
-    language: paste.files[0]?.language ?? "text",
+    language: paste.language,
     deletedAt,
     deletedLabel: deletedToday ? "Today" : formatDate(deletedAt),
     goneLabel: daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`,
     remaining: Math.min(1, Math.max(0, (goneAt - now) / (TRASH_DAYS * DAY))),
     goneSoon: daysLeft <= 1,
-    bytes: paste.files.reduce((size, file) => size + byteLength(file.content), 0),
+    bytes: paste.bytes,
   }
 }
 
