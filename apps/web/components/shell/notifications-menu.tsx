@@ -86,9 +86,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
             >
               <notice.icon className="mt-0.5" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className={cn(unread.has(notice.id) && "font-medium")}>
-                  {notice.title}
-                </span>
+                <span className={cn(unread.has(notice.id) && "font-medium")}>{notice.title}</span>
                 <span className="text-xs text-muted-foreground">{notice.detail}</span>
               </span>
               <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
