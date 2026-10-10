@@ -14,6 +14,7 @@ import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "./passwords"
+import { TRASH_DAYS } from "./purge"
 import type { Expiry, Paste, PasteInput, PasteSummary, Person, Share, SharingInput } from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
@@ -27,7 +28,8 @@ import { unlockCookieName, unlockToken } from "./unlock"
 // the data to the client.
 
 const DAY = 86_400_000
-export const TRASH_DAYS = 30
+
+export { TRASH_DAYS }
 // How many days of views the charts show.
 export const VIEW_HISTORY_DAYS = 60
 

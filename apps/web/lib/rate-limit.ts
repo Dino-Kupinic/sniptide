@@ -1,11 +1,12 @@
 import "server-only"
 
 import { rateLimit } from "@workspace/db/schema"
-import { eq, lt, sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 
 // Fixed-window counters in Postgres, so the limits hold across server instances and restarts. One
-// atomic upsert per hit means simultaneous requests can't all slip under the limit.
+// atomic upsert per hit means simultaneous requests can't all slip under the limit. Old counters
+// are cleared by the scheduled purge (lib/pastes/purge.ts).
 
 export interface Limit {
   key: string
@@ -38,11 +39,6 @@ export async function hit(limits: Limit[]): Promise<Hit> {
         left: sql<number>`ceil(extract(epoch from (${rateLimit.windowStart} + make_interval(secs => ${windowSeconds}::int) - now())))::int`,
       })
     if (row && row.count > max) retryAfterSeconds = Math.max(retryAfterSeconds, row.left, 1)
-  }
-
-  // Counters of windows that ended long ago, cleared now and then so the table stays small.
-  if (Math.random() < 0.01) {
-    await db.delete(rateLimit).where(lt(rateLimit.windowStart, sql`now() - interval '1 day'`))
   }
 
   return retryAfterSeconds > 0 ? { allowed: false, retryAfterSeconds } : { allowed: true }

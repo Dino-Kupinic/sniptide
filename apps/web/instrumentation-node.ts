@@ -10,3 +10,8 @@ export async function migrateOnStartup() {
     process.env.MIGRATIONS_DIR ?? path.join(process.cwd(), "../../packages/db/migrations")
   await migrateDb(getDb(), folder)
 }
+
+export async function startBackgroundJobs() {
+  const { schedulePurge } = await import("@/lib/pastes/purge")
+  schedulePurge()
+}
