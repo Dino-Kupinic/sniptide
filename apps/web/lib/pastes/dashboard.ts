@@ -1,6 +1,6 @@
 import "server-only"
 
-import { type PasteRow, toRow } from "./rows"
+import { type PasteRow, toRows } from "./rows"
 import { isExpired, listOwnPastes, VIEW_HISTORY_DAYS } from "./store"
 
 const DAY = 86_400_000
@@ -51,6 +51,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     expiringSoon: pastes.filter(
       (paste) => paste.expiresAt && paste.expiresAt > now && paste.expiresAt - now < 2 * DAY,
     ).length,
-    recent: await Promise.all(pastes.map((paste) => toRow(paste))),
+    recent: await toRows(pastes),
   }
 }
