@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
   // Self-contained server for the Docker image (apps/web/.next/standalone). Tracing from the
   // repo root so the workspace packages are included.
   output: "standalone",
+  deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },

@@ -18,7 +18,14 @@ COPY packages/ui/package.json packages/ui/
 RUN bun install --frozen-lockfile
 
 COPY . .
-RUN bun run --filter web build
+ARG DEPLOYMENT_VERSION
+ENV DEPLOYMENT_VERSION=$DEPLOYMENT_VERSION
+# A BuildKit secret avoids retaining the stable Server Actions key in image metadata.
+# Next embeds the key in the build output; reuse it for independent builds of the same service.
+RUN --mount=type=secret,id=server_actions_key \
+    if [ -f /run/secrets/server_actions_key ]; then \
+      export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/server_actions_key)"; \
+    fi; bun run --filter web build
 
 FROM node:24-slim AS run
 WORKDIR /app

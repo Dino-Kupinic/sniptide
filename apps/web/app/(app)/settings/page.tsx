@@ -1,7 +1,7 @@
 import { type SettingsTab, SettingsView } from "@/components/settings/settings-view"
 import { requireSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
-import { viewerStorage } from "@/lib/mock-data"
+import { storageUsage } from "@/lib/pastes/budget"
 import { trashTotals } from "@/lib/pastes/lists"
 import { navCounts } from "@/lib/pastes/store"
 import { parsePreferences } from "@/lib/preferences-schema"
@@ -12,11 +12,12 @@ export const metadata = { title: "Settings · Sniptide" }
 const tabs: SettingsTab[] = ["general", "defaults", "api", "billing"]
 
 export default async function Page({ searchParams }: PageProps<"/settings">) {
-  const [session, counts, trash, collections, { tab }] = await Promise.all([
+  const [session, counts, trash, collections, storage, { tab }] = await Promise.all([
     requireSession(),
     navCounts(),
     trashTotals(),
     listCollections(),
+    storageUsage(),
     searchParams,
   ])
   const viewer = viewerFromUser(session.user)
@@ -39,7 +40,10 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
         trash: trash.count,
         pastes: counts.pastes,
       }}
-      storage={{ usedMb: viewerStorage.storageUsedMb, limitMb: viewerStorage.storageLimitMb }}
+      storage={{
+        usedMb: Math.round((storage.bytes / 1024 / 1024) * 10) / 10,
+        limitMb: storage.limit.bytes / 1024 / 1024,
+      }}
     />
   )
 }

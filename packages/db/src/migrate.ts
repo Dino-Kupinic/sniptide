@@ -8,6 +8,8 @@ export const MIGRATION_LOCK = 0x5e1d_7a1e
 
 export async function migrateDb(db: Database, migrationsFolder: string) {
   await db.transaction(async (tx) => {
+    await tx.execute(sql`SET LOCAL statement_timeout = '5min'`)
+    await tx.execute(sql`SET LOCAL lock_timeout = '60s'`)
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK})`)
     await migrate(tx, { migrationsFolder })
   })

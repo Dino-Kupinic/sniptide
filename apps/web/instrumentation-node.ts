@@ -14,6 +14,8 @@ export async function migrateOnStartup() {
 // Checks the client-IP settings, so a bad CLIENT_IP_SOURCE stops the server here, and starts
 // recording each request's TCP peer for the "direct" source and the fallbacks.
 export async function setUpClientIp() {
+  const { startTelemetry } = await import("@/lib/telemetry")
+  startTelemetry()
   const { clientIpConfig, recordPeerAddresses } = await import("@/lib/client-ip")
   clientIpConfig()
   recordPeerAddresses()

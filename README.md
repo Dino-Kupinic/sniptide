@@ -120,6 +120,17 @@ separate domain, for example a short one:
 Copied links then use the share domain. On it, share pages and raw files are served as usual, and
 app pages (`/`, `/sign-in`, `/dashboard`, …) redirect to `BETTER_AUTH_URL` (`apps/web/proxy.ts`).
 
+## Scaling
+
+See [the early-growth operations guide](docs/scaling.md) for connection budgets, account limits,
+retention, telemetry, migration rollout, and deployment coordination at 100k pastes.
+
+## Load testing
+
+See [the read-load suite](apps/web/load/README.md) for the deterministic 100k-paste seeder, k6
+scenarios, configurable thresholds, and baseline reports. Run it against a dedicated load-test
+database and a production build.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,

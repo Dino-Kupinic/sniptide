@@ -24,13 +24,13 @@ import { getPreferences } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { formatDateTime, formatNumber, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
-import { getOwnPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
+import { getOwnMeta, getOwnPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
 import { indentLabel } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
-  const paste = await getOwnPaste((await params).slug)
+  const paste = await getOwnMeta((await params).slug)
   return { title: paste ? `${paste.title} · Sniptide` : "Paste not found · Sniptide" }
 }
 
@@ -38,9 +38,12 @@ function expiresLabel(paste: Paste) {
   return paste.expiresAt ? formatDateTime(paste.expiresAt) : "Never"
 }
 
-export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
+export default async function Page({ params, searchParams }: PageProps<"/pastes/[slug]">) {
   const { slug } = await params
-  const paste = await getOwnPaste(slug)
+  const revisionParam = Number((await searchParams).revisions)
+  const revisionPage =
+    Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1
+  const paste = await getOwnPaste(slug, revisionPage)
   if (!paste) notFound()
 
   const [starred, share, { origin, host }, preferences, collections] = await Promise.all([
@@ -61,7 +64,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
   const parent = owned
     ? { label: "My pastes", href: "/pastes" }
     : { label: "Shared with me", href: "/shared" }
-  const revision = paste.revisions.length
+  const revision = paste.revisionCount
   const sharingState = {
     slug,
     url,
@@ -219,38 +222,73 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]">) {
               </>
             }
             revisions={
-              <ol className="flex flex-col divide-y divide-border">
-                {paste.revisions.map((entry, index) => (
-                  <li
-                    key={`${entry.createdAt}-${entry.message}`}
-                    className="flex items-start gap-2.5 py-2.5 first:pt-1 last:pb-0"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={
-                        index === 0
-                          ? "mt-1.5 size-2 shrink-0 bg-link"
-                          : "mt-1.5 size-2 shrink-0 border-[1.5px] border-muted-foreground"
-                      }
-                    />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="flex items-center gap-2">
-                        <span className={index === 0 ? "font-medium" : undefined}>
-                          {entry.message}
-                        </span>
-                        {index === 0 ? (
-                          <span className="border border-border px-1 text-[11px] text-muted-foreground">
-                            Current
+              <div>
+                <ol className="flex flex-col divide-y divide-border">
+                  {paste.revisions.map((entry, index) => (
+                    <li
+                      key={`${entry.createdAt}-${entry.message}`}
+                      className="flex items-start gap-2.5 py-2.5 first:pt-1 last:pb-0"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={
+                          index === 0 && paste.revisionPage === 1
+                            ? "mt-1.5 size-2 shrink-0 bg-link"
+                            : "mt-1.5 size-2 shrink-0 border-[1.5px] border-muted-foreground"
+                        }
+                      />
+                      <span className="flex min-w-0 flex-col">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={
+                              index === 0 && paste.revisionPage === 1 ? "font-medium" : undefined
+                            }
+                          >
+                            {entry.message}
                           </span>
-                        ) : null}
+                          {index === 0 && paste.revisionPage === 1 ? (
+                            <span className="border border-border px-1 text-[11px] text-muted-foreground">
+                              Current
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {timeAgo(entry.createdAt)}
+                        </span>
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {timeAgo(entry.createdAt)}
-                      </span>
+                    </li>
+                  ))}
+                </ol>
+                {paste.revisionPageCount > 1 ? (
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    {paste.revisionPage > 1 ? (
+                      <Link
+                        className="text-link"
+                        href={`?revisions=${paste.revisionPage - 1}`}
+                        scroll={false}
+                      >
+                        Newer
+                      </Link>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-muted-foreground">
+                      {paste.revisionPage} / {paste.revisionPageCount}
                     </span>
-                  </li>
-                ))}
-              </ol>
+                    {paste.revisionPage < paste.revisionPageCount ? (
+                      <Link
+                        className="text-link"
+                        href={`?revisions=${paste.revisionPage + 1}`}
+                        scroll={false}
+                      >
+                        Older
+                      </Link>
+                    ) : (
+                      <span />
+                    )}
+                  </div>
+                ) : null}
+              </div>
             }
           />
         </div>
