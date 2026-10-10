@@ -18,6 +18,10 @@ export interface AuthConfig {
   // Domain to share the session cookie across subdomains (sniptide.com for app.sniptide.com and
   // the landing page). Leave unset to keep the cookie on the app's own host.
   cookieDomain?: string
+  // Request headers that name the client's IP for rate limiting, most trusted first.
+  ipAddressHeaders?: string[]
+  // Better Auth turns its rate limits on in production only unless told otherwise.
+  rateLimitEnabled?: boolean
   // Providers without credentials are left out, so the sign-in page can hide or disable them.
   github?: OAuthCredentials
   google?: OAuthCredentials
@@ -30,6 +34,8 @@ export function createAuth({
   baseURL,
   trustedOrigins,
   cookieDomain,
+  ipAddressHeaders,
+  rateLimitEnabled,
   github,
   google,
   plugins = [],
@@ -42,9 +48,12 @@ export function createAuth({
       ?.split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
-    advanced: cookieDomain
-      ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } }
-      : undefined,
+    advanced: {
+      ...(ipAddressHeaders?.length ? { ipAddress: { ipAddressHeaders } } : {}),
+      ...(cookieDomain ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } : {}),
+    },
+    // In Postgres rather than memory, so limits hold across restarts and deploys.
+    rateLimit: { enabled: rateLimitEnabled, storage: "database", modelName: "authRateLimit" },
     emailAndPassword: {
       enabled: true,
     },

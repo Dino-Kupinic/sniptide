@@ -8,6 +8,12 @@ export function clientIpHeader() {
   return (process.env.CLIENT_IP_HEADER || "cf-connecting-ip").trim().toLowerCase()
 }
 
+// Headers better-auth reads for its sign-in limits, in order. It only trusts an X-Forwarded-For
+// holding a single address, so that fallback helps single-proxy setups alone.
+export function authIpHeaders() {
+  return [...new Set([clientIpHeader(), "x-forwarded-for"])]
+}
+
 // The share domain's own site proxies share pages to this app, so on those requests every
 // header above names the site's server. When SHARE_PROXY_SECRET is set, the site can pass the
 // visitor's address in X-Sniptide-Client-IP, proven by the same secret in X-Sniptide-Proxy-Secret.

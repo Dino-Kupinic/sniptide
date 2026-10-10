@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
+import { authIpHeaders } from "@/lib/client-ip"
 import { getDb } from "@/lib/db"
 import { parsePreferences } from "@/lib/preferences-schema"
 
@@ -37,6 +38,7 @@ export async function getAuth() {
     baseURL: process.env.BETTER_AUTH_URL,
     trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
     cookieDomain: process.env.COOKIE_DOMAIN,
+    ipAddressHeaders: authIpHeaders(),
     ...getOAuthCredentials(),
     plugins: [nextCookies()],
   })
