@@ -40,6 +40,7 @@ export function mobileChrome(pathname: string) {
 // Titles for the top bar, keyed by the first path segment.
 export const pageTitles: Record<string, string> = {
   dashboard: "Dashboard",
+  analytics: "Analytics",
   pastes: "My pastes",
   starred: "Starred",
   shared: "Shared with me",

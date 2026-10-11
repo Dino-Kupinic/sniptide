@@ -12,6 +12,7 @@ import { Kbd } from "@sniptide/ui/components/kbd"
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
+  ChartColumnIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
@@ -108,17 +109,14 @@ export function Sidebar({
       </Button>
 
       <nav aria-label="Main" className="flex flex-col gap-0.5">
-        <Link
-          href="/dashboard"
-          data-active={isActivePath(pathname, "/dashboard")}
-          className={cn(
-            rowClass,
-            "gap-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4",
-          )}
-        >
+        <NavLink href="/dashboard" pathname={pathname}>
           <LayoutGridIcon />
           Dashboard
-        </Link>
+        </NavLink>
+        <NavLink href="/analytics" pathname={pathname}>
+          <ChartColumnIcon />
+          Analytics
+        </NavLink>
         <MoreMenu pathname={pathname} shared={counts.shared} />
       </nav>
 
@@ -229,7 +227,31 @@ export function Sidebar({
   )
 }
 
-// "More" under Dashboard: the pages that used to be top-level, in a dropdown.
+// A top-level page under the logo: icon and label, marked while on that page or below it.
+function NavLink({
+  href,
+  pathname,
+  children,
+}: {
+  href: string
+  pathname: string
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      data-active={isActivePath(pathname, href)}
+      className={cn(
+        rowClass,
+        "gap-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4",
+      )}
+    >
+      {children}
+    </Link>
+  )
+}
+
+// "More" under Analytics: the pages that used to be top-level, in a dropdown.
 function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
   // The import sheet lives outside the menu, which unmounts its items when it closes.
   const [importing, setImporting] = React.useState(false)

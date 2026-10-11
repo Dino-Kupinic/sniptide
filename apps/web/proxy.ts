@@ -20,7 +20,7 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
-    "/(sign-in|sign-up|dashboard|new|pastes|settings|shared|starred|trash|collections)/:path*",
+    "/(sign-in|sign-up|dashboard|analytics|new|pastes|settings|shared|starred|trash|collections)/:path*",
     "/api/auth/:path*",
   ],
 }
