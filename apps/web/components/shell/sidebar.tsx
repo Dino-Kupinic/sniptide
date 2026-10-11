@@ -123,7 +123,7 @@ export function Sidebar({
       {/* Only the lists scroll, so the account menu stays pinned to the bottom however many
           items there are. The negative inline margin keeps focus rings at the edges from
           clipping; the block margins pull the list closer to the nav and down onto the border. */}
-      <div className="-mx-2 -mt-1 -mb-3 flex min-h-0 flex-1 scroll-fade flex-col gap-3 overflow-y-auto px-2">
+      <div className="-mx-2 -mt-1 -mb-3 flex min-h-0 flex-1 scroll-fade scrollbar-subtle flex-col gap-3 overflow-y-auto px-2">
         {data.starred.length > 0 ? (
           <Section
             id="starred"
