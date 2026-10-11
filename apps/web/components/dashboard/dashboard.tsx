@@ -211,15 +211,24 @@ export function Dashboard({
                 Across all share links
               </p>
             </div>
-            <span className="flex items-center gap-1.5 pt-0.5 text-xs text-muted-foreground">
-              <span className="hidden size-2 bg-primary lg:block" />
-              <span className="hidden lg:inline">
-                {chartDays > 7 ? "Last 30 days" : "Last 7 days"}
+            <div className="flex flex-col items-end gap-1.5 pt-0.5">
+              <Link
+                href="/analytics"
+                className="flex items-center gap-1 text-[13px] font-medium text-link outline-none hover:underline focus-visible:underline"
+              >
+                View analytics
+                <ArrowRightIcon className="size-3.5" />
+              </Link>
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="hidden size-2 bg-link lg:block" />
+                <span className="hidden lg:inline">
+                  {chartDays > 7 ? "Last 30 days" : "Last 7 days"}
+                </span>
+                <span className="lg:hidden">
+                  peak {chartLabels[peakIndex]} · {formatNumber(chartValues[peakIndex] ?? 0)}
+                </span>
               </span>
-              <span className="lg:hidden">
-                peak {chartLabels[peakIndex]} · {formatNumber(chartValues[peakIndex] ?? 0)}
-              </span>
-            </span>
+            </div>
           </div>
           <ViewsBarChart values={chartValues} labels={chartLabels} className="flex-1" />
         </section>
