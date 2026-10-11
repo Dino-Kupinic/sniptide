@@ -3,6 +3,11 @@
 **/.open-next
 **/.wrangler
 **/.turbo
+**/.e2e
+**/.agents
+**/.claude
+**/.cursor
+**/.mcp.json
 **/data
 **/*.db*
 **/.env*

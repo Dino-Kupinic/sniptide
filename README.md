@@ -139,9 +139,14 @@ database and a production build.
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
-typecheck, `next build`, and a `docker build` of the production image.
+typecheck, `next build`, a `docker build` of the production image, Bun integration tests, and
+Chromium browser tests against an isolated PostgreSQL database and production build.
 
 ## Checks
+
+Browser regression tests use TesterArmy e2e with Chromium. See
+[the browser test guide](apps/web/tests/README.md) for the isolated database setup, local commands,
+and CI reports. Run `bun run test:e2e` after setting `E2E_DATABASE_URL`.
 
 ```bash
 bun run build
