@@ -36,6 +36,7 @@ import * as React from "react"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
+import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistSheet } from "@/components/lists/import-gist"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
@@ -85,6 +86,7 @@ export function Sidebar({
   onToggleSidebar: () => void
 }) {
   const pathname = usePathname()
+  const { open: openCommandMenu } = useCommandMenu()
   const [creating, setCreating] = React.useState(false)
   const { counts } = data
   const visibleSections = sectionOrder.filter((id) => id !== "starred" || data.starred.length > 0)
@@ -106,9 +108,9 @@ export function Sidebar({
         <SidebarToggle onToggle={onToggleSidebar} open />
       </div>
 
-      {/* Search isn't built yet; the field holds its place in the layout. */}
       <button
         type="button"
+        onClick={openCommandMenu}
         className="flex h-8.5 shrink-0 items-center gap-2 border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         <SearchIcon className="size-3.5" />

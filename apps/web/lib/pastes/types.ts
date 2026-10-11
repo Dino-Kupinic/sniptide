@@ -113,6 +113,7 @@ export interface SidebarPaste {
   owned: boolean
   starred: boolean
   collection: string | null
+  updatedAt: number
 }
 
 export interface SidebarData {
@@ -121,6 +122,22 @@ export interface SidebarData {
   recent: SidebarPaste[]
   starred: SidebarPaste[]
 }
+
+// What the ⌘K command menu finds for a query: the viewer's own pastes by title or slug.
+export interface PasteSearchHit {
+  slug: string
+  title: string
+  updatedAt: number
+}
+
+export interface PasteSearchResult {
+  hits: PasteSearchHit[]
+  // Every match, which can be more than the hits returned.
+  total: number
+}
+
+export const PASTE_SEARCH_LIMIT = 8
+export const PASTE_SEARCH_MAX_LENGTH = 120
 
 export const SIDEBAR_RECENT = 8
 export const SIDEBAR_STARRED = 3

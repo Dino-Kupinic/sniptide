@@ -4,6 +4,7 @@ import { TooltipProvider } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
+import { CommandMenuProvider } from "@/components/command-menu/command-menu"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
 import { HeaderSlotsProvider } from "./page-header"
@@ -90,74 +91,79 @@ export function AppShell({
   return (
     <TooltipProvider delay={300}>
       <HeaderSlotsProvider>
-        <div className="flex min-h-svh bg-background lg:bg-sidebar">
-          <aside
-            aria-label="Sidebar"
-            style={{ width }}
-            className={cn(
-              "sticky top-0 hidden h-svh shrink-0 lg:block",
-              layout.collapsed && "lg:hidden",
-              dragWidth !== null && "select-none",
-            )}
-          >
+        <CommandMenuProvider
+          recent={sidebarProps.data.recent}
+          collections={sidebarProps.collections}
+        >
+          <div className="flex min-h-svh bg-background lg:bg-sidebar">
+            <aside
+              aria-label="Sidebar"
+              style={{ width }}
+              className={cn(
+                "sticky top-0 hidden h-svh shrink-0 lg:block",
+                layout.collapsed && "lg:hidden",
+                dragWidth !== null && "select-none",
+              )}
+            >
+              <div
+                className={cn(
+                  "h-full overflow-hidden transition-opacity",
+                  releaseToCollapse && "opacity-50",
+                )}
+              >
+                <Sidebar
+                  {...sidebarProps}
+                  closed={layout.closed}
+                  sectionOrder={layout.sectionOrder}
+                  collectionOrder={layout.collectionOrder}
+                  onReorderSections={(sectionOrder) =>
+                    update((state) => ({ ...state, sectionOrder }))
+                  }
+                  onReorderCollections={(collectionOrder) =>
+                    update((state) => ({ ...state, collectionOrder }))
+                  }
+                  onToggleSection={toggleSection}
+                  onToggleSidebar={toggleSidebar}
+                />
+              </div>
+              <ResizeHandle
+                width={width}
+                settledWidth={settledWidth}
+                maxWidth={maxWidth ?? settledWidth}
+                onDrag={setDragWidth}
+                onRelease={(next) => {
+                  setDragWidth(null)
+                  if (next < SIDEBAR_MIN_WIDTH) {
+                    // Collapse like the header button does, and come back at the last good width.
+                    update((state) => ({ ...state, collapsed: true }))
+                  } else {
+                    update((state) => ({ ...state, width: next }))
+                  }
+                }}
+              />
+            </aside>
+
             <div
               className={cn(
-                "h-full overflow-hidden transition-opacity",
-                releaseToCollapse && "opacity-50",
+                "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
+                layout.collapsed && "lg:ml-2",
               )}
             >
-              <Sidebar
-                {...sidebarProps}
-                closed={layout.closed}
-                sectionOrder={layout.sectionOrder}
-                collectionOrder={layout.collectionOrder}
-                onReorderSections={(sectionOrder) =>
-                  update((state) => ({ ...state, sectionOrder }))
-                }
-                onReorderCollections={(collectionOrder) =>
-                  update((state) => ({ ...state, collectionOrder }))
-                }
-                onToggleSection={toggleSection}
-                onToggleSidebar={toggleSidebar}
-              />
+              <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
+              {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
+              <main
+                className={cn(
+                  "flex-1",
+                  chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+                )}
+              >
+                {children}
+              </main>
             </div>
-            <ResizeHandle
-              width={width}
-              settledWidth={settledWidth}
-              maxWidth={maxWidth ?? settledWidth}
-              onDrag={setDragWidth}
-              onRelease={(next) => {
-                setDragWidth(null)
-                if (next < SIDEBAR_MIN_WIDTH) {
-                  // Collapse like the header button does, and come back at the last good width.
-                  update((state) => ({ ...state, collapsed: true }))
-                } else {
-                  update((state) => ({ ...state, width: next }))
-                }
-              }}
-            />
-          </aside>
 
-          <div
-            className={cn(
-              "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
-              layout.collapsed && "lg:ml-2",
-            )}
-          >
-            <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
-            {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
-            <main
-              className={cn(
-                "flex-1",
-                chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
-              )}
-            >
-              {children}
-            </main>
+            {chrome.tabBar ? <TabBar /> : null}
           </div>
-
-          {chrome.tabBar ? <TabBar /> : null}
-        </div>
+        </CommandMenuProvider>
       </HeaderSlotsProvider>
     </TooltipProvider>
   )

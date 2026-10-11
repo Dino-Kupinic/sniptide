@@ -1,8 +1,10 @@
 "use client"
 
+import { Kbd } from "@sniptide/ui/components/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, SearchIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { pageTitle } from "./nav-config"
 import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs } from "./page-header"
@@ -43,9 +45,26 @@ export function TopBar({
       </div>
 
       <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
+      {sidebarOpen ? null : <SearchField />}
       <span aria-hidden="true" className="h-5 w-px bg-border" />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>
+  )
+}
+
+// The sidebar's Search button is the usual way in; with the sidebar hidden this field stands in.
+function SearchField() {
+  const { open } = useCommandMenu()
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
+    >
+      <SearchIcon className="size-3.5" />
+      Search pastes, collections…
+      <Kbd className="ml-auto border border-border">⌘K</Kbd>
+    </button>
   )
 }
 

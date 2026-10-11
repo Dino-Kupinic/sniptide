@@ -16,6 +16,7 @@ import {
   exists,
   gt,
   gte,
+  ilike,
   inArray,
   isNotNull,
   isNull,
@@ -50,7 +51,13 @@ import type {
   SharingInput,
   SidebarData,
 } from "./types"
-import { SIDEBAR_RECENT, SIDEBAR_STARRED } from "./types"
+import {
+  PASTE_SEARCH_LIMIT,
+  PASTE_SEARCH_MAX_LENGTH,
+  type PasteSearchResult,
+  SIDEBAR_RECENT,
+  SIDEBAR_STARRED,
+} from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
@@ -684,6 +691,7 @@ export const sidebarData = cache(async (): Promise<SidebarData> => {
     owned: record.ownerId === viewer,
     starred: starSlugs.has(record.slug),
     collection: record.ownerId === viewer ? record.collection : null,
+    updatedAt: record.updatedAt.getTime(),
   })
   return {
     counts: { pastes: own?.count ?? 0, starred: starCount?.count ?? 0, shared: 0 },
@@ -691,6 +699,37 @@ export const sidebarData = cache(async (): Promise<SidebarData> => {
     starred: starred.map(row),
   }
 })
+
+// The command menu's paste search: the viewer's own pastes whose title or slug contains the text,
+// latest first. File contents are never searched.
+export async function searchOwnPastes(
+  text: string,
+  limit = PASTE_SEARCH_LIMIT,
+): Promise<PasteSearchResult> {
+  const viewer = await viewerId()
+  const query = text.trim().slice(0, PASTE_SEARCH_MAX_LENGTH)
+  if (!viewer || !query) return { hits: [], total: 0 }
+  const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`
+  const where = and(
+    eq(pasteTable.ownerId, viewer),
+    isNull(pasteTable.deletedAt),
+    or(ilike(pasteTable.title, pattern), ilike(pasteTable.slug, pattern)),
+  )
+  const db = getDb()
+  const [rows, [count]] = await Promise.all([
+    db
+      .select({ slug: pasteTable.slug, title: pasteTable.title, updatedAt: pasteTable.updatedAt })
+      .from(pasteTable)
+      .where(where)
+      .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
+      .limit(limit),
+    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+  ])
+  return {
+    hits: rows.map((row) => ({ ...row, updatedAt: row.updatedAt.getTime() })),
+    total: count?.count ?? 0,
+  }
+}
 
 // The dashboard can hydrate its bounded recent selections without exposing the SQL layer.
 export async function summarizePastes(records: PasteRecord[], viewer: string) {
