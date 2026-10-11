@@ -179,3 +179,26 @@
     cursor: pointer;
   }
 }
+
+/* A thin scrollbar that stays out of the way: invisible until the area is hovered, then a faint
+   thumb with no track. */
+@utility scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 150ms;
+
+  &:hover {
+    scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+  }
+
+  /* For browsers without scrollbar-color. */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--foreground) 18%, transparent);
+  }
+}

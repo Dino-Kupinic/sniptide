@@ -40,8 +40,8 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
               <AvatarFallback>{viewer.initials}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <AccountMenuItems email={viewer.email} />
+          <DropdownMenuContent align="end" className="w-60">
+            <AccountMenuItems name={viewer.name} email={viewer.email} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

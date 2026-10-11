@@ -75,7 +75,7 @@ export function Sidebar({
   const { counts } = data
 
   return (
-    <div className="flex min-h-full flex-col gap-3 px-2 py-3">
+    <div className="flex h-full flex-col gap-3 px-2 py-3">
       <div className="flex items-center justify-between gap-2">
         <Link
           href="/dashboard"
@@ -122,100 +122,109 @@ export function Sidebar({
         <MoreMenu pathname={pathname} shared={counts.shared} />
       </nav>
 
-      {data.starred.length > 0 ? (
+      {/* Only the lists scroll, so the account menu stays pinned to the bottom however many
+          items there are. The negative margin keeps focus rings at the edges from clipping. */}
+      <div className="-mx-2 flex min-h-0 flex-1 scroll-fade scrollbar-subtle flex-col gap-3 overflow-y-auto px-2">
+        {data.starred.length > 0 ? (
+          <Section
+            id="starred"
+            title="Starred"
+            open={!closed.includes("starred")}
+            onToggle={onToggleSection}
+          >
+            {data.starred.map((paste) => (
+              <PasteRow
+                key={paste.slug}
+                paste={paste}
+                collections={collections}
+                pathname={pathname}
+                alwaysShowStar
+              />
+            ))}
+            <ViewAll href="/starred" count={counts.starred} shown={data.starred.length} />
+          </Section>
+        ) : null}
+
         <Section
-          id="starred"
-          title="Starred"
-          open={!closed.includes("starred")}
+          id="pastes"
+          title="Pastes"
+          open={!closed.includes("pastes")}
           onToggle={onToggleSection}
+          add={
+            <Link href="/new" aria-label="New paste" className={iconButtonClass}>
+              <PlusIcon />
+            </Link>
+          }
         >
-          {data.starred.map((paste) => (
+          {data.recent.map((paste) => (
             <PasteRow
               key={paste.slug}
               paste={paste}
               collections={collections}
               pathname={pathname}
-              alwaysShowStar
             />
           ))}
-          <ViewAll href="/starred" count={counts.starred} shown={data.starred.length} />
+          {data.recent.length === 0 ? (
+            <p className="px-2 py-1.5 text-[13px] text-muted-foreground">No pastes yet.</p>
+          ) : null}
+          <ViewAll href="/pastes" count={counts.pastes} shown={data.recent.length} />
         </Section>
-      ) : null}
 
-      <Section
-        id="pastes"
-        title="Pastes"
-        open={!closed.includes("pastes")}
-        onToggle={onToggleSection}
-        add={
-          <Link href="/new" aria-label="New paste" className={iconButtonClass}>
-            <PlusIcon />
-          </Link>
-        }
-      >
-        {data.recent.map((paste) => (
-          <PasteRow key={paste.slug} paste={paste} collections={collections} pathname={pathname} />
-        ))}
-        {data.recent.length === 0 ? (
-          <p className="px-2 py-1.5 text-[13px] text-muted-foreground">No pastes yet.</p>
-        ) : null}
-        <ViewAll href="/pastes" count={counts.pastes} shown={data.recent.length} />
-      </Section>
-
-      <Section
-        id="collections"
-        title="Collections"
-        open={!closed.includes("collections")}
-        onToggle={onToggleSection}
-        add={
-          <button
-            type="button"
-            aria-label="New collection"
-            onClick={() => setCreating(true)}
-            className={iconButtonClass}
-          >
-            <PlusIcon />
-          </button>
-        }
-      >
-        {collections.map((collection) => (
-          <div
-            key={collection.slug}
-            data-active={isActivePath(pathname, `/collections/${collection.slug}`)}
-            className={cn(rowClass, "gap-1.5 pl-1.5")}
-          >
-            <CollectionIconPicker collection={collection} />
-            <Link
-              href={`/collections/${collection.slug}`}
-              className="min-w-0 flex-1 truncate outline-none after:absolute after:inset-0 focus-visible:underline"
+        <Section
+          id="collections"
+          title="Collections"
+          open={!closed.includes("collections")}
+          onToggle={onToggleSection}
+          add={
+            <button
+              type="button"
+              aria-label="New collection"
+              onClick={() => setCreating(true)}
+              className={iconButtonClass}
             >
-              {collection.name}
-            </Link>
-          </div>
-        ))}
-      </Section>
+              <PlusIcon />
+            </button>
+          }
+        >
+          {collections.map((collection) => (
+            <div
+              key={collection.slug}
+              data-active={isActivePath(pathname, `/collections/${collection.slug}`)}
+              className={cn(rowClass, "gap-1.5 pl-1.5")}
+            >
+              <CollectionIconPicker collection={collection} />
+              <Link
+                href={`/collections/${collection.slug}`}
+                className="min-w-0 flex-1 truncate outline-none after:absolute after:inset-0 focus-visible:underline"
+              >
+                {collection.name}
+              </Link>
+            </div>
+          ))}
+        </Section>
+      </div>
       <NewCollectionDialog
         existing={collections.length}
         open={creating}
         onOpenChange={setCreating}
       />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger className="mt-auto flex shrink-0 items-center gap-2.5 p-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
-          <Avatar>
-            {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
-            <AvatarFallback>{viewer.initials}</AvatarFallback>
-          </Avatar>
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium">{viewer.name}</span>
-            <span className="truncate text-xs text-muted-foreground">{viewer.email}</span>
-          </span>
-          <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" className="w-(--anchor-width)">
-          <AccountMenuItems email={viewer.email} />
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* A hairline across the full sidebar width separates the account menu from the lists. */}
+      <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
+            <Avatar className="size-6 font-heading text-[11px] font-bold">
+              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
+              <AvatarFallback>{viewer.initials}</AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{viewer.name}</span>
+            <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" className="w-(--anchor-width) min-w-60">
+            <AccountMenuItems name={viewer.name} email={viewer.email} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   )
 }

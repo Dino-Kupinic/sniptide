@@ -2,7 +2,7 @@
 
 import { TooltipProvider } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
@@ -25,6 +25,7 @@ export function AppShell({
   ...sidebarProps
 }: SidebarProps & { initialSidebar: SidebarState; children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const chrome = mobileChrome(pathname)
   const [layout, setLayout] = React.useState(initialSidebar)
   // While the edge is being dragged: the width under the pointer, which can go below the minimum.
@@ -62,11 +63,16 @@ export function AppShell({
         event.preventDefault()
         toggleSidebar()
       }
+      // ⌘, opens settings, as shown in the account menu.
+      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+        event.preventDefault()
+        router.push("/settings")
+      }
     }
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [toggleSidebar])
+  }, [toggleSidebar, router])
 
   // A window made smaller than four times the sidebar squeezes it back to a quarter.
   const [maxWidth, setMaxWidth] = React.useState<number | null>(null)
@@ -96,7 +102,7 @@ export function AppShell({
           >
             <div
               className={cn(
-                "h-full overflow-x-hidden overflow-y-auto transition-opacity",
+                "h-full overflow-hidden transition-opacity",
                 releaseToCollapse && "opacity-50",
               )}
             >
