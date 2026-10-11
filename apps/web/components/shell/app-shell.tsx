@@ -96,7 +96,7 @@ export function AppShell({
           >
             <div
               className={cn(
-                "h-full overflow-x-hidden overflow-y-auto transition-opacity",
+                "h-full overflow-hidden transition-opacity",
                 releaseToCollapse && "opacity-50",
               )}
             >
