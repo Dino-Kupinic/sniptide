@@ -15,6 +15,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
+  DownloadIcon,
   LayoutGridIcon,
   ListFilterIcon,
   MoreHorizontalIcon,
@@ -29,6 +30,7 @@ import { usePathname } from "next/navigation"
 import * as React from "react"
 import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
+import { ImportGistSheet } from "@/components/lists/import-gist"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
@@ -220,6 +222,8 @@ export function Sidebar({
 
 // "More" under Dashboard: the pages that used to be top-level, in a dropdown.
 function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
+  // The import sheet lives outside the menu, which unmounts its items when it closes.
+  const [importing, setImporting] = React.useState(false)
   // On one of its pages, the row reads as that page instead of "More".
   const current = isActivePath(pathname, "/shared")
     ? "Shared with me"
@@ -229,37 +233,44 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
   const active = current !== null
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        data-active={active}
-        className={cn(
-          rowClass,
-          "group gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted [&_svg]:size-4",
-        )}
-      >
-        <ChevronRightIcon className="transition-transform group-data-popup-open:rotate-90" />
-        {current ?? "More"}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-(--anchor-width)">
-        <DropdownMenuItem
-          render={<Link href="/shared" />}
-          className={cn(isActivePath(pathname, "/shared") && "font-medium")}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          data-active={active}
+          className={cn(
+            rowClass,
+            "group gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted [&_svg]:size-4",
+          )}
         >
-          <UsersIcon />
-          Shared with me
-          {shared > 0 ? (
-            <span className="ml-auto text-xs text-muted-foreground tabular-nums">{shared}</span>
-          ) : null}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          render={<Link href="/trash" />}
-          className={cn(isActivePath(pathname, "/trash") && "font-medium")}
-        >
-          <Trash2Icon />
-          Trash
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <ChevronRightIcon className="transition-transform group-data-popup-open:rotate-90" />
+          {current ?? "More"}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-(--anchor-width)">
+          <DropdownMenuItem
+            render={<Link href="/shared" />}
+            className={cn(isActivePath(pathname, "/shared") && "font-medium")}
+          >
+            <UsersIcon />
+            Shared with me
+            {shared > 0 ? (
+              <span className="ml-auto text-xs text-muted-foreground tabular-nums">{shared}</span>
+            ) : null}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={<Link href="/trash" />}
+            className={cn(isActivePath(pathname, "/trash") && "font-medium")}
+          >
+            <Trash2Icon />
+            Trash
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setImporting(true)}>
+            <DownloadIcon />
+            Import
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ImportGistSheet open={importing} onOpenChange={setImporting} />
+    </>
   )
 }
 

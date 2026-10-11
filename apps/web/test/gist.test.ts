@@ -128,7 +128,7 @@ describe("readGistFiles", () => {
     const big = await load({ "big.txt": { filename: "big.txt", content: "x".repeat(2048) } })
     expect(await readGistFiles(big, ["big.txt"])).toEqual({
       ok: false,
-      error: "big.txt: Over the 1 KB limit, left out.",
+      error: "big.txt: Over the 1 KB limit.",
     })
   })
 })

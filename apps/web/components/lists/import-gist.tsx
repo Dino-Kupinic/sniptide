@@ -45,9 +45,18 @@ const shortLink = (link: string) => link.trim().replace(/^https?:\/\//i, "")
 const footerButton =
   "h-[34px] px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
 
-export function ImportGistButton() {
+// The import sheet. The caller owns `open`, so the Import gist buttons and the sidebar's More menu
+// can open the same one; `children` is where a trigger goes when the sheet has its own.
+export function ImportGistSheet({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  children?: React.ReactNode
+}) {
   const router = useRouter()
-  const [open, setOpen] = React.useState(false)
   const [step, setStep] = React.useState<Step>("link")
   const [link, setLink] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
@@ -91,6 +100,13 @@ export function ImportGistButton() {
     setStep("files")
   }
 
+  // Closing also forgets the gist, so the next opening starts at the link again. That matters when
+  // the sheet outlives the page it was opened from, as it does in the sidebar.
+  function close() {
+    onOpenChange(false)
+    reset()
+  }
+
   const chosen = gist ? gist.files.filter((file) => selected.has(file.name)) : []
   const chosenBytes = chosen.reduce((sum, file) => sum + file.size, 0)
   const overLimit = gist ? chosenBytes > gist.limitBytes : false
@@ -109,7 +125,7 @@ export function ImportGistButton() {
       setBusy(null)
       return
     }
-    setOpen(false)
+    close()
     router.push(`/pastes/${result.slug}`)
   }
 
@@ -119,7 +135,7 @@ export function ImportGistButton() {
     setBusy("editor")
     const params = new URLSearchParams({ gist: gist.id })
     for (const file of chosen) params.append("file", file.name)
-    setOpen(false)
+    close()
     router.push(`/new?${params}`)
   }
 
@@ -127,14 +143,11 @@ export function ImportGistButton() {
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        setOpen(next)
+        onOpenChange(next)
         reset()
       }}
     >
-      <SheetTrigger render={<Button variant="outline" size="lg" />}>
-        <DownloadIcon />
-        Import gist
-      </SheetTrigger>
+      {children}
       <SheetContent side="right" className="w-[400px] max-w-full" initialFocus={inputRef}>
         <div className="flex h-14 shrink-0 items-center justify-between border-b pr-4 pl-6">
           <SheetTitle className="text-[15px] leading-5 font-semibold">Import a gist</SheetTitle>
@@ -242,6 +255,20 @@ export function ImportGistButton() {
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+// The "Import gist" button of the list pages and the dashboard.
+export function ImportGistButton() {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <ImportGistSheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger render={<Button variant="outline" size="lg" />}>
+        <DownloadIcon />
+        Import gist
+      </SheetTrigger>
+    </ImportGistSheet>
   )
 }
 

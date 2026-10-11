@@ -68,9 +68,9 @@ function describeFile(file: z.infer<typeof gistSchema>["files"][string], limit: 
   const rawUrl = !inline && isHttps(file.raw_url, RAW_HOST) ? file.raw_url : null
 
   let skipped: string | null = null
-  if (file.filename.length > MAX_NAME) skipped = `Name is over ${MAX_NAME} characters, left out.`
-  else if (size > limit) skipped = `Over the ${formatLimit(limit)} limit, left out.`
-  else if (!inline && !rawUrl) skipped = "Couldn't be read, left out."
+  if (file.filename.length > MAX_NAME) skipped = `Name is over ${MAX_NAME} characters.`
+  else if (size > limit) skipped = `Over the ${formatLimit(limit)} limit.`
+  else if (!inline && !rawUrl) skipped = "Couldn't be read."
 
   return {
     name: file.filename,

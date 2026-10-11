@@ -138,7 +138,7 @@ describeDb("paste actions", () => {
       const result = await previewGist(GIST)
       expect(result.ok && result.gist.files).toEqual([
         { name: "small.txt", size: 2, skipped: null },
-        { name: "huge.json", size: 2048 * KB, skipped: "Over the 1 MB limit, left out." },
+        { name: "huge.json", size: 2048 * KB, skipped: "Over the 1 MB limit." },
       ])
       // Nothing is downloaded just to say it's too big.
       expect(fetched).toEqual([`https://api.github.com/gists/${GIST}`])
@@ -149,16 +149,14 @@ describeDb("paste actions", () => {
       serveGist(gist({ "big.txt": file("big.txt", "x".repeat(710 * KB)) }))
       const result = await previewGist(GIST)
       expect(result.ok && result.gist.limitLabel).toBe("512 KB")
-      expect(result.ok && result.gist.files[0]?.skipped).toBe("Over the 512 KB limit, left out.")
+      expect(result.ok && result.gist.files[0]?.skipped).toBe("Over the 512 KB limit.")
     })
 
     test("leaves out file names longer than the editor allows", async () => {
       const name = `${"n".repeat(200)}.txt`
       serveGist(gist({ [name]: file(name, "hi") }))
       const result = await previewGist(GIST)
-      expect(result.ok && result.gist.files[0]?.skipped).toBe(
-        "Name is over 120 characters, left out.",
-      )
+      expect(result.ok && result.gist.files[0]?.skipped).toBe("Name is over 120 characters.")
     })
 
     test("is limited to 20 reads an hour", async () => {
@@ -230,7 +228,7 @@ describeDb("paste actions", () => {
       serveGist(gist({ "huge.json": truncated("huge.json", 2048 * KB) }))
       expect(await importGist(choose("huge.json"))).toEqual({
         ok: false,
-        error: "huge.json: Over the 1 MB limit, left out.",
+        error: "huge.json: Over the 1 MB limit.",
       })
       expect(await pasteCount()).toBe(0)
       expect(fetched).toEqual([`https://api.github.com/gists/${GIST}`])
@@ -241,7 +239,7 @@ describeDb("paste actions", () => {
       const big = "é".repeat(600 * KB)
       serveGist(gist({ "a.txt": file("a.txt", big) }))
       const result = await previewGist(GIST)
-      expect(result.ok && result.gist.files[0]?.skipped).toBe("Over the 1 MB limit, left out.")
+      expect(result.ok && result.gist.files[0]?.skipped).toBe("Over the 1 MB limit.")
 
       const editor = input("utf8")
       editor.files = [{ name: "a.txt", content: big }]
@@ -269,7 +267,7 @@ describeDb("paste actions", () => {
       })
 
       const result = await importGist(choose("log.txt"))
-      expect(result).toEqual({ ok: false, error: "log.txt: Couldn't be read, left out." })
+      expect(result).toEqual({ ok: false, error: "log.txt: Couldn't be read." })
       expect(fetched).not.toContain(elsewhere)
     })
 
