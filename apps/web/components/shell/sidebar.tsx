@@ -121,8 +121,9 @@ export function Sidebar({
       </nav>
 
       {/* Only the lists scroll, so the account menu stays pinned to the bottom however many
-          items there are. The negative margin keeps focus rings at the edges from clipping. */}
-      <div className="-mx-2 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2">
+          items there are. The negative inline margin keeps focus rings at the edges from
+          clipping; the block margins pull the list closer to the nav and down onto the border. */}
+      <div className="-mx-2 -mt-1 -mb-3 flex min-h-0 flex-1 scroll-fade flex-col gap-3 overflow-y-auto px-2">
         {data.starred.length > 0 ? (
           <Section
             id="starred"
@@ -210,19 +211,16 @@ export function Sidebar({
       {/* A hairline across the full sidebar width separates the account menu from the lists. */}
       <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex w-full items-center gap-2.5 p-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
-            <Avatar>
+          <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
+            <Avatar className="size-6 font-heading text-[11px] font-bold">
               {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
               <AvatarFallback>{viewer.initials}</AvatarFallback>
             </Avatar>
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-medium">{viewer.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{viewer.email}</span>
-            </span>
-            <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{viewer.name}</span>
+            <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" className="w-(--anchor-width)">
-            <AccountMenuItems email={viewer.email} />
+          <DropdownMenuContent side="top" className="w-(--anchor-width) min-w-60">
+            <AccountMenuItems name={viewer.name} email={viewer.email} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
