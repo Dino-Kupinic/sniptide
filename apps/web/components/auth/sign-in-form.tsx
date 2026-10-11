@@ -11,7 +11,9 @@ import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
 import { EmailDivider, SocialButtons } from "./social-buttons"
 
-export function SignInForm({ socialProviders }: { socialProviders: SocialProvider[] }) {
+// `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
+// newcomers to the request-access page.
+export function SignInForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
   const router = useRouter()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
@@ -44,13 +46,17 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
 
   return (
     <>
-      <SocialButtons
-        enabled={socialProviders}
-        verb="Continue"
-        callbackURL="/dashboard"
-        onError={setError}
-      />
-      <EmailDivider />
+      {socialProviders ? (
+        <>
+          <SocialButtons
+            enabled={socialProviders}
+            verb="Continue"
+            callbackURL="/dashboard"
+            onError={setError}
+          />
+          <EmailDivider />
+        </>
+      ) : null}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
         <div className="flex flex-col gap-3.5">
@@ -92,8 +98,8 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
             />
             {showResetNote ? (
               <p className="text-xs text-muted-foreground">
-                Password reset by email isn't available yet. Sign in with GitHub or Google if you
-                linked one.
+                Password reset by email isn't available yet.
+                {socialProviders ? " Sign in with GitHub or Google if you linked one." : null}
               </p>
             ) : null}
           </div>
@@ -108,7 +114,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
         <SwitchPrompt>
           New to Sniptide?{" "}
           <Link href="/sign-up" className={inlineLinkClass}>
-            Create an account
+            {socialProviders ? "Create an account" : "Request access"}
           </Link>
         </SwitchPrompt>
       </form>

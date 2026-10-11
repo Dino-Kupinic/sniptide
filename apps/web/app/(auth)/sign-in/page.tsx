@@ -1,6 +1,6 @@
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { SignInForm } from "@/components/auth/sign-in-form"
-import { getSocialProviders } from "@/lib/auth"
+import { getInviteOnly, getSocialProviders } from "@/lib/auth"
 import { getSiteOrigin } from "@/lib/site"
 
 export const metadata = { title: "Sign in · Sniptide" }
@@ -19,7 +19,7 @@ export default async function Page() {
         note: "expires in 6 days",
       }}
     >
-      <SignInForm socialProviders={await getSocialProviders()} />
+      <SignInForm socialProviders={getInviteOnly() ? null : await getSocialProviders()} />
     </AuthScreen>
   )
 }

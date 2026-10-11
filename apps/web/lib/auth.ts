@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createAuth } from "@workspace/auth"
+import { parseAllowlist } from "@workspace/auth/allowlist"
 import { nextCookies } from "better-auth/next-js"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
@@ -26,6 +27,7 @@ export async function getAuth() {
     baseURL: config.appUrl,
     trustedOrigins: config.trustedOrigins,
     cookieDomain: config.cookieDomain,
+    allowedEmails: config.allowedEmails,
     ipAddressHeaders: [RESOLVED_IP_HEADER],
     github: config.github,
     google: config.google,
@@ -38,6 +40,13 @@ export async function getSocialProviders(): Promise<SocialProvider[]> {
   const configured = getConfig()
 
   return (["github", "google"] as const).filter((provider) => configured[provider])
+}
+
+// Set while ALLOWED_EMAILS limits sign-up: the sign-up page asks visitors to apply (at
+// WAITLIST_URL, when set) and sign-in drops the GitHub and Google buttons.
+export function getInviteOnly(): { applyUrl?: string } | null {
+  const config = getConfig()
+  return parseAllowlist(config.allowedEmails) ? { applyUrl: config.waitlistUrl } : null
 }
 
 export const getSession = cache(async () => {
