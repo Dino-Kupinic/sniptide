@@ -20,6 +20,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { track } from "@/lib/analytics"
 import { setStarred, trashPaste } from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
@@ -61,7 +62,15 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
   const { copied, copy } = useCopy()
 
   return (
-    <Button type="button" size="lg" className={className} onClick={() => copy(url)}>
+    <Button
+      type="button"
+      size="lg"
+      className={className}
+      onClick={() => {
+        track("share_link_copied", { from: "paste" })
+        return copy(url)
+      }}
+    >
       <LinkIcon />
       <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
     </Button>
@@ -89,6 +98,7 @@ export function ShareButton({
         // Dismissed or unsupported for this payload; fall back to copying.
       }
     }
+    track("share_link_copied", { from: "share_button" })
     await copy(url)
   }
 

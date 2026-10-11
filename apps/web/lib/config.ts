@@ -67,6 +67,9 @@ const schema = z.object({
 
   GITHUB_TOKEN: z.string().optional(),
   MAX_PASTE_SIZE: size.default(1024 * 1024),
+
+  POSTHOG_KEY: z.string().optional(),
+  POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
 })
 
 function oauth(clientId?: string, clientSecret?: string) {
@@ -97,6 +100,9 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),
     githubToken: value.GITHUB_TOKEN,
     maxPasteBytes: value.MAX_PASTE_SIZE,
+    analytics: value.POSTHOG_KEY
+      ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }
+      : undefined,
   }
 }
 

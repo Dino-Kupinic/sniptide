@@ -35,6 +35,7 @@ import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useSiteHost } from "@/components/site-host"
+import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
 import { renamePaste, setPasteCollection, setStarred, trashPaste } from "@/lib/pastes/actions"
 import type { SidebarPaste } from "@/lib/pastes/types"
@@ -85,9 +86,12 @@ export function PasteMenu({
             Share
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() =>
-              navigator.clipboard.writeText(`${window.location.protocol}//${host}/${paste.slug}`)
-            }
+            onClick={() => {
+              track("share_link_copied", { from: "menu" })
+              return navigator.clipboard.writeText(
+                `${window.location.protocol}//${host}/${paste.slug}`,
+              )
+            }}
           >
             <CopyIcon />
             Copy link

@@ -3,6 +3,7 @@
 import { Button } from "@sniptide/ui/components/button"
 import { FlameIcon } from "lucide-react"
 import * as React from "react"
+import { track } from "@/lib/analytics"
 import { FileViewer } from "./file-viewer"
 import { ShareActions } from "./share-actions"
 
@@ -65,6 +66,7 @@ export function RevealPaste({ slug }: { slug: string }) {
             const body = await response.json().catch(() => null)
             if (!response.ok || !body?.ok)
               return setError(body?.error ?? "This paste is gone. Someone already read it.")
+            track("burn_after_read_opened")
             setPaste({ title: body.title, files: body.files })
           })
         }

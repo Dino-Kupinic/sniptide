@@ -61,6 +61,8 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
     `GOOGLE_CLIENT_SECRET`
   - `CLIENT_IP_SOURCE`: `cloudflare`, so rate limits key on the `CF-Connecting-IP` Cloudflare
     sets (the default, `direct`, would see only the proxy's address)
+  - `POSTHOG_KEY`: the PostHog project key. The website uses the same project; filter on the
+    `surface` event property (`app` or `marketing`)
   - optional: `SHARE_PROXY_SECRET`, a random string shared with the website so it can pass the
     visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
@@ -109,6 +111,9 @@ comes from with `CLIENT_IP_SOURCE`:
 visitor shares one limit until you pick the matching source. A header-based source is only safe
 if clients can't reach the app without passing through whatever sets that header. Details are in
 `apps/web/.env.example`.
+
+Self-hosted instances send no analytics. PostHog only loads when `POSTHOG_KEY` is set (see
+`apps/web/.env.example`), and the key is read at runtime, so the same image never phones home.
 
 Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
 separate domain, for example a short one:
