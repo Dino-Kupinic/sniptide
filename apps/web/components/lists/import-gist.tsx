@@ -1,10 +1,10 @@
 "use client"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import { Checkbox } from "@sniptide/ui/components/checkbox"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
-import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   Sheet,
   SheetClose,
@@ -13,30 +13,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@sniptide/ui/components/sheet"
-import { CheckIcon, DownloadIcon, LoaderCircleIcon, XIcon } from "lucide-react"
+import { ArrowUpRightIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { formatBytes, timeAgo } from "@/lib/format"
+import { formatBytes } from "@/lib/format"
 import { type GistPreview, importGist, previewGist } from "@/lib/pastes/actions"
-import type { Visibility } from "@/lib/pastes/types"
 
 // Same shape the server accepts: a gist URL or its id, so reading can start as soon as one is
 // pasted.
 const GIST_LINK = /[0-9a-f]{20,40}\/?(?:#.*)?$/i
 const MAX_FILES = 10
 const READ_DELAY = 600
-
-const visibilityHelp: Record<Visibility, string> = {
-  private: "Only you and people you invite can open it.",
-  unlisted: "Anyone with the link can view. Hidden from search.",
-  public: "Listed on your profile and open to anyone.",
-}
-
-const visibilityOptions: { value: Visibility; label: string }[] = [
-  { value: "private", label: "Private" },
-  { value: "unlisted", label: "Unlisted" },
-  { value: "public", label: "Public" },
-]
 
 type Step = "link" | "reading" | "files"
 
@@ -52,9 +39,11 @@ function defaultSelection(gist: GistPreview) {
   return selected
 }
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`
-
 const shortLink = (link: string) => link.trim().replace(/^https?:\/\//i, "")
+
+// Disabled looks the same for both footer buttons, as in the design: a flat grey button.
+const footerButton =
+  "h-[34px] px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
 
 export function ImportGistButton() {
   const router = useRouter()
@@ -64,8 +53,7 @@ export function ImportGistButton() {
   const [error, setError] = React.useState<string | null>(null)
   const [gist, setGist] = React.useState<GistPreview | null>(null)
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
-  const [visibility, setVisibility] = React.useState<Visibility>("unlisted")
-  const [importing, setImporting] = React.useState(false)
+  const [busy, setBusy] = React.useState<"import" | "editor" | null>(null)
   const [importError, setImportError] = React.useState<string | null>(null)
 
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -81,8 +69,7 @@ export function ImportGistButton() {
     setError(null)
     setGist(null)
     setSelected(new Set())
-    setVisibility("unlisted")
-    setImporting(false)
+    setBusy(null)
     setImportError(null)
   }
 
@@ -104,28 +91,37 @@ export function ImportGistButton() {
     setStep("files")
   }
 
-  async function runImport() {
-    if (!gist || importing) return
-    setImporting(true)
+  const chosen = gist ? gist.files.filter((file) => selected.has(file.name)) : []
+  const chosenBytes = chosen.reduce((sum, file) => sum + file.size, 0)
+  const overLimit = gist ? chosenBytes > gist.limitBytes : false
+  const canImport = step === "files" && chosen.length > 0 && !overLimit && busy === null
+
+  // Saves the paste now, then opens it.
+  async function importNow() {
+    if (!gist || !canImport) return
+    setBusy("import")
     setImportError(null)
-    const result = await importGist({
-      id: gist.id,
-      files: gist.files.filter((file) => selected.has(file.name)).map((file) => file.name),
-      visibility,
-    }).catch(() => null)
+    const result = await importGist({ id: gist.id, files: chosen.map((file) => file.name) }).catch(
+      () => null,
+    )
     if (!result?.ok) {
       setImportError(result?.error ?? "Something went wrong. Try again.")
-      setImporting(false)
+      setBusy(null)
       return
     }
     setOpen(false)
     router.push(`/pastes/${result.slug}`)
   }
 
-  const chosen = gist ? gist.files.filter((file) => selected.has(file.name)) : []
-  const chosenBytes = chosen.reduce((sum, file) => sum + file.size, 0)
-  const overLimit = gist ? chosenBytes > gist.limitBytes : false
-  const canImport = step === "files" && chosen.length > 0 && !overLimit && !importing
+  // Nothing is saved: the new paste page reads the chosen files and fills in the editor.
+  function openInEditor() {
+    if (!gist || !canImport) return
+    setBusy("editor")
+    const params = new URLSearchParams({ gist: gist.id })
+    for (const file of chosen) params.append("file", file.name)
+    setOpen(false)
+    router.push(`/new?${params}`)
+  }
 
   return (
     <Sheet
@@ -166,8 +162,6 @@ export function ImportGistButton() {
               }
               chosenBytes={chosenBytes}
               overLimit={overLimit}
-              visibility={visibility}
-              onVisibility={setVisibility}
               error={importError}
             />
           ) : step === "reading" ? (
@@ -202,40 +196,49 @@ export function ImportGistButton() {
                 autoComplete="off"
                 spellCheck={false}
                 aria-invalid={Boolean(error)}
-                aria-describedby="gist-link-note"
+                aria-describedby={error ? "gist-link-error" : undefined}
                 className="font-mono text-base lg:text-xs"
               />
               {error ? (
-                <p id="gist-link-note" role="alert" className="text-xs leading-4 text-destructive">
+                <p id="gist-link-error" role="alert" className="text-xs leading-4 text-destructive">
                   {error}
                 </p>
-              ) : (
-                <p id="gist-link-note" className="text-xs leading-4 text-muted-foreground">
-                  Public gists only. We read it first, nothing is saved until you import.
-                </p>
-              )}
+              ) : null}
             </form>
           )}
         </div>
 
-        <div className="flex h-16 shrink-0 items-center justify-end gap-2 border-t px-6">
+        <div className="flex h-16 shrink-0 items-center justify-between border-t px-6">
           <SheetClose
-            render={<Button type="button" variant="outline" className="h-[34px] px-3.5" />}
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-[34px] px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              />
+            }
           >
             Cancel
           </SheetClose>
-          <Button
-            type="button"
-            className="h-[34px] px-3.5 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
-            disabled={!canImport}
-            onClick={runImport}
-          >
-            {importing
-              ? "Importing…"
-              : chosen.length > 0 && step === "files"
-                ? `Import ${plural(chosen.length, "file")}`
-                : "Import"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className={footerButton}
+              disabled={!canImport}
+              onClick={importNow}
+            >
+              {busy === "import" ? "Importing…" : "Import now"}
+            </Button>
+            <Button
+              type="button"
+              className={footerButton}
+              disabled={!canImport}
+              onClick={openInEditor}
+            >
+              Open in editor
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -285,8 +288,6 @@ function FilesStep({
   onSelect,
   chosenBytes,
   overLimit,
-  visibility,
-  onVisibility,
   error,
 }: {
   link: string
@@ -295,33 +296,42 @@ function FilesStep({
   onSelect: (name: string, checked: boolean) => void
   chosenBytes: number
   overLimit: boolean
-  visibility: Visibility
-  onVisibility: (visibility: Visibility) => void
   error: string | null
 }) {
-  const meta = [
-    gist.owner,
-    plural(gist.files.length, "file"),
-    gist.updatedAt ? `updated ${timeAgo(Date.parse(gist.updatedAt))}` : null,
-  ].filter(Boolean)
+  const { owner } = gist
 
   return (
     <>
       <LinkBox link={link} status="read" />
-      <div className="flex flex-col gap-0.5">
-        <h3 className="text-lg leading-6 font-semibold tracking-[-0.01em]">{gist.title}</h3>
-        <p className="text-[13px] leading-[18px] text-muted-foreground">{meta.join(" · ")}</p>
+      <div className="flex flex-col gap-2">
+        <h3 className="line-clamp-2 text-lg leading-6 font-semibold tracking-[-0.01em]">
+          {gist.title}
+        </h3>
+        {owner ? (
+          <a
+            href={owner.url}
+            target="_blank"
+            rel="noreferrer"
+            className="group flex w-fit max-w-full items-center gap-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            <Avatar className="size-5 text-[11px]">
+              {owner.avatarUrl ? <AvatarImage src={owner.avatarUrl} alt="" /> : null}
+              <AvatarFallback>{owner.login.slice(0, 1).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <span className="truncate text-sm leading-5 font-medium group-hover:underline">
+              {owner.login}
+            </span>
+            <ArrowUpRightIcon className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="sr-only">(opens GitHub in a new tab)</span>
+          </a>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <span className="text-[13px] leading-[18px] font-medium">Files</span>
-          <span
-            className={`text-xs leading-4 ${overLimit ? "text-destructive" : "text-muted-foreground"}`}
-            aria-live="polite"
-          >
-            {selected.size} of {gist.files.length} selected · {formatBytes(chosenBytes)} of{" "}
-            {gist.limitLabel}
+          <span className="text-xs leading-4 text-muted-foreground" aria-live="polite">
+            {selected.size} of {gist.files.length} selected
           </span>
         </div>
         <ul className="flex flex-col border">
@@ -365,24 +375,12 @@ function FilesStep({
             )
           })}
         </ul>
-        {overLimit ? (
-          <p role="alert" className="text-xs leading-4 text-destructive">
-            The selected files are over the {gist.limitLabel} limit. Deselect some to import.
-          </p>
-        ) : null}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <span id="gist-visibility" className="text-[13px] leading-[18px] font-medium">
-          Visibility
-        </span>
-        <SegmentedControl
-          aria-labelledby="gist-visibility"
-          value={visibility}
-          onValueChange={onVisibility}
-          options={visibilityOptions}
-        />
-        <p className="text-xs leading-4 text-muted-foreground">{visibilityHelp[visibility]}</p>
+        <p
+          className={`text-xs leading-4 ${overLimit ? "text-destructive" : "text-muted-foreground"}`}
+          aria-live="polite"
+        >
+          {formatBytes(chosenBytes)} of {gist.limitLabel}
+        </p>
       </div>
 
       {error ? (

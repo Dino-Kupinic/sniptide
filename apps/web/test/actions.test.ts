@@ -50,7 +50,7 @@ const truncated = (name: string, bytes: number, rawUrl = `${RAW}/${name}`) => ({
 const gist = (files: Record<string, unknown>, description: string | null = "A gist") => ({
   description,
   updated_at: "2026-10-01T12:00:00Z",
-  owner: { login: "octocat" },
+  owner: { login: "octocat", avatar_url: "https://avatars.githubusercontent.com/u/583231?v=4" },
   files,
 })
 
@@ -66,7 +66,7 @@ const input = (title: string): SavePasteInput => ({
   burnAfterRead: false,
 })
 
-const choose = (...files: string[]) => ({ id: GIST, files, visibility: "unlisted" as const })
+const choose = (...files: string[]) => ({ id: GIST, files })
 
 async function pasteCount() {
   return (await getDb().select().from(paste)).length
@@ -94,9 +94,12 @@ describeDb("paste actions", () => {
         ok: true,
         gist: {
           id: GIST,
-          owner: "octocat",
+          owner: {
+            login: "octocat",
+            avatarUrl: "https://avatars.githubusercontent.com/u/583231?v=4",
+            url: "https://github.com/octocat",
+          },
           title: "A gist",
-          updatedAt: "2026-10-01T12:00:00Z",
           limitBytes: 1024 * KB,
           limitLabel: "1 MB",
           files: [
@@ -182,7 +185,7 @@ describeDb("paste actions", () => {
   })
 
   describe("importGist", () => {
-    test("saves only the chosen files, with the chosen visibility", async () => {
+    test("saves only the chosen files, as an unlisted paste", async () => {
       serveGist(
         gist({
           "a.ts": file("a.ts", "export {}"),
@@ -191,11 +194,11 @@ describeDb("paste actions", () => {
         }),
       )
 
-      const result = await importGist({ id: GIST, files: ["a.ts", "b.md"], visibility: "private" })
+      const result = await importGist({ id: GIST, files: ["a.ts", "b.md"] })
       expect(result.ok).toBe(true)
       const [row] = await getDb().select().from(paste)
       expect(row?.title).toBe("A gist")
-      expect(row?.visibility).toBe("private")
+      expect(row?.visibility).toBe("unlisted")
       const files = await getDb()
         .select()
         .from(pasteFile)
@@ -287,11 +290,9 @@ describeDb("paste actions", () => {
       expect(await pasteCount()).toBe(0)
     })
 
-    test("needs at least one file and a real visibility", async () => {
+    test("needs at least one file", async () => {
       serveGist(gist({ "a.txt": file("a.txt", "hi") }))
-      expect((await importGist({ id: GIST, files: [], visibility: "unlisted" })).ok).toBe(false)
-      const bad = { id: GIST, files: ["a.txt"], visibility: "everyone" } as never
-      expect((await importGist(bad)).ok).toBe(false)
+      expect((await importGist({ id: GIST, files: [] })).ok).toBe(false)
       expect(await pasteCount()).toBe(0)
     })
 
