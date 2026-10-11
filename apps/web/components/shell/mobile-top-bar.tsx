@@ -9,11 +9,13 @@ import {
 import { Logo } from "@sniptide/ui/components/logo"
 import { SearchIcon } from "lucide-react"
 import Link from "next/link"
+import { useCommandMenu } from "@/components/command-menu/command-menu"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 
 // Top bar below lg, from the Paper mobile artboards: wordmark, search, account avatar.
 export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
+  const { open: openCommandMenu } = useCommandMenu()
   return (
     <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center justify-between bg-background px-4 pt-[env(safe-area-inset-top)] box-content lg:hidden">
       <Link
@@ -26,6 +28,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
         <button
           type="button"
           aria-label="Search"
+          onClick={openCommandMenu}
           className="inline-flex size-9 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-[17px]"
         >
           <SearchIcon />

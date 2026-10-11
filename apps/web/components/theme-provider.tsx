@@ -18,6 +18,7 @@ function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextT
   )
 }
 
+// Whether a key press is going into a field, where single-key shortcuts must stay out of the way.
 function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false
@@ -65,4 +66,4 @@ function ThemeHotkey() {
   return null
 }
 
-export { ThemeProvider }
+export { isTypingTarget, ThemeProvider }
