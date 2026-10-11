@@ -20,6 +20,7 @@ import {
   UsersIcon,
 } from "lucide-react"
 import * as React from "react"
+import { track } from "@/lib/analytics"
 import { updateSharing } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { useCopy } from "./copy-button"
@@ -54,7 +55,10 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
         variant="inverted"
         size="sm"
         className="mr-1 h-7 text-xs"
-        onClick={() => copy(url)}
+        onClick={() => {
+          track("share_link_copied", { from: "sharing_panel" })
+          return copy(url)
+        }}
       >
         <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
       </Button>

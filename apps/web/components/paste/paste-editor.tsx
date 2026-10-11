@@ -38,6 +38,7 @@ import {
 } from "@/components/paste/side-panel"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { useSiteHost } from "@/components/site-host"
+import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
@@ -190,6 +191,16 @@ export function PasteEditor({
       if (!result.ok) {
         setError(result.error)
         return
+      }
+      if (!editing) {
+        track("paste_created", {
+          files: files.length,
+          visibility,
+          expiry,
+          burn_after_read: burnAfterRead,
+          password: passwordOn,
+          custom_link: Boolean(slug),
+        })
       }
       router.push(`/pastes/${result.slug}`)
     })

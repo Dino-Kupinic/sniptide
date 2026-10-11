@@ -22,6 +22,7 @@
     "lucide-react": "catalog:ui",
     "next": "catalog:runtime",
     "next-themes": "catalog:runtime",
+    "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
     "server-only": "catalog:runtime",

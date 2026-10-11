@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Stack_Sans_Notch } from "next/font/google"
 
 import "@sniptide/ui/globals.css"
 import { cn } from "@sniptide/ui/lib/utils"
+import { Analytics } from "@/components/analytics"
 import { ThemeProvider } from "@/components/theme-provider"
 
 const fontHeading = Stack_Sans_Notch({
@@ -49,6 +50,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )
