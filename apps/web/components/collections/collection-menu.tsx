@@ -19,9 +19,9 @@ import {
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { deleteCollection, renameCollection } from "@/lib/collections/actions"
+import { deleteCollection } from "@/lib/collections/actions"
 import type { Collection } from "@/lib/collections/types"
-import { CollectionNameDialog } from "./name-dialog"
+import { RenameCollectionDialog } from "./rename-collection"
 
 // Rename and delete for one collection. `afterDelete` is where to go once it's gone: a
 // collection's own page has nothing left to show, while the Collections page just refreshes.
@@ -64,20 +64,9 @@ export function CollectionMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CollectionNameDialog
-        open={renaming}
-        onOpenChange={setRenaming}
-        title="Rename collection"
-        description="The collection keeps its link, and its pastes stay in it."
-        submitLabel="Save"
-        pendingLabel="Saving…"
-        initialName={collection.name}
-        onSubmit={async (name) => {
-          const result = await renameCollection(collection.slug, name)
-          if (result.ok) router.refresh()
-          return result
-        }}
-      />
+      {renaming ? (
+        <RenameCollectionDialog collection={collection} onOpenChange={setRenaming} />
+      ) : null}
 
       <AlertDialog open={deleting} onOpenChange={setDeleting}>
         <AlertDialogContent>

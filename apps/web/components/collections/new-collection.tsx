@@ -1,13 +1,10 @@
 "use client"
 
-import { Popover, PopoverContent, PopoverTrigger } from "@sniptide/ui/components/popover"
-import { ChevronDownIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { createCollection } from "@/lib/collections/actions"
 import { type Collection, defaultHue } from "@/lib/collections/types"
-import { CollectionIcon } from "./icon"
-import { IconOptions } from "./icon-picker"
+import { CollectionLookPicker } from "./icon-picker"
 import { CollectionNameDialog } from "./name-dialog"
 
 // The "New collection" dialog. Its trigger lives with the caller (the sidebar's + button, the
@@ -47,22 +44,11 @@ export function NewCollectionDialog({
       label="Name"
       placeholder="e.g. api-snippets"
       leading={
-        <Popover>
-          <PopoverTrigger
-            aria-label="Choose an icon"
-            className="flex h-10 shrink-0 items-center gap-1 border border-input px-2.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
-          >
-            <CollectionIcon icon={look.icon} hue={look.hue} className="size-3.5" />
-            <ChevronDownIcon className="size-3 text-muted-foreground" />
-          </PopoverTrigger>
-          <PopoverContent className="w-72">
-            <IconOptions
-              icon={look.icon}
-              hue={look.hue}
-              onPick={(next) => setLook((current) => ({ ...current, ...next }))}
-            />
-          </PopoverContent>
-        </Popover>
+        <CollectionLookPicker
+          icon={look.icon}
+          hue={look.hue}
+          onPick={(next) => setLook((current) => ({ ...current, ...next }))}
+        />
       }
       onSubmit={async (name) => {
         const result = await createCollection(name, look)

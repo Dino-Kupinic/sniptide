@@ -1,5 +1,8 @@
 "use client"
 
+import { arrayMove } from "@dnd-kit/helpers"
+import { DragDropProvider } from "@dnd-kit/react"
+import { isSortable, useSortable } from "@dnd-kit/react/sortable"
 import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import {
@@ -17,6 +20,7 @@ import {
   ChevronRightIcon,
   ChevronsUpDownIcon,
   DownloadIcon,
+  GripVerticalIcon,
   LayoutGridIcon,
   ListFilterIcon,
   MoreHorizontalIcon,
@@ -29,6 +33,7 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as React from "react"
+import { CollectionMenu } from "@/components/collections/collection-menu"
 import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { ImportGistSheet } from "@/components/lists/import-gist"
@@ -40,7 +45,7 @@ import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 import { isActivePath } from "./nav-config"
 import { PasteMenu } from "./paste-menu"
-import type { SectionId } from "./sidebar-state"
+import { completeSidebarOrder, type SectionId } from "./sidebar-state"
 import { SidebarToggle } from "./top-bar"
 
 export interface SidebarProps {
@@ -64,16 +69,30 @@ export function Sidebar({
   data,
   collections,
   closed,
+  sectionOrder,
+  collectionOrder,
+  onReorderSections,
+  onReorderCollections,
   onToggleSection,
   onToggleSidebar,
 }: SidebarProps & {
   closed: SectionId[]
+  sectionOrder: SectionId[]
+  collectionOrder: string[]
+  onReorderSections: (order: SectionId[]) => void
+  onReorderCollections: (order: string[]) => void
   onToggleSection: (section: SectionId) => void
   onToggleSidebar: () => void
 }) {
   const pathname = usePathname()
   const [creating, setCreating] = React.useState(false)
   const { counts } = data
+  const visibleSections = sectionOrder.filter((id) => id !== "starred" || data.starred.length > 0)
+  const orderedSlugs = completeSidebarOrder(
+    collectionOrder,
+    collections.map((item) => item.slug),
+  )
+  const collectionsBySlug = new Map(collections.map((item) => [item.slug, item]))
 
   return (
     <div className="flex h-full flex-col gap-3 px-2 py-3">
@@ -123,83 +142,117 @@ export function Sidebar({
       {/* Only the lists scroll, so the account menu stays pinned to the bottom however many
           items there are. The negative margin keeps focus rings at the edges from clipping. */}
       <div className="-mx-2 flex min-h-0 flex-1 scroll-fade scrollbar-subtle flex-col gap-3 overflow-y-auto px-2">
-        {data.starred.length > 0 ? (
-          <Section
-            id="starred"
-            title="Starred"
-            open={!closed.includes("starred")}
-            onToggle={onToggleSection}
-          >
-            {data.starred.map((paste) => (
-              <PasteRow
-                key={paste.slug}
-                paste={paste}
-                collections={collections}
-                pathname={pathname}
-                alwaysShowStar
-              />
-            ))}
-            <ViewAll href="/starred" count={counts.starred} shown={data.starred.length} />
-          </Section>
-        ) : null}
-
-        <Section
-          id="pastes"
-          title="Pastes"
-          open={!closed.includes("pastes")}
-          onToggle={onToggleSection}
-          add={
-            <Link href="/new" aria-label="New paste" className={iconButtonClass}>
-              <PlusIcon />
-            </Link>
-          }
+        <DragDropProvider
+          onDragEnd={(event) => {
+            if (event.canceled) return
+            const { source } = event.operation
+            if (!isSortable(source) || source.initialIndex === source.index) return
+            if (source.type === "section") {
+              const reordered = arrayMove(visibleSections, source.initialIndex, source.index)
+              let index = 0
+              // Invisible Starred keeps its place until there are stars to show again.
+              onReorderSections(
+                sectionOrder.map((id) =>
+                  visibleSections.includes(id) ? (reordered[index++] ?? id) : id,
+                ),
+              )
+            } else if (source.type === "collection") {
+              onReorderCollections(arrayMove(orderedSlugs, source.initialIndex, source.index))
+            }
+          }}
         >
-          {data.recent.map((paste) => (
-            <PasteRow
-              key={paste.slug}
-              paste={paste}
-              collections={collections}
-              pathname={pathname}
-            />
-          ))}
-          {data.recent.length === 0 ? (
-            <p className="px-2 py-1.5 text-[13px] text-muted-foreground">No pastes yet.</p>
-          ) : null}
-          <ViewAll href="/pastes" count={counts.pastes} shown={data.recent.length} />
-        </Section>
-
-        <Section
-          id="collections"
-          title="Collections"
-          open={!closed.includes("collections")}
-          onToggle={onToggleSection}
-          add={
-            <button
-              type="button"
-              aria-label="New collection"
-              onClick={() => setCreating(true)}
-              className={iconButtonClass}
-            >
-              <PlusIcon />
-            </button>
-          }
-        >
-          {collections.map((collection) => (
-            <div
-              key={collection.slug}
-              data-active={isActivePath(pathname, `/collections/${collection.slug}`)}
-              className={cn(rowClass, "gap-1.5 pl-1.5")}
-            >
-              <CollectionIconPicker collection={collection} />
-              <Link
-                href={`/collections/${collection.slug}`}
-                className="min-w-0 flex-1 truncate outline-none after:absolute after:inset-0 focus-visible:underline"
-              >
-                {collection.name}
-              </Link>
-            </div>
-          ))}
-        </Section>
+          {visibleSections.map((id, index) => {
+            switch (id) {
+              case "starred":
+                return (
+                  <Section
+                    key={id}
+                    id="starred"
+                    index={index}
+                    title="Starred"
+                    open={!closed.includes("starred")}
+                    onToggle={onToggleSection}
+                  >
+                    {data.starred.map((paste) => (
+                      <PasteRow
+                        key={paste.slug}
+                        paste={paste}
+                        collections={collections}
+                        pathname={pathname}
+                        alwaysShowStar
+                      />
+                    ))}
+                    <ViewAll href="/starred" count={counts.starred} shown={data.starred.length} />
+                  </Section>
+                )
+              case "pastes":
+                return (
+                  <Section
+                    key={id}
+                    id="pastes"
+                    index={index}
+                    title="Pastes"
+                    open={!closed.includes("pastes")}
+                    onToggle={onToggleSection}
+                    add={
+                      <Link href="/new" aria-label="New paste" className={iconButtonClass}>
+                        <PlusIcon />
+                      </Link>
+                    }
+                  >
+                    {data.recent.map((paste) => (
+                      <PasteRow
+                        key={paste.slug}
+                        paste={paste}
+                        collections={collections}
+                        pathname={pathname}
+                      />
+                    ))}
+                    {data.recent.length === 0 ? (
+                      <p className="px-2 py-1.5 text-[13px] text-muted-foreground">
+                        No pastes yet.
+                      </p>
+                    ) : null}
+                    <ViewAll href="/pastes" count={counts.pastes} shown={data.recent.length} />
+                  </Section>
+                )
+              case "collections":
+                return (
+                  <Section
+                    key={id}
+                    id="collections"
+                    index={index}
+                    title="Collections"
+                    open={!closed.includes("collections")}
+                    onToggle={onToggleSection}
+                    add={
+                      <button
+                        type="button"
+                        aria-label="New collection"
+                        onClick={() => setCreating(true)}
+                        className={iconButtonClass}
+                      >
+                        <PlusIcon />
+                      </button>
+                    }
+                  >
+                    {orderedSlugs.map((slug, index) => {
+                      const collection = collectionsBySlug.get(slug)
+                      return collection ? (
+                        <CollectionRow
+                          key={slug}
+                          collection={collection}
+                          index={index}
+                          pathname={pathname}
+                        />
+                      ) : null
+                    })}
+                  </Section>
+                )
+            }
+            return null
+          })}
+        </DragDropProvider>
       </div>
       <NewCollectionDialog
         existing={collections.length}
@@ -306,10 +359,10 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
   )
 }
 
-// A titled group that folds shut from its header. The header's filter and ⋯ show on hover and
-// are placeholders for now; `add` (the +) stays visible.
+// A sortable group with a separate drag handle so folding and menu actions remain clickable.
 function Section({
   id,
+  index,
   title,
   open,
   onToggle,
@@ -317,6 +370,7 @@ function Section({
   children,
 }: {
   id: SectionId
+  index: number
   title: string
   open: boolean
   onToggle: (section: SectionId) => void
@@ -324,9 +378,23 @@ function Section({
   children: React.ReactNode
 }) {
   const contentId = `sidebar-${id}`
+  const { ref, handleRef, isDragSource } = useSortable({
+    id: `section:${id}`,
+    index,
+    type: "section",
+    accept: "section",
+    group: "sections",
+  })
 
   return (
-    <section aria-label={title} className="flex flex-col gap-0.5">
+    <section
+      ref={ref}
+      aria-label={title}
+      className={cn(
+        "flex shrink-0 flex-col gap-0.5",
+        isDragSource && "relative z-20 bg-sidebar shadow-sm",
+      )}
+    >
       <div className="group/row flex h-7 shrink-0 items-center gap-0.5 pr-1 pl-2 text-muted-foreground hover:bg-muted hover:text-foreground has-data-popup-open:bg-muted">
         <button
           type="button"
@@ -342,6 +410,7 @@ function Section({
             <ChevronRightIcon className="size-3 shrink-0" />
           )}
         </button>
+        <DragHandle ref={handleRef} label={`Reorder ${title.toLowerCase()} section`} />
         <PlaceholderMenu
           label={`Filter ${title.toLowerCase()}`}
           note="Filters are coming soon."
@@ -360,6 +429,59 @@ function Section({
         </div>
       ) : null}
     </section>
+  )
+}
+
+function DragHandle({ ref, label }: { ref: React.Ref<HTMLButtonElement>; label: string }) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={label}
+      className={cn(iconButtonClass, revealClass, "touch-none cursor-grab active:cursor-grabbing")}
+    >
+      <GripVerticalIcon />
+    </button>
+  )
+}
+
+function CollectionRow({
+  collection,
+  index,
+  pathname,
+}: {
+  collection: Collection
+  index: number
+  pathname: string
+}) {
+  const { ref, handleRef, isDragSource } = useSortable({
+    id: `collection:${collection.slug}`,
+    index,
+    type: "collection",
+    accept: "collection",
+    group: "collections",
+  })
+  const href = `/collections/${collection.slug}`
+  return (
+    <div
+      ref={ref}
+      data-active={isActivePath(pathname, href)}
+      className={cn(rowClass, "gap-1.5 pl-1.5", isDragSource && "z-20 bg-sidebar shadow-sm")}
+    >
+      <CollectionIconPicker collection={collection} />
+      <Link
+        href={href}
+        className="min-w-0 flex-1 truncate outline-none after:absolute after:inset-0 focus-visible:underline"
+      >
+        {collection.name}
+      </Link>
+      <DragHandle ref={handleRef} label={`Reorder ${collection.name} collection`} />
+      <CollectionMenu
+        collection={collection}
+        afterDelete={isActivePath(pathname, href) ? "/collections" : undefined}
+        className={cn(iconButtonClass, revealClass)}
+      />
+    </div>
   )
 }
 

@@ -139,7 +139,11 @@ export async function createCollection(
   })
 }
 
-export async function renameCollection(slug: string, name: string): Promise<CollectionResult> {
+export async function renameCollection(
+  slug: string,
+  name: string,
+  look?: { icon: CollectionIcon; hue: Hue },
+): Promise<CollectionResult> {
   const owner = await requireViewerId()
   return getDb().transaction(async (tx) => {
     await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
@@ -153,7 +157,7 @@ export async function renameCollection(slug: string, name: string): Promise<Coll
     }
     const [row] = await tx
       .update(collectionTable)
-      .set({ name })
+      .set({ name, ...look })
       .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
       .returning()
     if (!row) return { status: "missing" }
