@@ -78,3 +78,59 @@ jobs:
 
       - run: bun run test
         working-directory: apps/web
+
+  e2e:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sniptide
+          POSTGRES_PASSWORD: sniptide
+          POSTGRES_DB: sniptide_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sniptide -d sniptide_e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://sniptide:sniptide@localhost:5432/sniptide_e2e
+      NEXT_TELEMETRY_DISABLED: "1"
+      E2E_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun --filter web test:e2e:install --with-deps
+      - run: bun run build
+      - run: bun run test:e2e
+      - name: Publish browser test summary
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -f apps/web/.e2e/summary.md ]; then
+            cat apps/web/.e2e/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload browser reports and failure evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            apps/web/.e2e/report.json
+            apps/web/.e2e/junit.xml
+            apps/web/.e2e/summary.md
+            apps/web/.e2e/failures/
+            apps/web/.e2e/artifacts/
+            apps/web/.e2e/logs/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
