@@ -2,6 +2,7 @@ import "server-only"
 
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
 import { and, eq, isNull, sql } from "drizzle-orm"
+import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import {
@@ -54,7 +55,7 @@ function toCollection(row: {
 }
 
 // The viewer's collections, oldest first, with how many live pastes each holds.
-export async function listCollections(): Promise<Collection[]> {
+export const listCollections = cache(async (): Promise<Collection[]> => {
   const viewer = await viewerId()
   if (!viewer) return []
   const rows = await getDb()
@@ -78,7 +79,7 @@ export async function listCollections(): Promise<Collection[]> {
     .groupBy(collectionTable.id)
     .orderBy(collectionTable.createdAt, collectionTable.id)
   return rows.map(toCollection)
-}
+})
 
 export async function getCollection(slug: string) {
   return (await listCollections()).find((candidate) => candidate.slug === slug) ?? null

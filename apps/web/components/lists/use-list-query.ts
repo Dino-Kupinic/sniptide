@@ -28,7 +28,7 @@ export function useListQuery(query: PasteListQuery) {
   )
 
   function update(patch: Partial<PasteListQuery>, debounce = false) {
-    const next = { ...latest.current, ...patch, page: patch.page ?? 1 }
+    const next = { ...latest.current, ...patch, cursor: patch.cursor, page: patch.page ?? 1 }
     latest.current = next
     setDraft(next)
     if (timer.current !== null) clearTimeout(timer.current)

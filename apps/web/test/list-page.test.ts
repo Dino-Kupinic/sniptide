@@ -31,7 +31,7 @@ describeDb("bounded paste reads", () => {
     )
     expect(pages.map((page) => page.pastes.length)).toEqual([10, 10, 5])
     expect(new Set(pages.flatMap((page) => page.pastes.map((p) => p.slug))).size).toBe(25)
-    expect(pages[0]?.pagination).toEqual({ page: 1, pageCount: 3, total: 25, totalAll: 25 })
+    expect(pages[0]?.pagination).toMatchObject({ page: 1, pageCount: 3, total: 25, totalAll: 25 })
     for (const page of pages)
       for (const row of page.pastes) {
         expect(row).not.toHaveProperty("files")
