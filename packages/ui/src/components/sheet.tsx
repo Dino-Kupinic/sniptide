@@ -7,6 +7,7 @@ const Sheet = SheetPrimitive.Root
 const SheetTrigger = SheetPrimitive.Trigger
 const SheetClose = SheetPrimitive.Close
 const SheetTitle = SheetPrimitive.Title
+const SheetDescription = SheetPrimitive.Description
 
 function SheetContent({
   className,
@@ -29,4 +30,4 @@ function SheetContent({
   )
 }
 
-export { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger }
+export { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger }

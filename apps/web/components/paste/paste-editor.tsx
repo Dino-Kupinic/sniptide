@@ -72,6 +72,7 @@ export function PasteEditor({
   collections,
   indentation = "2",
   secretDetection = true,
+  notice,
 }: {
   initial: EditorInitial
   // Slug of the paste being edited; omitted for a new paste.
@@ -82,6 +83,8 @@ export function PasteEditor({
   // From the viewer's Settings: what Tab inserts, and whether to warn about pasted secrets.
   indentation?: Preferences["indentation"]
   secretDetection?: boolean
+  // Shown like a save error when the page couldn't prefill the editor (a gist that can't be read).
+  notice?: string
 }) {
   const host = useSiteHost()
   const router = useRouter()
@@ -100,7 +103,7 @@ export function PasteEditor({
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
-  const [error, setError] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
   const [mobileMore, setMobileMore] = React.useState(false)
   const formRef = React.useRef<HTMLFormElement>(null)
