@@ -22,9 +22,9 @@ describe("sidebar preferences", () => {
   test("custom section and collection ordering survives serialization", () => {
     const state: SidebarState = {
       ...defaultSidebarState,
-      sectionOrder: ["collections", "pastes", "general", "starred"],
+      sectionOrder: ["collections", "pastes", "starred"],
       collectionOrder: ["pastes", "api-snippets", "general"],
-      closed: ["general"],
+      closed: ["pastes"],
     }
     expect(parseSidebarState(cookie(state))).toEqual(state)
   })
@@ -33,10 +33,21 @@ describe("sidebar preferences", () => {
     expect(
       parseSidebarState(cookie({ sectionOrder: ["collections", "unknown", "collections", null] }))
         .sectionOrder,
-    ).toEqual(["collections", "general", "starred", "pastes"])
+    ).toEqual(["collections", "starred", "pastes"])
     for (const value of [undefined, "%", "null", "[]", "1", cookie({ sectionOrder: "pastes" })]) {
       expect(parseSidebarState(value).sectionOrder).toEqual([...SECTIONS])
     }
+  })
+
+  test("old draggable General preferences cannot fold or reorder the fixed navigation", () => {
+    expect(
+      parseSidebarState(
+        cookie({
+          closed: ["general", "pastes"],
+          sectionOrder: ["collections", "general", "starred", "pastes"],
+        }),
+      ),
+    ).toMatchObject({ closed: ["pastes"], sectionOrder: ["collections", "starred", "pastes"] })
   })
 
   test("new collections append and deleted collections disappear without resetting the order", () => {

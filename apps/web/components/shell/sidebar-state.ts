@@ -11,7 +11,7 @@ export const SIDEBAR_MIN_WIDTH = 200
 export const sidebarMaxWidth = (windowWidth: number) =>
   Math.max(SIDEBAR_MIN_WIDTH, Math.floor(windowWidth / 4))
 
-export const SECTIONS = ["general", "starred", "pastes", "collections"] as const
+export const SECTIONS = ["starred", "pastes", "collections"] as const
 export type SectionId = (typeof SECTIONS)[number]
 
 export interface SidebarState {

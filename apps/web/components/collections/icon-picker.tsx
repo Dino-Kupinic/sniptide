@@ -2,10 +2,37 @@
 
 import { Popover, PopoverContent, PopoverTrigger } from "@sniptide/ui/components/popover"
 import { cn } from "@sniptide/ui/lib/utils"
+import { ChevronDownIcon } from "lucide-react"
 import * as React from "react"
 import { renameCollection, setCollectionIcon } from "@/lib/collections/actions"
 import { type Collection, HUES, ICONS, MAX_NAME_LENGTH } from "@/lib/collections/types"
 import { CollectionIcon, hueClass, hueLabel } from "./icon"
+
+// A draft icon and color for the create and rename dialogs. The caller saves them on submit.
+export function CollectionLookPicker({
+  icon,
+  hue,
+  onPick,
+}: {
+  icon: Collection["icon"]
+  hue: Collection["hue"]
+  onPick: (next: { icon?: Collection["icon"]; hue?: Collection["hue"] }) => void
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label="Choose an icon"
+        className="flex h-10 shrink-0 items-center gap-1 border border-input px-2.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
+      >
+        <CollectionIcon icon={icon} hue={hue} className="size-3.5" />
+        <ChevronDownIcon className="size-3 text-muted-foreground" />
+      </PopoverTrigger>
+      <PopoverContent className="w-72">
+        <IconOptions icon={icon} hue={hue} onPick={onPick} />
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 // A collection's icon, as a button that opens the picker: its name, twelve square icons and ten
 // hues. Every pick saves at once; the name saves on Enter or when the field loses focus.

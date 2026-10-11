@@ -127,6 +127,18 @@ export function Sidebar({
         <Kbd className="ml-auto border border-white/30">⌘N</Kbd>
       </Button>
 
+      <nav aria-label="Main" className="flex flex-col gap-0.5">
+        <NavLink href="/dashboard" pathname={pathname}>
+          <LayoutGridIcon />
+          Dashboard
+        </NavLink>
+        <NavLink href="/analytics" pathname={pathname}>
+          <ChartColumnIcon />
+          Analytics
+        </NavLink>
+        <MoreMenu pathname={pathname} shared={counts.shared} />
+      </nav>
+
       {/* Only the lists scroll, so the account menu stays pinned to the bottom however many
           items there are. The negative margin keeps focus rings at the edges from clipping. */}
       <div className="-mx-2 flex min-h-0 flex-1 scroll-fade scrollbar-subtle flex-col gap-3 overflow-y-auto px-2">
@@ -151,29 +163,6 @@ export function Sidebar({
         >
           {visibleSections.map((id, index) => {
             switch (id) {
-              case "general":
-                return (
-                  <Section
-                    key={id}
-                    id={id}
-                    index={index}
-                    title="General"
-                    open={!closed.includes(id)}
-                    onToggle={onToggleSection}
-                  >
-                    <nav aria-label="Main" className="flex flex-col gap-0.5">
-                      <NavLink href="/dashboard" pathname={pathname}>
-                        <LayoutGridIcon />
-                        Dashboard
-                      </NavLink>
-                      <NavLink href="/analytics" pathname={pathname}>
-                        <ChartColumnIcon />
-                        Analytics
-                      </NavLink>
-                      <MoreMenu pathname={pathname} shared={counts.shared} />
-                    </nav>
-                  </Section>
-                )
               case "starred":
                 return (
                   <Section

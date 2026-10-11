@@ -118,6 +118,43 @@ describeDb("collections", () => {
     expect((await pasteRow("p1"))?.collection).toBe("notes")
   })
 
+  test("rename saves the name, icon and color together without changing the link or pastes", async () => {
+    await createCollection("notes")
+    await seedPaste({ slug: "p1", owner: "ada", collection: "notes" })
+    expect(await renameCollection("notes", "Meeting notes", { icon: "grid", hue: "teal" })).toEqual(
+      {
+        ok: true,
+        slug: "notes",
+      },
+    )
+    expect(await getCollection("notes")).toMatchObject({
+      name: "Meeting notes",
+      icon: "grid",
+      hue: "teal",
+      pasteCount: 1,
+    })
+    expect((await pasteRow("p1"))?.collection).toBe("notes")
+    // Name-only edits from the sidebar icon popover retain the saved look.
+    await renameCollection("notes", "Notes")
+    expect(await getCollection("notes")).toMatchObject({ name: "Notes", icon: "grid", hue: "teal" })
+  })
+
+  test("a rejected rename cannot change the icon or color", async () => {
+    await createCollection("notes", { icon: "grid", hue: "teal" })
+    await createCollection("todo")
+    expect((await renameCollection("notes", "todo", { icon: "corner", hue: "red" })).ok).toBe(false)
+    expect((await renameCollection("notes", "   ", { icon: "corner", hue: "red" })).ok).toBe(false)
+    await expect(
+      renameCollection("notes", "New notes", { icon: "invalid", hue: "red" }),
+    ).rejects.toThrow()
+    signInAs("bob")
+    expect((await renameCollection("notes", "New notes", { icon: "corner", hue: "red" })).ok).toBe(
+      false,
+    )
+    signInAs("ada")
+    expect(await getCollection("notes")).toMatchObject({ name: "notes", icon: "grid", hue: "teal" })
+  })
+
   test("counts the live pastes in it, not the trash", async () => {
     await createCollection("notes")
     await seedPaste({ slug: "a", owner: "ada", collection: "notes" })

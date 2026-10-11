@@ -49,8 +49,13 @@ export async function createCollection(name: string, look?: { icon: string; hue:
   return save(name, (next) => store.createCollection(next, parsed))
 }
 
-export async function renameCollection(slug: string, name: string) {
-  return save(name, (next) => store.renameCollection(slug, next))
+export async function renameCollection(
+  slug: string,
+  name: string,
+  look?: { icon: string; hue: string },
+) {
+  const parsed = look ? lookSchema.parse(look) : undefined
+  return save(name, (next) => store.renameCollection(slug, next, parsed))
 }
 
 export async function setCollectionIcon(slug: string, icon: string, hue: string) {
