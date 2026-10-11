@@ -42,13 +42,13 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       className={cn(
-        "antialiased font-sans",
+        "overscroll-none antialiased font-sans",
         fontSans.variable,
         fontMono.variable,
         fontHeading.variable,
       )}
     >
-      <body>
+      <body className="overscroll-none">
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>
