@@ -3,6 +3,7 @@ import type { Database } from "@workspace/db"
 import * as schema from "@workspace/db/schema"
 import { type BetterAuthPlugin, betterAuth } from "better-auth"
 import { username } from "better-auth/plugins/username"
+import { assertAllowed, parseAllowlist } from "./allowlist"
 import { boundUserFields } from "./user-fields"
 import { USERNAME_PATTERN } from "./username"
 
@@ -23,6 +24,8 @@ export interface AuthConfig {
   ipAddressHeaders?: string[]
   // Better Auth turns its rate limits on in production only unless told otherwise.
   rateLimitEnabled?: boolean
+  // Comma-separated emails that may create an account. Unset or empty leaves sign-up open.
+  allowedEmails?: string
   // Providers without credentials are left out, so the sign-in page can hide or disable them.
   github?: OAuthCredentials
   google?: OAuthCredentials
@@ -37,10 +40,13 @@ export function createAuth({
   cookieDomain,
   ipAddressHeaders,
   rateLimitEnabled,
+  allowedEmails,
   github,
   google,
   plugins = [],
 }: AuthConfig) {
+  const allowlist = parseAllowlist(allowedEmails)
+
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
     secret,
@@ -67,7 +73,13 @@ export function createAuth({
     },
     databaseHooks: {
       user: {
-        create: { before: async (user) => ({ data: boundUserFields(user, "create") }) },
+        // Covers email sign-up and the first GitHub or Google sign-in alike.
+        create: {
+          before: async (user) => {
+            assertAllowed(allowlist, user.email)
+            return { data: boundUserFields(user, "create") }
+          },
+        },
         update: { before: async (user) => ({ data: boundUserFields(user, "update") }) },
       },
     },

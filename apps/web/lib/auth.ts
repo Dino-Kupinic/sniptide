@@ -26,6 +26,7 @@ export async function getAuth() {
     baseURL: config.appUrl,
     trustedOrigins: config.trustedOrigins,
     cookieDomain: config.cookieDomain,
+    allowedEmails: config.allowedEmails,
     ipAddressHeaders: [RESOLVED_IP_HEADER],
     github: config.github,
     google: config.google,
