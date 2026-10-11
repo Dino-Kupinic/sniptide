@@ -67,6 +67,16 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
     visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
 
+**PR previews.** Coolify's preview deployments get their own URL, secret and database, so they must
+not read production's session cookie. Better Auth names that cookie `better-auth.session_token`
+everywhere, and with `COOKIE_DOMAIN=sniptide.com` the browser sends production's copy to every
+preview, which can't verify it (and shadows the one the preview sets, so sign-in seems to do
+nothing until cookies are cleared). In the Coolify app's **Preview** environment variables (a
+separate list from production's, so production keeps the default name and stays signed in), set:
+
+- `COOKIE_PREFIX`: `preview` (any name that isn't `better-auth`; letters, digits, `-` and `_`)
+- `COOKIE_DOMAIN`: leave empty, so each preview's cookie stays on its own host
+
 `CLIENT_IP_SOURCE=cloudflare` is only safe while the origin accepts traffic from Cloudflare alone;
 otherwise anyone who reaches the server directly can send their own `CF-Connecting-IP`.
 

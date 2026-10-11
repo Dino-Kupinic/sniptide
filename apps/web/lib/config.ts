@@ -58,6 +58,10 @@ const schema = z.object({
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
   COOKIE_DOMAIN: z.string().optional(),
+  COOKIE_PREFIX: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/, { message: "may only contain letters, digits, - and _." })
+    .optional(),
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
@@ -97,6 +101,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     appUrl: value.BETTER_AUTH_URL,
     trustedOrigins: value.BETTER_AUTH_TRUSTED_ORIGINS,
     cookieDomain: value.COOKIE_DOMAIN,
+    cookiePrefix: value.COOKIE_PREFIX,
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
