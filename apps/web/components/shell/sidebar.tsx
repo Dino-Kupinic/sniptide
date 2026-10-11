@@ -207,22 +207,25 @@ export function Sidebar({
         onOpenChange={setCreating}
       />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex shrink-0 items-center gap-2.5 p-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
-          <Avatar>
-            {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
-            <AvatarFallback>{viewer.initials}</AvatarFallback>
-          </Avatar>
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium">{viewer.name}</span>
-            <span className="truncate text-xs text-muted-foreground">{viewer.email}</span>
-          </span>
-          <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" className="w-(--anchor-width)">
-          <AccountMenuItems email={viewer.email} />
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* A hairline across the full sidebar width separates the account menu from the lists. */}
+      <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex w-full items-center gap-2.5 p-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
+            <Avatar>
+              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
+              <AvatarFallback>{viewer.initials}</AvatarFallback>
+            </Avatar>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-medium">{viewer.name}</span>
+              <span className="truncate text-xs text-muted-foreground">{viewer.email}</span>
+            </span>
+            <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" className="w-(--anchor-width)">
+            <AccountMenuItems email={viewer.email} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   )
 }
