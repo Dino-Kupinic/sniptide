@@ -109,6 +109,14 @@ export function AppShell({
               <Sidebar
                 {...sidebarProps}
                 closed={layout.closed}
+                sectionOrder={layout.sectionOrder}
+                collectionOrder={layout.collectionOrder}
+                onReorderSections={(sectionOrder) =>
+                  update((state) => ({ ...state, sectionOrder }))
+                }
+                onReorderCollections={(collectionOrder) =>
+                  update((state) => ({ ...state, collectionOrder }))
+                }
                 onToggleSection={toggleSection}
                 onToggleSidebar={toggleSidebar}
               />
