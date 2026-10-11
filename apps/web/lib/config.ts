@@ -59,6 +59,7 @@ const schema = z.object({
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
   COOKIE_DOMAIN: z.string().optional(),
   ALLOWED_EMAILS: z.string().optional(),
+  WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
 
   GITHUB_CLIENT_ID: z.string().optional(),
@@ -94,6 +95,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     trustedOrigins: value.BETTER_AUTH_TRUSTED_ORIGINS,
     cookieDomain: value.COOKIE_DOMAIN,
     allowedEmails: value.ALLOWED_EMAILS,
+    waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),

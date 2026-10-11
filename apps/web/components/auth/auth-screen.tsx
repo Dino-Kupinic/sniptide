@@ -1,5 +1,6 @@
 import { Logo } from "@sniptide/ui/components/logo"
 import { Stripes } from "@sniptide/ui/components/stripes"
+import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
 
 export interface Pitch {
@@ -11,15 +12,18 @@ export interface Pitch {
 
 // Split auth layout from the Paper Sign in / Sign up artboards: form on the left, barcode
 // stripes with a pitch card on the right. Below lg the stripes become a strip above the form.
+// `centered` is for short screens (request access): on phones the content sits mid-screen, centered.
 export function AuthScreen({
   title,
   subtitle,
   legal,
   pitch,
+  centered = false,
   children,
 }: {
-  title: string
+  title?: string
   subtitle: string
+  centered?: boolean
   legal: string
   pitch: Pitch
   children: React.ReactNode
@@ -35,14 +39,30 @@ export function AuthScreen({
           <Logo />
         </div>
 
-        <main className="flex flex-1 justify-center px-5 pt-6 pb-8 lg:items-center lg:p-0">
+        {centered ? <Logo className="px-5 pt-6 lg:hidden" /> : null}
+
+        <main
+          className={cn(
+            "flex flex-1 justify-center px-5 pt-6 pb-8 lg:items-center lg:p-0",
+            centered && "items-center",
+          )}
+        >
           <div className="flex w-full flex-col gap-5 lg:max-w-[360px] lg:gap-6">
-            <Logo className="lg:hidden" />
+            {centered ? null : <Logo className="lg:hidden" />}
             <div className="flex flex-col gap-1.5 lg:gap-2">
-              <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
-                {title}
-              </h1>
-              <p className="text-[15px] leading-5 text-muted-foreground lg:text-sm">{subtitle}</p>
+              {title ? (
+                <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+                  {title}
+                </h1>
+              ) : null}
+              <p
+                className={cn(
+                  "text-[15px] leading-5 text-muted-foreground lg:text-sm",
+                  centered && "text-center lg:text-left",
+                )}
+              >
+                {subtitle}
+              </p>
             </div>
             {children}
           </div>

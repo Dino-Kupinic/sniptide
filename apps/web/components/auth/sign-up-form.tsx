@@ -48,7 +48,7 @@ function useUsernameAvailability(username: string) {
   return status
 }
 
-export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] }) {
+export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
   const host = useSiteHost()
   const router = useRouter()
   const [username, setUsername] = React.useState("")
@@ -92,13 +92,17 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
 
   return (
     <>
-      <SocialButtons
-        enabled={socialProviders}
-        verb="Sign up"
-        callbackURL="/dashboard"
-        onError={setError}
-      />
-      <EmailDivider />
+      {socialProviders ? (
+        <>
+          <SocialButtons
+            enabled={socialProviders}
+            verb="Sign up"
+            callbackURL="/dashboard"
+            onError={setError}
+          />
+          <EmailDivider />
+        </>
+      ) : null}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
         <div className="flex flex-col gap-3.5">
