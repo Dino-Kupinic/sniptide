@@ -4,9 +4,19 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { collectionExists } from "@/lib/collections/store"
-import { hit, type Limit } from "@/lib/rate-limit"
+import { getConfig } from "@/lib/config"
+import { formatLimit } from "@/lib/format"
 import { getSiteOrigin } from "@/lib/site"
+import {
+  fetchGist,
+  type GistOwner,
+  gistDescription,
+  gistTitle,
+  parseGistId,
+  readGistFiles,
+} from "./gist"
 import { detectLanguage } from "./languages"
+import { limited, limits } from "./limits"
 import { pasteSchema } from "./schema"
 import * as store from "./store"
 import { EXPIRIES, VISIBILITIES } from "./types"
@@ -15,27 +25,6 @@ async function assertSignedIn() {
   const session = await getSession()
   if (!session) throw new Error("Sign in to change pastes.")
   return session.user.id
-}
-
-const HOUR = 60 * 60
-
-// Per-account limits, so one account can't fill the database or spend the server's GitHub quota.
-const limits = {
-  create: (user: string): Limit => ({ key: `paste:create:${user}`, max: 30, windowSeconds: HOUR }),
-  edit: (user: string): Limit => ({ key: `paste:edit:${user}`, max: 240, windowSeconds: HOUR }),
-  gist: (user: string): Limit => ({ key: `paste:gist:${user}`, max: 20, windowSeconds: HOUR }),
-  slugCheck: (user: string): Limit => ({
-    key: `paste:slug-check:${user}`,
-    max: 600,
-    windowSeconds: HOUR,
-  }),
-}
-
-async function limited(...checks: Limit[]) {
-  const result = await hit(checks)
-  if (result.allowed) return null
-  const minutes = Math.ceil(result.retryAfterSeconds / 60)
-  return `You're doing that too often. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`
 }
 
 export type SavePasteInput = z.input<typeof pasteSchema>
@@ -162,55 +151,82 @@ export async function emptyTrash() {
   revalidatePath("/", "layout")
 }
 
-const gistSchema = z.object({
-  description: z.string().nullable(),
-  files: z.record(
-    z.string(),
-    z.object({
-      filename: z.string(),
-      content: z.string().optional(),
-      truncated: z.boolean().optional(),
-    }),
-  ),
-})
+export type GistPreview = {
+  id: string
+  owner: GistOwner | null
+  title: string
+  // The paste size limit, in bytes and as the label the UI shows ("1 MB").
+  limitBytes: number
+  limitLabel: string
+  files: { name: string; size: number; skipped: string | null }[]
+}
+export type GistPreviewResult = { ok: true; gist: GistPreview } | { ok: false; error: string }
 
-// Copies a public GitHub gist into a new unlisted paste. Accepts a gist URL or its id. The copy
-// goes through the same checks as a paste saved in the editor.
-export async function importGist(input: string): Promise<SavePasteResult> {
+// Reads a public GitHub gist (a gist URL or its id) and describes its files. Saves nothing.
+export async function previewGist(input: string): Promise<GistPreviewResult> {
   const user = await assertSignedIn()
 
-  const id = input.trim().match(/([0-9a-f]{20,40})\/?(?:#.*)?$/i)?.[1]
+  const id = parseGistId(input)
   if (!id) return { ok: false, error: "Paste a gist link like gist.github.com/you/1a2b3c…" }
 
-  const tooOften = await limited(limits.gist(user), limits.create(user))
+  const tooOften = await limited(limits.gist(user))
   if (tooOften) return { ok: false, error: tooOften }
 
-  const token = process.env.GITHUB_TOKEN
-  const response = await fetch(`https://api.github.com/gists/${id}`, {
-    headers: {
-      accept: "application/vnd.github+json",
-      "user-agent": "sniptide",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+  const result = await fetchGist(id)
+  if (!result.ok) return result
+
+  const { maxPasteBytes } = getConfig()
+  const { gist } = result
+  return {
+    ok: true,
+    gist: {
+      id: gist.id,
+      owner: gist.owner,
+      title: gist.description ?? gist.files[0]?.name ?? "Imported gist",
+      limitBytes: maxPasteBytes,
+      limitLabel: formatLimit(maxPasteBytes),
+      files: gist.files.map(({ name, size, skipped }) => ({ name, size, skipped })),
     },
-    signal: AbortSignal.timeout(10_000),
-  }).catch(() => null)
-  if (response?.status === 404)
-    return { ok: false, error: "That gist doesn't exist or isn't public." }
-  if (!response?.ok) return { ok: false, error: "GitHub didn't answer. Try again in a minute." }
+  }
+}
 
-  const gist = gistSchema.safeParse(await response.json().catch(() => null))
-  if (!gist.success) return { ok: false, error: "That gist couldn't be read." }
+const importSchema = z.object({
+  id: z.string().regex(/^[0-9a-f]{20,40}$/i),
+  files: z
+    .array(z.string())
+    .min(1, "Pick at least one file.")
+    .max(10, "A paste can hold up to 10 files."),
+})
 
-  const files = Object.values(gist.data.files)
-    .filter((file) => file.content !== undefined && !file.truncated)
-    .map((file) => ({ name: file.filename, content: file.content ?? "" }))
-  if (files.length === 0)
-    return { ok: false, error: "That gist has no files small enough to import." }
+// Copies the chosen files of a public GitHub gist into a new unlisted paste. The gist is read again, so
+// what's saved is what GitHub has now, and it goes through the same checks as a paste saved in
+// the editor.
+export async function importGist(input: z.input<typeof importSchema>): Promise<SavePasteResult> {
+  const user = await assertSignedIn()
+
+  const choice = importSchema.safeParse(input)
+  if (!choice.success) {
+    return {
+      ok: false,
+      error: choice.error.issues[0]?.message ?? "Check the import and try again.",
+    }
+  }
+  const { id, files: names } = choice.data
+
+  const tooOften = await limited(limits.create(user))
+  if (tooOften) return { ok: false, error: tooOften }
+
+  const result = await fetchGist(id)
+  if (!result.ok) return result
+  const { gist } = result
+
+  const read = await readGistFiles(gist, names)
+  if (!read.ok) return read
 
   const parsed = pasteSchema.safeParse({
-    title: (gist.data.description?.trim() || files[0]?.name || "Imported gist").slice(0, 120),
-    description: `Imported from gist ${id}`,
-    files: files.slice(0, 10),
+    title: gistTitle(gist, read.files[0]?.name),
+    description: gistDescription(gist),
+    files: read.files,
     visibility: "unlisted",
     expiry: "never",
     slug: "",

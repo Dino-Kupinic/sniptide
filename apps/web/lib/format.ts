@@ -57,6 +57,11 @@ export function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+// A size limit as people write it: "1 MB", "512 KB", "1.5 MB".
+export function formatLimit(bytes: number) {
+  return formatBytes(bytes).replace(".0 ", " ")
+}
+
 export function byteLength(text: string) {
   return new TextEncoder().encode(text).length
 }

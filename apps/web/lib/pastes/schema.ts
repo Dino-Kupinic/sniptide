@@ -1,11 +1,14 @@
 import "server-only"
 
 import { z } from "zod"
+import { getConfig } from "@/lib/config"
+import { formatLimit } from "@/lib/format"
 import { detectLanguage } from "./languages"
 import type { PasteInput } from "./types"
 import { EXPIRIES, VISIBILITIES } from "./types"
 
-export const MAX_PASTE_BYTES = 512 * 1024
+// The most a paste can hold, summed across its files. Set with MAX_PASTE_SIZE (1 MB by default).
+export const maxPasteBytes = () => getConfig().maxPasteBytes
 
 export const pasteSchema = z.object({
   title: z.string().trim().min(1, "Give the paste a title.").max(120),
@@ -27,8 +30,8 @@ export const pasteSchema = z.object({
     .refine(
       (files) =>
         files.reduce((size, file) => size + new TextEncoder().encode(file.content).byteLength, 0) <=
-        MAX_PASTE_BYTES,
-      "Pastes are limited to 512 KB.",
+        maxPasteBytes(),
+      { error: () => `Pastes are limited to ${formatLimit(maxPasteBytes())}.` },
     ),
   visibility: z.enum(VISIBILITIES),
   expiry: z.enum([...EXPIRIES, "keep"]),
