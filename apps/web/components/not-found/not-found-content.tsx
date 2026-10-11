@@ -1,6 +1,5 @@
-import { Button } from "@sniptide/ui/components/button"
-import Link from "next/link"
 import type { ViewerSummary } from "@/lib/viewer"
+import { NotFoundButton } from "./not-found-button"
 import { Pixel404 } from "./pixel-404"
 import { SwitchAccount } from "./switch-account"
 
@@ -40,26 +39,5 @@ export function NotFoundContent({ viewer }: { viewer: ViewerSummary | null }) {
         </div>
       ) : null}
     </div>
-  )
-}
-
-function NotFoundButton({
-  href,
-  outline,
-  children,
-}: {
-  href: string
-  outline?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Button
-      variant={outline ? "outline" : "default"}
-      className="h-12 px-[22px] text-[15px] sm:h-11 sm:text-sm"
-      render={<Link href={href} />}
-      nativeButton={false}
-    >
-      {children}
-    </Button>
   )
 }

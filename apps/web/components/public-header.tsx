@@ -1,14 +1,20 @@
 import { Button } from "@sniptide/ui/components/button"
 import { Logo } from "@sniptide/ui/components/logo"
+import { cn } from "@sniptide/ui/lib/utils"
 import { getAppOrigin } from "@/lib/site"
 
 // Header for pages visitors see without signing in (the public share page). Plain <a> tags, not
 // <Link>: this page can be served on a different domain than the app (see getAppOrigin).
-export function PublicHeader({ signedIn }: { signedIn: boolean }) {
+export function PublicHeader({ signedIn, className }: { signedIn: boolean; className?: string }) {
   const appOrigin = getAppOrigin()
 
   return (
-    <header className="flex h-16 items-center justify-between border-b-0 px-4 lg:border-b lg:border-border lg:px-10">
+    <header
+      className={cn(
+        "flex h-16 items-center justify-between border-b-0 px-4 lg:border-b lg:border-border lg:px-10",
+        className,
+      )}
+    >
       <a
         href={signedIn ? `${appOrigin}/dashboard` : "/"}
         className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
