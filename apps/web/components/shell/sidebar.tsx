@@ -256,16 +256,17 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
               <span className="ml-auto text-xs text-muted-foreground tabular-nums">{shared}</span>
             ) : null}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setImporting(true)}>
+            <DownloadIcon />
+            Import
+          </DropdownMenuItem>
+          {/* Trash stays last. */}
           <DropdownMenuItem
             render={<Link href="/trash" />}
             className={cn(isActivePath(pathname, "/trash") && "font-medium")}
           >
             <Trash2Icon />
             Trash
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setImporting(true)}>
-            <DownloadIcon />
-            Import
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
