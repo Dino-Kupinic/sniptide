@@ -45,6 +45,38 @@ export function track(event: string, properties?: Record<string, string | number
   if (started) posthog.capture(event, properties)
 }
 
+// Social sign-in leaves the page, so the return URL says what just happened: the provider
+// redirects new accounts to `newUserCallbackURL` and everyone else to `callbackURL`, and each
+// carries `?auth=<event>&method=<provider>`. `consumeAuthMarker` reports it once and strips it.
+const AUTH_EVENTS = ["signed_up", "signed_in"] as const
+const AUTH_METHODS = ["github", "google"] as const
+type AuthEvent = (typeof AUTH_EVENTS)[number]
+
+export function withAuthMarker(path: string, event: AuthEvent, method: string) {
+  const marker = new URLSearchParams({ auth: event, method })
+  return `${path}${path.includes("?") ? "&" : "?"}${marker}`
+}
+
+// Returns the event to report and the URL without the marker, or null when there is none. The
+// event and method are checked against fixed lists, so a crafted link can't send anything else.
+export function readAuthMarker(href: string) {
+  const url = new URL(href)
+  const event = AUTH_EVENTS.find((name) => name === url.searchParams.get("auth"))
+  const method = AUTH_METHODS.find((name) => name === url.searchParams.get("method"))
+  if (!event || !method) return null
+  url.searchParams.delete("auth")
+  url.searchParams.delete("method")
+  return { event, method, cleanUrl: `${url.pathname}${url.search}${url.hash}` }
+}
+
+// Reports a social sign-up or sign-in once, then removes the marker so a refresh doesn't repeat it.
+export function consumeAuthMarker() {
+  const marker = readAuthMarker(window.location.href)
+  if (!marker) return
+  window.history.replaceState(window.history.state, "", marker.cleanUrl)
+  track(marker.event, { method: marker.method })
+}
+
 // The app's own sections; any other first segment is a share link (/<slug>, /<slug>/raw).
 const SECTIONS = new Set([
   "",

@@ -2,7 +2,7 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import * as React from "react"
-import { track } from "@/lib/analytics"
+import { track, withAuthMarker } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 
@@ -56,9 +56,14 @@ export function SocialButtons({
 
   async function signIn(provider: SocialProvider) {
     setPending(provider)
-    // The account is created after the provider's redirect; this marks the attempt.
+    // The account is created after the provider's redirect; this marks the attempt. The result
+    // is reported on return: new accounts land on newUserCallbackURL, the rest on callbackURL.
     if (verb === "Sign up") track("sign_up_started", { method: provider })
-    const { error } = await authClient.signIn.social({ provider, callbackURL })
+    const { error } = await authClient.signIn.social({
+      provider,
+      callbackURL: withAuthMarker(callbackURL, "signed_in", provider),
+      newUserCallbackURL: withAuthMarker(callbackURL, "signed_up", provider),
+    })
     if (error) {
       setPending(null)
       onError(error.message ?? "Couldn't reach the provider. Try again.")

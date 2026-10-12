@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { scrubPath, scrubUrl } from "@/lib/analytics"
+import { readAuthMarker, scrubPath, scrubUrl, withAuthMarker } from "@/lib/analytics"
 import { assetsHost, forwardToPostHog, uiHost, upstreamUrl } from "@/lib/analytics-proxy"
 import { getConfig } from "@/lib/config"
 
@@ -109,5 +109,37 @@ describe("forwardToPostHog", () => {
     expect(calls[0]?.headers.get("cookie")).toBeNull()
     expect(calls[0]?.headers.get("authorization")).toBeNull()
     expect(calls[0]?.headers.get("content-type")).toBe("text/plain")
+  })
+})
+
+describe("auth marker", () => {
+  test("adds the event and method to the return path", () => {
+    expect(withAuthMarker("/dashboard", "signed_up", "github")).toBe(
+      "/dashboard?auth=signed_up&method=github",
+    )
+    expect(withAuthMarker("/dashboard?tab=1", "signed_in", "google")).toBe(
+      "/dashboard?tab=1&auth=signed_in&method=google",
+    )
+  })
+
+  test("reads the marker and returns the URL without it", () => {
+    const marker = readAuthMarker(
+      "https://app.sniptide.com/dashboard?tab=1&auth=signed_up&method=github#top",
+    )
+    expect(marker).toEqual({
+      event: "signed_up",
+      method: "github",
+      cleanUrl: "/dashboard?tab=1#top",
+    })
+  })
+
+  test("ignores a missing or unknown marker", () => {
+    expect(readAuthMarker("https://app.sniptide.com/dashboard")).toBeNull()
+    expect(
+      readAuthMarker("https://app.sniptide.com/dashboard?auth=paste_created&method=github"),
+    ).toBeNull()
+    expect(
+      readAuthMarker("https://app.sniptide.com/dashboard?auth=signed_up&method=a@b.c"),
+    ).toBeNull()
   })
 })
