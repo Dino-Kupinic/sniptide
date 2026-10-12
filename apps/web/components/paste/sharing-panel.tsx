@@ -238,7 +238,13 @@ export function PasteDetailPanel({
   const shared: PanelSection[] = sharedNote
     ? [{ id: "shared", label: "Shared with you", icon: UsersIcon, content: sharedNote }]
     : []
-  return <SidePanel label="Paste details" sections={[...shared, ...rest]} />
+  return (
+    <SidePanel
+      label="Paste details"
+      sections={[...shared, ...rest]}
+      defaultOpen={sharedNote ? ["shared"] : undefined}
+    />
+  )
 }
 
 function OwnerPanel({ state, rest }: { state: SharingState; rest: PanelSection[] }) {

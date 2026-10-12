@@ -3,6 +3,7 @@ import "server-only"
 import {
   pasteFile,
   pasteRevision,
+  pasteShare,
   pasteStar,
   paste as pasteTable,
   pasteViewDay,
@@ -39,6 +40,7 @@ export { PasteBudgetError } from "./budget"
 
 import { parsePasteInput } from "./schema"
 import type {
+  Access,
   Expiry,
   NavCounts,
   Paste,
@@ -48,6 +50,8 @@ import type {
   Person,
   Share,
   SharedPaste,
+  ShareInvite,
+  SharePerson,
   SharingInput,
   SidebarData,
 } from "./types"
@@ -64,7 +68,11 @@ import { unlockCookieName, unlockToken } from "./unlock"
 // signed-in viewer sees their own pastes in the app, and anyone can open a paste's public link
 // (subject to visibility, password and expiry).
 //
-// Content readers authorize before loading files: `getOwnPaste` for app screens,
+// The owner can also invite other accounts by email or username (paste_share). An invited person
+// sees the paste in Shared with me and can open it in the app and by its link, whatever its
+// visibility or password, until the owner removes them or they leave.
+//
+// Content readers authorize before loading files: `getPaste` for app screens,
 // `readSharedPaste` for share pages and `readRawFile` for raw downloads. Keep new content
 // reads behind the same access rules.
 
@@ -336,21 +344,192 @@ export async function listTrash() {
   return summarize(records, viewer)
 }
 
-// Sharing pastes with other accounts isn't built yet; "Shared with me" stays empty until then.
+// What makes a paste show up for someone it's shared with: a share row for them on a live paste
+// someone else owns. A burn-after-read paste is read once through its link, so a share never
+// opens it in the app, and an expired one is gone for everyone but its owner.
+function sharedWithWhere(viewer: string) {
+  return and(
+    eq(pasteShare.userId, viewer),
+    ne(pasteTable.ownerId, viewer),
+    isNull(pasteTable.deletedAt),
+    eq(pasteTable.burnAfterRead, false),
+    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
+  )
+}
+
+function toShare(slug: string, row: typeof pasteShare.$inferSelect) {
+  return {
+    slug,
+    access: row.access,
+    sharedAt: ms(row.createdAt),
+    seen: row.seenAt !== null,
+  } satisfies Share & { seen: boolean }
+}
+
+// Pastes other people shared with the viewer, newest share first.
 export async function listShared(): Promise<
   { share: Share & { seen: boolean }; paste: PasteSummary }[]
 > {
-  return []
+  const viewer = await viewerId()
+  if (!viewer) return []
+  const rows = await getDb()
+    .select({ paste: pasteTable, share: pasteShare })
+    .from(pasteShare)
+    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+    .where(sharedWithWhere(viewer))
+    .orderBy(desc(pasteShare.createdAt), pasteTable.id)
+  const summaries = await summarize(
+    rows.map((row) => row.paste),
+    viewer,
+  )
+  return rows.flatMap((row, index) => {
+    const paste = summaries[index]
+    return paste ? [{ share: toShare(row.paste.slug, row.share), paste }] : []
+  })
 }
 
-export async function getShare(_slug: string): Promise<(Share & { seen: boolean }) | null> {
-  return null
+// The viewer's share of a paste someone else owns, if it's open to them.
+export async function getShare(slug: string): Promise<(Share & { seen: boolean }) | null> {
+  const viewer = await viewerId()
+  if (!viewer) return null
+  const [row] = await getDb()
+    .select({ share: pasteShare })
+    .from(pasteShare)
+    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+    .where(and(eq(pasteTable.slug, slug), sharedWithWhere(viewer)))
+  return row ? toShare(slug, row.share) : null
 }
 
-export async function markShareSeen(_slug: string) {}
+export async function markShareSeen(slug: string) {
+  const viewer = await viewerId()
+  if (!viewer) return
+  await getDb()
+    .update(pasteShare)
+    .set({ seenAt: new Date() })
+    .where(
+      and(
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.seenAt),
+        inArray(
+          pasteShare.pasteId,
+          getDb().select({ id: pasteTable.id }).from(pasteTable).where(eq(pasteTable.slug, slug)),
+        ),
+      ),
+    )
+}
 
-// Whether the viewer may open this paste right now: their own, or one whose public link is open
-// to them. Stars never widen that, so they are checked against it when made and when listed.
+async function isSharedWith(record: PasteRecord, viewer: string | null) {
+  if (!viewer || record.ownerId === viewer || record.burnAfterRead) return false
+  const [row] = await getDb()
+    .select({ access: pasteShare.access })
+    .from(pasteShare)
+    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+  return Boolean(row)
+}
+
+function handle(person: {
+  username: string | null
+  displayUsername: string | null
+  email: string
+}) {
+  const username = person.displayUsername ?? person.username
+  return username ? `@${username}` : person.email
+}
+
+// Everyone the viewer's paste is shared with, oldest invite first. Null when it isn't theirs.
+export async function listPasteShares(slug: string): Promise<SharePerson[] | null> {
+  const record = await findOwned(slug)
+  if (!record || record.deletedAt) return null
+  const rows = await getDb()
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      displayUsername: user.displayUsername,
+      access: pasteShare.access,
+      createdAt: pasteShare.createdAt,
+    })
+    .from(pasteShare)
+    .innerJoin(user, eq(pasteShare.userId, user.id))
+    .where(eq(pasteShare.pasteId, record.id))
+    .orderBy(asc(pasteShare.createdAt), user.id)
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    handle: handle(row),
+    initials: initials(row.name),
+    access: row.access,
+    sharedAt: ms(row.createdAt),
+  }))
+}
+
+export type PersonLookup =
+  | { status: "ok"; person: Omit<SharePerson, "access" | "sharedAt"> }
+  | { status: "missing" }
+  | { status: "self" }
+
+// Finds the account behind an exact email or username, for an invite. There's deliberately no
+// partial match, so nobody can browse the accounts on an instance by typing letters.
+export async function findPerson(identifier: string): Promise<PersonLookup> {
+  const viewer = await requireViewerId()
+  const text = identifier.trim().replace(/^@/, "").toLowerCase()
+  if (!text) return { status: "missing" }
+  const [row] = await getDb()
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      displayUsername: user.displayUsername,
+    })
+    .from(user)
+    .where(or(sql`lower(${user.email}) = ${text}`, sql`lower(${user.username}) = ${text}`))
+    .limit(1)
+  if (!row) return { status: "missing" }
+  if (row.id === viewer) return { status: "self" }
+  return {
+    status: "ok",
+    person: { id: row.id, name: row.name, handle: handle(row), initials: initials(row.name) },
+  }
+}
+
+// Gives someone access to one of the viewer's pastes, or changes the access they have. A new
+// invite shows up as unseen in their Shared with me.
+export async function sharePaste(slug: string, userId: string, access: Access) {
+  const record = await findOwned(slug)
+  if (!record || record.deletedAt || userId === record.ownerId) return false
+  const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
+  if (!person) return false
+  await getDb()
+    .insert(pasteShare)
+    .values({ pasteId: record.id, userId, access })
+    .onConflictDoUpdate({ target: [pasteShare.pasteId, pasteShare.userId], set: { access } })
+  return true
+}
+
+// Takes someone's access away. The paste leaves their Shared with me and its link 404s for them
+// again, unless its visibility lets anyone in.
+export async function unsharePaste(slug: string, userId: string) {
+  const record = await findOwned(slug)
+  if (!record) return
+  await getDb()
+    .delete(pasteShare)
+    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+}
+
+// The viewer drops a paste someone shared with them. The owner can invite them again.
+export async function leaveShare(slug: string) {
+  const viewer = await requireViewerId()
+  const record = await findRecord(slug)
+  if (!record) return
+  await getDb()
+    .delete(pasteShare)
+    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+}
+
+// Whether the viewer may open this paste right now: their own, one shared with them, or one whose
+// public link is open to them. Stars never widen that, so they are checked against it when made and when listed.
 async function viewerMayRead(record: PasteRecord, viewer: string | null) {
   if (record.deletedAt) return false
   if (record.ownerId === viewer) return true
@@ -401,6 +580,16 @@ export async function readableStarsWhere(viewer: string) {
     or(
       eq(pasteTable.ownerId, viewer),
       and(
+        eq(pasteTable.burnAfterRead, false),
+        or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
+        exists(
+          getDb()
+            .select({ id: pasteShare.pasteId })
+            .from(pasteShare)
+            .where(and(eq(pasteShare.userId, viewer), eq(pasteShare.pasteId, pasteTable.id))),
+        ),
+      ),
+      and(
         ne(pasteTable.visibility, "private"),
         or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
         or(
@@ -449,31 +638,40 @@ export async function starredSlugs(slugs?: string[]) {
   return new Set(rows.map((row) => row.slug))
 }
 
-// One of the viewer's own pastes, for the app's screens (detail, edit, duplicate). Anyone else's
-// paste, a trashed one and a missing one all come back as null.
-export const getOwnPaste = cache(async (slug: string, revisionPage = 1) => {
+// Pastes the app's screens open for the viewer: their own, and ones shared with them.
+function appPasteWhere(slug: string, viewer: string) {
+  return and(
+    eq(pasteTable.slug, slug),
+    or(
+      and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
+      exists(
+        getDb()
+          .select({ id: pasteShare.pasteId })
+          .from(pasteShare)
+          .where(and(eq(pasteShare.pasteId, pasteTable.id), sharedWithWhere(viewer))),
+      ),
+    ),
+  )
+}
+
+// A paste for the app's screens (detail, edit, duplicate): one of the viewer's own, or one shared
+// with them. Anyone else's paste, a trashed one and a missing one all come back as null.
+export const getPaste = cache(async (slug: string, revisionPage = 1) => {
   const viewer = await viewerId()
   if (!viewer) return null
-  const [record] = await getDb()
-    .select()
-    .from(pasteTable)
-    .where(
-      and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
-    )
+  const [record] = await getDb().select().from(pasteTable).where(appPasteWhere(slug, viewer))
   if (!record) return null
   return hydrate(record, viewer, revisionPage)
 })
 
 // Metadata never needs content, view history or revision rows.
-export const getOwnMeta = cache(async (slug: string) => {
-  const owner = await viewerId()
-  if (!owner) return null
+export const getPasteMeta = cache(async (slug: string) => {
+  const viewer = await viewerId()
+  if (!viewer) return null
   const [row] = await getDb()
     .select({ title: pasteTable.title })
     .from(pasteTable)
-    .where(
-      and(eq(pasteTable.slug, slug), eq(pasteTable.ownerId, owner), isNull(pasteTable.deletedAt)),
-    )
+    .where(appPasteWhere(slug, viewer))
   return row ?? null
 })
 
@@ -494,10 +692,12 @@ async function findLiveRecord(slug: string) {
 // for reads: a burn claim still re-checks the row in its own UPDATE.
 const findSharedRecord = cache(findLiveRecord)
 
-// Whether the visitor may open the paste's public link: its owner always can; everyone else needs
-// a public or unlisted paste and, if it has one, the password (proved by the unlock cookie).
+// Whether the visitor may open the paste's public link: its owner and the people it's shared with
+// always can; everyone else needs a public or unlisted paste and, if it has one, the password
+// (proved by the unlock cookie).
 async function canOpenLink(record: PasteRecord, viewer: string | null) {
   if (record.ownerId === viewer) return "ok" as const
+  if (await isSharedWith(record, viewer)) return "ok" as const
   if (record.visibility === "private") return "missing" as const
   if (record.passwordHash) {
     const cookie = (await cookies()).get(unlockCookieName(record.slug))?.value
@@ -646,19 +846,29 @@ export async function getUnlockHash(slug: string) {
   return record && record.visibility !== "private" ? record.passwordHash : null
 }
 
+async function sharedCount(viewer: string) {
+  const [row] = await getDb()
+    .select({ count: sql<number>`count(*)::int` })
+    .from(pasteShare)
+    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+    .where(sharedWithWhere(viewer))
+  return row?.count ?? 0
+}
+
 export async function navCounts(): Promise<NavCounts> {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()
   const stars = await readableStarsWhere(viewer)
-  const [[own], [starred]] = await Promise.all([
+  const [[own], [starred], shared] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
       .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
     db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+    sharedCount(viewer),
   ])
-  return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared: 0 }
+  return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared }
 }
 
 export const sidebarData = cache(async (): Promise<SidebarData> => {
@@ -666,7 +876,7 @@ export const sidebarData = cache(async (): Promise<SidebarData> => {
   if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
   const db = getDb()
   const stars = await readableStarsWhere(viewer)
-  const [[own], [starCount], recent, starred] = await Promise.all([
+  const [[own], [starCount], recent, starred, shared] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
@@ -684,6 +894,7 @@ export const sidebarData = cache(async (): Promise<SidebarData> => {
       .where(stars)
       .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
       .limit(SIDEBAR_STARRED),
+    sharedCount(viewer),
   ])
   const starSlugs = await starredSlugs([...recent, ...starred].map((record) => record.slug))
   const row = (record: PasteRecord) => ({
@@ -695,7 +906,7 @@ export const sidebarData = cache(async (): Promise<SidebarData> => {
     updatedAt: record.updatedAt.getTime(),
   })
   return {
-    counts: { pastes: own?.count ?? 0, starred: starCount?.count ?? 0, shared: 0 },
+    counts: { pastes: own?.count ?? 0, starred: starCount?.count ?? 0, shared },
     recent: recent.map(row),
     starred: starred.map(row),
   }
@@ -752,7 +963,9 @@ function fileRows(pasteId: string, files: PasteInput["files"]) {
   return files.map((file, position) => ({ pasteId, position, ...file }))
 }
 
-export async function createPaste(input: PasteInput) {
+// Creates a paste and shares it with `invites`, people the editor already looked up. Invites of
+// the owner or of accounts that no longer exist are dropped.
+export async function createPaste(input: PasteInput, invites: ShareInvite[] = []) {
   const data = parsePasteInput(input)
   const owner = await requireViewerId()
   let slug = data.slug
@@ -784,15 +997,61 @@ export async function createPaste(input: PasteInput) {
     })
     await tx.insert(pasteFile).values(fileRows(id, data.files))
     await tx.insert(pasteRevision).values({ pasteId: id, message: "Created", createdAt: now })
+    const wanted = new Map(
+      invites.filter((invite) => invite.userId !== owner).map((i) => [i.userId, i.access]),
+    )
+    if (wanted.size === 0) return
+    const people = await tx
+      .select({ id: user.id })
+      .from(user)
+      .where(inArray(user.id, [...wanted.keys()]))
+    if (people.length === 0) return
+    await tx.insert(pasteShare).values(
+      people.map((person) => ({
+        pasteId: id,
+        userId: person.id,
+        access: wanted.get(person.id) ?? "view",
+        createdAt: now,
+      })),
+    )
   })
 
   return { slug }
 }
 
-export async function updatePaste(slug: string, input: PasteInput, message: string) {
-  const data = parsePasteInput(input)
-  const record = await findOwned(slug)
+// A paste the viewer may edit: their own, or one shared with them with edit access. `owned`
+// tells the two apart, since only the owner changes how the paste is shared.
+async function findEditable(slug: string) {
+  const viewer = await requireViewerId()
+  const record = await findRecord(slug)
   if (!record || record.deletedAt) return null
+  if (record.ownerId === viewer) return { record, owned: true }
+  if (recordExpired(record) || record.burnAfterRead) return null
+  const [share] = await getDb()
+    .select({ access: pasteShare.access })
+    .from(pasteShare)
+    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+  return share?.access === "edit" ? { record, owned: false } : null
+}
+
+// Saves an edit. Someone the paste is shared with changes only its title, description and files;
+// its link, visibility, expiry, password, collection and burn setting stay the owner's.
+export async function updatePaste(slug: string, input: PasteInput, message: string) {
+  const parsed = parsePasteInput(input)
+  const editable = await findEditable(slug)
+  if (!editable) return null
+  const { record, owned } = editable
+  const data: PasteInput = owned
+    ? parsed
+    : {
+        ...parsed,
+        slug,
+        visibility: record.visibility,
+        expiry: "keep",
+        collection: record.collection,
+        password: "",
+        burnAfterRead: record.burnAfterRead,
+      }
 
   const now = new Date()
   // An empty password on edit keeps the existing one; the client never sees it.

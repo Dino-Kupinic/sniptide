@@ -9,7 +9,7 @@ import {
   readGistFiles,
 } from "@/lib/pastes/gist"
 import { limited, limits } from "@/lib/pastes/limits"
-import { getOwnPaste } from "@/lib/pastes/store"
+import { getPaste } from "@/lib/pastes/store"
 
 export const metadata = { title: "New paste · Sniptide" }
 
@@ -51,7 +51,7 @@ async function gistDraft(
 export default async function Page({ searchParams }: PageProps<"/new">) {
   const { from, gist, file } = await searchParams
   const [source, preferences, collections, imported] = await Promise.all([
-    typeof from === "string" ? getOwnPaste(from) : null,
+    typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
     listCollections(),
     typeof gist === "string" ? gistDraft(gist, [file ?? []].flat()) : null,
@@ -75,7 +75,8 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
         visibility: source?.visibility ?? preferences.defaultVisibility,
         expiry: preferences.defaultExpiry,
         slug: "",
-        collection: source?.collection ?? null,
+        // A copy of a paste shared with the viewer can't go in its owner's collection.
+        collection: source && !source.owner ? source.collection : null,
         hasPassword: false,
         burnAfterRead: source ? false : preferences.defaultBurnAfterRead,
       }}

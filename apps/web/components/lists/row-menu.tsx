@@ -11,6 +11,7 @@ import {
   CopyIcon,
   ExternalLinkIcon,
   LinkIcon,
+  LogOutIcon,
   MoreHorizontalIcon,
   PencilIcon,
   StarIcon,
@@ -18,10 +19,19 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import Link from "next/link"
-import { setStarred, trashPaste } from "@/lib/pastes/actions"
+import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
 import type { PasteRow } from "@/lib/pastes/rows"
 
-export function RowMenu({ row, origin }: { row: PasteRow; origin: string }) {
+export function RowMenu({
+  row,
+  origin,
+  shared,
+}: {
+  row: PasteRow
+  origin: string
+  // A row of Shared with me, which the viewer can drop from their list.
+  shared?: boolean
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -53,6 +63,15 @@ export function RowMenu({ row, origin }: { row: PasteRow; origin: string }) {
           {row.starred ? <StarOffIcon /> : <StarIcon />}
           {row.starred ? "Unstar" : "Star"}
         </DropdownMenuItem>
+        {shared ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => leaveShare(row.slug)}>
+              <LogOutIcon />
+              Remove from my list
+            </DropdownMenuItem>
+          </>
+        ) : null}
         {row.owner ? null : (
           <>
             <DropdownMenuSeparator />

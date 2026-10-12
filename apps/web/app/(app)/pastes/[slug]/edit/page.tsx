@@ -3,16 +3,16 @@ import { PasteEditor } from "@/components/paste/paste-editor"
 import { getPreferences } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { formatDateTime } from "@/lib/format"
-import { getOwnPaste, getShare } from "@/lib/pastes/store"
+import { getPaste, getShare } from "@/lib/pastes/store"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edit">) {
-  const paste = await getOwnPaste((await params).slug)
+  const paste = await getPaste((await params).slug)
   return { title: paste ? `Edit ${paste.title} · Sniptide` : "Paste not found · Sniptide" }
 }
 
 export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">) {
   const { slug } = await params
-  const paste = await getOwnPaste(slug)
+  const paste = await getPaste(slug)
   if (!paste) notFound()
 
   const [share, preferences, collections] = await Promise.all([
@@ -20,11 +20,13 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
     getPreferences(),
     listCollections(),
   ])
-  if (paste.owner && share?.access !== "edit") notFound()
+  const shared = Boolean(paste.owner)
+  if (shared && share?.access !== "edit") notFound()
 
   return (
     <PasteEditor
       editing={slug}
+      sharedEdit={shared}
       collections={collections}
       indentation={preferences.indentation}
       secretDetection={preferences.secretDetection}
@@ -38,7 +40,8 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
         visibility: paste.visibility,
         expiry: "keep",
         slug,
-        collection: paste.collection,
+        // The owner's collection isn't one of the viewer's.
+        collection: shared ? null : paste.collection,
         hasPassword: Boolean(paste.password),
         burnAfterRead: paste.burnAfterRead,
       }}

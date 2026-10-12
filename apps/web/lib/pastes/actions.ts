@@ -19,7 +19,14 @@ import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
 import { pasteSchema } from "./schema"
 import * as store from "./store"
-import { EXPIRIES, VISIBILITIES } from "./types"
+import {
+  ACCESSES,
+  type Access,
+  EXPIRIES,
+  type ShareInvite,
+  type SharePerson,
+  VISIBILITIES,
+} from "./types"
 
 async function assertSignedIn() {
   const session = await getSession()
@@ -30,8 +37,17 @@ async function assertSignedIn() {
 export type SavePasteInput = z.input<typeof pasteSchema>
 export type SavePasteResult = { ok: true; slug: string } | { ok: false; error: string }
 
-// Creates a paste, or updates `editing` when given. Returns the slug to navigate to.
-export async function savePaste(input: SavePasteInput, editing?: string): Promise<SavePasteResult> {
+const invitesSchema = z
+  .array(z.object({ userId: z.string().min(1).max(100), access: z.enum(ACCESSES) }))
+  .max(50, "Invite up to 50 people at once.")
+
+// Creates a paste, or updates `editing` when given. Returns the slug to navigate to. A new paste
+// is also shared with `invites`, people looked up with `findPerson`.
+export async function savePaste(
+  input: SavePasteInput,
+  editing?: string,
+  invites: ShareInvite[] = [],
+): Promise<SavePasteResult> {
   const user = await assertSignedIn()
 
   const parsed = pasteSchema.safeParse(input)
@@ -52,7 +68,7 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
     return { ok: false, error: "That collection no longer exists." }
   }
   // On edit an empty password means "keep the current one"; a new paste needs a real one.
-  const current = editing ? await store.getOwnPaste(editing) : null
+  const current = editing ? await store.getPaste(editing) : null
   if (data.password === "" && !current?.password) {
     return { ok: false, error: "Enter a password or turn password protection off." }
   }
@@ -68,7 +84,7 @@ export async function savePaste(input: SavePasteInput, editing?: string): Promis
   try {
     const paste = editing
       ? await store.updatePaste(editing, payload, "Edited")
-      : await store.createPaste(payload)
+      : await store.createPaste(payload, invitesSchema.parse(invites))
     if (!paste) return { ok: false, error: "That paste no longer exists." }
 
     revalidatePath("/", "layout")
@@ -97,6 +113,80 @@ const sharingSchema = z.object({
 export async function updateSharing(slug: string, input: z.input<typeof sharingSchema>) {
   await assertSignedIn()
   await store.updateSharing(slug, sharingSchema.parse(input))
+  revalidatePath("/", "layout")
+}
+
+export type FindPersonResult =
+  | { ok: true; person: Omit<SharePerson, "access" | "sharedAt"> }
+  | { ok: false; error: string }
+
+// Looks up who to invite by their exact email or username.
+export async function findPerson(identifier: string): Promise<FindPersonResult> {
+  const user = await assertSignedIn()
+  const text = z.string().trim().min(1).max(320).safeParse(identifier)
+  if (!text.success) return { ok: false, error: "Enter an email or username." }
+  const tooOften = await limited(limits.personLookup(user))
+  if (tooOften) return { ok: false, error: tooOften }
+
+  const found = await store.findPerson(text.data)
+  if (found.status === "self") return { ok: false, error: "That's you. You already have access." }
+  if (found.status === "missing") {
+    return { ok: false, error: "No Sniptide account has that email or username." }
+  }
+  return { ok: true, person: found.person }
+}
+
+export type ShareResult = { ok: true; people: SharePerson[] } | { ok: false; error: string }
+
+async function sharesOf(slug: string): Promise<ShareResult> {
+  const people = await store.listPasteShares(slug)
+  return people ? { ok: true, people } : { ok: false, error: "That paste no longer exists." }
+}
+
+// Who one of the viewer's pastes is shared with, for the share dialog.
+export async function listPasteShares(slug: string): Promise<ShareResult> {
+  await assertSignedIn()
+  return sharesOf(slug)
+}
+
+// Invites someone (by exact email or username) to one of the viewer's pastes, or changes the
+// access they already have.
+export async function invitePerson(
+  slug: string,
+  identifier: string,
+  access: Access,
+): Promise<ShareResult> {
+  const found = await findPerson(identifier)
+  if (!found.ok) return found
+  return setShareAccess(slug, found.person.id, access)
+}
+
+export async function setShareAccess(
+  slug: string,
+  userId: string,
+  access: Access,
+): Promise<ShareResult> {
+  await assertSignedIn()
+  const parsed = z.enum(ACCESSES).safeParse(access)
+  if (!parsed.success) return { ok: false, error: "Pick view or edit access." }
+  if (!(await store.sharePaste(slug, userId, parsed.data))) {
+    return { ok: false, error: "That paste or person no longer exists." }
+  }
+  revalidatePath("/", "layout")
+  return sharesOf(slug)
+}
+
+export async function removeShare(slug: string, userId: string): Promise<ShareResult> {
+  await assertSignedIn()
+  await store.unsharePaste(slug, userId)
+  revalidatePath("/", "layout")
+  return sharesOf(slug)
+}
+
+// Drops a paste someone shared with the viewer from their Shared with me.
+export async function leaveShare(slug: string) {
+  await assertSignedIn()
+  await store.leaveShare(slug)
   revalidatePath("/", "layout")
 }
 

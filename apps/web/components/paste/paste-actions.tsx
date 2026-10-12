@@ -13,6 +13,7 @@ import {
   CopyIcon,
   FileCodeIcon,
   LinkIcon,
+  LogOutIcon,
   MoreHorizontalIcon,
   StarIcon,
   Trash2Icon,
@@ -21,7 +22,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { track } from "@/lib/analytics"
-import { setStarred, trashPaste } from "@/lib/pastes/actions"
+import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
 export function StarButton({
@@ -109,14 +110,40 @@ export function ShareButton({
   )
 }
 
+// Drops a paste someone shared with the viewer from their list, then goes back to it.
+export function LeaveShareButton({ slug, className }: { slug: string; className?: string }) {
+  const router = useRouter()
+  const [pending, startTransition] = React.useTransition()
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className={className}
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          await leaveShare(slug)
+          router.push("/shared")
+        })
+      }
+    >
+      Remove from my list
+    </Button>
+  )
+}
+
 export function PasteOverflowMenu({
   slug,
   canTrash,
+  canLeave,
   rawHref,
   className,
 }: {
   slug: string
   canTrash: boolean
+  // Shared with the viewer, so they can drop it from Shared with me.
+  canLeave?: boolean
   rawHref?: string
   className?: string
 }) {
@@ -143,6 +170,21 @@ export function PasteOverflowMenu({
             <FileCodeIcon />
             View raw
           </DropdownMenuItem>
+        ) : null}
+        {canLeave ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={async () => {
+                await leaveShare(slug)
+                router.push("/shared")
+              }}
+            >
+              <LogOutIcon />
+              Remove from my list
+            </DropdownMenuItem>
+          </>
         ) : null}
         {canTrash ? (
           <>
