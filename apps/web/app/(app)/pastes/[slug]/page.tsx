@@ -11,14 +11,14 @@ import {
   ShareButton,
   StarButton,
 } from "@/components/paste/paste-actions"
+import { ShareDialog } from "@/components/paste/share-dialog"
+import { ShareAvatar } from "@/components/paste/share-people"
 import {
   PasteDetailPanel,
   SettingRow,
   ShareLinkField,
   SharingPanel,
 } from "@/components/paste/sharing-panel"
-import { ShareDialog } from "@/components/paste/share-dialog"
-import { ShareAvatar } from "@/components/paste/share-people"
 import { SidePanelProvider } from "@/components/paste/side-panel"
 import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
