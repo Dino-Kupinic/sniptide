@@ -20,6 +20,8 @@ import {
   ChevronRightIcon,
   ChevronsUpDownIcon,
   DownloadIcon,
+  FolderIcon,
+  FolderOpenIcon,
   GripVerticalIcon,
   LayoutGridIcon,
   ListFilterIcon,
@@ -37,8 +39,12 @@ import { CollectionMenu } from "@/components/collections/collection-menu"
 import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
+import { FolderMenu } from "@/components/folders/folder-menu"
+import { NewFolderDialog } from "@/components/folders/new-folder"
 import { ImportGistSheet } from "@/components/lists/import-gist"
 import type { Collection } from "@/lib/collections/types"
+import { childrenOf, folderPath } from "@/lib/folders/tree"
+import type { Folder } from "@/lib/folders/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
 import type { SidebarData, SidebarPaste } from "@/lib/pastes/types"
@@ -53,6 +59,7 @@ export interface SidebarProps {
   viewer: ViewerSummary
   data: SidebarData
   collections: Collection[]
+  folders: Folder[]
 }
 
 const rowClass =
@@ -69,6 +76,7 @@ export function Sidebar({
   viewer,
   data,
   collections,
+  folders,
   closed,
   sectionOrder,
   collectionOrder,
@@ -88,6 +96,7 @@ export function Sidebar({
   const pathname = usePathname()
   const { open: openCommandMenu } = useCommandMenu()
   const [creating, setCreating] = React.useState(false)
+  const [creatingFolder, setCreatingFolder] = React.useState(false)
   const { counts } = data
   const visibleSections = sectionOrder.filter((id) => id !== "starred" || data.starred.length > 0)
   const orderedSlugs = completeSidebarOrder(
@@ -180,6 +189,7 @@ export function Sidebar({
                         key={paste.slug}
                         paste={paste}
                         collections={collections}
+                        folders={folders}
                         pathname={pathname}
                         alwaysShowStar
                       />
@@ -207,6 +217,7 @@ export function Sidebar({
                         key={paste.slug}
                         paste={paste}
                         collections={collections}
+                        folders={folders}
                         pathname={pathname}
                       />
                     ))}
@@ -216,6 +227,34 @@ export function Sidebar({
                       </p>
                     ) : null}
                     <ViewAll href="/pastes" count={counts.pastes} shown={data.recent.length} />
+                  </Section>
+                )
+              case "folders":
+                return (
+                  <Section
+                    key={id}
+                    id="folders"
+                    index={index}
+                    title="Folders"
+                    open={!closed.includes("folders")}
+                    onToggle={onToggleSection}
+                    add={
+                      <button
+                        type="button"
+                        aria-label="New folder"
+                        onClick={() => setCreatingFolder(true)}
+                        className={iconButtonClass}
+                      >
+                        <PlusIcon />
+                      </button>
+                    }
+                  >
+                    <FolderTree folders={folders} pathname={pathname} />
+                    {folders.length === 0 ? (
+                      <p className="px-2 py-1.5 text-[13px] text-muted-foreground">
+                        No folders yet.
+                      </p>
+                    ) : null}
                   </Section>
                 )
               case "collections":
@@ -261,6 +300,7 @@ export function Sidebar({
         open={creating}
         onOpenChange={setCreating}
       />
+      <NewFolderDialog open={creatingFolder} onOpenChange={setCreatingFolder} />
 
       {/* A hairline across the full sidebar width separates the account menu from the lists. */}
       <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
@@ -508,14 +548,114 @@ function PlaceholderMenu({
   )
 }
 
+// The folder tree: each folder with its paste count, its subfolders folded under a chevron. The
+// path to the folder being viewed is opened as you navigate.
+function FolderTree({ folders, pathname }: { folders: Folder[]; pathname: string }) {
+  const activeId = /^\/folders\/([^/]+)/.exec(pathname)?.[1] ?? null
+  const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
+
+  React.useEffect(() => {
+    if (!activeId) return
+    const ancestors = folderPath(folders, activeId)
+      .slice(0, -1)
+      .map((folder) => folder.id)
+    setExpanded((current) =>
+      ancestors.every((id) => current.has(id)) ? current : new Set([...current, ...ancestors]),
+    )
+  }, [activeId, folders])
+
+  const rows: React.ReactNode[] = []
+  const walk = (parentId: string | null, depth: number) => {
+    for (const folder of childrenOf(folders, parentId)) {
+      const nested = childrenOf(folders, folder.id).length > 0
+      const open = nested && expanded.has(folder.id)
+      rows.push(
+        <FolderRow
+          key={folder.id}
+          folder={folder}
+          folders={folders}
+          depth={depth}
+          nested={nested}
+          open={open}
+          active={pathname === `/folders/${folder.id}`}
+          onToggle={() =>
+            setExpanded((current) => {
+              const next = new Set(current)
+              if (!next.delete(folder.id)) next.add(folder.id)
+              return next
+            })
+          }
+        />,
+      )
+      if (open) walk(folder.id, depth + 1)
+    }
+  }
+  walk(null, 0)
+  return rows
+}
+
+function FolderRow({
+  folder,
+  folders,
+  depth,
+  nested,
+  open,
+  active,
+  onToggle,
+}: {
+  folder: Folder
+  folders: Folder[]
+  depth: number
+  nested: boolean
+  open: boolean
+  active: boolean
+  onToggle: () => void
+}) {
+  const Icon = open ? FolderOpenIcon : FolderIcon
+  return (
+    <div
+      data-active={active}
+      style={{ paddingLeft: 4 + depth * 14 }}
+      className={cn(rowClass, "gap-1 pl-1")}
+    >
+      {nested ? (
+        <button
+          type="button"
+          aria-label={`${open ? "Collapse" : "Expand"} ${folder.name}`}
+          aria-expanded={open}
+          onClick={onToggle}
+          className={iconButtonClass}
+        >
+          <ChevronRightIcon className={cn("transition-transform", open && "rotate-90")} />
+        </button>
+      ) : (
+        <span aria-hidden className="size-6 shrink-0" />
+      )}
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <Link
+        href={`/folders/${folder.id}`}
+        className="min-w-0 flex-1 truncate outline-none after:absolute after:inset-0 focus-visible:underline"
+      >
+        {folder.name}
+      </Link>
+      <span className="shrink-0 text-xs text-muted-foreground tabular-nums group-hover/row:hidden group-has-focus-visible/row:hidden group-has-data-popup-open/row:hidden">
+        {folder.pasteCount > 0 ? formatNumber(folder.pasteCount) : null}
+      </span>
+      <FolderMenu folder={folder} folders={folders} className={cn(iconButtonClass, revealClass)} />
+    </div>
+  )
+}
+
 function PasteRow({
   paste,
   collections,
+  folders,
   pathname,
   alwaysShowStar = false,
 }: {
   paste: SidebarPaste
   collections: Collection[]
+  folders: Folder[]
   pathname: string
   alwaysShowStar?: boolean
 }) {
@@ -534,6 +674,7 @@ function PasteRow({
       <PasteMenu
         paste={{ ...paste, starred }}
         collections={collections}
+        folders={folders}
         className={cn(iconButtonClass, revealClass)}
       />
       <button
