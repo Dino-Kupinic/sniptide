@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge } from "@sniptide/ui/components/badge"
+import { Button } from "@sniptide/ui/components/button"
 import {
   Table,
   TableBody,
@@ -10,6 +11,7 @@ import {
   TableRow,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
+import { UsersIcon } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
@@ -179,11 +181,33 @@ export function SharedList({
         </div>
 
         {filtered.length === 0 ? (
-          <p className="border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
-            {filtering
-              ? "No pastes match these filters."
-              : "Nobody has shared a paste with you yet."}
-          </p>
+          filtering ? (
+            <p className="border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
+              No pastes match these filters.
+            </p>
+          ) : (
+            <div className="flex flex-col items-start gap-3 border-border py-10 lg:border-t lg:px-8 lg:py-14">
+              <span className="flex size-10 items-center justify-center bg-muted">
+                <UsersIcon className="size-5" />
+              </span>
+              <div className="flex flex-col gap-1">
+                <p className="text-base font-medium">Nothing shared with you yet</p>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  When someone invites you to a private paste, it shows up here. If they remove you,
+                  it disappears.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="lg"
+                render={<Link href="/pastes" />}
+                nativeButton={false}
+                className="hidden lg:inline-flex"
+              >
+                Share one of your pastes
+              </Button>
+            </div>
+          )
         ) : view === "grid" ? (
           <ul className="hidden grid-cols-3 gap-3 border-t border-border p-3 lg:grid">
             {paged.items.map((row) => (
@@ -198,7 +222,7 @@ export function SharedList({
                   >
                     {row.title}
                   </Link>
-                  <RowMenu row={row} origin={origin} />
+                  <RowMenu row={row} origin={origin} shared />
                 </div>
                 <LanguageLabel language={row.language} className="text-[13px] text-foreground/80" />
                 {row.owner ? (
@@ -267,7 +291,7 @@ export function SharedList({
                     {row.sharedLabel}
                   </TableCell>
                   <TableCell className="pr-3 text-right">
-                    <RowMenu row={row} origin={origin} />
+                    <RowMenu row={row} origin={origin} shared />
                   </TableCell>
                 </TableRow>
               ))}
@@ -284,12 +308,19 @@ export function SharedList({
               >
                 <LanguageMarker language={row.language} />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <Link
-                    href={`/pastes/${row.slug}`}
-                    className="text-[15px] font-medium after:absolute after:inset-0"
-                  >
-                    {row.title}
-                  </Link>
+                  <span className="flex items-center gap-2">
+                    <Link
+                      href={`/pastes/${row.slug}`}
+                      className="truncate text-[15px] font-medium after:absolute after:inset-0"
+                    >
+                      {row.title}
+                    </Link>
+                    {row.unseen ? (
+                      <span className="size-1.5 shrink-0 bg-primary">
+                        <span className="sr-only">New</span>
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="truncate text-[13px] text-muted-foreground">
                     {row.owner?.name} · {row.sharedLabel}
                   </span>

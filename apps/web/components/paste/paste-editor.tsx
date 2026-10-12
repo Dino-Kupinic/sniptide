@@ -29,6 +29,7 @@ import {
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
+import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
 import { LanguageMarker } from "@/components/paste/language-marker"
 import {
   type PanelSection,
@@ -74,6 +75,7 @@ export function PasteEditor({
   indentation = "2",
   secretDetection = true,
   notice,
+  sharedEdit,
 }: {
   initial: EditorInitial
   // Slug of the paste being edited; omitted for a new paste.
@@ -86,6 +88,9 @@ export function PasteEditor({
   secretDetection?: boolean
   // Shown like a save error when the page couldn't prefill the editor (a gist that can't be read).
   notice?: string
+  // Editing a paste someone shared with the viewer: only its title, description and files are
+  // theirs to change, so the sharing options stay hidden.
+  sharedEdit?: boolean
 }) {
   const host = useSiteHost()
   const router = useRouter()
@@ -103,6 +108,7 @@ export function PasteEditor({
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
+  const [invites, setInvites] = React.useState<PendingInvite[]>([])
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
@@ -186,6 +192,10 @@ export function PasteEditor({
           burnAfterRead,
         },
         editing,
+        // Only a new private paste invites people; switching away from Private drops them.
+        !editing && visibility === "private"
+          ? invites.map((invite) => ({ userId: invite.person.id, access: invite.access }))
+          : [],
       )
 
       if (!result.ok) {
@@ -200,6 +210,7 @@ export function PasteEditor({
           burn_after_read: burnAfterRead,
           password: passwordOn,
           custom_link: Boolean(slug),
+          invites: visibility === "private" ? invites.length : 0,
         })
       }
       router.push(`/pastes/${result.slug}`)
@@ -228,6 +239,11 @@ export function PasteEditor({
     />
   ) : null
 
+  const inviteMenu =
+    !editing && visibility === "private" ? (
+      <InvitePeople invites={invites} onChange={setInvites} />
+    ) : null
+
   const panelSections: PanelSection[] = [
     {
       id: "access",
@@ -242,6 +258,7 @@ export function PasteEditor({
             options={visibilityOptions}
           />
           <p className="text-xs text-muted-foreground">{visibilityHelp[visibility]}</p>
+          {inviteMenu ? <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div> : null}
           <div className="mt-1 flex flex-col gap-2">
             <span className="text-muted-foreground">Expires after</span>
             <ExpiryChips
@@ -382,7 +399,7 @@ export function PasteEditor({
               }
               onRemove={removeFile}
               onAdd={addFile}
-              trailing={<SidePanelToggle />}
+              trailing={sharedEdit ? undefined : <SidePanelToggle />}
             />
 
             {preview ? (
@@ -470,66 +487,77 @@ export function PasteEditor({
             </div>
           </div>
 
-          <SidePanel label="Options" sections={panelSections} defaultOpen={["access"]} />
+          {sharedEdit ? null : (
+            <SidePanel label="Options" sections={panelSections} defaultOpen={["access"]} />
+          )}
         </div>
       </SidePanelProvider>
 
       {/* Mobile bottom panel */}
       <div className="sticky bottom-0 z-20 mt-6 flex flex-col gap-4 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgb(0_0_0/0.04)] lg:hidden">
         <span aria-hidden="true" className="mx-auto h-1 w-9 bg-border" />
-        <SegmentedControl
-          aria-label="Visibility"
-          value={visibility}
-          onValueChange={setVisibility}
-          options={visibilityOptions}
-          itemClassName="py-2.5 text-[15px]"
-          className="border border-border bg-muted"
-        />
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[15px]">Expires after</span>
-          <ExpiryChips
-            value={expiry}
-            onChange={setExpiry}
-            options={expiryOptions.filter((option) => ["1d", "1w", "never"].includes(option.value))}
-            currentExpiry={currentExpiry}
-          />
-        </div>
-        <ToggleRow
-          label="Password"
-          description="Visitors must enter it to view"
-          checked={passwordOn}
-          onCheckedChange={setPasswordOn}
-          large
-        />
-        {passwordField}
-        {mobileMore ? (
+        {sharedEdit ? null : (
           <>
-            <OptionGroup label="Custom link" id="slug-label-mobile">
-              <SlugInput value={slug} onChange={setSlug} status={slugStatus} />
-            </OptionGroup>
-            <OptionGroup label="Collection" id="collection-label-mobile">
-              <CollectionSelect
-                value={collection}
-                onChange={setCollection}
-                collections={collections}
+            <SegmentedControl
+              aria-label="Visibility"
+              value={visibility}
+              onValueChange={setVisibility}
+              options={visibilityOptions}
+              itemClassName="py-2.5 text-[15px]"
+              className="border border-border bg-muted"
+            />
+            {!editing && visibility === "private" ? (
+              <InvitePeople invites={invites} onChange={setInvites} large />
+            ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[15px]">Expires after</span>
+              <ExpiryChips
+                value={expiry}
+                onChange={setExpiry}
+                options={expiryOptions.filter((option) =>
+                  ["1d", "1w", "never"].includes(option.value),
+                )}
+                currentExpiry={currentExpiry}
               />
-            </OptionGroup>
+            </div>
             <ToggleRow
-              label="Burn after read"
-              description="Delete after the first view"
-              checked={burnAfterRead}
-              onCheckedChange={setBurnAfterRead}
+              label="Password"
+              description="Visitors must enter it to view"
+              checked={passwordOn}
+              onCheckedChange={setPasswordOn}
               large
             />
+            {passwordField}
+            {mobileMore ? (
+              <>
+                <OptionGroup label="Custom link" id="slug-label-mobile">
+                  <SlugInput value={slug} onChange={setSlug} status={slugStatus} />
+                </OptionGroup>
+                <OptionGroup label="Collection" id="collection-label-mobile">
+                  <CollectionSelect
+                    value={collection}
+                    onChange={setCollection}
+                    collections={collections}
+                  />
+                </OptionGroup>
+                <ToggleRow
+                  label="Burn after read"
+                  description="Delete after the first view"
+                  checked={burnAfterRead}
+                  onCheckedChange={setBurnAfterRead}
+                  large
+                />
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMobileMore(true)}
+                className="self-start text-sm text-muted-foreground underline underline-offset-2"
+              >
+                More options
+              </button>
+            )}
           </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setMobileMore(true)}
-            className="self-start text-sm text-muted-foreground underline underline-offset-2"
-          >
-            More options
-          </button>
         )}
         <Button type="submit" disabled={pending} className="h-[50px] text-base font-semibold">
           {pending ? "Saving…" : submitLabel}

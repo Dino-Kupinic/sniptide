@@ -7,7 +7,8 @@ export const EXPIRIES = ["1h", "1d", "1w", "1m", "never"] as const
 
 export type Visibility = (typeof VISIBILITIES)[number]
 export type Expiry = (typeof EXPIRIES)[number]
-export type Access = "edit" | "view"
+export const ACCESSES = ["view", "edit"] as const
+export type Access = (typeof ACCESSES)[number]
 
 export interface PasteFile {
   name: string
@@ -83,6 +84,23 @@ export interface Share {
   slug: string
   access: Access
   sharedAt: number
+}
+
+// Someone a paste is shared with, as its owner's share dialog lists them.
+export interface SharePerson {
+  id: string
+  name: string
+  // Their @username, or their email when they have none.
+  handle: string
+  initials: string
+  access: Access
+  sharedAt: number
+}
+
+// A person to invite when a paste is created, already looked up by the editor.
+export interface ShareInvite {
+  userId: string
+  access: Access
 }
 
 export interface PasteInput {

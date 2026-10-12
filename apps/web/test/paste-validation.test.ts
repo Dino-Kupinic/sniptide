@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { maxPasteBytes, parsePasteInput, pasteSchema } from "@/lib/pastes/schema"
-import { createPaste, getOwnPaste, updatePaste } from "@/lib/pastes/store"
+import { createPaste, getPaste, updatePaste } from "@/lib/pastes/store"
 import type { PasteInput } from "@/lib/pastes/types"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
@@ -56,6 +56,6 @@ describeDb("persistence validation", () => {
     const duplicate = input("hi")
     duplicate.files.push({ name: "a.ts", content: "other", language: "text" })
     await expect(updatePaste(saved.slug, duplicate, "Edited")).rejects.toThrow("unique")
-    expect((await getOwnPaste(saved.slug))?.files[0]?.content).toBe("original")
+    expect((await getPaste(saved.slug))?.files[0]?.content).toBe("original")
   })
 })

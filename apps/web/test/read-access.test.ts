@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { getOwnPaste, getUnlockHash, readSharedPaste } from "@/lib/pastes/store"
+import { getPaste, getUnlockHash, readSharedPaste } from "@/lib/pastes/store"
 import {
   hasDatabase,
   marker,
@@ -50,11 +50,11 @@ describeDb("read access", () => {
     "another account": "other",
   } as const
 
-  describe("getOwnPaste (the app's detail, edit and duplicate screens)", () => {
+  describe("getPaste (the app's detail, edit and duplicate screens)", () => {
     test("returns the owner's own pastes, whatever their visibility or password", async () => {
       signInAs("owner")
       for (const slug of ["pub", "unl", "priv", "pw", "privpw"]) {
-        const paste = await getOwnPaste(slug)
+        const paste = await getPaste(slug)
         expect(paste?.files[0]?.content).toBe(marker(slug))
         expect(paste?.owner).toBeNull()
       }
@@ -64,14 +64,14 @@ describeDb("read access", () => {
       test(`returns nothing for ${who}, even for public pastes`, async () => {
         signInAs(id)
         for (const slug of ["pub", "unl", "priv", "pw", "privpw", "old", "bin", "nope"]) {
-          expect(await getOwnPaste(slug)).toBeNull()
+          expect(await getPaste(slug)).toBeNull()
         }
       })
     }
 
     test("hides the owner's pastes in the trash", async () => {
       signInAs("owner")
-      expect(await getOwnPaste("bin")).toBeNull()
+      expect(await getPaste("bin")).toBeNull()
     })
   })
 

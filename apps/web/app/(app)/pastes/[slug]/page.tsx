@@ -6,10 +6,13 @@ import { CollectionIcon } from "@/components/collections/icon"
 import { FileViewer } from "@/components/paste/file-viewer"
 import {
   CopyLinkButton,
+  LeaveShareButton,
   PasteOverflowMenu,
   ShareButton,
   StarButton,
 } from "@/components/paste/paste-actions"
+import { ShareDialog } from "@/components/paste/share-dialog"
+import { ShareAvatar } from "@/components/paste/share-people"
 import {
   PasteDetailPanel,
   SettingRow,
@@ -20,17 +23,24 @@ import { SidePanelProvider } from "@/components/paste/side-panel"
 import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
-import { getPreferences } from "@/lib/auth"
+import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { formatDateTime, formatNumber, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
-import { getOwnMeta, getOwnPaste, getShare, isStarred, markShareSeen } from "@/lib/pastes/store"
+import {
+  getPaste,
+  getPasteMeta,
+  getShare,
+  isStarred,
+  listPasteShares,
+  markShareSeen,
+} from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
 import { indentLabel } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
-  const paste = await getOwnMeta((await params).slug)
+  const paste = await getPasteMeta((await params).slug)
   return { title: paste ? `${paste.title} · Sniptide` : "Paste not found · Sniptide" }
 }
 
@@ -43,19 +53,22 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   const revisionParam = Number((await searchParams).revisions)
   const revisionPage =
     Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1
-  const paste = await getOwnPaste(slug, revisionPage)
+  const paste = await getPaste(slug, revisionPage)
   if (!paste) notFound()
 
-  const [starred, share, { origin, host }, preferences, collections] = await Promise.all([
-    isStarred(slug),
-    getShare(slug),
-    getSiteOrigin(),
-    getPreferences(),
-    listCollections(),
-  ])
+  const owned = !paste.owner
+  const [starred, share, { origin, host }, preferences, collections, people, session] =
+    await Promise.all([
+      isStarred(slug),
+      owned ? null : getShare(slug),
+      getSiteOrigin(),
+      getPreferences(),
+      listCollections(),
+      owned ? listPasteShares(slug) : null,
+      getSession(),
+    ])
   if (share && !share.seen) await markShareSeen(slug)
 
-  const owned = !paste.owner
   const canEdit = owned || share?.access === "edit"
   const url = `${origin}/${paste.slug}`
   const files = await highlightFiles(paste.files)
@@ -65,6 +78,25 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     ? { label: "My pastes", href: "/pastes" }
     : { label: "Shared with me", href: "/shared" }
   const revision = paste.revisionCount
+  const viewer = session?.user
+  const shareDialog = (trigger: "button" | "icon") =>
+    people ? (
+      <ShareDialog
+        slug={slug}
+        title={paste.title}
+        visibility={paste.visibility}
+        owner={{
+          id: paste.author.username,
+          name: paste.author.name,
+          handle: viewer?.username
+            ? `@${viewer.displayUsername ?? viewer.username}`
+            : (viewer?.email ?? ""),
+          initials: paste.author.initials,
+        }}
+        people={people}
+        trigger={trigger}
+      />
+    ) : null
   const sharingState = {
     slug,
     url,
@@ -94,6 +126,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             Edit
           </Button>
         ) : null}
+        {shareDialog("button")}
         <Button
           variant="outline"
           size="lg"
@@ -113,10 +146,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           {parent.label}
         </Link>
         <div className="flex items-center">
+          {shareDialog("icon")}
           <StarButton slug={slug} starred={starred} variant="ghost" />
           <PasteOverflowMenu
             slug={slug}
             canTrash={owned}
+            canLeave={Boolean(share)}
             rawHref={
               paste.allowRaw && first
                 ? `/${slug}/raw?file=${encodeURIComponent(first.name)}`
@@ -199,9 +234,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           <PasteDetailPanel
             state={owned ? sharingState : undefined}
             sharedNote={
-              <p className="text-muted-foreground">
-                {paste.owner?.name} gave you {share?.access === "edit" ? "edit" : "view"} access.
-              </p>
+              paste.owner && share ? (
+                <SharedWithYou slug={slug} owner={paste.owner} share={share} />
+              ) : undefined
             }
             views={
               <>
@@ -307,6 +342,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             </SharingPanel>
           ) : (
             <dl className="divide-y divide-border border border-border text-[15px]">
+              {share ? (
+                <MobileRow
+                  label="Your access"
+                  value={`${share.access === "edit" ? "Can edit" : "Can view"} · from ${paste.owner?.name}`}
+                />
+              ) : null}
               <MobileRow label="Expires" value={expiresLabel(paste)} />
               <MobileRow
                 label="Views"
@@ -337,6 +378,55 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           className="h-12 flex-[2] text-base font-semibold"
         />
       </div>
+    </div>
+  )
+}
+
+// The recipient's "Shared with you" panel: who shared it, what they can do, and a way out.
+function SharedWithYou({
+  slug,
+  owner,
+  share,
+}: {
+  slug: string
+  owner: NonNullable<Paste["owner"]>
+  share: NonNullable<Awaited<ReturnType<typeof getShare>>>
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2.5">
+        <ShareAvatar
+          person={{
+            id: owner.username,
+            name: owner.name,
+            handle: owner.username,
+            initials: owner.initials,
+          }}
+          className="size-7 text-[10px]"
+        />
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate font-medium">{owner.name}</span>
+          <span className="text-xs text-muted-foreground">Shared {timeAgo(share.sharedAt)}</span>
+        </span>
+      </div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">Your access</span>
+        <span
+          className={
+            share.access === "edit"
+              ? "bg-foreground px-2 py-0.5 font-medium text-background"
+              : "border border-border px-2 py-0.5 font-medium"
+          }
+        >
+          {share.access === "edit" ? "Can edit" : "Can view"}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {share.access === "edit"
+          ? `You can edit this paste. Sharing and deleting stay with ${owner.name}.`
+          : `You can read and copy this paste. Only ${owner.name} can change it.`}
+      </p>
+      <LeaveShareButton slug={slug} className="h-8 text-[13px]" />
     </div>
   )
 }
