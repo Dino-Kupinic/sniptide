@@ -4,16 +4,18 @@ import { parseSidebarState, SIDEBAR_COOKIE } from "@/components/shell/sidebar-st
 import { SiteHostProvider } from "@/components/site-host"
 import { requireSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
+import { listFolders } from "@/lib/folders/store"
 import { sidebarData } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [session, data, { host }, collections, cookieStore] = await Promise.all([
+  const [session, data, { host }, collections, folders, cookieStore] = await Promise.all([
     requireSession(),
     sidebarData(),
     getSiteOrigin(),
     listCollections(),
+    listFolders(),
     cookies(),
   ])
 
@@ -23,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         viewer={viewerFromUser(session.user)}
         data={data}
         collections={collections}
+        folders={folders}
         initialSidebar={parseSidebarState(cookieStore.get(SIDEBAR_COOKIE)?.value)}
       >
         {children}

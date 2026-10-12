@@ -22,6 +22,8 @@ import {
   CheckIcon,
   CopyIcon,
   FolderIcon,
+  FolderInputIcon,
+  HomeIcon,
   MoreHorizontalIcon,
   PencilLineIcon,
   PlusIcon,
@@ -34,9 +36,13 @@ import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
+import { NewFolderDialog } from "@/components/folders/new-folder"
 import { useSiteHost } from "@/components/site-host"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
+import { movePastes } from "@/lib/folders/actions"
+import { flattenTree } from "@/lib/folders/tree"
+import type { Folder } from "@/lib/folders/types"
 import { renamePaste, setPasteCollection, setStarred, trashPaste } from "@/lib/pastes/actions"
 import type { SidebarPaste } from "@/lib/pastes/types"
 
@@ -45,10 +51,12 @@ import type { SidebarPaste } from "@/lib/pastes/types"
 export function PasteMenu({
   paste,
   collections,
+  folders,
   className,
 }: {
   paste: SidebarPaste
   collections: Collection[]
+  folders: Folder[]
   className?: string
 }) {
   const router = useRouter()
@@ -56,10 +64,15 @@ export function PasteMenu({
   const host = useSiteHost()
   const [renaming, setRenaming] = React.useState(false)
   const [creating, setCreating] = React.useState(false)
+  const [creatingFolder, setCreatingFolder] = React.useState(false)
   const [, startTransition] = React.useTransition()
 
   function fileIn(collection: string | null) {
     startTransition(() => setPasteCollection(paste.slug, collection).then(() => undefined))
+  }
+
+  function moveTo(folderId: string | null) {
+    startTransition(() => movePastes([paste.slug], folderId).then(() => undefined))
   }
 
   return (
@@ -130,6 +143,39 @@ export function PasteMenu({
             </DropdownMenuSub>
           ) : null}
           {paste.owned ? (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderInputIcon />
+                Move to folder
+              </DropdownMenuSubTrigger>
+              <DropdownMenuContent className="max-h-80 w-56 overflow-y-auto">
+                <DropdownMenuItem onClick={() => moveTo(null)}>
+                  <HomeIcon />
+                  <span className="truncate">No folder</span>
+                  {paste.folderId === null ? <CheckIcon className="ml-auto text-primary!" /> : null}
+                </DropdownMenuItem>
+                {flattenTree(folders).map(({ folder, depth }) => (
+                  <DropdownMenuItem
+                    key={folder.id}
+                    onClick={() => moveTo(paste.folderId === folder.id ? null : folder.id)}
+                    style={{ paddingLeft: 8 + depth * 12 }}
+                  >
+                    <FolderIcon />
+                    <span className="truncate">{folder.name}</span>
+                    {paste.folderId === folder.id ? (
+                      <CheckIcon className="ml-auto text-primary!" />
+                    ) : null}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setCreatingFolder(true)}>
+                  <PlusIcon />
+                  New folder
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuSub>
+          ) : null}
+          {paste.owned ? (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -158,6 +204,14 @@ export function PasteMenu({
             open={creating}
             onOpenChange={setCreating}
             onCreated={(slug) => fileIn(slug)}
+          />
+          <NewFolderDialog
+            open={creatingFolder}
+            onOpenChange={setCreatingFolder}
+            onCreated={(id) => {
+              setCreatingFolder(false)
+              moveTo(id)
+            }}
           />
         </>
       ) : null}

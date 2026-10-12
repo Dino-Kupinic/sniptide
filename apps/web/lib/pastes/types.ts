@@ -133,6 +133,7 @@ export interface SidebarPaste {
   owned: boolean
   starred: boolean
   collection: string | null
+  folderId: string | null
   updatedAt: number
 }
 

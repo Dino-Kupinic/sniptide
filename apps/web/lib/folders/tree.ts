@@ -1,4 +1,4 @@
-import type { Folder } from "./types"
+import { type Folder, MAX_FOLDER_DEPTH } from "./types"
 
 // Pure helpers over a flat folder list (parentId links), shared by the store and the screens. The
 // list is one owner's folders, so it stays small (MAX_FOLDERS) and is walked in memory.
@@ -81,4 +81,47 @@ export function uniqueName(wanted: string, taken: readonly string[], maxLength: 
     const name = `${wanted.slice(0, maxLength - suffix.length).trimEnd()}${suffix}`
     if (!clash(name)) return name
   }
+}
+
+// Pastes filed in `id` or any folder below it, not counting the trash.
+export function subtreePasteCount(folders: readonly Folder[], id: string) {
+  const inside = new Set([id, ...descendantIds(folders, id)])
+  return folders.reduce((sum, folder) => sum + (inside.has(folder.id) ? folder.pasteCount : 0), 0)
+}
+
+export interface FolderOption {
+  folder: Folder
+  // 0 for a top-level folder, one more for each level down; the indent in a picker.
+  depth: number
+}
+
+// Every folder in tree order (each followed by its subfolders, siblings by name), for pickers.
+export function flattenTree(folders: readonly Folder[]): FolderOption[] {
+  const walk = (parentId: string | null, depth: number): FolderOption[] =>
+    childrenOf(folders, parentId).flatMap((folder) => [
+      { folder, depth },
+      ...walk(folder.id, depth + 1),
+    ])
+  return walk(null, 0)
+}
+
+export type MoveCheck = "ok" | "same" | "cycle" | "depth" | "duplicate"
+
+// Whether folder `id` may go under `parentId` (null for the top level), in the order the rules
+// are told to the person: already there, inside itself, too deep, or a name clash among the new
+// siblings. The store and the Move dialog both ask, so a destination the dialog offers is one
+// the store accepts.
+export function checkMove(folders: readonly Folder[], id: string, parentId: string | null) {
+  const current = folders.find((folder) => folder.id === id)
+  if (!current || current.parentId === parentId) return "same" satisfies MoveCheck
+  if (parentId === id || (parentId !== null && descendantIds(folders, id).includes(parentId))) {
+    return "cycle" satisfies MoveCheck
+  }
+  if (depthOf(folders, parentId) + heightOf(folders, id) > MAX_FOLDER_DEPTH) {
+    return "depth" satisfies MoveCheck
+  }
+  const clash = folders.some(
+    (other) => other.id !== id && other.parentId === parentId && sameName(other.name, current.name),
+  )
+  return (clash ? "duplicate" : "ok") satisfies MoveCheck
 }

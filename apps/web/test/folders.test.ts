@@ -12,10 +12,13 @@ import {
 import { folderExists, listFolders } from "@/lib/folders/store"
 import {
   buildTree,
+  checkMove,
   depthOf,
   descendantIds,
+  flattenTree,
   folderPath,
   heightOf,
+  subtreePasteCount,
   uniqueName,
 } from "@/lib/folders/tree"
 import { type Folder, MAX_FOLDER_DEPTH, MAX_FOLDERS } from "@/lib/folders/types"
@@ -51,6 +54,36 @@ test("the tree helpers walk parent links", () => {
     ["a", ["b", "d"]],
     ["e", []],
   ])
+})
+
+test("pickers list folders in tree order, and counts add up the subtree", () => {
+  const folders = [
+    { ...f("b", null, "Beta"), pasteCount: 1 },
+    { ...f("a", null, "Alpha"), pasteCount: 2 },
+    { ...f("a1", "a", "Inner"), pasteCount: 4 },
+  ]
+  expect(flattenTree(folders).map((o) => [o.folder.id, o.depth])).toEqual([
+    ["a", 0],
+    ["a1", 1],
+    ["b", 0],
+  ])
+  expect(subtreePasteCount(folders, "a")).toBe(6)
+  expect(subtreePasteCount(folders, "b")).toBe(1)
+})
+
+test("a move is checked the same way the store does", () => {
+  const folders = [f("a", null, "A"), f("b", "a", "B"), f("c", null, "C"), f("d", "c", "B")]
+  expect(checkMove(folders, "b", "a")).toBe("same")
+  expect(checkMove(folders, "a", "b")).toBe("cycle")
+  expect(checkMove(folders, "a", "a")).toBe("cycle")
+  expect(checkMove(folders, "b", "c")).toBe("duplicate")
+  expect(checkMove(folders, "b", null)).toBe("ok")
+  expect(checkMove(folders, "c", "a")).toBe("ok")
+  let deep = [f("l1", null)]
+  for (let level = 2; level <= MAX_FOLDER_DEPTH; level++)
+    deep = [...deep, f(`l${level}`, `l${level - 1}`)]
+  deep.push(f("x", null), f("y", "x"))
+  expect(checkMove(deep, "x", `l${MAX_FOLDER_DEPTH}`)).toBe("depth")
 })
 
 test("a cycle in the data doesn't hang the path lookup", () => {

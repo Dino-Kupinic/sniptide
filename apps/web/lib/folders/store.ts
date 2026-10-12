@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
-import { depthOf, descendantIds, heightOf, sameName, uniqueName } from "./tree"
+import { checkMove, depthOf, descendantIds, sameName, uniqueName } from "./tree"
 import {
   type DeleteContents,
   type Folder,
@@ -151,12 +151,9 @@ export async function moveFolder(id: string, parentId: string | null): Promise<F
     if (parentId !== null && !all.some((other) => other.id === parentId)) {
       return { status: "missing" }
     }
-    if (current.parentId === parentId) return { status: "ok", folder: current }
-    if (parentId === id || (parentId !== null && descendantIds(all, id).includes(parentId))) {
-      return { status: "cycle" }
-    }
-    if (depthOf(all, parentId) + heightOf(all, id) > MAX_FOLDER_DEPTH) return { status: "depth" }
-    if (nameTaken(all, parentId, current.name)) return { status: "duplicate" }
+    const check = checkMove(all, id, parentId)
+    if (check === "same") return { status: "ok", folder: current }
+    if (check !== "ok") return { status: check }
     await tx
       .update(folderTable)
       .set({ parentId, updatedAt: new Date() })

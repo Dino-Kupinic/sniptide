@@ -916,6 +916,7 @@ export const sidebarData = cache(async (): Promise<SidebarData> => {
     owned: record.ownerId === viewer,
     starred: starSlugs.has(record.slug),
     collection: record.ownerId === viewer ? record.collection : null,
+    folderId: record.ownerId === viewer ? record.folderId : null,
     updatedAt: record.updatedAt.getTime(),
   })
   return {
