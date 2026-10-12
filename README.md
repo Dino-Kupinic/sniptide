@@ -32,6 +32,18 @@ The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics) 
 handler, document it there, or list it as internal if it only serves the web app; `bun test` fails
 until you do.
 
+## CLI
+
+The [Sniptide CLI](packages/cli/README.md) captures files, folders or globs and restores their relative
+paths in another project. Offline bundles work now; remote push, pull and search await the personal
+token API (WRK-106) and the [proposed versioned endpoints](packages/cli/API.md).
+
+```sh
+bun --filter @sniptide/cli build
+node packages/cli/dist/sniptide.js --help
+bun run test:cli
+```
+
 ## Database
 
 The schema lives in `packages/db/src/schema`. After changing it:
@@ -186,6 +198,7 @@ bun run format
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
 - `packages/auth`: better-auth setup on the Drizzle adapter
+- `packages/cli`: code capture and restore CLI, with a dependency-free Node.js executable
 - `packages/db`: Drizzle schema, Postgres client and migrations
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
   theme. Published to npm for the website repo; see `packages/ui/README.md`

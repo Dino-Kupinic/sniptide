@@ -39,6 +39,8 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
 
+      - run: bun run test:cli
+
       - run: bun run build
 
       # Builds the same image Coolify deploys, so a broken Dockerfile shows up in the PR.
