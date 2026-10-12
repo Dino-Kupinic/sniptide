@@ -43,6 +43,8 @@ export interface PasteSummary {
   burnAfterRead: boolean
   allowRaw: boolean
   collection: string | null
+  // The id of the folder the paste is filed in; only ever set for the owner's own view.
+  folderId: string | null
   // null means the signed-in viewer owns it.
   owner: Person | null
   // Who owns it, whoever is looking.

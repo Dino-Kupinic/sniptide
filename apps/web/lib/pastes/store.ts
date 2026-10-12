@@ -232,6 +232,7 @@ async function summarize(
       burnAfterRead: record.burnAfterRead,
       allowRaw: record.allowRaw,
       collection: record.collection,
+      folderId: record.ownerId === viewer ? record.folderId : null,
       owner: record.ownerId === viewer ? null : author,
       author,
       views: record.views,
