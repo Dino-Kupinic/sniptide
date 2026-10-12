@@ -157,6 +157,12 @@ export function SettingsView({
                 Sniptide doesn't have a public API yet, so there are no tokens to create. They'll
                 show up here when it does.
               </p>
+              <a
+                href="/docs/api"
+                className="text-[13px] text-foreground underline underline-offset-4 hover:text-primary"
+              >
+                See the HTTP endpoints available today
+              </a>
             </div>
           </SettingsSection>
         ) : null}

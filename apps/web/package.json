@@ -18,6 +18,7 @@
   "dependencies": {
     "@dnd-kit/helpers": "^0.5.0",
     "@dnd-kit/react": "^0.5.0",
+    "@scalar/api-reference-react": "catalog:runtime",
     "@shikijs/langs": "catalog:runtime",
     "@sniptide/ui": "workspace:*",
     "@workspace/auth": "workspace:*",

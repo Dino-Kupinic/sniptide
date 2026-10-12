@@ -24,6 +24,14 @@ disabled.
 Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
 `fix:`, `docs:`, …), enforced by a git hook and a CI check. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## API reference
+
+The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics) are documented at
+`/docs/api`, rendered by [Scalar](https://scalar.com) from the OpenAPI document at
+`/api/openapi.json`. The document lives in `apps/web/lib/openapi.ts`. When you add a route
+handler, document it there, or list it as internal if it only serves the web app; `bun test` fails
+until you do.
+
 ## Database
 
 The schema lives in `packages/db/src/schema`. After changing it:

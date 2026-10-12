@@ -16,6 +16,7 @@
   "catalogs": {
     "runtime": {
       "@better-auth/drizzle-adapter": "^1.7.3",
+      "@scalar/api-reference-react": "^0.9.79",
       "@shikijs/langs": "^4.5.0",
       "better-auth": "^1.7.3",
       "drizzle-orm": "1.0.0-rc.4",
