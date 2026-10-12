@@ -84,6 +84,7 @@ const RESERVED = new Set([
   "api",
   "collections",
   "dashboard",
+  "docs",
   "new",
   "pastes",
   "settings",
