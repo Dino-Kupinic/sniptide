@@ -6,7 +6,7 @@ import { CheckIcon, CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "l
 import * as React from "react"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
-import { useCopy } from "./copy-button"
+import { reportCopy, useCopy } from "./copy-button"
 import { LanguageMarker } from "./language-marker"
 import { panelToolClass, SidePanelToggle } from "./side-panel"
 
@@ -125,7 +125,10 @@ export function FileViewer({
             <button
               type="button"
               aria-label="Copy file contents"
-              onClick={() => copy(active.content)}
+              onClick={async () => {
+                await copy(active.content)
+                reportCopy(slug)
+              }}
               className={cn(panelToolClass, "hidden lg:inline-flex")}
             >
               {copied ? <CheckIcon /> : <CopyIcon />}

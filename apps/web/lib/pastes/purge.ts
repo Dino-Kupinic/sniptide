@@ -21,6 +21,9 @@ export async function purgeStaleData(now = new Date()) {
   const budget = envInteger("PURGE_TIME_BUDGET_MS", 2000, 100, 60000)
   const batch = envInteger("PURGE_BATCH_SIZE", 500, 1, 5000)
   const retention = envInteger("VIEW_HISTORY_RETENTION_DAYS", 90, 60, 3650)
+  // 180 days is what the Analytics page needs to compare 90 days with the 90 before them.
+  const analyticsDay =
+    Math.floor(now.getTime() / DAY) - envInteger("ANALYTICS_RETENTION_DAYS", 180, 180, 3650)
   const cutoff = new Date(now.getTime() - 30 * DAY).toISOString()
   const day = Math.floor(now.getTime() / DAY) - retention
   const totals = { trashed: 0, expired: 0 }
@@ -43,6 +46,12 @@ export async function purgeStaleData(now = new Date()) {
         const days = await tx.execute(
           sql`DELETE FROM paste_view_day WHERE (paste_id, day) IN (SELECT paste_id, day FROM paste_view_day WHERE day < ${day} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
         )
+        const stats = await tx.execute(
+          sql`DELETE FROM paste_stats_day WHERE (paste_id, day) IN (SELECT paste_id, day FROM paste_stats_day WHERE day < ${analyticsDay} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
+        )
+        const breakdown = await tx.execute(
+          sql`DELETE FROM paste_breakdown_day WHERE (paste_id, day, dimension, key) IN (SELECT paste_id, day, dimension, key FROM paste_breakdown_day WHERE day < ${analyticsDay} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
+        )
         const limits = await tx.execute(
           sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY).toISOString()} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
@@ -52,8 +61,10 @@ export async function purgeStaleData(now = new Date()) {
         return {
           trashed: trashed.length,
           expired: expired.length,
-          days: days.length,
-          full: [trashed, expired, days, limits, auth].some((rows) => rows.length === batch),
+          days: days.length + stats.length + breakdown.length,
+          full: [trashed, expired, days, stats, breakdown, limits, auth].some(
+            (rows) => rows.length === batch,
+          ),
         }
       })
       if (!result) return batches ? totals : null

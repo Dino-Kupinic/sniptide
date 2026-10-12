@@ -26,4 +26,6 @@ export async function setUpClientIp() {
 export async function startBackgroundJobs() {
   const { schedulePurge } = await import("@/lib/pastes/purge")
   schedulePurge()
+  const { scheduleRollup } = await import("@/lib/pastes/rollup")
+  scheduleRollup()
 }

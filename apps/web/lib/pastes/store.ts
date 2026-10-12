@@ -32,6 +32,7 @@ import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { enforceBudget } from "./budget"
+import { recordPasteEvent } from "./events"
 import { hashPassword } from "./passwords"
 import { TRASH_DAYS } from "./purge"
 
@@ -560,8 +561,10 @@ export async function readSharedPaste(
   const { record: found, owned, viewer } = access
   const sealed = found.burnAfterRead && !owned
   if (sealed && !options.reveal) return { status: "sealed", signedIn: viewer !== null }
-  const record = (sealed || options.visit) && !owned ? await claimVisit(found.id) : found
+  const counted = (sealed || options.visit) && !owned
+  const record = counted ? await claimVisit(found.id) : found
   if (!record) return { status: "missing" }
+  if (counted) await recordPasteEvent(record.id, "view")
 
   const db = getDb()
   const [files, [author]] = await Promise.all([
@@ -629,7 +632,16 @@ export async function readRawFile(slug: string, name: string | null): Promise<Ra
       pasteFile.id,
     )
     .limit(1)
-  return file ? { status: "ok", file } : { status: "missing" }
+  if (!file) return { status: "missing" }
+  if (!owned) await recordPasteEvent(record.id, "raw")
+  return { status: "ok", file }
+}
+
+// A visitor copied a paste's code on the share page. Counted like a view: not for the owner, and
+// only for a paste the visitor could open.
+export async function recordCopy(slug: string) {
+  const access = await sharedAccess(slug)
+  if (access.status === "ok" && !access.owned) await recordPasteEvent(access.record.id, "copy")
 }
 
 // The share page's title and indexing, without loading files or counting a view. A title is

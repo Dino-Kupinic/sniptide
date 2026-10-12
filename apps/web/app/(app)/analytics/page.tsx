@@ -10,7 +10,8 @@ import {
 } from "@/components/analytics-page/panels"
 import { PageHeader } from "@/components/page-header"
 import { requireSession } from "@/lib/auth"
-import { getAnalyticsReport, parseRange } from "@/lib/pastes/analytics"
+import { parseRange } from "@/lib/pastes/analytics"
+import { getAnalyticsReport } from "@/lib/pastes/analytics-report"
 import { getSiteOrigin } from "@/lib/site"
 
 export const metadata = { title: "Analytics · Sniptide" }
@@ -23,7 +24,11 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
   const query = await searchParams
   const [, report, { host }] = await Promise.all([
     requireSession(),
-    getAnalyticsReport({ range: parseRange(first(query.range)), paste: first(query.paste) }),
+    getAnalyticsReport({
+      range: parseRange(first(query.range)),
+      paste: first(query.paste),
+      collection: first(query.collection),
+    }),
     getSiteOrigin(),
   ])
   const views = report.kpis[0]?.value ?? 0
@@ -35,14 +40,16 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
         <PageHeader
           title="Analytics"
           description={
-            report.scope
+            report.scope?.type === "paste"
               ? `Views of ${report.scope.title}`
-              : `Views across all ${report.pasteCount} pastes`
+              : report.scope
+                ? `Views across ${report.pasteCount} pastes in ${report.scope.title}`
+                : `Views across all ${report.pasteCount} pastes`
           }
           actions={
             <AnalyticsControls
               range={report.range}
-              paste={report.scope?.slug}
+              paste={report.scope?.type === "paste" ? report.scope.slug : undefined}
               options={report.pasteOptions}
             />
           }

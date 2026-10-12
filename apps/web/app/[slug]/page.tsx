@@ -3,7 +3,6 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
-import { userAgent } from "next/server"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { LanguageLabel } from "@/components/paste/language-marker"
 import { RevealPaste } from "@/components/paste/reveal-paste"
@@ -12,6 +11,7 @@ import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
+import { isHumanVisit } from "@/lib/pastes/hit"
 import { readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin } from "@/lib/site"
 
@@ -35,9 +35,8 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 // Public page for a paste at sniptide.com/<slug>, from the "Share page (public)" artboards.
 export default async function Page({ params }: PageProps<"/[slug]">) {
   const { slug } = await params
-  // Crawlers and link unfurlers don't count as views.
-  const { isBot } = userAgent({ headers: await headers() })
-  const read = await readSharedPaste(slug, { visit: !isBot })
+  // Crawlers, link unfurlers, prefetches and scripts don't count as views.
+  const read = await readSharedPaste(slug, { visit: isHumanVisit(await headers()) })
   if (read.status === "missing") notFound()
 
   if (read.status === "sealed") {
@@ -127,7 +126,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           </div>
           {paste.files.length === 1 && first ? (
             <div className="hidden shrink-0 lg:block">
-              <ShareActions rawHref={rawHref} content={first.content} />
+              <ShareActions slug={slug} rawHref={rawHref} content={first.content} />
             </div>
           ) : null}
         </div>
@@ -144,7 +143,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
         <div className="mt-auto flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between">
           {first ? (
             <div className="lg:hidden">
-              <ShareActions rawHref={rawHref} content={first.content} compact />
+              <ShareActions slug={slug} rawHref={rawHref} content={first.content} compact />
             </div>
           ) : null}
           {signedIn ? null : <SignUpPrompt />}

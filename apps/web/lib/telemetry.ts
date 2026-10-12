@@ -79,7 +79,8 @@ export async function observe<T>(
   }
 }
 export function recordMaintenance(values: Record<string, number | boolean>) {
-  telemetry.maintenance = values
+  // Merged, because the purge and the analytics rollup each report their own keys.
+  telemetry.maintenance = { ...telemetry.maintenance, ...values }
 }
 function route(path = "/") {
   const pathname = path.split("?")[0] ?? "/"

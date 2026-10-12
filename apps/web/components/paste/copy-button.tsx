@@ -19,6 +19,12 @@ export function useCopy(timeout = 1600) {
   return { copied, copy }
 }
 
+// Tells the server a visitor copied a paste's code, for the Analytics page. A beacon, so a failed
+// or slow report never gets in the way of the copy.
+export function reportCopy(slug: string) {
+  navigator.sendBeacon?.(`/${encodeURIComponent(slug)}/copy`)
+}
+
 export function CopyButton({
   text,
   label = "Copy",

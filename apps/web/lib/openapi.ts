@@ -531,9 +531,11 @@ export const openApiDocument = {
 // the signed-in browser session, or are another library's, so the reference leaves them out. A
 // route handler that is in neither this list nor the document fails test/openapi.test.ts.
 export const internalRoutes = [
+  "/[slug]/copy",
   "/analytics/export",
   "/api/analytics",
   "/api/analytics/[...path]",
   "/api/auth/[...all]",
   "/api/search",
+  "/api/stats",
 ] as const
