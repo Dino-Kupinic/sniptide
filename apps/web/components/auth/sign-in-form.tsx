@@ -6,6 +6,7 @@ import { Label } from "@sniptide/ui/components/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
@@ -40,6 +41,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
       return
     }
 
+    track("signed_in", { method: "email" })
     router.replace("/dashboard")
     router.refresh()
   }
