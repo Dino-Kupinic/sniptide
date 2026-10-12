@@ -115,3 +115,27 @@ export const pasteStar = pgTable(
     index("paste_star_paste_idx").on(table.pasteId),
   ],
 )
+
+export const shareAccess = pgEnum("share_access", ["view", "edit"])
+
+// A paste its owner invited another account to. Removing the row revokes access, whether the
+// owner removes the person or the person leaves.
+export const pasteShare = pgTable(
+  "paste_share",
+  {
+    pasteId: uuid("paste_id")
+      .notNull()
+      .references(() => paste.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    access: shareAccess("access").notNull(),
+    createdAt: time("created_at").notNull().defaultNow(),
+    // When the person first opened it; null keeps it marked as new in Shared with me.
+    seenAt: time("seen_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.pasteId, table.userId] }),
+    index("paste_share_user_idx").on(table.userId, table.createdAt),
+  ],
+)
