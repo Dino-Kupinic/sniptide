@@ -1,6 +1,8 @@
 import path from "node:path"
 import { migrateDb } from "@workspace/db/migrate"
 import {
+  analyticsRollup,
+  analyticsSalt,
   authRateLimit,
   paste,
   pasteFile,
@@ -46,6 +48,9 @@ export async function resetDatabase() {
   await getDb().delete(user)
   await getDb().delete(rateLimit)
   await getDb().delete(authRateLimit)
+  // The rollup state and salts belong to no account. With no state every day is read from the hits.
+  await getDb().delete(analyticsRollup)
+  await getDb().delete(analyticsSalt)
   request.viewer = null
   request.cookies.clear()
   request.headers = new Headers()
@@ -68,6 +73,7 @@ interface SeedPaste {
   burnAfterRead?: boolean
   allowRaw?: boolean
   collection?: string
+  language?: string
   expiresAt?: Date
   deletedAt?: Date
 }
@@ -94,7 +100,7 @@ export async function seedPaste(input: SeedPaste) {
     pasteId: id,
     position: 0,
     name: "a.txt",
-    language: "text",
+    language: input.language ?? "text",
     content: input.content ?? marker(input.slug),
   })
   return { id, slug: input.slug }

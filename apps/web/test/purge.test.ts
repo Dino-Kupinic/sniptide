@@ -1,5 +1,12 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { authRateLimit, paste, pasteFile, rateLimit } from "@workspace/db/schema"
+import {
+  authRateLimit,
+  paste,
+  pasteBreakdownDay,
+  pasteFile,
+  pasteStatsDay,
+  rateLimit,
+} from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { purgeStaleData } from "@/lib/pastes/purge"
@@ -72,5 +79,23 @@ describeDb("purge", () => {
     await purgeStaleData()
     expect((await db.select().from(rateLimit)).map((row) => row.key)).toEqual(["new"])
     expect((await db.select().from(authRateLimit)).map((row) => row.key)).toEqual(["new"])
+  })
+
+  test("keeps 180 days of analytics rollups and drops the rest", async () => {
+    const { id } = await seedPaste({ slug: "stats", owner: "owner" })
+    const today = Math.floor(Date.now() / DAY)
+    const db = getDb()
+    await db.insert(pasteStatsDay).values([
+      { pasteId: id, day: today - 200, views: 1 },
+      { pasteId: id, day: today - 179, views: 1 },
+    ])
+    await db.insert(pasteBreakdownDay).values([
+      { pasteId: id, day: today - 200, dimension: "country", key: "AT", hits: 1 },
+      { pasteId: id, day: today - 179, dimension: "country", key: "AT", hits: 1 },
+    ])
+
+    await purgeStaleData()
+    expect((await db.select().from(pasteStatsDay)).map((row) => row.day)).toEqual([today - 179])
+    expect((await db.select().from(pasteBreakdownDay)).map((row) => row.day)).toEqual([today - 179])
   })
 })

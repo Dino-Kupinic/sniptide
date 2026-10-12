@@ -68,6 +68,7 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | ACCOUNT_STORAGE_BYTES | 1073741824 | Per-account current-content budget |
 | ACCOUNT_PASTE_LIMIT | 10000 | Per-account paste count, including trash |
 | VIEW_HISTORY_RETENTION_DAYS | 90 | Retained daily chart history |
+| ANALYTICS_RETENTION_DAYS | 180 | Retained daily analytics rollups (at least 180) |
 | PURGE_BATCH_SIZE | 500 | Maximum deletions per table in each transaction |
 | PURGE_TIME_BUDGET_MS | 2000 | Time between batches before ending a cleanup run |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
@@ -80,6 +81,19 @@ are not bounded by the parent batch size. A trash visit removes at most 500 old 
 older trash pending cleanup. Trash and expired pastes are permanently removed after 30 days;
 daily views and stale rate-limit records are also pruned. Increasing the batch size is a measured
 operational choice, not a substitute for finding slow cascades or blocked transactions.
+
+## Analytics
+
+Each counted visit, raw read and code copy is one row in `paste_event`, written inline after the
+read is authorized; a failed write is logged and never fails the read. A job inside each process
+folds the rows into `paste_stats_day` and `paste_breakdown_day` every 15 minutes under an advisory
+lock, so replicas don't duplicate the work. It recomputes only days after the last finalized day,
+replacing their rows, so a repeated or interrupted run is safe. Rows are deleted once their day is
+finalized and more than two days old; the Analytics page reads days that aren't finalized yet
+straight from `paste_event`, so its figures never wait for the job. Expect `paste_event` to hold
+about three days of traffic, one row per hit; if it grows past that the job is failing (look for
+`Analytics rollup failed` in the logs or `rollupLastRunAt` in the metrics). Rollup rows are removed
+after `ANALYTICS_RETENTION_DAYS` by the cleanup run.
 
 ## Telemetry
 

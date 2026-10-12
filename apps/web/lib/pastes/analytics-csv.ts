@@ -1,5 +1,4 @@
-import type { AnalyticsReport } from "./analytics"
-import { METRICS } from "./analytics"
+import { type AnalyticsReport, METRICS } from "./analytics"
 
 // The chart's data as a CSV: one row per day (per hour in the 24h range), a column per metric.
 const COLUMNS = ["date", "views", "unique_visitors", "code_copies", "raw_api_hits"]

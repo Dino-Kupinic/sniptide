@@ -133,6 +133,15 @@ if clients can't reach the app without passing through whatever sets that header
 Self-hosted instances send no analytics. PostHog only loads when `POSTHOG_KEY` is set (see
 `apps/web/.env.example`), and the key is read at runtime, so the same image never phones home.
 
+The Analytics page counts views, unique visitors, code copies, raw reads, referrers, devices and
+countries in your own database, with no cookies and nothing sent anywhere else. A visitor is a
+daily hash of the address and browser under a random salt that is deleted after a day, so nobody
+can link it back to a person or follow one across days. Only the referrer's host is kept, never the
+path. Crawlers, link previews, prefetches and scripts aren't counted as views. Countries come from
+the CDN's header (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), so there is
+no country data without one in front. `GET /api/stats?range=7d|30d|90d|24h` returns the same
+figures as JSON for the signed-in account.
+
 Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
 separate domain, for example a short one:
 

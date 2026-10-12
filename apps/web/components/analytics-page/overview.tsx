@@ -60,14 +60,16 @@ export function Overview({
                 <span className="font-heading text-[26px] leading-9 font-bold tracking-[-0.02em] tabular-nums lg:text-[30px]">
                   {formatNumber(kpi.value)}
                 </span>
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    kpi.delta >= 0 ? "text-link" : "text-muted-foreground",
-                  )}
-                >
-                  {formatDelta(kpi.delta)}
-                </span>
+                {kpi.delta === null ? null : (
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      kpi.delta >= 0 ? "text-link" : "text-muted-foreground",
+                    )}
+                  >
+                    {formatDelta(kpi.delta)}
+                  </span>
+                )}
               </span>
             </button>
           )

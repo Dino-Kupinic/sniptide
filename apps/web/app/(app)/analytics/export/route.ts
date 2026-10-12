@@ -1,8 +1,9 @@
 import { getSession } from "@/lib/auth"
-import { getAnalyticsReport, parseRange } from "@/lib/pastes/analytics"
+import { parseRange } from "@/lib/pastes/analytics"
 import { analyticsCsv, analyticsCsvName } from "@/lib/pastes/analytics-csv"
+import { getAnalyticsReport } from "@/lib/pastes/analytics-report"
 
-// The Analytics page's Export CSV: /analytics/export?range=30d&paste=<slug>.
+// The Analytics page's Export CSV: /analytics/export?range=30d&paste=<slug> (or &collection=<slug>).
 export async function GET(request: Request) {
   if (!(await getSession())) return new Response("Unauthorized", { status: 401 })
 
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
   const report = await getAnalyticsReport({
     range: parseRange(url.searchParams.get("range") ?? undefined),
     paste: url.searchParams.get("paste") ?? undefined,
+    collection: url.searchParams.get("collection") ?? undefined,
   })
 
   return new Response(analyticsCsv(report), {

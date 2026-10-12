@@ -154,6 +154,8 @@ describeDb("one-time reads", () => {
   })
 
   test("simultaneous views of an ordinary paste are all counted", async () => {
+    // Views come from browsers; a request with no user agent isn't counted.
+    request.headers = new Headers({ "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/120.0" })
     await Promise.all(Array.from({ length: 8 }, () => page("plain")))
 
     expect((await pasteRow("plain"))?.views).toBe(8)
