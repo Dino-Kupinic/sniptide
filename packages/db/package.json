@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "drizzle-orm": "catalog:runtime",
-    "postgres": "catalog:runtime"
+    "postgres": "catalog:runtime",
+    "zod": "catalog:runtime"
   },
   "devDependencies": {
     "@types/node": "catalog:tooling",
