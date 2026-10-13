@@ -162,6 +162,10 @@ export const openApiDocument = {
         "Your own pastes and collections, for the `sniptide` CLI, agents and scripts. Authenticate with a personal API token from Settings → API tokens. Reads need the read scope, creating needs write.",
     },
     {
+      name: "MCP",
+      description: "Coding agent tools over Streamable HTTP, authenticated by personal API token.",
+    },
+    {
       name: "Env",
       description:
         "Env groups: environment variables synced with `.env` files by `sniptide env`. Values are encrypted at rest.",
@@ -365,6 +369,59 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/mcp": {
+      post: {
+        operationId: "mcpRequest",
+        tags: ["MCP"],
+        summary: "Call the Sniptide MCP server",
+        description:
+          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No OAuth discovery or SSE sessions. See packages/mcp/README.md for client configuration.",
+        security: [{ apiToken: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { type: "object" },
+              example: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "An MCP JSON-RPC response (tool failures use isError).",
+            content: {
+              "application/json": {
+                schema: { type: "object" },
+                example: { jsonrpc: "2.0", id: 1, result: { tools: [] } },
+              },
+            },
+          },
+          "202": { description: "Notification accepted, no response body." },
+          "400": { description: "Invalid JSON-RPC message or protocol version." },
+          "406": { description: "Accept must include application/json and text/event-stream." },
+          "413": { description: "Request exceeds 8 MiB." },
+          "415": { description: "Content-Type must be application/json." },
+          ...tokenErrors,
+        },
+      },
+      get: {
+        operationId: "mcpStream",
+        tags: ["MCP"],
+        summary: "Check MCP stream support",
+        security: [{ apiToken: [] }],
+        responses: {
+          "405": { description: "No standalone SSE stream; use POST." },
+          ...tokenErrors,
+        },
+      },
+      delete: {
+        operationId: "mcpDeleteSession",
+        tags: ["MCP"],
+        summary: "Check MCP session deletion support",
+        security: [{ apiToken: [] }],
+        responses: { "405": { description: "No sessions to delete; use POST." }, ...tokenErrors },
+      },
+    },
     "/api/v1/me": {
       get: {
         operationId: "getTokenOwner",
@@ -565,6 +622,45 @@ export const openApiDocument = {
             "No paste of yours has that id, or it is trashed or expired.",
             "No paste with that id.",
           ),
+          ...tokenErrors,
+        },
+      },
+      put: {
+        operationId: "updateOwnPaste",
+        tags: ["Token API"],
+        summary: "Update one of your pastes",
+        description:
+          "Replaces title and all files. Omitted metadata is preserved. Explicit null clears collection/source. Link, expiry, password and burn setting stay unchanged. Records an edit in history. Requires write scope.",
+        security: [{ apiToken: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CaptureUpdate" },
+              example: pasteExample.capture,
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "The updated paste.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { paste: { $ref: "#/components/schemas/Paste" } },
+                },
+                example: { paste: pasteExample.paste },
+              },
+            },
+          },
+          "400": jsonError("Invalid input.", "Check the paste fields."),
+          "404": jsonError(
+            "No live paste of yours has that id, or the collection does not exist.",
+            "No paste with that id.",
+          ),
+          "413": jsonError("Request or storage limit exceeded.", "The request body is too large."),
           ...tokenErrors,
         },
       },
@@ -953,6 +1049,26 @@ export const openApiDocument = {
             items: { type: "string", maxLength: 50 },
             description: "Stored lowercase, without duplicates.",
           },
+          source: { $ref: "#/components/schemas/Source" },
+          files: {
+            type: "array",
+            minItems: 1,
+            maxItems: 10,
+            items: { $ref: "#/components/schemas/File" },
+          },
+        },
+      },
+      CaptureUpdate: {
+        type: "object",
+        required: ["title", "files"],
+        description:
+          "Replaces title/files; omitted metadata is preserved. No creation defaults apply.",
+        properties: {
+          title: { type: "string", minLength: 1, maxLength: 120 },
+          description: { type: "string", maxLength: 280 },
+          visibility: { enum: ["private", "unlisted", "public"] },
+          collection: { type: ["string", "null"] },
+          tags: { type: "array", maxItems: 20, items: { type: "string", maxLength: 50 } },
           source: { $ref: "#/components/schemas/Source" },
           files: {
             type: "array",

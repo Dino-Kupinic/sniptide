@@ -11,6 +11,8 @@
     "prepare": "husky",
     "cli": "bun packages/cli/src/bin.ts",
     "test:cli": "bun --filter @sniptide/cli test",
+    "mcp": "bun packages/mcp/src/bin.ts",
+    "test:mcp": "bun --filter @sniptide/mcp test",
     "load:seed": "bun apps/web/load/seed.ts",
     "load:run": "bun apps/web/load/run.ts",
     "test:e2e": "bun --filter web test:e2e"

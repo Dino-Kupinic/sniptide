@@ -40,6 +40,7 @@ jobs:
       - run: bun run typecheck
 
       - run: bun run test:cli
+      - run: bun run test:mcp
 
       - run: bun run build
 

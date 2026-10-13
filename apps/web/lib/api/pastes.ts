@@ -286,6 +286,87 @@ export async function getCapture(owner: string, idOrSlug: string): Promise<ApiPa
   return paste ?? null
 }
 
+// Replaces title/files, preserving omitted metadata and all sharing controls. Token callers
+// never use the browser session. The account lock and transaction serialize edits and budgets.
+export async function updateCapture(
+  owner: string,
+  idOrSlug: string,
+  input: unknown,
+): Promise<ApiPaste> {
+  const replacement = captureSchema.pick({ title: true, files: true }).passthrough().parse(input)
+  const data = parsePasteInput({
+    title: replacement.title,
+    description: "",
+    files: replacement.files.map(({ name, content }) => ({ name, content, language: "text" })),
+    visibility: "private",
+    expiry: "keep",
+    slug: "",
+    collection: null,
+    password: "",
+    burnAfterRead: false,
+  })
+  const existing = await getCapture(owner, idOrSlug)
+  if (!existing) throw new ApiError(404, "No paste with that id.")
+  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0)
+  try {
+    await getDb().transaction(async (tx) => {
+      await enforceBudget(tx, owner, bytes, existing.id)
+      const [record] = await tx
+        .select()
+        .from(pasteTable)
+        .where(and(eq(pasteTable.id, existing.id), liveOwned(owner)))
+        .for("update")
+      if (!record) throw new ApiError(404, "No paste with that id.")
+      const capture = captureSchema.parse({
+        description: record.description,
+        visibility: record.visibility,
+        collection: record.collection,
+        tags: record.tags,
+        source: record.source,
+        ...replacement,
+      })
+      const description = z.string().trim().max(280).parse(capture.description)
+      if (capture.collection && !(await ownsCollection(owner, capture.collection)))
+        throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
+      const now = new Date()
+      await tx
+        .update(pasteTable)
+        .set({
+          title: data.title,
+          description,
+          bytes,
+          visibility: capture.visibility,
+          collection: capture.collection,
+          tags: capture.tags,
+          source: capture.source,
+          updatedAt: now,
+        })
+        .where(eq(pasteTable.id, record.id))
+      await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
+      await tx.insert(pasteFile).values(
+        data.files.map((file, position) => ({
+          pasteId: record.id,
+          position,
+          name: file.name,
+          language: file.language,
+          content: file.content,
+          startLine: capture.files[position]?.lines?.start ?? null,
+          endLine: capture.files[position]?.lines?.end ?? null,
+        })),
+      )
+      await tx
+        .insert(pasteRevision)
+        .values({ pasteId: record.id, message: "Edited via API", createdAt: now })
+    })
+  } catch (error) {
+    if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
+    throw error
+  }
+  const updated = await getCapture(owner, existing.id)
+  if (!updated) throw new ApiError(404, "No paste with that id.")
+  return updated
+}
+
 // Postgres keeps microseconds and JavaScript milliseconds, so cursors compare and order on
 // timestamps truncated to the millisecond; the id breaks ties.
 const ms = (column: typeof pasteTable.updatedAt | typeof pasteTable.createdAt) =>
