@@ -26,11 +26,26 @@ Commits and PR titles follow [Conventional Commits](https://www.conventionalcomm
 
 ## API reference
 
-The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics) are documented at
+The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics, and the token API
+under `/api/v1` that the CLI uses) are documented at
 `/docs/api`, rendered by [Scalar](https://scalar.com) from the OpenAPI document at
 `/api/openapi.json`. The document lives in `apps/web/lib/openapi.ts`. When you add a route
 handler, document it there, or list it as internal if it only serves the web app; `bun test` fails
 until you do.
+
+## CLI
+
+The [Sniptide CLI](packages/cli/README.md) captures files, folders or globs as pastes and restores their
+relative paths in another project, and syncs `.env` files with env groups (`sniptide env`). It
+authenticates with a personal API token from Settings → API tokens and talks to the `/api/v1`
+endpoints ([summary](packages/cli/API.md)). Env values are encrypted at rest with a key derived from
+`ENV_SECRETS_KEY`, or from `BETTER_AUTH_SECRET` when that isn't set (`apps/web/.env.example`).
+
+```sh
+bun --filter @sniptide/cli build
+node packages/cli/dist/sniptide.js --help
+bun run test:cli
+```
 
 ## Database
 
@@ -186,6 +201,7 @@ bun run format
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
 - `packages/auth`: better-auth setup on the Drizzle adapter
+- `packages/cli`: code capture and restore CLI, with a dependency-free Node.js executable
 - `packages/db`: Drizzle schema, Postgres client and migrations
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
   theme. Published to npm for the website repo; see `packages/ui/README.md`

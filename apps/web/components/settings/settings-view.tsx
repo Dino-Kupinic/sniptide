@@ -3,12 +3,15 @@
 import { Button } from "@sniptide/ui/components/button"
 import { Progress } from "@sniptide/ui/components/progress"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ChevronRightIcon, KeyRoundIcon } from "lucide-react"
+import { ChevronRightIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import type { TokenSummary } from "@/lib/api/tokens"
 import { authClient } from "@/lib/auth-client"
+import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
+import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
 import { DeleteAccountSection } from "./delete-account"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
@@ -50,12 +53,14 @@ export function SettingsView({
   preferences,
   counts,
   storage,
+  api,
 }: {
   initialTab: SettingsTab
   profile: ProfileState
   preferences: Preferences
   counts: WorkspaceCounts
   storage: { usedMb: number; limitMb: number }
+  api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const router = useRouter()
   const [tab, setTab] = React.useState(initialTab)
@@ -146,25 +151,10 @@ export function SettingsView({
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
         {tab === "api" ? (
-          <SettingsSection
-            title="API tokens"
-            description="For scripts and editor plugins that create pastes for you."
-          >
-            <div className="flex flex-col items-start gap-2 border border-dashed border-input p-5">
-              <KeyRoundIcon className="size-5 text-muted-foreground" />
-              <p className="text-sm font-medium">No API yet</p>
-              <p className="text-[13px] text-muted-foreground">
-                Sniptide doesn't have a public API yet, so there are no tokens to create. They'll
-                show up here when it does.
-              </p>
-              <a
-                href="/docs/api"
-                className="text-[13px] text-foreground underline underline-offset-4 hover:text-primary"
-              >
-                See the HTTP endpoints available today
-              </a>
-            </div>
-          </SettingsSection>
+          <>
+            <ApiTokensSection tokens={api.tokens} origin={api.origin} />
+            <EnvGroupsSection groups={api.envGroups} />
+          </>
         ) : null}
         {tab === "billing" ? (
           <SettingsSection title="Plan" description="Sniptide is free while it's in early access.">

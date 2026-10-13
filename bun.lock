@@ -65,6 +65,19 @@
         "typescript": "catalog:tooling",
       },
     },
+    "packages/cli": {
+      "name": "@sniptide/cli",
+      "version": "0.1.0",
+      "bin": {
+        "sniptide": "dist/sniptide.js",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:tooling",
+        "@types/node": "catalog:tooling",
+        "@workspace/typescript": "workspace:*",
+        "typescript": "catalog:tooling",
+      },
+    },
     "packages/db": {
       "name": "@workspace/db",
       "version": "0.0.0",
@@ -755,6 +768,8 @@
     "@simple-libs/stream-utils": ["@simple-libs/stream-utils@2.0.0", "", {}, "sha512-fCTuZK4QBa+39Oz9l4OGfJfz+GpwCp3AqO7Zch3to99xHPgstVsRFpeQ8LNd2o1Gv8raL2mCFwiaHh7bFSp5DQ=="],
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@4.0.0", "", {}, "sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ=="],
+
+    "@sniptide/cli": ["@sniptide/cli@workspace:packages/cli"],
 
     "@sniptide/ui": ["@sniptide/ui@workspace:packages/ui"],
 

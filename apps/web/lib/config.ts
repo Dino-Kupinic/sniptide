@@ -55,6 +55,7 @@ const schema = z.object({
   MIGRATIONS_DIR: z.string().optional(),
 
   BETTER_AUTH_SECRET: z.string().optional(),
+  ENV_SECRETS_KEY: z.string().min(32, { message: "must be at least 32 characters." }).optional(),
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
   COOKIE_DOMAIN: z.string().optional(),
@@ -98,6 +99,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     databaseUrl: value.DATABASE_URL,
     migrationsDir: value.MIGRATIONS_DIR,
     authSecret: value.BETTER_AUTH_SECRET,
+    envSecretsKey: value.ENV_SECRETS_KEY,
     appUrl: value.BETTER_AUTH_URL,
     trustedOrigins: value.BETTER_AUTH_TRUSTED_ORIGINS,
     cookieDomain: value.COOKIE_DOMAIN,

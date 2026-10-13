@@ -9,6 +9,8 @@
     "format": "turbo format",
     "typecheck": "turbo typecheck",
     "prepare": "husky",
+    "cli": "bun packages/cli/src/bin.ts",
+    "test:cli": "bun --filter @sniptide/cli test",
     "load:seed": "bun apps/web/load/seed.ts",
     "load:run": "bun apps/web/load/run.ts",
     "test:e2e": "bun --filter web test:e2e"

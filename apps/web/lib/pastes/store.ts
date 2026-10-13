@@ -965,7 +965,7 @@ export async function isSlugAvailable(slug: string, except?: string) {
   return slug === except || !(await findRecord(slug))
 }
 
-function randomSlug() {
+export function randomSlug() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
   const bytes = crypto.getRandomValues(new Uint8Array(6))
   return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")

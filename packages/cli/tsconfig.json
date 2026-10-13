@@ -1,0 +1,10 @@
+{
+  "extends": "@workspace/typescript/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["node", "bun"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}
