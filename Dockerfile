@@ -13,6 +13,7 @@ COPY package.json bun.lock ./
 COPY apps/web/package.json apps/web/
 COPY packages/auth/package.json packages/auth/
 COPY packages/cli/package.json packages/cli/
+COPY packages/mcp/package.json packages/mcp/
 COPY packages/db/package.json packages/db/
 COPY packages/typescript/package.json packages/typescript/
 COPY packages/ui/package.json packages/ui/

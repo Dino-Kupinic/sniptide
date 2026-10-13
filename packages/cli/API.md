@@ -23,6 +23,7 @@ or not the token owner's, `409` env group limit, `413` size or storage limit, an
 | --- | --- | --- | --- |
 | Check token | `GET /me` | read | `{"user":{"id","name","username"},"scopes":["read","write"]}` |
 | Create capture | `POST /pastes` | write | `201 {"paste": Paste}` |
+| Update capture | `PUT /pastes/{id or slug}` | write | `{"paste": Paste}` (title/files replaced; omitted metadata preserved) |
 | Read capture | `GET /pastes/{id or slug}` | read | `{"paste": Paste}` |
 | List/search | `GET /pastes?q&tag&language&collection&limit&cursor` | read | `{"pastes": [Summary], "nextCursor": string or null}` |
 | Ordered collection | `GET /collections/{slug}/pastes?cursor` | read | `{"pastes": [Paste], "nextCursor": string or null}` |

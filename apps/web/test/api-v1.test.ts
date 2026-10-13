@@ -5,7 +5,7 @@ import { GET as getCollectionPastes } from "@/app/api/v1/collections/[slug]/past
 import { DELETE as deleteEnv, GET as getEnv, PUT as putEnv } from "@/app/api/v1/env/[group]/route"
 import { GET as listEnv } from "@/app/api/v1/env/route"
 import { GET as me } from "@/app/api/v1/me/route"
-import { GET as getPaste } from "@/app/api/v1/pastes/[id]/route"
+import { GET as getPaste, PUT as updatePaste } from "@/app/api/v1/pastes/[id]/route"
 import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/route"
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
 import { createToken, hashToken, listTokens } from "@/lib/api/tokens"
@@ -111,6 +111,14 @@ describeDb("token API", () => {
         call("pastes", token, { method: "POST", body: JSON.stringify(capture) }),
       )
       expect(created.status).toBe(403)
+      expect(
+        (
+          await updatePaste(
+            call("pastes/anything", token, { method: "PUT", body: JSON.stringify(capture) }),
+            ctx({ id: "anything" }),
+          )
+        ).status,
+      ).toBe(403)
       const pushed = await putEnv(
         call("env/app", token, { method: "PUT", body: JSON.stringify({ variables: [] }) }),
         ctx({ group: "app" }),
