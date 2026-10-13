@@ -48,6 +48,9 @@ jobs:
       - name: Build the Docker image
         run: docker build --tag sniptide:ci .
 
+      - name: Verify the Docker image against a fresh database
+        run: bash scripts/test-docker.sh sniptide:ci
+
   # Runs the store and routes against a real Postgres: the access rules and the one-time-read
   # claim live in SQL, so a mock would prove nothing.
   tests:

@@ -131,13 +131,44 @@ BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose --profile app up -d --
 
 ## Self-hosting
 
-Sniptide is the app container plus Postgres. `docker-compose.yml` runs both:
+The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM64 support.
+It contains the standalone Next.js server, static assets and database migrations. Settings come
+from environment variables at runtime; no database or auth credentials are needed to build it.
+
+With an existing Postgres database, create a `sniptide.env` file (keep it out of source control):
+
+```dotenv
+DATABASE_URL=postgres://user:password@your-postgres-host:5432/sniptide
+BETTER_AUTH_SECRET=replace-with-a-long-random-secret
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+Generate the secret with `openssl rand -hex 32` and keep it across restarts. Use the public HTTPS
+URL for `BETTER_AUTH_URL` when serving through a reverse proxy. The database host must be reachable
+from the container; `localhost` inside it refers to the container itself.
+
+```bash
+docker run -d --name sniptide --restart unless-stopped \
+  -p 3000:3000 --env-file sniptide.env ghcr.io/dino-kupinic/sniptide:latest
+```
+
+On startup, Sniptide applies migrations before serving requests. `GET /api/health` checks the
+server and database, and the image includes a Docker health check. Back up your database before
+upgrading; see [the rollout guide](docs/scaling.md) for migration and rollback considerations.
+
+For a new database, `docker-compose.yml` runs the published app image plus Postgres:
 
 ```bash
 export BETTER_AUTH_SECRET=$(openssl rand -hex 32)   # keep it; sessions depend on it
 export BETTER_AUTH_URL=https://paste.example.com     # the URL people open
-docker compose --profile app up -d
+docker compose --profile app up -d --no-build
 ```
+
+Compose uses `latest` by default. For repeatable deployments, set
+`SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:1.2.3` (substitute an actual release), or pin an image
+digest. To update, run `docker compose --profile app pull` then
+`docker compose --profile app up -d --no-build`. To build from source instead, run
+`docker compose --profile app up -d --build`.
 
 Put your reverse proxy (or Coolify) in front of port 3000, and back up the `postgres` volume
 (for example with `pg_dump`). Set `POSTGRES_PASSWORD` to change the database password.
@@ -193,8 +224,32 @@ database and a production build.
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
-typecheck, `next build`, a `docker build` of the production image, Bun integration tests, and
+typecheck, `next build`, a production Docker build and startup test, Bun integration tests, and
 Chromium browser tests against an isolated PostgreSQL database and production build.
+
+### Container releases
+
+Push a semantic version tag, such as `v1.2.3` (or `1.2.3`), to publish a release. The
+`Publish Docker image` workflow builds and tests both architectures against fresh Postgres
+databases, then publishes one multi-platform image to GHCR using GitHub's built-in token.
+Stable releases get `1.2.3`, `1.2`, `1` (except major zero) and `latest` tags. Prereleases such as
+`v1.3.0-beta.1` get only `1.3.0-beta.1`, so they do not replace stable tags. Publish stable tags in
+version order, letting each workflow finish before the next; the last completed stable release
+updates `latest`.
+
+After the first publish, a repository owner must set the `sniptide` package's visibility to
+**Public** in [GitHub's package settings](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images) so self-hosters can pull it without signing in. Release
+tags do not create a GitHub Release automatically.
+
+The same container test runs on PRs. To run it locally after building:
+
+```bash
+docker build -t sniptide:test .
+bash scripts/test-docker.sh sniptide:test
+```
+
+The test creates and removes its own containers and network, without using host ports or an
+existing database.
 
 ## Checks
 
