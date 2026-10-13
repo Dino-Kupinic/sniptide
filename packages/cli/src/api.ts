@@ -5,7 +5,11 @@ import { CliError } from "./errors"
 export class Api {
   constructor(private config: Config) {}
 
-  async request(endpoint: string, body?: unknown): Promise<Record<string, unknown>> {
+  async request(
+    endpoint: string,
+    body?: unknown,
+    method: "GET" | "POST" | "PUT" | "DELETE" = body === undefined ? "GET" : "POST",
+  ): Promise<Record<string, unknown>> {
     if (!this.config.token || /[\r\n]/.test(this.config.token)) {
       throw new CliError(
         "Set SNIPTIDE_TOKEN or run sniptide login --token-stdin.",
@@ -16,7 +20,7 @@ export class Api {
     let response: Response
     try {
       response = await fetch(`${this.config.baseUrl}/api/v1/${endpoint}`, {
-        method: body === undefined ? "GET" : "POST",
+        method,
         headers: {
           Authorization: `Bearer ${this.config.token}`,
           Accept: "application/json",
@@ -46,11 +50,17 @@ export class Api {
     }
     if (response.status === 404) {
       throw new CliError(
-        "Resource or CLI API not found. This instance needs the WRK-106 token API and the CLI endpoints described in API.md.",
+        "Not found. Check the id or name, and that the instance runs a Sniptide version with the CLI API.",
         "NOT_FOUND",
         1,
       )
     }
+    if (response.status === 413)
+      throw new CliError(
+        "Sniptide refused the size: the paste or your account's storage is over its limit.",
+        "TOO_LARGE",
+        1,
+      )
     if (!response.ok) {
       const retry = response.headers.get("retry-after")
       const suffix =

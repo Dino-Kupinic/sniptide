@@ -1,6 +1,6 @@
 import { CliError } from "./errors"
 
-// The versioned CLI wire contract. Server integration depends on WRK-106; see API.md.
+// The versioned CLI wire contract, served by apps/web/app/api/v1; see API.md.
 export interface CodeFile {
   name: string
   language: string

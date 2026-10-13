@@ -1,10 +1,9 @@
 # Sniptide CLI
 
 One CLI for people and coding agents to capture code, preserve its folder structure, and reuse it in
-another project. This is the WRK-115 client foundation. **Remote commands are not usable against the
-current Sniptide app yet:** WRK-106 must supply scoped personal tokens, and the server must implement
-the proposed [CLI API contract](API.md). The integration suite uses a local contract server, not the
-production service. Offline bundle export and import work now.
+another project, and to sync a project's `.env` with Sniptide. It talks to the instance's token API
+([summary](API.md), full reference at `/docs/api`) with a personal API token from Settings → API
+tokens. Offline bundle export and import work without an account.
 
 ## Run from this repository
 
@@ -21,9 +20,10 @@ project, create an alias with the absolute location of your checkout:
 alias sniptide='node /path/to/sniptide/packages/cli/dist/sniptide.js'
 ```
 
-This package is private while the server contract is pending; it is not published to npm. During
-local development, `bun run cli <command>` runs the source, and `bun run test:cli` runs the built
-Node executable against temporary projects and a local HTTP server.
+This package is not published to npm yet. During local development, `bun run cli <command>` runs the
+source, and `bun run test:cli` runs the built Node executable against temporary projects and a local
+HTTP server. `apps/web/test/cli-roundtrip.test.ts` runs the CLI against the app's real route handlers
+and database.
 
 ## Move a component between projects today
 
@@ -48,7 +48,7 @@ permissions and never replaces an existing file.
 A paste holds up to 10 UTF-8 text files and 1 MiB of content, matching the app's default limits. Narrow
 larger selections instead of silently dropping files. Binary files, symbolic links, `.env` files,
 Git internals and build/dependency directories are excluded. Git-ignored files are skipped. Explicit
-unsafe paths fail. This CLI transfers code; env files belong to the future `env` commands.
+unsafe paths fail. Code captures never include env files; those go through `sniptide env`.
 
 Selections use 1-based inclusive line numbers and require exactly one file:
 
@@ -64,10 +64,13 @@ that commit (including untracked files). Credentials and query strings are remov
 URLs. Outside a Git repository, source metadata is null. Files retain their language; unknown
 extensions use `text`. The original working files are captured, including uncommitted edits.
 
-## Connect to an instance when the API is available
+## Connect to an instance
+
+Create a token in Settings → API tokens (read-only, or with write access to create pastes and push
+env groups), then:
 
 ```sh
-export SNIPTIDE_TOKEN='your-scoped-api-token'
+export SNIPTIDE_TOKEN='snpt_…'
 sniptide push 'src/components/**/*.tsx' --title 'Buttons' --collection ui --tag react --json
 sniptide pull PASTE_ID --dir src/imported --json
 sniptide pull collection:ui --dry-run --json
@@ -129,6 +132,24 @@ or network access. On pull it fetches the source and checks the destination but 
 
 ## Env sync
 
-WRK-111 will add `sniptide env push`, `sniptide env pull`, and `sniptide env run -- <command>` to this
-same executable. No separate env CLI is created. Until then, `sniptide env` returns
-`NOT_IMPLEMENTED`; it never treats secrets as ordinary code captures.
+Env groups hold a project's environment variables on your instance, encrypted at rest. Names are
+1–64 lowercase letters, digits, `.`, `-` and `_`.
+
+```sh
+sniptide env push my-app                 # upload ./.env, replacing the group's variables
+sniptide env pull my-app                 # write ./.env (0600); refuses to overwrite without --force
+sniptide env pull my-app --stdout        # print it instead, e.g. into another tool
+sniptide env run my-app -- bun dev       # run a command with the variables set
+sniptide env list                        # groups and how many variables each holds
+sniptide env delete my-app
+```
+
+`--file PATH` reads or writes another file than `.env`, and `--dry-run` shows what push or pull would
+do without changing anything. Push reads dotenv syntax: `KEY=value`, an optional `export`, `#`
+comments, single-quoted literals, and double-quoted values with `\n` escapes or line breaks.
+Variables are not expanded. A push replaces the whole group, so a variable removed from the file is
+removed from the group. `env run` puts the group's variables on top of the current environment,
+passes stdio and signals through, and exits with the command's status (127 when it isn't found).
+
+Values are never printed, in JSON output included, except by `env pull --stdout`. With `--json`,
+push and pull report variable names only.

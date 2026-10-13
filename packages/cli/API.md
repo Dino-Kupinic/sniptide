@@ -1,100 +1,57 @@
-# Proposed CLI API contract (WRK-115)
+# CLI API (WRK-115, WRK-111)
 
-**This is a client contract proposal, not an API currently served by Sniptide.** The implementation in
-`src/contract.ts` and the CLI integration tests use this shape. The public API and token backend must
-be implemented before the remote CLI can be shipped or WRK-115 can meet its hosted round-trip
-acceptance criterion. Do not describe these routes as available in the app's OpenAPI document until
-route handlers exist.
+The CLI talks to the token API under `/api/v1`, served by `apps/web/app/api/v1`. The full reference,
+with request and response schemas and examples, is the app's OpenAPI document (`/docs/api` on any
+instance, written in `apps/web/lib/openapi.ts`). This page summarizes the contract the CLI relies on.
 
-## Prerequisites and remaining server work
+## Authentication
 
-- WRK-106: account-owned, hashed personal tokens with `read` and `write` scopes, revocation,
-  last-used timestamps and token management in settings. Every route below authenticates the
-  bearer token; session cookies are not used by the CLI.
-- Add versioned paste/list/collection handlers. Reuse existing account limits, validation,
-  account storage budgets and collection ownership checks; filter deleted and expired pastes.
-  `read` tokens must not authorize POST, and private code must remain account-scoped.
-- Persist source metadata, selected line ranges and tags. The current paste schema has no fields
-  for these. Paths can be stored in ordered `paste_file.name`, subject to its 120-character limit.
-- Define a stable collection order and cursor; the current collection grouping alone does not
-  define a reusable-code import order. Return all file content in collection pages.
-- Document and test the real handlers in the app's OpenAPI reference, then run the actual CLI
-  against the app and database. The current localhost suite checks client behavior only.
-- WRK-111: secret-group APIs and `env` subcommands, under this same executable.
+Every request sends `Authorization: Bearer snpt_…`, a personal API token created in Settings → API
+tokens. Tokens are stored as SHA-256 hashes, can expire, record when they were last used, and are
+revoked by deleting them in Settings. Scopes: `read` (every token) lists and pulls pastes and env
+groups; `write` also creates pastes and pushes or deletes env groups. Session cookies are not used.
 
-All URLs append `/api/v1` to the instance's configured URL, including a deployment path prefix.
-Requests use `Authorization: Bearer TOKEN` and `Accept: application/json`. POST also uses
-`Content-Type: application/json`. Responses should use `Cache-Control: private, no-store`.
-
-## Capture and paste shape
-
-```json
-{
-  "title": "Button",
-  "description": "Reusable button and hook",
-  "visibility": "private",
-  "collection": "ui",
-  "tags": ["react", "component"],
-  "source": {
-    "repository": "https://github.com/example/project.git",
-    "commit": "0123456789012345678901234567890123456789",
-    "dirty": false
-  },
-  "files": [
-    {
-      "name": "src/components/Button.tsx",
-      "language": "typescript",
-      "content": "export const Button = () => <button>Go</button>\n",
-      "lines": { "start": 10, "end": 10 }
-    }
-  ]
-}
-```
-
-`collection` is a slug or null. `source` is null outside Git; within Git, repository may be null if
-there is no network origin. `lines` is omitted for whole files. All line numbers are 1-based,
-inclusive. `dirty` distinguishes current code from the recorded HEAD commit. A returned paste has
-these fields plus nonempty `id` and `slug` strings. File names are root-relative portable paths and
-file order is preserved.
-
-Client limits: title 1–120 characters, description at most 280 characters, up to 20 tags of 1–50
-characters, 1–10 files, path length at most 120 characters, and 1 MiB content per capture. The server
-must validate independently and enforce its own configured limits; clients cannot bypass budgets.
+URLs append `/api/v1` to the instance's configured URL, including a deployment path prefix.
+Responses carry `Cache-Control: private, no-store`. Errors are `{ "ok": false, "error": "…" }` with
+`400` invalid input, `401` missing/invalid/expired/revoked token, `403` missing scope, `404` absent
+or not the token owner's, `409` env group limit, `413` size or storage limit, and `429` rate limited
+(with `Retry-After`). The CLI prints none of these bodies.
 
 ## Endpoints
 
 | Operation | Method and path | Scope | Success body |
 | --- | --- | --- | --- |
-| Validate login | `GET /me` | Any valid personal token | `{"user":{"id":"user-id"},"scopes":["read","write"]}` |
-| Create capture | `POST /pastes` | write | `{"paste": Paste}` (201 or 200) |
-| Read capture | `GET /pastes/{id}` | read | `{"paste": Paste}` |
-| List/search captures | `GET /pastes` | read | `{"pastes": [Summary], "nextCursor": string or null}` |
-| Read ordered collection | `GET /collections/{slug}/pastes` | read | `{"pastes": [Paste], "nextCursor": string or null}` |
+| Check token | `GET /me` | read | `{"user":{"id","name","username"},"scopes":["read","write"]}` |
+| Create capture | `POST /pastes` | write | `201 {"paste": Paste}` |
+| Read capture | `GET /pastes/{id or slug}` | read | `{"paste": Paste}` |
+| List/search | `GET /pastes?q&tag&language&collection&limit&cursor` | read | `{"pastes": [Summary], "nextCursor": string or null}` |
+| Ordered collection | `GET /collections/{slug}/pastes?cursor` | read | `{"pastes": [Paste], "nextCursor": string or null}` |
+| List env groups | `GET /env` | read | `{"groups": [{"slug","variables","createdAt","updatedAt"}]}` |
+| Read env group | `GET /env/{group}` | read | `{"group": {"slug","updatedAt","variables":[{"name","value"}]}}` |
+| Replace env group | `PUT /env/{group}` with `{"variables": [...]}` | write | `{"group": …}` |
+| Delete env group | `DELETE /env/{group}` | write | `{"ok": true}` |
 
-POST `/pastes` takes the Capture shape as its body. The collection must exist and belong to the
-account. No collection is created implicitly. Creation should be transactional across the paste,
-files, metadata and tags. CLI does not retry POST automatically.
+A capture is `{ title, description, visibility, collection, tags, source, files }` where each file is
+`{ name, content, lines? }` and `name` is a root-relative path (at most 120 characters). The server
+detects each file's language from its name, stores tags lowercase, and keeps `source` (repository,
+commit, dirty) and `lines` (1-based, inclusive) as metadata. Pastes are private unless
+`visibility` says otherwise and never expire. A `collection` must already exist; none is created
+implicitly. Creation is one transaction under the account's paste, storage and hourly create
+limits, the same ones the editor applies. A returned `Paste` adds `id`, `slug`, `url`, `createdAt`,
+`updatedAt` and `expiresAt`.
 
-GET `/pastes` accepts `q` (title/name search), repeated `tag`, `language`, `collection`, `limit` (1–100)
-and opaque `cursor`. Tags should combine as AND filters; all filters compose with `q`. Summary
-requires `id` and `title`; additional summary metadata passes through the CLI's JSON output unchanged
-and can include `slug`, `languages`, `tags`, `collection` and timestamps. List/search returns one page
-per command.
+Lists and collections only include the token owner's live pastes (not trashed, not expired). Lists
+are ordered by last edit, collections by creation, both with the id breaking ties; cursors are
+opaque and stable across pages, and the last page has `nextCursor: null`. Collection pages hold 50
+full pastes; the CLI reads every page before writing, and stops at 1,000 pastes or 20 MiB.
 
-Collection pages must preserve a stable server-defined order across cursors, return full pastes,
-and end with explicit `nextCursor: null`. CLI exhausts pages before writing. A repeated cursor,
-malformed paste, duplicate output path, path collision or conflicting file prevents all writes.
-The client caps a collection at 1,000 pastes and 20 MiB total content.
-
-Failures use appropriate HTTP statuses: `400` invalid input, `401` invalid/revoked token, `403`
-insufficient scope, `404` resource absent/inaccessible, `413` body too large, `429` rate limited
-(optionally `Retry-After` as integer seconds), and `5xx` service failures. CLI deliberately does not
-print error bodies, because they can accidentally echo tokens or captured content. No redirects are
-followed; users must configure the final instance URL.
+Env groups are named 1–64 lowercase letters, digits, `.`, `-` and `_`, hold up to 500 variables
+(32 KB per value, 256 KB per group), and an account has up to 100. `PUT` replaces the whole group in
+the order given, creating it if it's new. Values are encrypted with AES-256-GCM before they are
+stored, bound to their group and name.
 
 ## Offline bundle
 
-Offline transfers use `{ "version": 1, "pastes": [Capture] }`. They need no token or network. This is
-an export/import format, not a local substitute for the Sniptide account database. A bundle may
-contain multiple ordered captures; the CLI currently exports one per push and imports all entries.
+Offline transfers use `{ "version": 1, "pastes": [Capture] }`. They need no token or network. A
+bundle may contain multiple ordered captures; the CLI exports one per push and imports all entries.
 Unknown versions, missing fields and malformed files fail before restoration.

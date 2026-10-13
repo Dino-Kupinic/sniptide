@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -17,6 +18,14 @@ import { user } from "./auth"
 export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
 
 const time = (name: string) => timestamp(name, { withTimezone: true })
+
+// Where captured code came from, recorded by the CLI (`sniptide push`). `dirty` marks code that
+// differs from the recorded commit.
+export interface PasteSource {
+  repository: string | null
+  commit: string | null
+  dirty: boolean
+}
 
 export const paste = pgTable(
   "paste",
@@ -36,6 +45,9 @@ export const paste = pgTable(
     burnAfterRead: boolean("burn_after_read").notNull().default(false),
     allowRaw: boolean("allow_raw").notNull().default(true),
     collection: text("collection"),
+    // Free-form labels for finding a paste again (`sniptide list --tag react`).
+    tags: text("tags").array().notNull().default([]),
+    source: jsonb("source").$type<PasteSource>(),
     views: integer("views").notNull().default(0),
     uniqueViews: integer("unique_views").notNull().default(0),
     createdAt: time("created_at").notNull().defaultNow(),
@@ -52,6 +64,7 @@ export const paste = pgTable(
     index("paste_expired_idx").on(table.expiresAt),
     index("paste_title_search_idx").using("gin", table.title.op("gin_trgm_ops")),
     index("paste_slug_search_idx").using("gin", table.slug.op("gin_trgm_ops")),
+    index("paste_tags_idx").using("gin", table.tags),
   ],
 )
 
@@ -66,6 +79,9 @@ export const pasteFile = pgTable(
     name: text("name").notNull(),
     language: text("language").notNull(),
     content: text("content").notNull(),
+    // The source lines a capture took, 1-based and inclusive. Null for a whole file.
+    startLine: integer("start_line"),
+    endLine: integer("end_line"),
   },
   (table) => [index("paste_file_paste_idx").on(table.pasteId, table.position)],
 )

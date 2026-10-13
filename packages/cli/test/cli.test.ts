@@ -49,7 +49,7 @@ beforeEach(async () => {
     fetch: async (req) => {
       requests.push({
         url: new URL(req.url),
-        body: req.method === "POST" ? await req.clone().json() : null,
+        body: req.method === "POST" || req.method === "PUT" ? await req.clone().json() : null,
         auth: req.headers.get("authorization"),
       })
       return handler(req)
@@ -474,7 +474,7 @@ describe("built Node CLI", () => {
   })
 })
 
-test("round-trips code through the proposed API between two projects", async () => {
+test("round-trips code through a contract server between two projects", async () => {
   await fixture()
   await fixture("src/hooks/use-button.ts", "export const useButton = () => true\n")
   let stored: Capture | undefined
@@ -528,4 +528,109 @@ test("limits response bodies before parsing JSON", async () => {
   const result = await cli(["list", "--json"])
   expect(result.code).toBe(1)
   expect(JSON.parse(result.stderr).error.code).toBe("RESPONSE_TOO_LARGE")
+})
+
+describe("env sync", () => {
+  const variables = [
+    { name: "DATABASE_URL", value: "postgres://app:hunter2@db/app" },
+    { name: "GREETING", value: "hello world" },
+    { name: "MULTI", value: "one\ntwo" },
+  ]
+  let group: { slug: string; variables: typeof variables } | null
+  beforeEach(() => {
+    group = null
+    handler = async (req) => {
+      const url = new URL(req.url)
+      if (url.pathname === "/api/v1/env")
+        return Response.json({ groups: group ? [{ slug: group.slug, variables: 3 }] : [] })
+      const slug = url.pathname.split("/").pop() ?? ""
+      if (req.method === "PUT") {
+        group = {
+          slug,
+          variables: ((await req.json()) as { variables: typeof variables }).variables,
+        }
+        return Response.json({ group: { ...group, updatedAt: "2026-10-13T00:00:00.000Z" } })
+      }
+      if (req.method === "DELETE") {
+        group = null
+        return Response.json({ ok: true })
+      }
+      return group
+        ? Response.json({ group: { ...group, updatedAt: "2026-10-13T00:00:00.000Z" } })
+        : Response.json({ ok: false, error: "No env group" }, { status: 404 })
+    }
+  })
+
+  test("push parses .env and replaces the group, never printing values", async () => {
+    await writeFile(
+      path.join(source, ".env"),
+      '# comment\nexport DATABASE_URL=postgres://app:hunter2@db/app\nGREETING="hello world" # hi\nMULTI="one\\ntwo"\n',
+    )
+    const dry = await cli(["env", "push", "my-app", "--dry-run", "--json"])
+    expect(dry.code).toBe(0)
+    expect(requests).toHaveLength(0)
+    expect(dry.stdout).not.toContain("hunter2")
+
+    const pushed = await cli(["env", "push", "my-app", "--json"])
+    expect(pushed.code).toBe(0)
+    expect(JSON.parse(pushed.stdout).data).toEqual({
+      group: "my-app",
+      variables: ["DATABASE_URL", "GREETING", "MULTI"],
+    })
+    expect(pushed.stdout).not.toContain("hunter2")
+    expect(requests[0]?.url.pathname).toBe("/api/v1/env/my-app")
+    expect(requests[0]?.body).toEqual({ variables })
+    expect(requests[0]?.auth).toBe("Bearer test-token")
+  })
+
+  test("pull writes an owner-only .env that reads back the same, and won't overwrite", async () => {
+    group = { slug: "my-app", variables }
+    const pulled = await cli(["env", "pull", "my-app", "--json"], target)
+    expect(pulled.code).toBe(0)
+    expect(pulled.stdout).not.toContain("hunter2")
+    const filename = path.join(target, ".env")
+    expect((await lstat(filename)).mode & 0o777).toBe(0o600)
+    await writeFile(path.join(source, ".env"), await readFile(filename, "utf8"))
+    await cli(["env", "push", "copy"])
+    expect(requests.at(-1)?.body).toEqual({ variables })
+
+    const again = await cli(["env", "pull", "my-app", "--json"], target)
+    expect(again.code).toBe(2)
+    expect(JSON.parse(again.stderr).error.code).toBe("PATH_CONFLICT")
+    expect((await cli(["env", "pull", "my-app", "--force"], target)).code).toBe(0)
+
+    const printed = await cli(["env", "pull", "my-app", "--stdout"], target)
+    expect(printed.stdout).toBe(
+      'DATABASE_URL=postgres://app:hunter2@db/app\nGREETING="hello world"\nMULTI="one\\ntwo"\n',
+    )
+  })
+
+  test("run injects the group into a command and passes its exit status through", async () => {
+    group = { slug: "my-app", variables }
+    const script =
+      "process.exit(process.env.GREETING === 'hello world' && process.env.MULTI === 'one\\ntwo' && process.env.KEEP === 'yes' ? 7 : 1)"
+    const result = await cli(["env", "run", "my-app", "--", "node", "-e", script], source, {
+      KEEP: "yes",
+    })
+    expect(result.code).toBe(7)
+    const missing = await cli(["env", "run", "my-app", "--", "no-such-command-sniptide"])
+    expect(missing.code).toBe(127)
+    expect((await cli(["env", "run", "my-app", "--json"])).code).toBe(2)
+  })
+
+  test("list and delete groups, and reject bad group names before any request", async () => {
+    group = { slug: "my-app", variables }
+    expect((await cli(["env", "list"])).stdout).toBe("my-app\t3 variables\n")
+    expect((await cli(["env", "delete", "my-app"])).code).toBe(0)
+    expect(requests.at(-1)?.url.pathname).toBe("/api/v1/env/my-app")
+    const count = requests.length
+    for (const args of [
+      ["env", "pull", "Bad Name"],
+      ["env", "push", "../x"],
+      ["env", "nope", "x"],
+      ["env", "push", "x", "--stdout"],
+    ])
+      expect((await cli([...args, "--json"])).code).toBe(2)
+    expect(requests).toHaveLength(count)
+  })
 })

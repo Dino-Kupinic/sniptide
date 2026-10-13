@@ -26,7 +26,8 @@ Commits and PR titles follow [Conventional Commits](https://www.conventionalcomm
 
 ## API reference
 
-The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics) are documented at
+The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics, and the token API
+under `/api/v1` that the CLI uses) are documented at
 `/docs/api`, rendered by [Scalar](https://scalar.com) from the OpenAPI document at
 `/api/openapi.json`. The document lives in `apps/web/lib/openapi.ts`. When you add a route
 handler, document it there, or list it as internal if it only serves the web app; `bun test` fails
@@ -34,9 +35,11 @@ until you do.
 
 ## CLI
 
-The [Sniptide CLI](packages/cli/README.md) captures files, folders or globs and restores their relative
-paths in another project. Offline bundles work now; remote push, pull and search await the personal
-token API (WRK-106) and the [proposed versioned endpoints](packages/cli/API.md).
+The [Sniptide CLI](packages/cli/README.md) captures files, folders or globs as pastes and restores their
+relative paths in another project, and syncs `.env` files with env groups (`sniptide env`). It
+authenticates with a personal API token from Settings → API tokens and talks to the `/api/v1`
+endpoints ([summary](packages/cli/API.md)). Env values are encrypted at rest with a key derived from
+`ENV_SECRETS_KEY`, or from `BETTER_AUTH_SECRET` when that isn't set (`apps/web/.env.example`).
 
 ```sh
 bun --filter @sniptide/cli build

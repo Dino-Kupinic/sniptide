@@ -4,6 +4,15 @@ import { parseArgs } from "node:util"
 import { Api } from "./api"
 import { configPath, normalizeBaseUrl, resolveConfig, saveConfig } from "./config"
 import { bundle, type Capture, paste, record, string } from "./contract"
+import {
+  fetchGroup,
+  groupName,
+  pushGroup,
+  readEnvFile,
+  runWith,
+  serializeDotenv,
+  writeEnvFile,
+} from "./env"
 import { CliError } from "./errors"
 import { collectFiles, readBundle, restoreFiles } from "./files"
 
@@ -27,6 +36,8 @@ const options = {
   language: { type: "string" },
   cursor: { type: "string" },
   limit: { type: "string" },
+  file: { type: "string" },
+  stdout: { type: "boolean" },
 } as const
 const allowed: Record<string, string[]> = {
   login: ["token-stdin"],
@@ -35,6 +46,11 @@ const allowed: Record<string, string[]> = {
   pull: ["input", "dir", "force", "dry-run"],
   list: ["tag", "language", "collection", "cursor", "limit"],
   search: ["tag", "language", "collection", "cursor", "limit"],
+  "env list": [],
+  "env push": ["file", "dry-run"],
+  "env pull": ["file", "force", "dry-run", "stdout"],
+  "env run": [],
+  "env delete": [],
 }
 const globalOptions = ["base-url", "json", "help", "version"]
 
@@ -46,6 +62,11 @@ export const help = `Sniptide CLI (Node.js 24+)
   sniptide pull <id|collection:slug>  Restore files into the current directory
   sniptide list                      List pastes, with optional filters
   sniptide search <query>            Find pastes by title, tag, or language
+  sniptide env list                  List your env groups
+  sniptide env push <group>          Upload .env to an env group, replacing its variables
+  sniptide env pull <group>          Write an env group to .env
+  sniptide env run <group> -- <cmd>  Run a command with the group's variables set
+  sniptide env delete <group>        Delete an env group
 
 Global: --base-url URL, --json (-j), --help (-h), --version
 Push:   --title NAME, --description TEXT, --visibility private|unlisted|public
@@ -54,11 +75,10 @@ Push:   --title NAME, --description TEXT, --visibility private|unlisted|public
 Pull:   --dir DIRECTORY, --force, --dry-run, --input FILE (read an offline bundle)
 Find:   --tag TAG (repeatable), --language ID, --collection SLUG, --limit 1..100
         --cursor CURSOR
+Env:    --file PATH (default .env), --force, --dry-run, --stdout (pull prints instead)
 
-SNIPTIDE_TOKEN / SNIPTIDE_BASE_URL override saved config.
-SNIPTIDE_CONFIG overrides the config file location. Commands never prompt.
-Remote commands need the pending WRK-106 token API and CLI endpoints (see API.md).
-Env sync will use sniptide env <push|pull|run> under WRK-111.
+Create a token in Settings → API tokens. SNIPTIDE_TOKEN / SNIPTIDE_BASE_URL override saved
+config. SNIPTIDE_CONFIG overrides the config file location. Commands never prompt.
 `
 
 export interface Context {
@@ -109,7 +129,11 @@ async function getCollection(api: Api, slug: string): Promise<Capture[]> {
 }
 
 // Returns an exit status rather than exiting, so tests and embedding tools share the real flow.
-export async function run(args: string[], ctx: Context): Promise<number> {
+export async function run(argv: string[], ctx: Context): Promise<number> {
+  // Everything after `--` belongs to the command `env run` starts, not to this CLI.
+  const separator = argv.indexOf("--")
+  const args = separator === -1 ? argv : argv.slice(0, separator)
+  const rest = separator === -1 ? [] : argv.slice(separator + 1)
   let json = args.includes("--json") || args.includes("-j") || args.includes("--json=true")
   const emit = (data: unknown, human: string) =>
     ctx.stdout(json ? `${JSON.stringify({ ok: true, data })}\n` : `${human}\n`)
@@ -118,6 +142,8 @@ export async function run(args: string[], ctx: Context): Promise<number> {
     const { values } = parsed
     json = values.json ?? false
     const [command, ...params] = parsed.positionals
+    const runsCommand = command === "env" && params[0] === "run"
+    if (!runsCommand) params.push(...rest)
     if (values.help) {
       emit({ help }, help.trimEnd())
       return 0
@@ -130,22 +156,86 @@ export async function run(args: string[], ctx: Context): Promise<number> {
       emit({ help }, help.trimEnd())
       return 0
     }
-    if (command === "env")
+    const key = command === "env" ? `env ${params[0] ?? ""}` : command
+    if (!allowed[key])
       throw new CliError(
-        "Env sync is tracked in WRK-111. Use sniptide env <push|pull|run> when available.",
-        "NOT_IMPLEMENTED",
-        1,
+        command === "env"
+          ? "Use sniptide env list, push, pull, run or delete."
+          : `Unknown command ${JSON.stringify(command)}. Run sniptide --help.`,
       )
-    if (!allowed[command])
-      throw new CliError(`Unknown command ${JSON.stringify(command)}. Run sniptide --help.`)
     for (const token of parsed.tokens) {
       if (
         token.kind === "option" &&
         !globalOptions.includes(token.name) &&
-        !allowed[command]?.includes(token.name)
+        !allowed[key]?.includes(token.name)
       ) {
-        throw new CliError(`--${token.name} is not supported by ${command}.`)
+        throw new CliError(`--${token.name} is not supported by ${key}.`)
       }
+    }
+    if (command === "env") {
+      const [action, ...names] = params
+      const api = async () => new Api(await resolveConfig(ctx.env, values["base-url"]))
+      if (action === "list") {
+        countArgs(names, 0, 0, "env list")
+        const data = await (await api()).request("env")
+        if (!Array.isArray(data.groups))
+          throw new CliError("Invalid env group list.", "INVALID_RESPONSE", 1)
+        const lines = data.groups.map((item) => {
+          const group = record(item)
+          return `${displayText(string(group.slug, "group"))}\t${Number(group.variables)} variables`
+        })
+        emit(data, lines.join("\n") || "No env groups yet.")
+        return 0
+      }
+      countArgs(
+        names,
+        1,
+        1,
+        action === "run" ? "env run <group> -- <command> [args...]" : `env ${action} <group>`,
+      )
+      const group = groupName(names[0])
+      const filename = path.resolve(ctx.cwd, values.file ?? ".env")
+      if (action === "push") {
+        const variables = await readEnvFile(filename)
+        const listed = variables.map((variable) => variable.name)
+        if (values["dry-run"]) {
+          emit(
+            { group, file: filename, variables: listed, dryRun: true },
+            `Would push ${listed.length} variables to ${group}:\n${listed.join("\n")}`,
+          )
+          return 0
+        }
+        const saved = await pushGroup(await api(), group, variables)
+        emit(
+          { group: saved.slug, variables: saved.variables.map((variable) => variable.name) },
+          `Pushed ${saved.variables.length} variables to ${saved.slug}.`,
+        )
+        return 0
+      }
+      if (action === "delete") {
+        await (await api()).request(`env/${encodeURIComponent(group)}`, undefined, "DELETE")
+        emit({ deleted: group }, `Deleted env group ${group}.`)
+        return 0
+      }
+      const { variables } = await fetchGroup(await api(), group)
+      if (action === "run") {
+        const [program, ...programArgs] = rest
+        if (!program) throw new CliError("Usage: sniptide env run <group> -- <command> [args...]")
+        return await runWith(program, programArgs, ctx.cwd, ctx.env, variables)
+      }
+      // env pull
+      if (values.stdout) {
+        if (json) emit({ group, variables }, "")
+        else ctx.stdout(serializeDotenv(variables))
+        return 0
+      }
+      const listed = variables.map((variable) => variable.name)
+      if (!values["dry-run"]) await writeEnvFile(filename, variables, values.force ?? false)
+      emit(
+        { group, file: filename, variables: listed, dryRun: values["dry-run"] ?? false },
+        `${values["dry-run"] ? "Would write" : "Wrote"} ${listed.length} variables to ${filename}.`,
+      )
+      return 0
     }
     if (command === "logout") {
       countArgs(params, 0, 0, "logout")
