@@ -1,7 +1,7 @@
 # Sniptide with its Postgres database.
 #
 # Self-hosting: set BETTER_AUTH_SECRET (and BETTER_AUTH_URL to the URL you'll open), then
-#   docker compose --profile app up -d
+#   docker compose --profile app up -d --no-build
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db
 services:
@@ -23,6 +23,7 @@ services:
       retries: 10
 
   app:
+    image: ${SNIPTIDE_IMAGE:-ghcr.io/dino-kupinic/sniptide:latest}
     build:
       context: .
       args:
