@@ -58,9 +58,9 @@ export interface SidebarProps {
 const rowClass =
   "group/row relative flex h-8 shrink-0 items-center gap-0.5 pr-1 pl-2 text-sm text-foreground/80 hover:bg-muted has-data-popup-open:bg-muted data-[active=true]:bg-muted data-[active=true]:font-medium data-[active=true]:text-foreground"
 
-// Buttons on a row or header that only show while it is hovered (or one of them is in use).
+// Reveal row/header controls on hover or focus; touch-only devices always need them visible.
 const revealClass =
-  "opacity-0 group-hover/row:opacity-100 group-has-focus-visible/row:opacity-100 group-has-data-popup-open/row:opacity-100"
+  "opacity-0 [@media(hover:none)]:opacity-100 group-hover/row:opacity-100 group-has-focus-visible/row:opacity-100 group-has-data-popup-open/row:opacity-100"
 
 const iconButtonClass =
   "relative z-10 flex size-6 shrink-0 items-center justify-center text-foreground/75 outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10 [&_svg]:size-3.5"

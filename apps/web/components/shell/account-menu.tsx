@@ -53,8 +53,12 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
   return (
     <>
       <div className="flex min-w-0 flex-col px-3 pt-1.5 pb-2">
-        <span className="truncate text-[13px] font-medium">{name}</span>
-        <span className="truncate text-xs text-muted-foreground">{email}</span>
+        <span title={name} className="truncate text-[13px] font-medium">
+          {name}
+        </span>
+        <span title={email} className="truncate text-xs text-muted-foreground">
+          {email}
+        </span>
       </div>
       <DropdownMenuSeparator />
       <DropdownMenuItem render={<Link href="/settings" />}>

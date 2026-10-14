@@ -14,4 +14,20 @@ describe("initials", () => {
     expect(initials("x")).toBe("X")
     expect(initials("   ")).toBe("?")
   })
+
+  test("preserves complete graphemes in multilingual and emoji names", () => {
+    expect(initials("Jo")).toBe("JO")
+    expect(initials("王秀英")).toBe("王秀")
+    expect(initials("Đặng Thị Ngọc Hân")).toBe("ĐH")
+    expect(initials("🦊 Fox")).toBe("🦊F")
+    expect(initials("👩🏽‍💻 Priya")).toBe("👩🏽‍💻P")
+    expect(initials("A\u0301da Lee")).toBe("A\u0301L")
+    expect(initials("👩🏽‍💻")).toBe("👩🏽‍💻")
+  })
+
+  test("uses the family name before a generational suffix", () => {
+    expect(initials("Christopher Alexander Montgomery III")).toBe("CM")
+    expect(initials("Sam Lee Jr.")).toBe("SL")
+    expect(initials("  Sam   Lee ")).toBe("SL")
+  })
 })
