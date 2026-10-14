@@ -25,6 +25,7 @@ import { VisibilityBadge } from "@/components/paste/visibility-badge"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
+import { getConfig } from "@/lib/config"
 import { formatDateTime, formatNumber, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import {
@@ -36,6 +37,7 @@ import {
   markShareSeen,
 } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
+import { WEBHOOK_TARGETS } from "@/lib/pastes/webhook-url"
 import { indentLabel } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -95,6 +97,13 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         }}
         people={people}
         trigger={trigger}
+        webhookTargets={WEBHOOK_TARGETS.filter((target) => Boolean(getConfig().webhooks[target]))}
+        webhookAllowed={
+          paste.visibility !== "private" &&
+          !paste.password &&
+          !paste.burnAfterRead &&
+          (!paste.expiresAt || paste.expiresAt > Date.now())
+        }
       />
     ) : null
   const sharingState = {

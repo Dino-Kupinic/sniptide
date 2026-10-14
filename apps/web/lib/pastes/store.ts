@@ -35,6 +35,7 @@ import { DAY } from "@/lib/time"
 import { enforceBudget } from "./budget"
 import { recordPasteEvent } from "./events"
 import { hashPassword } from "./passwords"
+import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
 
 export { PasteBudgetError } from "./budget"
@@ -850,6 +851,40 @@ export async function readSharedMeta(slug: string) {
   const access = await sharedAccess(slug)
   if (access.status !== "ok" || access.record.burnAfterRead) return null
   return { title: access.record.title, visibility: access.record.visibility }
+}
+
+// Public card data ignores sessions and unlock cookies. Even the owner cannot expose a
+// protected paste through the unauthenticated image URL. No views, events or burn claims.
+export async function readPublicPreview(slug: string): Promise<PastePreview | null> {
+  const record = await findSharedRecord(slug)
+  if (record?.visibility !== "public" || record.passwordHash || record.burnAfterRead) return null
+  const [file] = await getDb()
+    .select({
+      name: pasteFile.name,
+      language: pasteFile.language,
+      content: sql<string>`left(${pasteFile.content}, 4000)`,
+    })
+    .from(pasteFile)
+    .where(eq(pasteFile.pasteId, record.id))
+    .orderBy(pasteFile.position, pasteFile.id)
+    .limit(1)
+  return file ? { slug: record.slug, title: record.title, ...file } : null
+}
+
+// Only the owner may send a link to the instance's configured channel. Protected links aren't
+// useful to a channel, and a bot must never consume a one-time paste.
+export async function readWebhookPaste(slug: string) {
+  const record = await findOwned(slug)
+  if (
+    !record ||
+    record.deletedAt ||
+    recordExpired(record) ||
+    record.visibility === "private" ||
+    record.passwordHash ||
+    record.burnAfterRead
+  )
+    return null
+  return { slug: record.slug, title: record.title, visibility: record.visibility }
 }
 
 // The stored password hash of a paste someone could be asked to unlock, for the unlock route.

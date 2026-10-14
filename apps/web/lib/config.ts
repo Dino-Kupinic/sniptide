@@ -1,6 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
+import { isWebhookUrl } from "@/lib/pastes/webhook-url"
 
 // Every setting the app reads from the environment, validated in one place. Each option, its
 // default and what it does is documented in apps/web/.env.example.
@@ -73,6 +74,18 @@ const schema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 
   GITHUB_TOKEN: z.string().optional(),
+  SLACK_WEBHOOK_URL: z
+    .string()
+    .refine((value) => isWebhookUrl(value, "slack"), {
+      message: "must be a Slack incoming webhook URL.",
+    })
+    .optional(),
+  DISCORD_WEBHOOK_URL: z
+    .string()
+    .refine((value) => isWebhookUrl(value, "discord"), {
+      message: "must be a Discord incoming webhook URL.",
+    })
+    .optional(),
   MAX_PASTE_SIZE: size.default(1024 * 1024),
 
   POSTHOG_KEY: z.string().optional(),
@@ -110,6 +123,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),
     githubToken: value.GITHUB_TOKEN,
+    webhooks: { slack: value.SLACK_WEBHOOK_URL, discord: value.DISCORD_WEBHOOK_URL },
     maxPasteBytes: value.MAX_PASTE_SIZE,
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

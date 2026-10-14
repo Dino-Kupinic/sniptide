@@ -1301,6 +1301,7 @@ export const openApiDocument = {
 // route handler that is in neither this list nor the document fails test/openapi.test.ts.
 export const internalRoutes = [
   "/[slug]/copy",
+  "/[slug]/preview",
   "/analytics/export",
   "/api/analytics",
   "/api/analytics/[...path]",
