@@ -14,7 +14,14 @@ import { EmailDivider, SocialButtons } from "./social-buttons"
 
 // `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
 // newcomers to the request-access page.
-export function SignInForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
+// `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
+export function SignInForm({
+  socialProviders,
+  signUpClosed = false,
+}: {
+  socialProviders: SocialProvider[] | null
+  signUpClosed?: boolean
+}) {
   const router = useRouter()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
@@ -113,12 +120,14 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
           {pending ? "Signing in…" : "Sign in"}
         </Button>
 
-        <SwitchPrompt>
-          New to Sniptide?{" "}
-          <Link href="/sign-up" className={inlineLinkClass}>
-            {socialProviders ? "Create an account" : "Request access"}
-          </Link>
-        </SwitchPrompt>
+        {signUpClosed ? null : (
+          <SwitchPrompt>
+            New to Sniptide?{" "}
+            <Link href="/sign-up" className={inlineLinkClass}>
+              {socialProviders ? "Create an account" : "Request access"}
+            </Link>
+          </SwitchPrompt>
+        )}
       </form>
     </>
   )

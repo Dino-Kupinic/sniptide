@@ -51,6 +51,10 @@ jobs:
       - name: Verify the Docker image against a fresh database
         run: bash scripts/test-docker.sh sniptide:ci
 
+      # docker-compose.yml and the Coolify template, the two ways self-hosters start Sniptide.
+      - name: Verify docker compose and the Coolify template
+        run: bash scripts/test-compose.sh sniptide:ci
+
   # Runs the store and routes against a real Postgres: the access rules and the one-time-read
   # claim live in SQL, so a mock would prove nothing.
   tests:

@@ -51,10 +51,10 @@ wait_for_app() {
 }
 
 wait_for_database
+# Only DATABASE_URL and the auth secret: that is all a self-hoster has to set.
 docker run -d --name "$app" --network "$network" \
   -e DATABASE_URL=postgres://sniptide:sniptide@db:5432/sniptide \
   -e BETTER_AUTH_SECRET=docker-smoke-test-secret-at-least-32-characters \
-  -e BETTER_AUTH_URL=http://localhost:3000 \
   "$image" >/dev/null
 wait_for_app
 
