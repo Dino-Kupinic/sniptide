@@ -1,10 +1,25 @@
 import { randomUUID } from "node:crypto"
+import type { Browser } from "@e2e-dev/web"
 import { expect } from "e2e"
 import { test } from "./fixtures"
 
+// A key pressed before the page hydrates goes nowhere, and the page can look loaded a moment
+// before it is, so press until a dialog shows up.
+async function pressUntilDialog(browser: Browser, key: string) {
+  const dialogOpen = () =>
+    browser.evaluate(() => document.querySelector('[role="dialog"]') !== null)
+  await expect
+    .poll(async () => {
+      if (await dialogOpen()) return true
+      await browser.keyboard.press(key)
+      return dialogOpen()
+    })
+    .toBe(true)
+}
+
 test("? opens the shortcut sheet and lists every group", async ({ app, browser, screen }) => {
   await app.open("/dashboard")
-  await browser.keyboard.press("?")
+  await pressUntilDialog(browser, "?")
   const sheet = screen.getByRole("dialog", "Keyboard shortcuts")
   await expect(sheet).toBeVisible()
   for (const heading of ["General", "Go to", "Editor", "Command menu"]) {
@@ -22,7 +37,7 @@ test("n starts a new paste and / opens search, but not while typing", async ({
 }) => {
   await app.open("/dashboard")
   const search = screen.getByLabel("Search pastes, collections, or run a command")
-  await browser.keyboard.press("/")
+  await pressUntilDialog(browser, "/")
   await expect(search).toBeVisible()
   await browser.keyboard.press("Escape")
   await expect(search).not.toBeVisible()
