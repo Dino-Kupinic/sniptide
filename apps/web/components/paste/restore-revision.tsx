@@ -12,6 +12,7 @@ import { Button } from "@sniptide/ui/components/button"
 import { RotateCcwIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { runAction } from "@/lib/feedback"
 import { restoreRevision } from "@/lib/pastes/actions"
 
 // "Restore" on one entry of the history. It asks first, since it replaces what's on the page now,
@@ -27,7 +28,6 @@ export function RestoreRevision({
 }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
   return (
@@ -37,10 +37,7 @@ export function RestoreRevision({
         size="xs"
         className="-my-0.5 shrink-0 text-muted-foreground"
         aria-label={`Restore revision ${number}`}
-        onClick={() => {
-          setError(null)
-          setOpen(true)
-        }}
+        onClick={() => setOpen(true)}
       >
         <RotateCcwIcon />
         Restore
@@ -54,22 +51,20 @@ export function RestoreRevision({
             other settings stay as they are. What's there now stays in the history, so you can
             restore it again.
           </AlertDialogDescription>
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" size="lg" />}>
               Cancel
             </AlertDialogClose>
             <Button
               size="lg"
-              disabled={pending}
+              loading={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await restoreRevision(slug, revisionId)
-                  if (!result.ok) return setError(result.error)
+                  const result = await runAction(() => restoreRevision(slug, revisionId), {
+                    success: `Restored revision ${number}`,
+                    error: "Couldn't restore that version. Try again.",
+                  })
+                  if (!result.ok) return
                   setOpen(false)
                   router.refresh()
                 })

@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, UserIcon, XIcon } from "lucide-react"
 import * as React from "react"
@@ -167,18 +168,15 @@ export function InviteField({
           <Button
             type="button"
             className={cn("shrink-0 max-lg:flex-1", compact ? "h-9" : "h-11 lg:h-9")}
-            disabled={!identifier.trim() || pending}
+            disabled={!identifier.trim()}
+            loading={pending}
             onClick={() => void submit()}
           >
             {pending ? "Inviting…" : submitLabel}
           </Button>
         ) : null}
       </div>
-      {error ? (
-        <p id={errorId} role="alert" className="text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError id={errorId} variant="inline" message={error} />
     </div>
   )
 }

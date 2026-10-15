@@ -1,5 +1,6 @@
 "use client"
 
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Popover, PopoverContent, PopoverTrigger } from "@sniptide/ui/components/popover"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon } from "lucide-react"
@@ -57,7 +58,15 @@ export function CollectionIconPicker({
     const nextHue = next.hue ?? hue
     setIcon(nextIcon)
     setHue(nextHue)
-    startTransition(() => setCollectionIcon(collection.slug, nextIcon, nextHue))
+    startTransition(async () => {
+      try {
+        await setCollectionIcon(collection.slug, nextIcon, nextHue)
+      } catch {
+        setIcon(icon)
+        setHue(hue)
+        setError("Couldn't change the icon. Try again.")
+      }
+    })
   }
 
   function rename(input: HTMLInputElement) {
@@ -67,8 +76,10 @@ export function CollectionIconPicker({
       return setError(null)
     }
     startTransition(async () => {
-      const result = await renameCollection(collection.slug, name)
-      setError(result.ok ? null : result.error)
+      const result = await renameCollection(collection.slug, name).catch(() => null)
+      setError(
+        result ? (result.ok ? null : result.error) : "Couldn't rename the collection. Try again.",
+      )
     })
   }
 
@@ -105,11 +116,7 @@ export function CollectionIconPicker({
             className="h-9 min-w-0 flex-1 border border-border bg-transparent px-2.5 font-mono text-[13px] outline-none focus:border-primary aria-invalid:border-destructive"
           />
         </div>
-        {error ? (
-          <p role="alert" className="px-3 pt-2 text-xs text-destructive">
-            {error}
-          </p>
-        ) : null}
+        <FormError variant="inline" message={error} className="px-3 pt-2 text-xs" />
 
         <IconOptions icon={icon} hue={hue} onPick={pick} />
       </PopoverContent>

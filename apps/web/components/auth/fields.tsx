@@ -6,18 +6,7 @@ export const authInputClass = "h-[46px] text-base lg:h-10 lg:text-sm"
 export const authSubmitClass =
   "h-[50px] w-full text-base font-semibold lg:h-10 lg:text-sm lg:font-medium"
 
-export function FormError({ message }: { message: string | null }) {
-  if (!message) return null
-
-  return (
-    <p
-      role="alert"
-      className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive"
-    >
-      {message}
-    </p>
-  )
-}
+export { FormError } from "@sniptide/ui/components/form-error"
 
 export function SwitchPrompt({
   children,

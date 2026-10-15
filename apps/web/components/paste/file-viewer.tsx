@@ -1,8 +1,9 @@
 "use client"
 
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "lucide-react"
+import { CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "lucide-react"
 import * as React from "react"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
@@ -126,12 +127,11 @@ export function FileViewer({
               type="button"
               aria-label="Copy file contents"
               onClick={async () => {
-                await copy(active.content)
-                reportCopy(slug)
+                if (await copy(active.content)) reportCopy(slug)
               }}
               className={cn(panelToolClass, "hidden lg:inline-flex")}
             >
-              {copied ? <CheckIcon /> : <CopyIcon />}
+              {copied ? <SuccessCheck /> : <CopyIcon />}
             </button>
           </Tool>
           <span aria-live="polite" className="sr-only">

@@ -109,10 +109,13 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
     const previous = image
     setImage(next)
     startTransition(async () => {
-      const result = await updateAvatar(next)
-      if (!result.ok) {
+      const result = await updateAvatar(next).catch(() => null)
+      if (!result?.ok) {
         setImage(previous)
-        setStatus({ ok: false, message: result.error })
+        setStatus({
+          ok: false,
+          message: result?.error ?? "Couldn't update your avatar. Try again.",
+        })
       } else {
         setStatus({ ok: true, message: next ? "Avatar updated." : "Avatar removed." })
       }

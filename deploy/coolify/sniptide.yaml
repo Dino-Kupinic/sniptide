@@ -1,0 +1,61 @@
+# documentation: https://github.com/Dino-Kupinic/sniptide#self-hosting
+# slogan: Sniptide is a self-hostable pastebin with short links, expiry, burn-after-read and per-paste analytics.
+# category: productivity
+# tags: pastebin,snippets,code,sharing,postgresql
+# port: 3000
+
+# Coolify one-click service for Sniptide: the app and its Postgres. Coolify fills in the domain,
+# a database user and password, and the auth secret. Everything else below is optional and shows
+# up as an editable variable. Keep in step with docker-compose.yml and apps/web/.env.example.
+
+services:
+  sniptide:
+    image: ghcr.io/dino-kupinic/sniptide:latest
+    environment:
+      - SERVICE_URL_SNIPTIDE_3000
+      - DATABASE_URL=postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-sniptide}
+      - BETTER_AUTH_SECRET=${SERVICE_BASE64_64_SNIPTIDE}
+      - BETTER_AUTH_URL=${SERVICE_URL_SNIPTIDE}
+      # Coolify's proxy (Traefik) appends the visitor to X-Forwarded-For; rate limits read it there.
+      - CLIENT_IP_SOURCE=${CLIENT_IP_SOURCE:-x-forwarded-for}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-private}
+      - ALLOW_SIGN_UP=${ALLOW_SIGN_UP:-true}
+      - ALLOWED_EMAILS=${ALLOWED_EMAILS}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MAX_PASTE_SIZE=${MAX_PASTE_SIZE}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - POSTHOG_KEY=${POSTHOG_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=${POSTGRES_DB:-sniptide}
+    volumes:
+      - sniptide-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 20s
+      retries: 10

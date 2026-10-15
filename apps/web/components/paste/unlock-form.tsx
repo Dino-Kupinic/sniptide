@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { LockIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -50,12 +51,8 @@ export function UnlockForm({ slug }: { slug: string }) {
         aria-invalid={Boolean(error)}
         className="h-10 text-base lg:text-sm"
       />
-      {error ? (
-        <p role="alert" className="text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" disabled={pending} className="h-10">
+      <FormError variant="inline" message={error} />
+      <Button type="submit" loading={pending} className="h-10">
         {pending ? "Checking…" : "Unlock"}
       </Button>
     </form>

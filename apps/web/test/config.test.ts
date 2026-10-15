@@ -32,6 +32,34 @@ describe("getConfig", () => {
     expect(config.githubToken).toBeUndefined()
   })
 
+  test("leaves self-hosted extras off and sign-up open by default", () => {
+    const config = getConfig({})
+    expect(config.analytics).toBeUndefined()
+    expect(config.github).toBeUndefined()
+    expect(config.google).toBeUndefined()
+    expect(config.allowedEmails).toBeUndefined()
+    expect(config.allowSignUp).toBe(true)
+  })
+
+  test("reads the sign-up toggle", () => {
+    for (const value of ["false", "FALSE", "0", "no", "off"]) {
+      expect(getConfig({ ALLOW_SIGN_UP: value }).allowSignUp).toBe(false)
+    }
+    for (const value of ["true", "1", "yes", "on", ""]) {
+      expect(getConfig({ ALLOW_SIGN_UP: value }).allowSignUp).toBe(true)
+    }
+    expect(() => getConfig({ ALLOW_SIGN_UP: "maybe" })).toThrow(/ALLOW_SIGN_UP must be "true"/)
+  })
+
+  test("boots with only the database and auth secret", () => {
+    const config = getConfig({
+      DATABASE_URL: "postgres://u:p@db/sniptide",
+      BETTER_AUTH_SECRET: "s",
+    })
+    expect(config.databaseUrl).toBe("postgres://u:p@db/sniptide")
+    expect(config.authSecret).toBe("s")
+  })
+
   test("treats an empty value as unset", () => {
     const config = getConfig({ MAX_PASTE_SIZE: "", SHARE_URL: "  ", GITHUB_TOKEN: "" })
     expect(config.maxPasteBytes).toBe(1024 * 1024)

@@ -1,7 +1,8 @@
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { RequestAccess } from "@/components/auth/request-access"
+import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
-import { getInviteOnly, getSocialProviders } from "@/lib/auth"
+import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
 import { getSiteOrigin } from "@/lib/site"
 
 export const metadata = { title: "Create account · Sniptide" }
@@ -10,6 +11,25 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
   const { host } = await getSiteOrigin()
   const inviteOnly = getInviteOnly()
   const legal = "By creating an account you agree to the Terms and Privacy Policy."
+
+  // ALLOW_SIGN_UP=false: no accounts can be created, not even with ?invite.
+  if (isSignUpClosed()) {
+    return (
+      <AuthScreen
+        subtitle="Sign-up is closed on this instance. Ask the administrator if you need an account."
+        legal={legal}
+        centered
+        pitch={{
+          title: ["Sign-up is", "closed."],
+          body: "New accounts can't be created here right now. If you already have an account, sign in.",
+          link: `${host}/@you`,
+          note: "yours once you're in",
+        }}
+      >
+        <SignUpClosed />
+      </AuthScreen>
+    )
+  }
 
   // Invite-only: visitors get the request-access screen; ?invite opens the form for invitees.
   if (inviteOnly && !("invite" in (await searchParams))) {

@@ -14,7 +14,14 @@ import { EmailDivider, SocialButtons } from "./social-buttons"
 
 // `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
 // newcomers to the request-access page.
-export function SignInForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
+// `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
+export function SignInForm({
+  socialProviders,
+  signUpClosed = false,
+}: {
+  socialProviders: SocialProvider[] | null
+  signUpClosed?: boolean
+}) {
   const router = useRouter()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
@@ -26,10 +33,12 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signIn.email({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    })
+    const { error } = await authClient.signIn
+      .email({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      })
+      .catch(() => ({ error: { status: 0, message: "Couldn't reach the server. Try again." } }))
 
     if (error) {
       setPending(false)
@@ -109,16 +118,18 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
 
         <FormError message={error} />
 
-        <Button type="submit" disabled={pending} className={authSubmitClass}>
+        <Button type="submit" loading={pending} className={authSubmitClass}>
           {pending ? "Signing in…" : "Sign in"}
         </Button>
 
-        <SwitchPrompt>
-          New to Sniptide?{" "}
-          <Link href="/sign-up" className={inlineLinkClass}>
-            {socialProviders ? "Create an account" : "Request access"}
-          </Link>
-        </SwitchPrompt>
+        {signUpClosed ? null : (
+          <SwitchPrompt>
+            New to Sniptide?{" "}
+            <Link href="/sign-up" className={inlineLinkClass}>
+              {socialProviders ? "Create an account" : "Request access"}
+            </Link>
+          </SwitchPrompt>
+        )}
       </form>
     </>
   )
