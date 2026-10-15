@@ -81,7 +81,11 @@ function RestoreButton({ slug, className }: { slug: string; className?: string }
       variant="outline"
       size="sm"
       disabled={pending}
-      onClick={() => startTransition(() => restorePaste(slug))}
+      onClick={() =>
+        startTransition(async () => {
+          await restorePaste(slug)
+        })
+      }
       className={cn("h-[30px] px-3 text-[13px]", className)}
     >
       Restore

@@ -21,8 +21,15 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
 export function StarButton({
@@ -111,7 +118,15 @@ export function ShareButton({
 }
 
 // Drops a paste someone shared with the viewer from their list, then goes back to it.
-export function LeaveShareButton({ slug, className }: { slug: string; className?: string }) {
+export function LeaveShareButton({
+  slug,
+  title,
+  className,
+}: {
+  slug: string
+  title: string
+  className?: string
+}) {
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
 
@@ -125,6 +140,12 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
         startTransition(async () => {
           await leaveShare(slug)
           router.push("/shared")
+          showUndo({
+            title: "Removed from your list",
+            description: title,
+            undo: () => restoreShare(slug),
+            onUndone: () => router.push(`/pastes/${slug}`),
+          })
         })
       }
     >
@@ -135,12 +156,14 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
 
 export function PasteOverflowMenu({
   slug,
+  title,
   canTrash,
   canLeave,
   rawHref,
   className,
 }: {
   slug: string
+  title: string
   canTrash: boolean
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
@@ -179,6 +202,12 @@ export function PasteOverflowMenu({
               onClick={async () => {
                 await leaveShare(slug)
                 router.push("/shared")
+                showUndo({
+                  title: "Removed from your list",
+                  description: title,
+                  undo: () => restoreShare(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
+                })
               }}
             >
               <LogOutIcon />
@@ -194,6 +223,12 @@ export function PasteOverflowMenu({
               onClick={async () => {
                 await trashPaste(slug)
                 router.push("/pastes")
+                showUndo({
+                  title: "Moved to trash",
+                  description: title,
+                  undo: () => restorePaste(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
+                })
               }}
             >
               <Trash2Icon />

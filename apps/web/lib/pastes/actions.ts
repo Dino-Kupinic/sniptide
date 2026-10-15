@@ -34,6 +34,8 @@ async function assertSignedIn() {
   return session.user.id
 }
 
+export type ActionOutcome = { ok: true } | { ok: false; error: string }
+
 export type SavePasteInput = z.input<typeof pasteSchema>
 export type SavePasteResult = { ok: true; slug: string } | { ok: false; error: string }
 
@@ -183,11 +185,42 @@ export async function removeShare(slug: string, userId: string): Promise<ShareRe
   return sharesOf(slug)
 }
 
+// Undoes removeShare: the same access, in the same place in the list. The person sees the paste
+// as new again, since opening it before is forgotten.
+export async function restoreRemovedShare(
+  slug: string,
+  userId: string,
+  access: Access,
+  sharedAt: number,
+): Promise<ShareResult> {
+  await assertSignedIn()
+  const parsed = z
+    .object({ access: z.enum(ACCESSES), sharedAt: z.number().int().positive() })
+    .safeParse({ access, sharedAt })
+  if (!parsed.success) return { ok: false, error: "That share can't be restored." }
+  const date = new Date(Math.min(parsed.data.sharedAt, Date.now()))
+  if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
+    return { ok: false, error: "That paste or person no longer exists." }
+  }
+  revalidatePath("/", "layout")
+  return sharesOf(slug)
+}
+
 // Drops a paste someone shared with the viewer from their Shared with me.
 export async function leaveShare(slug: string) {
   await assertSignedIn()
   await store.leaveShare(slug)
   revalidatePath("/", "layout")
+}
+
+// Undoes leaveShare, unless the owner has revoked the share since.
+export async function restoreShare(slug: string): Promise<ActionOutcome> {
+  await assertSignedIn()
+  if (!(await store.restoreShare(slug))) {
+    return { ok: false, error: "That paste is no longer shared with you." }
+  }
+  revalidatePath("/", "layout")
+  return { ok: true }
 }
 
 export async function setStarred(slug: string, starred: boolean) {
@@ -223,10 +256,11 @@ export async function trashPaste(slug: string) {
   revalidatePath("/", "layout")
 }
 
-export async function restorePaste(slug: string) {
+export async function restorePaste(slug: string): Promise<ActionOutcome> {
   await assertSignedIn()
-  await store.restorePaste(slug)
+  const restored = await store.restorePaste(slug)
   revalidatePath("/", "layout")
+  return restored ? { ok: true } : { ok: false, error: "That paste is gone for good." }
 }
 
 export async function deleteForever(slug: string) {

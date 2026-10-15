@@ -9,6 +9,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
@@ -37,10 +38,13 @@ import {
   SidePanelProvider,
   SidePanelToggle,
 } from "@/components/paste/side-panel"
+import { useEditorHistory } from "@/components/paste/use-editor-history"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { useSiteHost } from "@/components/site-host"
+import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
+import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
@@ -59,6 +63,14 @@ export interface EditorInitial {
   collection: string | null
   hasPassword: boolean
   burnAfterRead: boolean
+}
+
+function snapshotOf(textarea: HTMLTextAreaElement): Snapshot {
+  return {
+    value: textarea.value,
+    selectionStart: textarea.selectionStart,
+    selectionEnd: textarea.selectionEnd,
+  }
 }
 
 let fileCounter = 0
@@ -114,6 +126,13 @@ export function PasteEditor({
   const [pending, startTransition] = React.useTransition()
   const [mobileMore, setMobileMore] = React.useState(false)
   const formRef = React.useRef<HTMLFormElement>(null)
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  // Where the caret goes once the next render has put new text in the textarea (Undo, Redo, Tab).
+  const pendingSelection = React.useRef<Pick<Snapshot, "selectionStart" | "selectionEnd"> | null>(
+    null,
+  )
+  const removalToasts = React.useRef(new Set<string>())
+  const history = useEditorHistory()
   const formId = React.useId()
   const slugStatus = useSlugStatus(slug, editing)
 
@@ -146,10 +165,35 @@ export function PasteEditor({
   function removeFile(id: string) {
     if (files.length === 1) return
     const index = files.findIndex((file) => file.id === id)
+    const removed = files[index]
     const next = files.filter((file) => file.id !== id)
     setFiles(next)
     if (id === activeId) setActiveId(next[Math.max(0, index - 1)]?.id ?? "")
+    if (!removed) return
+
+    // Undo puts the file back where it was, with its content and its undo history.
+    const toastId = showUndo({
+      title: `Removed ${removed.name}`,
+      undo: async () => {
+        setFiles((current) =>
+          current.some((file) => file.id === removed.id)
+            ? current
+            : [...current.slice(0, index), removed, ...current.slice(index)],
+        )
+        setActiveId(removed.id)
+        setPreview(false)
+      },
+    })
+    removalToasts.current.add(toastId)
   }
+
+  // The toasts above only make sense while the editor is open.
+  React.useEffect(() => {
+    const toasts = removalToasts.current
+    return () => {
+      for (const id of toasts) toast.close(id)
+    }
+  }, [])
 
   function trackCursor(textarea: HTMLTextAreaElement) {
     const before = textarea.value.slice(0, textarea.selectionStart)
@@ -157,18 +201,72 @@ export function PasteEditor({
     setCursor({ line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 })
   }
 
+  // Undo and Redo walk this file's own history (see useEditorHistory), not the browser's, so they
+  // keep working after Tab, after switching files and across saves.
+  function step(direction: "undo" | "redo") {
+    if (!active) return
+    const result = history.step(active.id, active.content, direction)
+    if (!result) return
+    pendingSelection.current = result
+    updateActive({ content: result.value })
+  }
+
+  // Latest `step` for the native listener below, which is attached once.
+  const stepRef = React.useRef(step)
+  React.useEffect(() => {
+    stepRef.current = step
+  })
+
+  // The Edit menu and a phone's shake-to-undo bypass the keyboard: catch them as well.
+  const bindTextarea = React.useCallback((textarea: HTMLTextAreaElement | null) => {
+    textareaRef.current = textarea
+    if (!textarea) return
+    function onBeforeInput(event: InputEvent) {
+      if (event.inputType !== "historyUndo" && event.inputType !== "historyRedo") return
+      event.preventDefault()
+      stepRef.current(event.inputType === "historyRedo" ? "redo" : "undo")
+    }
+    textarea.addEventListener("beforeinput", onBeforeInput)
+    return () => {
+      textarea.removeEventListener("beforeinput", onBeforeInput)
+      textareaRef.current = null
+    }
+  }, [])
+
+  React.useLayoutEffect(() => {
+    const selection = pendingSelection.current
+    const textarea = textareaRef.current
+    if (!selection || !textarea) return
+    pendingSelection.current = null
+    textarea.setSelectionRange(selection.selectionStart, selection.selectionEnd)
+    trackCursor(textarea)
+  })
+
   function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const key = event.key.toLowerCase()
+    const modifier = event.metaKey || event.ctrlKey
+    if (modifier && !event.altKey && (key === "z" || (key === "y" && event.ctrlKey))) {
+      event.preventDefault()
+      step(key === "y" || event.shiftKey ? "redo" : "undo")
+      return
+    }
+
     // Tab indents (by the Settings indentation) instead of leaving the editor.
-    if (event.key !== "Tab" || event.shiftKey) return
+    if (key !== "tab" || event.shiftKey || !active) return
     event.preventDefault()
     const textarea = event.currentTarget
     const { selectionStart, selectionEnd, value } = textarea
     const unit = indentUnit(indentation)
     const next = `${value.slice(0, selectionStart)}${unit}${value.slice(selectionEnd)}`
+    const caret = selectionStart + unit.length
+    history.edit(
+      active.id,
+      value,
+      { value: next, selectionStart: caret, selectionEnd: caret },
+      "other",
+    )
+    pendingSelection.current = { selectionStart: caret, selectionEnd: caret }
     updateActive({ content: next })
-    requestAnimationFrame(() => {
-      textarea.selectionStart = textarea.selectionEnd = selectionStart + unit.length
-    })
   }
 
   function submit() {
@@ -423,11 +521,24 @@ export function PasteEditor({
                   aria-label={`Contents of ${active?.name ?? "file"}`}
                   lines={lines}
                   value={active?.content ?? ""}
+                  ref={bindTextarea}
                   onChange={(event) => {
-                    updateActive({ content: event.target.value })
-                    trackCursor(event.target)
+                    const textarea = event.target
+                    if (active) {
+                      history.edit(
+                        active.id,
+                        active.content,
+                        snapshotOf(textarea),
+                        editKind((event.nativeEvent as InputEvent).inputType),
+                      )
+                    }
+                    updateActive({ content: textarea.value })
+                    trackCursor(textarea)
                   }}
-                  onSelect={(event) => trackCursor(event.currentTarget)}
+                  onSelect={(event) => {
+                    if (active) history.moveCaret(active.id, snapshotOf(event.currentTarget))
+                    trackCursor(event.currentTarget)
+                  }}
                   onKeyDown={onEditorKeyDown}
                   spellCheck={false}
                   autoCapitalize="off"

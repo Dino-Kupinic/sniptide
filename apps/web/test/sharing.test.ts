@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { removeShare, restoreRemovedShare, restoreShare as undoLeave } from "@/lib/pastes/actions"
 import { toSharedRows } from "@/lib/pastes/rows"
 import {
   createPaste,
@@ -159,6 +160,95 @@ describeDb("sharing", () => {
     await share("priv", "friend")
     signInAs("friend")
     expect(await listShared()).toHaveLength(1)
+  })
+
+  test("leaving can be undone, and keeps the share as it was", async () => {
+    await share("priv", "friend", "edit")
+    signInAs("friend")
+    await markShareSeen("priv")
+    await setStarred("priv", true)
+
+    await leaveShare("priv")
+    expect(await getPaste("priv")).toBeNull()
+    expect(await getShare("priv")).toBeNull()
+    expect(await listStarred()).toEqual([])
+    expect(await updatePaste("priv", edit(), "Edited")).toBeNull()
+    expect((await navCounts()).shared).toBe(0)
+
+    expect(await undoLeave("priv")).toEqual({ ok: true })
+    expect((await getPaste("priv"))?.slug).toBe("priv")
+    expect(await getShare("priv")).toMatchObject({ access: "edit", seen: true })
+    expect(await listShared()).toHaveLength(1)
+    expect((await listStarred()).map((row) => row.slug)).toEqual(["priv"])
+    expect((await navCounts()).shared).toBe(1)
+    // Undoing twice changes nothing more.
+    expect(await undoLeave("priv")).toMatchObject({ ok: false })
+  })
+
+  test("someone who left is gone from the owner's list, and the undo can't outlive a revoke", async () => {
+    await share("priv", "friend")
+    signInAs("friend")
+    await leaveShare("priv")
+
+    signInAs("owner")
+    expect(await listPasteShares("priv")).toEqual([])
+
+    // The owner removes the person for good while the undo is still on screen.
+    await unsharePaste("priv", "friend")
+    signInAs("friend")
+    expect(await undoLeave("priv")).toMatchObject({ ok: false })
+    expect(await getPaste("priv")).toBeNull()
+    expect(await listShared()).toEqual([])
+  })
+
+  test("inviting someone who left starts a fresh, unseen share", async () => {
+    await share("priv", "friend")
+    signInAs("friend")
+    await markShareSeen("priv")
+    await leaveShare("priv")
+
+    await share("priv", "friend", "edit")
+    signInAs("friend")
+    expect(await getShare("priv")).toMatchObject({ access: "edit", seen: false })
+    // Nothing left to undo.
+    expect(await undoLeave("priv")).toMatchObject({ ok: false })
+  })
+
+  test("nobody can undo a leave they never made", async () => {
+    await share("priv", "friend")
+    signInAs("stranger")
+    expect(await undoLeave("priv")).toMatchObject({ ok: false })
+    expect(await getPaste("priv")).toBeNull()
+    signInAs("friend")
+    expect(await undoLeave("priv")).toMatchObject({ ok: false })
+  })
+
+  test("removing someone can be undone, in the same place in the list", async () => {
+    await seedUser("second")
+    await share("priv", "friend")
+    await share("priv", "second", "edit")
+    signInAs("owner")
+    const before = await listPasteShares("priv")
+    const friend = before?.find((person) => person.id === "friend")
+    expect(before?.map((person) => person.id)).toEqual(["friend", "second"])
+    if (!friend) throw new Error("friend missing")
+
+    const removed = await removeShare("priv", "friend")
+    expect(removed.ok && removed.people.map((person) => person.id)).toEqual(["second"])
+    signInAs("friend")
+    expect(await getPaste("priv")).toBeNull()
+
+    signInAs("owner")
+    const restored = await restoreRemovedShare("priv", "friend", friend.access, friend.sharedAt)
+    expect(restored.ok && restored.people.map((person) => person.id)).toEqual(["friend", "second"])
+    signInAs("friend")
+    expect((await getPaste("priv"))?.slug).toBe("priv")
+
+    // Only the owner can put someone back.
+    signInAs("stranger")
+    expect(await restoreRemovedShare("priv", "stranger", "edit", Date.now())).toMatchObject({
+      ok: false,
+    })
   })
 
   test("view access can't edit; edit access changes content but not how it's shared", async () => {

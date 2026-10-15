@@ -353,6 +353,7 @@ export async function listTrash() {
 function sharedWithWhere(viewer: string) {
   return and(
     eq(pasteShare.userId, viewer),
+    isNull(pasteShare.leftAt),
     ne(pasteTable.ownerId, viewer),
     isNull(pasteTable.deletedAt),
     eq(pasteTable.burnAfterRead, false),
@@ -426,7 +427,13 @@ async function isSharedWith(record: PasteRecord, viewer: string | null) {
   const [row] = await getDb()
     .select({ access: pasteShare.access })
     .from(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
   return Boolean(row)
 }
 
@@ -455,7 +462,7 @@ export async function listPasteShares(slug: string): Promise<SharePerson[] | nul
     })
     .from(pasteShare)
     .innerJoin(user, eq(pasteShare.userId, user.id))
-    .where(eq(pasteShare.pasteId, record.id))
+    .where(and(eq(pasteShare.pasteId, record.id), isNull(pasteShare.leftAt)))
     .orderBy(asc(pasteShare.createdAt), user.id)
   return rows.map((row) => ({
     id: row.id,
@@ -498,16 +505,26 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
 }
 
 // Gives someone access to one of the viewer's pastes, or changes the access they have. A new
-// invite shows up as unseen in their Shared with me.
-export async function sharePaste(slug: string, userId: string, access: Access) {
+// invite shows up as unseen in their Shared with me. `sharedAt` backdates a new share, for undoing
+// a revoke.
+export async function sharePaste(slug: string, userId: string, access: Access, sharedAt?: Date) {
   const record = await findOwned(slug)
   if (!record || record.deletedAt || userId === record.ownerId) return false
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
   if (!person) return false
   await getDb()
     .insert(pasteShare)
-    .values({ pasteId: record.id, userId, access })
-    .onConflictDoUpdate({ target: [pasteShare.pasteId, pasteShare.userId], set: { access } })
+    .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
+    .onConflictDoUpdate({
+      target: [pasteShare.pasteId, pasteShare.userId],
+      // Inviting someone who left starts a fresh share: new, unseen, and open to them again.
+      set: {
+        access,
+        createdAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.createdAt} else now() end`,
+        seenAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.seenAt} else null end`,
+        leftAt: null,
+      },
+    })
   return true
 }
 
@@ -521,14 +538,42 @@ export async function unsharePaste(slug: string, userId: string) {
     .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
 }
 
-// The viewer drops a paste someone shared with them. The owner can invite them again.
+// The viewer drops a paste someone shared with them. The owner can invite them again, and
+// `restoreShare` takes it back until then. The row stays, marked left, so that's instant.
 export async function leaveShare(slug: string) {
   const viewer = await requireViewerId()
   const record = await findRecord(slug)
   if (!record) return
   await getDb()
-    .delete(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+    .update(pasteShare)
+    .set({ leftAt: new Date() })
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
+}
+
+// Undoes `leaveShare`. False when there's nothing to take back: the viewer never left, or the
+// owner revoked the share in the meantime (which deletes the row).
+export async function restoreShare(slug: string) {
+  const viewer = await requireViewerId()
+  const record = await findRecord(slug)
+  if (!record) return false
+  const restored = await getDb()
+    .update(pasteShare)
+    .set({ leftAt: null })
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNotNull(pasteShare.leftAt),
+      ),
+    )
+    .returning({ pasteId: pasteShare.pasteId })
+  return restored.length > 0
 }
 
 // Whether the viewer may open this paste right now: their own, one shared with them, or one whose
@@ -589,7 +634,13 @@ export async function readableStarsWhere(viewer: string) {
           getDb()
             .select({ id: pasteShare.pasteId })
             .from(pasteShare)
-            .where(and(eq(pasteShare.userId, viewer), eq(pasteShare.pasteId, pasteTable.id))),
+            .where(
+              and(
+                eq(pasteShare.userId, viewer),
+                eq(pasteShare.pasteId, pasteTable.id),
+                isNull(pasteShare.leftAt),
+              ),
+            ),
         ),
       ),
       and(
@@ -1076,7 +1127,13 @@ async function findEditable(slug: string) {
   const [share] = await getDb()
     .select({ access: pasteShare.access })
     .from(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
   return share?.access === "edit" ? { record, owned: false } : null
 }
 
@@ -1194,10 +1251,12 @@ export async function trashPaste(slug: string) {
     .where(eq(pasteTable.id, record.id))
 }
 
+// False when the paste is gone for good (or was never the viewer's), so Undo can say so.
 export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
-  if (!record) return
+  if (!record) return false
   await getDb().update(pasteTable).set({ deletedAt: null }).where(eq(pasteTable.id, record.id))
+  return true
 }
 
 export async function deleteForever(slug: string) {

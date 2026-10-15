@@ -1,0 +1,1 @@
+ALTER TABLE "paste_share" ADD COLUMN "left_at" timestamp with time zone;

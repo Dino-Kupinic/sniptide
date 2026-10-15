@@ -35,9 +35,16 @@ import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useSiteHost } from "@/components/site-host"
+import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
-import { renamePaste, setPasteCollection, setStarred, trashPaste } from "@/lib/pastes/actions"
+import {
+  renamePaste,
+  restorePaste,
+  setPasteCollection,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import type { SidebarPaste } from "@/lib/pastes/types"
 
 // The ⋯ menu on a sidebar paste row. Renaming, filing and deleting only apply to the viewer's own
@@ -58,8 +65,23 @@ export function PasteMenu({
   const [creating, setCreating] = React.useState(false)
   const [, startTransition] = React.useTransition()
 
+  // Files the paste in `collection`, or takes it out of its current one with null. Undo puts it
+  // back where it was.
   function fileIn(collection: string | null) {
-    startTransition(() => setPasteCollection(paste.slug, collection).then(() => undefined))
+    const previous = paste.collection
+    const nameOf = (slug: string | null) =>
+      collections.find((candidate) => candidate.slug === slug)?.name
+    startTransition(async () => {
+      const result = await setPasteCollection(paste.slug, collection)
+      if (!result.ok) return
+      showUndo({
+        title: collection
+          ? `Moved to ${nameOf(collection) ?? "a new collection"}`
+          : `Removed from ${nameOf(previous) ?? "its collection"}`,
+        description: paste.title,
+        undo: () => setPasteCollection(paste.slug, previous),
+      })
+    })
   }
 
   return (
@@ -138,7 +160,16 @@ export function PasteMenu({
                   startTransition(async () => {
                     await trashPaste(paste.slug)
                     // Its own page has nothing left to show.
-                    if (pathname.startsWith(`/pastes/${paste.slug}`)) router.push("/pastes")
+                    const onItsPage = pathname.startsWith(`/pastes/${paste.slug}`)
+                    if (onItsPage) router.push("/pastes")
+                    showUndo({
+                      title: "Moved to trash",
+                      description: paste.title,
+                      undo: () => restorePaste(paste.slug),
+                      onUndone: () => {
+                        if (onItsPage) router.push(`/pastes/${paste.slug}`)
+                      },
+                    })
                   })
                 }
               >

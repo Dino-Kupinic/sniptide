@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter, JetBrains_Mono, Stack_Sans_Notch } from "next/font/google"
 
 import "@sniptide/ui/globals.css"
+import { Toaster } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { Analytics } from "@/components/analytics"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -49,7 +50,10 @@ export default function RootLayout({
       )}
     >
       <body className="overscroll-none">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

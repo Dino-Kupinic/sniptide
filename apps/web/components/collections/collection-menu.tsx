@@ -19,7 +19,8 @@ import {
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { deleteCollection } from "@/lib/collections/actions"
+import { showUndo } from "@/components/undo-toast"
+import { deleteCollection, restoreCollection } from "@/lib/collections/actions"
 import type { Collection } from "@/lib/collections/types"
 import { RenameCollectionDialog } from "./rename-collection"
 
@@ -86,10 +87,23 @@ export function CollectionMenu({
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await deleteCollection(collection.slug)
+                  const snapshot = await deleteCollection(collection.slug)
                   setDeleting(false)
                   if (afterDelete) router.push(afterDelete)
                   else router.refresh()
+                  if (snapshot) {
+                    showUndo({
+                      title: `Deleted “${collection.name}”`,
+                      description:
+                        snapshot.pastes.length > 0
+                          ? `${snapshot.pastes.length} ${snapshot.pastes.length === 1 ? "paste" : "pastes"} kept`
+                          : undefined,
+                      undo: () => restoreCollection(snapshot),
+                      onUndone: () => {
+                        if (afterDelete) router.push(`/collections/${snapshot.slug}`)
+                      },
+                    })
+                  }
                 })
               }
             >

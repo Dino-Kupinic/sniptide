@@ -12,8 +12,15 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LockIcon, UserPlusIcon, UsersIcon, XIcon } from "lucide-react"
 import * as React from "react"
+import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
-import { invitePerson, removeShare, type ShareResult, setShareAccess } from "@/lib/pastes/actions"
+import {
+  invitePerson,
+  removeShare,
+  restoreRemovedShare,
+  type ShareResult,
+  setShareAccess,
+} from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
@@ -82,7 +89,16 @@ export function ShareDialog({
 
   function remove(person: SharePerson) {
     startTransition(async () => {
-      apply(await removeShare(slug, person.id))
+      if (!apply(await removeShare(slug, person.id))) return
+      showUndo({
+        title: `Removed ${person.name}`,
+        description: `${person.handle} can no longer open “${title}”`,
+        undo: async () => {
+          const result = await restoreRemovedShare(slug, person.id, person.access, person.sharedAt)
+          apply(result)
+          return result
+        },
+      })
     })
   }
 

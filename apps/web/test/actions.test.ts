@@ -1,10 +1,19 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-import { paste, pasteFile } from "@workspace/db/schema"
+import { collection, paste, pasteFile } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { byteLength } from "@/lib/format"
-import { importGist, previewGist, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
-import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
+import {
+  deleteForever,
+  importGist,
+  previewGist,
+  restorePaste,
+  type SavePasteInput,
+  savePaste,
+  setPasteCollection,
+  trashPaste,
+} from "@/lib/pastes/actions"
+import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // The server actions behind the editor and the gist import: the same limits for both, and a
 // bound on how much one account can create.
@@ -351,5 +360,59 @@ describeDb("paste actions", () => {
       await expect(previewGist(GIST)).rejects.toThrow()
       await expect(importGist(choose("a.txt"))).rejects.toThrow()
     })
+  })
+})
+
+// Every destructive action leaves what the Undo toast needs to put it back.
+describeDb("undoing paste actions", () => {
+  afterAll(resetDatabase)
+  beforeEach(async () => {
+    await resetDatabase()
+    await seedUser("owner")
+    await seedUser("other")
+    signInAs("owner")
+  })
+
+  test("a trashed paste comes back exactly as it was", async () => {
+    await seedPaste({ slug: "p", owner: "owner", collection: "notes" })
+    await trashPaste("p")
+    expect((await pasteRow("p"))?.deletedAt).not.toBeNull()
+
+    expect(await restorePaste("p")).toEqual({ ok: true })
+    const row = await pasteRow("p")
+    expect(row?.deletedAt).toBeNull()
+    expect(row?.collection).toBe("notes")
+  })
+
+  test("a paste that is gone for good, or isn't theirs, can't be restored", async () => {
+    await seedPaste({ slug: "p", owner: "owner" })
+    await trashPaste("p")
+    await deleteForever("p")
+    expect(await restorePaste("p")).toMatchObject({ ok: false })
+
+    await seedPaste({ slug: "theirs", owner: "other", deletedAt: new Date() })
+    expect(await restorePaste("theirs")).toMatchObject({ ok: false })
+    expect((await pasteRow("theirs"))?.deletedAt).not.toBeNull()
+  })
+
+  test("a move or removal is undone by filing it back where it was", async () => {
+    await seedPaste({ slug: "p", owner: "owner", collection: "old" })
+    // Moving needs a real collection; the undo target here is the previous one or none.
+    await getDb()
+      .insert(collection)
+      .values([
+        { ownerId: "owner", slug: "old", name: "old" },
+        { ownerId: "owner", slug: "new", name: "new" },
+      ])
+
+    expect(await setPasteCollection("p", "new")).toEqual({ ok: true })
+    expect((await pasteRow("p"))?.collection).toBe("new")
+    expect(await setPasteCollection("p", "old")).toEqual({ ok: true })
+    expect((await pasteRow("p"))?.collection).toBe("old")
+
+    expect(await setPasteCollection("p", null)).toEqual({ ok: true })
+    expect((await pasteRow("p"))?.collection).toBeNull()
+    expect(await setPasteCollection("p", "old")).toEqual({ ok: true })
+    expect((await pasteRow("p"))?.collection).toBe("old")
   })
 })

@@ -19,7 +19,14 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import Link from "next/link"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import { showUndo } from "@/components/undo-toast"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import type { PasteRow } from "@/lib/pastes/rows"
 
 export function RowMenu({
@@ -66,7 +73,17 @@ export function RowMenu({
         {shared ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => leaveShare(row.slug)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={async () => {
+                await leaveShare(row.slug)
+                showUndo({
+                  title: "Removed from your list",
+                  description: row.title,
+                  undo: () => restoreShare(row.slug),
+                })
+              }}
+            >
               <LogOutIcon />
               Remove from my list
             </DropdownMenuItem>
@@ -75,7 +92,17 @@ export function RowMenu({
         {row.owner ? null : (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => trashPaste(row.slug)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={async () => {
+                await trashPaste(row.slug)
+                showUndo({
+                  title: "Moved to trash",
+                  description: row.title,
+                  undo: () => restorePaste(row.slug),
+                })
+              }}
+            >
               <Trash2Icon />
               Move to trash
             </DropdownMenuItem>
