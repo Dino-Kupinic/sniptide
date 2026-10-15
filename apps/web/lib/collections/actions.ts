@@ -65,8 +65,40 @@ export async function setCollectionIcon(slug: string, icon: string, hue: string)
   revalidatePath("/", "layout")
 }
 
-export async function deleteCollection(slug: string) {
+// Returns what was removed, for `restoreCollection` to take back; null when it was already gone.
+export async function deleteCollection(slug: string): Promise<store.CollectionSnapshot | null> {
   await assertSignedIn()
-  await store.deleteCollection(slug)
+  const snapshot = await store.deleteCollection(slug)
   revalidatePath("/", "layout")
+  return snapshot
+}
+
+const snapshotSchema = z.object({
+  slug: z.string().min(1).max(60),
+  name: nameSchema,
+  icon: z.enum(ICONS),
+  hue: z.enum(HUES),
+  createdAt: z.number().int().positive(),
+  pastes: z.array(z.string().min(1).max(40)).max(10_000),
+})
+
+const restoreFailures = {
+  duplicate: "You already have a collection with that name.",
+  limit: `You can have up to ${MAX_COLLECTIONS} collections.`,
+  taken: "A collection with that link exists now.",
+} as const
+
+// Undoes `deleteCollection`: brings the collection back with its pastes.
+export async function restoreCollection(
+  snapshot: store.CollectionSnapshot,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await assertSignedIn()
+  const parsed = snapshotSchema.safeParse(snapshot)
+  if (!parsed.success) return { ok: false, error: "That collection can't be restored." }
+  // The date only places it in the list; it can't be from the future.
+  const createdAt = Math.min(parsed.data.createdAt, Date.now())
+  const result = await store.restoreCollection({ ...parsed.data, createdAt })
+  if (result.status !== "ok") return { ok: false, error: restoreFailures[result.status] }
+  revalidatePath("/", "layout")
+  return { ok: true }
 }

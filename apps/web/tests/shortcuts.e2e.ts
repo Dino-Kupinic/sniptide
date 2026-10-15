@@ -25,7 +25,7 @@ test("? opens the shortcut sheet and lists every group", async ({ app, browser, 
   for (const heading of ["General", "Go to", "Editor", "Command menu"]) {
     await expect(sheet.getByRole("heading", heading)).toBeVisible()
   }
-  await expect(sheet.getByText("Create or save the paste")).toBeVisible()
+  await expect(sheet.getByText("Create the paste or finish editing")).toBeVisible()
   await browser.keyboard.press("?")
   await expect(sheet).not.toBeVisible()
 })

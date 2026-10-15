@@ -28,11 +28,13 @@ function usePreferences(initial: Preferences) {
     setPreferences({ ...preferences, ...patch })
     setStatus(null)
     startTransition(async () => {
-      const result = await updatePreferences(patch)
-      if (!result.ok) {
+      const result = await updatePreferences(patch).catch(() => null)
+      if (!result?.ok) {
         setPreferences(previous)
-        setStatus({ ok: false, message: result.error })
+        setStatus({ ok: false, message: result?.error ?? "Couldn't save. Try again." })
+        return
       }
+      setStatus({ ok: true, message: "Saved." })
     })
   }
 

@@ -1,9 +1,11 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { collection } from "@workspace/db/schema"
+import { eq } from "drizzle-orm"
 import {
   createCollection,
   deleteCollection,
   renameCollection,
+  restoreCollection,
   setCollectionIcon,
 } from "@/lib/collections/actions"
 import { collectionExists, getCollection, listCollections, slugify } from "@/lib/collections/store"
@@ -182,6 +184,76 @@ describeDb("collections", () => {
     expect((await pasteRow("keep"))?.collection).toBe("other")
     expect((await pasteRow("bobs"))?.collection).toBe("notes")
     expect((await listOwnPastes()).map((p) => p.slug).sort()).toEqual(["a", "keep"])
+  })
+
+  test("deleting can be undone: same place, same look, and its pastes come back", async () => {
+    for (const name of ["first", "notes", "last"]) await createCollection(name)
+    // Spread out so the order is certain.
+    for (const [index, slug] of ["first", "notes", "last"].entries()) {
+      await getDb()
+        .update(collection)
+        .set({ createdAt: new Date(2026, 0, index + 1) })
+        .where(eq(collection.slug, slug))
+    }
+    await setCollectionIcon("notes", "target", "teal")
+    await seedPaste({ slug: "a", owner: "ada", collection: "notes" })
+    await seedPaste({ slug: "gone", owner: "ada", collection: "notes", deletedAt: new Date() })
+    await seedPaste({ slug: "moved", owner: "ada", collection: "notes" })
+    await seedPaste({ slug: "keep", owner: "ada", collection: "last" })
+
+    const snapshot = await deleteCollection("notes")
+    expect(snapshot).toMatchObject({ slug: "notes", name: "notes", icon: "target", hue: "teal" })
+    expect(snapshot?.pastes.sort()).toEqual(["a", "gone", "moved"])
+    expect(await names()).toEqual(["first", "last"])
+
+    // The viewer files one of them somewhere else before changing their mind.
+    await setPasteCollection("moved", "last")
+    if (!snapshot) throw new Error("nothing was deleted")
+    expect(await restoreCollection(snapshot)).toEqual({ ok: true })
+
+    expect(await names()).toEqual(["first", "notes", "last"])
+    expect(await getCollection("notes")).toMatchObject({
+      icon: "target",
+      hue: "teal",
+      pasteCount: 1,
+    })
+    expect((await pasteRow("a"))?.collection).toBe("notes")
+    expect((await pasteRow("gone"))?.collection).toBe("notes")
+    expect((await pasteRow("moved"))?.collection).toBe("last")
+    expect((await pasteRow("keep"))?.collection).toBe("last")
+  })
+
+  test("a collection that is already gone has nothing to undo", async () => {
+    expect(await deleteCollection("missing")).toBeNull()
+  })
+
+  test("undoing a delete fails if its name or link was taken, or the limit was reached", async () => {
+    await createCollection("notes")
+    const snapshot = await deleteCollection("notes")
+    if (!snapshot) throw new Error("nothing was deleted")
+
+    await createCollection("notes")
+    expect(await restoreCollection(snapshot)).toMatchObject({ ok: false })
+    expect(await names()).toEqual(["notes"])
+
+    await deleteCollection("notes")
+    for (let i = 0; i < MAX_COLLECTIONS; i++) await createCollection(`filler ${i}`)
+    expect(await restoreCollection(snapshot)).toMatchObject({ ok: false })
+    expect(await listCollections()).toHaveLength(MAX_COLLECTIONS)
+  })
+
+  test("undoing a delete only touches the viewer's own pastes", async () => {
+    await createCollection("notes")
+    await seedPaste({ slug: "bobs", owner: "bob" })
+    const snapshot = await deleteCollection("notes")
+    if (!snapshot) throw new Error("nothing was deleted")
+
+    expect(await restoreCollection({ ...snapshot, pastes: ["bobs"] })).toEqual({ ok: true })
+    expect((await pasteRow("bobs"))?.collection).toBeNull()
+    // Garbage in the snapshot is refused, not stored.
+    expect(await restoreCollection({ ...snapshot, name: "", pastes: [] })).toMatchObject({
+      ok: false,
+    })
   })
 
   test("a paste can only be filed in one of the owner's collections", async () => {

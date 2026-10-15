@@ -27,6 +27,20 @@ export interface PasteSource {
   dirty: boolean
 }
 
+// What a revision restores: the paste's title, description and files as they were when it was
+// saved. Sharing settings, the link and the collection are not part of it.
+export interface RevisionSnapshot {
+  title: string
+  description: string
+  files: {
+    name: string
+    language: string
+    content: string
+    startLine?: number | null
+    endLine?: number | null
+  }[]
+}
+
 export const paste = pgTable(
   "paste",
   {
@@ -94,6 +108,11 @@ export const pasteRevision = pgTable(
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
     message: text("message").notNull(),
+    // Set when the editor is closed with Done: the next edit starts a new revision instead of
+    // folding into this one.
+    sealed: boolean("sealed").notNull().default(false),
+    // Null for revisions made before snapshots were kept and for ones pruned from a long history.
+    snapshot: jsonb("snapshot").$type<RevisionSnapshot>(),
     createdAt: time("created_at").notNull().defaultNow(),
   },
   (table) => [index("paste_revision_paste_idx").on(table.pasteId, table.createdAt)],
@@ -149,6 +168,9 @@ export const pasteShare = pgTable(
     createdAt: time("created_at").notNull().defaultNow(),
     // When the person first opened it; null keeps it marked as new in Shared with me.
     seenAt: time("seen_at"),
+    // When the person removed it from their Shared with me. The row stays so Undo is instant, but
+    // a paste they left gives them no access; the owner inviting them again clears it.
+    leftAt: time("left_at"),
   },
   (table) => [
     primaryKey({ columns: [table.pasteId, table.userId] }),

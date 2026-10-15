@@ -11,6 +11,7 @@ import { CopyButton } from "@/components/paste/copy-button"
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
 import type { TokenExpiry, TokenSummary } from "@/lib/api/tokens"
 import type { EnvGroupSummary } from "@/lib/env/store"
+import { runAction } from "@/lib/feedback"
 import { formatDate, timeAgo } from "@/lib/format"
 import { SaveStatus, SettingRow, SettingsSection } from "./section"
 
@@ -65,9 +66,14 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
           const name = String(new FormData(form).get("name") ?? "")
           setStatus(null)
           startTransition(async () => {
-            const result = await createApiToken({ name, write, expiry })
-            if (!result.ok) return setStatus({ ok: false, message: result.error })
-            setCreated(result.token)
+            try {
+              const result = await createApiToken({ name, write, expiry })
+              if (!result.ok) return setStatus({ ok: false, message: result.error })
+              setCreated(result.token)
+              setStatus({ ok: true, message: "Token created." })
+            } catch {
+              return setStatus({ ok: false, message: "Couldn't create the token. Try again." })
+            }
             form.reset()
             router.refresh()
           })
@@ -102,7 +108,7 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
             itemClassName="px-2 whitespace-nowrap"
           />
         </SettingRow>
-        <Button type="submit" size="lg" disabled={pending} className="self-start">
+        <Button type="submit" size="lg" loading={pending} className="self-start">
           <KeyRoundIcon />
           {pending ? "Creating…" : "Create token"}
         </Button>
@@ -135,8 +141,11 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    await revokeApiToken(token.id)
-                    router.refresh()
+                    const result = await runAction(() => revokeApiToken(token.id), {
+                      success: "Token revoked",
+                      error: "Couldn't revoke the token. Try again.",
+                    })
+                    if (result.ok) router.refresh()
                   })
                 }
               >
@@ -187,8 +196,11 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
                 disabled={pending}
                 onClick={() =>
                   startTransition(async () => {
-                    await deleteEnvGroup(group.slug)
-                    router.refresh()
+                    const result = await runAction(() => deleteEnvGroup(group.slug), {
+                      success: "Env group deleted",
+                      error: "Couldn't delete the env group. Try again.",
+                    })
+                    if (result.ok) router.refresh()
                   })
                 }
               >

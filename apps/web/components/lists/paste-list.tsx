@@ -14,6 +14,7 @@ import { StarIcon } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
@@ -285,7 +286,13 @@ export function PasteList({
                       <button
                         type="button"
                         aria-label={`Unstar ${row.title}`}
-                        onClick={() => setStarred(row.slug, false)}
+                        onClick={async () => {
+                          await setStarred(row.slug, false)
+                          showUndo({
+                            message: `Removed “${row.title}” from starred`,
+                            undo: () => setStarred(row.slug, true),
+                          })
+                        }}
                         className="relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
                       >
                         <StarIcon className="size-4 fill-current" />

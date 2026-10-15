@@ -9,11 +9,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sniptide/ui/components/dialog"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LockIcon, UserPlusIcon, UsersIcon, XIcon } from "lucide-react"
 import * as React from "react"
+import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
-import { invitePerson, removeShare, type ShareResult, setShareAccess } from "@/lib/pastes/actions"
+import {
+  invitePerson,
+  removeShare,
+  restoreRemovedShare,
+  type ShareResult,
+  setShareAccess,
+} from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
@@ -63,10 +71,22 @@ export function ShareDialog({
     return result.ok
   }
 
+  // Applies a share action's result and says how it went; a throw shows in the dialog like any error.
+  async function run(action: () => Promise<ShareResult>, success?: string) {
+    try {
+      const ok = apply(await action())
+      if (ok && success) toast.success(success)
+      return ok
+    } catch {
+      setError("Something went wrong. Try again.")
+      return false
+    }
+  }
+
   function invite(identifier: string, access: SharePerson["access"]) {
     return new Promise<boolean>((resolve) =>
       startTransition(async () => {
-        const ok = apply(await invitePerson(slug, identifier, access))
+        const ok = await run(() => invitePerson(slug, identifier, access), "Invitation sent")
         if (ok) track("paste_shared", { access })
         resolve(ok)
       }),
@@ -76,13 +96,28 @@ export function ShareDialog({
   function change(person: SharePerson, access: SharePerson["access"]) {
     if (access === person.access) return
     startTransition(async () => {
-      apply(await setShareAccess(slug, person.id, access))
+      await run(() => setShareAccess(slug, person.id, access), "Access updated")
     })
   }
 
   function remove(person: SharePerson) {
     startTransition(async () => {
-      apply(await removeShare(slug, person.id))
+      const ok = await run(() => removeShare(slug, person.id))
+      if (ok) {
+        showUndo({
+          message: `Removed ${person.name}`,
+          undo: async () => {
+            const result = await restoreRemovedShare(
+              slug,
+              person.id,
+              person.access,
+              person.sharedAt,
+            )
+            if (result.ok) apply(result)
+            return result
+          },
+        })
+      }
     })
   }
 

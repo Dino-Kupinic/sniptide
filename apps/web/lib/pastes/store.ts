@@ -22,6 +22,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   ne,
   or,
   sql,
@@ -32,12 +33,14 @@ import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
-import { enforceBudget } from "./budget"
+import { enforceBudget, PasteBudgetError } from "./budget"
+import { isLargeEdit } from "./edit-size"
 import { recordPasteEvent } from "./events"
 import { insertPaste } from "./insert"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
+import { pruneSnapshots, snapshotOf } from "./snapshot"
 
 export { PasteBudgetError } from "./budget"
 
@@ -266,7 +269,12 @@ async function hydrate(
     summarize([record], viewer, true),
     db.select().from(pasteFile).where(eq(pasteFile.pasteId, record.id)).orderBy(pasteFile.position),
     db
-      .select()
+      .select({
+        id: pasteRevision.id,
+        message: pasteRevision.message,
+        createdAt: pasteRevision.createdAt,
+        restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
+      })
       .from(pasteRevision)
       .where(eq(pasteRevision.pasteId, record.id))
       .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
@@ -281,7 +289,12 @@ async function hydrate(
     revisionPage,
     revisionPageCount,
     files: files.map(({ name, language, content }) => ({ name, language, content })),
-    revisions: revisions.map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
+    revisions: revisions.map(({ id, message, createdAt, restorable }) => ({
+      id,
+      message,
+      createdAt: ms(createdAt),
+      restorable,
+    })),
   }
 }
 
@@ -353,6 +366,7 @@ export async function listTrash() {
 function sharedWithWhere(viewer: string) {
   return and(
     eq(pasteShare.userId, viewer),
+    isNull(pasteShare.leftAt),
     ne(pasteTable.ownerId, viewer),
     isNull(pasteTable.deletedAt),
     eq(pasteTable.burnAfterRead, false),
@@ -426,7 +440,13 @@ async function isSharedWith(record: PasteRecord, viewer: string | null) {
   const [row] = await getDb()
     .select({ access: pasteShare.access })
     .from(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
   return Boolean(row)
 }
 
@@ -455,7 +475,7 @@ export async function listPasteShares(slug: string): Promise<SharePerson[] | nul
     })
     .from(pasteShare)
     .innerJoin(user, eq(pasteShare.userId, user.id))
-    .where(eq(pasteShare.pasteId, record.id))
+    .where(and(eq(pasteShare.pasteId, record.id), isNull(pasteShare.leftAt)))
     .orderBy(asc(pasteShare.createdAt), user.id)
   return rows.map((row) => ({
     id: row.id,
@@ -498,16 +518,26 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
 }
 
 // Gives someone access to one of the viewer's pastes, or changes the access they have. A new
-// invite shows up as unseen in their Shared with me.
-export async function sharePaste(slug: string, userId: string, access: Access) {
+// invite shows up as unseen in their Shared with me. `sharedAt` backdates a new share, for undoing
+// a revoke.
+export async function sharePaste(slug: string, userId: string, access: Access, sharedAt?: Date) {
   const record = await findOwned(slug)
   if (!record || record.deletedAt || userId === record.ownerId) return false
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
   if (!person) return false
   await getDb()
     .insert(pasteShare)
-    .values({ pasteId: record.id, userId, access })
-    .onConflictDoUpdate({ target: [pasteShare.pasteId, pasteShare.userId], set: { access } })
+    .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
+    .onConflictDoUpdate({
+      target: [pasteShare.pasteId, pasteShare.userId],
+      // Inviting someone who left starts a fresh share: new, unseen, and open to them again.
+      set: {
+        access,
+        createdAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.createdAt} else now() end`,
+        seenAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.seenAt} else null end`,
+        leftAt: null,
+      },
+    })
   return true
 }
 
@@ -521,14 +551,42 @@ export async function unsharePaste(slug: string, userId: string) {
     .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
 }
 
-// The viewer drops a paste someone shared with them. The owner can invite them again.
+// The viewer drops a paste someone shared with them. The owner can invite them again, and
+// `restoreShare` takes it back until then. The row stays, marked left, so that's instant.
 export async function leaveShare(slug: string) {
   const viewer = await requireViewerId()
   const record = await findRecord(slug)
   if (!record) return
   await getDb()
-    .delete(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+    .update(pasteShare)
+    .set({ leftAt: new Date() })
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
+}
+
+// Undoes `leaveShare`. False when there's nothing to take back: the viewer never left, or the
+// owner revoked the share in the meantime (which deletes the row).
+export async function restoreShare(slug: string) {
+  const viewer = await requireViewerId()
+  const record = await findRecord(slug)
+  if (!record) return false
+  const restored = await getDb()
+    .update(pasteShare)
+    .set({ leftAt: null })
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNotNull(pasteShare.leftAt),
+      ),
+    )
+    .returning({ pasteId: pasteShare.pasteId })
+  return restored.length > 0
 }
 
 // Whether the viewer may open this paste right now: their own, one shared with them, or one whose
@@ -589,7 +647,13 @@ export async function readableStarsWhere(viewer: string) {
           getDb()
             .select({ id: pasteShare.pasteId })
             .from(pasteShare)
-            .where(and(eq(pasteShare.userId, viewer), eq(pasteShare.pasteId, pasteTable.id))),
+            .where(
+              and(
+                eq(pasteShare.userId, viewer),
+                eq(pasteShare.pasteId, pasteTable.id),
+                isNull(pasteShare.leftAt),
+              ),
+            ),
         ),
       ),
       and(
@@ -1076,13 +1140,49 @@ async function findEditable(slug: string) {
   const [share] = await getDb()
     .select({ access: pasteShare.access })
     .from(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, viewer)))
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
   return share?.access === "edit" ? { record, owned: false } : null
 }
 
+// Revisions made by editing are batched: while the newest revision has the same message, is
+// less than this old and wasn't closed with Done, another edit folds into it instead of adding a
+// row. A save that rewrites most of the paste (see isLargeEdit) still gets a row of its own.
+// Auto-save would otherwise fill the history with one entry per pause in typing.
+export const REVISION_WINDOW_MS = 10 * 60_000
+
+export interface UpdateOptions {
+  // Only save if the paste is still at this version (its `updatedAt`), so an edit made from a stale
+  // copy can't silently overwrite a newer one.
+  expectedVersion?: number
+  // Fold the edit into the latest revision when it is recent (see REVISION_WINDOW_MS).
+  batchRevision?: boolean
+}
+
+export type UpdateResult =
+  | {
+      slug: string
+      // The paste's new version: pass it as `expectedVersion` on the next save.
+      version: number
+      expiresAt: number | null
+      hasPassword: boolean
+    }
+  // `slug` is where the paste lives now, in case the newer save moved it.
+  | { conflict: true; version: number; slug: string }
+
 // Saves an edit. Someone the paste is shared with changes only its title, description and files;
 // its link, visibility, expiry, password, collection and burn setting stay the owner's.
-export async function updatePaste(slug: string, input: PasteInput, message: string) {
+export async function updatePaste(
+  slug: string,
+  input: PasteInput,
+  message: string,
+  options: UpdateOptions = {},
+): Promise<UpdateResult | null> {
   const parsed = parsePasteInput(input)
   const editable = await findEditable(slug)
   if (!editable) return null
@@ -1107,11 +1207,15 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
       : data.password
         ? await hashPassword(data.password)
         : null
+  const expiresAt = resolveExpiry(data.expiry, record.expiresAt, now.getTime())
+  // A version always moves forward, even if two saves land in the same millisecond.
+  const version = Math.max(now.getTime(), record.updatedAt.getTime() + 1)
+  const stamp = new Date(version)
 
   const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-  await getDb().transaction(async (tx) => {
+  return getDb().transaction(async (tx): Promise<UpdateResult> => {
     await enforceBudget(tx, record.ownerId, bytes, record.id)
-    await tx
+    const changed = await tx
       .update(pasteTable)
       .set({
         bytes,
@@ -1122,16 +1226,184 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
         passwordHash,
         burnAfterRead: data.burnAfterRead,
         collection: data.collection,
-        expiresAt: resolveExpiry(data.expiry, record.expiresAt, now.getTime()),
-        updatedAt: now,
+        expiresAt,
+        updatedAt: stamp,
+      })
+      .where(
+        and(
+          eq(pasteTable.id, record.id),
+          options.expectedVersion === undefined
+            ? undefined
+            : eq(pasteTable.updatedAt, new Date(options.expectedVersion)),
+        ),
+      )
+      .returning({ id: pasteTable.id })
+    if (changed.length === 0) {
+      const [latest] = await tx
+        .select({ updatedAt: pasteTable.updatedAt, slug: pasteTable.slug })
+        .from(pasteTable)
+        .where(eq(pasteTable.id, record.id))
+      return {
+        conflict: true,
+        version: ms(latest?.updatedAt ?? record.updatedAt),
+        slug: latest?.slug ?? record.slug,
+      }
+    }
+
+    // Read before they are replaced, to tell a small edit from a rewrite.
+    const before = options.batchRevision
+      ? await tx
+          .select({ name: pasteFile.name, content: pasteFile.content })
+          .from(pasteFile)
+          .where(eq(pasteFile.pasteId, record.id))
+      : []
+    await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
+    await tx.insert(pasteFile).values(fileRows(record.id, data.files))
+
+    const [latest] = options.batchRevision
+      ? await tx
+          .select()
+          .from(pasteRevision)
+          .where(eq(pasteRevision.pasteId, record.id))
+          .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+          .limit(1)
+      : []
+    const batched =
+      latest?.message === message &&
+      !latest.sealed &&
+      now.getTime() - latest.createdAt.getTime() < REVISION_WINDOW_MS &&
+      !isLargeEdit(before, data.files)
+    const snapshot = snapshotOf(data, data.files)
+    if (batched && latest) {
+      // The revision stands for the state the batch ended in.
+      await tx.update(pasteRevision).set({ snapshot }).where(eq(pasteRevision.id, latest.id))
+    } else {
+      await tx
+        .insert(pasteRevision)
+        .values({ pasteId: record.id, message, snapshot, createdAt: stamp })
+      await pruneSnapshots(tx, record.id)
+    }
+
+    return {
+      slug: data.slug || slug,
+      version,
+      expiresAt: ms(expiresAt),
+      hasPassword: passwordHash !== null,
+    }
+  })
+}
+
+// Closes the editing session: the next edit starts a new revision. Only the revision made by
+// auto-save is closed; one made another way (created, imported, restored) is left alone.
+export async function sealRevision(slug: string, message: string): Promise<boolean> {
+  const editable = await findEditable(slug)
+  if (!editable) return false
+  const db = getDb()
+  const [latest] = await db
+    .select({ id: pasteRevision.id, message: pasteRevision.message })
+    .from(pasteRevision)
+    .where(eq(pasteRevision.pasteId, editable.record.id))
+    .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+    .limit(1)
+  if (latest?.message === message) {
+    await db.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
+  }
+  return true
+}
+
+export type RestoreResult =
+  | { ok: true; slug: string; version: number }
+  | { ok: false; error: string }
+
+// Rolls the title, description and files back to how a revision left them. The sharing settings,
+// the link and the collection stay as they are. The rollback is a revision of its own, so the
+// version it replaced is still in the history and can be restored in turn.
+export async function restoreRevision(slug: string, revisionId: number): Promise<RestoreResult> {
+  const editable = await findEditable(slug)
+  if (!editable) return { ok: false, error: "That paste no longer exists." }
+  const { record } = editable
+
+  return getDb().transaction(async (tx): Promise<RestoreResult> => {
+    const [locked] = await tx
+      .select()
+      .from(pasteTable)
+      .where(eq(pasteTable.id, record.id))
+      .for("update")
+    if (!locked || locked.deletedAt) return { ok: false, error: "That paste no longer exists." }
+
+    const [target] = await tx
+      .select()
+      .from(pasteRevision)
+      .where(and(eq(pasteRevision.id, revisionId), eq(pasteRevision.pasteId, record.id)))
+    const snapshot = target?.snapshot
+    if (!target || !snapshot || snapshot.files.length === 0) {
+      return { ok: false, error: "That version can't be restored." }
+    }
+
+    const [newest] = await tx
+      .select({ id: pasteRevision.id })
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, record.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+      .limit(1)
+    if (newest?.id === target.id) return { ok: false, error: "That is the current version." }
+
+    const [position] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pasteRevision)
+      .where(
+        and(
+          eq(pasteRevision.pasteId, record.id),
+          or(
+            lt(pasteRevision.createdAt, target.createdAt),
+            and(eq(pasteRevision.createdAt, target.createdAt), lte(pasteRevision.id, target.id)),
+          ),
+        ),
+      )
+
+    const bytes = snapshot.files.reduce(
+      (sum, file) => sum + Buffer.byteLength(file.content, "utf8"),
+      0,
+    )
+    try {
+      await enforceBudget(tx, record.ownerId, bytes, record.id)
+    } catch (error) {
+      if (error instanceof PasteBudgetError) return { ok: false, error: error.message }
+      throw error
+    }
+
+    const version = Math.max(Date.now(), locked.updatedAt.getTime() + 1)
+    const stamp = new Date(version)
+    await tx
+      .update(pasteTable)
+      .set({
+        title: snapshot.title,
+        description: snapshot.description,
+        bytes,
+        updatedAt: stamp,
       })
       .where(eq(pasteTable.id, record.id))
     await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
-    await tx.insert(pasteFile).values(fileRows(record.id, data.files))
-    await tx.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: now })
+    await tx.insert(pasteFile).values(
+      snapshot.files.map((file, index) => ({
+        pasteId: record.id,
+        position: index,
+        name: file.name,
+        language: file.language,
+        content: file.content,
+        startLine: file.startLine ?? null,
+        endLine: file.endLine ?? null,
+      })),
+    )
+    await tx.insert(pasteRevision).values({
+      pasteId: record.id,
+      message: `Restored revision ${position?.count ?? 0}`,
+      snapshot,
+      createdAt: stamp,
+    })
+    await pruneSnapshots(tx, record.id)
+    return { ok: true, slug: locked.slug, version }
   })
-
-  return { slug: data.slug || slug }
 }
 
 export async function updateSharing(slug: string, input: SharingInput) {
@@ -1194,10 +1466,12 @@ export async function trashPaste(slug: string) {
     .where(eq(pasteTable.id, record.id))
 }
 
+// False when the paste is gone for good (or was never the viewer's), so Undo can say so.
 export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
-  if (!record) return
+  if (!record) return false
   await getDb().update(pasteTable).set({ deletedAt: null }).where(eq(pasteTable.id, record.id))
+  return true
 }
 
 export async function deleteForever(slug: string) {

@@ -11,6 +11,7 @@ import {
   ShareButton,
   StarButton,
 } from "@/components/paste/paste-actions"
+import { RestoreRevision } from "@/components/paste/restore-revision"
 import { ShareDialog } from "@/components/paste/share-dialog"
 import { ShareAvatar } from "@/components/paste/share-people"
 import {
@@ -159,6 +160,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           <StarButton slug={slug} starred={starred} variant="ghost" />
           <PasteOverflowMenu
             slug={slug}
+            title={paste.title}
             canTrash={owned}
             canLeave={Boolean(share)}
             rawHref={
@@ -244,7 +246,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             state={owned ? sharingState : undefined}
             sharedNote={
               paste.owner && share ? (
-                <SharedWithYou slug={slug} owner={paste.owner} share={share} />
+                <SharedWithYou slug={slug} title={paste.title} owner={paste.owner} share={share} />
               ) : undefined
             }
             views={
@@ -268,40 +270,44 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             revisions={
               <div>
                 <ol className="flex flex-col divide-y divide-border">
-                  {paste.revisions.map((entry, index) => (
-                    <li
-                      key={`${entry.createdAt}-${entry.message}`}
-                      className="flex items-start gap-2.5 py-2.5 first:pt-1 last:pb-0"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={
-                          index === 0 && paste.revisionPage === 1
-                            ? "mt-1.5 size-2 shrink-0 bg-link"
-                            : "mt-1.5 size-2 shrink-0 border-[1.5px] border-muted-foreground"
-                        }
-                      />
-                      <span className="flex min-w-0 flex-col">
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={
-                              index === 0 && paste.revisionPage === 1 ? "font-medium" : undefined
-                            }
-                          >
-                            {entry.message}
-                          </span>
-                          {index === 0 && paste.revisionPage === 1 ? (
-                            <span className="border border-border px-1 text-[11px] text-muted-foreground">
-                              Current
+                  {paste.revisions.map((entry, index) => {
+                    // Counted from the oldest, the way "Restored revision 3" names them.
+                    const number = paste.revisionCount - (paste.revisionPage - 1) * 20 - index
+                    const current = index === 0 && paste.revisionPage === 1
+                    return (
+                      <li
+                        key={entry.id}
+                        className="flex items-start gap-2.5 py-2.5 first:pt-1 last:pb-0"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={
+                            current
+                              ? "mt-1.5 size-2 shrink-0 bg-link"
+                              : "mt-1.5 size-2 shrink-0 border-[1.5px] border-muted-foreground"
+                          }
+                        />
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="flex items-center gap-2">
+                            <span className={current ? "font-medium" : undefined}>
+                              {entry.message}
                             </span>
-                          ) : null}
+                            {current ? (
+                              <span className="border border-border px-1 text-[11px] text-muted-foreground">
+                                Current
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            #{number} · {timeAgo(entry.createdAt)}
+                          </span>
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {timeAgo(entry.createdAt)}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
+                        {canEdit && !current && entry.restorable ? (
+                          <RestoreRevision slug={slug} revisionId={entry.id} number={number} />
+                        ) : null}
+                      </li>
+                    )
+                  })}
                 </ol>
                 {paste.revisionPageCount > 1 ? (
                   <div className="mt-3 flex items-center justify-between gap-2">
@@ -394,10 +400,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 // The recipient's "Shared with you" panel: who shared it, what they can do, and a way out.
 function SharedWithYou({
   slug,
+  title,
   owner,
   share,
 }: {
   slug: string
+  title: string
   owner: NonNullable<Paste["owner"]>
   share: NonNullable<Awaited<ReturnType<typeof getShare>>>
 }) {
@@ -435,7 +443,7 @@ function SharedWithYou({
           ? `You can edit this paste. Sharing and deleting stay with ${owner.name}.`
           : `You can read and copy this paste. Only ${owner.name} can change it.`}
       </p>
-      <LeaveShareButton slug={slug} className="h-8 text-[13px]" />
+      <LeaveShareButton slug={slug} title={title} className="h-8 text-[13px]" />
     </div>
   )
 }

@@ -33,7 +33,12 @@ export const SHORTCUTS = [
   { id: "go-starred", label: "Starred", group: "navigation", keys: ["g", "s"], sequence: true },
   { id: "go-trash", label: "Trash", group: "navigation", keys: ["g", "t"], sequence: true },
 
-  { id: "submit", label: "Create or save the paste", group: "editor", keys: ["mod", "enter"] },
+  {
+    id: "submit",
+    label: "Create the paste or finish editing",
+    group: "editor",
+    keys: ["mod", "enter"],
+  },
   { id: "save", label: "Save now", group: "editor", keys: ["mod", "s"] },
   { id: "undo", label: "Undo", group: "editor", keys: ["mod", "z"] },
   { id: "redo", label: "Redo", group: "editor", keys: ["mod", "shift", "z"] },

@@ -34,12 +34,46 @@ async function assertSignedIn() {
   return session.user.id
 }
 
+export type ActionOutcome = { ok: true } | { ok: false; error: string }
+
 export type SavePasteInput = z.input<typeof pasteSchema>
 export type SavePasteResult = { ok: true; slug: string } | { ok: false; error: string }
 
 const invitesSchema = z
   .array(z.object({ userId: z.string().min(1).max(100), access: z.enum(ACCESSES) }))
   .max(50, "Invite up to 50 people at once.")
+
+// The checks creating and editing share, run once the input's own shape is known to be valid.
+async function checkedPayload(data: z.output<typeof pasteSchema>, editing?: string) {
+  if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
+    return {
+      ok: false as const,
+      error: `${(await getSiteOrigin()).host}/${data.slug} is taken or not allowed.`,
+    }
+  }
+  if (data.collection !== null && !(await collectionExists(data.collection))) {
+    return { ok: false as const, error: "That collection no longer exists." }
+  }
+  // On edit an empty password means "keep the current one"; a new paste needs a real one.
+  const current = editing ? await store.getPaste(editing) : null
+  if (data.password === "" && !current?.password) {
+    return {
+      ok: false as const,
+      error: "Enter a password or turn password protection off.",
+    }
+  }
+
+  return {
+    ok: true as const,
+    payload: {
+      ...data,
+      files: data.files.map((file) => ({
+        ...file,
+        language: detectLanguage(file.name).id,
+      })),
+    },
+  }
+}
 
 // Creates a paste, or updates `editing` when given. Returns the slug to navigate to. A new paste
 // is also shared with `invites`, people looked up with `findPerson`.
@@ -57,35 +91,15 @@ export async function savePaste(
   const tooOften = await limited(editing ? limits.edit(user) : limits.create(user))
   if (tooOften) return { ok: false, error: tooOften }
 
-  const data = parsed.data
-  if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
-    return {
-      ok: false,
-      error: `${(await getSiteOrigin()).host}/${data.slug} is taken or not allowed.`,
-    }
-  }
-  if (data.collection !== null && !(await collectionExists(data.collection))) {
-    return { ok: false, error: "That collection no longer exists." }
-  }
-  // On edit an empty password means "keep the current one"; a new paste needs a real one.
-  const current = editing ? await store.getPaste(editing) : null
-  if (data.password === "" && !current?.password) {
-    return { ok: false, error: "Enter a password or turn password protection off." }
-  }
-
-  const payload = {
-    ...data,
-    files: data.files.map((file) => ({
-      ...file,
-      language: detectLanguage(file.name).id,
-    })),
-  }
+  const checked = await checkedPayload(parsed.data, editing)
+  if (!checked.ok) return checked
 
   try {
     const paste = editing
-      ? await store.updatePaste(editing, payload, "Edited")
-      : await store.createPaste(payload, invitesSchema.parse(invites))
+      ? await store.updatePaste(editing, checked.payload, "Edited")
+      : await store.createPaste(checked.payload, invitesSchema.parse(invites))
     if (!paste) return { ok: false, error: "That paste no longer exists." }
+    if ("conflict" in paste) return { ok: false, error: "That paste was changed elsewhere." }
 
     revalidatePath("/", "layout")
     return { ok: true, slug: paste.slug }
@@ -93,6 +107,80 @@ export async function savePaste(
     if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
     throw error
   }
+}
+
+export type AutosavePasteResult =
+  | {
+      ok: true
+      slug: string
+      // Send it back with the next auto-save.
+      version: number
+      expiresAt: number | null
+      hasPassword: boolean
+    }
+  | { ok: false; error: string }
+  // Someone saved a newer version first; `version` and `slug` are what the server has now.
+  | { ok: false; conflict: true; version: number; slug: string }
+
+// Saves an edit to a paste the editor has open. `expectedVersion` is the version the editor last
+// saw: if the paste has moved on (another tab, device or collaborator saved), nothing is written
+// and the editor is told, so the two edits can be settled by the person. Edits close together
+// share a revision.
+export async function autosavePaste(
+  editing: string,
+  input: SavePasteInput,
+  expectedVersion: number,
+): Promise<AutosavePasteResult> {
+  const user = await assertSignedIn()
+
+  const parsed = pasteSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the paste and try again." }
+  }
+  const tooOften = await limited(limits.autosave(user))
+  if (tooOften) return { ok: false, error: tooOften }
+
+  const checked = await checkedPayload(parsed.data, editing)
+  if (!checked.ok) return checked
+
+  try {
+    const result = await store.updatePaste(editing, checked.payload, "Edited", {
+      expectedVersion,
+      batchRevision: true,
+    })
+    if (!result) return { ok: false, error: "That paste no longer exists." }
+    if ("conflict" in result) {
+      return { ok: false, conflict: true, version: result.version, slug: result.slug }
+    }
+
+    // If the custom link changed, the page the editor is on no longer exists. Refreshing it now
+    // would 404 under the editor, so the editor moves to the new link first and refreshes there.
+    if (result.slug === editing) revalidatePath("/", "layout")
+    return { ok: true, ...result }
+  } catch (error) {
+    if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
+    throw error
+  }
+}
+
+// Called when the editor is closed with Done: the edits so far stay one revision, and the next
+// time the paste is edited it starts a new one.
+export async function finishEditing(editing: string): Promise<void> {
+  const user = await assertSignedIn()
+  if (await limited(limits.autosave(user))) return
+  await store.sealRevision(editing, "Edited")
+}
+
+// Rolls a paste back to an earlier revision (see store.restoreRevision).
+export async function restoreRevision(slug: string, revisionId: number) {
+  const user = await assertSignedIn()
+  if (!Number.isSafeInteger(revisionId)) return { ok: false as const, error: "Pick a version." }
+  const tooOften = await limited(limits.edit(user))
+  if (tooOften) return { ok: false as const, error: tooOften }
+
+  const result = await store.restoreRevision(slug, revisionId)
+  if (result.ok) revalidatePath("/", "layout")
+  return result
 }
 
 // Answers "not available" while limited; saving checks the slug again anyway.
@@ -183,11 +271,42 @@ export async function removeShare(slug: string, userId: string): Promise<ShareRe
   return sharesOf(slug)
 }
 
+// Undoes removeShare: the same access, in the same place in the list. The person sees the paste
+// as new again, since opening it before is forgotten.
+export async function restoreRemovedShare(
+  slug: string,
+  userId: string,
+  access: Access,
+  sharedAt: number,
+): Promise<ShareResult> {
+  await assertSignedIn()
+  const parsed = z
+    .object({ access: z.enum(ACCESSES), sharedAt: z.number().int().positive() })
+    .safeParse({ access, sharedAt })
+  if (!parsed.success) return { ok: false, error: "That share can't be restored." }
+  const date = new Date(Math.min(parsed.data.sharedAt, Date.now()))
+  if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
+    return { ok: false, error: "That paste or person no longer exists." }
+  }
+  revalidatePath("/", "layout")
+  return sharesOf(slug)
+}
+
 // Drops a paste someone shared with the viewer from their Shared with me.
 export async function leaveShare(slug: string) {
   await assertSignedIn()
   await store.leaveShare(slug)
   revalidatePath("/", "layout")
+}
+
+// Undoes leaveShare, unless the owner has revoked the share since.
+export async function restoreShare(slug: string): Promise<ActionOutcome> {
+  await assertSignedIn()
+  if (!(await store.restoreShare(slug))) {
+    return { ok: false, error: "That paste is no longer shared with you." }
+  }
+  revalidatePath("/", "layout")
+  return { ok: true }
 }
 
 export async function setStarred(slug: string, starred: boolean) {
@@ -223,10 +342,11 @@ export async function trashPaste(slug: string) {
   revalidatePath("/", "layout")
 }
 
-export async function restorePaste(slug: string) {
+export async function restorePaste(slug: string): Promise<ActionOutcome> {
   await assertSignedIn()
-  await store.restorePaste(slug)
+  const restored = await store.restorePaste(slug)
   revalidatePath("/", "layout")
+  return restored ? { ok: true } : { ok: false, error: "That paste is gone for good." }
 }
 
 export async function deleteForever(slug: string) {

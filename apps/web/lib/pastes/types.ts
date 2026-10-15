@@ -25,8 +25,11 @@ export interface Person {
 }
 
 export interface Revision {
+  id: number
   message: string
   createdAt: number
+  // False for history from before copies were kept, and for entries too old to keep one.
+  restorable: boolean
 }
 
 // What the lists read: a paste without its file contents or revision history.

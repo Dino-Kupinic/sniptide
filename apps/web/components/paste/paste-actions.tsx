@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
@@ -21,8 +22,16 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import { runAction } from "@/lib/feedback"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
 export function StarButton({
@@ -49,8 +58,12 @@ export function StarButton({
       className={className}
       onClick={() =>
         startTransition(async () => {
-          setOptimistic(!optimistic)
-          await setStarred(slug, !optimistic)
+          const next = !optimistic
+          setOptimistic(next)
+          await runAction(() => setStarred(slug, next), {
+            success: next ? "Starred" : "Removed from starred",
+            error: "Couldn't update the star. Try again.",
+          })
         })
       }
     >
@@ -72,7 +85,7 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
         return copy(url)
       }}
     >
-      <LinkIcon />
+      {copied ? <SuccessCheck /> : <LinkIcon />}
       <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
     </Button>
   )
@@ -105,13 +118,22 @@ export function ShareButton({
 
   return (
     <Button type="button" className={className} onClick={share}>
+      {copied ? <SuccessCheck /> : null}
       <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
     </Button>
   )
 }
 
 // Drops a paste someone shared with the viewer from their list, then goes back to it.
-export function LeaveShareButton({ slug, className }: { slug: string; className?: string }) {
+export function LeaveShareButton({
+  slug,
+  title,
+  className,
+}: {
+  slug: string
+  title: string
+  className?: string
+}) {
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
 
@@ -120,11 +142,16 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
       type="button"
       variant="outline"
       className={className}
-      disabled={pending}
+      loading={pending}
       onClick={() =>
         startTransition(async () => {
-          await leaveShare(slug)
-          router.push("/shared")
+          const result = await withUndo(() => leaveShare(slug), {
+            error: "Couldn't remove it from your list. Try again.",
+            message: `Removed “${title}” from your list`,
+            undo: () => restoreShare(slug),
+            onUndone: () => router.push(`/pastes/${slug}`),
+          })
+          if (result.ok) router.push("/shared")
         })
       }
     >
@@ -135,12 +162,14 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
 
 export function PasteOverflowMenu({
   slug,
+  title,
   canTrash,
   canLeave,
   rawHref,
   className,
 }: {
   slug: string
+  title: string
   canTrash: boolean
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
@@ -177,8 +206,13 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await leaveShare(slug)
-                router.push("/shared")
+                const result = await withUndo(() => leaveShare(slug), {
+                  error: "Couldn't remove it from your list. Try again.",
+                  message: `Removed “${title}” from your list`,
+                  undo: () => restoreShare(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
+                })
+                if (result.ok) router.push("/shared")
               }}
             >
               <LogOutIcon />
@@ -192,8 +226,13 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await trashPaste(slug)
-                router.push("/pastes")
+                const result = await withUndo(() => trashPaste(slug), {
+                  error: "Couldn't move the paste to trash. Try again.",
+                  message: `Moved “${title}” to trash`,
+                  undo: () => restorePaste(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
+                })
+                if (result.ok) router.push("/pastes")
               }}
             >
               <Trash2Icon />

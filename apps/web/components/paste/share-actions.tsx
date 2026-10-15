@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
+import { CopyIcon, DownloadIcon } from "lucide-react"
 import { reportCopy, useCopy } from "./copy-button"
 
 // Raw / Download / Copy code on the public page, for the paste's first file.
@@ -19,8 +20,7 @@ export function ShareActions({
 }) {
   const { copied, copy } = useCopy()
   const copyCode = async () => {
-    await copy(content)
-    if (slug) reportCopy(slug)
+    if ((await copy(content)) && slug) reportCopy(slug)
   }
 
   if (compact) {
@@ -37,7 +37,7 @@ export function ShareActions({
           </Button>
         ) : null}
         <Button className="h-12 flex-1 gap-2 text-base font-semibold" onClick={copyCode}>
-          {copied ? <CheckIcon /> : <CopyIcon />}
+          {copied ? <SuccessCheck /> : <CopyIcon />}
           <span aria-live="polite">{copied ? "Copied" : "Copy code"}</span>
         </Button>
       </div>
@@ -63,7 +63,7 @@ export function ShareActions({
         </>
       ) : null}
       <Button size="lg" onClick={copyCode}>
-        {copied ? <CheckIcon /> : <CopyIcon />}
+        {copied ? <SuccessCheck /> : <CopyIcon />}
         <span aria-live="polite">{copied ? "Copied" : "Copy code"}</span>
       </Button>
     </div>

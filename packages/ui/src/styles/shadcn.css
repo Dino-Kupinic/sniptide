@@ -562,6 +562,14 @@
 }
 
 @theme inline {
+  @keyframes check-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
   @keyframes tw-shimmer {
     from {
       background-position: 100% 0;

@@ -19,8 +19,10 @@ import {
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { deleteCollection } from "@/lib/collections/actions"
+import { showUndo } from "@/components/undo-toast"
+import { deleteCollection, restoreCollection } from "@/lib/collections/actions"
 import type { Collection } from "@/lib/collections/types"
+import { runAction } from "@/lib/feedback"
 import { RenameCollectionDialog } from "./rename-collection"
 
 // Rename and delete for one collection. `afterDelete` is where to go once it's gone: a
@@ -83,13 +85,26 @@ export function CollectionMenu({
             <Button
               size="lg"
               className="bg-destructive text-white hover:bg-destructive/85"
-              disabled={pending}
+              loading={pending}
               onClick={() =>
                 startTransition(async () => {
-                  await deleteCollection(collection.slug)
+                  const result = await runAction(() => deleteCollection(collection.slug), {
+                    error: "Couldn't delete the collection. Try again.",
+                  })
+                  const snapshot = result.ok ? result.value : null
                   setDeleting(false)
+                  if (!result.ok) return
                   if (afterDelete) router.push(afterDelete)
                   else router.refresh()
+                  if (snapshot) {
+                    showUndo({
+                      message: `Deleted “${collection.name}”`,
+                      undo: () => restoreCollection(snapshot),
+                      onUndone: () => {
+                        if (afterDelete) router.push(`/collections/${snapshot.slug}`)
+                      },
+                    })
+                  }
                 })
               }
             >

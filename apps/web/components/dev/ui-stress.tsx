@@ -87,6 +87,7 @@ export function UiStress({
             <PasteEditor
               initial={data.editor}
               collections={data.collections}
+              draftScope="ui-stress"
               secretDetection={false}
             />
           ) : null}
