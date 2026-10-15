@@ -8,7 +8,9 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Switch } from "@sniptide/ui/components/switch"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -140,9 +142,11 @@ export function QuickPaste({
         collection: null,
         password: null,
         burnAfterRead: draft.burnAfterRead,
-      })
+      }).catch(() => null)
+      if (!result) return setError("Couldn't create the paste. Try again.")
       if (!result.ok) return setError(result.error)
       writeDraft(null)
+      toast.success("Paste created")
       router.push(`/pastes/${result.slug}`)
     })
   }
@@ -275,7 +279,7 @@ export function QuickPaste({
         <Button
           variant="inverted"
           size="lg"
-          disabled={pending}
+          loading={pending}
           onClick={create}
           className="h-8 gap-2 text-[13px]"
         >
@@ -283,11 +287,7 @@ export function QuickPaste({
           <span className="font-mono text-[11px] text-background/70">⌘↵</span>
         </Button>
       </div>
-      {error ? (
-        <p role="alert" className="border-t border-border px-4 py-2 text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError variant="inline" message={error} className="border-t border-border px-4 py-2" />
     </section>
   )
 }

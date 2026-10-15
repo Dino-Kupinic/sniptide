@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@sniptide/ui/components/dialog"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import * as React from "react"
 import type { CollectionActionResult } from "@/lib/collections/actions"
@@ -63,8 +64,12 @@ export function CollectionNameDialog({
             event.preventDefault()
             const name = String(new FormData(event.currentTarget).get("name") ?? "")
             startTransition(async () => {
-              const result = await onSubmit(name)
-              if (!result.ok) return setError(result.error)
+              try {
+                const result = await onSubmit(name)
+                if (!result.ok) return setError(result.error)
+              } catch {
+                return setError("Something went wrong. Try again.")
+              }
               onOpenChange(false)
             })
           }}
@@ -92,16 +97,12 @@ export function CollectionNameDialog({
               className="h-10 min-w-0 flex-1 font-mono text-base lg:text-[13px]"
             />
           </div>
-          {error ? (
-            <p role="alert" className="text-[13px] text-destructive">
-              {error}
-            </p>
-          ) : null}
+          <FormError variant="inline" message={error} />
           <div className="flex justify-end gap-2">
             <DialogClose render={<Button type="button" variant="outline" size="lg" />}>
               Cancel
             </DialogClose>
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button type="submit" size="lg" loading={pending}>
               {pending ? pendingLabel : submitLabel}
             </Button>
           </div>

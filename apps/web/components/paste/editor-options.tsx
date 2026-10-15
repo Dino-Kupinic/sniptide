@@ -44,6 +44,15 @@ const NO_COLLECTION = "none"
 
 export type SlugStatus = "idle" | "checking" | "ok" | "taken"
 
+// Enter finishes a field without submitting the editor's form.
+function commitOnEnter(onCommit?: () => void) {
+  return (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter" || !onCommit) return
+    event.preventDefault()
+    onCommit()
+  }
+}
+
 export function useSlugStatus(slug: string, except?: string) {
   const [status, setStatus] = React.useState<SlugStatus>("idle")
 
@@ -131,10 +140,13 @@ export function ExpiryChips({
 export function SlugInput({
   value,
   onChange,
+  onCommit,
   status,
 }: {
   value: string
   onChange: (value: string) => void
+  // The person finished typing (left the field or pressed Enter).
+  onCommit?: () => void
   status: SlugStatus
 }) {
   const host = useSiteHost()
@@ -153,6 +165,8 @@ export function SlugInput({
           aria-label="Custom link"
           value={value}
           onChange={(event) => onChange(event.target.value.replace(/[^A-Za-z0-9_-]/g, ""))}
+          onBlur={onCommit}
+          onKeyDown={commitOnEnter(onCommit)}
           placeholder="random"
           maxLength={40}
           spellCheck={false}
@@ -279,10 +293,13 @@ export function ToggleRow({
 export function PasswordInput({
   value,
   onChange,
+  onCommit,
   placeholder,
 }: {
   value: string
   onChange: (value: string) => void
+  // The person finished typing (left the field or pressed Enter).
+  onCommit?: () => void
   placeholder: string
 }) {
   const [visible, setVisible] = React.useState(false)
@@ -294,6 +311,8 @@ export function PasswordInput({
         autoComplete="new-password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onCommit}
+        onKeyDown={commitOnEnter(onCommit)}
         placeholder={placeholder}
         className="h-[34px] pr-9 text-base lg:text-sm"
       />

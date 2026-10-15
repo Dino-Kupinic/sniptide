@@ -50,17 +50,24 @@ async function gistDraft(
 // `?gist=<id>&file=<name>…` starts from files of a public gist (the import sheet).
 export default async function Page({ searchParams }: PageProps<"/new">) {
   const { from, gist, file } = await searchParams
-  const [source, preferences, collections, imported] = await Promise.all([
+  const [source, preferences, collections, imported, session] = await Promise.all([
     typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
     listCollections(),
     typeof gist === "string" ? gistDraft(gist, [file ?? []].flat()) : null,
+    getSession(),
   ])
   const draft = imported && "draft" in imported ? imported.draft : null
 
   return (
     <PasteEditor
       collections={collections}
+      // A copy or an import starts from other text, so its draft is kept apart from a blank paste.
+      draftScope={[
+        session?.user.id ?? "",
+        source ? `from:${source.slug}` : "",
+        typeof gist === "string" ? `gist:${gist}` : "",
+      ].join(":")}
       indentation={preferences.indentation}
       secretDetection={preferences.secretDetection}
       notice={imported && "error" in imported ? imported.error : undefined}

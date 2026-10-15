@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
@@ -21,8 +22,9 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { showUndo } from "@/components/undo-toast"
+import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
+import { runAction } from "@/lib/feedback"
 import {
   leaveShare,
   restorePaste,
@@ -56,8 +58,12 @@ export function StarButton({
       className={className}
       onClick={() =>
         startTransition(async () => {
-          setOptimistic(!optimistic)
-          await setStarred(slug, !optimistic)
+          const next = !optimistic
+          setOptimistic(next)
+          await runAction(() => setStarred(slug, next), {
+            success: next ? "Starred" : "Removed from starred",
+            error: "Couldn't update the star. Try again.",
+          })
         })
       }
     >
@@ -79,7 +85,7 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
         return copy(url)
       }}
     >
-      <LinkIcon />
+      {copied ? <SuccessCheck /> : <LinkIcon />}
       <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
     </Button>
   )
@@ -112,6 +118,7 @@ export function ShareButton({
 
   return (
     <Button type="button" className={className} onClick={share}>
+      {copied ? <SuccessCheck /> : null}
       <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
     </Button>
   )
@@ -135,17 +142,16 @@ export function LeaveShareButton({
       type="button"
       variant="outline"
       className={className}
-      disabled={pending}
+      loading={pending}
       onClick={() =>
         startTransition(async () => {
-          await leaveShare(slug)
-          router.push("/shared")
-          showUndo({
-            title: "Removed from your list",
-            description: title,
+          const result = await withUndo(() => leaveShare(slug), {
+            error: "Couldn't remove it from your list. Try again.",
+            message: `Removed “${title}” from your list`,
             undo: () => restoreShare(slug),
             onUndone: () => router.push(`/pastes/${slug}`),
           })
+          if (result.ok) router.push("/shared")
         })
       }
     >
@@ -200,14 +206,13 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await leaveShare(slug)
-                router.push("/shared")
-                showUndo({
-                  title: "Removed from your list",
-                  description: title,
+                const result = await withUndo(() => leaveShare(slug), {
+                  error: "Couldn't remove it from your list. Try again.",
+                  message: `Removed “${title}” from your list`,
                   undo: () => restoreShare(slug),
                   onUndone: () => router.push(`/pastes/${slug}`),
                 })
+                if (result.ok) router.push("/shared")
               }}
             >
               <LogOutIcon />
@@ -221,14 +226,13 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await trashPaste(slug)
-                router.push("/pastes")
-                showUndo({
-                  title: "Moved to trash",
-                  description: title,
+                const result = await withUndo(() => trashPaste(slug), {
+                  error: "Couldn't move the paste to trash. Try again.",
+                  message: `Moved “${title}” to trash`,
                   undo: () => restorePaste(slug),
                   onUndone: () => router.push(`/pastes/${slug}`),
                 })
+                if (result.ok) router.push("/pastes")
               }}
             >
               <Trash2Icon />

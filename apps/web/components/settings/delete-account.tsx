@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -57,7 +58,9 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                 event.preventDefault()
                 const password = String(new FormData(event.currentTarget).get("password") ?? "")
                 startTransition(async () => {
-                  const { error } = await authClient.deleteUser({ password: password || undefined })
+                  const { error } = await authClient
+                    .deleteUser({ password: password || undefined })
+                    .catch(() => ({ error: { message: undefined } }))
                   if (error) return setError(error.message ?? "Couldn't delete your account.")
                   router.replace("/sign-up")
                   router.refresh()
@@ -73,11 +76,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                 aria-invalid={Boolean(error)}
                 className="h-10 text-base lg:text-sm"
               />
-              {error ? (
-                <p role="alert" className="text-[13px] text-destructive">
-                  {error}
-                </p>
-              ) : null}
+              <FormError variant="inline" message={error} />
               <AlertDialogFooter>
                 <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>
                   Cancel
@@ -85,7 +84,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                 <Button
                   type="submit"
                   size="lg"
-                  disabled={pending}
+                  loading={pending}
                   className="bg-destructive text-white hover:bg-destructive/85"
                 >
                   {pending ? "Deleting…" : "Delete account"}

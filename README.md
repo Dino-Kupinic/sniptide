@@ -8,6 +8,7 @@ Docker container on Coolify with Cloudflare in front, backed by Postgres.
 ```bash
 bun install
 cp apps/web/.env.example apps/web/.env.local   # then set BETTER_AUTH_SECRET
+echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" > .env   # compose insists on one, even for `db`
 docker compose up -d db                        # local Postgres on localhost:5432
 bun dev
 ```
@@ -141,7 +142,7 @@ Cloudflare handles DNS and proxies the domain to the server (orange cloud), with
 To try the production image locally with its database:
 
 ```bash
-BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose --profile app up -d --build
+BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose up -d --build
 ```
 
 ## Self-hosting
@@ -171,22 +172,76 @@ On startup, Sniptide applies migrations before serving requests. `GET /api/healt
 server and database, and the image includes a Docker health check. Back up your database before
 upgrading; see [the rollout guide](docs/scaling.md) for migration and rollback considerations.
 
-For a new database, `docker-compose.yml` runs the published app image plus Postgres:
+### Docker Compose
+
+For a new database, `docker-compose.yml` runs the published app image plus Postgres. On a fresh
+server with Docker installed, from zero to a running instance:
 
 ```bash
-export BETTER_AUTH_SECRET=$(openssl rand -hex 32)   # keep it; sessions depend on it
-export BETTER_AUTH_URL=https://paste.example.com     # the URL people open
-docker compose --profile app up -d --no-build
+git clone https://github.com/Dino-Kupinic/sniptide.git && cd sniptide   # or download docker-compose.yml and .env.example
+printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<your-server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
+docker compose up -d
 ```
+
+Keep the secret: sessions depend on it. `BETTER_AUTH_URL` must be the exact address you open in
+the browser (a domain with `https://` once you add HTTPS below); sign-in is rejected from any other
+origin. Open it and create your account; the first start applies the database migrations. `.env.example` lists every setting compose accepts (`BETTER_AUTH_URL`,
+`POSTGRES_PASSWORD`, sign-up and OAuth options, …); the app's own reference is
+`apps/web/.env.example`.
 
 Compose uses `latest` by default. For repeatable deployments, set
 `SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:1.2.3` (substitute an actual release), or pin an image
-digest. To update, run `docker compose --profile app pull` then
-`docker compose --profile app up -d --no-build`. To build from source instead, run
-`docker compose --profile app up -d --build`.
+digest. To update, run `docker compose pull` then `docker compose up -d`. To build from source
+instead, run `docker compose up -d --build`. Back up the `postgres` volume (for example with
+`pg_dump`). Set `POSTGRES_PASSWORD` in `.env` before the first start; Postgres keeps the password
+it was created with.
 
-Put your reverse proxy (or Coolify) in front of port 3000, and back up the `postgres` volume
-(for example with `pg_dump`). Set `POSTGRES_PASSWORD` to change the database password.
+**HTTPS on your own domain.** The optional `proxy` profile adds [Caddy](https://caddyserver.com),
+which gets and renews a Let's Encrypt certificate. Point the domain's DNS at the server, open ports
+80 and 443, then add this to `.env` and start with the profile:
+
+```dotenv
+SNIPTIDE_DOMAIN=paste.example.com
+BETTER_AUTH_URL=https://paste.example.com
+CLIENT_IP_SOURCE=x-forwarded-for
+TRUSTED_PROXIES=private
+SNIPTIDE_BIND=127.0.0.1   # optional: close port 3000 to the outside
+```
+
+```bash
+docker compose --profile proxy up -d
+```
+
+Already running nginx, Traefik or Coolify? Skip the profile and put your proxy in front of port
+3000 (see the table below for `CLIENT_IP_SOURCE`).
+
+### Coolify
+
+`deploy/coolify/sniptide.yaml` is a [Coolify](https://coolify.io) service template with the app
+and Postgres. Coolify generates the database credentials and the auth secret and assigns the
+domain, so there is nothing to fill in before the first deploy. In a Coolify project choose
+**Add Resource → Docker Compose Empty**, paste the file, set the domain for the `sniptide` service
+(port 3000), and deploy. It follows Coolify's service template format, so it can also be
+contributed to Coolify's one-click service list. The optional settings (sign-up, OAuth, webhooks,
+`MAX_PASTE_SIZE`) show up as environment variables on the resource.
+
+### Settings
+
+Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`; add `BETTER_AUTH_URL` so browsers
+can sign in (compose and the Coolify template set all three). Everything else is optional and documented with its default in `apps/web/.env.example`;
+a test fails when the app reads a variable that file doesn't list. The hosted-only extras are off
+unless you turn them on:
+
+| Feature | Default on a self-hosted instance | Setting |
+| --- | --- | --- |
+| Email and password sign-in | On, always | n/a |
+| GitHub and Google sign-in | Off; buttons render disabled | `GITHUB_CLIENT_ID`/`_SECRET`, `GOOGLE_CLIENT_ID`/`_SECRET` |
+| Open sign-up | On: anyone can create an account | `ALLOW_SIGN_UP=false` closes it for everyone; existing accounts keep signing in |
+| Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails (`WAITLIST_URL` adds an "apply" link) |
+| PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
+| Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
+
+To run a private instance: sign up once, then set `ALLOW_SIGN_UP=false` and restart.
 
 Rate limits (sign-in, password-protected pastes) count per visitor IP. Tell the app where that
 comes from with `CLIENT_IP_SOURCE`:

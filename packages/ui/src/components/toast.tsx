@@ -1,62 +1,134 @@
 "use client"
 
-import { Toast as ToastPrimitive } from "@base-ui/react/toast"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "cn"
-import { XIcon } from "lucide-react"
+import { AlertCircleIcon, XIcon } from "lucide-react"
+import * as React from "react"
 
-// Square toasts with the hard offset shadow the menus use. `toast` is a global manager, so server
-// action callbacks and plain functions can raise one; mount <Toaster /> once near the root.
-const toast = ToastPrimitive.createToastManager()
-
-// How long an action toast (one with an Undo) stays up. Hovering or focusing it pauses the clock.
-const TOAST_ACTION_TIMEOUT = 8000
-
-function ToastList() {
-  const { toasts } = ToastPrimitive.useToastManager()
-  return toasts.map((item) => (
-    <ToastPrimitive.Root
-      key={item.id}
-      toast={item}
-      className={cn(
-        "pointer-events-auto flex w-full items-center gap-3 border border-offset-shadow bg-popover py-2.5 pr-2 pl-4 text-popover-foreground shadow-[4px_4px_0_0_var(--offset-shadow)] transition-[opacity,translate] duration-150 data-ending-style:translate-y-2 data-ending-style:opacity-0 data-starting-style:translate-y-2 data-starting-style:opacity-0",
-        item.type === "error" && "border-destructive shadow-[4px_4px_0_0_var(--destructive)]",
-      )}
-    >
-      <ToastPrimitive.Content className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <ToastPrimitive.Title className="truncate text-sm font-medium" />
-          <ToastPrimitive.Description className="truncate text-[13px] text-muted-foreground" />
-        </div>
-        {item.actionProps ? (
-          <ToastPrimitive.Action className="shrink-0 px-2 py-1 text-sm font-semibold text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40" />
-        ) : null}
-        <ToastPrimitive.Close
-          aria-label="Dismiss"
-          className="flex size-7 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-        >
-          <XIcon className="size-4" />
-        </ToastPrimitive.Close>
-      </ToastPrimitive.Content>
-    </ToastPrimitive.Root>
-  ))
+type ToastKind = "success" | "error" | "info"
+type ToastAction = { label: string; run: () => void | Promise<void> }
+type ToastItem = {
+  id: number
+  kind: ToastKind
+  message: string
+  action?: ToastAction
+  duration: number
+}
+type ToastOptions = {
+  // A button on the toast, e.g. Undo. Clicking it closes the toast and then runs `run`.
+  action?: ToastAction
+  // How long it stays up, in ms. Toasts with an action default to longer.
+  duration?: number
 }
 
-// Mounts the provider and viewport. On phones the viewport clears the bottom tab bar.
+const DURATION: Record<ToastKind, number> = { success: 3000, error: 6000, info: 3000 }
+const ACTION_DURATION = 8000
+const MAX_VISIBLE = 3
+const EMPTY: ToastItem[] = []
+
+let items: ToastItem[] = EMPTY
+let nextId = 1
+const listeners = new Set<() => void>()
+const timers = new Map<number, ReturnType<typeof setTimeout>>()
+
+function emit(next: ToastItem[]) {
+  items = next
+  for (const listener of listeners) listener()
+}
+
+function dismiss(id: number) {
+  clearTimeout(timers.get(id))
+  timers.delete(id)
+  emit(items.filter((item) => item.id !== id))
+}
+
+function show(kind: ToastKind, message: string, options: ToastOptions = {}) {
+  const id = nextId++
+  const duration = options.duration ?? (options.action ? ACTION_DURATION : DURATION[kind])
+  const dropped = items.slice(0, Math.max(0, items.length - (MAX_VISIBLE - 1)))
+  for (const item of dropped) {
+    clearTimeout(timers.get(item.id))
+    timers.delete(item.id)
+  }
+  emit([...items.slice(dropped.length), { id, kind, message, action: options.action, duration }])
+  timers.set(
+    id,
+    setTimeout(() => dismiss(id), duration),
+  )
+  return id
+}
+
+// Feedback for actions that have no button or form of their own to report on, like a menu item.
+// `info` is neutral; pass `action` for something the reader can take back, like Undo.
+// Mount <Toaster /> once near the root.
+const toast = {
+  success: (message: string, options?: ToastOptions) => show("success", message, options),
+  error: (message: string, options?: ToastOptions) => show("error", message, options),
+  info: (message: string, options?: ToastOptions) => show("info", message, options),
+  dismiss,
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
 function Toaster({ className }: { className?: string }) {
+  const current = React.useSyncExternalStore(
+    subscribe,
+    () => items,
+    () => EMPTY,
+  )
+
   return (
-    <ToastPrimitive.Provider toastManager={toast} limit={3}>
-      <ToastPrimitive.Portal>
-        <ToastPrimitive.Viewport
+    <div
+      data-slot="toaster"
+      className={cn(
+        "pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-100 flex flex-col items-center gap-2 px-4 lg:bottom-6",
+        className,
+      )}
+    >
+      {current.map((item) => (
+        <div
+          key={item.id}
+          role={item.kind === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-none fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-[60] mx-auto flex max-w-sm flex-col gap-2 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:mx-0 lg:w-96",
-            className,
+            "pointer-events-auto flex max-w-sm items-center gap-2 border bg-popover py-2 pr-1.5 pl-3 text-[13px] text-popover-foreground shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
+            item.kind === "error" ? "border-destructive/40" : "border-border",
           )}
         >
-          <ToastList />
-        </ToastPrimitive.Viewport>
-      </ToastPrimitive.Portal>
-    </ToastPrimitive.Provider>
+          {item.kind === "error" ? (
+            <AlertCircleIcon className="size-4 shrink-0 text-destructive" aria-hidden="true" />
+          ) : item.kind === "success" ? (
+            <SuccessCheck className="text-primary" />
+          ) : null}
+          <span className="min-w-0 flex-1">{item.message}</span>
+          {item.action ? (
+            <button
+              type="button"
+              onClick={() => {
+                dismiss(item.id)
+                void item.action?.run()
+              }}
+              className="shrink-0 px-2 py-1 text-[13px] font-semibold text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              {item.action.label}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => dismiss(item.id)}
+            className="flex size-6 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <XIcon className="size-3.5" />
+          </button>
+        </div>
+      ))}
+    </div>
   )
 }
 
-export { TOAST_ACTION_TIMEOUT, Toaster, toast }
+export { Toaster, toast }

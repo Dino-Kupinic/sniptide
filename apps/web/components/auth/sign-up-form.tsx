@@ -74,12 +74,14 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signUp.email({
-      name: username,
-      username,
-      email: String(form.get("email")),
-      password,
-    })
+    const { error } = await authClient.signUp
+      .email({
+        name: username,
+        username,
+        email: String(form.get("email")),
+        password,
+      })
+      .catch(() => ({ error: { message: "Couldn't reach the server. Try again." } }))
 
     if (error) {
       setPending(false)
@@ -205,7 +207,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
 
         <FormError message={error} />
 
-        <Button type="submit" disabled={pending} className={authSubmitClass}>
+        <Button type="submit" loading={pending} className={authSubmitClass}>
           {pending ? "Creating account…" : "Create account"}
         </Button>
 

@@ -50,10 +50,8 @@ export default function RootLayout({
       )}
     >
       <body className="overscroll-none">
-        <ThemeProvider>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
+        <Toaster />
         <Analytics />
       </body>
     </html>

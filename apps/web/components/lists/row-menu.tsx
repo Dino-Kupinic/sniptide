@@ -19,7 +19,8 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import Link from "next/link"
-import { showUndo } from "@/components/undo-toast"
+import { withUndo } from "@/components/undo-toast"
+import { copyText, runAction } from "@/lib/feedback"
 import {
   leaveShare,
   restorePaste,
@@ -52,7 +53,7 @@ export function RowMenu({
           <ExternalLinkIcon />
           Open
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${origin}/${row.slug}`)}>
+        <DropdownMenuItem onClick={() => copyText(`${origin}/${row.slug}`)}>
           <LinkIcon />
           Copy link
         </DropdownMenuItem>
@@ -66,7 +67,14 @@ export function RowMenu({
           <CopyIcon />
           Duplicate
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setStarred(row.slug, !row.starred)}>
+        <DropdownMenuItem
+          onClick={() =>
+            runAction(() => setStarred(row.slug, !row.starred), {
+              success: row.starred ? "Removed from starred" : "Starred",
+              error: "Couldn't update the star. Try again.",
+            })
+          }
+        >
           {row.starred ? <StarOffIcon /> : <StarIcon />}
           {row.starred ? "Unstar" : "Star"}
         </DropdownMenuItem>
@@ -75,14 +83,13 @@ export function RowMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onClick={async () => {
-                await leaveShare(row.slug)
-                showUndo({
-                  title: "Removed from your list",
-                  description: row.title,
+              onClick={() =>
+                withUndo(() => leaveShare(row.slug), {
+                  error: "Couldn't remove it from your list. Try again.",
+                  message: `Removed “${row.title}” from your list`,
                   undo: () => restoreShare(row.slug),
                 })
-              }}
+              }
             >
               <LogOutIcon />
               Remove from my list
@@ -94,14 +101,13 @@ export function RowMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onClick={async () => {
-                await trashPaste(row.slug)
-                showUndo({
-                  title: "Moved to trash",
-                  description: row.title,
+              onClick={() =>
+                withUndo(() => trashPaste(row.slug), {
+                  error: "Couldn't move the paste to trash. Try again.",
+                  message: `Moved “${row.title}” to trash`,
                   undo: () => restorePaste(row.slug),
                 })
-              }}
+              }
             >
               <Trash2Icon />
               Move to trash

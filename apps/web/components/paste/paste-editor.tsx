@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { toast } from "@sniptide/ui/components/toast"
@@ -15,6 +16,7 @@ import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } f
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { AutosaveStatus, ConflictBanner, DraftNotice } from "@/components/autosave-status"
 import { CodeBlock } from "@/components/paste/code-block"
 import {
   CollectionSelect,
@@ -43,11 +45,19 @@ import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { useSiteHost } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
+import type { Autosaver, SaveOutcome } from "@/lib/autosave/autosaver"
+import { draftKey } from "@/lib/autosave/drafts"
+import {
+  type PasteBroadcast,
+  useAutosave,
+  useDraftBackup,
+  useSaveBroadcast,
+} from "@/lib/autosave/use-autosave"
 import type { Collection } from "@/lib/collections/types"
 import { editKind, type Snapshot } from "@/lib/editor-history"
-import { byteLength, formatBytes } from "@/lib/format"
+import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
-import { savePaste } from "@/lib/pastes/actions"
+import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
@@ -63,6 +73,27 @@ export interface EditorInitial {
   collection: string | null
   hasPassword: boolean
   burnAfterRead: boolean
+  // The paste's version when the page loaded (editing only); see autosavePaste.
+  version?: number
+}
+
+const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
+
+// What the draft on this device keeps: everything except the password, which never leaves memory.
+function forDraft(value: SavePasteInput): SavePasteInput {
+  return { ...value, password: value.password === null ? null : "" }
+}
+
+// Why an edit can't be saved yet, or null. Mirrors the first checks the server makes, so the
+// editor says "add a title" quietly instead of showing an error while someone is mid-thought.
+function unsavable(value: SavePasteInput) {
+  if (!value.title.trim()) return "add a title"
+  if (value.files.some((file) => !file.name.trim())) return "every file needs a name"
+  if (new Set(value.files.map((file) => file.name.trim())).size !== value.files.length) {
+    return "file names must be unique"
+  }
+  if (!value.files.some((file) => file.content.trim())) return "paste some code"
+  return null
 }
 
 function snapshotOf(textarea: HTMLTextAreaElement): Snapshot {
@@ -84,6 +115,7 @@ export function PasteEditor({
   editing,
   currentExpiry,
   collections,
+  draftScope,
   indentation = "2",
   secretDetection = true,
   notice,
@@ -95,6 +127,9 @@ export function PasteEditor({
   // Human label for the current expiry when editing ("Oct 12, 09:24").
   currentExpiry?: string
   collections: Collection[]
+  // Whose drafts these are (the signed-in account, plus what the page started from), so accounts
+  // sharing a browser and different starting points don't mix.
+  draftScope: string
   // From the viewer's Settings: what Tab inserts, and whether to warn about pasted secrets.
   indentation?: Preferences["indentation"]
   secretDetection?: boolean
@@ -131,10 +166,21 @@ export function PasteEditor({
   const pendingSelection = React.useRef<Pick<Snapshot, "selectionStart" | "selectionEnd"> | null>(
     null,
   )
-  const removalToasts = React.useRef(new Set<string>())
+  const removalToasts = React.useRef(new Set<number>())
   const history = useEditorHistory()
   const formId = React.useId()
-  const slugStatus = useSlugStatus(slug, editing)
+  // Editing a paste saves it as you go, so the fields below are split in two. What the person is
+  // typing lives in the state above. A custom link and a password only count once they finish
+  // typing (leave the field or press Enter), because saving "ab" on the way to "abc" would change
+  // the paste's public link or lock it behind a half-typed password.
+  const [committedSlug, setCommittedSlug] = React.useState(initial.slug)
+  const [committedPassword, setCommittedPassword] = React.useState("")
+  // What the server has: the link the page is at, whether a password is set, and when it expires.
+  const [savedSlug, setSavedSlug] = React.useState(editing ?? "")
+  const [hasPassword, setHasPassword] = React.useState(initial.hasPassword)
+  const [expiryLabel, setExpiryLabel] = React.useState(currentExpiry)
+  const versionRef = React.useRef(initial.version ?? 0)
+  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined)
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
@@ -147,6 +193,215 @@ export function PasteEditor({
     () => (secretDetection ? findSecrets(files) : null),
     [files, secretDetection],
   )
+
+  // The paste as the server would store it. Editing sends this after every pause in typing.
+  const slugForSave = !editing
+    ? slug
+    : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+      ? slug
+      : savedSlug
+  const passwordForSave = !passwordOn
+    ? null
+    : !editing
+      ? password
+      : // Switched on but not set yet: the paste isn't protected until a password is typed.
+        committedPassword || (hasPassword ? "" : null)
+  const value = React.useMemo<SavePasteInput>(
+    () => ({
+      title,
+      description,
+      files: files.map(({ name, content }) => ({ name, content })),
+      visibility,
+      expiry,
+      slug: slugForSave,
+      collection,
+      password: passwordForSave,
+      burnAfterRead,
+    }),
+    [
+      title,
+      description,
+      files,
+      visibility,
+      expiry,
+      slugForSave,
+      collection,
+      passwordForSave,
+      burnAfterRead,
+    ],
+  )
+  const [initialValue] = React.useState<SavePasteInput>(() => ({
+    title: initial.title,
+    description: initial.description,
+    files: initial.files.map(({ name, content }) => ({ name, content })),
+    visibility: initial.visibility,
+    expiry: initial.expiry,
+    slug: initial.slug,
+    collection: initial.collection,
+    password: initial.hasPassword ? "" : null,
+    burnAfterRead: initial.burnAfterRead,
+  }))
+
+  // The newest version another tab or device saved, once we know about it.
+  const conflictRef = React.useRef<PasteBroadcast | null>(null)
+  const savedSlugRef = React.useRef(editing ?? "")
+  const autosaverRef = React.useRef<Autosaver<SavePasteInput> | null>(null)
+  const [changedElsewhere, setChangedElsewhere] = React.useState(false)
+  const draftId = draftKey(draftScope, editing)
+  const broadcast = useSaveBroadcast(draftId, (message) => {
+    if (message.version === versionRef.current) return
+    conflictRef.current = message
+    if (autosaverRef.current?.hasUnsavedChanges()) autosaverRef.current.markConflict()
+    else setChangedElsewhere(true)
+  })
+
+  async function saveEdit(sent: SavePasteInput): Promise<SaveOutcome<SavePasteInput>> {
+    const result = await autosavePaste(savedSlugRef.current, sent, versionRef.current)
+    if (!result.ok) {
+      if ("conflict" in result) {
+        conflictRef.current = { slug: result.slug, version: result.version }
+        return { ok: false, conflict: true }
+      }
+      return result
+    }
+
+    versionRef.current = result.version
+    savedSlugRef.current = result.slug
+    broadcast({ slug: result.slug, version: result.version })
+    setSavedSlug(result.slug)
+    setHasPassword(result.hasPassword)
+    setExpiryLabel(
+      result.expiresAt ? `expires ${formatDateTime(result.expiresAt)}` : "never expires",
+    )
+    // An expiry picked from the chips is relative to the save, so it must not be applied again by
+    // the next one. A password was hashed on the server; the field goes back to "keep".
+    setExpiry((current) => (current === sent.expiry ? "keep" : current))
+    if (sent.password) {
+      setPassword((current) => (current === sent.password ? "" : current))
+      setCommittedPassword((current) => (current === sent.password ? "" : current))
+    }
+    return {
+      ok: true,
+      saved: {
+        ...sent,
+        expiry: "keep",
+        slug: result.slug,
+        password: result.hasPassword ? "" : null,
+      },
+    }
+  }
+
+  const { autosaver, state } = useAutosave({
+    value,
+    initial: initialValue,
+    save: saveEdit,
+    validate: unsavable,
+    manual: !editing,
+  })
+  autosaverRef.current = autosaver
+  const unsaved = state.kind !== "idle" && state.kind !== "saved"
+
+  // A backup of unsaved edits on this device, put back if the tab closed or the network dropped
+  // before they reached the server.
+  const draftValue = React.useMemo(() => forDraft(value), [value])
+  const [draftReady, setDraftReady] = React.useState(false)
+  const [draftNotice, setDraftNotice] = React.useState<
+    { kind: "restored" } | { kind: "choose"; savedAt: number } | null
+  >(null)
+  const { draft, discard: discardDraft } = useDraftBackup({
+    key: draftId,
+    value: draftValue,
+    baseVersion: editing ? versionRef.current : null,
+    dirty: unsaved,
+    enabled: draftReady,
+  })
+  const latestValue = React.useRef(value)
+  latestValue.current = value
+  const draftChecked = React.useRef(false)
+
+  function applyValue(next: SavePasteInput) {
+    const nextFiles = next.files.map((file) => newFile(file.name, file.content))
+    setTitle(next.title)
+    setDescription(next.description)
+    setFiles(nextFiles)
+    setActiveId(nextFiles[0]?.id ?? "")
+    setVisibility(next.visibility)
+    setExpiry(next.expiry)
+    setSlug(next.slug)
+    setCommittedSlug(next.slug)
+    setCollection(next.collection)
+    setPasswordOn(next.password !== null)
+    setPassword("")
+    setCommittedPassword("")
+    setBurnAfterRead(next.burnAfterRead)
+  }
+
+  React.useEffect(() => {
+    if (draft === undefined || draftChecked.current) return
+    draftChecked.current = true
+    if (!draft) return setDraftReady(true)
+
+    const started = JSON.stringify(forDraft(initialValue))
+    if (JSON.stringify(draft.value) === started) {
+      void discardDraft()
+      return setDraftReady(true)
+    }
+    // Typing before the draft arrived, or a draft made against an older version of the paste:
+    // let the person pick instead of overwriting either.
+    const edited = JSON.stringify(forDraft(latestValue.current)) !== started
+    if (edited || (editing && draft.baseVersion !== versionRef.current)) {
+      return setDraftNotice({ kind: "choose", savedAt: draft.savedAt })
+    }
+    applyValue(draft.value)
+    setDraftNotice({ kind: "restored" })
+    setDraftReady(true)
+  }, [draft])
+
+  // Once a restored draft has reached the server there is nothing left to undo.
+  React.useEffect(() => {
+    if (editing && draftNotice?.kind === "restored" && state.kind === "saved") setDraftNotice(null)
+  }, [editing, draftNotice, state])
+
+  // A new custom link moves the page's own address. Do it once everything is saved: the editor
+  // starts over at the new address, and anything typed in the meantime comes back from the draft.
+  React.useEffect(() => {
+    if (!editing || savedSlug === editing || state.kind !== "saved") return
+    if (autosaver.hasUnsavedChanges()) return
+    React.startTransition(() => {
+      router.replace(`/pastes/${savedSlug}/edit`)
+      router.refresh()
+    })
+  }, [editing, savedSlug, state, autosaver, router])
+
+  async function loadLatest() {
+    const target = conflictRef.current?.slug ?? savedSlugRef.current
+    // Nothing to protect any more, so leaving doesn't ask.
+    autosaver.rebase(value)
+    await discardDraft()
+    window.location.assign(`/pastes/${target}/edit`)
+  }
+
+  function keepMine() {
+    if (conflictRef.current) versionRef.current = conflictRef.current.version
+    setChangedElsewhere(false)
+    autosaver.resolveConflict()
+  }
+
+  // Editing has no save button: this leaves once the last edit is on the server.
+  async function finish() {
+    const saved = await autosaver.flush()
+    if (
+      !saved &&
+      !window.confirm(
+        "Some changes haven't been saved yet. They stay on this device and come back the next time you open this paste. Leave anyway?",
+      )
+    ) {
+      return
+    }
+    // Best effort: failing to close the revision only means the next edit may share it.
+    if (saved) await finishEditing(savedSlugRef.current).catch(() => {})
+    router.push(`/pastes/${savedSlugRef.current}`)
+  }
 
   function updateActive(patch: Partial<EditorFile>) {
     setFiles((current) =>
@@ -173,7 +428,7 @@ export function PasteEditor({
 
     // Undo puts the file back where it was, with its content and its undo history.
     const toastId = showUndo({
-      title: `Removed ${removed.name}`,
+      message: `Removed ${removed.name}`,
       undo: async () => {
         setFiles((current) =>
           current.some((file) => file.id === removed.id)
@@ -191,7 +446,7 @@ export function PasteEditor({
   React.useEffect(() => {
     const toasts = removalToasts.current
     return () => {
-      for (const id of toasts) toast.close(id)
+      for (const id of toasts) toast.dismiss(id)
     }
   }, [])
 
@@ -270,6 +525,10 @@ export function PasteEditor({
   }
 
   function submit() {
+    if (editing) {
+      void finish()
+      return
+    }
     setError(null)
     if (slugStatus === "taken") {
       setError(`${host}/${slug} is taken. Pick another custom link.`)
@@ -278,39 +537,34 @@ export function PasteEditor({
 
     startTransition(async () => {
       const result = await savePaste(
-        {
-          title,
-          description,
-          files: files.map(({ name, content }) => ({ name, content })),
-          visibility,
-          expiry,
-          slug,
-          collection,
-          password: passwordOn ? password : null,
-          burnAfterRead,
-        },
-        editing,
+        value,
+        undefined,
         // Only a new private paste invites people; switching away from Private drops them.
-        !editing && visibility === "private"
+        visibility === "private"
           ? invites.map((invite) => ({ userId: invite.person.id, access: invite.access }))
           : [],
-      )
+      ).catch(() => null)
 
+      if (!result) {
+        setError("Couldn't save the paste. Check your connection and try again.")
+        return
+      }
       if (!result.ok) {
         setError(result.error)
         return
       }
-      if (!editing) {
-        track("paste_created", {
-          files: files.length,
-          visibility,
-          expiry,
-          burn_after_read: burnAfterRead,
-          password: passwordOn,
-          custom_link: Boolean(slug),
-          invites: visibility === "private" ? invites.length : 0,
-        })
-      }
+      track("paste_created", {
+        files: files.length,
+        visibility,
+        expiry,
+        burn_after_read: burnAfterRead,
+        password: passwordOn,
+        custom_link: Boolean(slug),
+        invites: visibility === "private" ? invites.length : 0,
+      })
+      toast.success("Paste created")
+      autosaver.rebase(value)
+      await discardDraft()
       router.push(`/pastes/${result.slug}`)
     })
   }
@@ -326,15 +580,22 @@ export function PasteEditor({
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
-  const submitLabel = editing ? "Save changes" : "Create paste"
-  const cancelHref = editing ? `/pastes/${editing}` : "/pastes"
+  const cancelHref = editing ? `/pastes/${savedSlug}` : "/pastes"
 
   const passwordField = passwordOn ? (
-    <PasswordInput
-      value={password}
-      onChange={setPassword}
-      placeholder={initial.hasPassword ? "Leave empty to keep the current one" : "Password"}
-    />
+    <>
+      <PasswordInput
+        value={password}
+        onChange={setPassword}
+        onCommit={editing ? () => setCommittedPassword(password) : undefined}
+        placeholder={hasPassword ? "Leave empty to keep the current one" : "Password"}
+      />
+      {editing && !hasPassword && !committedPassword ? (
+        <p className="text-xs text-muted-foreground">
+          Anyone with the link can open it until you set a password.
+        </p>
+      ) : null}
+    </>
   ) : null
 
   const inviteMenu =
@@ -363,7 +624,7 @@ export function PasteEditor({
               value={expiry}
               onChange={setExpiry}
               options={expiryOptions}
-              currentExpiry={currentExpiry}
+              currentExpiry={expiryLabel}
             />
           </div>
         </>
@@ -373,7 +634,14 @@ export function PasteEditor({
       id: "slug",
       label: "Custom link",
       icon: LinkIcon,
-      content: <SlugInput value={slug} onChange={setSlug} status={slugStatus} />,
+      content: (
+        <SlugInput
+          value={slug}
+          onChange={setSlug}
+          onCommit={editing ? () => setCommittedSlug(slug) : undefined}
+          status={slugStatus}
+        />
+      ),
     },
     {
       id: "collection",
@@ -421,9 +689,19 @@ export function PasteEditor({
     >
       {/* Mobile header from the Paper "New paste" artboard */}
       <div className="sticky top-0 z-20 flex h-[52px] items-center justify-between bg-background px-4 pt-[env(safe-area-inset-top)] box-content lg:hidden">
-        <Link href={cancelHref} className="text-[15px] text-foreground/80">
-          Cancel
-        </Link>
+        {editing ? (
+          <button
+            type="button"
+            onClick={() => void finish()}
+            className="text-[15px] font-medium text-link"
+          >
+            Done
+          </button>
+        ) : (
+          <Link href={cancelHref} className="text-[15px] text-foreground/80">
+            Cancel
+          </Link>
+        )}
         <span className="text-[15px] font-semibold">{editing ? "Edit paste" : "New paste"}</span>
         <button
           type="button"
@@ -435,11 +713,21 @@ export function PasteEditor({
         </button>
       </div>
 
-      <HeaderTitle>{editing ? "Edit paste" : "New paste"}</HeaderTitle>
+      <HeaderTitle>
+        {editing ? "Edit paste" : "New paste"}
+        {editing ? <AutosaveStatus state={state} className="hidden lg:inline" /> : null}
+      </HeaderTitle>
       <HeaderActions>
-        <Button variant="ghost" size="lg" render={<Link href={cancelHref} />} nativeButton={false}>
-          {editing ? "Cancel" : "Discard"}
-        </Button>
+        {editing ? null : (
+          <Button
+            variant="ghost"
+            size="lg"
+            render={<Link href={cancelHref} />}
+            nativeButton={false}
+          >
+            Discard
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -450,8 +738,8 @@ export function PasteEditor({
           <EyeIcon />
           {preview ? "Edit" : "Preview"}
         </Button>
-        <Button type="submit" form={formId} size="lg" disabled={pending} className="gap-2">
-          {pending ? "Saving…" : submitLabel}
+        <Button type="submit" form={formId} size="lg" loading={pending} className="gap-2">
+          {editing ? "Done" : pending ? "Saving…" : "Create paste"}
           <Kbd className="bg-primary-foreground/20 text-primary-foreground">⌘↵</Kbd>
         </Button>
       </HeaderActions>
@@ -476,14 +764,59 @@ export function PasteEditor({
         />
       </div>
 
-      {error ? (
-        <p
-          role="alert"
-          className="mx-4 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive lg:mx-0"
-        >
-          {error}
-        </p>
+      {editing ? <AutosaveStatus state={state} className="px-4 lg:hidden" /> : null}
+
+      {state.kind === "conflict" ? (
+        <ConflictBanner onLoadLatest={() => void loadLatest()} onKeepMine={keepMine} />
+      ) : changedElsewhere ? (
+        <DraftNotice
+          message="This paste was just saved in another tab. Load it to see the latest."
+          actions={[{ label: "Load latest", onClick: () => void loadLatest(), primary: true }]}
+        />
       ) : null}
+
+      {draftNotice?.kind === "restored" ? (
+        <DraftNotice
+          message="Restored the changes you hadn't saved from this device."
+          actions={[
+            {
+              label: "Undo",
+              onClick: () => {
+                applyValue(initialValue)
+                setDraftNotice(null)
+              },
+            },
+            { label: "Dismiss", onClick: () => setDraftNotice(null), primary: true },
+          ]}
+        />
+      ) : null}
+
+      {draftNotice?.kind === "choose" && draft ? (
+        <DraftNotice
+          message={`A draft from ${formatDateTime(draftNotice.savedAt)} was kept on this device. Restoring it replaces what's here now.`}
+          actions={[
+            {
+              label: "Discard draft",
+              onClick: () => {
+                void discardDraft()
+                setDraftNotice(null)
+                setDraftReady(true)
+              },
+            },
+            {
+              label: "Restore draft",
+              primary: true,
+              onClick: () => {
+                applyValue(draft.value)
+                setDraftNotice({ kind: "restored" })
+                setDraftReady(true)
+              },
+            },
+          ]}
+        />
+      ) : null}
+
+      <FormError message={error} className="mx-4 lg:mx-0" />
 
       <SidePanelProvider>
         <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
@@ -628,7 +961,7 @@ export function PasteEditor({
                 options={expiryOptions.filter((option) =>
                   ["1d", "1w", "never"].includes(option.value),
                 )}
-                currentExpiry={currentExpiry}
+                currentExpiry={expiryLabel}
               />
             </div>
             <ToggleRow
@@ -642,7 +975,12 @@ export function PasteEditor({
             {mobileMore ? (
               <>
                 <OptionGroup label="Custom link" id="slug-label-mobile">
-                  <SlugInput value={slug} onChange={setSlug} status={slugStatus} />
+                  <SlugInput
+                    value={slug}
+                    onChange={setSlug}
+                    onCommit={editing ? () => setCommittedSlug(slug) : undefined}
+                    status={slugStatus}
+                  />
                 </OptionGroup>
                 <OptionGroup label="Collection" id="collection-label-mobile">
                   <CollectionSelect
@@ -670,8 +1008,8 @@ export function PasteEditor({
             )}
           </>
         )}
-        <Button type="submit" disabled={pending} className="h-[50px] text-base font-semibold">
-          {pending ? "Saving…" : submitLabel}
+        <Button type="submit" loading={pending} className="h-[50px] text-base font-semibold">
+          {editing ? "Done" : pending ? "Saving…" : "Create paste"}
         </Button>
       </div>
     </form>

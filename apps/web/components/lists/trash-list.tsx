@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import {
   Table,
   TableBody,
@@ -18,10 +19,12 @@ import {
   TableHeader,
   TableRow,
 } from "@sniptide/ui/components/table"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { Trash2Icon } from "lucide-react"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
 import { PASTE_PAGE_SIZE, type PageInfo, type PasteListQuery } from "@/lib/pastes/list-query"
@@ -33,24 +36,34 @@ function ConfirmDelete({
   title,
   description,
   confirmLabel,
+  successMessage,
   onConfirm,
   trigger,
 }: {
   title: string
   description: string
   confirmLabel: string
+  successMessage: string
   onConfirm: () => Promise<void>
   trigger: React.ReactElement
 }) {
   const [pending, startTransition] = React.useTransition()
   const [open, setOpen] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        setError(null)
+      }}
+    >
       <AlertDialogTrigger render={trigger} />
       <AlertDialogContent>
         <AlertDialogTitle>{title}</AlertDialogTitle>
         <AlertDialogDescription>{description}</AlertDialogDescription>
+        <FormError variant="inline" message={error} />
         <AlertDialogFooter>
           <AlertDialogClose render={<Button variant="outline" size="lg" />}>
             Cancel
@@ -58,10 +71,15 @@ function ConfirmDelete({
           <Button
             size="lg"
             className="bg-destructive text-white hover:bg-destructive/85"
-            disabled={pending}
+            loading={pending}
             onClick={() =>
               startTransition(async () => {
-                await onConfirm()
+                try {
+                  await onConfirm()
+                } catch {
+                  return setError("Couldn't delete. Try again.")
+                }
+                toast.success(successMessage)
                 setOpen(false)
               })
             }
@@ -80,10 +98,13 @@ function RestoreButton({ slug, className }: { slug: string; className?: string }
     <Button
       variant="outline"
       size="sm"
-      disabled={pending}
+      loading={pending}
       onClick={() =>
         startTransition(async () => {
-          await restorePaste(slug)
+          await runAction(() => restorePaste(slug), {
+            success: "Paste restored",
+            error: "Couldn't restore the paste. Try again.",
+          })
         })
       }
       className={cn("h-[30px] px-3 text-[13px]", className)}
@@ -114,6 +135,7 @@ export function TrashList({
       title="Empty trash?"
       description={`${pagination.totalAll} ${pagination.totalAll === 1 ? "paste" : "pastes"} will be deleted for good. This can't be undone.`}
       confirmLabel="Empty trash"
+      successMessage="Trash emptied"
       onConfirm={emptyTrash}
       trigger={
         variant === "desktop" ? (
@@ -215,6 +237,7 @@ export function TrashList({
                           title="Delete forever?"
                           description={`"${row.title}" will be deleted for good. This can't be undone.`}
                           confirmLabel="Delete forever"
+                          successMessage="Paste deleted"
                           onConfirm={() => deleteForever(row.slug)}
                           trigger={
                             <button

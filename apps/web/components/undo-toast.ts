@@ -1,45 +1,42 @@
-import { TOAST_ACTION_TIMEOUT, toast } from "@sniptide/ui/components/toast"
+import { toast } from "@sniptide/ui/components/toast"
+import { runAction } from "@/lib/feedback"
 
-// An undo callback reports success by returning anything but a server action's `{ ok: false, error }`.
-function failureOf(outcome: unknown) {
-  if (typeof outcome !== "object" || outcome === null) return null
-  if (!("ok" in outcome) || outcome.ok !== false) return null
-  return "error" in outcome && typeof outcome.error === "string" ? outcome.error : "Try again."
-}
+// The toast's Undo lasts this long. The action has already happened (soft-deleted, unlinked,
+// moved), so Undo only has to reverse it.
+const UNDO_DURATION = 8000
 
-// Confirms a destructive action with a toast whose Undo puts things back. The action has already
-// happened (soft-deleted, unlinked, moved), so Undo only has to reverse it; it stays up for
-// TOAST_ACTION_TIMEOUT, and hovering or focusing it pauses the clock.
+// Shows a neutral toast with an Undo button. Undo runs `undo`, reports a failure as an error
+// toast, and calls `onUndone` after it works. Returns the toast's id.
 export function showUndo({
-  title,
-  description,
+  message,
   undo,
   onUndone,
 }: {
-  title: string
-  description?: string
+  message: string
   undo: () => Promise<unknown>
-  // Runs after a successful undo, e.g. to go back to the page the action closed.
   onUndone?: () => void
 }) {
-  const id = toast.add({
-    title,
-    description,
-    timeout: TOAST_ACTION_TIMEOUT,
-    actionProps: {
-      children: "Undo",
-      onClick: async () => {
-        toast.close(id)
-        let failure: string | null = null
-        try {
-          failure = failureOf(await undo())
-        } catch {
-          failure = "Something went wrong. Try again."
-        }
-        if (failure === null) onUndone?.()
-        else toast.add({ title: "Couldn't undo", description: failure, type: "error" })
+  return toast.info(message, {
+    duration: UNDO_DURATION,
+    action: {
+      label: "Undo",
+      run: async () => {
+        const result = await runAction(undo, { error: "Couldn't undo. Try again." })
+        if (result.ok) onUndone?.()
       },
     },
   })
-  return id
+}
+
+// Runs an action that can be taken back. On success the Undo toast appears; on failure the error
+// toast says why, and no Undo is offered for something that didn't happen.
+export function withUndo<T>(
+  action: () => Promise<T>,
+  options: Parameters<typeof showUndo>[0] & { error: string },
+) {
+  const { error, ...undo } = options
+  return runAction(action, { error }).then((result) => {
+    if (result.ok) showUndo(undo)
+    return result
+  })
 }

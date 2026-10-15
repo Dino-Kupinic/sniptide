@@ -289,8 +289,7 @@ export function PasteList({
                         onClick={async () => {
                           await setStarred(row.slug, false)
                           showUndo({
-                            title: "Removed from starred",
-                            description: row.title,
+                            message: `Removed “${row.title}” from starred`,
                             undo: () => setStarred(row.slug, true),
                           })
                         }}
