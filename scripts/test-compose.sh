@@ -32,7 +32,9 @@ docker compose -p sniptide-compose-test down -v
 echo 'docker-compose.yml: app and database came up healthy.'
 
 # 2. The Coolify template, using the image under test and the variables Coolify generates.
+# Coolify creates the named volumes itself, so the template doesn't declare them; plain compose needs them.
 sed "s|ghcr.io/dino-kupinic/sniptide:latest|$image|" deploy/coolify/sniptide.yaml >"$work/coolify.yaml"
+printf '\nvolumes:\n  sniptide-postgres-data:\n' >>"$work/coolify.yaml"
 export SERVICE_USER_POSTGRES=sniptide SERVICE_PASSWORD_POSTGRES=templatepassword123
 export SERVICE_BASE64_64_SNIPTIDE="template-smoke-test-secret-at-least-32-characters"
 export SERVICE_URL_SNIPTIDE=https://paste.example.com
