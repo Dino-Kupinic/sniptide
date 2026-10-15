@@ -54,6 +54,22 @@ test("n starts a new paste and / opens search, but not while typing", async ({
   await expect(screen.getByRole("dialog")).toHaveCount(0)
 })
 
+test("T then T flips the theme but a lone D does not", async ({ app, browser, screen }) => {
+  await app.open("/dashboard")
+  const isDark = () => browser.evaluate(() => document.documentElement.classList.contains("dark"))
+  // Wait for hydration with a shortcut that opens something, then close it again.
+  await pressUntilDialog(browser, "/")
+  await browser.keyboard.press("Escape")
+  await expect(screen.getByLabel("Search pastes, collections, or run a command")).not.toBeVisible()
+
+  const before = await isDark()
+  await browser.keyboard.press("d")
+  expect(await isDark()).toBe(before)
+  await browser.keyboard.press("t")
+  await browser.keyboard.press("t")
+  await expect.poll(isDark).toBe(!before)
+})
+
 test("undo and redo step through the editor's text, indents included", async ({ app, screen }) => {
   await app.open("/new")
   const editor = screen.getByLabel("Contents of untitled.txt")

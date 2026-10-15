@@ -1,9 +1,6 @@
 "use client"
 
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
-import * as React from "react"
-import { shouldIgnoreSingleKey } from "@/lib/keyboard"
-import { isPlainKey } from "@/lib/shortcuts"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
 
 function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
   return (
@@ -14,32 +11,9 @@ function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextT
       disableTransitionOnChange
       {...props}
     >
-      <ThemeHotkey />
       {children}
     </NextThemesProvider>
   )
-}
-
-function ThemeHotkey() {
-  const { resolvedTheme, setTheme } = useTheme()
-
-  React.useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (!isPlainKey(event, "d") || shouldIgnoreSingleKey(event)) {
-        return
-      }
-
-      setTheme(resolvedTheme === "dark" ? "light" : "dark")
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-
-    return () => {
-      window.removeEventListener("keydown", onKeyDown)
-    }
-  }, [resolvedTheme, setTheme])
-
-  return null
 }
 
 export { ThemeProvider }

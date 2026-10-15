@@ -1,6 +1,7 @@
 import {
   ContrastIcon,
   DownloadIcon,
+  FolderIcon,
   FolderPlusIcon,
   KeyboardIcon,
   LayoutGridIcon,
@@ -12,8 +13,8 @@ import {
 import { type ShortcutId, shortcut } from "@/lib/shortcuts"
 
 // A row the menu can run: it either goes to `href` or calls `run`. `shortcut` is only shown, the
-// bindings themselves live next to what they control: command-menu.tsx (⌘K, /, G-then-key chords),
-// the shortcuts provider (N, ?) and the theme provider (D).
+// bindings themselves live next to what they control: command-menu.tsx (⌘K, /, the two-key sequences),
+// and the shortcuts provider (N, ?).
 export interface Command {
   id: string
   group: "go" | "actions"
@@ -28,6 +29,7 @@ export interface Command {
 const GO_TO_ROWS = [
   { id: "go-dashboard", label: "Dashboard", icon: LayoutGridIcon, href: "/dashboard" },
   { id: "go-starred", label: "Starred", icon: StarIcon, href: "/starred" },
+  { id: "go-collections", label: "Collections", icon: FolderIcon, href: "/collections" },
   { id: "go-trash", label: "Trash", icon: Trash2Icon, href: "/trash" },
 ] as const
 

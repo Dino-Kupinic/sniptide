@@ -310,7 +310,11 @@ export function PasteEditor({
   const [draftNotice, setDraftNotice] = React.useState<
     { kind: "restored" } | { kind: "choose"; savedAt: number } | null
   >(null)
-  const { draft, discard: discardDraft } = useDraftBackup({
+  const {
+    draft,
+    discard: discardDraft,
+    saveNow: saveDraftNow,
+  } = useDraftBackup({
     key: draftId,
     value: draftValue,
     baseVersion: editing ? versionRef.current : null,
@@ -580,14 +584,19 @@ export function PasteEditor({
   }
 
   // Latest handlers for the window listener below, which is attached once.
-  const saveRef = React.useRef({ editing: Boolean(editing), flush: () => {} })
+  const saveRef = React.useRef<() => void>(() => {})
   React.useEffect(() => {
-    saveRef.current = { editing: Boolean(editing), flush: () => void autosaver.flush() }
+    saveRef.current = () => {
+      // An open paste saves as you go, so ⌘S just pushes the pending edit out. A new paste has
+      // nowhere to be saved yet, so ⌘S keeps what's typed as a draft on this device.
+      if (editing) void autosaver.flush()
+      else if (saveDraftNow()) toast.success("Draft saved on this device")
+    }
   })
 
   React.useEffect(() => {
-    // ⌘↵ creates the paste (or finishes editing it); ⌘S saves it now. ⌘S is claimed even while
-    // something else has focus, since the browser would otherwise offer to save the page itself.
+    // ⌘↵ creates the paste (or finishes editing it); ⌘S saves without leaving. ⌘S is claimed even
+    // while something else has focus, since the browser would otherwise offer to save the page.
     function onKeyDown(event: KeyboardEvent) {
       const submits = matchesCombo(event, shortcut("submit").keys)
       const saves = matchesCombo(event, shortcut("save").keys)
@@ -595,8 +604,7 @@ export function PasteEditor({
       event.preventDefault()
       // A dialog or menu in front owns the keyboard.
       if (event.repeat || isOverlayOpen()) return
-      // An open paste saves as you go, so ⌘S just pushes the pending edit out and stays.
-      if (saves && saveRef.current.editing) saveRef.current.flush()
+      if (saves) saveRef.current()
       else formRef.current?.requestSubmit()
     }
     window.addEventListener("keydown", onKeyDown)

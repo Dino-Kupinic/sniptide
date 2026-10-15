@@ -24,13 +24,21 @@ export const SHORTCUTS = [
   { id: "command-menu", label: "Open the command menu", group: "general", keys: ["mod", "k"] },
   { id: "search", label: "Search", group: "general", keys: ["/"] },
   { id: "new-paste", label: "New paste", group: "general", keys: ["n"] },
-  { id: "toggle-theme", label: "Toggle theme", group: "general", keys: ["d"] },
+  // Two keys, since a lone letter flips the theme whenever a finger slips.
+  { id: "toggle-theme", label: "Toggle theme", group: "general", keys: ["t", "t"], sequence: true },
   { id: "toggle-sidebar", label: "Show or hide the sidebar", group: "general", keys: ["mod", "b"] },
   { id: "settings", label: "Settings", group: "general", keys: ["mod", ","] },
   { id: "help", label: "Keyboard shortcuts", group: "general", keys: ["?"] },
 
   { id: "go-dashboard", label: "Dashboard", group: "navigation", keys: ["g", "d"], sequence: true },
   { id: "go-starred", label: "Starred", group: "navigation", keys: ["g", "s"], sequence: true },
+  {
+    id: "go-collections",
+    label: "Collections",
+    group: "navigation",
+    keys: ["g", "c"],
+    sequence: true,
+  },
   { id: "go-trash", label: "Trash", group: "navigation", keys: ["g", "t"], sequence: true },
 
   {
@@ -39,7 +47,7 @@ export const SHORTCUTS = [
     group: "editor",
     keys: ["mod", "enter"],
   },
-  { id: "save", label: "Save now", group: "editor", keys: ["mod", "s"] },
+  { id: "save", label: "Save without leaving", group: "editor", keys: ["mod", "s"] },
   { id: "undo", label: "Undo", group: "editor", keys: ["mod", "z"] },
   { id: "redo", label: "Redo", group: "editor", keys: ["mod", "shift", "z"] },
   { id: "indent", label: "Indent", group: "editor", keys: ["tab"] },

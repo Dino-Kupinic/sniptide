@@ -104,6 +104,7 @@ describe("key labels", () => {
 
   test("plain text joins a sequence with then", () => {
     expect(shortcutLabel(shortcut("go-dashboard"), true)).toBe("G then D")
+    expect(shortcutLabel(shortcut("toggle-theme"), false)).toBe("T then T")
     expect(shortcutLabel(shortcut("toggle-sidebar"), true)).toBe("⌘B")
   })
 
@@ -114,5 +115,24 @@ describe("key labels", () => {
     expect(detectMac("Win32")).toBe(false)
     expect(detectMac("Linux x86_64")).toBe(false)
     expect(detectMac(undefined)).toBe(false)
+  })
+})
+
+describe("single letters", () => {
+  const all: readonly Shortcut[] = SHORTCUTS
+
+  test("no lone letter other than N is a shortcut, so a stray key can't do anything", () => {
+    const lone = all.filter((item) => !item.sequence && /^[a-z]$/.test(item.keys.join("")))
+    expect(lone.map((item) => item.id)).toEqual(["new-paste"])
+  })
+
+  test("a sequence never starts with a key that is also a shortcut on its own", () => {
+    const leaders = new Set(
+      all
+        .filter((item) => item.sequence && /^[a-z]$/.test(item.keys[0] ?? ""))
+        .map((item) => item.keys[0]),
+    )
+    const lone = all.filter((item) => !item.sequence && item.keys.length === 1)
+    for (const item of lone) expect(leaders.has(item.keys[0] ?? "")).toBe(false)
   })
 })

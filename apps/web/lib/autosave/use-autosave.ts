@@ -110,8 +110,8 @@ export function useDraftBackup<T>({
     }
   }, [key, store])
 
-  const latest = React.useRef({ value, baseVersion, dirty })
-  latest.current = { value, baseVersion, dirty }
+  const latest = React.useRef({ value, baseVersion, dirty, enabled })
+  latest.current = { value, baseVersion, dirty, enabled }
 
   React.useEffect(() => {
     if (!enabled) return
@@ -125,31 +125,33 @@ export function useDraftBackup<T>({
     return () => clearTimeout(timer)
   }, [enabled, dirty, value, baseVersion, key, store])
 
+  // Writes the backup now instead of waiting out the delay. False when there was nothing to keep.
+  const saveNow = React.useCallback(() => {
+    const current = latest.current
+    if (!current.enabled || !current.dirty) return false
+    void store.put(key, {
+      baseVersion: current.baseVersion,
+      savedAt: Date.now(),
+      value: current.value,
+    })
+    return true
+  }, [key, store])
+
   // Don't wait out the delay when the tab is hidden or closing.
   React.useEffect(() => {
     if (!enabled) return
-    function writeNow() {
-      const current = latest.current
-      if (current.dirty) {
-        void store.put(key, {
-          baseVersion: current.baseVersion,
-          savedAt: Date.now(),
-          value: current.value,
-        })
-      }
-    }
     function onVisibility() {
-      if (document.visibilityState === "hidden") writeNow()
+      if (document.visibilityState === "hidden") saveNow()
     }
     document.addEventListener("visibilitychange", onVisibility)
-    window.addEventListener("pagehide", writeNow)
+    window.addEventListener("pagehide", saveNow)
     return () => {
       document.removeEventListener("visibilitychange", onVisibility)
-      window.removeEventListener("pagehide", writeNow)
+      window.removeEventListener("pagehide", saveNow)
     }
-  }, [enabled, key, store])
+  }, [enabled, saveNow])
 
-  return { draft, discard: () => store.delete(key).then(() => setDraft(null)) }
+  return { draft, discard: () => store.delete(key).then(() => setDraft(null)), saveNow }
 }
 
 export interface PasteBroadcast {
