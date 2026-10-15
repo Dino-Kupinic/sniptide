@@ -26,6 +26,7 @@ import {
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
+import { insertPaste } from "@/lib/pastes/insert"
 import { limited, limits } from "@/lib/pastes/limits"
 import { parsePasteInput } from "@/lib/pastes/schema"
 import { randomSlug } from "@/lib/pastes/store"
@@ -238,7 +239,7 @@ export async function createCapture(owner: string, input: unknown): Promise<ApiP
   try {
     await getDb().transaction(async (tx) => {
       await enforceBudget(tx, owner, bytes)
-      await tx.insert(pasteTable).values({
+      await insertPaste(tx, {
         id,
         slug,
         ownerId: owner,
@@ -249,21 +250,15 @@ export async function createCapture(owner: string, input: unknown): Promise<ApiP
         collection: data.collection,
         tags: capture.tags,
         source: capture.source,
-        createdAt: now,
-        updatedAt: now,
-      })
-      await tx.insert(pasteFile).values(
-        data.files.map((file, position) => ({
-          pasteId: id,
-          position,
+        files: data.files.map((file, position) => ({
           name: file.name,
           language: file.language,
           content: file.content,
           startLine: capture.files[position]?.lines?.start ?? null,
           endLine: capture.files[position]?.lines?.end ?? null,
         })),
-      )
-      await tx.insert(pasteRevision).values({ pasteId: id, message: "Created", createdAt: now })
+        createdAt: now,
+      })
     })
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
