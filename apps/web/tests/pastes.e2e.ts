@@ -25,7 +25,7 @@ test("create, edit, and share a snippet with an anonymous reader", async ({
   )
   await screen.getByLabel("Title").fill(`${title} edited`)
   await screen.getByLabel("Contents of untitled.txt").fill("edited browser fixture")
-  await screen.getByRole("button", /^Save changes/).tap()
+  await screen.getByRole("button", /^Done/).tap()
   await expect(browser).toHaveURL(`/pastes/${slug}`)
   await app.clearState()
   await app.open(`/${slug}`)
