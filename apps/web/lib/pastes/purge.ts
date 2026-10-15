@@ -4,6 +4,8 @@ import { performance } from "node:perf_hooks"
 import { envInteger } from "@workspace/db/config"
 import { sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { notifyExpiringPastes } from "@/lib/notifications/expiring"
+import { READ_RETENTION_DAYS, UNREAD_RETENTION_DAYS } from "@/lib/notifications/retention"
 import { recordMaintenance, recordMetric } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 
@@ -58,11 +60,14 @@ export async function purgeStaleData(now = new Date()) {
         const auth = await tx.execute(
           sql`DELETE FROM auth_rate_limit WHERE id IN (SELECT id FROM auth_rate_limit WHERE last_request < ${now.getTime() - DAY} ORDER BY last_request LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
         )
+        const notices = await tx.execute(
+          sql`DELETE FROM notification WHERE id IN (SELECT id FROM notification WHERE read_at < ${new Date(now.getTime() - READ_RETENTION_DAYS * DAY).toISOString()} OR created_at < ${new Date(now.getTime() - UNREAD_RETENTION_DAYS * DAY).toISOString()} ORDER BY created_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+        )
         return {
           trashed: trashed.length,
           expired: expired.length,
           days: days.length + stats.length + breakdown.length,
-          full: [trashed, expired, days, stats, breakdown, limits, auth].some(
+          full: [trashed, expired, days, stats, breakdown, limits, auth, notices].some(
             (rows) => rows.length === batch,
           ),
         }
@@ -112,6 +117,11 @@ export function schedulePurge() {
       await purgeStaleData()
     } catch (error) {
       console.error("Paste purge failed", error)
+    }
+    try {
+      await notifyExpiringPastes()
+    } catch (error) {
+      console.error("Expiry notifications failed", error)
     } finally {
       running = false
     }

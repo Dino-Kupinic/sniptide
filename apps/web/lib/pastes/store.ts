@@ -1,6 +1,7 @@
 import "server-only"
 
 import {
+  notification,
   pasteFile,
   pasteRevision,
   pasteShare,
@@ -32,6 +33,8 @@ import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
+import { viewMilestone } from "@/lib/notifications/describe"
+import { recordNotification } from "@/lib/notifications/record"
 import { DAY } from "@/lib/time"
 import { enforceBudget, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
@@ -525,6 +528,10 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
   if (!record || record.deletedAt || userId === record.ownerId) return false
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
   if (!person) return false
+  const [before] = await getDb()
+    .select({ leftAt: pasteShare.leftAt })
+    .from(pasteShare)
+    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
   await getDb()
     .insert(pasteShare)
     .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
@@ -538,7 +545,30 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
         leftAt: null,
       },
     })
+  // Tell the person about a new invite, or one after they left; changing their access or undoing a
+  // revoke is not news.
+  if (!sharedAt && (!before || before.leftAt)) {
+    await recordNotification(getDb(), {
+      userId,
+      kind: "shared",
+      pasteId: record.id,
+      actorId: record.ownerId,
+    })
+  }
   return true
+}
+
+// Drops the "shared with you" notification for a paste the person can no longer open.
+function forgetShareNotice(pasteId: string, userId: string) {
+  return getDb()
+    .delete(notification)
+    .where(
+      and(
+        eq(notification.pasteId, pasteId),
+        eq(notification.userId, userId),
+        eq(notification.kind, "shared"),
+      ),
+    )
 }
 
 // Takes someone's access away. The paste leaves their Shared with me and its link 404s for them
@@ -549,6 +579,7 @@ export async function unsharePaste(slug: string, userId: string) {
   await getDb()
     .delete(pasteShare)
     .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+  await forgetShareNotice(record.id, userId)
 }
 
 // The viewer drops a paste someone shared with them. The owner can invite them again, and
@@ -567,6 +598,7 @@ export async function leaveShare(slug: string) {
         isNull(pasteShare.leftAt),
       ),
     )
+  await forgetShareNotice(record.id, viewer)
 }
 
 // Undoes `leaveShare`. False when there's nothing to take back: the viewer never left, or the
@@ -806,6 +838,17 @@ async function claimVisit(id: string) {
         target: [pasteViewDay.pasteId, pasteViewDay.day],
         set: { views: sql`${pasteViewDay.views} + 1` },
       })
+    if (row.burnAfterRead) {
+      await recordNotification(tx, { userId: row.ownerId, kind: "burned", pasteId: id })
+    } else if (viewMilestone(row.views)) {
+      await recordNotification(tx, {
+        userId: row.ownerId,
+        kind: "views",
+        pasteId: id,
+        count: row.views,
+        dedupeKey: `views:${id}:${row.views}`,
+      })
+    }
     return row
   })
 }
