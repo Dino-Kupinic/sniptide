@@ -32,12 +32,13 @@ describeDb("invite-only sign-up", () => {
   afterAll(resetDatabase)
   beforeEach(resetDatabase)
 
-  function makeAuth(allowedEmails?: string) {
+  function makeAuth(allowedEmails?: string, allowSignUp?: boolean) {
     return createAuth({
       db: getDb(),
       secret: "test-secret-that-is-long-enough-for-better-auth",
       baseURL: BASE,
       allowedEmails,
+      allowSignUp,
     })
   }
 
@@ -72,5 +73,20 @@ describeDb("invite-only sign-up", () => {
 
   test("is open to anyone without a list", async () => {
     expect((await signUp(makeAuth(), "eve@example.com", "eve")).status).toBe(200)
+  })
+
+  test("closes sign-up for everyone, listed emails included", async () => {
+    const auth = makeAuth("ada@example.com", false)
+    expect((await signUp(auth, "ada@example.com", "ada")).status).toBe(403)
+    expect((await signUp(makeAuth(undefined, false), "eve@example.com", "eve")).status).toBe(403)
+  })
+
+  test("keeps existing accounts signing in while sign-up is closed", async () => {
+    expect((await signUp(makeAuth(), "eve@example.com", "eve")).status).toBe(200)
+    const response = await post(makeAuth(undefined, false), "/sign-in/email", {
+      email: "eve@example.com",
+      password: PASSWORD,
+    })
+    expect(response.status).toBe(200)
   })
 })

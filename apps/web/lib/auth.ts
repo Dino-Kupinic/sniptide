@@ -28,6 +28,7 @@ export async function getAuth() {
     trustedOrigins: config.trustedOrigins,
     cookieDomain: config.cookieDomain,
     cookiePrefix: config.cookiePrefix,
+    allowSignUp: config.allowSignUp,
     allowedEmails: config.allowedEmails,
     ipAddressHeaders: [RESOLVED_IP_HEADER],
     github: config.github,
@@ -41,6 +42,11 @@ export async function getSocialProviders(): Promise<SocialProvider[]> {
   const configured = getConfig()
 
   return (["github", "google"] as const).filter((provider) => configured[provider])
+}
+
+// True while ALLOW_SIGN_UP=false: nobody can create an account; existing accounts sign in as usual.
+export function isSignUpClosed() {
+  return !getConfig().allowSignUp
 }
 
 // Set while ALLOWED_EMAILS limits sign-up: the sign-up page asks visitors to apply (at

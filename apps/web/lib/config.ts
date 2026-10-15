@@ -49,6 +49,15 @@ const size = z.string().transform((value, ctx) => {
   return bytes
 })
 
+// "true"/"false" (also 1/0, yes/no, on/off), in any case.
+const flag = z.string().transform((value, ctx) => {
+  const normalized = value.trim().toLowerCase()
+  if (["true", "1", "yes", "on"].includes(normalized)) return true
+  if (["false", "0", "no", "off"].includes(normalized)) return false
+  ctx.addIssue({ code: "custom", message: 'must be "true" or "false".' })
+  return z.NEVER
+})
+
 const origin = z.url({ message: "must be a full URL like https://sniptide.com." })
 
 const schema = z.object({
@@ -64,6 +73,7 @@ const schema = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]+$/, { message: "may only contain letters, digits, - and _." })
     .optional(),
+  ALLOW_SIGN_UP: flag.default(true),
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
@@ -117,6 +127,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     trustedOrigins: value.BETTER_AUTH_TRUSTED_ORIGINS,
     cookieDomain: value.COOKIE_DOMAIN,
     cookiePrefix: value.COOKIE_PREFIX,
+    allowSignUp: value.ALLOW_SIGN_UP,
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,

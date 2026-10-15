@@ -1,7 +1,11 @@
-# Sniptide with its Postgres database.
+# Sniptide with its Postgres database, ready to self-host.
 #
-# Self-hosting: set BETTER_AUTH_SECRET (and BETTER_AUTH_URL to the URL you'll open), then
-#   docker compose --profile app up -d --no-build
+#   printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
+#   docker compose up -d
+#
+# Keep the secret (sessions depend on it); BETTER_AUTH_URL is the exact address you open in the
+# browser. Then open it and create your account. Every option is in .env.example. For
+# HTTPS on your own domain, add the bundled Caddy proxy (see the "proxy" service below).
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db
 services:
@@ -13,7 +17,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sniptide}
       POSTGRES_DB: sniptide
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
     healthcheck:
@@ -34,9 +38,27 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://sniptide:${POSTGRES_PASSWORD:-sniptide}@db:5432/sniptide
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32) in .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      ALLOW_SIGN_UP: ${ALLOW_SIGN_UP:-true}
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
+      WAITLIST_URL: ${WAITLIST_URL:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ENV_SECRETS_KEY: ${ENV_SECRETS_KEY:-}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
       SHARE_URL: ${SHARE_URL:-}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      COOKIE_PREFIX: ${COOKIE_PREFIX:-}
+      SHARE_PROXY_SECRET: ${SHARE_PROXY_SECRET:-}
+      MAX_PASTE_SIZE: ${MAX_PASTE_SIZE:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      POSTHOG_KEY: ${POSTHOG_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-}
       DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
       DATABASE_CONNECT_TIMEOUT_SECONDS: ${DATABASE_CONNECT_TIMEOUT_SECONDS:-10}
       DATABASE_IDLE_TIMEOUT_SECONDS: ${DATABASE_IDLE_TIMEOUT_SECONDS:-20}
@@ -47,20 +69,44 @@ services:
       ACCOUNT_STORAGE_BYTES: ${ACCOUNT_STORAGE_BYTES:-1073741824}
       ACCOUNT_PASTE_LIMIT: ${ACCOUNT_PASTE_LIMIT:-10000}
       VIEW_HISTORY_RETENTION_DAYS: ${VIEW_HISTORY_RETENTION_DAYS:-90}
+      ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-180}
       PURGE_BATCH_SIZE: ${PURGE_BATCH_SIZE:-500}
       PURGE_TIME_BUDGET_MS: ${PURGE_TIME_BUDGET_MS:-2000}
       HIGHLIGHT_CACHE_BYTES: ${HIGHLIGHT_CACHE_BYTES:-33554432}
       SLOW_QUERY_MS: ${SLOW_QUERY_MS:-500}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
-      # Where rate limits get the visitor's IP (see apps/web/.env.example). "direct" is right when
-      # people reach port 3000 itself; behind a reverse proxy use x-forwarded-for with
-      # TRUSTED_PROXIES (or x-real-ip), and behind Cloudflare only, cloudflare.
+      # Where rate limits get the visitor's IP (see .env.example). "direct" is right when people
+      # reach the app's port itself; behind the bundled proxy use x-forwarded-for with
+      # TRUSTED_PROXIES=private, and behind Cloudflare only, cloudflare.
       CLIENT_IP_SOURCE: ${CLIENT_IP_SOURCE:-direct}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-}
+    # Set SNIPTIDE_BIND=127.0.0.1 when the proxy (or another one on this host) is the only way in.
     ports:
-      - "3000:3000"
-    profiles: [app]
+      - "${SNIPTIDE_BIND:-0.0.0.0}:${SNIPTIDE_PORT:-3000}:3000"
+
+  # Optional HTTPS reverse proxy: Caddy gets and renews a Let's Encrypt certificate for
+  # SNIPTIDE_DOMAIN (whose DNS must point at this host, with ports 80 and 443 open). Turn it on with
+  #   docker compose --profile proxy up -d
+  # and set BETTER_AUTH_URL=https://<SNIPTIDE_DOMAIN>, CLIENT_IP_SOURCE=x-forwarded-for and
+  # TRUSTED_PROXIES=private in .env.
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: [proxy]
+    depends_on:
+      app:
+        condition: service_healthy
+    command: caddy reverse-proxy --from ${SNIPTIDE_DOMAIN:-localhost} --to app:3000
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   postgres:
+  caddy-data:
+  caddy-config:
