@@ -7,7 +7,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
@@ -38,16 +37,27 @@ import {
   SidePanelToggle,
 } from "@/components/paste/side-panel"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useSiteHost } from "@/components/site-host"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
+import { isOverlayOpen } from "@/lib/keyboard"
 import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
+import { matchesCombo, shortcut } from "@/lib/shortcuts"
+import {
+  caretAfter,
+  createHistory,
+  type History,
+  record,
+  redo as redoHistory,
+  undo as undoHistory,
+} from "@/lib/undo-history"
 
 export interface EditorInitial {
   title: string
@@ -114,6 +124,9 @@ export function PasteEditor({
   const [pending, startTransition] = React.useTransition()
   const [mobileMore, setMobileMore] = React.useState(false)
   const formRef = React.useRef<HTMLFormElement>(null)
+  // Undo history per file, kept here because the browser drops its own whenever the text is set
+  // from code (Tab, switching files).
+  const histories = React.useRef(new Map<string, History>())
   const formId = React.useId()
   const slugStatus = useSlugStatus(slug, editing)
 
@@ -157,7 +170,43 @@ export function PasteEditor({
     setCursor({ line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 })
   }
 
+  // Sets the active file's text and remembers the step for undo. `boundary` keeps a paste or an
+  // indent from merging into the typing around it.
+  function setContent(value: string, boundary = false) {
+    if (!active) return
+    const history = histories.current.get(active.id) ?? createHistory(active.content)
+    histories.current.set(active.id, record(history, value, Date.now(), boundary))
+    updateActive({ content: value })
+  }
+
+  function stepHistory(textarea: HTMLTextAreaElement, direction: "undo" | "redo") {
+    if (!active) return
+    const history = histories.current.get(active.id)
+    const next = history && (direction === "undo" ? undoHistory(history) : redoHistory(history))
+    if (!history || !next) return
+    histories.current.set(active.id, next)
+    updateActive({ content: next.present })
+    const caret = caretAfter(history.present, next.present)
+    requestAnimationFrame(() => {
+      textarea.selectionStart = textarea.selectionEnd = caret
+      trackCursor(textarea)
+    })
+  }
+
   function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.nativeEvent.isComposing) return
+
+    // ⌘Z / ⌘⇧Z (and Ctrl+Y off the Mac) go through our own history; see `histories`.
+    const undo = matchesCombo(event, shortcut("undo").keys)
+    const redo =
+      matchesCombo(event, shortcut("redo").keys) ||
+      (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "y")
+    if (undo || redo) {
+      event.preventDefault()
+      stepHistory(event.currentTarget, undo ? "undo" : "redo")
+      return
+    }
+
     // Tab indents (by the Settings indentation) instead of leaving the editor.
     if (event.key !== "Tab" || event.shiftKey) return
     event.preventDefault()
@@ -165,13 +214,15 @@ export function PasteEditor({
     const { selectionStart, selectionEnd, value } = textarea
     const unit = indentUnit(indentation)
     const next = `${value.slice(0, selectionStart)}${unit}${value.slice(selectionEnd)}`
-    updateActive({ content: next })
+    setContent(next, true)
     requestAnimationFrame(() => {
       textarea.selectionStart = textarea.selectionEnd = selectionStart + unit.length
     })
   }
 
   function submit() {
+    // A second ⌘S or ⌘↵ while the first is still saving must not create the paste twice.
+    if (pending) return
     setError(null)
     if (slugStatus === "taken") {
       setError(`${host}/${slug} is taken. Pick another custom link.`)
@@ -218,11 +269,16 @@ export function PasteEditor({
   }
 
   React.useEffect(() => {
+    // ⌘↵ and ⌘S both save. ⌘S is claimed even while something else has focus, since the browser
+    // would otherwise offer to save the page itself.
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-        event.preventDefault()
-        formRef.current?.requestSubmit()
-      }
+      const saves =
+        matchesCombo(event, shortcut("submit").keys) || matchesCombo(event, shortcut("save").keys)
+      if (!saves || event.defaultPrevented) return
+      event.preventDefault()
+      // A dialog or menu in front owns the keyboard.
+      if (event.repeat || isOverlayOpen()) return
+      formRef.current?.requestSubmit()
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
@@ -354,7 +410,7 @@ export function PasteEditor({
         </Button>
         <Button type="submit" form={formId} size="lg" disabled={pending} className="gap-2">
           {pending ? "Saving…" : submitLabel}
-          <Kbd className="bg-primary-foreground/20 text-primary-foreground">⌘↵</Kbd>
+          <ShortcutKeys id="submit" className="bg-primary-foreground/20 text-primary-foreground" />
         </Button>
       </HeaderActions>
 
@@ -424,7 +480,11 @@ export function PasteEditor({
                   lines={lines}
                   value={active?.content ?? ""}
                   onChange={(event) => {
-                    updateActive({ content: event.target.value })
+                    const { inputType = "" } = event.nativeEvent as InputEvent
+                    setContent(
+                      event.target.value,
+                      /^(insertFromPaste|insertFromDrop|deleteByCut|history)/.test(inputType),
+                    )
                     trackCursor(event.target)
                   }}
                   onSelect={(event) => trackCursor(event.currentTarget)}

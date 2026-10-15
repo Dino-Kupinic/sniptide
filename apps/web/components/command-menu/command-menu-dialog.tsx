@@ -9,10 +9,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { timeAgo } from "@/lib/format"
 import type { SidebarPaste } from "@/lib/pastes/types"
+import type { ShortcutId } from "@/lib/shortcuts"
 import type { Command } from "./commands"
 import { highlight, matches, parseQuery, SCOPES, type Scope } from "./search"
 import { usePasteSearch } from "./use-paste-search"
@@ -231,7 +233,7 @@ export function CommandMenuDialog({
               className="pl-9 focus-visible:pl-[35px] lg:h-14 lg:border-0 lg:bg-transparent lg:pr-0 lg:pl-8 lg:text-[15px] lg:focus-visible:border-0 lg:focus-visible:pl-8"
             />
           </div>
-          <Kbd className="max-lg:hidden">esc</Kbd>
+          <ShortcutKeys id="menu-close" className="max-lg:hidden" />
           <DialogClose className="shrink-0 text-sm font-medium text-link outline-none focus-visible:underline lg:hidden">
             Cancel
           </DialogClose>
@@ -308,9 +310,9 @@ export function CommandMenuDialog({
         </div>
 
         <div className="hidden h-10 shrink-0 items-center gap-4 border-t border-border bg-sidebar px-4 text-xs text-muted-foreground lg:flex">
-          <Hint keys={["↑", "↓"]}>Navigate</Hint>
-          <Hint keys={["↵"]}>Open</Hint>
-          <Hint keys={["⌘", "↵"]}>New tab</Hint>
+          <Hint id="menu-navigate">Navigate</Hint>
+          <Hint id="menu-open">Open</Hint>
+          <Hint id="menu-new-tab">New tab</Hint>
           {seeAll ? (
             <Link
               href={`/pastes?q=${encodeURIComponent(text)}`}
@@ -331,10 +333,10 @@ export function CommandMenuDialog({
   )
 }
 
-function Hint({ keys, children }: { keys: string[]; children: React.ReactNode }) {
+function Hint({ id, children }: { id: ShortcutId; children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-1.5">
-      <Kbd className="border border-border">{keys.join("")}</Kbd>
+      <ShortcutKeys id={id} className="border border-border" />
       {children}
     </span>
   )
@@ -464,11 +466,7 @@ function EntryRow({
       </span>
       {command.shortcut ? (
         <span className="flex shrink-0 gap-1 max-lg:hidden">
-          {command.shortcut.map((key) => (
-            <Kbd key={key} className="border border-border">
-              {key}
-            </Kbd>
-          ))}
+          <ShortcutKeys id={command.shortcut} className="border border-border" />
         </span>
       ) : null}
     </>

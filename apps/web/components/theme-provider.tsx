@@ -2,6 +2,8 @@
 
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 import * as React from "react"
+import { shouldIgnoreSingleKey } from "@/lib/keyboard"
+import { isPlainKey } from "@/lib/shortcuts"
 
 function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
   return (
@@ -18,38 +20,12 @@ function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextT
   )
 }
 
-// Whether a key press is going into a field, where single-key shortcuts must stay out of the way.
-function isTypingTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
-
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  )
-}
-
 function ThemeHotkey() {
   const { resolvedTheme, setTheme } = useTheme()
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || event.repeat) {
-        return
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      if (event.key.toLowerCase() !== "d") {
-        return
-      }
-
-      if (isTypingTarget(event.target)) {
+      if (!isPlainKey(event, "d") || shouldIgnoreSingleKey(event)) {
         return
       }
 
@@ -66,4 +42,4 @@ function ThemeHotkey() {
   return null
 }
 
-export { isTypingTarget, ThemeProvider }
+export { ThemeProvider }

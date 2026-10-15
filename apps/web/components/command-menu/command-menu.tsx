@@ -5,9 +5,11 @@ import { useTheme } from "next-themes"
 import * as React from "react"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { ImportGistSheet } from "@/components/lists/import-gist"
-import { isTypingTarget } from "@/components/theme-provider"
+import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import type { Collection } from "@/lib/collections/types"
+import { shouldIgnoreSingleKey } from "@/lib/keyboard"
 import type { SidebarPaste } from "@/lib/pastes/types"
+import { isPlainKey, matchesCombo, shortcut } from "@/lib/shortcuts"
 import { CommandMenuDialog } from "./command-menu-dialog"
 import { createCommands, GO_TO } from "./commands"
 
@@ -21,8 +23,8 @@ export function useCommandMenu() {
 // How long G waits for the key that completes a "go to" chord.
 const CHORD_MS = 1200
 
-// Owns the menu for the whole app shell: the ⌘K / Ctrl K shortcut, the G-then-key chords on the
-// Go to rows, and the dialogs its actions open (New collection, Import gist).
+// Owns the menu for the whole app shell: the ⌘K / Ctrl K and / shortcuts, the G-then-key chords on
+// the Go to rows, and the dialogs its actions open (New collection, Import gist).
 export function CommandMenuProvider({
   recent,
   collections,
@@ -33,6 +35,7 @@ export function CommandMenuProvider({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const shortcuts = useShortcutsHelp()
   const { resolvedTheme, setTheme } = useTheme()
   const [open, setOpen] = React.useState(false)
   const [creating, setCreating] = React.useState(false)
@@ -44,8 +47,9 @@ export function CommandMenuProvider({
         newCollection: () => setCreating(true),
         importGist: () => setImporting(true),
         toggleTheme: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
+        showShortcuts: shortcuts.open,
       }),
-    [resolvedTheme, setTheme],
+    [resolvedTheme, setTheme, shortcuts.open],
   )
   const menu = React.useMemo(() => ({ open: () => setOpen(true) }), [])
 
@@ -53,13 +57,21 @@ export function CommandMenuProvider({
     let armedAt = 0
 
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k") {
+      if (matchesCombo(event, shortcut("command-menu").keys)) {
         event.preventDefault()
         setOpen((current) => !current)
         return
       }
-      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.repeat) return
-      if (event.defaultPrevented || isTypingTarget(event.target)) return
+      if (event.metaKey || event.ctrlKey || event.altKey || shouldIgnoreSingleKey(event)) return
+
+      // / is the search shortcut. It needs no Shift on a US keyboard but is Shift+7 on a German one,
+      // so only the key itself is checked.
+      if (isPlainKey(event, "/")) {
+        event.preventDefault()
+        setOpen(true)
+        return
+      }
+      if (event.shiftKey) return
 
       const key = event.key.toLowerCase()
       const armed = armedAt > 0 && Date.now() - armedAt < CHORD_MS

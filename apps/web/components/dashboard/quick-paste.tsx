@@ -15,10 +15,12 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { LanguageMarker } from "@/components/paste/language-marker"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
+import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
 const DRAFT_KEY = "sniptide:quick-paste"
 
@@ -127,7 +129,14 @@ export function QuickPaste({
     update({ name: `${base || "snippet"}.${extension}` })
   }
 
+  // ⌘S: write the draft now instead of waiting out the half-second delay.
+  function saveDraft() {
+    writeDraft(draft)
+    setSaved(Boolean(draft.content))
+  }
+
   function create() {
+    if (pending) return
     setError(null)
     startTransition(async () => {
       const result = await savePaste({
@@ -152,9 +161,13 @@ export function QuickPaste({
       aria-labelledby="quick-paste-heading"
       className="flex min-w-0 flex-[1.8] flex-col border border-border"
       onKeyDown={(event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        if (matchesCombo(event, shortcut("submit").keys)) {
           event.preventDefault()
           create()
+        } else if (matchesCombo(event, shortcut("save").keys)) {
+          // Without this the browser offers to save the page.
+          event.preventDefault()
+          saveDraft()
         }
       }}
     >
@@ -280,7 +293,10 @@ export function QuickPaste({
           className="h-8 gap-2 text-[13px]"
         >
           {pending ? "Creating…" : "Create paste"}
-          <span className="font-mono text-[11px] text-background/70">⌘↵</span>
+          <ShortcutKeys
+            id="submit"
+            className="h-auto min-w-0 bg-transparent px-0 text-background/70"
+          />
         </Button>
       </div>
       {error ? (

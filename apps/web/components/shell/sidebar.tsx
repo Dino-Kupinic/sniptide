@@ -11,7 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
@@ -38,6 +37,7 @@ import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistSheet } from "@/components/lists/import-gist"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
@@ -115,7 +115,7 @@ export function Sidebar({
       >
         <SearchIcon className="size-3.5" />
         Search
-        <Kbd className="ml-auto border border-border">⌘K</Kbd>
+        <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
       </button>
 
       <Button
@@ -126,7 +126,7 @@ export function Sidebar({
       >
         <PlusIcon />
         New paste
-        <Kbd className="ml-auto border border-white/30">⌘N</Kbd>
+        <ShortcutKeys id="new-paste" className="ml-auto border border-white/30" />
       </Button>
 
       <nav aria-label="Main" className="flex flex-col gap-0.5">
