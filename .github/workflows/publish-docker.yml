@@ -3,10 +3,22 @@ name: Publish Docker image
 on:
   push:
     tags: ['v*.*.*', '[0-9]*.[0-9]*.[0-9]*']
+  workflow_call:
+    inputs:
+      tag:
+        description: Version tag to build and publish
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build or retry
+        required: true
+        type: string
 
 # Separate releases must not cancel each other when several tags are pushed.
 concurrency:
-  group: publish-docker-${{ github.ref }}
+  group: publish-docker-${{ inputs.tag || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -30,6 +42,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        id: checkout
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - name: Resolve the registry image name
         id: image
         env:
@@ -41,7 +56,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
+            type=semver,pattern={{version}},value=${{ inputs.tag || github.ref_name }}
           labels: |
             org.opencontainers.image.licenses=AGPL-3.0-only
       - name: Require a semantic version
@@ -55,7 +70,7 @@ jobs:
           load: true
           tags: sniptide:release-test
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: DEPLOYMENT_VERSION=${{ github.sha }}
+          build-args: DEPLOYMENT_VERSION=${{ steps.checkout.outputs.commit }}
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}
       - name: Verify migrations and the running image
@@ -72,7 +87,7 @@ jobs:
           context: .
           platforms: linux/${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: DEPLOYMENT_VERSION=${{ github.sha }}
+          build-args: DEPLOYMENT_VERSION=${{ steps.checkout.outputs.commit }}
           outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
           provenance: false
@@ -108,9 +123,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref_name, 'v0.') && !startsWith(github.ref_name, '0.') }}
+            type=semver,pattern={{version}},value=${{ inputs.tag || github.ref_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.tag || github.ref_name }}
+            type=semver,pattern={{major}},value=${{ inputs.tag || github.ref_name }},enable=${{ !startsWith(inputs.tag || github.ref_name, 'v0.') && !startsWith(inputs.tag || github.ref_name, '0.') }}
       - uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
