@@ -9,6 +9,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { Input } from "@sniptide/ui/components/input"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
@@ -21,6 +22,7 @@ import {
 } from "lucide-react"
 import * as React from "react"
 import { track } from "@/lib/analytics"
+import { runAction } from "@/lib/feedback"
 import { updateSharing } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { useCopy } from "./copy-button"
@@ -60,6 +62,7 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
           return copy(url)
         }}
       >
+        {copied ? <SuccessCheck /> : null}
         <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
       </Button>
     </div>
@@ -83,8 +86,15 @@ function useSharingControls(state: SharingState, list: boolean) {
   const [allowRaw, setAllowRaw] = React.useState(state.allowRaw)
   const [pending, startTransition] = React.useTransition()
 
-  function save(input: Parameters<typeof updateSharing>[1]) {
-    startTransition(() => updateSharing(state.slug, input))
+  // Reports every change, and puts the control back where it was when the save fails.
+  function save(input: Parameters<typeof updateSharing>[1], restore?: () => void) {
+    startTransition(async () => {
+      const result = await runAction(() => updateSharing(state.slug, input), {
+        success: "Sharing updated",
+        error: "Couldn't update sharing. Try again.",
+      })
+      if (!result.ok) restore?.()
+    })
   }
 
   const visibilityControl = (
@@ -92,8 +102,9 @@ function useSharingControls(state: SharingState, list: boolean) {
       aria-label="Visibility"
       value={visibility}
       onValueChange={(next) => {
+        const previous = visibility
         setVisibility(next)
-        save({ visibility: next })
+        save({ visibility: next }, () => setVisibility(previous))
       }}
       options={[
         { value: "private", label: "Private" },
@@ -135,7 +146,7 @@ function useSharingControls(state: SharingState, list: boolean) {
             if (checked) return setSettingPassword(true)
             setSettingPassword(false)
             setHasPassword(false)
-            save({ password: null })
+            save({ password: null }, () => setHasPassword(true))
           }}
         />
       </SettingRow>
@@ -145,9 +156,10 @@ function useSharingControls(state: SharingState, list: boolean) {
           onSubmit={(event) => {
             event.preventDefault()
             if (!password) return
+            const had = hasPassword
             setHasPassword(true)
             setSettingPassword(false)
-            save({ password })
+            save({ password }, () => setHasPassword(had))
             setPassword("")
           }}
         >
@@ -183,7 +195,7 @@ function useSharingControls(state: SharingState, list: boolean) {
           checked={burnAfterRead}
           onCheckedChange={(checked) => {
             setBurnAfterRead(checked)
-            save({ burnAfterRead: checked })
+            save({ burnAfterRead: checked }, () => setBurnAfterRead(!checked))
           }}
         />
       </SettingRow>
@@ -193,7 +205,7 @@ function useSharingControls(state: SharingState, list: boolean) {
           checked={allowRaw}
           onCheckedChange={(checked) => {
             setAllowRaw(checked)
-            save({ allowRaw: checked })
+            save({ allowRaw: checked }, () => setAllowRaw(!checked))
           }}
         />
       </SettingRow>

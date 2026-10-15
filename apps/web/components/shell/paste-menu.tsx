@@ -17,6 +17,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import {
   CheckIcon,
@@ -37,6 +38,7 @@ import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useSiteHost } from "@/components/site-host"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
+import { copyText, runAction } from "@/lib/feedback"
 import { renamePaste, setPasteCollection, setStarred, trashPaste } from "@/lib/pastes/actions"
 import type { SidebarPaste } from "@/lib/pastes/types"
 
@@ -59,7 +61,12 @@ export function PasteMenu({
   const [, startTransition] = React.useTransition()
 
   function fileIn(collection: string | null) {
-    startTransition(() => setPasteCollection(paste.slug, collection).then(() => undefined))
+    startTransition(async () => {
+      await runAction(() => setPasteCollection(paste.slug, collection), {
+        success: collection ? "Added to collection" : "Removed from collection",
+        error: "Couldn't update the collection. Try again.",
+      })
+    })
   }
 
   return (
@@ -76,7 +83,14 @@ export function PasteMenu({
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem
-            onClick={() => startTransition(() => setStarred(paste.slug, !paste.starred))}
+            onClick={() =>
+              startTransition(async () => {
+                await runAction(() => setStarred(paste.slug, !paste.starred), {
+                  success: paste.starred ? "Removed from starred" : "Starred",
+                  error: "Couldn't update the star. Try again.",
+                })
+              })
+            }
           >
             {paste.starred ? <StarOffIcon /> : <StarIcon />}
             {paste.starred ? "Unstar" : "Star"}
@@ -88,9 +102,7 @@ export function PasteMenu({
           <DropdownMenuItem
             onClick={() => {
               track("share_link_copied", { from: "menu" })
-              return navigator.clipboard.writeText(
-                `${window.location.protocol}//${host}/${paste.slug}`,
-              )
+              return copyText(`${window.location.protocol}//${host}/${paste.slug}`)
             }}
           >
             <CopyIcon />
@@ -136,9 +148,14 @@ export function PasteMenu({
                 variant="destructive"
                 onClick={() =>
                   startTransition(async () => {
-                    await trashPaste(paste.slug)
+                    const result = await runAction(() => trashPaste(paste.slug), {
+                      success: "Moved to trash",
+                      error: "Couldn't move the paste to trash. Try again.",
+                    })
                     // Its own page has nothing left to show.
-                    if (pathname.startsWith(`/pastes/${paste.slug}`)) router.push("/pastes")
+                    if (result.ok && pathname.startsWith(`/pastes/${paste.slug}`)) {
+                      router.push("/pastes")
+                    }
                   })
                 }
               >
@@ -194,8 +211,12 @@ function RenamePasteDialog({
             event.preventDefault()
             const title = String(new FormData(event.currentTarget).get("title") ?? "")
             startTransition(async () => {
-              const result = await renamePaste(paste.slug, title)
-              if (!result.ok) return setError(result.error)
+              try {
+                const result = await renamePaste(paste.slug, title)
+                if (!result.ok) return setError(result.error)
+              } catch {
+                return setError("Couldn't rename the paste. Try again.")
+              }
               onOpenChange(false)
             })
           }}
@@ -213,16 +234,12 @@ function RenamePasteDialog({
             aria-invalid={Boolean(error)}
             className="h-10 text-base lg:text-sm"
           />
-          {error ? (
-            <p role="alert" className="text-[13px] text-destructive">
-              {error}
-            </p>
-          ) : null}
+          <FormError variant="inline" message={error} />
           <div className="flex justify-end gap-2">
             <DialogClose render={<Button type="button" variant="outline" size="lg" />}>
               Cancel
             </DialogClose>
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button type="submit" size="lg" loading={pending}>
               {pending ? "Saving…" : "Save"}
             </Button>
           </div>

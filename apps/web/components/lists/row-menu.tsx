@@ -19,6 +19,7 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import Link from "next/link"
+import { copyText, runAction } from "@/lib/feedback"
 import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
 import type { PasteRow } from "@/lib/pastes/rows"
 
@@ -45,7 +46,7 @@ export function RowMenu({
           <ExternalLinkIcon />
           Open
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${origin}/${row.slug}`)}>
+        <DropdownMenuItem onClick={() => copyText(`${origin}/${row.slug}`)}>
           <LinkIcon />
           Copy link
         </DropdownMenuItem>
@@ -59,14 +60,29 @@ export function RowMenu({
           <CopyIcon />
           Duplicate
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setStarred(row.slug, !row.starred)}>
+        <DropdownMenuItem
+          onClick={() =>
+            runAction(() => setStarred(row.slug, !row.starred), {
+              success: row.starred ? "Removed from starred" : "Starred",
+              error: "Couldn't update the star. Try again.",
+            })
+          }
+        >
           {row.starred ? <StarOffIcon /> : <StarIcon />}
           {row.starred ? "Unstar" : "Star"}
         </DropdownMenuItem>
         {shared ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => leaveShare(row.slug)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() =>
+                runAction(() => leaveShare(row.slug), {
+                  success: "Removed from your list",
+                  error: "Couldn't remove it from your list. Try again.",
+                })
+              }
+            >
               <LogOutIcon />
               Remove from my list
             </DropdownMenuItem>
@@ -75,7 +91,15 @@ export function RowMenu({
         {row.owner ? null : (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => trashPaste(row.slug)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() =>
+                runAction(() => trashPaste(row.slug), {
+                  success: "Moved to trash",
+                  error: "Couldn't move the paste to trash. Try again.",
+                })
+              }
+            >
               <Trash2Icon />
               Move to trash
             </DropdownMenuItem>

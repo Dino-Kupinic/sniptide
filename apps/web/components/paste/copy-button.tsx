@@ -1,17 +1,32 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import { CheckIcon, CopyIcon } from "lucide-react"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
+import { toast } from "@sniptide/ui/components/toast"
+import { CopyIcon } from "lucide-react"
 import * as React from "react"
 
+// Copies to the clipboard and flips `copied` for a moment so the button can show the check. A
+// refused clipboard (no permission, an insecure origin) says so in a toast; `copy` resolves to
+// whether it worked.
 export function useCopy(timeout = 1600) {
   const [copied, setCopied] = React.useState(false)
+  const timer = React.useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  React.useEffect(() => () => clearTimeout(timer.current), [])
 
   const copy = React.useCallback(
     async (text: string) => {
-      await navigator.clipboard.writeText(text)
+      try {
+        await navigator.clipboard.writeText(text)
+      } catch {
+        toast.error("Couldn't copy. Allow clipboard access and try again.")
+        return false
+      }
       setCopied(true)
-      setTimeout(() => setCopied(false), timeout)
+      clearTimeout(timer.current)
+      timer.current = setTimeout(() => setCopied(false), timeout)
+      return true
     },
     [timeout],
   )
@@ -41,7 +56,7 @@ export function CopyButton({
 
   return (
     <Button type="button" onClick={() => copy(text)} {...props}>
-      {icon ? copied ? <CheckIcon /> : <CopyIcon /> : null}
+      {icon ? copied ? <SuccessCheck /> : <CopyIcon /> : null}
       <span aria-live="polite">{copied ? copiedLabel : label}</span>
     </Button>
   )

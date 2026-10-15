@@ -7,8 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
@@ -196,8 +198,12 @@ export function PasteEditor({
         !editing && visibility === "private"
           ? invites.map((invite) => ({ userId: invite.person.id, access: invite.access }))
           : [],
-      )
+      ).catch(() => null)
 
+      if (!result) {
+        setError("Couldn't save the paste. Check your connection and try again.")
+        return
+      }
       if (!result.ok) {
         setError(result.error)
         return
@@ -213,6 +219,7 @@ export function PasteEditor({
           invites: visibility === "private" ? invites.length : 0,
         })
       }
+      toast.success(editing ? "Changes saved" : "Paste created")
       router.push(`/pastes/${result.slug}`)
     })
   }
@@ -352,7 +359,7 @@ export function PasteEditor({
           <EyeIcon />
           {preview ? "Edit" : "Preview"}
         </Button>
-        <Button type="submit" form={formId} size="lg" disabled={pending} className="gap-2">
+        <Button type="submit" form={formId} size="lg" loading={pending} className="gap-2">
           {pending ? "Saving…" : submitLabel}
           <Kbd className="bg-primary-foreground/20 text-primary-foreground">⌘↵</Kbd>
         </Button>
@@ -378,14 +385,7 @@ export function PasteEditor({
         />
       </div>
 
-      {error ? (
-        <p
-          role="alert"
-          className="mx-4 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive lg:mx-0"
-        >
-          {error}
-        </p>
-      ) : null}
+      <FormError message={error} className="mx-4 lg:mx-0" />
 
       <SidePanelProvider>
         <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
@@ -559,7 +559,7 @@ export function PasteEditor({
             )}
           </>
         )}
-        <Button type="submit" disabled={pending} className="h-[50px] text-base font-semibold">
+        <Button type="submit" loading={pending} className="h-[50px] text-base font-semibold">
           {pending ? "Saving…" : submitLabel}
         </Button>
       </div>

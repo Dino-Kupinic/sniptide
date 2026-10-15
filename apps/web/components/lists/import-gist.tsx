@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import { Checkbox } from "@sniptide/ui/components/checkbox"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import {
@@ -13,7 +14,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@sniptide/ui/components/sheet"
-import { ArrowUpRightIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, XIcon } from "lucide-react"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
+import { Spinner } from "@sniptide/ui/components/spinner"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
+import { ArrowUpRightIcon, DownloadIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { formatBytes } from "@/lib/format"
@@ -212,11 +216,12 @@ export function ImportGistSheet({
                 aria-describedby={error ? "gist-link-error" : undefined}
                 className="font-mono text-base lg:text-xs"
               />
-              {error ? (
-                <p id="gist-link-error" role="alert" className="text-xs leading-4 text-destructive">
-                  {error}
-                </p>
-              ) : null}
+              <FormError
+                id="gist-link-error"
+                variant="inline"
+                message={error}
+                className="text-xs leading-4"
+              />
             </form>
           )}
         </div>
@@ -238,7 +243,8 @@ export function ImportGistSheet({
               type="button"
               variant="outline"
               className={footerButton}
-              disabled={!canImport}
+              disabled={!canImport && busy !== "import"}
+              loading={busy === "import"}
               onClick={importNow}
             >
               {busy === "import" ? "Importing…" : "Import now"}
@@ -277,9 +283,9 @@ function LinkBox({ link, status }: { link: string; status: "reading" | "read" })
     <div className="flex h-10 shrink-0 items-center justify-between gap-3 border px-3">
       <span className="truncate font-mono text-xs leading-4">{shortLink(link)}</span>
       {status === "reading" ? (
-        <LoaderCircleIcon className="size-4 animate-spin text-primary" aria-hidden />
+        <Spinner className="text-primary" />
       ) : (
-        <CheckIcon className="size-4 text-[#1F8A4C]" aria-hidden />
+        <SuccessCheck className="text-[#1F8A4C]" />
       )}
     </div>
   )
@@ -292,15 +298,15 @@ function ReadingStep({ link }: { link: string }) {
       <p role="status" className="sr-only">
         Reading the gist…
       </p>
-      <div className="flex flex-col gap-2" aria-hidden>
-        <div className="h-5 w-[220px] bg-muted" />
-        <div className="h-3 w-40 bg-muted" />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-5 w-[220px]" />
+        <Skeleton className="h-3 w-40" />
       </div>
-      <div className="flex flex-col border" aria-hidden>
+      <div className="flex flex-col border">
         {[150, 120, 90].map((width) => (
           <div key={width} className="flex h-11 items-center gap-3 border-b px-3 last:border-b-0">
-            <div className="size-4 shrink-0 bg-muted" />
-            <div className="h-3 bg-muted" style={{ width }} />
+            <Skeleton className="size-4 shrink-0" />
+            <Skeleton className="h-3" style={{ width }} />
           </div>
         ))}
       </div>
@@ -410,11 +416,7 @@ function FilesStep({
         </p>
       </div>
 
-      {error ? (
-        <p role="alert" className="text-xs leading-4 text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError variant="inline" message={error} className="text-xs leading-4" />
     </>
   )
 }

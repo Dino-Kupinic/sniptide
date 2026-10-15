@@ -84,10 +84,13 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
     const previous = image
     setImage(next)
     startTransition(async () => {
-      const result = await updateAvatar(next)
-      if (!result.ok) {
+      const result = await updateAvatar(next).catch(() => null)
+      if (!result?.ok) {
         setImage(previous)
-        setStatus({ ok: false, message: result.error })
+        setStatus({
+          ok: false,
+          message: result?.error ?? "Couldn't update your avatar. Try again.",
+        })
       } else {
         setStatus({ ok: true, message: next ? "Avatar updated." : "Avatar removed." })
       }
@@ -146,11 +149,11 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
           event.preventDefault()
           setStatus(null)
           startTransition(async () => {
-            const result = await updateProfile({ name, username })
+            const result = await updateProfile({ name, username }).catch(() => null)
             setStatus(
-              result.ok
+              result?.ok
                 ? { ok: true, message: "Profile saved." }
-                : { ok: false, message: result.error },
+                : { ok: false, message: result?.error ?? "Couldn't save your profile. Try again." },
             )
           })
         }}
@@ -235,9 +238,9 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
           <Button
             type="submit"
             size="lg"
+            loading={pending}
             disabled={
               !dirty ||
-              pending ||
               usernameStatus === "taken" ||
               usernameStatus === "invalid" ||
               usernameStatus === "checking"
