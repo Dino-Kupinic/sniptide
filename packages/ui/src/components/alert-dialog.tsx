@@ -29,7 +29,7 @@ function AlertDialogContent({ className, children, ...props }: AlertDialogPrimit
 function AlertDialogTitle({ className, ...props }: AlertDialogPrimitive.Title.Props) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn("font-heading text-xl font-bold tracking-[-0.02em] uppercase", className)}
+      className={cn("font-heading text-xl font-bold tracking-[-0.02em]", className)}
       {...props}
     />
   )

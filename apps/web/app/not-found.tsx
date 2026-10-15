@@ -21,7 +21,7 @@ export default async function NotFound() {
           className="flex w-fit items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
           <LogoMark className="size-6 sm:size-7" />
-          <span className="hidden font-heading text-[25px] leading-7 font-bold tracking-[-0.01em] sm:inline">
+          <span className="hidden font-logo text-[25px] leading-7 font-bold tracking-[-0.01em] sm:inline">
             SNIPTIDE
           </span>
         </Link>

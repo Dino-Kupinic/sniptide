@@ -50,7 +50,7 @@ function Greeting({ firstName }: { firstName: string }) {
   }, [])
 
   return (
-    <h1 className="font-heading text-[28px] leading-8 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+    <h1 className="font-heading text-[28px] leading-8 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
       {part ? `Good ${part}` : "Hello"}, {firstName}
     </h1>
   )

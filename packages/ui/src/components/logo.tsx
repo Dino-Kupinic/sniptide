@@ -43,9 +43,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
       <LogoMark />
-      <span className="font-heading text-[25px] leading-7 font-bold tracking-[-0.01em]">
-        SNIPTIDE
-      </span>
+      <span className="font-logo text-[25px] leading-7 font-bold tracking-[-0.01em]">SNIPTIDE</span>
     </span>
   )
 }

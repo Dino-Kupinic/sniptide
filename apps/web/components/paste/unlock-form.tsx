@@ -35,9 +35,7 @@ export function UnlockForm({ slug }: { slug: string }) {
     >
       <LockIcon className="size-5" />
       <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-bold tracking-[-0.02em] uppercase">
-          Password needed
-        </h1>
+        <h1 className="font-heading text-2xl font-bold tracking-[-0.02em]">Password needed</h1>
         <p className="text-sm text-muted-foreground">
           Whoever shared this paste protected it with a password.
         </p>
