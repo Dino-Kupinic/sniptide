@@ -43,7 +43,7 @@ export function RevealPaste({ slug }: { slug: string }) {
     <div className="flex w-full max-w-sm flex-col gap-4 self-center border border-foreground bg-background p-6 shadow-[8px_8px_0_0_var(--foreground)]">
       <FlameIcon className="size-5" />
       <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-bold tracking-[-0.02em] uppercase">Read once</h1>
+        <h1 className="font-heading text-2xl font-bold tracking-[-0.02em]">Read once</h1>
         <p className="text-sm text-muted-foreground">
           This paste burns after reading. Opening it deletes it, so open it when you're ready to
           copy what you need.

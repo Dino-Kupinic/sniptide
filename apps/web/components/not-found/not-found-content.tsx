@@ -9,7 +9,7 @@ export function NotFoundContent({ viewer }: { viewer: ViewerSummary | null }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
       <Pixel404 className="w-[302px] sm:w-[536px]" />
-      <h1 className="mt-8 text-center font-heading text-[26px] leading-[30px] font-bold tracking-[-0.01em] uppercase sm:mt-10 sm:text-[30px] sm:leading-[34px]">
+      <h1 className="mt-8 text-center font-heading text-[26px] leading-[30px] font-bold tracking-[-0.01em] sm:mt-10 sm:text-[30px] sm:leading-[34px]">
         Nothing here.
       </h1>
       <p className="mt-2.5 max-w-[440px] text-center text-[15px] leading-[22px] text-muted-foreground">

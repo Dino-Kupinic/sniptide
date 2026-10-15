@@ -339,7 +339,7 @@ export function ListHeader({
       </HeaderTitle>
       {actions ? <HeaderActions>{actions}</HeaderActions> : null}
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+        <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
           {title}
         </h1>
         {count !== undefined ? (

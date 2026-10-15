@@ -51,7 +51,7 @@ export function AuthScreen({
             {centered ? null : <Logo className="lg:hidden" />}
             <div className="flex flex-col gap-1.5 lg:gap-2">
               {title ? (
-                <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+                <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
                   {title}
                 </h1>
               ) : null}
@@ -76,7 +76,7 @@ export function AuthScreen({
       <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border lg:flex">
         <Stripes className="inset-0 size-full" />
         <div className="relative flex w-[400px] flex-col gap-[18px] border border-offset-shadow bg-background p-7 shadow-[8px_8px_0_0_var(--offset-shadow)]">
-          <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em] uppercase">
+          <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em]">
             {pitch.title[0]}
             <br />
             {pitch.title[1]}

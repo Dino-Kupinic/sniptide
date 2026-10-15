@@ -78,7 +78,7 @@ export function SettingsView({
   return (
     <div className="flex flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-6 lg:gap-6 lg:p-7">
       <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
           Settings
         </h1>
         <p className="hidden text-sm text-muted-foreground lg:block">
