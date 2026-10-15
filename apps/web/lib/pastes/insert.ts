@@ -7,6 +7,7 @@ import {
   pasteRevision,
   paste as pasteTable,
 } from "@workspace/db/schema"
+import { snapshotOf } from "./snapshot"
 import type { Visibility } from "./types"
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
@@ -72,6 +73,7 @@ export async function insertPaste(tx: Transaction, paste: InsertedPaste) {
   await tx.insert(pasteRevision).values({
     pasteId: paste.id,
     message: "Created",
+    snapshot: snapshotOf(paste, paste.files),
     createdAt: paste.createdAt,
   })
 }

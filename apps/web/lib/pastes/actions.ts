@@ -169,6 +169,18 @@ export async function finishEditing(editing: string): Promise<void> {
   await store.sealRevision(editing, "Edited")
 }
 
+// Rolls a paste back to an earlier revision (see store.restoreRevision).
+export async function restoreRevision(slug: string, revisionId: number) {
+  const user = await assertSignedIn()
+  if (!Number.isSafeInteger(revisionId)) return { ok: false as const, error: "Pick a version." }
+  const tooOften = await limited(limits.edit(user))
+  if (tooOften) return { ok: false as const, error: tooOften }
+
+  const result = await store.restoreRevision(slug, revisionId)
+  if (result.ok) revalidatePath("/", "layout")
+  return result
+}
+
 // Answers "not available" while limited; saving checks the slug again anyway.
 export async function checkSlug(slug: string, except?: string) {
   const user = await assertSignedIn()

@@ -22,6 +22,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   ne,
   or,
   sql,
@@ -32,13 +33,14 @@ import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
-import { enforceBudget } from "./budget"
+import { enforceBudget, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
 import { recordPasteEvent } from "./events"
 import { insertPaste } from "./insert"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
+import { pruneSnapshots, snapshotOf } from "./snapshot"
 
 export { PasteBudgetError } from "./budget"
 
@@ -267,7 +269,12 @@ async function hydrate(
     summarize([record], viewer, true),
     db.select().from(pasteFile).where(eq(pasteFile.pasteId, record.id)).orderBy(pasteFile.position),
     db
-      .select()
+      .select({
+        id: pasteRevision.id,
+        message: pasteRevision.message,
+        createdAt: pasteRevision.createdAt,
+        restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
+      })
       .from(pasteRevision)
       .where(eq(pasteRevision.pasteId, record.id))
       .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
@@ -282,7 +289,12 @@ async function hydrate(
     revisionPage,
     revisionPageCount,
     files: files.map(({ name, language, content }) => ({ name, language, content })),
-    revisions: revisions.map(({ message, createdAt }) => ({ message, createdAt: ms(createdAt) })),
+    revisions: revisions.map(({ id, message, createdAt, restorable }) => ({
+      id,
+      message,
+      createdAt: ms(createdAt),
+      restorable,
+    })),
   }
 }
 
@@ -1204,8 +1216,15 @@ export async function updatePaste(
       !latest.sealed &&
       now.getTime() - latest.createdAt.getTime() < REVISION_WINDOW_MS &&
       !isLargeEdit(before, data.files)
-    if (!batched) {
-      await tx.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: stamp })
+    const snapshot = snapshotOf(data, data.files)
+    if (batched && latest) {
+      // The revision stands for the state the batch ended in.
+      await tx.update(pasteRevision).set({ snapshot }).where(eq(pasteRevision.id, latest.id))
+    } else {
+      await tx
+        .insert(pasteRevision)
+        .values({ pasteId: record.id, message, snapshot, createdAt: stamp })
+      await pruneSnapshots(tx, record.id)
     }
 
     return {
@@ -1233,6 +1252,101 @@ export async function sealRevision(slug: string, message: string): Promise<boole
     await db.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
   }
   return true
+}
+
+export type RestoreResult =
+  | { ok: true; slug: string; version: number }
+  | { ok: false; error: string }
+
+// Rolls the title, description and files back to how a revision left them. The sharing settings,
+// the link and the collection stay as they are. The rollback is a revision of its own, so the
+// version it replaced is still in the history and can be restored in turn.
+export async function restoreRevision(slug: string, revisionId: number): Promise<RestoreResult> {
+  const editable = await findEditable(slug)
+  if (!editable) return { ok: false, error: "That paste no longer exists." }
+  const { record } = editable
+
+  return getDb().transaction(async (tx): Promise<RestoreResult> => {
+    const [locked] = await tx
+      .select()
+      .from(pasteTable)
+      .where(eq(pasteTable.id, record.id))
+      .for("update")
+    if (!locked || locked.deletedAt) return { ok: false, error: "That paste no longer exists." }
+
+    const [target] = await tx
+      .select()
+      .from(pasteRevision)
+      .where(and(eq(pasteRevision.id, revisionId), eq(pasteRevision.pasteId, record.id)))
+    const snapshot = target?.snapshot
+    if (!target || !snapshot || snapshot.files.length === 0) {
+      return { ok: false, error: "That version can't be restored." }
+    }
+
+    const [newest] = await tx
+      .select({ id: pasteRevision.id })
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, record.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+      .limit(1)
+    if (newest?.id === target.id) return { ok: false, error: "That is the current version." }
+
+    const [position] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pasteRevision)
+      .where(
+        and(
+          eq(pasteRevision.pasteId, record.id),
+          or(
+            lt(pasteRevision.createdAt, target.createdAt),
+            and(eq(pasteRevision.createdAt, target.createdAt), lte(pasteRevision.id, target.id)),
+          ),
+        ),
+      )
+
+    const bytes = snapshot.files.reduce(
+      (sum, file) => sum + Buffer.byteLength(file.content, "utf8"),
+      0,
+    )
+    try {
+      await enforceBudget(tx, record.ownerId, bytes, record.id)
+    } catch (error) {
+      if (error instanceof PasteBudgetError) return { ok: false, error: error.message }
+      throw error
+    }
+
+    const version = Math.max(Date.now(), locked.updatedAt.getTime() + 1)
+    const stamp = new Date(version)
+    await tx
+      .update(pasteTable)
+      .set({
+        title: snapshot.title,
+        description: snapshot.description,
+        bytes,
+        updatedAt: stamp,
+      })
+      .where(eq(pasteTable.id, record.id))
+    await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
+    await tx.insert(pasteFile).values(
+      snapshot.files.map((file, index) => ({
+        pasteId: record.id,
+        position: index,
+        name: file.name,
+        language: file.language,
+        content: file.content,
+        startLine: file.startLine ?? null,
+        endLine: file.endLine ?? null,
+      })),
+    )
+    await tx.insert(pasteRevision).values({
+      pasteId: record.id,
+      message: `Restored revision ${position?.count ?? 0}`,
+      snapshot,
+      createdAt: stamp,
+    })
+    await pruneSnapshots(tx, record.id)
+    return { ok: true, slug: locked.slug, version }
+  })
 }
 
 export async function updateSharing(slug: string, input: SharingInput) {
