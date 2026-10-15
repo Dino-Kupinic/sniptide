@@ -85,12 +85,26 @@ test("undo and redo step through the editor's text, indents included", async ({ 
   await expect(editor).toHaveValue("one  ")
 })
 
-test("Ctrl+S saves the paste from the editor", async ({ app, browser, screen }) => {
+test("Ctrl+S keeps a draft and Ctrl+Enter creates the paste", async ({ app, browser, screen }) => {
   const title = `Shortcut snippet ${randomUUID()}`
   await app.open("/new")
   await screen.getByLabel("Title").fill(title)
-  await screen.getByLabel("Contents of untitled.txt").fill("saved from the keyboard")
-  await screen.getByLabel("Contents of untitled.txt").press("Control+s")
+  const editor = screen.getByLabel("Contents of untitled.txt")
+  await editor.fill("saved from the keyboard")
+
+  // Ctrl+S stays in the editor and says where the draft went. The draft is only kept once the
+  // editor has started backing up, so press until the notice shows.
+  const toastShown = () =>
+    browser.evaluate(() => document.body.innerText.includes("Draft saved on this device"))
+  await expect
+    .poll(async () => {
+      await editor.press("Control+s")
+      return toastShown()
+    })
+    .toBe(true)
+  await expect(browser).toHaveURL(/\/new$/)
+
+  await editor.press("Control+Enter")
   await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
   const slug = new URL(await browser.url()).pathname.split("/").at(-1)
   const raw = await fetch(new URL(`/${slug}/raw`, app.baseUrl))
