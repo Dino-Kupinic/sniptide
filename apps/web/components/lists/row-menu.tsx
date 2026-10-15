@@ -19,8 +19,15 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import Link from "next/link"
+import { withUndo } from "@/components/undo-toast"
 import { copyText, runAction } from "@/lib/feedback"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import type { PasteRow } from "@/lib/pastes/rows"
 
 export function RowMenu({
@@ -77,9 +84,10 @@ export function RowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={() =>
-                runAction(() => leaveShare(row.slug), {
-                  success: "Removed from your list",
+                withUndo(() => leaveShare(row.slug), {
                   error: "Couldn't remove it from your list. Try again.",
+                  message: `Removed “${row.title}” from your list`,
+                  undo: () => restoreShare(row.slug),
                 })
               }
             >
@@ -94,9 +102,10 @@ export function RowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={() =>
-                runAction(() => trashPaste(row.slug), {
-                  success: "Moved to trash",
+                withUndo(() => trashPaste(row.slug), {
                   error: "Couldn't move the paste to trash. Try again.",
+                  message: `Moved “${row.title}” to trash`,
+                  undo: () => restorePaste(row.slug),
                 })
               }
             >

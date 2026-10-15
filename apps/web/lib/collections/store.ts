@@ -1,7 +1,7 @@
 import "server-only"
 
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
-import { and, eq, isNull, sql } from "drizzle-orm"
+import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
@@ -183,17 +183,86 @@ export async function setCollectionIcon(slug: string, icon: CollectionIcon, hue:
     .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
 }
 
+// What `deleteCollection` removed, enough for `restoreCollection` to put it all back.
+export interface CollectionSnapshot {
+  slug: string
+  name: string
+  icon: CollectionIcon
+  hue: Hue
+  // When it was made, so it takes its old place in the oldest-first order.
+  createdAt: number
+  // Slugs of the pastes that were filed in it, trashed ones included.
+  pastes: string[]
+}
+
 // Deletes the collection and takes its pastes out of it; the pastes themselves stay, trashed ones
-// included, so restoring one never points at a collection that is gone.
-export async function deleteCollection(slug: string) {
+// included, so restoring one never points at a collection that is gone. Returns what it removed
+// (null when there was no such collection), for `restoreCollection`.
+export async function deleteCollection(slug: string): Promise<CollectionSnapshot | null> {
   const owner = await requireViewerId()
-  await getDb().transaction(async (tx) => {
-    await tx
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(collectionTable)
+      .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
+    if (!row) return null
+    const pastes = await tx
       .update(pasteTable)
       .set({ collection: null })
       .where(and(eq(pasteTable.ownerId, owner), eq(pasteTable.collection, slug)))
+      .returning({ slug: pasteTable.slug })
     await tx
       .delete(collectionTable)
       .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
+    const { icon, hue } = toCollection({ ...row, pasteCount: 0 })
+    return {
+      slug: row.slug,
+      name: row.name,
+      icon,
+      hue,
+      createdAt: row.createdAt.getTime(),
+      pastes: pastes.map((paste) => paste.slug),
+    }
+  })
+}
+
+export type RestoreResult = { status: "ok" } | { status: "duplicate" | "limit" | "taken" }
+
+// Undoes `deleteCollection`: the same collection, in its old place, with its pastes back in it.
+// A paste the viewer filed somewhere else since stays where it is. Fails when the name or link
+// has been taken, or the viewer is at the collection limit, in the meantime.
+export async function restoreCollection(snapshot: CollectionSnapshot): Promise<RestoreResult> {
+  const owner = await requireViewerId()
+  return getDb().transaction(async (tx) => {
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
+    const existing = await tx
+      .select({ slug: collectionTable.slug, name: collectionTable.name })
+      .from(collectionTable)
+      .where(eq(collectionTable.ownerId, owner))
+    if (existing.length >= MAX_COLLECTIONS) return { status: "limit" }
+    if (existing.some((row) => row.slug === snapshot.slug)) return { status: "taken" }
+    if (existing.some((row) => sameName(row.name, snapshot.name))) return { status: "duplicate" }
+
+    await tx.insert(collectionTable).values({
+      ownerId: owner,
+      slug: snapshot.slug,
+      name: snapshot.name,
+      icon: snapshot.icon,
+      hue: snapshot.hue,
+      createdAt: new Date(snapshot.createdAt),
+    })
+    if (snapshot.pastes.length > 0) {
+      await tx
+        .update(pasteTable)
+        .set({ collection: snapshot.slug })
+        .where(
+          and(
+            eq(pasteTable.ownerId, owner),
+            isNull(pasteTable.collection),
+            inArray(pasteTable.slug, snapshot.pastes),
+          ),
+        )
+    }
+    return { status: "ok" }
   })
 }

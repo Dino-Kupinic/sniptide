@@ -168,6 +168,9 @@ export const pasteShare = pgTable(
     createdAt: time("created_at").notNull().defaultNow(),
     // When the person first opened it; null keeps it marked as new in Shared with me.
     seenAt: time("seen_at"),
+    // When the person removed it from their Shared with me. The row stays so Undo is instant, but
+    // a paste they left gives them no access; the owner inviting them again clears it.
+    leftAt: time("left_at"),
   },
   (table) => [
     primaryKey({ columns: [table.pasteId, table.userId] }),

@@ -36,10 +36,17 @@ import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useSiteHost } from "@/components/site-host"
+import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
 import { copyText, runAction } from "@/lib/feedback"
-import { renamePaste, setPasteCollection, setStarred, trashPaste } from "@/lib/pastes/actions"
+import {
+  renamePaste,
+  restorePaste,
+  setPasteCollection,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import type { SidebarPaste } from "@/lib/pastes/types"
 
 // The ⋯ menu on a sidebar paste row. Renaming, filing and deleting only apply to the viewer's own
@@ -60,11 +67,19 @@ export function PasteMenu({
   const [creating, setCreating] = React.useState(false)
   const [, startTransition] = React.useTransition()
 
+  // Files the paste in `collection`, or takes it out of its current one with null. Undo puts it
+  // back where it was.
   function fileIn(collection: string | null) {
+    const previous = paste.collection
+    const nameOf = (slug: string | null) =>
+      collections.find((candidate) => candidate.slug === slug)?.name
     startTransition(async () => {
-      await runAction(() => setPasteCollection(paste.slug, collection), {
-        success: collection ? "Added to collection" : "Removed from collection",
+      await withUndo(() => setPasteCollection(paste.slug, collection), {
         error: "Couldn't update the collection. Try again.",
+        message: collection
+          ? `Moved to ${nameOf(collection) ?? "a new collection"}`
+          : `Removed from ${nameOf(previous) ?? "its collection"}`,
+        undo: () => setPasteCollection(paste.slug, previous),
       })
     })
   }
@@ -148,14 +163,17 @@ export function PasteMenu({
                 variant="destructive"
                 onClick={() =>
                   startTransition(async () => {
-                    const result = await runAction(() => trashPaste(paste.slug), {
-                      success: "Moved to trash",
+                    const onItsPage = pathname.startsWith(`/pastes/${paste.slug}`)
+                    const result = await withUndo(() => trashPaste(paste.slug), {
                       error: "Couldn't move the paste to trash. Try again.",
+                      message: `Moved “${paste.title}” to trash`,
+                      undo: () => restorePaste(paste.slug),
+                      onUndone: () => {
+                        if (onItsPage) router.push(`/pastes/${paste.slug}`)
+                      },
                     })
                     // Its own page has nothing left to show.
-                    if (result.ok && pathname.startsWith(`/pastes/${paste.slug}`)) {
-                      router.push("/pastes")
-                    }
+                    if (result.ok && onItsPage) router.push("/pastes")
                   })
                 }
               >

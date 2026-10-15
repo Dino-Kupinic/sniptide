@@ -5,10 +5,24 @@ import { cn } from "cn"
 import { AlertCircleIcon, XIcon } from "lucide-react"
 import * as React from "react"
 
-type ToastKind = "success" | "error"
-type ToastItem = { id: number; kind: ToastKind; message: string }
+type ToastKind = "success" | "error" | "info"
+type ToastAction = { label: string; run: () => void | Promise<void> }
+type ToastItem = {
+  id: number
+  kind: ToastKind
+  message: string
+  action?: ToastAction
+  duration: number
+}
+type ToastOptions = {
+  // A button on the toast, e.g. Undo. Clicking it closes the toast and then runs `run`.
+  action?: ToastAction
+  // How long it stays up, in ms. Toasts with an action default to longer.
+  duration?: number
+}
 
-const DURATION: Record<ToastKind, number> = { success: 3000, error: 6000 }
+const DURATION: Record<ToastKind, number> = { success: 3000, error: 6000, info: 3000 }
+const ACTION_DURATION = 8000
 const MAX_VISIBLE = 3
 const EMPTY: ToastItem[] = []
 
@@ -28,26 +42,29 @@ function dismiss(id: number) {
   emit(items.filter((item) => item.id !== id))
 }
 
-function show(kind: ToastKind, message: string) {
+function show(kind: ToastKind, message: string, options: ToastOptions = {}) {
   const id = nextId++
+  const duration = options.duration ?? (options.action ? ACTION_DURATION : DURATION[kind])
   const dropped = items.slice(0, Math.max(0, items.length - (MAX_VISIBLE - 1)))
   for (const item of dropped) {
     clearTimeout(timers.get(item.id))
     timers.delete(item.id)
   }
-  emit([...items.slice(dropped.length), { id, kind, message }])
+  emit([...items.slice(dropped.length), { id, kind, message, action: options.action, duration }])
   timers.set(
     id,
-    setTimeout(() => dismiss(id), DURATION[kind]),
+    setTimeout(() => dismiss(id), duration),
   )
   return id
 }
 
 // Feedback for actions that have no button or form of their own to report on, like a menu item.
+// `info` is neutral; pass `action` for something the reader can take back, like Undo.
 // Mount <Toaster /> once near the root.
 const toast = {
-  success: (message: string) => show("success", message),
-  error: (message: string) => show("error", message),
+  success: (message: string, options?: ToastOptions) => show("success", message, options),
+  error: (message: string, options?: ToastOptions) => show("error", message, options),
+  info: (message: string, options?: ToastOptions) => show("info", message, options),
   dismiss,
 }
 
@@ -84,10 +101,22 @@ function Toaster({ className }: { className?: string }) {
         >
           {item.kind === "error" ? (
             <AlertCircleIcon className="size-4 shrink-0 text-destructive" aria-hidden="true" />
-          ) : (
+          ) : item.kind === "success" ? (
             <SuccessCheck className="text-primary" />
-          )}
+          ) : null}
           <span className="min-w-0 flex-1">{item.message}</span>
+          {item.action ? (
+            <button
+              type="button"
+              onClick={() => {
+                dismiss(item.id)
+                void item.action?.run()
+              }}
+              className="shrink-0 px-2 py-1 text-[13px] font-semibold text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              {item.action.label}
+            </button>
+          ) : null}
           <button
             type="button"
             aria-label="Dismiss"

@@ -22,9 +22,16 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import { runAction } from "@/lib/feedback"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
 export function StarButton({
@@ -118,7 +125,15 @@ export function ShareButton({
 }
 
 // Drops a paste someone shared with the viewer from their list, then goes back to it.
-export function LeaveShareButton({ slug, className }: { slug: string; className?: string }) {
+export function LeaveShareButton({
+  slug,
+  title,
+  className,
+}: {
+  slug: string
+  title: string
+  className?: string
+}) {
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
 
@@ -130,9 +145,11 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
       loading={pending}
       onClick={() =>
         startTransition(async () => {
-          const result = await runAction(() => leaveShare(slug), {
-            success: "Removed from your list",
+          const result = await withUndo(() => leaveShare(slug), {
             error: "Couldn't remove it from your list. Try again.",
+            message: `Removed “${title}” from your list`,
+            undo: () => restoreShare(slug),
+            onUndone: () => router.push(`/pastes/${slug}`),
           })
           if (result.ok) router.push("/shared")
         })
@@ -145,12 +162,14 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
 
 export function PasteOverflowMenu({
   slug,
+  title,
   canTrash,
   canLeave,
   rawHref,
   className,
 }: {
   slug: string
+  title: string
   canTrash: boolean
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
@@ -187,9 +206,11 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                const result = await runAction(() => leaveShare(slug), {
-                  success: "Removed from your list",
+                const result = await withUndo(() => leaveShare(slug), {
                   error: "Couldn't remove it from your list. Try again.",
+                  message: `Removed “${title}” from your list`,
+                  undo: () => restoreShare(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
                 })
                 if (result.ok) router.push("/shared")
               }}
@@ -205,9 +226,11 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                const result = await runAction(() => trashPaste(slug), {
-                  success: "Moved to trash",
+                const result = await withUndo(() => trashPaste(slug), {
                   error: "Couldn't move the paste to trash. Try again.",
+                  message: `Moved “${title}” to trash`,
+                  undo: () => restorePaste(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
                 })
                 if (result.ok) router.push("/pastes")
               }}

@@ -160,6 +160,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           <StarButton slug={slug} starred={starred} variant="ghost" />
           <PasteOverflowMenu
             slug={slug}
+            title={paste.title}
             canTrash={owned}
             canLeave={Boolean(share)}
             rawHref={
@@ -245,7 +246,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             state={owned ? sharingState : undefined}
             sharedNote={
               paste.owner && share ? (
-                <SharedWithYou slug={slug} owner={paste.owner} share={share} />
+                <SharedWithYou slug={slug} title={paste.title} owner={paste.owner} share={share} />
               ) : undefined
             }
             views={
@@ -399,10 +400,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 // The recipient's "Shared with you" panel: who shared it, what they can do, and a way out.
 function SharedWithYou({
   slug,
+  title,
   owner,
   share,
 }: {
   slug: string
+  title: string
   owner: NonNullable<Paste["owner"]>
   share: NonNullable<Awaited<ReturnType<typeof getShare>>>
 }) {
@@ -440,7 +443,7 @@ function SharedWithYou({
           ? `You can edit this paste. Sharing and deleting stay with ${owner.name}.`
           : `You can read and copy this paste. Only ${owner.name} can change it.`}
       </p>
-      <LeaveShareButton slug={slug} className="h-8 text-[13px]" />
+      <LeaveShareButton slug={slug} title={title} className="h-8 text-[13px]" />
     </div>
   )
 }
