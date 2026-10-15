@@ -34,6 +34,21 @@ The theme reads three font variables, so set them on `<html>` (for example with 
 `globals.css` already tells Tailwind to scan this package's components; your own files are found
 by Tailwind's automatic source detection.
 
+## Feedback states
+
+Every async action ends in the same three states, built from these pieces:
+
+- **Loading:** `<Button loading={pending}>` shows a `Spinner` in place of the button's icon, ignores
+  clicks and sets `aria-busy`. Use `Skeleton` for content that is still on its way.
+- **Success:** `SuccessCheck` is a check that draws itself in (a copy button swaps its icon for it).
+  Actions without a button of their own, like menu items, call `toast.success(...)`. Mount
+  `<Toaster />` once in the root layout.
+- **Error:** `FormError` for a failure next to the thing that failed (`banner` on top of a form,
+  `inline` under a field), `toast.error(...)` for actions with no place for a message.
+
+Spinners fall back to a slow pulse and the check and skeletons stop animating when the visitor
+prefers reduced motion.
+
 ## Releasing
 
 Bump `version` in `package.json` and merge to `main`. The `Publish @sniptide/ui` workflow stages

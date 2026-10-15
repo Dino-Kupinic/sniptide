@@ -59,11 +59,13 @@ export function SocialButtons({
     // The account is created after the provider's redirect; this marks the attempt. The result
     // is reported on return: new accounts land on newUserCallbackURL, the rest on callbackURL.
     if (verb === "Sign up") track("sign_up_started", { method: provider })
-    const { error } = await authClient.signIn.social({
-      provider,
-      callbackURL: withAuthMarker(callbackURL, "signed_in", provider),
-      newUserCallbackURL: withAuthMarker(callbackURL, "signed_up", provider),
-    })
+    const { error } = await authClient.signIn
+      .social({
+        provider,
+        callbackURL: withAuthMarker(callbackURL, "signed_in", provider),
+        newUserCallbackURL: withAuthMarker(callbackURL, "signed_up", provider),
+      })
+      .catch(() => ({ error: { message: undefined } }))
     if (error) {
       setPending(null)
       onError(error.message ?? "Couldn't reach the provider. Try again.")
@@ -80,7 +82,8 @@ export function SocialButtons({
             key={id}
             type="button"
             variant="outline"
-            disabled={!available || pending !== null}
+            disabled={!available || (pending !== null && pending !== id)}
+            loading={pending === id}
             title={available ? undefined : `${name} sign-in isn't configured yet`}
             onClick={() => signIn(id)}
             className="h-[46px] flex-1 gap-2 text-[15px] lg:h-10 lg:flex-none lg:gap-2.5 lg:text-sm"

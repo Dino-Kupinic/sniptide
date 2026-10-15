@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
@@ -22,6 +23,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 import { track } from "@/lib/analytics"
+import { runAction } from "@/lib/feedback"
 import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
@@ -49,8 +51,12 @@ export function StarButton({
       className={className}
       onClick={() =>
         startTransition(async () => {
-          setOptimistic(!optimistic)
-          await setStarred(slug, !optimistic)
+          const next = !optimistic
+          setOptimistic(next)
+          await runAction(() => setStarred(slug, next), {
+            success: next ? "Starred" : "Removed from starred",
+            error: "Couldn't update the star. Try again.",
+          })
         })
       }
     >
@@ -72,7 +78,7 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
         return copy(url)
       }}
     >
-      <LinkIcon />
+      {copied ? <SuccessCheck /> : <LinkIcon />}
       <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
     </Button>
   )
@@ -105,6 +111,7 @@ export function ShareButton({
 
   return (
     <Button type="button" className={className} onClick={share}>
+      {copied ? <SuccessCheck /> : null}
       <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
     </Button>
   )
@@ -120,11 +127,14 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
       type="button"
       variant="outline"
       className={className}
-      disabled={pending}
+      loading={pending}
       onClick={() =>
         startTransition(async () => {
-          await leaveShare(slug)
-          router.push("/shared")
+          const result = await runAction(() => leaveShare(slug), {
+            success: "Removed from your list",
+            error: "Couldn't remove it from your list. Try again.",
+          })
+          if (result.ok) router.push("/shared")
         })
       }
     >
@@ -177,8 +187,11 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await leaveShare(slug)
-                router.push("/shared")
+                const result = await runAction(() => leaveShare(slug), {
+                  success: "Removed from your list",
+                  error: "Couldn't remove it from your list. Try again.",
+                })
+                if (result.ok) router.push("/shared")
               }}
             >
               <LogOutIcon />
@@ -192,8 +205,11 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await trashPaste(slug)
-                router.push("/pastes")
+                const result = await runAction(() => trashPaste(slug), {
+                  success: "Moved to trash",
+                  error: "Couldn't move the paste to trash. Try again.",
+                })
+                if (result.ok) router.push("/pastes")
               }}
             >
               <Trash2Icon />

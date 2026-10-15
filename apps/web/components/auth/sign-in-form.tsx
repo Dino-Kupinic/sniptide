@@ -26,10 +26,12 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signIn.email({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    })
+    const { error } = await authClient.signIn
+      .email({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      })
+      .catch(() => ({ error: { status: 0, message: "Couldn't reach the server. Try again." } }))
 
     if (error) {
       setPending(false)
@@ -109,7 +111,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
 
         <FormError message={error} />
 
-        <Button type="submit" disabled={pending} className={authSubmitClass}>
+        <Button type="submit" loading={pending} className={authSubmitClass}>
           {pending ? "Signing in…" : "Sign in"}
         </Button>
 

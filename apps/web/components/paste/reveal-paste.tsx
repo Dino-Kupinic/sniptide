@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { FlameIcon } from "lucide-react"
 import * as React from "react"
 import { track } from "@/lib/analytics"
@@ -48,14 +49,10 @@ export function RevealPaste({ slug }: { slug: string }) {
           copy what you need.
         </p>
       </div>
-      {error ? (
-        <p role="alert" className="text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError variant="inline" message={error} />
       <Button
         type="button"
-        disabled={pending}
+        loading={pending}
         className="h-10"
         onClick={() =>
           startTransition(async () => {
