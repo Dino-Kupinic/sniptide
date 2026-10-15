@@ -4,6 +4,7 @@ import { verifyPassword } from "@/lib/pastes/passwords"
 import { getUnlockHash } from "@/lib/pastes/store"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
 import { hit, type Limit, refund } from "@/lib/rate-limit"
+import { HOUR_SECONDS, seconds } from "@/lib/time"
 
 // The longest password a paste can have (see the save schema) and the most this route will read.
 const MAX_PASSWORD_LENGTH = 200
@@ -14,8 +15,8 @@ const MAX_BODY_BYTES = 1024
 // paste, the other per paste for everyone, which also bounds guessing spread across many visitors.
 function limitsFor(slug: string, client: string): Limit[] {
   return [
-    { key: `unlock:client:${slug}:${client}`, max: 8, windowSeconds: 15 * 60 },
-    { key: `unlock:paste:${slug}`, max: 60, windowSeconds: 60 * 60 },
+    { key: `unlock:client:${slug}:${client}`, max: 8, windowSeconds: seconds(15 * 60) },
+    { key: `unlock:paste:${slug}`, max: 60, windowSeconds: HOUR_SECONDS },
   ]
 }
 
