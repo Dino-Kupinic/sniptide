@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/auth"
 import { deleteGroup } from "@/lib/env/store"
 import { hit, type Limit } from "@/lib/rate-limit"
+import { HOUR_SECONDS } from "@/lib/time"
 import { type CreateTokenResult, createToken, revokeToken, type TokenInput } from "./tokens"
 
 // Settings actions for API tokens and env groups. They act on the signed-in account only.
@@ -11,7 +12,7 @@ import { type CreateTokenResult, createToken, revokeToken, type TokenInput } fro
 const tokenCreate = (user: string): Limit => ({
   key: `api:token-create:${user}`,
   max: 20,
-  windowSeconds: 60 * 60,
+  windowSeconds: HOUR_SECONDS,
 })
 
 export async function createApiToken(input: TokenInput): Promise<CreateTokenResult> {

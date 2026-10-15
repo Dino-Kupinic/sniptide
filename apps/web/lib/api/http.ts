@@ -2,13 +2,13 @@ import "server-only"
 
 import { ZodError } from "zod"
 import { hit, type Limit } from "@/lib/rate-limit"
+import { HOUR_SECONDS } from "@/lib/time"
 import { authenticate, type Scope, type TokenOwner } from "./tokens"
 
 // Shared plumbing for the token API under /api/v1: bearer authentication, scope checks, rate
 // limits and JSON responses. Errors use the same `{ ok: false, error }` shape as the rest of the
 // public API, and nothing a client sent is echoed back in them.
 
-const HOUR = 60 * 60
 const headers = { "cache-control": "private, no-store" }
 
 export const apiLimits = {
@@ -16,7 +16,7 @@ export const apiLimits = {
   request: (token: string): Limit => ({
     key: `api:token:${token}`,
     max: 3600,
-    windowSeconds: HOUR,
+    windowSeconds: HOUR_SECONDS,
   }),
 }
 
