@@ -96,7 +96,7 @@ function ShortcutsSheet({
                     key={item.id}
                     className="flex min-h-9 items-center justify-between gap-4 border-b border-border text-sm last:border-b-0"
                   >
-                    {item.label}
+                    <span>{item.label}</span>
                     <span className="flex shrink-0 items-center gap-1">
                       <ShortcutKeys id={item.id} className="border border-border" />
                     </span>

@@ -21,10 +21,11 @@ test("n starts a new paste and / opens search, but not while typing", async ({
   screen,
 }) => {
   await app.open("/dashboard")
+  const search = screen.getByLabel("Search pastes, collections, or run a command")
   await browser.keyboard.press("/")
-  await expect(screen.getByRole("dialog", "Command menu")).toBeVisible()
+  await expect(search).toBeVisible()
   await browser.keyboard.press("Escape")
-  await expect(screen.getByRole("dialog", "Command menu")).not.toBeVisible()
+  await expect(search).not.toBeVisible()
 
   await browser.keyboard.press("n")
   await expect(browser).toHaveURL(/\/new$/)
@@ -60,5 +61,7 @@ test("Ctrl+S saves the paste from the editor", async ({ app, browser, screen }) 
   await screen.getByLabel("Contents of untitled.txt").fill("saved from the keyboard")
   await screen.getByLabel("Contents of untitled.txt").press("Control+s")
   await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
-  await expect(screen.getByRole("heading", title)).toBeVisible()
+  const slug = new URL(await browser.url()).pathname.split("/").at(-1)
+  const raw = await fetch(new URL(`/${slug}/raw`, app.baseUrl))
+  expect(await raw.text()).toBe("saved from the keyboard")
 })
