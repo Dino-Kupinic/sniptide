@@ -168,7 +168,9 @@ describeDb("sharing", () => {
 
     await share("priv", "friend", "edit")
     signInAs("friend")
-    expect(await updatePaste("priv", edit({ slug: "stolen" }), "Edited")).toEqual({ slug: "priv" })
+    expect(await updatePaste("priv", edit({ slug: "stolen" }), "Edited")).toMatchObject({
+      slug: "priv",
+    })
     signInAs("owner")
     const saved = await getPaste("priv")
     expect(saved?.title).toBe("edited")

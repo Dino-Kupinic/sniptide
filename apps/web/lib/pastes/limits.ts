@@ -15,6 +15,12 @@ export const limits = {
     max: 240,
     windowSeconds: HOUR_SECONDS,
   }),
+  // Auto-save sends an edit after every pause in typing, so it gets a much larger allowance.
+  autosave: (user: string): Limit => ({
+    key: `paste:autosave:${user}`,
+    max: 1800,
+    windowSeconds: HOUR_SECONDS,
+  }),
   gist: (user: string): Limit => ({
     key: `paste:gist:${user}`,
     max: 20,

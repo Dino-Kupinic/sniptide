@@ -1080,9 +1080,38 @@ async function findEditable(slug: string) {
   return share?.access === "edit" ? { record, owned: false } : null
 }
 
+// Revisions made by editing are batched: while the newest revision has the same message and is
+// less than this old, another edit folds into it instead of adding a row. Auto-save would
+// otherwise fill the history with one entry per pause in typing.
+export const REVISION_WINDOW_MS = 10 * 60_000
+
+export interface UpdateOptions {
+  // Only save if the paste is still at this version (its `updatedAt`), so an edit made from a stale
+  // copy can't silently overwrite a newer one.
+  expectedVersion?: number
+  // Fold the edit into the latest revision when it is recent (see REVISION_WINDOW_MS).
+  batchRevision?: boolean
+}
+
+export type UpdateResult =
+  | {
+      slug: string
+      // The paste's new version: pass it as `expectedVersion` on the next save.
+      version: number
+      expiresAt: number | null
+      hasPassword: boolean
+    }
+  // `slug` is where the paste lives now, in case the newer save moved it.
+  | { conflict: true; version: number; slug: string }
+
 // Saves an edit. Someone the paste is shared with changes only its title, description and files;
 // its link, visibility, expiry, password, collection and burn setting stay the owner's.
-export async function updatePaste(slug: string, input: PasteInput, message: string) {
+export async function updatePaste(
+  slug: string,
+  input: PasteInput,
+  message: string,
+  options: UpdateOptions = {},
+): Promise<UpdateResult | null> {
   const parsed = parsePasteInput(input)
   const editable = await findEditable(slug)
   if (!editable) return null
@@ -1107,11 +1136,15 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
       : data.password
         ? await hashPassword(data.password)
         : null
+  const expiresAt = resolveExpiry(data.expiry, record.expiresAt, now.getTime())
+  // A version always moves forward, even if two saves land in the same millisecond.
+  const version = Math.max(now.getTime(), record.updatedAt.getTime() + 1)
+  const stamp = new Date(version)
 
   const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-  await getDb().transaction(async (tx) => {
+  return getDb().transaction(async (tx): Promise<UpdateResult> => {
     await enforceBudget(tx, record.ownerId, bytes, record.id)
-    await tx
+    const changed = await tx
       .update(pasteTable)
       .set({
         bytes,
@@ -1122,16 +1155,54 @@ export async function updatePaste(slug: string, input: PasteInput, message: stri
         passwordHash,
         burnAfterRead: data.burnAfterRead,
         collection: data.collection,
-        expiresAt: resolveExpiry(data.expiry, record.expiresAt, now.getTime()),
-        updatedAt: now,
+        expiresAt,
+        updatedAt: stamp,
       })
-      .where(eq(pasteTable.id, record.id))
+      .where(
+        and(
+          eq(pasteTable.id, record.id),
+          options.expectedVersion === undefined
+            ? undefined
+            : eq(pasteTable.updatedAt, new Date(options.expectedVersion)),
+        ),
+      )
+      .returning({ id: pasteTable.id })
+    if (changed.length === 0) {
+      const [latest] = await tx
+        .select({ updatedAt: pasteTable.updatedAt, slug: pasteTable.slug })
+        .from(pasteTable)
+        .where(eq(pasteTable.id, record.id))
+      return {
+        conflict: true,
+        version: ms(latest?.updatedAt ?? record.updatedAt),
+        slug: latest?.slug ?? record.slug,
+      }
+    }
+
     await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
     await tx.insert(pasteFile).values(fileRows(record.id, data.files))
-    await tx.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: now })
-  })
 
-  return { slug: data.slug || slug }
+    const [latest] = options.batchRevision
+      ? await tx
+          .select()
+          .from(pasteRevision)
+          .where(eq(pasteRevision.pasteId, record.id))
+          .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+          .limit(1)
+      : []
+    const batched =
+      latest?.message === message && now.getTime() - latest.createdAt.getTime() < REVISION_WINDOW_MS
+    if (!batched) {
+      await tx.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: stamp })
+    }
+
+    return {
+      slug: data.slug || slug,
+      version,
+      expiresAt: ms(expiresAt),
+      hasPassword: passwordHash !== null,
+    }
+  })
 }
 
 export async function updateSharing(slug: string, input: SharingInput) {
