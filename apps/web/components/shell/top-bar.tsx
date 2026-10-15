@@ -1,10 +1,10 @@
 "use client"
 
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { PanelLeftIcon, SearchIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
+import { ShortcutKeys, useShortcutLabel } from "@/components/shortcuts/shortcut-keys"
 import { pageTitle } from "./nav-config"
 import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs } from "./page-header"
@@ -66,7 +66,7 @@ function SearchField() {
     >
       <SearchIcon className="size-3.5" />
       Search pastes, collections…
-      <Kbd className="ml-auto border border-border">⌘K</Kbd>
+      <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
     </button>
   )
 }
@@ -80,6 +80,7 @@ export function SidebarToggle({
   open: boolean
   className?: string
 }) {
+  const label = useShortcutLabel("toggle-sidebar")
   return (
     <Tooltip>
       <TooltipTrigger
@@ -90,7 +91,7 @@ export function SidebarToggle({
       >
         <PanelLeftIcon />
       </TooltipTrigger>
-      <TooltipContent side="bottom">⌘B</TooltipContent>
+      <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
   )
 }

@@ -11,7 +11,6 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   ArrowUpRightIcon,
@@ -20,6 +19,7 @@ import {
   CircleHelpIcon,
   GlobeIcon,
   HouseIcon,
+  KeyboardIcon,
   LogOutIcon,
   MonitorIcon,
   MoonIcon,
@@ -30,6 +30,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import * as React from "react"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
+import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import { authClient } from "@/lib/auth-client"
 
 // Where the resource links go. There is no marketing site or docs site in this app yet.
@@ -43,6 +45,7 @@ const links = {
 // as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
 export function AccountMenuItems({ name, email }: { name: string; email: string }) {
   const router = useRouter()
+  const shortcuts = useShortcutsHelp()
 
   async function signOut() {
     await authClient.signOut()
@@ -64,11 +67,16 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
       <DropdownMenuItem render={<Link href="/settings" />}>
         <SettingsIcon />
         Settings
-        <Kbd className="ml-auto bg-transparent text-muted-foreground">⌘,</Kbd>
+        <ShortcutKeys id="settings" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
       <DropdownMenuItem render={<Link href="/settings?tab=billing" />}>
         <ChartColumnIcon />
         Usage
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={shortcuts.open} className="max-lg:hidden">
+        <KeyboardIcon />
+        Keyboard shortcuts
+        <ShortcutKeys id="help" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <ThemeRow />

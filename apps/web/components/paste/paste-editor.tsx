@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
@@ -42,6 +41,7 @@ import {
 } from "@/components/paste/side-panel"
 import { useEditorHistory } from "@/components/paste/use-editor-history"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useSiteHost } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
@@ -57,11 +57,13 @@ import type { Collection } from "@/lib/collections/types"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
+import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
+import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
 export interface EditorInitial {
   title: string
@@ -308,7 +310,11 @@ export function PasteEditor({
   const [draftNotice, setDraftNotice] = React.useState<
     { kind: "restored" } | { kind: "choose"; savedAt: number } | null
   >(null)
-  const { draft, discard: discardDraft } = useDraftBackup({
+  const {
+    draft,
+    discard: discardDraft,
+    saveNow: saveDraftNow,
+  } = useDraftBackup({
     key: draftId,
     value: draftValue,
     baseVersion: editing ? versionRef.current : null,
@@ -498,15 +504,21 @@ export function PasteEditor({
   })
 
   function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    const key = event.key.toLowerCase()
-    const modifier = event.metaKey || event.ctrlKey
-    if (modifier && !event.altKey && (key === "z" || (key === "y" && event.ctrlKey))) {
+    if (event.nativeEvent.isComposing) return
+
+    // ⌘Z / ⌘⇧Z (and Ctrl+Y off the Mac) go through our own history.
+    const undo = matchesCombo(event, shortcut("undo").keys)
+    const redo =
+      matchesCombo(event, shortcut("redo").keys) ||
+      (event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "y")
+    if (undo || redo) {
       event.preventDefault()
-      step(key === "y" || event.shiftKey ? "redo" : "undo")
+      step(undo ? "undo" : "redo")
       return
     }
 
     // Tab indents (by the Settings indentation) instead of leaving the editor.
+    const key = event.key.toLowerCase()
     if (key !== "tab" || event.shiftKey || !active) return
     event.preventDefault()
     const textarea = event.currentTarget
@@ -529,6 +541,8 @@ export function PasteEditor({
       void finish()
       return
     }
+    // A second ⌘S or ⌘↵ while the first is still saving must not create the paste twice.
+    if (pending) return
     setError(null)
     if (slugStatus === "taken") {
       setError(`${host}/${slug} is taken. Pick another custom link.`)
@@ -569,12 +583,29 @@ export function PasteEditor({
     })
   }
 
+  // Latest handlers for the window listener below, which is attached once.
+  const saveRef = React.useRef<() => void>(() => {})
   React.useEffect(() => {
+    saveRef.current = () => {
+      // An open paste saves as you go, so ⌘S just pushes the pending edit out. A new paste has
+      // nowhere to be saved yet, so ⌘S keeps what's typed as a draft on this device.
+      if (editing) void autosaver.flush()
+      else if (saveDraftNow()) toast.success("Draft saved on this device")
+    }
+  })
+
+  React.useEffect(() => {
+    // ⌘↵ creates the paste (or finishes editing it); ⌘S saves without leaving. ⌘S is claimed even
+    // while something else has focus, since the browser would otherwise offer to save the page.
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-        event.preventDefault()
-        formRef.current?.requestSubmit()
-      }
+      const submits = matchesCombo(event, shortcut("submit").keys)
+      const saves = matchesCombo(event, shortcut("save").keys)
+      if ((!submits && !saves) || event.defaultPrevented) return
+      event.preventDefault()
+      // A dialog or menu in front owns the keyboard.
+      if (event.repeat || isOverlayOpen()) return
+      if (saves) saveRef.current()
+      else formRef.current?.requestSubmit()
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
@@ -740,7 +771,7 @@ export function PasteEditor({
         </Button>
         <Button type="submit" form={formId} size="lg" loading={pending} className="gap-2">
           {editing ? "Done" : pending ? "Saving…" : "Create paste"}
-          <Kbd className="bg-primary-foreground/20 text-primary-foreground">⌘↵</Kbd>
+          <ShortcutKeys id="submit" className="bg-primary-foreground/20 text-primary-foreground" />
         </Button>
       </HeaderActions>
 
