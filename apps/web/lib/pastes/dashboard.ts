@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
 import { type PasteRow, toRows } from "./rows"
+import { VISIBILITIES } from "./types"
 import { summarizePastes, VIEW_HISTORY_DAYS } from "./store"
 
 const RECENT_ROWS = 5
@@ -74,7 +75,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .where(and(own, gte(pasteViewDay.day, firstDay), lt(pasteViewDay.day, today + 1)))
       .groupBy(pasteViewDay.day),
     Promise.all(
-      [undefined, ...(["public", "unlisted", "private"] as const)].map((visibility) =>
+      [undefined, ...VISIBILITIES].map((visibility) =>
         db
           .select()
           .from(pasteTable)

@@ -3,6 +3,7 @@ import type { EditorInitial } from "@/components/paste/paste-editor"
 import { type Collection, HUES, ICONS } from "@/lib/collections/types"
 import { initials } from "@/lib/format"
 import type { PasteRow, SharedRow, TrashRow } from "@/lib/pastes/rows"
+import { VISIBILITIES } from "@/lib/pastes/types"
 import type { ViewerSummary } from "@/lib/viewer"
 
 export const datasets = ["demo", "worst", "empty", "one", "large"] as const
@@ -49,7 +50,7 @@ export function stressData(dataset: Dataset) {
         ? (titles[index % titles.length] ?? "Untitled")
         : `Deployment notes ${index + 1}`,
       language: ["typescript", "objective-c", "text", "python"][index % 4] ?? "text",
-      visibility: (["public", "unlisted", "private"] as const)[index % 3] ?? "private",
+      visibility: VISIBILITIES[index % 3] ?? "private",
       burnAfterRead: index % 4 === 3,
       views: worst ? ([0, 1, 1284, 1000000, 12345678][index % 5] ?? 0) : 12,
       expiresLabel: index % 4 === 3 ? "after 1 view" : index % 4 === 1 ? "in 1 hour" : "Never",

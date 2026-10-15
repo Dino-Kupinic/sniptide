@@ -15,7 +15,8 @@
     "test:mcp": "bun --filter @sniptide/mcp test",
     "load:seed": "bun apps/web/load/seed.ts",
     "load:run": "bun apps/web/load/run.ts",
-    "test:e2e": "bun --filter web test:e2e"
+    "test:e2e": "bun --filter web test:e2e",
+    "check:boundaries": "bun scripts/check-agent-boundaries.ts"
   },
   "catalogs": {
     "runtime": {
