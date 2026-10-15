@@ -27,6 +27,8 @@ dist
 # misc
 .DS_Store
 *.pem
+/.worktrees/
+/.claude/worktrees/
 
 # debug
 npm-debug.log*
