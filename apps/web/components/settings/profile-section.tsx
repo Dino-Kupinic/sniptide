@@ -7,8 +7,10 @@ import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
 import { USERNAME_PATTERN } from "@workspace/auth/username"
 import * as React from "react"
+import { AutosaveStatus } from "@/components/autosave-status"
 import { useSiteHost } from "@/components/site-host"
 import { authClient } from "@/lib/auth-client"
+import { useAutosave } from "@/lib/autosave/use-autosave"
 import { updateAvatar, updateProfile } from "@/lib/settings-actions"
 import { SaveStatus, SettingsSection } from "./section"
 
@@ -69,16 +71,39 @@ function useUsernameCheck(username: string, current: string) {
   return status
 }
 
+// The name saves after a pause in typing. The username changes the address of the profile, so it
+// only counts once typing stops (leaving the field or Enter) and the name is free.
 export function ProfileSection({ profile }: { profile: ProfileState }) {
   const host = useSiteHost()
   const [name, setName] = React.useState(profile.name)
   const [username, setUsername] = React.useState(profile.username)
+  const [committedUsername, setCommittedUsername] = React.useState(profile.username)
+  const [savedUsername, setSavedUsername] = React.useState(profile.username)
   const [image, setImage] = React.useState(profile.image)
   const [status, setStatus] = React.useState<{ ok: boolean; message: string } | null>(null)
   const [pending, startTransition] = React.useTransition()
   const fileRef = React.useRef<HTMLInputElement>(null)
-  const usernameStatus = useUsernameCheck(username, profile.username)
-  const dirty = name.trim() !== profile.name || username !== profile.username
+  const usernameStatus = useUsernameCheck(username, savedUsername)
+
+  const profileValue = React.useMemo(
+    () => ({
+      name: name.trim(),
+      username:
+        committedUsername === username && usernameStatus === "available" ? username : savedUsername,
+    }),
+    [name, username, committedUsername, usernameStatus, savedUsername],
+  )
+  const { state } = useAutosave({
+    value: profileValue,
+    initial: { name: profile.name, username: profile.username },
+    validate: (next) => (next.name ? null : "enter a display name"),
+    async save(sent) {
+      const result = await updateProfile(sent)
+      if (!result.ok) return result
+      setSavedUsername(sent.username)
+      return { ok: true }
+    },
+  })
 
   function changeAvatar(next: string | null) {
     const previous = image
@@ -143,21 +168,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
         ) : null}
       </div>
 
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(event) => {
-          event.preventDefault()
-          setStatus(null)
-          startTransition(async () => {
-            const result = await updateProfile({ name, username }).catch(() => null)
-            setStatus(
-              result?.ok
-                ? { ok: true, message: "Profile saved." }
-                : { ok: false, message: result?.error ?? "Couldn't save your profile. Try again." },
-            )
-          })
-        }}
-      >
+      <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="display-name">Display name</Label>
@@ -186,6 +197,12 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
                 id="settings-username"
                 value={username}
                 onChange={(event) => setUsername(event.target.value.toLowerCase().trim())}
+                onBlur={() => setCommittedUsername(username)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return
+                  event.preventDefault()
+                  setCommittedUsername(username)
+                }}
                 maxLength={30}
                 autoCapitalize="none"
                 spellCheck={false}
@@ -235,19 +252,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            type="submit"
-            size="lg"
-            loading={pending}
-            disabled={
-              !dirty ||
-              usernameStatus === "taken" ||
-              usernameStatus === "invalid" ||
-              usernameStatus === "checking"
-            }
-          >
-            {pending ? "Saving…" : "Save profile"}
-          </Button>
+          <AutosaveStatus state={state} />
           <SaveStatus status={status} />
         </div>
       </form>

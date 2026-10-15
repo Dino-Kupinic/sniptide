@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { PasteEditor } from "@/components/paste/paste-editor"
-import { getPreferences } from "@/lib/auth"
+import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { formatDateTime } from "@/lib/format"
 import { getPaste, getShare } from "@/lib/pastes/store"
@@ -15,10 +15,11 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
   const paste = await getPaste(slug)
   if (!paste) notFound()
 
-  const [share, preferences, collections] = await Promise.all([
+  const [share, preferences, collections, session] = await Promise.all([
     getShare(slug),
     getPreferences(),
     listCollections(),
+    getSession(),
   ])
   const shared = Boolean(paste.owner)
   if (shared && share?.access !== "edit") notFound()
@@ -28,6 +29,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
       editing={slug}
       sharedEdit={shared}
       collections={collections}
+      draftScope={session?.user.id ?? ""}
       indentation={preferences.indentation}
       secretDetection={preferences.secretDetection}
       currentExpiry={
@@ -44,6 +46,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
         collection: shared ? null : paste.collection,
         hasPassword: Boolean(paste.password),
         burnAfterRead: paste.burnAfterRead,
+        version: paste.updatedAt,
       }}
     />
   )

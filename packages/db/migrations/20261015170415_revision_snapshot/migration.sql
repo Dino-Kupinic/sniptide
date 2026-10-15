@@ -1,0 +1,1 @@
+ALTER TABLE "paste_revision" ADD COLUMN "snapshot" jsonb;

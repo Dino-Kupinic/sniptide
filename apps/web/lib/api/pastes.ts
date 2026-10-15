@@ -29,6 +29,7 @@ import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
 import { insertPaste } from "@/lib/pastes/insert"
 import { limited, limits } from "@/lib/pastes/limits"
 import { parsePasteInput } from "@/lib/pastes/schema"
+import { pruneSnapshots, snapshotOf } from "@/lib/pastes/snapshot"
 import { randomSlug } from "@/lib/pastes/store"
 import { VISIBILITIES } from "@/lib/pastes/types"
 import { getSiteOrigin } from "@/lib/site"
@@ -349,9 +350,19 @@ export async function updateCapture(
           endLine: capture.files[position]?.lines?.end ?? null,
         })),
       )
-      await tx
-        .insert(pasteRevision)
-        .values({ pasteId: record.id, message: "Edited via API", createdAt: now })
+      await tx.insert(pasteRevision).values({
+        pasteId: record.id,
+        message: "Edited via API",
+        snapshot: snapshotOf({ title: data.title, description }, [
+          ...data.files.map((file, position) => ({
+            ...file,
+            startLine: capture.files[position]?.lines?.start ?? null,
+            endLine: capture.files[position]?.lines?.end ?? null,
+          })),
+        ]),
+        createdAt: now,
+      })
+      await pruneSnapshots(tx, record.id)
     })
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
