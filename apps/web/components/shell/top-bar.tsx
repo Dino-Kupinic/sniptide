@@ -27,7 +27,7 @@ export function TopBar({
   const { setTitle, setActions } = useHeaderSlotRefs()
 
   return (
-    <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6 lg:flex">
+    <header className="sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
       {sidebarOpen ? null : (
         <>
           <SidebarToggle onToggle={onToggleSidebar} open={false} className="-ml-2" />
@@ -44,7 +44,10 @@ export function TopBar({
         </span>
       </div>
 
-      <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
+      <div
+        ref={setActions}
+        className="flex max-w-full shrink-0 flex-wrap items-center gap-2 empty:hidden"
+      />
       {sidebarOpen ? null : <SearchField />}
       <span aria-hidden="true" className="h-5 w-px bg-border" />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />

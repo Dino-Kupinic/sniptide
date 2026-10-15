@@ -22,6 +22,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { Trash2Icon } from "lucide-react"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
 import { PASTE_PAGE_SIZE, type PageInfo, type PasteListQuery } from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
@@ -162,7 +163,7 @@ export function TrashList({
           </p>
         ) : (
           <>
-            <Table className="hidden table-fixed lg:table">
+            <Table className="hidden min-w-[960px] table-fixed lg:table">
               <TableHeader className="bg-sidebar">
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Paste</TableHead>
@@ -233,7 +234,9 @@ export function TrashList({
                 <li key={row.slug} className="flex items-center gap-3 border-b border-border py-3">
                   <LanguageMarker language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-[15px] text-foreground/70">{row.title}</span>
+                    <span title={row.title} className="truncate text-[15px] text-foreground/70">
+                      {row.title}
+                    </span>
                     <span
                       className={cn(
                         "text-[13px] text-muted-foreground",
@@ -251,15 +254,17 @@ export function TrashList({
             </ul>
 
             <p className="hidden border-t border-border px-4 py-3 text-[13px] text-muted-foreground lg:block">
-              {pagination.totalAll} {pagination.totalAll === 1 ? "paste" : "pastes"} · {sizeLabel}
+              {formatNumber(pagination.totalAll)} {pagination.totalAll === 1 ? "paste" : "pastes"} ·{" "}
+              {sizeLabel}
             </p>
           </>
         )}
       </div>
       {pagination.total > 0 ? (
-        <div className="flex items-center justify-between gap-3 text-[13px] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
           <span>
-            Showing {start + 1}–{start + rows.length} of {pagination.total}
+            Showing {formatNumber(start + 1)}–{formatNumber(start + rows.length)} of{" "}
+            {formatNumber(pagination.total)}
           </span>
           <Pagination
             page={pagination.page}

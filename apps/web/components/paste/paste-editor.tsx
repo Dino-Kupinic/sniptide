@@ -449,7 +449,7 @@ export function PasteEditor({
                 can read it, so remove it or keep the paste private.
               </p>
             ) : null}
-            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label={`Language: ${language.name}`}

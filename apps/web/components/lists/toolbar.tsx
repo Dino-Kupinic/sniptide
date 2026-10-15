@@ -263,7 +263,7 @@ export function Pagination({
     .sort((a, b) => a - b)
 
   return (
-    <nav aria-label="Pagination" className="flex items-center gap-1 text-[13px]">
+    <nav aria-label="Pagination" className="flex shrink-0 flex-wrap items-center gap-1 text-[13px]">
       <button
         type="button"
         aria-label="Previous page"
@@ -274,7 +274,10 @@ export function Pagination({
         <ChevronLeftIcon className="size-3.5" />
       </button>
       {pages.map((candidate, index) => (
-        <span key={candidate} className="flex items-center gap-1">
+        <span
+          key={candidate}
+          className={cn("hidden items-center gap-1 sm:flex", candidate === page && "flex")}
+        >
           {index > 0 && candidate - (pages[index - 1] ?? candidate) > 1 ? (
             <span
               aria-hidden="true"
@@ -325,20 +328,24 @@ export function ListHeader({
   return (
     <div className="flex flex-col gap-1">
       <HeaderTitle>
-        <span className="truncate">{title}</span>
+        <span className="truncate" title={title}>
+          {title}
+        </span>
         {count !== undefined ? (
-          <span className="bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
+          <span className="shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
             {formatNumber(count)}
           </span>
         ) : null}
       </HeaderTitle>
       {actions ? <HeaderActions>{actions}</HeaderActions> : null}
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+        <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
           {title}
         </h1>
         {count !== undefined ? (
-          <span className="text-sm text-muted-foreground tabular-nums lg:hidden">{count}</span>
+          <span className="shrink-0 text-sm text-muted-foreground tabular-nums lg:hidden">
+            {formatNumber(count)}
+          </span>
         ) : null}
       </div>
       {description ? (

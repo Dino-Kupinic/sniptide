@@ -119,7 +119,7 @@ export function PasteList({
     query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
-  const range = `${start + 1}–${start + rows.length}`
+  const range = `${formatNumber(start + 1)}–${formatNumber(start + rows.length)}`
 
   const quick =
     mode === "starred" ? (
@@ -161,8 +161,8 @@ export function PasteList({
       </div>
 
       <div className="flex flex-col lg:border lg:border-border">
-        <div className="hidden items-center justify-between gap-3 p-3 lg:flex">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label="Language"
@@ -197,37 +197,40 @@ export function PasteList({
         {pagination.total === 0 ? (
           <EmptyState filtering={filtering} mode={mode} />
         ) : view === "grid" ? (
-          <ul className="hidden grid-cols-3 gap-3 border-t border-border p-3 lg:grid">
+          <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 border-t border-border p-3 lg:grid">
             {rows.map((row) => (
               <li
                 key={row.slug}
-                className="relative flex flex-col gap-3 border border-border p-4 hover:border-foreground/40"
+                className="relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link
                     href={`/pastes/${row.slug}`}
-                    className="text-sm font-medium after:absolute after:inset-0"
+                    title={row.title}
+                    className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
                   >
                     {row.title}
                   </Link>
                   <RowMenu row={row} origin={origin} />
                 </div>
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="[overflow-wrap:anywhere] font-mono text-xs text-muted-foreground">
                   {host}/{row.slug}
                 </span>
-                <div className="mt-auto flex items-center justify-between text-[13px] text-foreground/80">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[13px] text-foreground/80">
                   <LanguageLabel language={row.language} />
                   <RowBadge row={row} />
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="font-mono">{formatNumber(row.views)} views</span>
+                <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono">
+                    {formatNumber(row.views)} {row.views === 1 ? "view" : "views"}
+                  </span>
                   <span>{row.updatedLabel}</span>
                 </div>
               </li>
             ))}
           </ul>
         ) : (
-          <Table className="hidden table-fixed lg:table">
+          <Table className="hidden min-w-[960px] table-fixed lg:table">
             <TableHeader className="bg-sidebar">
               <TableRow className="hover:bg-transparent">
                 <TableHead>Paste</TableHead>
@@ -247,6 +250,7 @@ export function PasteList({
                   <TableCell className="truncate">
                     <Link
                       href={`/pastes/${row.slug}`}
+                      title={row.title}
                       className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                     >
                       {row.title}
@@ -308,6 +312,7 @@ export function PasteList({
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <Link
                     href={`/pastes/${row.slug}`}
+                    title={row.title}
                     className="truncate text-[15px] font-medium after:absolute after:inset-0"
                   >
                     {row.title}
@@ -324,7 +329,7 @@ export function PasteList({
                       ? row.expiresLabel
                       : row.expiresSoon
                         ? `expires ${row.expiresLabel}`
-                        : `${formatNumber(row.views)} views`}
+                        : `${formatNumber(row.views)} ${row.views === 1 ? "view" : "views"}`}
                   </span>
                 </div>
                 <RowBadge row={row} short className="shrink-0" />
@@ -334,10 +339,10 @@ export function PasteList({
         ) : null}
 
         {pagination.total > 0 ? (
-          <div className="flex items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
             <span className="text-[13px] text-muted-foreground">
-              Showing {range} of {pagination.total}
-              {filtering ? ` (filtered from ${pagination.totalAll})` : ""}
+              Showing {range} of {formatNumber(pagination.total)}
+              {filtering ? ` (filtered from ${formatNumber(pagination.totalAll)})` : ""}
             </span>
             <Pagination
               page={pagination.page}

@@ -17,14 +17,15 @@ import { AccountMenuItems } from "./account-menu"
 export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   const { open: openCommandMenu } = useCommandMenu()
   return (
-    <header className="sticky top-0 z-30 flex h-[52px] shrink-0 items-center justify-between bg-background px-4 pt-[env(safe-area-inset-top)] box-content lg:hidden">
+    <header className="sticky top-0 z-30 flex min-h-[52px] shrink-0 items-center justify-between gap-3 bg-background px-4 pt-[env(safe-area-inset-top)] box-content lg:hidden">
       <Link
         href="/dashboard"
-        className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        aria-label="Sniptide dashboard"
+        className="min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
-        <Logo />
+        <Logo className="min-w-0 [&>span]:truncate" />
       </Link>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
           aria-label="Search"

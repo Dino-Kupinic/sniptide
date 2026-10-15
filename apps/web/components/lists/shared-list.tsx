@@ -15,6 +15,7 @@ import { UsersIcon } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { formatNumber } from "@/lib/format"
 import type { SharedRow } from "@/lib/pastes/rows"
 import type { Person } from "@/lib/pastes/types"
 import { RowMenu } from "./row-menu"
@@ -142,7 +143,7 @@ export function SharedList({
       </div>
 
       <div className="flex flex-col lg:border lg:border-border">
-        <div className="hidden items-center justify-between gap-3 p-3 lg:flex">
+        <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
           <div className="flex flex-wrap items-center gap-2">
             <SearchField value={query} onChange={setQuery} />
             <FilterMenu
@@ -209,16 +210,17 @@ export function SharedList({
             </div>
           )
         ) : view === "grid" ? (
-          <ul className="hidden grid-cols-3 gap-3 border-t border-border p-3 lg:grid">
+          <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 border-t border-border p-3 lg:grid">
             {paged.items.map((row) => (
               <li
                 key={row.slug}
-                className="relative flex flex-col gap-3 border border-border p-4 hover:border-foreground/40"
+                className="relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link
                     href={`/pastes/${row.slug}`}
-                    className="text-sm font-medium after:absolute after:inset-0"
+                    title={row.title}
+                    className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
                   >
                     {row.title}
                   </Link>
@@ -226,12 +228,18 @@ export function SharedList({
                 </div>
                 <LanguageLabel language={row.language} className="text-[13px] text-foreground/80" />
                 {row.owner ? (
-                  <span className="mt-auto flex items-center gap-2 text-[13px]">
+                  <span className="mt-auto flex min-w-0 items-start gap-2 text-[13px]">
                     <PersonAvatar person={row.owner} />
-                    {row.owner.name}
+                    <span
+                      dir="auto"
+                      title={row.owner.name || row.owner.username}
+                      className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
+                    >
+                      {row.owner.name || row.owner.username}
+                    </span>
                   </span>
                 ) : null}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <AccessBadge access={row.access} />
                   {row.sharedLabel}
                 </div>
@@ -239,7 +247,7 @@ export function SharedList({
             ))}
           </ul>
         ) : (
-          <Table className="hidden table-fixed lg:table">
+          <Table className="hidden min-w-[960px] table-fixed lg:table">
             <TableHeader className="bg-sidebar">
               <TableRow className="hover:bg-transparent">
                 <TableHead>Paste</TableHead>
@@ -259,7 +267,8 @@ export function SharedList({
                     <span className="flex items-center gap-2">
                       <Link
                         href={`/pastes/${row.slug}`}
-                        className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                        title={row.title}
+                        className="min-w-0 truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                       >
                         {row.title}
                       </Link>
@@ -278,9 +287,15 @@ export function SharedList({
                   </TableCell>
                   <TableCell className="text-[13px]">
                     {row.owner ? (
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 items-start gap-2">
                         <PersonAvatar person={row.owner} />
-                        {row.owner.name}
+                        <span
+                          dir="auto"
+                          title={row.owner.name || row.owner.username}
+                          className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
+                        >
+                          {row.owner.name || row.owner.username}
+                        </span>
                       </span>
                     ) : null}
                   </TableCell>
@@ -311,7 +326,8 @@ export function SharedList({
                   <span className="flex items-center gap-2">
                     <Link
                       href={`/pastes/${row.slug}`}
-                      className="truncate text-[15px] font-medium after:absolute after:inset-0"
+                      title={row.title}
+                      className="min-w-0 truncate text-[15px] font-medium after:absolute after:inset-0"
                     >
                       {row.title}
                     </Link>
@@ -322,7 +338,8 @@ export function SharedList({
                     ) : null}
                   </span>
                   <span className="truncate text-[13px] text-muted-foreground">
-                    {row.owner?.name} · {row.sharedLabel}
+                    {row.owner ? `${row.owner.name || row.owner.username} · ` : ""}
+                    {row.sharedLabel}
                   </span>
                 </div>
                 <AccessBadge access={row.access} />
@@ -332,10 +349,10 @@ export function SharedList({
         ) : null}
 
         {filtered.length > 0 ? (
-          <div className="flex items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
             <span className="hidden text-[13px] text-muted-foreground lg:inline">
-              {filtered.length} {filtered.length === 1 ? "paste" : "pastes"} from{" "}
-              {new Set(filtered.map((row) => row.owner?.username)).size}{" "}
+              {formatNumber(filtered.length)} {filtered.length === 1 ? "paste" : "pastes"} from{" "}
+              {formatNumber(new Set(filtered.map((row) => row.owner?.username)).size)}{" "}
               {new Set(filtered.map((row) => row.owner?.username)).size === 1 ? "person" : "people"}
             </span>
             <Pagination page={paged.page} pageCount={paged.pageCount} onChange={setPage} />

@@ -68,14 +68,21 @@ export function byteLength(text: string) {
 
 // "JD" for "Jane Doe" or "jane.doe", "JA" for "jane": first and last word, else the first two
 // letters.
+const graphemes = new Intl.Segmenter("en", { granularity: "grapheme" })
+
 export function initials(name: string) {
   const words = name
     .trim()
     .split(/[\s._-]+/)
     .filter(Boolean)
+  if (words.length > 1 && /^(jr|sr|ii|iii|iv|v)$/i.test(words.at(-1) ?? "")) words.pop()
   const first = words[0] ?? ""
   const last = words.length > 1 ? words.at(-1) : undefined
-  const letters = last ? `${first.charAt(0)}${last.charAt(0)}` : first.slice(0, 2)
+  const firstLetters = [...graphemes.segment(first)].map(({ segment }) => segment)
+  const lastLetter = last ? [...graphemes.segment(last)][0]?.segment : undefined
+  const letters = lastLetter
+    ? `${firstLetters[0] ?? ""}${lastLetter}`
+    : firstLetters.slice(0, 2).join("")
   return letters.toUpperCase() || "?"
 }
 

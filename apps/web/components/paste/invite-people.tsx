@@ -56,8 +56,12 @@ export function InvitePeople({
           {invites.map((invite) => (
             <li key={invite.person.id} className="flex items-center gap-2 py-1.5">
               <ShareAvatar person={invite.person} className="size-5" />
-              <span className="min-w-0 flex-1 truncate" title={invite.person.handle}>
-                {invite.person.name}
+              <span
+                className="min-w-0 flex-1 truncate"
+                title={`${invite.person.name || invite.person.handle} · ${invite.person.handle}`}
+                dir="auto"
+              >
+                {invite.person.name || invite.person.handle}
               </span>
               <AccessMenu
                 value={invite.access}
