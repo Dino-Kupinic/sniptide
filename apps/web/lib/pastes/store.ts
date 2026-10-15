@@ -34,6 +34,7 @@ import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { enforceBudget } from "./budget"
 import { recordPasteEvent } from "./events"
+import { insertPaste } from "./insert"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
@@ -1027,7 +1028,7 @@ export async function createPaste(input: PasteInput, invites: ShareInvite[] = []
   const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   await getDb().transaction(async (tx) => {
     await enforceBudget(tx, owner, bytes)
-    await tx.insert(pasteTable).values({
+    await insertPaste(tx, {
       id,
       slug,
       ownerId: owner,
@@ -1038,12 +1039,10 @@ export async function createPaste(input: PasteInput, invites: ShareInvite[] = []
       passwordHash,
       burnAfterRead: data.burnAfterRead,
       collection: data.collection,
+      files: data.files,
       createdAt: now,
-      updatedAt: now,
       expiresAt: resolveExpiry(data.expiry, null, now.getTime()),
     })
-    await tx.insert(pasteFile).values(fileRows(id, data.files))
-    await tx.insert(pasteRevision).values({ pasteId: id, message: "Created", createdAt: now })
     const wanted = new Map(
       invites.filter((invite) => invite.userId !== owner).map((i) => [i.userId, i.access]),
     )
