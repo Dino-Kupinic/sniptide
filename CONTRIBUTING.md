@@ -46,3 +46,21 @@ and open PRs.
 
 - Keep a PR to one change, and say in the description what it does and why.
 - Run the checks from the README before pushing; CI runs the same ones.
+
+## Releases
+
+Merging a PR into `main` automatically publishes a GitHub release after its CI passes. The
+Conventional Commit title determines the version: `feat` bumps the minor version, `fix` and
+other types bump the patch version, and `!` or a `BREAKING CHANGE:` footer bumps the major
+version. Changes since the previous tag are included in the release notes. No manual version
+bump or tag is needed; the private root package version is not the release version.
+
+The release workflow then builds, smoke-tests and publishes the matching AMD64/ARM64 Docker
+image, including its version tags and `latest`. A failed CI run never publishes a release.
+If another PR merges before a release starts, the older run is skipped; the next passing run
+at the tip of `main` releases the accumulated changes together. Direct pushes do not start
+a release. Re-running a successful release does not create another version.
+
+If image publishing fails after the GitHub release was created, re-run the failed jobs or run
+**Publish Docker image** manually with that existing release tag. Coolify continues deploying
+`main` independently; publishing a release does not report a production deployment to GitHub.
