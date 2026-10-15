@@ -1,9 +1,10 @@
 # Sniptide with its Postgres database, ready to self-host.
 #
-#   echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" > .env   # keep it: sessions depend on it
+#   printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
 #   docker compose up -d
 #
-# Open http://localhost:3000 and create your account. Every option is in .env.example. For
+# Keep the secret (sessions depend on it); BETTER_AUTH_URL is the exact address you open in the
+# browser. Then open it and create your account. Every option is in .env.example. For
 # HTTPS on your own domain, add the bundled Caddy proxy (see the "proxy" service below).
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db

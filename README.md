@@ -179,12 +179,13 @@ server with Docker installed, from zero to a running instance:
 
 ```bash
 git clone https://github.com/Dino-Kupinic/sniptide.git && cd sniptide   # or download docker-compose.yml and .env.example
-echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" > .env                  # keep it; sessions depend on it
+printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<your-server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
 docker compose up -d
 ```
 
-Open `http://<your-server>:3000` and create your account; the first start applies the database
-migrations. `.env.example` lists every setting compose accepts (`BETTER_AUTH_URL`,
+Keep the secret: sessions depend on it. `BETTER_AUTH_URL` must be the exact address you open in
+the browser (a domain with `https://` once you add HTTPS below); sign-in is rejected from any other
+origin. Open it and create your account; the first start applies the database migrations. `.env.example` lists every setting compose accepts (`BETTER_AUTH_URL`,
 `POSTGRES_PASSWORD`, sign-up and OAuth options, …); the app's own reference is
 `apps/web/.env.example`.
 
@@ -226,8 +227,8 @@ contributed to Coolify's one-click service list. The optional settings (sign-up,
 
 ### Settings
 
-Sniptide runs with just `DATABASE_URL` and `BETTER_AUTH_SECRET` (compose and the Coolify template
-set both). Everything else is optional and documented with its default in `apps/web/.env.example`;
+Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`; add `BETTER_AUTH_URL` so browsers
+can sign in (compose and the Coolify template set all three). Everything else is optional and documented with its default in `apps/web/.env.example`;
 a test fails when the app reads a variable that file doesn't list. The hosted-only extras are off
 unless you turn them on:
 
