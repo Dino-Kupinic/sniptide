@@ -33,6 +33,21 @@ under `/api/v1` that the CLI uses) are documented at
 handler, document it there, or list it as internal if it only serves the web app; `bun test` fails
 until you do.
 
+## Link previews and channel sharing
+
+Public pastes without password or one-time protection include Open Graph and X cards with the
+title, language and the first ten lines of the first file. Private, unlisted and protected pastes
+have no code image. Preview requests neither count views nor consume one-time pastes; images
+are not cached by Sniptide. Messaging services may retain a preview they already fetched.
+
+Set `SLACK_WEBHOOK_URL` and/or `DISCORD_WEBHOOK_URL` on the app server to enable **Share → Share
+to Slack/Discord**. Create an incoming webhook in the destination channel, copy its URL into
+the matching environment variable, and restart the app. Each provider has one destination for
+the instance; the dialog tells owners that everyone in the channel receives the link. Only
+owners can send live public or unlisted pastes without password or one-time protection, with
+20 sends per hour per account across both providers. URLs remain server secrets. A failed or
+timed-out send reports an error without automatically retrying; check the channel before retrying.
+
 ## CLI
 
 The [Sniptide CLI](packages/cli/README.md) captures files, folders or globs as pastes and restores their

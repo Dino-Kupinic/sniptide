@@ -12,8 +12,9 @@ import { PublicHeader } from "@/components/public-header"
 import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
-import { readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
-import { getAppOrigin } from "@/lib/site"
+import { previewMetadata } from "@/lib/pastes/preview"
+import { readPublicPreview, readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
+import { getAppOrigin, getSiteOrigin } from "@/lib/site"
 
 const avatarTone = {
   primary: "bg-primary text-primary-foreground",
@@ -22,8 +23,11 @@ const avatarTone = {
 }
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">) {
-  const meta = await readSharedMeta((await params).slug)
-  if (!meta) return { title: "Sniptide" }
+  const { slug } = await params
+  const preview = await readPublicPreview(slug)
+  if (preview) return previewMetadata(preview, (await getSiteOrigin()).origin)
+  const meta = await readSharedMeta(slug)
+  if (!meta) return { title: "Sniptide", robots: { index: false, follow: false } }
 
   return {
     title: `${meta.title} · Sniptide`,

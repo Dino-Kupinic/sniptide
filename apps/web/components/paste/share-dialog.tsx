@@ -15,7 +15,9 @@ import * as React from "react"
 import { track } from "@/lib/analytics"
 import { invitePerson, removeShare, type ShareResult, setShareAccess } from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
+import type { WebhookTarget } from "@/lib/pastes/webhook-url"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
+import { WebhookShare } from "./webhook-share"
 
 const visibilityNote: Record<Visibility, { icon: typeof LockIcon; text: string }> = {
   private: { icon: LockIcon, text: "Private. Everyone else gets a 404." },
@@ -33,6 +35,8 @@ export function ShareDialog({
   owner,
   people: initialPeople,
   trigger,
+  webhookTargets = [],
+  webhookAllowed = false,
 }: {
   slug: string
   title: string
@@ -40,6 +44,8 @@ export function ShareDialog({
   owner: { id: string; name: string; handle: string; initials: string }
   people: SharePerson[]
   trigger: "button" | "icon"
+  webhookTargets?: WebhookTarget[]
+  webhookAllowed?: boolean
 }) {
   const [people, setPeople] = React.useState(initialPeople)
   const [error, setError] = React.useState<string | null>(null)
@@ -154,6 +160,7 @@ export function ShareDialog({
           </p>
         ) : null}
 
+        <WebhookShare slug={slug} targets={webhookTargets} allowed={webhookAllowed} />
         <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 lg:px-6">
           <span className="flex items-center gap-2 text-[13px]">
             <note.icon className="size-3.5 shrink-0" />

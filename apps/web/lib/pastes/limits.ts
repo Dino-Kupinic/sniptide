@@ -9,6 +9,11 @@ export const limits = {
   create: (user: string): Limit => ({ key: `paste:create:${user}`, max: 30, windowSeconds: HOUR }),
   edit: (user: string): Limit => ({ key: `paste:edit:${user}`, max: 240, windowSeconds: HOUR }),
   gist: (user: string): Limit => ({ key: `paste:gist:${user}`, max: 20, windowSeconds: HOUR }),
+  webhook: (user: string): Limit => ({
+    key: `paste:webhook:${user}`,
+    max: 20,
+    windowSeconds: HOUR,
+  }),
   // Looking up who to invite. Lookups are exact, but a cap still keeps anyone from testing a
   // long list of addresses for accounts.
   personLookup: (user: string): Limit => ({
