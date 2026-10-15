@@ -94,6 +94,9 @@ export const pasteRevision = pgTable(
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
     message: text("message").notNull(),
+    // Set when the editor is closed with Done: the next edit starts a new revision instead of
+    // folding into this one.
+    sealed: boolean("sealed").notNull().default(false),
     createdAt: time("created_at").notNull().defaultNow(),
   },
   (table) => [index("paste_revision_paste_idx").on(table.pasteId, table.createdAt)],

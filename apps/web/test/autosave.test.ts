@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { paste, pasteRevision } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { autosavePaste, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
+import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { getPaste, REVISION_WINDOW_MS } from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -130,6 +130,75 @@ describeDb("autosavePaste", () => {
       "Edited",
       "Edited",
     ])
+  })
+
+  test("an edit that rewrites most of the paste gets a revision of its own", async () => {
+    const lines = (word: string) =>
+      Array.from({ length: 40 }, (_, index) => `${word} line number ${index}`).join("\n")
+    const { slug, version } = await create({ files: [{ name: "a.txt", content: lines("old") }] })
+
+    const typed = await autosavePaste(
+      slug,
+      input({ files: [{ name: "a.txt", content: `${lines("old")}\nmore` }] }),
+      version,
+    )
+    if (!typed.ok || "conflict" in typed) throw new Error("expected a save")
+    const small = await autosavePaste(
+      slug,
+      input({ files: [{ name: "a.txt", content: `${lines("old")}\nmore text` }] }),
+      typed.version,
+    )
+    if (!small.ok || "conflict" in small) throw new Error("expected a save")
+    expect(await revisions(slug)).toHaveLength(2)
+
+    const rewrite = await autosavePaste(
+      slug,
+      input({ files: [{ name: "a.txt", content: lines("new") }] }),
+      small.version,
+    )
+    if (!rewrite.ok || "conflict" in rewrite) throw new Error("expected a save")
+    expect((await revisions(slug)).map((revision) => revision.message)).toEqual([
+      "Created",
+      "Edited",
+      "Edited",
+    ])
+
+    // Small edits after it fold into the new revision again.
+    await autosavePaste(
+      slug,
+      input({ files: [{ name: "a.txt", content: `${lines("new")}\nmore` }] }),
+      rewrite.version,
+    )
+    expect(await revisions(slug)).toHaveLength(3)
+  })
+
+  test("closing the editor with Done ends the revision, once", async () => {
+    const { slug, version } = await create()
+    const first = await autosavePaste(slug, input({ title: "one" }), version)
+    if (!first.ok || "conflict" in first) throw new Error("expected a save")
+
+    await finishEditing(slug)
+    await finishEditing(slug)
+    expect((await revisions(slug)).map((revision) => revision.sealed)).toEqual([false, true])
+
+    await autosavePaste(slug, input({ title: "two" }), first.version)
+    expect((await revisions(slug)).map((revision) => revision.message)).toEqual([
+      "Created",
+      "Edited",
+      "Edited",
+    ])
+  })
+
+  test("Done leaves other revisions and other people's pastes alone", async () => {
+    const { slug } = await create()
+    await finishEditing(slug)
+    expect((await revisions(slug)).map((revision) => revision.sealed)).toEqual([false])
+
+    const edited = await autosavePaste(slug, input({ title: "one" }), (await create()).version)
+    expect(edited.ok || "conflict" in edited).toBe(true)
+    signInAs("other")
+    await finishEditing(slug)
+    expect((await revisions(slug)).every((revision) => !revision.sealed)).toBe(true)
   })
 
   test("explicit saves still add a revision each time", async () => {

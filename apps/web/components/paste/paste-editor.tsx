@@ -52,7 +52,7 @@ import {
 import type { Collection } from "@/lib/collections/types"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
-import { autosavePaste, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
+import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
@@ -378,6 +378,8 @@ export function PasteEditor({
     ) {
       return
     }
+    // Best effort: failing to close the revision only means the next edit may share it.
+    if (saved) await finishEditing(savedSlugRef.current).catch(() => {})
     router.push(`/pastes/${savedSlugRef.current}`)
   }
 

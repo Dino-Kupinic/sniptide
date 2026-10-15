@@ -161,6 +161,14 @@ export async function autosavePaste(
   }
 }
 
+// Called when the editor is closed with Done: the edits so far stay one revision, and the next
+// time the paste is edited it starts a new one.
+export async function finishEditing(editing: string): Promise<void> {
+  const user = await assertSignedIn()
+  if (await limited(limits.autosave(user))) return
+  await store.sealRevision(editing, "Edited")
+}
+
 // Answers "not available" while limited; saving checks the slug again anyway.
 export async function checkSlug(slug: string, except?: string) {
   const user = await assertSignedIn()

@@ -33,6 +33,7 @@ import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { enforceBudget } from "./budget"
+import { isLargeEdit } from "./edit-size"
 import { recordPasteEvent } from "./events"
 import { insertPaste } from "./insert"
 import { hashPassword } from "./passwords"
@@ -1080,9 +1081,10 @@ async function findEditable(slug: string) {
   return share?.access === "edit" ? { record, owned: false } : null
 }
 
-// Revisions made by editing are batched: while the newest revision has the same message and is
-// less than this old, another edit folds into it instead of adding a row. Auto-save would
-// otherwise fill the history with one entry per pause in typing.
+// Revisions made by editing are batched: while the newest revision has the same message, is
+// less than this old and wasn't closed with Done, another edit folds into it instead of adding a
+// row. A save that rewrites most of the paste (see isLargeEdit) still gets a row of its own.
+// Auto-save would otherwise fill the history with one entry per pause in typing.
 export const REVISION_WINDOW_MS = 10 * 60_000
 
 export interface UpdateOptions {
@@ -1179,6 +1181,13 @@ export async function updatePaste(
       }
     }
 
+    // Read before they are replaced, to tell a small edit from a rewrite.
+    const before = options.batchRevision
+      ? await tx
+          .select({ name: pasteFile.name, content: pasteFile.content })
+          .from(pasteFile)
+          .where(eq(pasteFile.pasteId, record.id))
+      : []
     await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
     await tx.insert(pasteFile).values(fileRows(record.id, data.files))
 
@@ -1191,7 +1200,10 @@ export async function updatePaste(
           .limit(1)
       : []
     const batched =
-      latest?.message === message && now.getTime() - latest.createdAt.getTime() < REVISION_WINDOW_MS
+      latest?.message === message &&
+      !latest.sealed &&
+      now.getTime() - latest.createdAt.getTime() < REVISION_WINDOW_MS &&
+      !isLargeEdit(before, data.files)
     if (!batched) {
       await tx.insert(pasteRevision).values({ pasteId: record.id, message, createdAt: stamp })
     }
@@ -1203,6 +1215,24 @@ export async function updatePaste(
       hasPassword: passwordHash !== null,
     }
   })
+}
+
+// Closes the editing session: the next edit starts a new revision. Only the revision made by
+// auto-save is closed; one made another way (created, imported, restored) is left alone.
+export async function sealRevision(slug: string, message: string): Promise<boolean> {
+  const editable = await findEditable(slug)
+  if (!editable) return false
+  const db = getDb()
+  const [latest] = await db
+    .select({ id: pasteRevision.id, message: pasteRevision.message })
+    .from(pasteRevision)
+    .where(eq(pasteRevision.pasteId, editable.record.id))
+    .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+    .limit(1)
+  if (latest?.message === message) {
+    await db.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
+  }
+  return true
 }
 
 export async function updateSharing(slug: string, input: SharingInput) {
