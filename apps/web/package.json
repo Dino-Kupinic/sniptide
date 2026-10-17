@@ -31,6 +31,7 @@
     "next": "catalog:runtime",
     "next-intl": "^4.14.9",
     "next-themes": "catalog:runtime",
+    "nodemailer": "^10.1.2",
     "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",

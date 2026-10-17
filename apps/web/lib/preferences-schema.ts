@@ -4,8 +4,21 @@ import { z } from "zod"
 import { EXPIRIES, VISIBILITIES } from "@/lib/pastes/types"
 import { defaultPreferences, type Preferences } from "./preferences"
 
+const channels = z
+  .object({ inApp: z.boolean().catch(true), email: z.boolean().catch(false) })
+  .catch({ inApp: true, email: false })
+export const notificationPreferencesSchema = z
+  .object({
+    shared: channels,
+    burned: channels,
+    expiring: channels,
+    views: channels,
+  })
+  .catch(defaultPreferences.notifications)
+
 // Forgiving parse: unknown or missing keys fall back to the defaults.
 export const preferencesSchema = z.object({
+  notifications: notificationPreferencesSchema,
   indentation: z.enum(["2", "4", "tab"]).catch(defaultPreferences.indentation),
   lineNumbers: z.boolean().catch(defaultPreferences.lineNumbers),
   secretDetection: z.boolean().catch(defaultPreferences.secretDetection),

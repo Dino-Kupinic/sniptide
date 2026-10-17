@@ -29,6 +29,13 @@ services:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_SECURE=${SMTP_SECURE:-}
+      - SMTP_REQUIRE_TLS=${SMTP_REQUIRE_TLS:-}
       - POSTHOG_KEY=${POSTHOG_KEY}
     depends_on:
       postgres:
