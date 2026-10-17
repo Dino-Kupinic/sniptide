@@ -1,21 +1,20 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
 import { entriesSchema, fieldClass, useSecretValues } from "./client"
 
 export function SharedSecret({ token }: { token: string }) {
+  const t = useTranslations("Secrets")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const { values, setValues, clear, begin } = useSecretValues()
   return (
     <main className="ph-no-capture mx-auto w-full max-w-xl space-y-6 px-5 py-16">
-      <h1 className="text-2xl font-semibold">Protected secrets</h1>
-      <p className="text-sm text-muted-foreground">
-        Enter the link password to reveal the current values. Values hide after one minute or when
-        you leave this window.
-      </p>
+      <h1 className="text-2xl font-semibold">{t("protected_title")}</h1>
+      <p className="text-sm text-muted-foreground">{t("unlock_description")}</p>
       <form
         autoComplete="off"
         className="space-y-4"
@@ -36,24 +35,22 @@ export function SharedSecret({ token }: { token: string }) {
               body: JSON.stringify({ password }),
             })
             const result: unknown = await response.json()
-            if (!response.ok)
-              throw new Error(
-                response.status === 429
-                  ? "Too many attempts. Try again later."
-                  : "Link unavailable or password incorrect.",
-              )
+            if (!response.ok) {
+              setError(response.status === 429 ? t("limited_error") : t("locked_error"))
+              return
+            }
             const data = z.object({ entries: entriesSchema }).parse(result)
             if (active())
               setValues(Object.fromEntries(data.entries.map((entry) => [entry.name, entry.value])))
-          } catch (error) {
-            setError(error instanceof Error ? error.message : "Could not reveal secrets.")
+          } catch {
+            setError(t("unlock_error"))
           } finally {
             setBusy(false)
           }
         }}
       >
         <label className="block space-y-2 text-sm">
-          Link password
+          {t("password")}
           <input
             className={fieldClass}
             name="password"
@@ -65,7 +62,7 @@ export function SharedSecret({ token }: { token: string }) {
           />
         </label>
         <Button type="submit" disabled={busy}>
-          {busy ? "Checking…" : "Reveal secrets"}
+          {busy ? t("checking") : t("reveal_secrets")}
         </Button>
       </form>
       {error && (
@@ -76,13 +73,13 @@ export function SharedSecret({ token }: { token: string }) {
       {Object.keys(values).length > 0 && (
         <section className="space-y-3">
           <Button size="sm" variant="outline" onClick={clear}>
-            Hide all
+            {t("hide_all")}
           </Button>
           {Object.entries(values).map(([name, value]) => (
             <div key={name} className="space-y-2 border border-border p-4">
               <h2 className="break-all font-mono text-sm font-medium">{name}</h2>
               <p className="max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-sm">
-                {value || "(empty value)"}
+                {value || t("empty_value")}
               </p>
               <Button
                 size="sm"
@@ -91,11 +88,11 @@ export function SharedSecret({ token }: { token: string }) {
                   try {
                     await navigator.clipboard.writeText(value)
                   } catch {
-                    setError("Could not copy the secret.")
+                    setError(t("copy_error"))
                   }
                 }}
               >
-                Copy
+                {t("copy")}
               </Button>
             </div>
           ))}

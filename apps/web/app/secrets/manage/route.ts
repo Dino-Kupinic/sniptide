@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { boundedJson, secretJson } from "@/lib/env/http"
@@ -26,13 +27,14 @@ const commandSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("revoke"), id, shareId: id }),
 ])
 export async function POST(request: Request) {
+  const t = await getTranslations("Secrets")
   try {
     if (request.headers.get("origin") !== new URL(request.url).origin)
-      return secretJson({ error: "Request refused." }, 403)
+      return secretJson({ error: t("refused_error") }, 403)
     const session = await getSession()
-    if (!session) return secretJson({ error: "Sign in to continue." }, 401)
+    if (!session) return secretJson({ error: t("sign_in_error") }, 401)
     const parsed = commandSchema.safeParse(await boundedJson(request, 2 * 1024 * 1024))
-    if (!parsed.success) return secretJson({ error: "Check the fields and size limits." }, 400)
+    if (!parsed.success) return secretJson({ error: t("fields_error") }, 400)
     const command = parsed.data
     const owner = session.user.id
     switch (command.operation) {
@@ -43,10 +45,10 @@ export async function POST(request: Request) {
           {
             error:
               result.status === "conflict"
-                ? "This group changed. Reload before saving again."
+                ? t("conflict_error")
                 : result.status === "duplicate"
-                  ? "That group name already exists."
-                  : "Could not save this group.",
+                  ? t("duplicate_error")
+                  : t("save_group_error"),
           },
           result.status === "conflict" ? 409 : 400,
         )
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
       case "reveal": {
         const value = await revealSecret(owner, command.id, command.name)
         return value === null
-          ? secretJson({ error: "Secret unavailable." }, 404)
+          ? secretJson({ error: t("unavailable_error") }, 404)
           : secretJson({ value })
       }
       case "delete":
@@ -65,14 +67,14 @@ export async function POST(request: Request) {
         const limit = await hit([
           { key: `secret-share-create:${owner}`, max: 20, windowSeconds: seconds(3600) },
         ])
-        if (!limit.allowed) return secretJson({ error: "Try again later." }, 429)
+        if (!limit.allowed) return secretJson({ error: t("retry_error") }, 429)
         const token = await createSecretShare(owner, command.id, command.input)
         return token
           ? secretJson({ url: `${(await getSiteOrigin()).origin}/secret-share/${token}` })
-          : secretJson({ error: "Could not create link." }, 400)
+          : secretJson({ error: t("create_link_error") }, 400)
       }
     }
   } catch {
-    return secretJson({ error: "Could not complete the request." }, 400)
+    return secretJson({ error: t("complete_error") }, 400)
   }
 }

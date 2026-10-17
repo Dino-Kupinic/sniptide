@@ -1,22 +1,28 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { z } from "zod"
 
-export async function secretRequest(command: unknown, signal?: AbortSignal) {
-  const response = await fetch("/secrets/manage", {
-    method: "POST",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(command),
-    signal,
-  })
-  const data: unknown = await response.json()
-  if (!response.ok) {
-    const error = z.object({ error: z.string() }).safeParse(data)
-    throw new Error(error.success ? error.data.error : "Request failed.")
+export class SecretRequestError extends Error {}
+
+export function useSecretRequest() {
+  const t = useTranslations("Secrets")
+  return async function secretRequest(command: unknown, signal?: AbortSignal) {
+    const response = await fetch("/secrets/manage", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(command),
+      signal,
+    })
+    const data: unknown = await response.json()
+    if (!response.ok) {
+      const error = z.object({ error: z.string() }).safeParse(data)
+      throw new SecretRequestError(error.success ? error.data.error : t("request_error"))
+    }
+    return data
   }
-  return data
 }
 export const entriesSchema = z.array(z.object({ name: z.string(), value: z.string() }))
 export function useSecretValues() {

@@ -46,6 +46,7 @@ test("create, edit, reveal and revoke an encrypted env group", async ({ app, bro
   await screen.getByLabel("Link password", { exact: true }).fill(secrets.get("pastePassword"))
   await screen.getByRole("button", "Create protected link", { exact: true }).tap()
   await expect(screen.getByLabel("Protected link", { exact: true })).toBeVisible()
+  await expect(screen.getByText(/^Expires.*UTC/)).toBeVisible()
   const link = await screen.getByLabel("Protected link", { exact: true }).inputValue()
   const cookies = await browser.cookies()
   await app.clearState()

@@ -142,7 +142,7 @@ export function Sidebar({
         </NavLink>
         <NavLink href="/secrets" pathname={pathname}>
           <KeyRoundIcon />
-          Secrets
+          {t("secrets")}
         </NavLink>
         <MoreMenu pathname={pathname} shared={counts.shared} />
       </nav>

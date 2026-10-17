@@ -143,6 +143,7 @@ export function PasteEditor({
   sharedEdit?: boolean
 }) {
   const t = useTranslations("Paste")
+  const secretsT = useTranslations("Secrets")
   const feedbackT = useTranslations("Core")
   const locale: Locale = useLocale()
   const host = useSiteHost()
@@ -792,9 +793,9 @@ export function PasteEditor({
 
       {!editing && (
         <p className="px-4 text-sm text-muted-foreground lg:px-0">
-          Storing credentials?{" "}
+          {secretsT("credentials_prompt")}{" "}
           <Link href="/secrets/new" className="text-link underline underline-offset-4">
-            Create an encrypted secret group
+            {secretsT("credentials_link")}
           </Link>
           .
         </p>

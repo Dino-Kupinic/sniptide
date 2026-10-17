@@ -1,10 +1,15 @@
+import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 import { z } from "zod"
 import { SecretDetail } from "@/components/secrets/secret-detail"
 import { getSession } from "@/lib/auth"
 import { secretDetail } from "@/lib/env/web-store"
 
-export const metadata = { title: "Secrets · Sniptide", robots: { index: false, follow: false } }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Secrets")
+  return { title: `${t("title")} · Sniptide`, robots: { index: false, follow: false } }
+}
 export const dynamic = "force-dynamic"
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()

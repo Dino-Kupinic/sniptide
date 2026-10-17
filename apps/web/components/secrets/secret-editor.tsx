@@ -4,11 +4,12 @@ import { Button } from "@sniptide/ui/components/button"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
 import { parseEnvFile } from "@/lib/env/dotenv"
 import type { SecretDetail } from "@/lib/env/web-store"
-import { fieldClass, secretRequest } from "./client"
+import { fieldClass, SecretRequestError, useSecretRequest } from "./client"
 
 export function SecretEditor({
   group,
@@ -19,6 +20,8 @@ export function SecretEditor({
   onSaved?: () => void
   onCancel?: () => void
 }) {
+  const t = useTranslations("Secrets")
+  const secretRequest = useSecretRequest()
   const router = useRouter()
   const [entries, setEntries] = useState(
     () =>
@@ -55,7 +58,7 @@ export function SecretEditor({
       setSource("")
       setError("")
     } catch {
-      setError("Check the .env syntax and size limits.")
+      setError(t("syntax_error"))
     }
   }
   return (
@@ -90,7 +93,7 @@ export function SecretEditor({
           router.push(`/secrets/${result.id}`)
           router.refresh()
         } catch (error) {
-          setError(error instanceof Error ? error.message : "Could not save.")
+          setError(error instanceof SecretRequestError ? error.message : t("save_error"))
         } finally {
           setBusy(false)
         }
@@ -98,7 +101,7 @@ export function SecretEditor({
     >
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="space-y-2 text-sm">
-          Group name
+          {t("group_name")}
           <input
             name="slug"
             className={fieldClass}
@@ -110,35 +113,33 @@ export function SecretEditor({
           />
         </label>
         <label className="space-y-2 text-sm">
-          Project
+          {t("project")}
           <input
             name="project"
             className={fieldClass}
             defaultValue={group?.project ?? ""}
             required
             maxLength={100}
-            placeholder="My app"
+            placeholder={t("project_placeholder")}
           />
         </label>
         <label className="space-y-2 text-sm">
-          Environment
+          {t("environment")}
           <select
             name="environment"
             className={fieldClass}
             defaultValue={group?.environment ?? "dev"}
           >
-            <option value="dev">Development</option>
-            <option value="staging">Staging</option>
-            <option value="prod">Production</option>
+            <option value="dev">{t("dev")}</option>
+            <option value="staging">{t("staging")}</option>
+            <option value="prod">{t("prod")}</option>
           </select>
         </label>
       </div>
       <div>
-        <h2 className="font-medium">Variables</h2>
+        <h2 className="font-medium">{t("variables")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {group
-            ? "Leave a value blank to keep it. Select Clear value to save an empty value."
-            : "Values are encrypted before storage."}
+          {group ? t("keep_values") : t("encrypted_notice")}
         </p>
       </div>
       <div className="space-y-3">
@@ -148,10 +149,10 @@ export function SecretEditor({
             className="grid gap-2 border border-border p-3 sm:grid-cols-[1fr_1fr_auto]"
           >
             <label className="space-y-1 text-xs text-muted-foreground">
-              Variable name
+              {t("variable_name")}
               <input
                 className={`${fieldClass} font-mono`}
-                aria-label={`Variable name ${index + 1}`}
+                aria-label={t("variable_name_index", { index: index + 1 })}
                 value={entry.name}
                 readOnly={entry.existing}
                 onChange={(event) =>
@@ -165,7 +166,7 @@ export function SecretEditor({
               />
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
-              {entry.existing ? "New value" : "Value"}
+              {entry.existing ? t("new_value") : t("value")}
               <input
                 type="password"
                 autoComplete="new-password"
@@ -180,14 +181,14 @@ export function SecretEditor({
                     ),
                   )
                 }
-                placeholder={entry.existing ? "Keep current value" : "Enter value"}
+                placeholder={entry.existing ? t("keep_value") : t("enter_value")}
               />
             </label>
             <Button
               type="button"
               variant="ghost"
               className="self-end"
-              aria-label={`Remove variable ${index + 1}`}
+              aria-label={t("remove_variable_index", { index: index + 1 })}
               onClick={() => {
                 if (entry.existing) setDeleted((names) => [...names, entry.name])
                 setEntries((rows) => rows.filter((row) => row.key !== entry.key))
@@ -210,7 +211,7 @@ export function SecretEditor({
                     )
                   }
                 />
-                Clear value
+                {t("clear_value")}
               </label>
             )}
           </div>
@@ -227,12 +228,12 @@ export function SecretEditor({
         }
       >
         <PlusIcon />
-        Add variable
+        {t("add_variable")}
       </Button>
       <details className="border border-border p-4">
-        <summary className="cursor-pointer text-sm font-medium">Paste a .env file</summary>
+        <summary className="cursor-pointer text-sm font-medium">{t("paste_file")}</summary>
         <label className="mt-3 block space-y-2 text-sm">
-          File contents
+          {t("file_contents")}
           <textarea
             autoComplete="off"
             spellCheck={false}
@@ -243,7 +244,7 @@ export function SecretEditor({
           />
         </label>
         <Button type="button" variant="outline" className="mt-3" onClick={importFile}>
-          Import variables
+          {t("import_variables")}
         </Button>
       </details>
       {error && (
@@ -253,11 +254,11 @@ export function SecretEditor({
       )}
       <div className="flex gap-3">
         <Button type="submit" disabled={busy}>
-          {busy ? "Saving…" : "Save secrets"}
+          {busy ? t("saving") : t("save")}
         </Button>
         {onCancel ? (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {t("cancel")}
           </Button>
         ) : (
           <Button
@@ -266,7 +267,7 @@ export function SecretEditor({
             render={<Link href={group ? `/secrets/${group.id}` : "/secrets"} />}
             nativeButton={false}
           >
-            Cancel
+            {t("cancel")}
           </Button>
         )}
       </div>

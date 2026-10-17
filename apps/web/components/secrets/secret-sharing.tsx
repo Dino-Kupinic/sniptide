@@ -2,12 +2,16 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { useRouter } from "next/navigation"
+import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
 import type { SecretDetail } from "@/lib/env/web-store"
-import { fieldClass, secretRequest } from "./client"
+import { fieldClass, SecretRequestError, useSecretRequest } from "./client"
 
 export function SecretSharing({ group }: { group: SecretDetail }) {
+  const t = useTranslations("Secrets")
+  const format = useFormatter()
+  const secretRequest = useSecretRequest()
   const router = useRouter()
   const [link, setLink] = useState("")
   const [error, setError] = useState("")
@@ -15,11 +19,8 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
   return (
     <section className="space-y-4 border-t border-border pt-6">
       <div>
-        <h2 className="font-medium">Protected sharing</h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Links show the current values, including later updates and CLI pushes. A password and
-          expiry are required. Send the password separately.
-        </p>
+        <h2 className="font-medium">{t("sharing")}</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("sharing_description")}</p>
       </div>
       <form
         autoComplete="off"
@@ -42,14 +43,14 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
             form.reset()
             router.refresh()
           } catch (error) {
-            setError(error instanceof Error ? error.message : "Could not create link.")
+            setError(error instanceof SecretRequestError ? error.message : t("create_link_error"))
           } finally {
             setBusy(false)
           }
         }}
       >
         <label className="min-w-48 flex-1 space-y-2 text-sm">
-          Link password
+          {t("password")}
           <input
             className={fieldClass}
             type="password"
@@ -58,25 +59,25 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
             minLength={12}
             maxLength={128}
             autoComplete="new-password"
-            placeholder="At least 12 characters"
+            placeholder={t("password_hint")}
           />
         </label>
         <label className="space-y-2 text-sm">
-          Expires in
+          {t("expires_in")}
           <select className={fieldClass} name="hours" defaultValue="24">
-            <option value="1">1 hour</option>
-            <option value="24">1 day</option>
-            <option value="168">7 days</option>
+            <option value="1">{t("hour")}</option>
+            <option value="24">{t("day")}</option>
+            <option value="168">{t("week")}</option>
           </select>
         </label>
         <Button type="submit" disabled={busy}>
-          {busy ? "Creating…" : "Create protected link"}
+          {busy ? t("creating") : t("create_link")}
         </Button>
       </form>
       {link && (
         <div className="space-y-2 border border-border p-4">
           <label className="block text-sm">
-            Protected link
+            {t("protected_link")}
             <input
               className={`${fieldClass} mt-2 font-mono`}
               readOnly
@@ -91,27 +92,37 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
               try {
                 await navigator.clipboard.writeText(link)
               } catch {
-                setError("Could not copy the link.")
+                setError(t("copy_link_error"))
               }
             }}
           >
-            Copy link
+            {t("copy_link")}
           </Button>
-          <p className="text-xs text-muted-foreground">
-            This link is only shown now. Create another if you lose it.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("link_notice")}</p>
         </div>
       )}
       <div className="space-y-2">
         {group.shares.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No active links. This group is private.</p>
+          <p className="text-sm text-muted-foreground">{t("private_notice")}</p>
         ) : (
           group.shares.map((share) => (
             <div
               key={share.id}
               className="flex items-center justify-between gap-3 border border-border px-4 py-2"
             >
-              <span className="text-sm">Expires {new Date(share.expiresAt).toLocaleString()}</span>
+              <span className="text-sm">
+                {t("expires", {
+                  date: format.dateTime(new Date(share.expiresAt), {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "UTC",
+                    timeZoneName: "short",
+                  }),
+                })}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -121,11 +132,11 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
                     setLink("")
                     router.refresh()
                   } catch {
-                    setError("Could not revoke the link.")
+                    setError(t("revoke_error"))
                   }
                 }}
               >
-                Revoke
+                {t("revoke")}
               </Button>
             </div>
           ))
@@ -137,10 +148,8 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
         </p>
       )}
       <details>
-        <summary className="cursor-pointer text-sm text-destructive">Delete group</summary>
-        <p className="my-3 text-sm text-muted-foreground">
-          Deletes every variable and revokes all links. This also removes the CLI env group.
-        </p>
+        <summary className="cursor-pointer text-sm text-destructive">{t("delete_group")}</summary>
+        <p className="my-3 text-sm text-muted-foreground">{t("delete_notice")}</p>
         <Button
           variant="destructive"
           onClick={async () => {
@@ -149,11 +158,11 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
               router.push("/secrets")
               router.refresh()
             } catch {
-              setError("Could not delete the group.")
+              setError(t("delete_error"))
             }
           }}
         >
-          Permanently delete group
+          {t("permanently_delete")}
         </Button>
       </details>
     </section>
