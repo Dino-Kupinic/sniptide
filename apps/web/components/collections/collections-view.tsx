@@ -4,10 +4,10 @@ import { Button } from "@sniptide/ui/components/button"
 import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon } from "lucide-react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { ListHeader } from "@/components/lists/toolbar"
 import type { Collection } from "@/lib/collections/types"
-import { formatNumber } from "@/lib/format"
 import { CollectionMenu } from "./collection-menu"
 import { CollectionIcon } from "./icon"
 import { NewCollectionDialog } from "./new-collection"
@@ -15,33 +15,34 @@ import { NewCollectionDialog } from "./new-collection"
 // The Collections page: every collection with its paste count, and the way to make a new one.
 // It is also where phones, which have no sidebar, manage collections.
 export function CollectionsView({ collections }: { collections: Collection[] }) {
+  const t = useTranslations("Workspace")
   const [creating, setCreating] = React.useState(false)
   const create = (
     <Button size="lg" className="max-w-full whitespace-normal" onClick={() => setCreating(true)}>
       <PlusIcon />
-      New collection
+      {t("new_collection")}
     </Button>
   )
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
-        title="Collections"
+        title={t("collections")}
         count={collections.length}
-        description="Group related pastes under one name."
+        description={t("group_related_pastes_under_one_name")}
         actions={create}
       />
       <div className="lg:hidden">{create}</div>
 
       {collections.length === 0 ? (
         <div className="flex flex-col items-center gap-3 border border-border px-4 py-14 text-center text-sm text-muted-foreground">
-          No collections yet.
+          {t("no_collections_yet")}
           <button
             type="button"
             onClick={() => setCreating(true)}
             className="font-medium text-link hover:underline"
           >
-            Create your first collection
+            {t("create_your_first_collection")}
           </button>
         </div>
       ) : (
@@ -62,8 +63,7 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
                 {collection.name}
               </Link>
               <span className="col-span-3 col-start-1 row-start-2 text-xs text-muted-foreground tabular-nums sm:col-span-1 sm:col-start-3 sm:row-start-1">
-                {formatNumber(collection.pasteCount)}{" "}
-                {collection.pasteCount === 1 ? "paste" : "pastes"}
+                {t("paste_count", { count: collection.pasteCount })}
               </span>
               <CollectionMenu
                 collection={collection}

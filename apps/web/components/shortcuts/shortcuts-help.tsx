@@ -10,10 +10,34 @@ import {
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { shouldIgnoreSingleKey } from "@/lib/keyboard"
 import { isPlainKey, SHORTCUT_GROUPS, SHORTCUTS } from "@/lib/shortcuts"
 import { ShortcutKeys } from "./shortcut-keys"
+
+const shortcutMessages = {
+  "command-menu": "open_command_menu",
+  search: "search",
+  "new-paste": "new_paste",
+  "toggle-theme": "toggle_theme",
+  "toggle-sidebar": "toggle_sidebar",
+  settings: "settings",
+  help: "keyboard_shortcuts",
+  "go-dashboard": "dashboard",
+  "go-starred": "starred",
+  "go-collections": "collections",
+  "go-trash": "trash",
+  submit: "submit_paste",
+  save: "save_without_leaving",
+  undo: "undo",
+  redo: "redo",
+  indent: "indent",
+  "menu-navigate": "move_through_results",
+  "menu-open": "open",
+  "menu-new-tab": "open_new_tab",
+  "menu-close": "close",
+}
 
 const ShortcutsContext = React.createContext<{ open: () => void }>({ open: () => {} })
 
@@ -66,18 +90,17 @@ function ShortcutsSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslations("Workspace")
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-4rem)] max-w-none gap-0 overflow-hidden p-0 lg:w-170">
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div className="flex flex-col gap-1">
-            <DialogTitle className="text-base">Keyboard shortcuts</DialogTitle>
-            <DialogDescription>
-              Single keys work when you aren't typing in a field.
-            </DialogDescription>
+            <DialogTitle className="text-base">{t("keyboard_shortcuts")}</DialogTitle>
+            <DialogDescription>{t("single_keys_work_when_you_arent_typing_in")}</DialogDescription>
           </div>
           <DialogClose
-            aria-label="Close"
+            aria-label={t("close")}
             className="-mr-1.5 flex size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <XIcon className="size-4" />
@@ -88,7 +111,14 @@ function ShortcutsSheet({
           {SHORTCUT_GROUPS.map((group) => (
             <section key={group.id} aria-labelledby={`shortcuts-${group.id}`}>
               <h3 id={`shortcuts-${group.id}`} className="mb-2 text-xs text-muted-foreground">
-                {group.title}
+                {t(
+                  {
+                    general: "general",
+                    navigation: "go_to",
+                    editor: "editor",
+                    menu: "command_menu",
+                  }[group.id],
+                )}
               </h3>
               <ul className="flex flex-col">
                 {SHORTCUTS.filter((item) => item.group === group.id).map((item) => (
@@ -96,7 +126,7 @@ function ShortcutsSheet({
                     key={item.id}
                     className="flex min-h-9 items-center justify-between gap-4 border-b border-border text-sm last:border-b-0"
                   >
-                    <span>{item.label}</span>
+                    <span>{t(shortcutMessages[item.id])}</span>
                     <span className="flex shrink-0 items-center gap-1">
                       <ShortcutKeys id={item.id} className="border border-border" />
                     </span>
@@ -108,7 +138,9 @@ function ShortcutsSheet({
         </div>
 
         <div className="flex h-10 shrink-0 items-center gap-1.5 border-t border-border bg-sidebar px-5 text-xs text-muted-foreground">
-          Press <Kbd className="border border-border">?</Kbd> anywhere to open this sheet
+          {t.rich("shortcut_hint", {
+            key: (chunks) => <Kbd className="border border-border">{chunks}</Kbd>,
+          })}
         </div>
       </DialogContent>
     </Dialog>

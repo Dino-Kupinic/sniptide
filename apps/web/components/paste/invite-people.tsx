@@ -1,6 +1,7 @@
 "use client"
 
 import { UsersIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { findPerson } from "@/lib/pastes/actions"
 import type { Access, SharePerson } from "@/lib/pastes/types"
@@ -19,6 +20,7 @@ export function InvitePeople({
   onChange: (invites: PendingInvite[]) => void
   large?: boolean
 }) {
+  const t = useTranslations("Paste")
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
@@ -46,9 +48,9 @@ export function InvitePeople({
       <div className="flex items-center justify-between">
         <span className={large ? "flex items-center gap-2 text-[15px]" : "flex items-center gap-2"}>
           <UsersIcon className="size-4" />
-          Invite people
+          {t("invitePeople")}
         </span>
-        <span className="text-xs text-muted-foreground">Optional</span>
+        <span className="text-xs text-muted-foreground">{t("optional")}</span>
       </div>
       <InviteField onInvite={add} error={error} pending={pending} compact={!large} />
       {invites.length > 0 ? (
@@ -72,11 +74,11 @@ export function InvitePeople({
                     ),
                   )
                 }
-                label={`Access for ${invite.person.name}`}
+                label={t("accessFor", { name: invite.person.name })}
                 className="text-muted-foreground"
               />
               <RemoveButton
-                label={`Don't invite ${invite.person.name}`}
+                label={t("dontInvite", { name: invite.person.name })}
                 onClick={() =>
                   onChange(invites.filter((other) => other.person.id !== invite.person.id))
                 }
@@ -86,9 +88,7 @@ export function InvitePeople({
         </ul>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        {invites.length > 0
-          ? "They get it in Shared with me when you create the paste."
-          : "Press Enter to add someone with a Sniptide account."}
+        {invites.length > 0 ? t("theyGetItInSharedWith") : t("pressEnterToAddSomeoneWith")}
       </p>
     </div>
   )

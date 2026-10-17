@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import * as store from "./store"
 import { HUES, ICONS, MAX_COLLECTIONS, MAX_NAME_LENGTH } from "./types"
 
 async function assertSignedIn() {
-  if (!(await getSession())) throw new Error("Sign in to change collections.")
+  if (!(await getSession())) throw new Error(await actionError("signInCollections"))
 }
 
 const nameSchema = z
@@ -31,11 +32,15 @@ async function save(
   await assertSignedIn()
   const parsed = nameSchema.safeParse(name)
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the name." }
+    return {
+      ok: false,
+      error: await translateActionError(parsed.error.issues[0]?.message ?? "Check the name."),
+    }
   }
 
   const result = await write(parsed.data)
-  if (result.status !== "ok") return { ok: false, error: failures[result.status] }
+  if (result.status !== "ok")
+    return { ok: false, error: await translateActionError(failures[result.status]) }
 
   revalidatePath("/", "layout")
   return { ok: true, slug: result.collection.slug }
@@ -94,11 +99,12 @@ export async function restoreCollection(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   await assertSignedIn()
   const parsed = snapshotSchema.safeParse(snapshot)
-  if (!parsed.success) return { ok: false, error: "That collection can't be restored." }
+  if (!parsed.success) return { ok: false, error: await actionError("collectionRestore") }
   // The date only places it in the list; it can't be from the future.
   const createdAt = Math.min(parsed.data.createdAt, Date.now())
   const result = await store.restoreCollection({ ...parsed.data, createdAt })
-  if (result.status !== "ok") return { ok: false, error: restoreFailures[result.status] }
+  if (result.status !== "ok")
+    return { ok: false, error: await translateActionError(restoreFailures[result.status]) }
   revalidatePath("/", "layout")
   return { ok: true }
 }

@@ -1,3 +1,4 @@
+import { getLocale } from "next-intl/server"
 import { listNotifications } from "@/lib/notifications/store"
 
 export const dynamic = "force-dynamic"
@@ -5,7 +6,7 @@ export const dynamic = "force-dynamic"
 // The signed-in account's latest notifications and how many are unread, as the bell polls them.
 export async function GET() {
   const headers = { "cache-control": "private, no-store" }
-  const feed = await listNotifications()
+  const feed = await listNotifications(Date.now(), await getLocale())
   if (!feed) {
     return Response.json(
       { ok: false, error: "Sign in to see notifications." },

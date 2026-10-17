@@ -1,4 +1,5 @@
 import { cn } from "@sniptide/ui/lib/utils"
+import { useLocale, useTranslations } from "next-intl"
 import { formatNumber } from "@/lib/format"
 import type { SeriesPoint } from "@/lib/pastes/analytics"
 import { formatTick, labelIndexes, niceScale } from "./chart-scale"
@@ -21,6 +22,8 @@ export function ViewsChart({
   points: SeriesPoint[]
   metric: keyof SeriesPoint["values"]
 }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const values = points.map((point) => point.values[metric])
   const biggest = Math.max(0, ...values)
   const peak = biggest > 0 ? values.indexOf(biggest) : -1
@@ -57,7 +60,7 @@ export function ViewsChart({
           </span>
           <span className="flex items-center gap-1.5">
             <span aria-hidden="true" className="size-2 bg-foreground" />
-            Peak day
+            {t("peak_day")}
           </span>
         </div>
       </div>
@@ -70,7 +73,7 @@ export function ViewsChart({
               className="absolute right-0 -translate-y-1/2 font-mono text-[11px] leading-[14px] text-muted-foreground"
               style={{ top: 6 + PLOT - (index * PLOT) / (ticks.length - 1) }}
             >
-              {formatTick(tick)}
+              {formatTick(tick, locale)}
             </span>
           ))}
         </div>
@@ -78,9 +81,21 @@ export function ViewsChart({
         <div className="min-w-0 flex-1">
           <div
             role="img"
-            aria-label={`${title} from ${rangeLabel}: ${formatNumber(total)} in total${
-              peakPoint ? `, peaking at ${formatNumber(biggest)} on ${peakPoint.label}` : ""
-            }`}
+            aria-label={
+              peakPoint
+                ? t("chart_summary_peak", {
+                    title,
+                    range: rangeLabel,
+                    total: formatNumber(total, locale),
+                    peak: formatNumber(biggest, locale),
+                    day: peakPoint.label,
+                  })
+                : t("chart_summary", {
+                    title,
+                    range: rangeLabel,
+                    total: formatNumber(total, locale),
+                  })
+            }
             className="relative flex h-[246px] flex-col"
           >
             <div className="absolute inset-x-0 top-1.5 flex h-60 flex-col justify-between">
@@ -104,13 +119,13 @@ export function ViewsChart({
                 return (
                   <div
                     key={point.date}
-                    title={`${point.label}: ${formatNumber(value)}`}
+                    title={`${point.label}: ${formatNumber(value, locale)}`}
                     className="relative flex min-w-0 flex-1 flex-col justify-end gap-0.5 hover:opacity-80"
                     style={{ height }}
                   >
                     {isPeak ? (
                       <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] whitespace-nowrap text-background">
-                        {formatNumber(value)}
+                        {formatNumber(value, locale)}
                       </span>
                     ) : null}
                     {height >= CAP_MIN ? (

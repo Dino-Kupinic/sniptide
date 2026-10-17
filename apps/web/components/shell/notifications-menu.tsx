@@ -17,6 +17,7 @@ import {
   Share2Icon,
 } from "lucide-react"
 import Link from "next/link"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { timeAgo } from "@/lib/format"
 import { markAllRead, markRead } from "@/lib/notifications/actions"
@@ -39,6 +40,8 @@ type Feed = NotificationFeed | "error" | null
 // every 30 seconds while the page is in view, when the tab comes back into view and whenever the
 // menu opens, so new ones appear without a reload. Opening one goes to its page and marks it read.
 export function NotificationsMenu({ className }: { className?: string }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const [feed, setFeed] = React.useState<Feed>(null)
   const [open, setOpen] = React.useState(false)
   // Only the newest answer counts, so a slow earlier request can't undo a mark-as-read.
@@ -55,7 +58,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
       // Keep showing what we have; only a bell that never loaded reports the failure.
       if (id === latest.current) setFeed((current) => (current === null ? "error" : current))
     }
-  }, [])
+  }, [locale])
 
   React.useEffect(() => {
     void load()
@@ -91,7 +94,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
         return load()
       })
       .catch(() => {
-        toast.error("Couldn't update notifications. Try again.")
+        toast.error(t("couldnt_update_notifications_try_again"))
         void load()
       })
   }
@@ -124,7 +127,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
       }}
     >
       <DropdownMenuTrigger
-        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-label={unread > 0 ? t("notifications_unread", { count: unread }) : t("notifications")}
         className={cn("relative data-popup-open:bg-muted", className)}
       >
         <BellIcon />
@@ -139,14 +142,14 @@ export function NotificationsMenu({ className }: { className?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 py-0">
         <div className="flex h-10 items-center justify-between border-b border-border px-3">
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-sm font-medium">{t("notifications")}</span>
           <button
             type="button"
             disabled={unread === 0}
             onClick={markAll}
             className="text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:underline disabled:opacity-50"
           >
-            Mark all as read
+            {t("mark_all_as_read")}
           </button>
         </div>
         {loaded && loaded.items.length > 0 ? (
@@ -168,12 +171,12 @@ export function NotificationsMenu({ className }: { className?: string }) {
                     <span className="text-xs text-muted-foreground">{item.detail}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-                    {timeAgo(item.createdAt)}
+                    {timeAgo(item.createdAt, undefined, locale)}
                     <span
                       aria-hidden="true"
                       className={cn("size-1.5", item.read ? "bg-transparent" : "bg-primary")}
                     />
-                    {item.read ? null : <span className="sr-only">Unread</span>}
+                    {item.read ? null : <span className="sr-only">{t("unread")}</span>}
                   </span>
                 </DropdownMenuItem>
               )
@@ -188,16 +191,17 @@ export function NotificationsMenu({ className }: { className?: string }) {
 }
 
 function Placeholder({ feed, retry }: { feed: Feed; retry: () => void }) {
+  const t = useTranslations("Workspace")
   if (feed === "error") {
     return (
       <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-        <p className="text-sm font-medium">Couldn't load notifications</p>
+        <p className="text-sm font-medium">{t("couldnt_load_notifications")}</p>
         <button
           type="button"
           onClick={retry}
           className="text-xs text-muted-foreground underline outline-none hover:text-foreground"
         >
-          Try again
+          {t("try_again")}
         </button>
       </div>
     )
@@ -205,15 +209,15 @@ function Placeholder({ feed, retry }: { feed: Feed; retry: () => void }) {
   if (feed === null) {
     return (
       <p role="status" className="px-4 py-8 text-center text-sm text-muted-foreground">
-        Loading…
+        {t("loading")}
       </p>
     )
   }
   return (
     <div className="flex flex-col items-center gap-1 px-4 py-8 text-center">
-      <p className="text-sm font-medium">You're all caught up</p>
+      <p className="text-sm font-medium">{t("youre_all_caught_up")}</p>
       <p className="text-xs text-muted-foreground">
-        Shares, pastes that burned after reading, expiring pastes and view milestones show up here.
+        {t("shares_pastes_that_burned_after_reading_expiring_pastes")}
       </p>
     </div>
   )

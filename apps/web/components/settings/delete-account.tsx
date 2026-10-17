@@ -13,11 +13,13 @@ import { Button } from "@sniptide/ui/components/button"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { authClient } from "@/lib/auth-client"
 import { SettingsSection } from "./section"
 
 export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
+  const t = useTranslations("Settings")
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -25,13 +27,11 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
 
   return (
     <SettingsSection
-      title="Delete account"
-      description={`Removes your account and signs you out everywhere. Your ${pasteCount} pastes and their share links go with it. This can't be undone.`}
+      title={t("deleteAccount")}
+      description={t("deleteAccountDescription", { count: pasteCount })}
     >
       <div className="flex flex-col gap-3 border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[13px] text-foreground/80">
-          Copy anything you want to keep before you go.
-        </p>
+        <p className="text-[13px] text-foreground/80">{t("copyAnythingYouWantToKeep")}</p>
         <AlertDialog
           open={open}
           onOpenChange={(next) => {
@@ -44,14 +44,11 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
               <Button size="lg" className="bg-destructive text-white hover:bg-destructive/85" />
             }
           >
-            Delete account
+            {t("deleteAccount")}
           </AlertDialogTrigger>
           <AlertDialogContent>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Enter your password to confirm. Your account, sessions and pastes are deleted for
-              good.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("deleteYourAccount")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("enterYourPasswordToConfirmYour")}</AlertDialogDescription>
             <form
               className="flex flex-col gap-3"
               onSubmit={(event) => {
@@ -61,7 +58,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                   const { error } = await authClient
                     .deleteUser({ password: password || undefined })
                     .catch(() => ({ error: { message: undefined } }))
-                  if (error) return setError(error.message ?? "Couldn't delete your account.")
+                  if (error) return setError(error.message ?? t("couldnTDeleteYourAccount"))
                   router.replace("/sign-up")
                   router.refresh()
                 })
@@ -71,15 +68,15 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                aria-label="Password"
-                placeholder="Password"
+                aria-label={t("password")}
+                placeholder={t("password")}
                 aria-invalid={Boolean(error)}
                 className="h-10 text-base lg:text-sm"
               />
               <FormError variant="inline" message={error} />
               <AlertDialogFooter>
                 <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>
-                  Cancel
+                  {t("cancel")}
                 </AlertDialogClose>
                 <Button
                   type="submit"
@@ -87,7 +84,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                   loading={pending}
                   className="bg-destructive text-white hover:bg-destructive/85"
                 >
-                  {pending ? "Deleting…" : "Delete account"}
+                  {pending ? t("deleting") : t("deleteAccount")}
                 </Button>
               </AlertDialogFooter>
             </form>

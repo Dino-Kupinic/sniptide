@@ -4,6 +4,7 @@ import { notification, paste, user } from "@workspace/db/schema"
 import { and, desc, eq, isNull, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import type { Locale } from "@/lib/i18n/config"
 import { describeNotification } from "./describe"
 import type { NotificationFeed } from "./types"
 
@@ -12,7 +13,10 @@ import type { NotificationFeed } from "./types"
 export const NOTIFICATION_LIMIT = 20
 
 // The signed-in account's notifications, newest first, or null without a session.
-export async function listNotifications(now = Date.now()): Promise<NotificationFeed | null> {
+export async function listNotifications(
+  now = Date.now(),
+  locale: Locale = "en",
+): Promise<NotificationFeed | null> {
   const viewer = (await getSession())?.user.id
   if (!viewer) return null
   const db = getDb()
@@ -56,6 +60,7 @@ export async function listNotifications(now = Date.now()): Promise<NotificationF
           actor: row.actor,
         },
         now,
+        locale,
       ),
     })),
     unread: counted?.unread ?? 0,

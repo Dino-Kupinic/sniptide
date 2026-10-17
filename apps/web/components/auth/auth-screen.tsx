@@ -2,6 +2,7 @@ import { Logo } from "@sniptide/ui/components/logo"
 import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
+import { LanguageSwitcher } from "@/components/language-switcher"
 
 export interface Pitch {
   title: [string, string]
@@ -68,9 +69,10 @@ export function AuthScreen({
           </div>
         </main>
 
-        <p className="px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground lg:p-0 lg:text-left">
-          {legal}
-        </p>
+        <footer className="flex flex-col items-center gap-3 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:items-start lg:p-0">
+          <LanguageSwitcher />
+          <p className="text-center text-xs text-muted-foreground lg:text-left">{legal}</p>
+        </footer>
       </div>
 
       <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border lg:flex">

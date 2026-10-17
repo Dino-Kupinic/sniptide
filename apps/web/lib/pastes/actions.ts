@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth"
 import { collectionExists } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { formatLimit } from "@/lib/format"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { getSiteOrigin } from "@/lib/site"
 import {
   fetchGist,
@@ -30,7 +31,7 @@ import {
 
 async function assertSignedIn() {
   const session = await getSession()
-  if (!session) throw new Error("Sign in to change pastes.")
+  if (!session) throw new Error(await actionError("signInPastes"))
   return session.user.id
 }
 
@@ -48,18 +49,20 @@ async function checkedPayload(data: z.output<typeof pasteSchema>, editing?: stri
   if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
     return {
       ok: false as const,
-      error: `${(await getSiteOrigin()).host}/${data.slug} is taken or not allowed.`,
+      error: await actionError("slugTaken", {
+        link: `${(await getSiteOrigin()).host}/${data.slug}`,
+      }),
     }
   }
   if (data.collection !== null && !(await collectionExists(data.collection))) {
-    return { ok: false as const, error: "That collection no longer exists." }
+    return { ok: false as const, error: await actionError("collectionMissing") }
   }
   // On edit an empty password means "keep the current one"; a new paste needs a real one.
   const current = editing ? await store.getPaste(editing) : null
   if (data.password === "" && !current?.password) {
     return {
       ok: false as const,
-      error: "Enter a password or turn password protection off.",
+      error: await actionError("passwordRequired"),
     }
   }
 
@@ -86,10 +89,15 @@ export async function savePaste(
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the paste and try again." }
+    return {
+      ok: false,
+      error: await translateActionError(
+        parsed.error.issues[0]?.message ?? "Check the paste and try again.",
+      ),
+    }
   }
   const tooOften = await limited(editing ? limits.edit(user) : limits.create(user))
-  if (tooOften) return { ok: false, error: tooOften }
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
   const checked = await checkedPayload(parsed.data, editing)
   if (!checked.ok) return checked
@@ -98,13 +106,14 @@ export async function savePaste(
     const paste = editing
       ? await store.updatePaste(editing, checked.payload, "Edited")
       : await store.createPaste(checked.payload, invitesSchema.parse(invites))
-    if (!paste) return { ok: false, error: "That paste no longer exists." }
-    if ("conflict" in paste) return { ok: false, error: "That paste was changed elsewhere." }
+    if (!paste) return { ok: false, error: await actionError("pasteMissing") }
+    if ("conflict" in paste) return { ok: false, error: await actionError("pasteConflict") }
 
     revalidatePath("/", "layout")
     return { ok: true, slug: paste.slug }
   } catch (error) {
-    if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
+    if (error instanceof store.PasteBudgetError)
+      return { ok: false, error: await translateActionError(error.message) }
     throw error
   }
 }
@@ -135,10 +144,15 @@ export async function autosavePaste(
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the paste and try again." }
+    return {
+      ok: false,
+      error: await translateActionError(
+        parsed.error.issues[0]?.message ?? "Check the paste and try again.",
+      ),
+    }
   }
   const tooOften = await limited(limits.autosave(user))
-  if (tooOften) return { ok: false, error: tooOften }
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
   const checked = await checkedPayload(parsed.data, editing)
   if (!checked.ok) return checked
@@ -148,7 +162,7 @@ export async function autosavePaste(
       expectedVersion,
       batchRevision: true,
     })
-    if (!result) return { ok: false, error: "That paste no longer exists." }
+    if (!result) return { ok: false, error: await actionError("pasteMissing") }
     if ("conflict" in result) {
       return { ok: false, conflict: true, version: result.version, slug: result.slug }
     }
@@ -158,7 +172,8 @@ export async function autosavePaste(
     if (result.slug === editing) revalidatePath("/", "layout")
     return { ok: true, ...result }
   } catch (error) {
-    if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
+    if (error instanceof store.PasteBudgetError)
+      return { ok: false, error: await translateActionError(error.message) }
     throw error
   }
 }
@@ -174,13 +189,14 @@ export async function finishEditing(editing: string): Promise<void> {
 // Rolls a paste back to an earlier revision (see store.restoreRevision).
 export async function restoreRevision(slug: string, revisionId: number) {
   const user = await assertSignedIn()
-  if (!Number.isSafeInteger(revisionId)) return { ok: false as const, error: "Pick a version." }
+  if (!Number.isSafeInteger(revisionId))
+    return { ok: false as const, error: await actionError("pickVersion") }
   const tooOften = await limited(limits.edit(user))
-  if (tooOften) return { ok: false as const, error: tooOften }
+  if (tooOften) return { ok: false as const, error: await translateActionError(tooOften) }
 
   const result = await store.restoreRevision(slug, revisionId)
   if (result.ok) revalidatePath("/", "layout")
-  return result
+  return result.ok ? result : { ...result, error: await translateActionError(result.error) }
 }
 
 // Answers "not available" while limited; saving checks the slug again anyway.
@@ -212,14 +228,14 @@ export type FindPersonResult =
 export async function findPerson(identifier: string): Promise<FindPersonResult> {
   const user = await assertSignedIn()
   const text = z.string().trim().min(1).max(320).safeParse(identifier)
-  if (!text.success) return { ok: false, error: "Enter an email or username." }
+  if (!text.success) return { ok: false, error: await actionError("personIdentifier") }
   const tooOften = await limited(limits.personLookup(user))
-  if (tooOften) return { ok: false, error: tooOften }
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
   const found = await store.findPerson(text.data)
-  if (found.status === "self") return { ok: false, error: "That's you. You already have access." }
+  if (found.status === "self") return { ok: false, error: await actionError("personSelf") }
   if (found.status === "missing") {
-    return { ok: false, error: "No Sniptide account has that email or username." }
+    return { ok: false, error: await actionError("personMissing") }
   }
   return { ok: true, person: found.person }
 }
@@ -228,7 +244,7 @@ export type ShareResult = { ok: true; people: SharePerson[] } | { ok: false; err
 
 async function sharesOf(slug: string): Promise<ShareResult> {
   const people = await store.listPasteShares(slug)
-  return people ? { ok: true, people } : { ok: false, error: "That paste no longer exists." }
+  return people ? { ok: true, people } : { ok: false, error: await actionError("pasteMissing") }
 }
 
 // Who one of the viewer's pastes is shared with, for the share dialog.
@@ -256,9 +272,9 @@ export async function setShareAccess(
 ): Promise<ShareResult> {
   await assertSignedIn()
   const parsed = z.enum(ACCESSES).safeParse(access)
-  if (!parsed.success) return { ok: false, error: "Pick view or edit access." }
+  if (!parsed.success) return { ok: false, error: await actionError("pickAccess") }
   if (!(await store.sharePaste(slug, userId, parsed.data))) {
-    return { ok: false, error: "That paste or person no longer exists." }
+    return { ok: false, error: await actionError("shareMissing") }
   }
   revalidatePath("/", "layout")
   return sharesOf(slug)
@@ -283,10 +299,10 @@ export async function restoreRemovedShare(
   const parsed = z
     .object({ access: z.enum(ACCESSES), sharedAt: z.number().int().positive() })
     .safeParse({ access, sharedAt })
-  if (!parsed.success) return { ok: false, error: "That share can't be restored." }
+  if (!parsed.success) return { ok: false, error: await actionError("shareRestore") }
   const date = new Date(Math.min(parsed.data.sharedAt, Date.now()))
   if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
-    return { ok: false, error: "That paste or person no longer exists." }
+    return { ok: false, error: await actionError("shareMissing") }
   }
   revalidatePath("/", "layout")
   return sharesOf(slug)
@@ -303,7 +319,7 @@ export async function leaveShare(slug: string) {
 export async function restoreShare(slug: string): Promise<ActionOutcome> {
   await assertSignedIn()
   if (!(await store.restoreShare(slug))) {
-    return { ok: false, error: "That paste is no longer shared with you." }
+    return { ok: false, error: await actionError("shareRevoked") }
   }
   revalidatePath("/", "layout")
   return { ok: true }
@@ -319,7 +335,10 @@ export async function renamePaste(slug: string, title: string) {
   await assertSignedIn()
   const parsed = pasteSchema.shape.title.safeParse(title)
   if (!parsed.success) {
-    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check the title." }
+    return {
+      ok: false as const,
+      error: await translateActionError(parsed.error.issues[0]?.message ?? "Check the title."),
+    }
   }
   await store.renamePaste(slug, parsed.data)
   revalidatePath("/", "layout")
@@ -329,7 +348,7 @@ export async function renamePaste(slug: string, title: string) {
 export async function setPasteCollection(slug: string, collection: string | null) {
   await assertSignedIn()
   if (collection !== null && !(await collectionExists(collection))) {
-    return { ok: false as const, error: "That collection no longer exists." }
+    return { ok: false as const, error: await actionError("collectionMissing") }
   }
   await store.setPasteCollection(slug, collection)
   revalidatePath("/", "layout")
@@ -346,7 +365,7 @@ export async function restorePaste(slug: string): Promise<ActionOutcome> {
   await assertSignedIn()
   const restored = await store.restorePaste(slug)
   revalidatePath("/", "layout")
-  return restored ? { ok: true } : { ok: false, error: "That paste is gone for good." }
+  return restored ? { ok: true } : { ok: false, error: await actionError("pasteGone") }
 }
 
 export async function deleteForever(slug: string) {
@@ -377,13 +396,13 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
   const user = await assertSignedIn()
 
   const id = parseGistId(input)
-  if (!id) return { ok: false, error: "Paste a gist link like gist.github.com/you/1a2b3c…" }
+  if (!id) return { ok: false, error: await actionError("gistLink") }
 
   const tooOften = await limited(limits.gist(user))
-  if (tooOften) return { ok: false, error: tooOften }
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
   const result = await fetchGist(id)
-  if (!result.ok) return result
+  if (!result.ok) return { ok: false, error: await translateActionError(result.error) }
 
   const { maxPasteBytes } = getConfig()
   const { gist } = result
@@ -395,7 +414,13 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
       title: gist.description ?? gist.files[0]?.name ?? "Imported gist",
       limitBytes: maxPasteBytes,
       limitLabel: formatLimit(maxPasteBytes),
-      files: gist.files.map(({ name, size, skipped }) => ({ name, size, skipped })),
+      files: await Promise.all(
+        gist.files.map(async ({ name, size, skipped }) => ({
+          name,
+          size,
+          skipped: skipped ? await translateActionError(skipped) : null,
+        })),
+      ),
     },
   }
 }
@@ -418,20 +443,22 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
   if (!choice.success) {
     return {
       ok: false,
-      error: choice.error.issues[0]?.message ?? "Check the import and try again.",
+      error: await translateActionError(
+        choice.error.issues[0]?.message ?? "Check the import and try again.",
+      ),
     }
   }
   const { id, files: names } = choice.data
 
   const tooOften = await limited(limits.create(user))
-  if (tooOften) return { ok: false, error: tooOften }
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
   const result = await fetchGist(id)
-  if (!result.ok) return result
+  if (!result.ok) return { ok: false, error: await translateActionError(result.error) }
   const { gist } = result
 
   const read = await readGistFiles(gist, names)
-  if (!read.ok) return read
+  if (!read.ok) return { ok: false, error: await translateActionError(read.error) }
 
   const parsed = pasteSchema.safeParse({
     title: gistTitle(gist, read.files[0]?.name),
@@ -447,7 +474,9 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
   if (!parsed.success) {
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? "That gist couldn't be imported.",
+      error: await translateActionError(
+        parsed.error.issues[0]?.message ?? "That gist couldn't be imported.",
+      ),
     }
   }
 
@@ -463,7 +492,8 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
     revalidatePath("/", "layout")
     return { ok: true, slug: paste.slug }
   } catch (error) {
-    if (error instanceof store.PasteBudgetError) return { ok: false, error: error.message }
+    if (error instanceof store.PasteBudgetError)
+      return { ok: false, error: await translateActionError(error.message) }
     throw error
   }
 }

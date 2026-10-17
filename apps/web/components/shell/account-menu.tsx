@@ -4,7 +4,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -28,11 +27,14 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import { authClient } from "@/lib/auth-client"
+import { setLocale } from "@/lib/i18n/actions"
+import { localeNames, locales } from "@/lib/i18n/config"
 
 // Where the resource links go. There is no marketing site or docs site in this app yet.
 const links = {
@@ -44,7 +46,10 @@ const links = {
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
 // as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
 export function AccountMenuItems({ name, email }: { name: string; email: string }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
+  const locale = useLocale()
+  const [changingLocale, startLocaleTransition] = React.useTransition()
   const shortcuts = useShortcutsHelp()
 
   async function signOut() {
@@ -66,16 +71,16 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
       <DropdownMenuSeparator />
       <DropdownMenuItem render={<Link href="/settings" />}>
         <SettingsIcon />
-        Settings
+        {t("settings")}
         <ShortcutKeys id="settings" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
       <DropdownMenuItem render={<Link href="/settings?tab=billing" />}>
         <ChartColumnIcon />
-        Usage
+        {t("usage")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={shortcuts.open} className="max-lg:hidden">
         <KeyboardIcon />
-        Keyboard shortcuts
+        {t("keyboard_shortcuts")}
         <ShortcutKeys id="help" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
       <DropdownMenuSeparator />
@@ -83,27 +88,39 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
           <GlobeIcon />
-          Language
-          <span className="ml-auto text-xs text-muted-foreground">English</span>
+          {t("language")}
         </DropdownMenuSubTrigger>
         <DropdownMenuContent side="right" align="start" sideOffset={4}>
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Only English for now</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value="en">
-              <DropdownMenuRadioItem value="en">English</DropdownMenuRadioItem>
+            <DropdownMenuRadioGroup
+              value={locale}
+              onValueChange={(value) => {
+                const next = locales.find((candidate) => candidate === value)
+                if (next)
+                  startLocaleTransition(async () => {
+                    await setLocale(next)
+                    router.refresh()
+                  })
+              }}
+            >
+              {locales.map((language) => (
+                <DropdownMenuRadioItem key={language} value={language} disabled={changingLocale}>
+                  {localeNames[language]}
+                </DropdownMenuRadioItem>
+              ))}
             </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenuSub>
       <DropdownMenuSeparator />
       <ExternalItem href={links.homepage} icon={<HouseIcon />}>
-        Homepage
+        {t("homepage")}
       </ExternalItem>
       <ExternalItem href={links.documentation} icon={<BookIcon />}>
-        Documentation
+        {t("documentation")}
       </ExternalItem>
       <ExternalItem href={links.help} icon={<CircleHelpIcon />} arrow={false}>
-        Help
+        {t("help")}
       </ExternalItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
@@ -112,7 +129,7 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
         className="data-highlighted:bg-destructive/10 [&_svg]:text-destructive"
       >
         <LogOutIcon />
-        Log out
+        {t("log_out")}
       </DropdownMenuItem>
     </>
   )
@@ -138,14 +155,15 @@ function ExternalItem({
   )
 }
 
-const themeOptions = [
-  { value: "system", label: <MonitorIcon aria-label="System" /> },
-  { value: "light", label: <SunIcon aria-label="Light" /> },
-  { value: "dark", label: <MoonIcon aria-label="Dark" /> },
-] as const
-
 // Not a menu item: picking a theme keeps the menu open so the change can be seen.
 function ThemeRow() {
+  const t = useTranslations("Workspace")
+  const themeOptions = [
+    { value: "system", label: <MonitorIcon aria-label={t("system")} /> },
+    { value: "light", label: <SunIcon aria-label={t("light")} /> },
+    { value: "dark", label: <MoonIcon aria-label={t("dark")} /> },
+  ] as const
+
   const { theme, setTheme } = useTheme()
   // The theme is only known in the browser; show "system" until mounted.
   const [mounted, setMounted] = React.useState(false)
@@ -154,7 +172,7 @@ function ThemeRow() {
   return (
     <div className="flex h-9 items-center gap-2 pr-1 pl-3 text-sm">
       <MoonIcon className="size-4 shrink-0 text-muted-foreground" />
-      <span id="account-theme-label">Theme</span>
+      <span id="account-theme-label">{t("theme")}</span>
       <SegmentedControl
         aria-labelledby="account-theme-label"
         value={(mounted ? theme : "system") as "system" | "light" | "dark"}

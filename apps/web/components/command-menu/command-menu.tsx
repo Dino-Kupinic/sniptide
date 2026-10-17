@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
@@ -40,6 +41,7 @@ export function CommandMenuProvider({
   collections: Collection[]
   children: React.ReactNode
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const shortcuts = useShortcutsHelp()
   const { resolvedTheme, setTheme } = useTheme()
@@ -54,8 +56,8 @@ export function CommandMenuProvider({
         importGist: () => setImporting(true),
         toggleTheme: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
         showShortcuts: shortcuts.open,
-      }),
-    [resolvedTheme, setTheme, shortcuts.open],
+      }).map((command) => ({ ...command, label: t(command.label) })),
+    [resolvedTheme, setTheme, shortcuts.open, t],
   )
   const menu = React.useMemo(() => ({ open: () => setOpen(true) }), [])
 

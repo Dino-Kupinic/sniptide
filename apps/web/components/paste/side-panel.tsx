@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   PanelRightIcon,
 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 
 // The side panel next to the editor and the code view: a stack of sections that are collapsed to
@@ -41,6 +42,7 @@ export const panelToolClass =
 
 // Lives in the code card's bar, after a divider. Desktop only, like the panel.
 export function SidePanelToggle() {
+  const t = useTranslations("Paste")
   const { rail, setRail } = React.useContext(PanelContext)
   return (
     <>
@@ -48,14 +50,14 @@ export function SidePanelToggle() {
       <Tooltip>
         <TooltipTrigger
           type="button"
-          aria-label={rail ? "Show side panel" : "Hide side panel"}
+          aria-label={rail ? t("showSidePanel") : t("hideSidePanel")}
           aria-expanded={!rail}
           onClick={() => setRail(!rail)}
           className={cn(panelToolClass, "hidden lg:inline-flex")}
         >
           <PanelRightIcon />
         </TooltipTrigger>
-        <TooltipContent side="bottom">{rail ? "Show panel" : "Hide panel"}</TooltipContent>
+        <TooltipContent side="bottom">{rail ? t("showPanel") : t("hidePanel")}</TooltipContent>
       </Tooltip>
     </>
   )
@@ -72,6 +74,7 @@ export function SidePanel({
   defaultOpen?: string[]
   className?: string
 }) {
+  const t = useTranslations("Paste")
   const { rail, setRail } = React.useContext(PanelContext)
   const [open, setOpen] = React.useState<string[]>(defaultOpen)
   const toggle = (id: string) =>
@@ -90,7 +93,7 @@ export function SidePanel({
       >
         <button
           type="button"
-          aria-label="Show side panel"
+          aria-label={t("showSidePanel")}
           onClick={() => setRail(false)}
           className={cn(panelToolClass, "my-1.5")}
         >

@@ -1,11 +1,14 @@
 import { Button } from "@sniptide/ui/components/button"
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
+import { useTranslations } from "next-intl"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { getAppOrigin } from "@/lib/site"
 
 // Header for pages visitors see without signing in (the public share page). Plain <a> tags, not
 // <Link>: this page can be served on a different domain than the app (see getAppOrigin).
 export function PublicHeader({ signedIn, className }: { signedIn: boolean; className?: string }) {
+  const t = useTranslations("Auth")
   const appOrigin = getAppOrigin()
 
   return (
@@ -19,14 +22,15 @@ export function PublicHeader({ signedIn, className }: { signedIn: boolean; class
         href={signedIn ? `${appOrigin}/dashboard` : "/"}
         className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
-        <Logo />
+        <Logo className="max-sm:[&>span]:hidden" />
       </a>
-      <nav className="flex items-center gap-5 text-sm">
+      <nav aria-label={t("navigation")} className="flex items-center gap-3 text-sm sm:gap-5">
+        <LanguageSwitcher compact />
         <a
           href={`${appOrigin}/new`}
           className="hidden text-foreground/80 hover:text-foreground lg:inline"
         >
-          Create a paste
+          {t("createPaste")}
         </a>
         <Button
           variant="inverted"
@@ -34,7 +38,7 @@ export function PublicHeader({ signedIn, className }: { signedIn: boolean; class
           render={<a href={`${appOrigin}${signedIn ? "/dashboard" : "/sign-in"}`} />}
           nativeButton={false}
         >
-          {signedIn ? "Dashboard" : "Sign in"}
+          {t(signedIn ? "dashboard" : "signIn")}
         </Button>
       </nav>
     </header>

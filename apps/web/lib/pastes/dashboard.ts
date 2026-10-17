@@ -4,18 +4,12 @@ import { paste as pasteTable, pasteViewDay } from "@workspace/db/schema"
 import { and, desc, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import type { Locale } from "@/lib/i18n/config"
 import { DAY } from "@/lib/time"
 import { type PasteRow, toRows } from "./rows"
 import { summarizePastes, VIEW_HISTORY_DAYS } from "./store"
 
 const RECENT_ROWS = 5
-const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" })
-const shortDate = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-})
-
 export interface DashboardData {
   dailyViews: number[]
   dayNames: string[]
@@ -29,7 +23,13 @@ export interface DashboardData {
   recent: PasteRow[]
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(locale: Locale = "en"): Promise<DashboardData> {
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" })
+  const shortDate = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  })
   const viewer = (await getSession())?.user.id
   const now = Date.now()
   const today = Math.floor(now / DAY)
@@ -95,7 +95,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const records = [
     ...new Map(recentTabs.flat().map((record) => [record.id, record])).values(),
   ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.id.localeCompare(b.id))
-  const recent = await toRows(await summarizePastes(records, viewer))
+  const recent = await toRows(await summarizePastes(records, viewer), locale)
   return {
     ...empty,
     dailyViews,

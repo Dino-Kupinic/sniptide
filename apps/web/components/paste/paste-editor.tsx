@@ -14,6 +14,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { AutosaveStatus, ConflictBanner, DraftNotice } from "@/components/autosave-status"
 import { CodeBlock } from "@/components/paste/code-block"
@@ -26,7 +27,6 @@ import {
   SlugInput,
   ToggleRow,
   useSlugStatus,
-  visibilityHelp,
   visibilityOptions,
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
@@ -57,6 +57,7 @@ import type { Collection } from "@/lib/collections/types"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
 import { useHighlight } from "@/lib/highlight/use-highlight"
+import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
@@ -89,12 +90,12 @@ function forDraft(value: SavePasteInput): SavePasteInput {
 // Why an edit can't be saved yet, or null. Mirrors the first checks the server makes, so the
 // editor says "add a title" quietly instead of showing an error while someone is mid-thought.
 function unsavable(value: SavePasteInput) {
-  if (!value.title.trim()) return "add a title"
-  if (value.files.some((file) => !file.name.trim())) return "every file needs a name"
+  if (!value.title.trim()) return "addATitle"
+  if (value.files.some((file) => !file.name.trim())) return "everyFileNeedsAName"
   if (new Set(value.files.map((file) => file.name.trim())).size !== value.files.length) {
-    return "file names must be unique"
+    return "fileNamesMustBeUnique"
   }
-  if (!value.files.some((file) => file.content.trim())) return "paste some code"
+  if (!value.files.some((file) => file.content.trim())) return "pasteSomeCode"
   return null
 }
 
@@ -115,7 +116,7 @@ function newFile(name: string, content = ""): EditorFile {
 export function PasteEditor({
   initial,
   editing,
-  currentExpiry,
+  currentExpiresAt,
   collections,
   draftScope,
   indentation = "2",
@@ -127,7 +128,7 @@ export function PasteEditor({
   // Slug of the paste being edited; omitted for a new paste.
   editing?: string
   // Human label for the current expiry when editing ("Oct 12, 09:24").
-  currentExpiry?: string
+  currentExpiresAt?: number | null
   collections: Collection[]
   // Whose drafts these are (the signed-in account, plus what the page started from), so accounts
   // sharing a browser and different starting points don't mix.
@@ -141,6 +142,9 @@ export function PasteEditor({
   // theirs to change, so the sharing options stay hidden.
   sharedEdit?: boolean
 }) {
+  const t = useTranslations("Paste")
+  const feedbackT = useTranslations("Core")
+  const locale: Locale = useLocale()
   const host = useSiteHost()
   const router = useRouter()
   const [title, setTitle] = React.useState(initial.title)
@@ -180,7 +184,13 @@ export function PasteEditor({
   // What the server has: the link the page is at, whether a password is set, and when it expires.
   const [savedSlug, setSavedSlug] = React.useState(editing ?? "")
   const [hasPassword, setHasPassword] = React.useState(initial.hasPassword)
-  const [expiryLabel, setExpiryLabel] = React.useState(currentExpiry)
+  const [savedExpiresAt, setSavedExpiresAt] = React.useState(currentExpiresAt)
+  const expiryLabel =
+    savedExpiresAt === undefined
+      ? undefined
+      : savedExpiresAt === null
+        ? t("neverExpires")
+        : t("expiresAt", { date: formatDateTime(savedExpiresAt, locale) })
   const versionRef = React.useRef(initial.version ?? 0)
   const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined)
 
@@ -272,9 +282,7 @@ export function PasteEditor({
     broadcast({ slug: result.slug, version: result.version })
     setSavedSlug(result.slug)
     setHasPassword(result.hasPassword)
-    setExpiryLabel(
-      result.expiresAt ? `expires ${formatDateTime(result.expiresAt)}` : "never expires",
-    )
+    setSavedExpiresAt(result.expiresAt)
     // An expiry picked from the chips is relative to the save, so it must not be applied again by
     // the next one. A password was hashed on the server; the field goes back to "keep".
     setExpiry((current) => (current === sent.expiry ? "keep" : current))
@@ -297,7 +305,10 @@ export function PasteEditor({
     value,
     initial: initialValue,
     save: saveEdit,
-    validate: unsavable,
+    validate: (next) => {
+      const reason = unsavable(next)
+      return reason ? t(reason) : null
+    },
     manual: !editing,
   })
   autosaverRef.current = autosaver
@@ -396,12 +407,7 @@ export function PasteEditor({
   // Editing has no save button: this leaves once the last edit is on the server.
   async function finish() {
     const saved = await autosaver.flush()
-    if (
-      !saved &&
-      !window.confirm(
-        "Some changes haven't been saved yet. They stay on this device and come back the next time you open this paste. Leave anyway?",
-      )
-    ) {
+    if (!saved && !window.confirm(t("someChangesHavenTBeenSaved"))) {
       return
     }
     // Best effort: failing to close the revision only means the next edit may share it.
@@ -434,7 +440,8 @@ export function PasteEditor({
 
     // Undo puts the file back where it was, with its content and its undo history.
     const toastId = showUndo({
-      message: `Removed ${removed.name}`,
+      labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+      message: t("removedFile", { name: removed.name }),
       undo: async () => {
         setFiles((current) =>
           current.some((file) => file.id === removed.id)
@@ -545,7 +552,7 @@ export function PasteEditor({
     if (pending) return
     setError(null)
     if (slugStatus === "taken") {
-      setError(`${host}/${slug} is taken. Pick another custom link.`)
+      setError(t("linkTaken", { link: `${host}/${slug}` }))
       return
     }
 
@@ -560,7 +567,7 @@ export function PasteEditor({
       ).catch(() => null)
 
       if (!result) {
-        setError("Couldn't save the paste. Check your connection and try again.")
+        setError(t("couldnTSaveThePasteCheck"))
         return
       }
       if (!result.ok) {
@@ -576,7 +583,7 @@ export function PasteEditor({
         custom_link: Boolean(slug),
         invites: visibility === "private" ? invites.length : 0,
       })
-      toast.success("Paste created")
+      toast.success(t("pasteCreated"))
       autosaver.rebase(value)
       await discardDraft()
       router.push(`/pastes/${result.slug}`)
@@ -590,7 +597,7 @@ export function PasteEditor({
       // An open paste saves as you go, so ⌘S just pushes the pending edit out. A new paste has
       // nowhere to be saved yet, so ⌘S keeps what's typed as a draft on this device.
       if (editing) void autosaver.flush()
-      else if (saveDraftNow()) toast.success("Draft saved on this device")
+      else if (saveDraftNow()) toast.success(t("draftSavedOnThisDevice"))
     }
   })
 
@@ -619,12 +626,10 @@ export function PasteEditor({
         value={password}
         onChange={setPassword}
         onCommit={editing ? () => setCommittedPassword(password) : undefined}
-        placeholder={hasPassword ? "Leave empty to keep the current one" : "Password"}
+        placeholder={hasPassword ? t("leaveEmptyToKeepTheCurrent") : t("password")}
       />
       {editing && !hasPassword && !committedPassword ? (
-        <p className="text-xs text-muted-foreground">
-          Anyone with the link can open it until you set a password.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("anyoneWithTheLinkCanOpenMessage")}</p>
       ) : null}
     </>
   ) : null
@@ -637,24 +642,32 @@ export function PasteEditor({
   const panelSections: PanelSection[] = [
     {
       id: "access",
-      label: "Visibility & expiry",
+      label: t("visibilityExpiry"),
       icon: EyeIcon,
       content: (
         <>
           <SegmentedControl
-            aria-label="Visibility"
+            aria-label={t("visibility")}
             value={visibility}
             onValueChange={setVisibility}
-            options={visibilityOptions}
+            options={visibilityOptions.map((option) => ({
+              ...option,
+              label: t("visibilityValue", { value: option.value }),
+            }))}
           />
-          <p className="text-xs text-muted-foreground">{visibilityHelp[visibility]}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("visibilityHelp", { value: visibility })}
+          </p>
           {inviteMenu ? <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div> : null}
           <div className="mt-1 flex flex-col gap-2">
-            <span className="text-muted-foreground">Expires after</span>
+            <span className="text-muted-foreground">{t("expiresAfter")}</span>
             <ExpiryChips
               value={expiry}
               onChange={setExpiry}
-              options={expiryOptions}
+              options={expiryOptions.map((option) => ({
+                ...option,
+                label: t("expiryValue", { value: option.value }),
+              }))}
               currentExpiry={expiryLabel}
             />
           </div>
@@ -663,7 +676,7 @@ export function PasteEditor({
     },
     {
       id: "slug",
-      label: "Custom link",
+      label: t("customLink"),
       icon: LinkIcon,
       content: (
         <SlugInput
@@ -676,7 +689,7 @@ export function PasteEditor({
     },
     {
       id: "collection",
-      label: "Collection",
+      label: t("collection"),
       icon: FolderIcon,
       marked: collection !== null,
       content: (
@@ -685,21 +698,21 @@ export function PasteEditor({
     },
     {
       id: "protection",
-      label: "Protection",
+      label: t("protection"),
       icon: LockIcon,
       marked: passwordOn || burnAfterRead,
       content: (
         <>
           <ToggleRow
-            label="Password"
-            description="Visitors must enter it to view"
+            label={t("password")}
+            description={t("visitorsMustEnterItToView")}
             checked={passwordOn}
             onCheckedChange={setPasswordOn}
           />
           {passwordField}
           <ToggleRow
-            label="Burn after reading"
-            description="Deleted after the first view"
+            label={t("burnAfterReading")}
+            description={t("deletedAfterTheFirstView")}
             checked={burnAfterRead}
             onCheckedChange={setBurnAfterRead}
           />
@@ -726,26 +739,28 @@ export function PasteEditor({
             onClick={() => void finish()}
             className="text-[15px] font-medium text-link"
           >
-            Done
+            {t("done")}
           </button>
         ) : (
           <Link href={cancelHref} className="text-[15px] text-foreground/80">
-            Cancel
+            {t("cancel")}
           </Link>
         )}
-        <span className="text-[15px] font-semibold">{editing ? "Edit paste" : "New paste"}</span>
+        <span className="text-[15px] font-semibold">
+          {editing ? t("editPaste") : t("newPaste")}
+        </span>
         <button
           type="button"
           onClick={() => setPreview((value) => !value)}
           aria-pressed={preview}
           className={cn("text-[15px] text-muted-foreground", preview && "text-link")}
         >
-          {preview ? "Edit" : "Preview"}
+          {preview ? t("edit") : t("preview")}
         </button>
       </div>
 
       <HeaderTitle>
-        {editing ? "Edit paste" : "New paste"}
+        {editing ? t("editPaste") : t("newPaste")}
         {editing ? <AutosaveStatus state={state} className="hidden lg:inline" /> : null}
       </HeaderTitle>
       <HeaderActions>
@@ -756,7 +771,7 @@ export function PasteEditor({
             render={<Link href={cancelHref} />}
             nativeButton={false}
           >
-            Discard
+            {t("discard")}
           </Button>
         )}
         <Button
@@ -767,29 +782,29 @@ export function PasteEditor({
           onClick={() => setPreview((value) => !value)}
         >
           <EyeIcon />
-          {preview ? "Edit" : "Preview"}
+          {preview ? t("edit") : t("preview")}
         </Button>
         <Button type="submit" form={formId} size="lg" loading={pending} className="gap-2">
-          {editing ? "Done" : pending ? "Saving…" : "Create paste"}
+          {editing ? t("done") : pending ? t("saving") : t("createPaste")}
           <ShortcutKeys id="submit" className="bg-primary-foreground/20 text-primary-foreground" />
         </Button>
       </HeaderActions>
 
       <div className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
         <input
-          aria-label="Title"
+          aria-label={t("title")}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Untitled paste"
+          placeholder={t("untitledPaste")}
           maxLength={120}
           required
           className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-primary outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
         />
         <input
-          aria-label="Description"
+          aria-label={t("description")}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Add a description (optional)"
+          placeholder={t("addADescriptionOptional")}
           maxLength={280}
           className="w-full bg-transparent text-[15px] leading-5 outline-none placeholder:text-muted-foreground lg:text-sm lg:leading-5"
         />
@@ -801,33 +816,33 @@ export function PasteEditor({
         <ConflictBanner onLoadLatest={() => void loadLatest()} onKeepMine={keepMine} />
       ) : changedElsewhere ? (
         <DraftNotice
-          message="This paste was just saved in another tab. Load it to see the latest."
-          actions={[{ label: "Load latest", onClick: () => void loadLatest(), primary: true }]}
+          message={t("thisPasteWasJustSavedIn")}
+          actions={[{ label: t("loadLatest"), onClick: () => void loadLatest(), primary: true }]}
         />
       ) : null}
 
       {draftNotice?.kind === "restored" ? (
         <DraftNotice
-          message="Restored the changes you hadn't saved from this device."
+          message={t("restoredTheChangesYouHadnT")}
           actions={[
             {
-              label: "Undo",
+              label: t("undo"),
               onClick: () => {
                 applyValue(initialValue)
                 setDraftNotice(null)
               },
             },
-            { label: "Dismiss", onClick: () => setDraftNotice(null), primary: true },
+            { label: t("dismiss"), onClick: () => setDraftNotice(null), primary: true },
           ]}
         />
       ) : null}
 
       {draftNotice?.kind === "choose" && draft ? (
         <DraftNotice
-          message={`A draft from ${formatDateTime(draftNotice.savedAt)} was kept on this device. Restoring it replaces what's here now.`}
+          message={t("draftKept", { savedAt: formatDateTime(draftNotice.savedAt, locale) })}
           actions={[
             {
-              label: "Discard draft",
+              label: t("discardDraft"),
               onClick: () => {
                 void discardDraft()
                 setDraftNotice(null)
@@ -835,7 +850,7 @@ export function PasteEditor({
               },
             },
             {
-              label: "Restore draft",
+              label: t("restoreDraft"),
               primary: true,
               onClick: () => {
                 applyValue(draft.value)
@@ -882,7 +897,7 @@ export function PasteEditor({
                   ))}
                 </div>
                 <HighlightedTextarea
-                  aria-label={`Contents of ${active?.name ?? "file"}`}
+                  aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
                   lines={lines}
                   value={active?.content ?? ""}
                   ref={bindTextarea}
@@ -907,7 +922,7 @@ export function PasteEditor({
                   spellCheck={false}
                   autoCapitalize="off"
                   autoCorrect="off"
-                  placeholder="Paste or type code…"
+                  placeholder={t("pasteOrTypeCode")}
                   rows={Math.max(lineCount, 12)}
                   wrap="off"
                   metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
@@ -920,14 +935,13 @@ export function PasteEditor({
                 role="status"
                 className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-link"
               >
-                Line {secret.line} of {secret.file} looks like {secret.name}. Anyone with the link
-                can read it, so remove it or keep the paste private.
+                {t("secretWarning", { line: secret.line, file: secret.file, name: secret.name })}
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  aria-label={`Language: ${language.name}`}
+                  aria-label={t("languageName", { name: language.name })}
                   className="-ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
                 >
                   <LanguageMarker language={language.id} />
@@ -955,15 +969,15 @@ export function PasteEditor({
               </DropdownMenu>
               <span className="tabular-nums">
                 <span className="hidden sm:inline">
-                  Ln {cursor.line}, Col {cursor.column} ·{" "}
+                  {t("cursorPosition", { line: cursor.line, column: cursor.column })} ·{" "}
                 </span>
-                {files.length} {files.length === 1 ? "file" : "files"} · {formatBytes(totalBytes)}
+                {t("fileCount", { count: files.length })} · {formatBytes(totalBytes, locale)}
               </span>
             </div>
           </div>
 
           {sharedEdit ? null : (
-            <SidePanel label="Options" sections={panelSections} defaultOpen={["access"]} />
+            <SidePanel label={t("options")} sections={panelSections} defaultOpen={["access"]} />
           )}
         </div>
       </SidePanelProvider>
@@ -974,10 +988,13 @@ export function PasteEditor({
         {sharedEdit ? null : (
           <>
             <SegmentedControl
-              aria-label="Visibility"
+              aria-label={t("visibility")}
               value={visibility}
               onValueChange={setVisibility}
-              options={visibilityOptions}
+              options={visibilityOptions.map((option) => ({
+                ...option,
+                label: t("visibilityValue", { value: option.value }),
+              }))}
               itemClassName="py-2.5 text-[15px]"
               className="border border-border bg-muted"
             />
@@ -985,19 +1002,22 @@ export function PasteEditor({
               <InvitePeople invites={invites} onChange={setInvites} large />
             ) : null}
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[15px]">Expires after</span>
+              <span className="text-[15px]">{t("expiresAfter")}</span>
               <ExpiryChips
                 value={expiry}
                 onChange={setExpiry}
-                options={expiryOptions.filter((option) =>
-                  ["1d", "1w", "never"].includes(option.value),
-                )}
+                options={expiryOptions
+                  .filter((option) => ["1d", "1w", "never"].includes(option.value))
+                  .map((option) => ({
+                    ...option,
+                    label: t("expiryValue", { value: option.value }),
+                  }))}
                 currentExpiry={expiryLabel}
               />
             </div>
             <ToggleRow
-              label="Password"
-              description="Visitors must enter it to view"
+              label={t("password")}
+              description={t("visitorsMustEnterItToView")}
               checked={passwordOn}
               onCheckedChange={setPasswordOn}
               large
@@ -1005,7 +1025,7 @@ export function PasteEditor({
             {passwordField}
             {mobileMore ? (
               <>
-                <OptionGroup label="Custom link" id="slug-label-mobile">
+                <OptionGroup label={t("customLink")} id="slug-label-mobile">
                   <SlugInput
                     value={slug}
                     onChange={setSlug}
@@ -1013,7 +1033,7 @@ export function PasteEditor({
                     status={slugStatus}
                   />
                 </OptionGroup>
-                <OptionGroup label="Collection" id="collection-label-mobile">
+                <OptionGroup label={t("collection")} id="collection-label-mobile">
                   <CollectionSelect
                     value={collection}
                     onChange={setCollection}
@@ -1021,8 +1041,8 @@ export function PasteEditor({
                   />
                 </OptionGroup>
                 <ToggleRow
-                  label="Burn after read"
-                  description="Delete after the first view"
+                  label={t("burnAfterRead")}
+                  description={t("deleteAfterTheFirstView")}
                   checked={burnAfterRead}
                   onCheckedChange={setBurnAfterRead}
                   large
@@ -1034,13 +1054,13 @@ export function PasteEditor({
                 onClick={() => setMobileMore(true)}
                 className="self-start text-sm text-muted-foreground underline underline-offset-2"
               >
-                More options
+                {t("moreOptions")}
               </button>
             )}
           </>
         )}
         <Button type="submit" loading={pending} className="h-[50px] text-base font-semibold">
-          {editing ? "Done" : pending ? "Saving…" : "Create paste"}
+          {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>
       </div>
     </form>

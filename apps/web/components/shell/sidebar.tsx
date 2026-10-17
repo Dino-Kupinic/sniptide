@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { CollectionIconPicker } from "@/components/collections/icon-picker"
@@ -39,7 +40,6 @@ import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistSheet } from "@/components/lists/import-gist"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import type { Collection } from "@/lib/collections/types"
-import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
 import type { SidebarData, SidebarPaste } from "@/lib/pastes/types"
 import type { ViewerSummary } from "@/lib/viewer"
@@ -85,6 +85,7 @@ export function Sidebar({
   onToggleSection: (section: SectionId) => void
   onToggleSidebar: () => void
 }) {
+  const t = useTranslations("Workspace")
   const pathname = usePathname()
   const { open: openCommandMenu } = useCommandMenu()
   const [creating, setCreating] = React.useState(false)
@@ -114,7 +115,7 @@ export function Sidebar({
         className="flex h-8.5 shrink-0 items-center gap-2 border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         <SearchIcon className="size-3.5" />
-        Search
+        {t("search")}
         <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
       </button>
 
@@ -125,18 +126,18 @@ export function Sidebar({
         nativeButton={false}
       >
         <PlusIcon />
-        New paste
+        {t("new_paste")}
         <ShortcutKeys id="new-paste" className="ml-auto border border-white/30" />
       </Button>
 
-      <nav aria-label="Main" className="flex flex-col gap-0.5">
+      <nav aria-label={t("main")} className="flex flex-col gap-0.5">
         <NavLink href="/dashboard" pathname={pathname}>
           <LayoutGridIcon />
-          Dashboard
+          {t("dashboard")}
         </NavLink>
         <NavLink href="/analytics" pathname={pathname}>
           <ChartColumnIcon />
-          Analytics
+          {t("analytics")}
         </NavLink>
         <MoreMenu pathname={pathname} shared={counts.shared} />
       </nav>
@@ -171,7 +172,7 @@ export function Sidebar({
                     key={id}
                     id="starred"
                     index={index}
-                    title="Starred"
+                    title={t("starred")}
                     open={!closed.includes("starred")}
                     onToggle={onToggleSection}
                   >
@@ -193,11 +194,11 @@ export function Sidebar({
                     key={id}
                     id="pastes"
                     index={index}
-                    title="Pastes"
+                    title={t("pastes")}
                     open={!closed.includes("pastes")}
                     onToggle={onToggleSection}
                     add={
-                      <Link href="/new" aria-label="New paste" className={iconButtonClass}>
+                      <Link href="/new" aria-label={t("new_paste")} className={iconButtonClass}>
                         <PlusIcon />
                       </Link>
                     }
@@ -212,7 +213,7 @@ export function Sidebar({
                     ))}
                     {data.recent.length === 0 ? (
                       <p className="px-2 py-1.5 text-[13px] text-muted-foreground">
-                        No pastes yet.
+                        {t("no_pastes_yet")}
                       </p>
                     ) : null}
                     <ViewAll href="/pastes" count={counts.pastes} shown={data.recent.length} />
@@ -224,13 +225,13 @@ export function Sidebar({
                     key={id}
                     id="collections"
                     index={index}
-                    title="Collections"
+                    title={t("collections")}
                     open={!closed.includes("collections")}
                     onToggle={onToggleSection}
                     add={
                       <button
                         type="button"
-                        aria-label="New collection"
+                        aria-label={t("new_collection")}
                         onClick={() => setCreating(true)}
                         className={iconButtonClass}
                       >
@@ -308,13 +309,14 @@ function NavLink({
 
 // "More" under Analytics: the pages that used to be top-level, in a dropdown.
 function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
+  const t = useTranslations("Workspace")
   // The import sheet lives outside the menu, which unmounts its items when it closes.
   const [importing, setImporting] = React.useState(false)
   // On one of its pages, the row reads as that page instead of "More".
   const current = isActivePath(pathname, "/shared")
-    ? "Shared with me"
+    ? t("shared_with_me")
     : isActivePath(pathname, "/trash")
-      ? "Trash"
+      ? t("trash")
       : null
   const active = current !== null
 
@@ -329,7 +331,7 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
           )}
         >
           <ChevronRightIcon className="transition-transform group-data-popup-open:rotate-90" />
-          {current ?? "More"}
+          {current ?? t("more")}
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-(--anchor-width)">
           <DropdownMenuItem
@@ -337,14 +339,14 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
             className={cn(isActivePath(pathname, "/shared") && "font-medium")}
           >
             <UsersIcon />
-            Shared with me
+            {t("shared_with_me")}
             {shared > 0 ? (
               <span className="ml-auto text-xs text-muted-foreground tabular-nums">{shared}</span>
             ) : null}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setImporting(true)}>
             <DownloadIcon />
-            Import
+            {t("import")}
           </DropdownMenuItem>
           {/* Trash stays last. */}
           <DropdownMenuItem
@@ -352,7 +354,7 @@ function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
             className={cn(isActivePath(pathname, "/trash") && "font-medium")}
           >
             <Trash2Icon />
-            Trash
+            {t("trash")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -379,6 +381,7 @@ function Section({
   add?: React.ReactNode
   children: React.ReactNode
 }) {
+  const t = useTranslations("Workspace")
   const contentId = `sidebar-${id}`
   const { ref, handleRef, isDragSource } = useSortable({
     id: `section:${id}`,
@@ -412,15 +415,15 @@ function Section({
             <ChevronRightIcon className="size-3 shrink-0" />
           )}
         </button>
-        <DragHandle ref={handleRef} label={`Reorder ${title.toLowerCase()} section`} />
+        <DragHandle ref={handleRef} label={t("reorder_section", { name: title })} />
         <PlaceholderMenu
-          label={`Filter ${title.toLowerCase()}`}
-          note="Filters are coming soon."
+          label={t("filter_section", { name: title })}
+          note={t("filters_are_coming_soon")}
           icon={<ListFilterIcon />}
         />
         <PlaceholderMenu
-          label={`${title} options`}
-          note="More options are coming soon."
+          label={t("section_options", { name: title })}
+          note={t("more_options_are_coming_soon")}
           icon={<MoreHorizontalIcon />}
         />
         {add}
@@ -456,6 +459,7 @@ function CollectionRow({
   index: number
   pathname: string
 }) {
+  const t = useTranslations("Workspace")
   const { ref, handleRef, isDragSource } = useSortable({
     id: `collection:${collection.slug}`,
     index,
@@ -477,7 +481,7 @@ function CollectionRow({
       >
         {collection.name}
       </Link>
-      <DragHandle ref={handleRef} label={`Reorder ${collection.name} collection`} />
+      <DragHandle ref={handleRef} label={t("reorder_collection", { name: collection.name })} />
       <CollectionMenu
         collection={collection}
         afterDelete={isActivePath(pathname, href) ? "/collections" : undefined}
@@ -519,6 +523,7 @@ function PasteRow({
   pathname: string
   alwaysShowStar?: boolean
 }) {
+  const t = useTranslations("Workspace")
   const [starred, setStarredState] = React.useState(paste.starred)
   const [, startTransition] = React.useTransition()
   React.useEffect(() => setStarredState(paste.starred), [paste.starred])
@@ -538,7 +543,11 @@ function PasteRow({
       />
       <button
         type="button"
-        aria-label={starred ? `Unstar ${paste.title}` : `Star ${paste.title}`}
+        aria-label={
+          starred
+            ? t("unstar_named", { name: paste.title })
+            : t("star_named", { name: paste.title })
+        }
         aria-pressed={starred}
         onClick={() => {
           setStarredState(!starred)
@@ -553,13 +562,14 @@ function PasteRow({
 }
 
 function ViewAll({ href, count, shown }: { href: string; count: number; shown: number }) {
+  const t = useTranslations("Workspace")
   if (count <= shown) return null
   return (
     <Link
       href={href}
       className="flex h-7 shrink-0 items-center px-2 text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:underline"
     >
-      View all {formatNumber(count)}
+      {t("view_all_count", { count })}
     </Link>
   )
 }

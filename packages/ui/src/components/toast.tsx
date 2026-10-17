@@ -75,7 +75,13 @@ function subscribe(listener: () => void) {
   }
 }
 
-function Toaster({ className }: { className?: string }) {
+function Toaster({
+  className,
+  dismissLabel = "Dismiss",
+}: {
+  className?: string
+  dismissLabel?: string
+}) {
   const current = React.useSyncExternalStore(
     subscribe,
     () => items,
@@ -119,7 +125,7 @@ function Toaster({ className }: { className?: string }) {
           ) : null}
           <button
             type="button"
-            aria-label="Dismiss"
+            aria-label={dismissLabel}
             onClick={() => dismiss(item.id)}
             className="flex size-6 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
           >

@@ -4,6 +4,8 @@ import { collection as collectionTable, paste as pasteTable } from "@workspace/d
 import { and, desc, eq, isNull, type SQL, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import type { Locale } from "@/lib/i18n/config"
+import { coreTranslator } from "@/lib/i18n/core"
 import { DAY, HOUR } from "@/lib/time"
 import {
   type AnalyticsQuery,
@@ -32,13 +34,6 @@ const OPTIONS = 25
 const REFERRERS = 5
 const COUNTRIES = 9
 const LANGUAGES = 9
-
-const dayFormat = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-})
-const regionNames = new Intl.DisplayNames(["en"], { type: "region" })
 
 const DEVICE_LABELS: Record<DeviceRow["id"], string> = {
   desktop: "Desktop",
@@ -247,14 +242,15 @@ async function breakdown(rows: SQL) {
     ORDER BY dimension, hits DESC, key`)
 }
 
-function referrersOf(rows: BreakdownRow[]): Referrer[] {
+function referrersOf(rows: BreakdownRow[], locale: Locale): Referrer[] {
+  const t = coreTranslator(locale)
   const found = rows.filter((row) => row.dimension === "referrer")
   const shown = found.slice(0, REFERRERS).map(
     (row): Referrer =>
       row.key === ""
         ? {
             id: "direct",
-            label: "Direct or copied link",
+            label: t("direct"),
             domain: null,
             kind: "direct",
             views: row.hits,
@@ -267,7 +263,7 @@ function referrersOf(rows: BreakdownRow[]): Referrer[] {
     const views = total - shown.reduce((sum, row) => sum + row.views, 0)
     shown.push({
       id: "other",
-      label: `Other (${keys - shown.length} sources)`,
+      label: t("otherSources", { count: keys - shown.length }),
       domain: null,
       kind: "other",
       views,
@@ -276,7 +272,8 @@ function referrersOf(rows: BreakdownRow[]): Referrer[] {
   return shown
 }
 
-function countriesOf(rows: BreakdownRow[]): CountryRow[] {
+function countriesOf(rows: BreakdownRow[], locale: Locale): CountryRow[] {
+  const regionNames = new Intl.DisplayNames([locale], { type: "region" })
   return rows
     .filter((row) => row.dimension === "country")
     .slice(0, COUNTRIES)
@@ -296,7 +293,17 @@ function devicesOf(rows: BreakdownRow[]): DeviceRow[] {
   }))
 }
 
-function point(time: number, hourly: boolean, row: SeriesRow | undefined): SeriesPoint {
+function point(
+  time: number,
+  hourly: boolean,
+  row: SeriesRow | undefined,
+  locale: Locale,
+): SeriesPoint {
+  const dayFormat = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  })
   const iso = new Date(time).toISOString()
   return {
     date: hourly ? `${iso.slice(0, 13).replace("T", " ")}:00` : iso.slice(0, 10),
@@ -313,7 +320,9 @@ function point(time: number, hourly: boolean, row: SeriesRow | undefined): Serie
 export async function getAnalyticsReport(
   query: AnalyticsQuery,
   now = Date.now(),
+  locale: Locale = "en",
 ): Promise<AnalyticsReport> {
+  const t = coreTranslator(locale)
   const db = getDb()
   const viewer = (await getSession())?.user.id ?? null
   const { range } = query
@@ -357,11 +366,20 @@ export async function getAnalyticsReport(
   ])
 
   const points = Array.from({ length: count }, (_, index) =>
-    point((first + index) * step, hourly, series.rows.get(first + index)),
+    point((first + index) * step, hourly, series.rows.get(first + index), locale),
   )
   const kpis: Kpi[] = METRICS.map((metric) => ({
     id: metric.id,
-    label: metric.label,
+    label: t(
+      (
+        {
+          views: "metricViews",
+          unique: "metricUnique",
+          copies: "metricCopies",
+          raw: "metricRaw",
+        } as const
+      )[metric.id],
+    ),
     value: series.total[metric.id],
     delta: percentChange(series.total[metric.id], series.before[metric.id]),
   }))
@@ -383,9 +401,14 @@ export async function getAnalyticsReport(
     kpis,
     points,
     topPastes: tops,
-    referrers: referrersOf(hits),
-    countries: countriesOf(hits),
-    devices: devicesOf(hits),
+    referrers: referrersOf(hits, locale),
+    countries: countriesOf(hits, locale),
+    devices: devicesOf(hits).map((row) => ({
+      ...row,
+      label: t(
+        ({ desktop: "deviceDesktop", mobile: "deviceMobile", cli: "deviceCli" } as const)[row.id],
+      ),
+    })),
     languages: byLanguage,
   }
 }

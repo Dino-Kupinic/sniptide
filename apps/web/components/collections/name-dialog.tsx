@@ -10,6 +10,7 @@ import {
 } from "@sniptide/ui/components/dialog"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import type { CollectionActionResult } from "@/lib/collections/actions"
 import { MAX_NAME_LENGTH } from "@/lib/collections/types"
@@ -43,6 +44,7 @@ export function CollectionNameDialog({
   leading?: React.ReactNode
   onSubmit: (name: string) => Promise<CollectionActionResult>
 }) {
+  const t = useTranslations("Workspace")
   const nameId = React.useId()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
@@ -68,7 +70,7 @@ export function CollectionNameDialog({
                 const result = await onSubmit(name)
                 if (!result.ok) return setError(result.error)
               } catch {
-                return setError("Something went wrong. Try again.")
+                return setError(t("something_went_wrong_try_again"))
               }
               onOpenChange(false)
             })
@@ -85,7 +87,7 @@ export function CollectionNameDialog({
               key={initialName}
               id={nameId}
               name="name"
-              aria-label={label ? undefined : "Collection name"}
+              aria-label={label ? undefined : t("collection_name")}
               placeholder={placeholder}
               defaultValue={initialName}
               maxLength={MAX_NAME_LENGTH}
@@ -100,7 +102,7 @@ export function CollectionNameDialog({
           <FormError variant="inline" message={error} />
           <div className="flex justify-end gap-2">
             <DialogClose render={<Button type="button" variant="outline" size="lg" />}>
-              Cancel
+              {t("cancel")}
             </DialogClose>
             <Button type="submit" size="lg" loading={pending}>
               {pending ? pendingLabel : submitLabel}

@@ -9,12 +9,12 @@ export interface NavItem {
 // Bottom tabs below lg; the New paste button sits between the second and third tab.
 // `match` lists the routes that light the tab up.
 export const mobileTabs: (NavItem & { match: string[] })[] = [
-  { href: "/dashboard", label: "Home", icon: LayoutGridIcon, match: ["/dashboard"] },
-  { href: "/pastes", label: "Pastes", icon: StickyNoteIcon, match: ["/pastes"] },
-  { href: "/starred", label: "Starred", icon: StarIcon, match: ["/starred"] },
+  { href: "/dashboard", label: "home", icon: LayoutGridIcon, match: ["/dashboard"] },
+  { href: "/pastes", label: "pastes", icon: StickyNoteIcon, match: ["/pastes"] },
+  { href: "/starred", label: "starred", icon: StarIcon, match: ["/starred"] },
   {
     href: "/settings",
-    label: "More",
+    label: "more",
     icon: MenuIcon,
     match: ["/settings", "/shared", "/trash", "/collections"],
   },
@@ -39,15 +39,15 @@ export function mobileChrome(pathname: string) {
 
 // Titles for the top bar, keyed by the first path segment.
 export const pageTitles: Record<string, string> = {
-  dashboard: "Dashboard",
-  analytics: "Analytics",
-  pastes: "My pastes",
-  starred: "Starred",
-  shared: "Shared with me",
-  trash: "Trash",
-  new: "New paste",
-  settings: "Settings",
-  collections: "Collections",
+  dashboard: "dashboard",
+  analytics: "analytics",
+  pastes: "my_pastes",
+  starred: "starred",
+  shared: "shared_with_me",
+  trash: "trash",
+  new: "new_paste",
+  settings: "settings",
+  collections: "collections",
 }
 
 // The top bar's title for a route. Deeper routes (a paste, a collection) name themselves with
