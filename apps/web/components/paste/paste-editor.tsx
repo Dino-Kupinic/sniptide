@@ -790,6 +790,16 @@ export function PasteEditor({
         </Button>
       </HeaderActions>
 
+      {!editing && (
+        <p className="px-4 text-sm text-muted-foreground lg:px-0">
+          Storing credentials?{" "}
+          <Link href="/secrets/new" className="text-link underline underline-offset-4">
+            Create an encrypted secret group
+          </Link>
+          .
+        </p>
+      )}
+
       <div className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
         <input
           aria-label={t("title")}

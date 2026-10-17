@@ -104,6 +104,8 @@ const RESERVED = new Set([
   "docs",
   "new",
   "pastes",
+  "secrets",
+  "secret-share",
   "settings",
   "shared",
   "sign-in",

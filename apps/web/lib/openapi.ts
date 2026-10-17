@@ -1310,4 +1310,6 @@ export const internalRoutes = [
   "/api/locale",
   "/api/search",
   "/api/stats",
+  "/secrets/manage",
+  "/secret-share/[token]/reveal",
 ] as const
