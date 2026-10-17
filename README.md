@@ -285,6 +285,29 @@ app pages (`/`, `/sign-in`, `/dashboard`, …) redirect to `BETTER_AUTH_URL` (`a
 See [the early-growth operations guide](docs/scaling.md) for connection budgets, account limits,
 retention, telemetry, migration rollout, and deployment coordination at 100k pastes.
 
+## Encrypted secrets
+
+Open **Secrets** to create an env group, assign a project and a development, staging, or production
+environment, and add variables or paste a `.env` file. Existing CLI groups appear here too. The group
+name stays compatible with `sniptide env push`, `pull`, and `run`. A CLI push replaces the entire group;
+a web editor opened before that push must reload before saving.
+
+Values are encrypted with AES-256-GCM before reaching Postgres, using `ENV_SECRETS_KEY` or a key
+derived from `BETTER_AUTH_SECRET`. The server can decrypt them, so this is encryption at rest.
+Keep that key stable and backed up. Changing it makes existing values unreadable. Project labels,
+environment names, group names, and variable names are metadata and are not encrypted.
+
+Values remain masked on normal page loads. Reveal and Copy make an explicit, private, uncached
+request. Revealed values clear after one minute, on hide, and when the window loses focus. The
+Secrets screens have no browser drafts or autosave and do not send analytics events. Copy places
+plaintext on your system clipboard.
+
+Groups are private by default. Owners can create links with a password of at least 12 characters and
+an expiry of one hour, one day, or seven days, then revoke them at any time. Links expose the **current**
+values, including future web edits and CLI pushes. Share the password separately. Tokens and passwords
+are stored only as hashes, and every reveal checks the password, expiry, revocation, and request limits.
+When `SHARE_URL` uses another host, that host must route `/secret-share/*` to this app as well as paste links.
+
 ## Load testing
 
 See [the read-load suite](apps/web/load/README.md) for the deterministic 100k-paste seeder, k6

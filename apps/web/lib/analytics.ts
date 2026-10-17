@@ -31,7 +31,11 @@ export function startAnalytics({ key, uiHost }: AnalyticsConfig) {
     mask_all_text: true,
     mask_all_element_attributes: true,
     before_send: (event) => {
-      if (!event) return null
+      if (
+        !event ||
+        shouldDropSecretEvent(event, typeof window === "undefined" ? "" : window.location.pathname)
+      )
+        return null
       scrubProperties(event.properties)
       scrubProperties(event.$set)
       scrubProperties(event.$set_once)
@@ -91,11 +95,15 @@ const SECTIONS = new Set([
   "starred",
   "trash",
   "collections",
+  "secrets",
+  "secret-share",
 ])
 
 // "/k7Qe2x/raw" -> "/[slug]/raw", "/pastes/k7Qe2x/edit" -> "/pastes/[slug]/edit".
 export function scrubPath(pathname: string) {
   const [, first = "", second, ...rest] = pathname.split("/")
+  if (first === "secret-share") return second ? "/secret-share/[token]" : "/secret-share"
+  if (first === "secrets") return second ? "/secrets/[id]" : "/secrets"
   if (!SECTIONS.has(first)) return second ? `/[slug]/${second}` : "/[slug]"
   if ((first === "pastes" || first === "collections") && second) {
     return ["", first, "[slug]", ...rest].join("/")
@@ -120,4 +128,31 @@ function scrubProperties(properties: Record<string, unknown> | undefined) {
       properties[name] = scrubUrl(value)
     }
   }
+}
+
+export function isSecretPath(value: string) {
+  try {
+    const path = new URL(value, "https://analytics.invalid").pathname
+    return /^\/(?:secrets|secret-share)(?:\/|$)/.test(path)
+  } catch {
+    return /\/(?:secrets|secret-share)(?:\/|$)/.test(value)
+  }
+}
+export function shouldDropSecretEvent(
+  event: {
+    properties?: Record<string, unknown>
+    $set?: Record<string, unknown>
+    $set_once?: Record<string, unknown>
+  },
+  pathname: string,
+) {
+  if (isSecretPath(pathname)) return true
+  return [event.properties, event.$set, event.$set_once].some(
+    (properties) =>
+      properties &&
+      Object.entries(properties).some(
+        ([key, value]) =>
+          typeof value === "string" && /url|pathname|referrer/i.test(key) && isSecretPath(value),
+      ),
+  )
 }
