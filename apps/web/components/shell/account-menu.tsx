@@ -89,9 +89,6 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
         <DropdownMenuSubTrigger>
           <GlobeIcon />
           {t("language")}
-          <span className="ml-auto text-xs text-muted-foreground">
-            {localeNames[locales.find((language) => language === locale) ?? "en"]}
-          </span>
         </DropdownMenuSubTrigger>
         <DropdownMenuContent side="right" align="start" sideOffset={4}>
           <DropdownMenuGroup>
