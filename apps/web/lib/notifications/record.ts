@@ -1,12 +1,12 @@
 import "server-only"
 
-import { notification } from "@workspace/db/schema"
+import { notification, user } from "@workspace/db/schema"
+import { inArray } from "drizzle-orm"
 import type { getDb } from "@/lib/db"
+import { parsePreferences } from "@/lib/preferences-schema"
 import type { NotificationKind } from "./types"
 
-// The database or a transaction on it, so a notification can be written in the same transaction
-// as the event it reports.
-type Executor = Pick<ReturnType<typeof getDb>, "insert">
+type Executor = Pick<ReturnType<typeof getDb>, "insert" | "select">
 
 export interface NewNotification {
   userId: string
@@ -17,17 +17,29 @@ export interface NewNotification {
   dedupeKey?: string
 }
 
-// Adds a notification. One with a dedupe key that already exists for that account is skipped.
-export async function recordNotification(db: Executor, input: NewNotification) {
-  await db
+export async function recordNotifications(db: Executor, inputs: readonly NewNotification[]) {
+  if (!inputs.length) return 0
+  const accounts = await db
+    .select({ id: user.id, preferences: user.preferences })
+    .from(user)
+    .where(inArray(user.id, [...new Set(inputs.map((input) => input.userId))]))
+  const preferences = new Map(
+    accounts.map((account) => [account.id, parsePreferences(account.preferences)]),
+  )
+  const added = await db
     .insert(notification)
-    .values({
-      userId: input.userId,
-      kind: input.kind,
-      pasteId: input.pasteId,
-      actorId: input.actorId ?? null,
-      count: input.count ?? null,
-      dedupeKey: input.dedupeKey ?? null,
-    })
+    .values(
+      inputs.map((input) => {
+        const channels = preferences.get(input.userId)?.notifications[input.kind]
+        return {
+          ...input,
+          inApp: channels?.inApp ?? true,
+          emailStatus: channels?.email ? ("pending" as const) : ("disabled" as const),
+          emailNextAttemptAt: channels?.email ? new Date() : null,
+        }
+      }),
+    )
     .onConflictDoNothing()
+    .returning({ id: notification.id })
+  return added.length
 }

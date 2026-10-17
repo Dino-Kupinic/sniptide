@@ -32,13 +32,19 @@ export async function listNotifications(now = Date.now()): Promise<NotificationF
       .from(notification)
       .innerJoin(paste, eq(paste.id, notification.pasteId))
       .leftJoin(user, eq(user.id, notification.actorId))
-      .where(eq(notification.userId, viewer))
+      .where(and(eq(notification.userId, viewer), eq(notification.inApp, true)))
       .orderBy(desc(notification.createdAt), desc(notification.id))
       .limit(NOTIFICATION_LIMIT),
     db
       .select({ unread: sql<number>`count(*)::int` })
       .from(notification)
-      .where(and(eq(notification.userId, viewer), isNull(notification.readAt))),
+      .where(
+        and(
+          eq(notification.userId, viewer),
+          eq(notification.inApp, true),
+          isNull(notification.readAt),
+        ),
+      ),
   ])
   return {
     items: rows.map((row) => ({
@@ -71,7 +77,12 @@ export async function markNotificationRead(id: string) {
     .update(notification)
     .set({ readAt: new Date() })
     .where(
-      and(eq(notification.id, id), eq(notification.userId, viewer), isNull(notification.readAt)),
+      and(
+        eq(notification.id, id),
+        eq(notification.userId, viewer),
+        eq(notification.inApp, true),
+        isNull(notification.readAt),
+      ),
     )
   return true
 }
@@ -82,6 +93,12 @@ export async function markAllNotificationsRead() {
   await getDb()
     .update(notification)
     .set({ readAt: new Date() })
-    .where(and(eq(notification.userId, viewer), isNull(notification.readAt)))
+    .where(
+      and(
+        eq(notification.userId, viewer),
+        eq(notification.inApp, true),
+        isNull(notification.readAt),
+      ),
+    )
   return true
 }

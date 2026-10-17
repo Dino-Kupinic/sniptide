@@ -13,15 +13,17 @@ import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
 import { DeleteAccountSection } from "./delete-account"
+import { NotificationSection } from "./notification-section"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-export type SettingsTab = "general" | "defaults" | "api" | "billing"
+export type SettingsTab = "general" | "defaults" | "notifications" | "api" | "billing"
 
 const tabs: { value: SettingsTab; label: string }[] = [
   { value: "general", label: "General" },
   { value: "defaults", label: "Paste defaults" },
+  { value: "notifications", label: "Notifications" },
   { value: "api", label: "API tokens" },
   { value: "billing", label: "Billing" },
 ]
@@ -51,6 +53,7 @@ export function SettingsView({
   initialTab,
   profile,
   preferences,
+  emailAvailable,
   counts,
   storage,
   api,
@@ -58,6 +61,7 @@ export function SettingsView({
   initialTab: SettingsTab
   profile: ProfileState
   preferences: Preferences
+  emailAvailable: boolean
   counts: WorkspaceCounts
   storage: { usedMb: number; limitMb: number }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
@@ -150,6 +154,13 @@ export function SettingsView({
           </>
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
+        {tab === "notifications" ? (
+          <NotificationSection
+            initial={preferences.notifications}
+            emailAvailable={emailAvailable}
+            emailVerified={profile.emailVerified}
+          />
+        ) : null}
         {tab === "api" ? (
           <>
             <ApiTokensSection tokens={api.tokens} origin={api.origin} />

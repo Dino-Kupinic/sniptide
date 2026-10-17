@@ -34,7 +34,7 @@ import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { viewMilestone } from "@/lib/notifications/describe"
-import { recordNotification } from "@/lib/notifications/record"
+import { recordNotifications } from "@/lib/notifications/record"
 import { DAY } from "@/lib/time"
 import { enforceBudget, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
@@ -528,77 +528,92 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
   if (!record || record.deletedAt || userId === record.ownerId) return false
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
   if (!person) return false
-  const [before] = await getDb()
-    .select({ leftAt: pasteShare.leftAt })
-    .from(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
-  await getDb()
-    .insert(pasteShare)
-    .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
-    .onConflictDoUpdate({
-      target: [pasteShare.pasteId, pasteShare.userId],
-      // Inviting someone who left starts a fresh share: new, unseen, and open to them again.
-      set: {
-        access,
-        createdAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.createdAt} else now() end`,
-        seenAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.seenAt} else null end`,
-        leftAt: null,
-      },
-    })
-  // Tell the person about a new invite, or one after they left; changing their access or undoing a
-  // revoke is not news.
-  if (!sharedAt && (!before || before.leftAt)) {
-    await recordNotification(getDb(), {
-      userId,
-      kind: "shared",
-      pasteId: record.id,
-      actorId: record.ownerId,
-    })
-  }
-  return true
+  return getDb().transaction(async (tx) => {
+    const [locked] = await tx
+      .select({ id: pasteTable.id, deletedAt: pasteTable.deletedAt })
+      .from(pasteTable)
+      .where(and(eq(pasteTable.id, record.id), eq(pasteTable.ownerId, record.ownerId)))
+      .for("update")
+    if (!locked || locked.deletedAt) return false
+    const [before] = await tx
+      .select({ leftAt: pasteShare.leftAt })
+      .from(pasteShare)
+      .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+    await tx
+      .insert(pasteShare)
+      .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
+      .onConflictDoUpdate({
+        target: [pasteShare.pasteId, pasteShare.userId],
+        set: {
+          access,
+          createdAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.createdAt} else now() end`,
+          seenAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.seenAt} else null end`,
+          leftAt: null,
+        },
+      })
+    if (!sharedAt && (!before || before.leftAt)) {
+      await recordNotifications(tx, [
+        { userId, kind: "shared", pasteId: record.id, actorId: record.ownerId },
+      ])
+    }
+    return true
+  })
 }
 
-// Drops the "shared with you" notification for a paste the person can no longer open.
-function forgetShareNotice(pasteId: string, userId: string) {
-  return getDb()
-    .delete(notification)
-    .where(
-      and(
-        eq(notification.pasteId, pasteId),
-        eq(notification.userId, userId),
-        eq(notification.kind, "shared"),
-      ),
-    )
-}
-
-// Takes someone's access away. The paste leaves their Shared with me and its link 404s for them
-// again, unless its visibility lets anyone in.
 export async function unsharePaste(slug: string, userId: string) {
   const record = await findOwned(slug)
   if (!record) return
-  await getDb()
-    .delete(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
-  await forgetShareNotice(record.id, userId)
+  await getDb().transaction(async (tx) => {
+    await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(eq(pasteTable.id, record.id))
+      .for("update")
+    await tx
+      .delete(pasteShare)
+      .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+    await tx
+      .delete(notification)
+      .where(
+        and(
+          eq(notification.pasteId, record.id),
+          eq(notification.userId, userId),
+          eq(notification.kind, "shared"),
+        ),
+      )
+  })
 }
 
-// The viewer drops a paste someone shared with them. The owner can invite them again, and
-// `restoreShare` takes it back until then. The row stays, marked left, so that's instant.
 export async function leaveShare(slug: string) {
   const viewer = await requireViewerId()
   const record = await findRecord(slug)
   if (!record) return
-  await getDb()
-    .update(pasteShare)
-    .set({ leftAt: new Date() })
-    .where(
-      and(
-        eq(pasteShare.pasteId, record.id),
-        eq(pasteShare.userId, viewer),
-        isNull(pasteShare.leftAt),
-      ),
-    )
-  await forgetShareNotice(record.id, viewer)
+  await getDb().transaction(async (tx) => {
+    await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(eq(pasteTable.id, record.id))
+      .for("update")
+    await tx
+      .update(pasteShare)
+      .set({ leftAt: new Date() })
+      .where(
+        and(
+          eq(pasteShare.pasteId, record.id),
+          eq(pasteShare.userId, viewer),
+          isNull(pasteShare.leftAt),
+        ),
+      )
+    await tx
+      .delete(notification)
+      .where(
+        and(
+          eq(notification.pasteId, record.id),
+          eq(notification.userId, viewer),
+          eq(notification.kind, "shared"),
+        ),
+      )
+  })
 }
 
 // Undoes `leaveShare`. False when there's nothing to take back: the viewer never left, or the
@@ -839,15 +854,17 @@ async function claimVisit(id: string) {
         set: { views: sql`${pasteViewDay.views} + 1` },
       })
     if (row.burnAfterRead) {
-      await recordNotification(tx, { userId: row.ownerId, kind: "burned", pasteId: id })
+      await recordNotifications(tx, [{ userId: row.ownerId, kind: "burned", pasteId: id }])
     } else if (viewMilestone(row.views)) {
-      await recordNotification(tx, {
-        userId: row.ownerId,
-        kind: "views",
-        pasteId: id,
-        count: row.views,
-        dedupeKey: `views:${id}:${row.views}`,
-      })
+      await recordNotifications(tx, [
+        {
+          userId: row.ownerId,
+          kind: "views",
+          pasteId: id,
+          count: row.views,
+          dedupeKey: `views:${id}:${row.views}`,
+        },
+      ])
     }
     return row
   })
