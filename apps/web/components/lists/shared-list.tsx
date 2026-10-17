@@ -13,9 +13,9 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { UsersIcon } from "lucide-react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
-import { formatNumber } from "@/lib/format"
 import type { SharedRow } from "@/lib/pastes/rows"
 import type { Person } from "@/lib/pastes/types"
 import { RowMenu } from "./row-menu"
@@ -33,11 +33,6 @@ import {
 const PAGE_SIZE = 10
 
 type Sort = "shared" | "updated" | "title"
-const sortOptions: { value: Sort; label: string }[] = [
-  { value: "shared", label: "Recently shared" },
-  { value: "updated", label: "Last updated" },
-  { value: "title", label: "Title" },
-]
 
 const toneClass: Record<Person["tone"], string> = {
   primary: "bg-primary text-primary-foreground",
@@ -61,13 +56,14 @@ export function PersonAvatar({ person, className }: { person: Person; className?
 }
 
 function AccessBadge({ access }: { access: SharedRow["access"] }) {
+  const t = useTranslations("Workspace")
   return access === "edit" ? (
     <Badge variant="solid" className="h-5 px-2 text-xs">
-      Can edit
+      {t("can_edit")}
     </Badge>
   ) : (
     <Badge variant="muted" className="h-5 px-2 text-xs text-foreground">
-      Can view
+      {t("can_view")}
     </Badge>
   )
 }
@@ -81,6 +77,13 @@ export function SharedList({
   origin: string
   host: string
 }) {
+  const t = useTranslations("Workspace")
+  const sortOptions: { value: Sort; label: string }[] = [
+    { value: "shared", label: t("recently_shared") },
+    { value: "updated", label: t("last_updated") },
+    { value: "title", label: t("title") },
+  ]
+
   const [query, setQuery] = React.useState("")
   const [languages, setLanguages] = React.useState<string[]>([])
   const [people, setPeople] = React.useState<string[]>([])
@@ -123,7 +126,7 @@ export function SharedList({
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
-        title="Shared with me"
+        title={t("shared_with_me")}
         count={rows.length}
         actions={<ViewToggle value={view} onChange={setView} />}
       />
@@ -131,13 +134,13 @@ export function SharedList({
       <div className="flex flex-col gap-3 lg:hidden">
         <SearchField value={query} onChange={setQuery} />
         <QuickChips
-          label="Access"
+          label={t("access")}
           value={(access.length === 1 ? access[0] : "all") as "all" | "edit" | "view"}
           onChange={(next) => setAccess(next === "all" ? [] : [next])}
           options={[
-            { value: "all", label: "All" },
-            { value: "edit", label: "Can edit" },
-            { value: "view", label: "Can view" },
+            { value: "all", label: t("all") },
+            { value: "edit", label: t("can_edit") },
+            { value: "view", label: t("can_view") },
           ]}
         />
       </div>
@@ -147,7 +150,7 @@ export function SharedList({
           <div className="flex flex-wrap items-center gap-2">
             <SearchField value={query} onChange={setQuery} />
             <FilterMenu
-              label="Language"
+              label={t("language")}
               options={[...new Set(rows.map((row) => row.language))]
                 .sort()
                 .map((id) => ({ value: id, label: <LanguageLabel language={id} /> }))}
@@ -155,7 +158,7 @@ export function SharedList({
               onChange={setLanguages}
             />
             <FilterMenu
-              label="Shared by"
+              label={t("shared_by")}
               options={owners.map((person) => ({
                 value: person.username,
                 label: (
@@ -169,10 +172,10 @@ export function SharedList({
               onChange={setPeople}
             />
             <FilterMenu
-              label="Access"
+              label={t("access")}
               options={[
-                { value: "edit", label: "Can edit" },
-                { value: "view", label: "Can view" },
+                { value: "edit", label: t("can_edit") },
+                { value: "view", label: t("can_view") },
               ]}
               selected={access}
               onChange={setAccess}
@@ -184,7 +187,7 @@ export function SharedList({
         {filtered.length === 0 ? (
           filtering ? (
             <p className="border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
-              No pastes match these filters.
+              {t("no_pastes_match_these_filters")}
             </p>
           ) : (
             <div className="flex flex-col items-start gap-3 border-border py-10 lg:border-t lg:px-8 lg:py-14">
@@ -192,10 +195,9 @@ export function SharedList({
                 <UsersIcon className="size-5" />
               </span>
               <div className="flex flex-col gap-1">
-                <p className="text-base font-medium">Nothing shared with you yet</p>
+                <p className="text-base font-medium">{t("nothing_shared_with_you_yet")}</p>
                 <p className="max-w-md text-sm text-muted-foreground">
-                  When someone invites you to a private paste, it shows up here. If they remove you,
-                  it disappears.
+                  {t("when_someone_invites_you_to_a_private_paste")}
                 </p>
               </div>
               <Button
@@ -205,7 +207,7 @@ export function SharedList({
                 nativeButton={false}
                 className="hidden lg:inline-flex"
               >
-                Share one of your pastes
+                {t("share_one_of_your_pastes")}
               </Button>
             </div>
           )
@@ -250,13 +252,13 @@ export function SharedList({
           <Table className="hidden min-w-[960px] table-fixed lg:table">
             <TableHeader className="bg-sidebar">
               <TableRow className="hover:bg-transparent">
-                <TableHead>Paste</TableHead>
-                <TableHead className="w-[130px]">Language</TableHead>
-                <TableHead className="w-[200px]">Shared by</TableHead>
-                <TableHead className="w-[120px]">Access</TableHead>
-                <TableHead className="w-[116px]">Shared</TableHead>
+                <TableHead>{t("paste")}</TableHead>
+                <TableHead className="w-[130px]">{t("language")}</TableHead>
+                <TableHead className="w-[200px]">{t("shared_by")}</TableHead>
+                <TableHead className="w-[120px]">{t("access")}</TableHead>
+                <TableHead className="w-[116px]">{t("shared")}</TableHead>
                 <TableHead className="w-12">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -274,7 +276,7 @@ export function SharedList({
                       </Link>
                       {row.unseen ? (
                         <span className="size-1.5 shrink-0 bg-primary">
-                          <span className="sr-only">New</span>
+                          <span className="sr-only">{t("new")}</span>
                         </span>
                       ) : null}
                     </span>
@@ -333,7 +335,7 @@ export function SharedList({
                     </Link>
                     {row.unseen ? (
                       <span className="size-1.5 shrink-0 bg-primary">
-                        <span className="sr-only">New</span>
+                        <span className="sr-only">{t("new")}</span>
                       </span>
                     ) : null}
                   </span>
@@ -351,9 +353,10 @@ export function SharedList({
         {filtered.length > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
             <span className="hidden text-[13px] text-muted-foreground lg:inline">
-              {formatNumber(filtered.length)} {filtered.length === 1 ? "paste" : "pastes"} from{" "}
-              {formatNumber(new Set(filtered.map((row) => row.owner?.username)).size)}{" "}
-              {new Set(filtered.map((row) => row.owner?.username)).size === 1 ? "person" : "people"}
+              {t("shared_summary", {
+                count: filtered.length,
+                people: new Set(filtered.map((row) => row.owner?.username)).size,
+              })}
             </span>
             <Pagination page={paged.page} pageCount={paged.pageCount} onChange={setPage} />
           </div>

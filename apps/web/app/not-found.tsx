@@ -2,15 +2,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/ava
 import { LogoMark } from "@sniptide/ui/components/logo"
 import type { Metadata } from "next"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { currentViewer } from "@/components/not-found/current-viewer"
 import { NotFoundContent } from "@/components/not-found/not-found-content"
 
-export const metadata: Metadata = { title: "Not found" }
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("NotFound")
+  return { title: t("title") }
+}
 
 // The app's 404, from the Paper "Not found" artboards. Lives at the root so it also answers URLs
 // no route matches, which is why it draws its own header instead of the app shell.
 export default async function NotFound() {
-  const viewer = await currentViewer()
+  const [viewer, t] = await Promise.all([currentViewer(), getTranslations("NotFound")])
 
   return (
     <div className="flex min-h-dvh flex-col bg-background dark:bg-sidebar">
@@ -25,7 +29,7 @@ export default async function NotFound() {
             SNIPTIDE
           </span>
         </Link>
-        <span className="text-sm font-medium">Not found</span>
+        <span className="text-sm font-medium">{t("title")}</span>
         <div className="flex justify-end">
           {viewer ? (
             <Avatar className="size-7 font-heading text-[11px] font-bold dark:bg-border dark:text-white">

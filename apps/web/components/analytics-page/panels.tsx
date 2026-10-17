@@ -16,6 +16,7 @@ import {
   TerminalIcon,
 } from "lucide-react"
 import Link from "next/link"
+import { useLocale, useTranslations } from "next-intl"
 import "flag-icons/css/flag-icons.min.css"
 import { LanguageMarker } from "@/components/paste/language-marker"
 import { formatNumber } from "@/lib/format"
@@ -58,14 +59,16 @@ export function TopPastes({
   total: number
   host: string
 }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const peak = Math.max(0.001, ...rows.map((row) => share(row.views, total)))
 
   return (
     <Card
-      title="Top pastes"
+      title={t("top_pastes")}
       action={
         <Link href="/pastes" className={viewAllClass}>
-          View all
+          {t("view_all")}
           <ArrowRightIcon className="size-3.5" />
         </Link>
       }
@@ -73,13 +76,15 @@ export function TopPastes({
       <Table className="table-fixed">
         <TableHeader className="bg-sidebar">
           <TableRow className="hover:bg-transparent">
-            <TableHead className="h-9 px-4 text-xs font-medium">Paste</TableHead>
-            <TableHead className="h-9 w-20 px-0 text-right text-xs font-medium">Views</TableHead>
+            <TableHead className="h-9 px-4 text-xs font-medium">{t("paste")}</TableHead>
+            <TableHead className="h-9 w-20 px-0 text-right text-xs font-medium">
+              {t("views")}
+            </TableHead>
             <TableHead className="hidden h-9 w-20 px-0 text-right text-xs font-medium md:table-cell">
-              Unique
+              {t("unique")}
             </TableHead>
             <TableHead className="h-9 w-24 pr-4 pl-4 text-xs font-medium sm:w-[150px] sm:pl-7">
-              Share
+              {t("share")}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -108,7 +113,7 @@ export function TopPastes({
                   </div>
                 </TableCell>
                 <TableCell className={cn(countClass, "px-0 text-right")}>
-                  {formatNumber(row.views)}
+                  {formatNumber(row.views, locale)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -116,13 +121,17 @@ export function TopPastes({
                     "hidden px-0 text-right text-foreground/80 md:table-cell",
                   )}
                 >
-                  {formatNumber(row.unique)}
+                  {formatNumber(row.unique, locale)}
                 </TableCell>
-                <TableCell className="pr-4 pl-4 sm:pl-7">
+                <TableCell className={"pr-4 pl-4 sm:pl-7"}>
                   <div className="flex items-center gap-2">
                     <Meter value={rowShare / peak} className="hidden w-14 sm:flex" />
                     <span className="font-mono text-xs text-foreground/80 tabular-nums">
-                      {(rowShare * 100).toFixed(1)}%
+                      {new Intl.NumberFormat(locale, {
+                        style: "percent",
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      }).format(rowShare)}
                     </span>
                   </div>
                 </TableCell>
@@ -136,10 +145,12 @@ export function TopPastes({
 }
 
 export function Referrers({ rows }: { rows: Referrer[] }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const peak = peakOf(rows)
 
   return (
-    <Card title="Referrers">
+    <Card title={t("referrers")}>
       <ScrollList>
         {rows.map((row) => (
           <div key={row.id} className={rowClass}>
@@ -154,7 +165,7 @@ export function Referrers({ rows }: { rows: Referrer[] }) {
                 )}
                 <span className="truncate text-[13px] leading-[18px]">{row.label}</span>
               </span>
-              <span className={countClass}>{formatNumber(row.views)}</span>
+              <span className={countClass}>{formatNumber(row.views, locale)}</span>
             </div>
             <Meter value={row.views / peak} tone={row.kind === "other" ? "muted" : "link"} />
           </div>
@@ -165,10 +176,12 @@ export function Referrers({ rows }: { rows: Referrer[] }) {
 }
 
 export function Countries({ rows, total }: { rows: CountryRow[]; total: number }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const peak = peakOf(rows)
 
   return (
-    <Card title="Countries" className="lg:h-[321px]">
+    <Card title={t("countries")} className="lg:h-[321px]">
       <ScrollList>
         {rows.map((row) => (
           <div key={row.code} className={rowClass}>
@@ -176,14 +189,19 @@ export function Countries({ rows, total }: { rows: CountryRow[]; total: number }
               <span className="flex min-w-0 items-center gap-2.5">
                 <span
                   role="img"
-                  aria-label={`Flag of ${row.name}`}
+                  aria-label={t("flag_of", { country: row.name })}
                   className={`fi fi-${row.code} h-[15px]! w-5! shrink-0 ring-1 ring-black/10 ring-inset dark:ring-white/15`}
                 />
                 <span className="truncate text-[13px] leading-[18px]">{row.name}</span>
               </span>
               <span className="flex items-baseline gap-2.5">
-                <span className={countClass}>{formatNumber(row.views)}</span>
-                <span className={percentClass}>{Math.round(share(row.views, total) * 100)}%</span>
+                <span className={countClass}>{formatNumber(row.views, locale)}</span>
+                <span className={percentClass}>
+                  {new Intl.NumberFormat(locale, {
+                    style: "percent",
+                    maximumFractionDigits: 0,
+                  }).format(share(row.views, total))}
+                </span>
               </span>
             </div>
             <Meter value={row.views / peak} />
@@ -209,12 +227,14 @@ const deviceIcons = {
 } as const
 
 export function Devices({ rows }: { rows: DeviceRow[] }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const total = rows.reduce((sum, row) => sum + row.views, 0)
 
   return (
-    <Card title="Devices" className="lg:h-[321px]">
+    <Card title={t("devices")} className="lg:h-[321px]">
       <div className="flex flex-col gap-6 px-4 py-6">
-        <div role="img" aria-label="Share of views by device" className="flex h-7 gap-0.5">
+        <div role="img" aria-label={t("share_of_views_by_device")} className="flex h-7 gap-0.5">
           {rows.map((row) => (
             <span
               key={row.id}
@@ -234,8 +254,13 @@ export function Devices({ rows }: { rows: DeviceRow[] }) {
                   {row.label}
                 </span>
                 <span className="flex items-baseline gap-2.5">
-                  <span className={countClass}>{formatNumber(row.views)}</span>
-                  <span className={percentClass}>{Math.round(share(row.views, total) * 100)}%</span>
+                  <span className={countClass}>{formatNumber(row.views, locale)}</span>
+                  <span className={percentClass}>
+                    {new Intl.NumberFormat(locale, {
+                      style: "percent",
+                      maximumFractionDigits: 0,
+                    }).format(share(row.views, total))}
+                  </span>
                 </span>
               </li>
             )
@@ -247,10 +272,12 @@ export function Devices({ rows }: { rows: DeviceRow[] }) {
 }
 
 export function Languages({ rows, total }: { rows: LanguageRow[]; total: number }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const peak = peakOf(rows)
 
   return (
-    <Card title="Languages" className="lg:h-[321px]">
+    <Card title={t("languages")} className="lg:h-[321px]">
       <ScrollList>
         {rows.map((row) => (
           <div key={row.language} className={rowClass}>
@@ -261,7 +288,12 @@ export function Languages({ rows, total }: { rows: LanguageRow[]; total: number 
                   {getLanguage(row.language).name}
                 </span>
               </span>
-              <span className={percentClass}>{Math.round(share(row.views, total) * 100)}%</span>
+              <span className={percentClass}>
+                {new Intl.NumberFormat(locale, {
+                  style: "percent",
+                  maximumFractionDigits: 0,
+                }).format(share(row.views, total))}
+              </span>
             </div>
             <Meter value={row.views / peak} />
           </div>

@@ -1,4 +1,6 @@
-import { formatNumber, timeUntil } from "@/lib/format"
+import { timeUntil } from "@/lib/format"
+import type { Locale } from "@/lib/i18n/config"
+import { coreTranslator } from "@/lib/i18n/core"
 import type { NotificationKind } from "./types"
 
 // The first view count that earns a notification is 10, then every 5 or 10 times that: 10, 50,
@@ -18,38 +20,45 @@ export interface NotificationRow {
 
 // The words and the link for one notification. Written when listing, from the paste as it is
 // now, so a renamed paste or a changed expiry shows up in old notifications.
-export function describeNotification(row: NotificationRow, now = Date.now()) {
-  const quoted = `“${row.title}”`
+export function describeNotification(
+  row: NotificationRow,
+  now = Date.now(),
+  locale: Locale = "en",
+) {
+  const t = coreTranslator(locale)
   switch (row.kind) {
     case "shared":
       return {
-        title: `${row.actor ?? "Someone"} shared ${quoted} with you`,
-        detail: "Open it from Shared with me",
+        title: t("notificationShared", { name: row.actor ?? t("someone"), title: row.title }),
+        detail: t("notificationSharedDetail"),
         href: `/pastes/${row.slug}`,
       }
     case "burned":
       return {
-        title: `${quoted} was read`,
-        detail: "It burned after reading. Restore it from the trash to keep it",
+        title: t("notificationBurned", { title: row.title }),
+        detail: t("notificationBurnedDetail"),
         href: "/trash",
       }
     case "expiring": {
       const title =
         row.expiresAt === null
-          ? `${quoted} no longer expires`
+          ? t("notificationNeverExpires", { title: row.title })
           : row.expiresAt <= now
-            ? `${quoted} has expired`
-            : `${quoted} expires ${timeUntil(row.expiresAt, now)}`
+            ? t("notificationExpired", { title: row.title })
+            : t("notificationExpiring", {
+                title: row.title,
+                time: timeUntil(row.expiresAt, now, locale),
+              })
       return {
         title,
-        detail: "Extend it from the paste's sharing panel",
+        detail: t("notificationExpiringDetail"),
         href: `/pastes/${row.slug}`,
       }
     }
     case "views":
       return {
-        title: `${quoted} reached ${formatNumber(row.count ?? 0)} views`,
-        detail: "See where they came from in Analytics",
+        title: t("notificationViews", { title: row.title, count: row.count ?? 0 }),
+        detail: t("notificationViewsDetail"),
         href: `/analytics?paste=${encodeURIComponent(row.slug)}`,
       }
   }

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { PasteList } from "@/components/lists/paste-list"
 import { getCollection } from "@/lib/collections/store"
@@ -9,10 +10,12 @@ import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/collections/[slug]">) {
   const collection = await getCollection((await params).slug)
-  return { title: `${collection?.name ?? "Collection"} · Sniptide` }
+  const t = await getTranslations("Core")
+  return { title: `${collection?.name ?? t("collection")} · Sniptide` }
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/collections/[slug]">) {
+  const locale = await getLocale()
   const { slug } = await params
   const query = parsePasteListQuery(await searchParams)
   const [collection, data, { origin, host }] = await Promise.all([
@@ -22,7 +25,7 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
   ])
   if (!collection) notFound()
 
-  const rows = await toRows(data.pastes)
+  const rows = await toRows(data.pastes, locale)
 
   return (
     <PasteList

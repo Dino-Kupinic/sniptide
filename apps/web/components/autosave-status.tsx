@@ -2,33 +2,47 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { cn } from "@sniptide/ui/lib/utils"
+import { createTranslator, useTranslations } from "next-intl"
 import type { AutosaveState } from "@/lib/autosave/autosaver"
+import en from "@/messages/en/core.json"
 
-export function autosaveLabel(state: AutosaveState) {
+const english = createTranslator({ locale: "en", messages: en, namespace: "Core" })
+type AutosaveKey =
+  | "autosaveIdle"
+  | "autosaveDirty"
+  | "autosaveBlocked"
+  | "autosaveSaving"
+  | "autosaveSaved"
+  | "autosaveOffline"
+  | "autosaveRetry"
+  | "autosaveError"
+  | "autosaveConflict"
+type StatusTranslator = (key: AutosaveKey, values?: Record<string, string>) => string
+
+export function autosaveLabel(state: AutosaveState, t: StatusTranslator = english) {
   switch (state.kind) {
     case "idle":
-      return "Changes save automatically"
+      return t("autosaveIdle")
     case "dirty":
-      return "Unsaved changes…"
+      return t("autosaveDirty")
     case "blocked":
-      return `Not saved yet: ${state.reason}`
+      return t("autosaveBlocked", { reason: state.reason })
     case "saving":
-      return "Saving…"
+      return t("autosaveSaving")
     case "saved":
-      return "All changes saved"
+      return t("autosaveSaved")
     case "retrying":
-      return state.offline
-        ? "Offline. Changes are kept on this device"
-        : "Can't reach Sniptide. Changes are kept on this device; retrying"
+      return state.offline ? t("autosaveOffline") : t("autosaveRetry")
     case "error":
-      return `Not saved: ${state.message}`
+      return t("autosaveError", { message: state.message })
     case "conflict":
-      return "Changed somewhere else"
+      return t("autosaveConflict")
   }
 }
 
 // One line in the editor's header that says whether the last edit has reached the server.
 export function AutosaveStatus({ state, className }: { state: AutosaveState; className?: string }) {
+  const t = useTranslations("Core")
   const problem =
     state.kind === "error" ||
     state.kind === "retrying" ||
@@ -45,7 +59,7 @@ export function AutosaveStatus({ state, className }: { state: AutosaveState; cla
         className,
       )}
     >
-      {autosaveLabel(state)}
+      {autosaveLabel(state, t)}
     </span>
   )
 }
@@ -58,21 +72,19 @@ export function ConflictBanner({
   onLoadLatest: () => void
   onKeepMine: () => void
 }) {
+  const t = useTranslations("Core")
   return (
     <div
       role="alert"
       className="mx-4 flex flex-col gap-3 border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:justify-between lg:mx-0"
     >
-      <p>
-        This paste was changed in another tab or on another device. Saving stopped so nothing is
-        overwritten.
-      </p>
+      <p>{t("conflictDescription")}</p>
       <div className="flex shrink-0 gap-2">
         <Button type="button" size="sm" variant="outline" onClick={onLoadLatest}>
-          Load latest
+          {t("loadLatest")}
         </Button>
         <Button type="button" size="sm" onClick={onKeepMine}>
-          Keep my version
+          {t("keepMine")}
         </Button>
       </div>
     </div>

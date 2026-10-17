@@ -29,6 +29,7 @@
     "flag-icons": "catalog:ui",
     "lucide-react": "catalog:ui",
     "next": "catalog:runtime",
+    "next-intl": "^4.14.9",
     "next-themes": "catalog:runtime",
     "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
@@ -38,8 +39,9 @@
     "zod": "catalog:runtime"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
     "@e2e-dev/web": "0.13.0",
+    "@formatjs/icu-messageformat-parser": "^3.5.21",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@tailwindcss/postcss": "catalog:ui",
     "@types/bun": "catalog:tooling",
     "@types/node": "catalog:tooling",

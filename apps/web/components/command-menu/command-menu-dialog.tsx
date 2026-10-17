@@ -7,6 +7,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, CornerDownLeftIcon, SearchIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
@@ -75,6 +76,7 @@ export function CommandMenuDialog({
   collections: Collection[]
   commands: Command[]
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const host = useSiteHost()
   const desktop = useIsDesktop()
@@ -115,28 +117,29 @@ export function CommandMenuDialog({
         .map((command) => ({ id: command.id, kind: "command", command }))
 
     if (scope === "commands") {
-      add("go", "Go to", commandEntries("go"))
-      add("actions", "Actions", commandEntries("actions"))
+      add("go", t("go_to"), commandEntries("go"))
+      add("actions", t("actions"), commandEntries("actions"))
     } else if (text === "") {
       if (scope === "all" || scope === "pastes") {
         const shown = scope === "all" ? RECENT_SHOWN : recent.length
-        add("recent", "Recent pastes", pasteEntries(recent.slice(0, shown)))
+        add("recent", t("recent_pastes"), pasteEntries(recent.slice(0, shown)))
       }
-      if (scope === "collections") add("collections", "Collections", collectionEntries(collections))
+      if (scope === "collections")
+        add("collections", t("collections"), collectionEntries(collections))
       if (scope === "all") {
-        if (desktop) add("go", "Go to", commandEntries("go"))
+        if (desktop) add("go", t("go_to"), commandEntries("go"))
         else
           add(
             "collections",
-            "Collections",
+            t("collections"),
             collectionEntries(collections.slice(0, COLLECTIONS_EMPTY_SHOWN)),
           )
-        add("actions", "Actions", commandEntries("actions"))
+        add("actions", t("actions"), commandEntries("actions"))
       }
     } else {
       if (scope === "all" || scope === "pastes") {
         const shown = scope === "all" ? PASTES_SHOWN : search.hits.length
-        add("pastes", "Pastes", pasteEntries(search.hits.slice(0, shown)))
+        add("pastes", t("pastes"), pasteEntries(search.hits.slice(0, shown)))
       }
       if (scope === "all" || scope === "collections") {
         const found = collections.filter(
@@ -144,13 +147,13 @@ export function CommandMenuDialog({
         )
         add(
           "collections",
-          "Collections",
+          t("collections"),
           collectionEntries(scope === "all" ? found.slice(0, COLLECTIONS_SHOWN) : found),
         )
       }
     }
     return result
-  }, [scope, text, recent, collections, commands, desktop, search.hits])
+  }, [scope, text, recent, collections, commands, desktop, search.hits, t])
 
   const entries = React.useMemo(() => groups.flatMap((group) => group.entries), [groups])
   const activeIndex = Math.min(active, entries.length - 1)
@@ -199,7 +202,7 @@ export function CommandMenuDialog({
           "max-lg:inset-0 max-lg:h-dvh max-lg:bg-background max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:border-0 max-lg:shadow-none",
         )}
       >
-        <DialogTitle className="sr-only">Command menu</DialogTitle>
+        <DialogTitle className="sr-only">{t("command_menu")}</DialogTitle>
 
         <div className="flex items-center gap-3 border-border max-lg:pt-[calc(env(safe-area-inset-top)+0.75rem)] max-lg:pr-4 max-lg:pb-3 max-lg:pl-4 lg:h-14 lg:border-b lg:px-4">
           <div className="relative min-w-0 flex-1">
@@ -213,16 +216,14 @@ export function CommandMenuDialog({
               aria-controls={listId}
               aria-activedescendant={activeEntry ? optionId(activeEntry) : undefined}
               aria-autocomplete="list"
-              aria-label="Search pastes, collections, or run a command"
+              aria-label={t("search_pastes_collections_or_run_a_command")}
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
               enterKeyHint="go"
               placeholder={
-                desktop
-                  ? "Search pastes, collections, or run a command…"
-                  : "Search pastes and collections…"
+                desktop ? t("command_search_placeholder") : t("search_pastes_and_collections")
               }
               value={value}
               onChange={(event) => {
@@ -235,7 +236,7 @@ export function CommandMenuDialog({
           </div>
           <ShortcutKeys id="menu-close" className="max-lg:hidden" />
           <DialogClose className="shrink-0 text-sm font-medium text-link outline-none focus-visible:underline lg:hidden">
-            Cancel
+            {t("cancel")}
           </DialogClose>
         </div>
 
@@ -256,7 +257,7 @@ export function CommandMenuDialog({
                   : "border-border text-foreground",
               )}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -264,7 +265,7 @@ export function CommandMenuDialog({
         <div
           id={listId}
           role="listbox"
-          aria-label="Results"
+          aria-label={t("results")}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 lg:max-h-[min(480px,calc(100dvh-14rem))] lg:flex-none lg:px-2 lg:pt-1.5 lg:pb-2"
         >
           {groups.map((group) => (
@@ -298,33 +299,35 @@ export function CommandMenuDialog({
           {empty ? (
             <div className="flex flex-col items-center gap-1 px-6 py-12 text-center">
               <p className="text-sm text-foreground">
-                {text ? `No results for “${text}”` : "Nothing here yet"}
+                {text ? t("no_results_for", { text }) : t("nothing_here_yet")}
               </p>
               <p className="text-[13px] text-muted-foreground">
                 {scope === "commands"
-                  ? "Try another command."
-                  : "Search covers paste titles, slugs and collection names."}
+                  ? t("try_another_command")
+                  : t("search_covers_paste_titles_slugs_and_collection_names")}
               </p>
             </div>
           ) : null}
         </div>
 
         <div className="hidden h-10 shrink-0 items-center gap-4 border-t border-border bg-sidebar px-4 text-xs text-muted-foreground lg:flex">
-          <Hint id="menu-navigate">Navigate</Hint>
-          <Hint id="menu-open">Open</Hint>
-          <Hint id="menu-new-tab">New tab</Hint>
+          <Hint id="menu-navigate">{t("navigate")}</Hint>
+          <Hint id="menu-open">{t("open")}</Hint>
+          <Hint id="menu-new-tab">{t("new_tab")}</Hint>
           {seeAll ? (
             <Link
               href={`/pastes?q=${encodeURIComponent(text)}`}
               onClick={() => onOpenChange(false)}
               className="ml-auto flex items-center gap-1 font-medium text-link outline-none hover:underline focus-visible:underline"
             >
-              See all {search.total} {search.total === 1 ? "paste" : "pastes"}
+              {t("see_all_pastes", { count: search.total })}
               <ArrowRightIcon className="size-3.5" />
             </Link>
           ) : scope !== "commands" && text === "" ? (
             <span className="ml-auto flex items-center gap-1.5">
-              Type <Kbd className="border border-border">&gt;</Kbd> to run a command
+              {t.rich("command_hint", {
+                key: (chunks) => <Kbd className="border border-border">{chunks}</Kbd>,
+              })}
             </span>
           ) : null}
         </div>
@@ -401,8 +404,10 @@ function EntryRow({
   active: boolean
   desktop: boolean
 }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   if (entry.kind === "paste") {
-    const ago = timeAgo(entry.updatedAt)
+    const ago = timeAgo(entry.updatedAt, undefined, locale)
     return (
       <>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 max-lg:justify-center max-lg:py-3 lg:flex-row lg:items-baseline lg:gap-2.5">
@@ -417,7 +422,7 @@ function EntryRow({
         <span className="flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground max-lg:hidden">
           {active ? (
             <>
-              Open
+              {t("open")}
               <Kbd className="border border-border bg-background">
                 <CornerDownLeftIcon className="size-3" />
               </Kbd>
@@ -443,13 +448,13 @@ function EntryRow({
         <span className="shrink-0 text-[13px] text-muted-foreground">
           {active && desktop ? (
             <span className="flex items-center gap-2">
-              Open
+              {t("open")}
               <Kbd className="border border-border bg-background">
                 <CornerDownLeftIcon className="size-3" />
               </Kbd>
             </span>
           ) : (
-            `${collection.pasteCount} ${collection.pasteCount === 1 ? "paste" : "pastes"}`
+            t("paste_count", { count: collection.pasteCount })
           )}
         </span>
       </>

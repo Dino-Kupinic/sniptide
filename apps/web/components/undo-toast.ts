@@ -11,17 +11,19 @@ export function showUndo({
   message,
   undo,
   onUndone,
+  labels,
 }: {
   message: string
   undo: () => Promise<unknown>
   onUndone?: () => void
+  labels: { undo: string; error: string }
 }) {
   return toast.info(message, {
     duration: UNDO_DURATION,
     action: {
-      label: "Undo",
+      label: labels.undo,
       run: async () => {
-        const result = await runAction(undo, { error: "Couldn't undo. Try again." })
+        const result = await runAction(undo, { error: labels.error })
         if (result.ok) onUndone?.()
       },
     },

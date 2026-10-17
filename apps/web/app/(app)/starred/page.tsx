@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { PasteList } from "@/components/lists/paste-list"
 import { listCollections } from "@/lib/collections/store"
@@ -6,9 +7,14 @@ import { listPastePage } from "@/lib/pastes/lists"
 import { toRows } from "@/lib/pastes/rows"
 import { getSiteOrigin } from "@/lib/site"
 
-export const metadata = { title: "Starred · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("Core")
+  return { title: `${t("starred")} · Sniptide` }
+}
 
 export default async function Page({ searchParams }: PageProps<"/starred">) {
+  const locale = await getLocale()
+  const t = await getTranslations("Core")
   const query = parsePasteListQuery(await searchParams)
   const [data, { origin, host }, collections] = await Promise.all([
     listPastePage({ mode: "starred" }, query),
@@ -17,9 +23,9 @@ export default async function Page({ searchParams }: PageProps<"/starred">) {
   ])
   return (
     <PasteList
-      title="Starred"
+      title={t("starred")}
       mode="starred"
-      rows={await toRows(data.pastes)}
+      rows={await toRows(data.pastes, locale)}
       origin={origin}
       host={host}
       collections={collections}

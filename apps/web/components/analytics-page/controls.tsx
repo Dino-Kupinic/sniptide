@@ -12,17 +12,11 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { DownloadIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { type AnalyticsRange, DEFAULT_RANGE } from "@/lib/pastes/analytics"
 
 const ALL = "all"
-
-const rangeOptions: { value: AnalyticsRange; label: string }[] = [
-  { value: "24h", label: "24h" },
-  { value: "7d", label: "7 days" },
-  { value: "30d", label: "30 days" },
-  { value: "90d", label: "90 days" },
-]
 
 function analyticsHref(path: string, range: AnalyticsRange, paste: string | undefined) {
   const params = new URLSearchParams()
@@ -43,6 +37,14 @@ export function AnalyticsControls({
   paste: string | undefined
   options: { slug: string; title: string }[]
 }) {
+  const t = useTranslations("Workspace")
+  const rangeOptions: { value: AnalyticsRange; label: string }[] = [
+    { value: "24h", label: t("24h") },
+    { value: "7d", label: t("7_days") },
+    { value: "30d", label: t("30_days") },
+    { value: "90d", label: t("90_days") },
+  ]
+
   const router = useRouter()
   const [, startTransition] = React.useTransition()
   const [shown, setShown] = React.useOptimistic({ range, paste })
@@ -55,7 +57,7 @@ export function AnalyticsControls({
   }
 
   const items = [
-    { value: ALL, label: "All pastes" },
+    { value: ALL, label: t("all_pastes") },
     ...options.map((option) => ({ value: option.slug, label: option.title })),
   ]
 
@@ -69,7 +71,7 @@ export function AnalyticsControls({
         items={items}
       >
         <SelectTrigger
-          aria-label="Pastes"
+          aria-label={t("pastes")}
           className="h-[34px] max-w-48 gap-1.5 pr-2.5 pl-3 text-[13px] font-medium"
         >
           <SelectValue />
@@ -84,7 +86,7 @@ export function AnalyticsControls({
       </Select>
 
       <SegmentedControl
-        aria-label="Range"
+        aria-label={t("range")}
         value={shown.range}
         onValueChange={(next) => choose({ range: next, paste: shown.paste })}
         options={rangeOptions}
@@ -101,7 +103,7 @@ export function AnalyticsControls({
         )}
       >
         <DownloadIcon />
-        Export CSV
+        {t("export_csv")}
       </a>
     </div>
   )

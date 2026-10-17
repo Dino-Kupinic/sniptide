@@ -6,6 +6,7 @@ import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Switch } from "@sniptide/ui/components/switch"
 import { KeyRoundIcon, TerminalIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { CopyButton } from "@/components/paste/copy-button"
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
@@ -13,24 +14,24 @@ import type { TokenExpiry, TokenSummary } from "@/lib/api/tokens"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import { runAction } from "@/lib/feedback"
 import { formatDate, timeAgo } from "@/lib/format"
+import type { Locale } from "@/lib/i18n/config"
 import { SaveStatus, SettingRow, SettingsSection } from "./section"
 
 const expiryOptions: { value: TokenExpiry; label: string }[] = [
-  { value: "30d", label: "30 days" },
-  { value: "90d", label: "90 days" },
-  { value: "1y", label: "1 year" },
-  { value: "never", label: "Never" },
+  { value: "30d", label: "30Days" },
+  { value: "90d", label: "90Days" },
+  { value: "1y", label: "1Year" },
+  { value: "never", label: "never" },
 ]
 
 function NewToken({ token, origin }: { token: string; origin: string }) {
+  const t = useTranslations("Settings")
   // The token goes in through stdin, so it stays out of shell history and process lists.
   const login = `sniptide login --token-stdin --base-url ${origin}`
   return (
     <div role="status" className="flex flex-col gap-3 border border-primary/40 bg-primary/5 p-4">
-      <p className="text-sm font-medium">Copy your new token now</p>
-      <p className="text-[13px] text-muted-foreground">
-        It won't be shown again. Anyone with it can act as you within its scopes.
-      </p>
+      <p className="text-sm font-medium">{t("copyYourNewTokenNow")}</p>
+      <p className="text-[13px] text-muted-foreground">{t("itWonTBeShownAgain")}</p>
       <div className="flex items-center gap-2">
         <code className="min-w-0 flex-1 truncate border border-border bg-background px-3 py-2 font-mono text-[13px]">
           {token}
@@ -38,14 +39,18 @@ function NewToken({ token, origin }: { token: string; origin: string }) {
         <CopyButton text={token} variant="outline" size="lg" />
       </div>
       <p className="text-[13px] text-muted-foreground">
-        For the CLI, pipe it into <code className="font-mono text-foreground">{login}</code>, or set
-        it as <code className="font-mono text-foreground">SNIPTIDE_TOKEN</code>.
+        {t.rich("cliTokenHint", {
+          command: (chunks) => <code className="font-mono text-foreground">{chunks}</code>,
+          login,
+        })}
       </p>
     </div>
   )
 }
 
 export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; origin: string }) {
+  const t = useTranslations("Settings")
+  const locale: Locale = useLocale()
   const router = useRouter()
   const [write, setWrite] = React.useState(true)
   const [expiry, setExpiry] = React.useState<TokenExpiry>("90d")
@@ -54,10 +59,7 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
   const [pending, startTransition] = React.useTransition()
 
   return (
-    <SettingsSection
-      title="API tokens"
-      description="For the sniptide CLI, coding agents and scripts. A token acts as you: read lists and pulls your pastes and env groups, write also creates them."
-    >
+    <SettingsSection title={t("apiTokens")} description={t("forTheSniptideCLICodingAgents")}>
       <form
         className="flex flex-col gap-4 border border-border p-4"
         onSubmit={(event) => {
@@ -70,9 +72,9 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
               const result = await createApiToken({ name, write, expiry })
               if (!result.ok) return setStatus({ ok: false, message: result.error })
               setCreated(result.token)
-              setStatus({ ok: true, message: "Token created." })
+              setStatus({ ok: true, message: t("tokenCreated") })
             } catch {
-              return setStatus({ ok: false, message: "Couldn't create the token. Try again." })
+              return setStatus({ ok: false, message: t("couldnTCreateTheTokenTry") })
             }
             form.reset()
             router.refresh()
@@ -83,14 +85,14 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
           name="name"
           required
           maxLength={60}
-          aria-label="Token name"
-          placeholder="Token name, like “laptop CLI”"
+          aria-label={t("tokenName")}
+          placeholder={t("tokenNameLikeLaptopCLI")}
           className="h-10 text-base lg:text-sm"
         />
         <SettingRow
           id="token-write-label"
-          label="Write access"
-          description="Create pastes and push env groups. Off means read-only."
+          label={t("writeAccess")}
+          description={t("createPastesAndPushEnvGroups")}
         >
           <Switch
             aria-labelledby="token-write-label"
@@ -98,19 +100,19 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
             onCheckedChange={(checked) => setWrite(checked)}
           />
         </SettingRow>
-        <SettingRow id="token-expiry-label" label="Expires">
+        <SettingRow id="token-expiry-label" label={t("expires")}>
           <SegmentedControl
             aria-labelledby="token-expiry-label"
             value={expiry}
             onValueChange={setExpiry}
-            options={expiryOptions}
+            options={expiryOptions.map((option) => ({ ...option, label: t(option.label) }))}
             className="shrink-0"
             itemClassName="px-2 whitespace-nowrap"
           />
         </SettingRow>
         <Button type="submit" size="lg" loading={pending} className="self-start">
           <KeyRoundIcon />
-          {pending ? "Creating…" : "Create token"}
+          {pending ? t("creating") : t("createToken")}
         </Button>
         <SaveStatus status={status} />
       </form>
@@ -119,7 +121,7 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
 
       {tokens.length ? (
         <ul
-          aria-label="Your API tokens"
+          aria-label={t("yourAPITokens")}
           className="flex flex-col divide-y divide-border border border-border"
         >
           {tokens.map((token) => (
@@ -130,9 +132,13 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
                   {token.prefix}… · {token.scopes.join(" + ")}
                 </span>
                 <span className="text-[12px] text-muted-foreground">
-                  Created {formatDate(token.createdAt)} ·{" "}
-                  {token.lastUsedAt ? `used ${timeAgo(token.lastUsedAt)}` : "never used"}
-                  {token.expiresAt ? ` · expires ${formatDate(token.expiresAt)}` : ""}
+                  {t("tokenCreatedAt", { date: formatDate(token.createdAt, locale) })} ·{" "}
+                  {token.lastUsedAt
+                    ? t("tokenUsedAt", { time: timeAgo(token.lastUsedAt, Date.now(), locale) })
+                    : t("neverUsed")}
+                  {token.expiresAt
+                    ? ` · ${t("tokenExpiresAt", { date: formatDate(token.expiresAt, locale) })}`
+                    : ""}
                 </span>
               </div>
               <Button
@@ -142,43 +148,45 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
                 onClick={() =>
                   startTransition(async () => {
                     const result = await runAction(() => revokeApiToken(token.id), {
-                      success: "Token revoked",
-                      error: "Couldn't revoke the token. Try again.",
+                      success: t("tokenRevoked"),
+                      error: t("couldnTRevokeTheTokenTry"),
                     })
                     if (result.ok) router.refresh()
                   })
                 }
               >
-                Revoke
+                {t("revoke")}
               </Button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-[13px] text-muted-foreground">No tokens yet.</p>
+        <p className="text-[13px] text-muted-foreground">{t("noTokensYet")}</p>
       )}
       <a
         href="/docs/api"
         className="text-[13px] text-foreground underline underline-offset-4 hover:text-primary"
       >
-        API reference
+        {t("apiReference")}
       </a>
     </SettingsSection>
   )
 }
 
 export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
+  const t = useTranslations("Settings")
+  const locale: Locale = useLocale()
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
 
   return (
     <SettingsSection
-      title="Env groups"
-      description="Environment variables you sync with sniptide env. Values are encrypted at rest and only shown to the CLI."
+      title={t("envGroups")}
+      description={t("environmentVariablesYouSyncWithSniptide")}
     >
       {groups.length ? (
         <ul
-          aria-label="Your env groups"
+          aria-label={t("yourEnvGroups")}
           className="flex flex-col divide-y divide-border border border-border"
         >
           {groups.map((group) => (
@@ -186,8 +194,10 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate font-mono text-sm">{group.slug}</span>
                 <span className="text-[12px] text-muted-foreground">
-                  {group.variables} variable{group.variables === 1 ? "" : "s"} · updated{" "}
-                  {timeAgo(group.updatedAt)}
+                  {t("groupUpdated", {
+                    count: group.variables,
+                    time: timeAgo(group.updatedAt, Date.now(), locale),
+                  })}
                 </span>
               </div>
               <Button
@@ -197,14 +207,14 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
                 onClick={() =>
                   startTransition(async () => {
                     const result = await runAction(() => deleteEnvGroup(group.slug), {
-                      success: "Env group deleted",
-                      error: "Couldn't delete the env group. Try again.",
+                      success: t("envGroupDeleted"),
+                      error: t("couldnTDeleteTheEnvGroup"),
                     })
                     if (result.ok) router.refresh()
                   })
                 }
               >
-                Delete
+                {t("delete")}
               </Button>
             </li>
           ))}
@@ -212,10 +222,11 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
       ) : (
         <div className="flex flex-col items-start gap-2 border border-dashed border-input p-5">
           <TerminalIcon className="size-5 text-muted-foreground" />
-          <p className="text-sm font-medium">No env groups yet</p>
+          <p className="text-sm font-medium">{t("noEnvGroupsYet")}</p>
           <p className="text-[13px] text-muted-foreground">
-            Push a project's .env with <code className="font-mono">sniptide env push my-app</code>,
-            then pull it on another machine or run a command with it.
+            {t.rich("pushEnvHint", {
+              command: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
         </div>
       )}

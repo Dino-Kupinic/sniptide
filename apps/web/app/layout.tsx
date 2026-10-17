@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, JetBrains_Mono, Stack_Sans_Headline, Stack_Sans_Notch } from "next/font/google"
+import { NextIntlClientProvider } from "next-intl"
+import { getLocale, getTranslations } from "next-intl/server"
 
 import "@sniptide/ui/globals.css"
 import { Toaster } from "@sniptide/ui/components/toast"
@@ -40,14 +42,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const [locale, t] = await Promise.all([getLocale(), getTranslations("Core")])
   return (
     <html
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
       className={cn(
         "overscroll-none antialiased font-sans",
@@ -58,8 +61,10 @@ export default function RootLayout({
       )}
     >
       <body className="overscroll-none">
-        <ThemeProvider>{children}</ThemeProvider>
-        <Toaster />
+        <NextIntlClientProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </NextIntlClientProvider>
+        <Toaster dismissLabel={t("dismiss")} />
         <Analytics />
       </body>
     </html>

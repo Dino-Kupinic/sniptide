@@ -4,16 +4,18 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { isActivePath, mobileTabs } from "./nav-config"
 
 // Bottom tab bar below lg. "More" stands in for everything the sidebar holds beyond the
 // three main tabs, so it lights up on Settings, Shared with me, Trash and collections.
 export function TabBar() {
+  const t = useTranslations("Workspace")
   const pathname = usePathname()
 
   return (
     <nav
-      aria-label="Main"
+      aria-label={t("main")}
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <div className="flex h-14 items-center justify-around px-2">
@@ -26,7 +28,7 @@ export function TabBar() {
         ))}
         <Link
           href="/new"
-          aria-label="New paste"
+          aria-label={t("new_paste")}
           className="flex w-15 justify-center outline-none focus-visible:[&>span]:ring-2 focus-visible:[&>span]:ring-ring/40 focus-visible:[&>span]:ring-offset-2"
         >
           <span className="flex h-10 w-12 items-center justify-center bg-primary text-primary-foreground">
@@ -46,6 +48,7 @@ export function TabBar() {
 }
 
 function Tab({ tab, active }: { tab: (typeof mobileTabs)[number]; active: boolean }) {
+  const t = useTranslations("Workspace")
   return (
     <Link
       href={tab.href}
@@ -56,7 +59,7 @@ function Tab({ tab, active }: { tab: (typeof mobileTabs)[number]; active: boolea
       )}
     >
       <tab.icon className="size-[22px]" />
-      {tab.label}
+      {t(tab.label)}
     </Link>
   )
 }

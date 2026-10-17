@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server"
 import { AnalyticsBreadcrumb } from "@/components/analytics-page/breadcrumb"
 import { AnalyticsControls } from "@/components/analytics-page/controls"
 import { Overview } from "@/components/analytics-page/overview"
@@ -14,21 +15,30 @@ import { parseRange } from "@/lib/pastes/analytics"
 import { getAnalyticsReport } from "@/lib/pastes/analytics-report"
 import { getSiteOrigin } from "@/lib/site"
 
-export const metadata = { title: "Analytics · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("Core")
+  return { title: `${t("analytics")} · Sniptide` }
+}
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
 export default async function Page({ searchParams }: PageProps<"/analytics">) {
+  const locale = await getLocale()
+  const t = await getTranslations("Core")
   const query = await searchParams
   const [, report, { host }] = await Promise.all([
     requireSession(),
-    getAnalyticsReport({
-      range: parseRange(first(query.range)),
-      paste: first(query.paste),
-      collection: first(query.collection),
-    }),
+    getAnalyticsReport(
+      {
+        range: parseRange(first(query.range)),
+        paste: first(query.paste),
+        collection: first(query.collection),
+      },
+      Date.now(),
+      locale,
+    ),
     getSiteOrigin(),
   ])
   const views = report.kpis[0]?.value ?? 0
@@ -38,13 +48,13 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
       <AnalyticsBreadcrumb />
       <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
         <PageHeader
-          title="Analytics"
+          title={t("analytics")}
           description={
             report.scope?.type === "paste"
-              ? `Views of ${report.scope.title}`
+              ? t("viewsOf", { title: report.scope.title })
               : report.scope
-                ? `Views across ${report.pasteCount} pastes in ${report.scope.title}`
-                : `Views across all ${report.pasteCount} pastes`
+                ? t("viewsIn", { count: report.pasteCount, title: report.scope.title })
+                : t("viewsAll", { count: report.pasteCount })
           }
           actions={
             <AnalyticsControls

@@ -1,22 +1,26 @@
+import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
 import { getSiteOrigin } from "@/lib/site"
 
-export const metadata = { title: "Sign in · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("Auth")
+  return { title: t("signInTitle") }
+}
 
 export default async function Page() {
-  const { host } = await getSiteOrigin()
+  const [{ host }, t] = await Promise.all([getSiteOrigin(), getTranslations("Auth")])
   return (
     <AuthScreen
-      title="Welcome back"
-      subtitle="Sign in to get to your pastes."
-      legal="By continuing you agree to the Terms and Privacy Policy."
+      title={t("welcomeBack")}
+      subtitle={t("signInSubtitle")}
+      legal={t("signInLegal")}
       pitch={{
-        title: ["Short links", "for your code."],
-        body: "Paste code, choose when it expires, and share the link. Every paste shows how often it was opened.",
+        title: [t("signInPitchTitle1"), t("signInPitchTitle2")],
+        body: t("signInPitchBody"),
         link: `${host}/k7Qe2x`,
-        note: "expires in 6 days",
+        note: t("expiresInDays", { days: 6 }),
       }}
     >
       <SignInForm

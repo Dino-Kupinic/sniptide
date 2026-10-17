@@ -11,6 +11,7 @@ import {
 import { Button } from "@sniptide/ui/components/button"
 import { RotateCcwIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { runAction } from "@/lib/feedback"
 import { restoreRevision } from "@/lib/pastes/actions"
@@ -26,6 +27,7 @@ export function RestoreRevision({
   revisionId: number
   number: number
 }) {
+  const t = useTranslations("Paste")
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [pending, startTransition] = React.useTransition()
@@ -36,24 +38,20 @@ export function RestoreRevision({
         variant="ghost"
         size="xs"
         className="-my-0.5 shrink-0 text-muted-foreground"
-        aria-label={`Restore revision ${number}`}
+        aria-label={t("restoreRevision", { number })}
         onClick={() => setOpen(true)}
       >
         <RotateCcwIcon />
-        Restore
+        {t("restore")}
       </Button>
 
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
-          <AlertDialogTitle>Restore revision {number}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The title, description and files go back to how they were then. The link, visibility and
-            other settings stay as they are. What's there now stays in the history, so you can
-            restore it again.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("restoreRevisionQuestion", { number })}</AlertDialogTitle>
+          <AlertDialogDescription>{t("theTitleDescriptionAndFilesGo")}</AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" size="lg" />}>
-              Cancel
+              {t("cancel")}
             </AlertDialogClose>
             <Button
               size="lg"
@@ -61,8 +59,8 @@ export function RestoreRevision({
               onClick={() =>
                 startTransition(async () => {
                   const result = await runAction(() => restoreRevision(slug, revisionId), {
-                    success: `Restored revision ${number}`,
-                    error: "Couldn't restore that version. Try again.",
+                    success: t("restoredRevision", { number }),
+                    error: t("couldnTRestoreThatVersionTry"),
                   })
                   if (!result.ok) return
                   setOpen(false)
@@ -70,7 +68,7 @@ export function RestoreRevision({
                 })
               }
             >
-              {pending ? "Restoring…" : "Restore"}
+              {pending ? t("restoring") : t("restore")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

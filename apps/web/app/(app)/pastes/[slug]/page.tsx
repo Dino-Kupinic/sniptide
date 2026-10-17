@@ -2,6 +2,7 @@ import { Button } from "@sniptide/ui/components/button"
 import { ChevronLeftIcon, ClockIcon, CopyIcon, PencilIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
 import { FileViewer } from "@/components/paste/file-viewer"
 import {
@@ -39,20 +40,19 @@ import {
 } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
 import { WEBHOOK_TARGETS } from "@/lib/pastes/webhook-url"
-import { indentLabel } from "@/lib/preferences"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
   const paste = await getPasteMeta((await params).slug)
-  return { title: paste ? `${paste.title} · Sniptide` : "Paste not found · Sniptide" }
-}
-
-function expiresLabel(paste: Paste) {
-  return paste.expiresAt ? formatDateTime(paste.expiresAt) : "Never"
+  const t = await getTranslations("Core")
+  return { title: paste ? `${paste.title} · Sniptide` : `${t("pasteNotFound")} · Sniptide` }
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/pastes/[slug]">) {
   const { slug } = await params
+  const [t, locale] = await Promise.all([getTranslations("Core"), getLocale()])
+  const expiresLabel = (paste: Paste) =>
+    paste.expiresAt ? formatDateTime(paste.expiresAt, locale) : t("never")
   const revisionParam = Number((await searchParams).revisions)
   const revisionPage =
     Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1
@@ -78,8 +78,8 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   const first = files[0]
   const collection = owned ? collections.find((c) => c.slug === paste.collection) : undefined
   const parent = owned
-    ? { label: "My pastes", href: "/pastes" }
-    : { label: "Shared with me", href: "/shared" }
+    ? { label: t("pastes"), href: "/pastes" }
+    : { label: t("shared"), href: "/shared" }
   const revision = paste.revisionCount
   const viewer = session?.user
   const shareDialog = (trigger: "button" | "icon") =>
@@ -133,7 +133,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             nativeButton={false}
           >
             <PencilIcon />
-            Edit
+            {t("edit")}
           </Button>
         ) : null}
         {shareDialog("button")}
@@ -144,7 +144,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           nativeButton={false}
         >
           <CopyIcon />
-          Duplicate
+          {t("duplicate")}
         </Button>
         <CopyLinkButton url={url} />
       </HeaderActions>
@@ -204,14 +204,18 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           <MetaDivider />
           <span className="flex items-center gap-1.5 font-medium text-foreground">
             <ClockIcon className="size-3.5" />
-            Edited {timeAgo(paste.updatedAt)}
+            {t("edited", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
           </span>
           {paste.owner ? (
             <>
               <MetaDivider />
               <span>
-                by {paste.owner.name}
-                {share ? ` (can ${share.access})` : ""}
+                {share
+                  ? t("byOwnerAccess", {
+                      name: paste.owner.name,
+                      access: t(share.access === "edit" ? "canEdit" : "canView"),
+                    })
+                  : t("byOwner", { name: paste.owner.name })}
               </span>
             </>
           ) : null}
@@ -234,10 +238,13 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             footerClassName="hidden lg:flex"
             footer={
               <>
-                <span>UTF-8 · LF · {indentLabel(preferences.indentation)}</span>
                 <span>
-                  Revision {revision} of {revision}
+                  UTF-8 · LF ·{" "}
+                  {preferences.indentation === "tab"
+                    ? t("indentTabs")
+                    : t("indentSpaces", { count: Number(preferences.indentation) })}
                 </span>
+                <span>{t("revision", { number: revision, total: revision })}</span>
               </>
             }
           />
@@ -253,17 +260,17 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               <>
                 <p className="flex items-baseline gap-1.5">
                   <span className="font-heading text-3xl font-bold tracking-[-0.02em] tabular-nums">
-                    {formatNumber(paste.views)}
+                    {formatNumber(paste.views, locale)}
                   </span>
-                  <span className="text-xs text-muted-foreground">views</span>
+                  <span className="text-xs text-muted-foreground">{t("views")}</span>
                   <span className="ml-auto text-xs text-muted-foreground">
-                    {formatNumber(paste.uniqueViews)} unique
+                    {t("unique", { count: paste.uniqueViews })}
                   </span>
                 </p>
                 <ViewsSparkline values={paste.viewsByDay.slice(-14)} />
                 <p className="flex justify-between text-xs text-muted-foreground">
-                  <span>14 days ago</span>
-                  <span>Today</span>
+                  <span>{t("fourteenDays")}</span>
+                  <span>{t("today")}</span>
                 </p>
               </>
             }
@@ -294,12 +301,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                             </span>
                             {current ? (
                               <span className="border border-border px-1 text-[11px] text-muted-foreground">
-                                Current
+                                {t("current")}
                               </span>
                             ) : null}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            #{number} · {timeAgo(entry.createdAt)}
+                            #{number} · {timeAgo(entry.createdAt, Date.now(), locale)}
                           </span>
                         </span>
                         {canEdit && !current && entry.restorable ? (
@@ -317,7 +324,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                         href={`?revisions=${paste.revisionPage - 1}`}
                         scroll={false}
                       >
-                        Newer
+                        {t("newer")}
                       </Link>
                     ) : (
                       <span />
@@ -331,7 +338,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                         href={`?revisions=${paste.revisionPage + 1}`}
                         scroll={false}
                       >
-                        Older
+                        {t("older")}
                       </Link>
                     ) : (
                       <span />
@@ -349,9 +356,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         <div className="mx-4">
           {owned ? (
             <SharingPanel state={sharingState}>
-              <SettingRow label="Views" list>
+              <SettingRow label={t("viewsLabel")} list>
                 <span className="text-muted-foreground">
-                  {formatNumber(paste.views)} · {formatNumber(paste.uniqueViews)} unique
+                  {formatNumber(paste.views, locale)} · {t("unique", { count: paste.uniqueViews })}
                 </span>
               </SettingRow>
             </SharingPanel>
@@ -359,16 +366,19 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <dl className="divide-y divide-border border border-border text-[15px]">
               {share ? (
                 <MobileRow
-                  label="Your access"
-                  value={`${share.access === "edit" ? "Can edit" : "Can view"} · from ${paste.owner?.name}`}
+                  label={t("yourAccess")}
+                  value={t("accessFrom", {
+                    access: t(share.access === "edit" ? "canEdit" : "canView"),
+                    name: paste.owner?.name ?? "",
+                  })}
                 />
               ) : null}
-              <MobileRow label="Expires" value={expiresLabel(paste)} />
+              <MobileRow label={t("expiresLabel")} value={expiresLabel(paste)} />
               <MobileRow
-                label="Views"
-                value={`${formatNumber(paste.views)} · ${formatNumber(paste.uniqueViews)} unique`}
+                label={t("viewsLabel")}
+                value={`${formatNumber(paste.views, locale)} · ${t("unique", { count: paste.uniqueViews })}`}
               />
-              <MobileRow label="Revisions" value={String(revision)} />
+              <MobileRow label={t("revisions")} value={String(revision)} />
             </dl>
           )}
         </div>
@@ -384,7 +394,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             nativeButton={false}
           >
             <PencilIcon />
-            Edit
+            {t("edit")}
           </Button>
         ) : null}
         <ShareButton
@@ -398,7 +408,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 }
 
 // The recipient's "Shared with you" panel: who shared it, what they can do, and a way out.
-function SharedWithYou({
+async function SharedWithYou({
   slug,
   title,
   owner,
@@ -409,6 +419,7 @@ function SharedWithYou({
   owner: NonNullable<Paste["owner"]>
   share: NonNullable<Awaited<ReturnType<typeof getShare>>>
 }) {
+  const [t, locale] = await Promise.all([getTranslations("Core"), getLocale()])
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5">
@@ -423,11 +434,13 @@ function SharedWithYou({
         />
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-medium">{owner.name}</span>
-          <span className="text-xs text-muted-foreground">Shared {timeAgo(share.sharedAt)}</span>
+          <span className="text-xs text-muted-foreground">
+            {t("sharedTime", { time: timeAgo(share.sharedAt, Date.now(), locale) })}
+          </span>
         </span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Your access</span>
+        <span className="text-muted-foreground">{t("yourAccess")}</span>
         <span
           className={
             share.access === "edit"
@@ -435,13 +448,11 @@ function SharedWithYou({
               : "border border-border px-2 py-0.5 font-medium"
           }
         >
-          {share.access === "edit" ? "Can edit" : "Can view"}
+          {t(share.access === "edit" ? "canEdit" : "canView")}
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        {share.access === "edit"
-          ? `You can edit this paste. Sharing and deleting stay with ${owner.name}.`
-          : `You can read and copy this paste. Only ${owner.name} can change it.`}
+        {t(share.access === "edit" ? "editPermission" : "viewPermission", { name: owner.name })}
       </p>
       <LeaveShareButton slug={slug} title={title} className="h-8 text-[13px]" />
     </div>

@@ -6,6 +6,7 @@ import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
 import { USERNAME_PATTERN } from "@workspace/auth/username"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { AutosaveStatus } from "@/components/autosave-status"
 import { useSiteHost } from "@/components/site-host"
@@ -74,6 +75,7 @@ function useUsernameCheck(username: string, current: string) {
 // The name saves after a pause in typing. The username changes the address of the profile, so it
 // only counts once typing stops (leaving the field or Enter) and the name is free.
 export function ProfileSection({ profile }: { profile: ProfileState }) {
+  const t = useTranslations("Settings")
   const host = useSiteHost()
   const [name, setName] = React.useState(profile.name)
   const [username, setUsername] = React.useState(profile.username)
@@ -96,7 +98,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
   const { state } = useAutosave({
     value: profileValue,
     initial: { name: profile.name, username: profile.username },
-    validate: (next) => (next.name ? null : "enter a display name"),
+    validate: (next) => (next.name ? null : t("enterADisplayName")),
     async save(sent) {
       const result = await updateProfile(sent)
       if (!result.ok) return result
@@ -114,16 +116,16 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
         setImage(previous)
         setStatus({
           ok: false,
-          message: result?.error ?? "Couldn't update your avatar. Try again.",
+          message: result?.error ?? t("couldnTUpdateYourAvatarTry"),
         })
       } else {
-        setStatus({ ok: true, message: next ? "Avatar updated." : "Avatar removed." })
+        setStatus({ ok: true, message: next ? t("avatarUpdated") : t("avatarRemoved") })
       }
     })
   }
 
   return (
-    <SettingsSection title="Profile" description="Shown on your public pastes and share pages.">
+    <SettingsSection title={t("profile")} description={t("shownOnYourPublicPastesAnd")}>
       <div className="flex items-center gap-3">
         <Avatar className="size-14 font-heading text-lg font-bold">
           {image ? <AvatarImage src={image} alt="" /> : null}
@@ -143,7 +145,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
             try {
               changeAvatar(await resizeAvatar(file))
             } catch {
-              setStatus({ ok: false, message: "That image couldn't be read." })
+              setStatus({ ok: false, message: t("thatImageCouldnTBeRead") })
             }
           }}
         />
@@ -153,7 +155,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
           disabled={pending}
           onClick={() => fileRef.current?.click()}
         >
-          Upload
+          {t("upload")}
         </Button>
         {image ? (
           <Button
@@ -163,7 +165,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
             onClick={() => changeAvatar(null)}
             className="text-muted-foreground"
           >
-            Remove
+            {t("remove")}
           </Button>
         ) : null}
       </div>
@@ -171,7 +173,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
       <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="display-name">Display name</Label>
+            <Label htmlFor="display-name">{t("displayName")}</Label>
             <Input
               id="display-name"
               value={name}
@@ -182,7 +184,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="settings-username">Username</Label>
+            <Label htmlFor="settings-username">{t("username")}</Label>
             <div
               className={cn(
                 "flex h-10 items-center border border-input focus-within:border-2 focus-within:border-primary",
@@ -218,18 +220,18 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
                 )}
               >
                 {usernameStatus === "available"
-                  ? "Available"
+                  ? t("available")
                   : usernameStatus === "taken"
-                    ? "Taken"
+                    ? t("taken")
                     : usernameStatus === "invalid"
-                      ? "Invalid"
+                      ? t("invalid")
                       : ""}
               </span>
             </div>
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="settings-email">Email</Label>
+          <Label htmlFor="settings-email">{t("email")}</Label>
           <div className="flex h-10 items-center border border-input bg-sidebar px-3">
             <input
               id="settings-email"
@@ -244,11 +246,11 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
                 profile.emailVerified ? "text-link" : "text-muted-foreground",
               )}
             >
-              {profile.emailVerified ? "Verified" : "Not verified"}
+              {profile.emailVerified ? t("verified") : t("notVerified")}
             </span>
           </div>
           <p id="settings-email-note" className="text-xs text-muted-foreground">
-            Changing your email needs verification by mail, which isn't set up yet.
+            {t("changingYourEmailNeedsVerificationBy")}
           </p>
         </div>
         <div className="flex items-center gap-3">

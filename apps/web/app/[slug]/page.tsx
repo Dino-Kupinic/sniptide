@@ -3,13 +3,14 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
+import { getLocale, getTranslations } from "next-intl/server"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { LanguageLabel } from "@/components/paste/language-marker"
 import { RevealPaste } from "@/components/paste/reveal-paste"
 import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
-import { byteLength, formatBytes, formatNumber, lineCount, timeAgo, timeUntil } from "@/lib/format"
+import { byteLength, formatBytes, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
 import { previewMetadata } from "@/lib/pastes/preview"
@@ -39,6 +40,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 // Public page for a paste at sniptide.com/<slug>, from the "Share page (public)" artboards.
 export default async function Page({ params }: PageProps<"/[slug]">) {
   const { slug } = await params
+  const [t, locale] = await Promise.all([getTranslations("Core"), getLocale()])
   // Crawlers, link unfurlers, prefetches and scripts don't count as views.
   const read = await readSharedPaste(slug, { visit: isHumanVisit(await headers()) })
   if (read.status === "missing") notFound()
@@ -81,9 +83,9 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   const rawHref =
     rawAllowed && first ? `/${slug}/raw?file=${encodeURIComponent(first.name)}` : undefined
   const expires = paste.burnAfterRead
-    ? "Deleted after one view"
+    ? t("deletedAfterView")
     : paste.expiresAt
-      ? `Expires ${timeUntil(paste.expiresAt)}`
+      ? t("expires", { time: timeUntil(paste.expiresAt, Date.now(), locale) })
       : null
 
   return (
@@ -104,7 +106,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
                 {owner.initials}
               </span>
               <span className="text-foreground">@{owner.username}</span>
-              shared {timeAgo(paste.updatedAt).replace("min ago", "minutes ago")}
+              {t("sharedTime", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
             </p>
             <h1 className="font-heading text-[32px] leading-10 font-bold tracking-[-0.03em] lg:text-5xl lg:leading-[56px]">
               {paste.title}
@@ -114,7 +116,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
                 <LanguageLabel language={first.language} className="text-foreground/80" />
               ) : null}
               <span className="hidden lg:inline">
-                {formatNumber(lines)} lines · {formatBytes(bytes)}
+                {t("lineSize", { count: lines, size: formatBytes(bytes, locale) })}
               </span>
               {expires ? (
                 <span className="inline-flex items-center gap-1.5">
@@ -124,7 +126,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
               ) : null}
               <span className="inline-flex items-center gap-1.5">
                 <EyeIcon className="hidden size-3.5 lg:block" />
-                {formatNumber(paste.views)} views
+                {t("viewCount", { count: paste.views })}
               </span>
             </p>
           </div>
@@ -159,15 +161,16 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   )
 }
 
-function SignUpPrompt() {
+async function SignUpPrompt() {
+  const t = await getTranslations("Core")
   return (
     <p className="text-center text-[13px] text-muted-foreground lg:text-left">
-      Shared with Sniptide.{" "}
+      {t("sharedWithSniptide")}{" "}
       <a
         href={`${getAppOrigin()}/sign-up`}
         className="inline-flex items-center gap-1 font-medium text-link hover:underline"
       >
-        Create a free account
+        {t("createFree")}
         <ArrowRightIcon className="size-3.5" />
       </a>
     </p>

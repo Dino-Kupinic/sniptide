@@ -4,6 +4,7 @@ import { FormError } from "@sniptide/ui/components/form-error"
 import { Popover, PopoverContent, PopoverTrigger } from "@sniptide/ui/components/popover"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { renameCollection, setCollectionIcon } from "@/lib/collections/actions"
 import { type Collection, HUES, ICONS, MAX_NAME_LENGTH } from "@/lib/collections/types"
@@ -19,10 +20,11 @@ export function CollectionLookPicker({
   hue: Collection["hue"]
   onPick: (next: { icon?: Collection["icon"]; hue?: Collection["hue"] }) => void
 }) {
+  const t = useTranslations("Workspace")
   return (
     <Popover>
       <PopoverTrigger
-        aria-label="Choose an icon"
+        aria-label={t("choose_an_icon")}
         className="flex h-10 shrink-0 items-center gap-1 border border-input px-2.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
       >
         <CollectionIcon icon={icon} hue={hue} className="size-3.5" />
@@ -44,6 +46,7 @@ export function CollectionIconPicker({
   collection: Collection
   className?: string
 }) {
+  const t = useTranslations("Workspace")
   const [icon, setIcon] = React.useState(collection.icon)
   const [hue, setHue] = React.useState(collection.hue)
   const [error, setError] = React.useState<string | null>(null)
@@ -64,7 +67,7 @@ export function CollectionIconPicker({
       } catch {
         setIcon(icon)
         setHue(hue)
-        setError("Couldn't change the icon. Try again.")
+        setError(t("couldnt_change_the_icon_try_again"))
       }
     })
   }
@@ -78,7 +81,7 @@ export function CollectionIconPicker({
     startTransition(async () => {
       const result = await renameCollection(collection.slug, name).catch(() => null)
       setError(
-        result ? (result.ok ? null : result.error) : "Couldn't rename the collection. Try again.",
+        result ? (result.ok ? null : result.error) : t("couldnt_rename_the_collection_try_again"),
       )
     })
   }
@@ -86,7 +89,7 @@ export function CollectionIconPicker({
   return (
     <Popover onOpenChange={() => setError(null)}>
       <PopoverTrigger
-        aria-label={`Change icon for ${collection.name}`}
+        aria-label={t("change_icon_for", { name: collection.name })}
         className={cn(
           "relative z-10 flex size-5 shrink-0 items-center justify-center outline-none hover:bg-foreground/10 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10",
           className,
@@ -101,7 +104,7 @@ export function CollectionIconPicker({
           </span>
           <input
             key={collection.name}
-            aria-label="Collection name"
+            aria-label={t("collection_name")}
             defaultValue={collection.name}
             maxLength={MAX_NAME_LENGTH}
             autoComplete="off"
@@ -134,13 +137,14 @@ export function IconOptions({
   hue: Collection["hue"]
   onPick: (next: { icon?: Collection["icon"]; hue?: Collection["hue"] }) => void
 }) {
+  const t = useTranslations("Workspace")
   const id = React.useId()
 
   return (
     <>
       <div className="flex flex-col gap-2 px-3 pt-3 pb-1">
         <p id={`${id}-icon`} className="text-xs font-medium text-muted-foreground">
-          Icon
+          {t("icon")}
         </p>
         <fieldset
           aria-labelledby={`${id}-icon`}
@@ -150,7 +154,7 @@ export function IconOptions({
             <button
               key={option}
               type="button"
-              aria-label={option}
+              aria-label={t(option)}
               aria-pressed={option === icon}
               onClick={() => onPick({ icon: option })}
               className={cn(
@@ -166,7 +170,7 @@ export function IconOptions({
 
       <div className="flex flex-col gap-2 p-3">
         <p id={`${id}-hue`} className="text-xs font-medium text-muted-foreground">
-          Color
+          {t("color")}
         </p>
         <fieldset
           aria-labelledby={`${id}-hue`}
@@ -176,7 +180,7 @@ export function IconOptions({
             <button
               key={option}
               type="button"
-              aria-label={hueLabel[option]}
+              aria-label={t(hueLabel[option])}
               aria-pressed={option === hue}
               onClick={() => onPick({ hue: option })}
               className={cn(

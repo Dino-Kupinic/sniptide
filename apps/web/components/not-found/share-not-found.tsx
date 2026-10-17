@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl"
 import { getAppOrigin } from "@/lib/site"
 import { NotFoundButton } from "./not-found-button"
 import { Pixel404 } from "./pixel-404"
@@ -6,6 +7,7 @@ import { Pixel404 } from "./pixel-404"
 // artboards. Share links are served on the marketing domain through a proxy, so every link here
 // is a plain <a>, and the sign-in link goes to the app's own origin.
 export function ShareNotFound() {
+  const t = useTranslations("NotFound")
   const appOrigin = getAppOrigin()
 
   return (
@@ -19,18 +21,18 @@ export function ShareNotFound() {
       <div className="relative flex flex-col items-center">
         <Pixel404 className="w-[302px] sm:w-[536px]" />
         <h1 className="mt-10 text-center font-heading text-[34px] leading-[38px] font-bold tracking-[-0.025em] sm:mt-12 sm:text-[44px] sm:leading-[50px]">
-          This page is gone.
+          {t("shareHeading")}
         </h1>
         <p className="mt-3 max-w-[460px] text-center text-[15px] leading-[22px] text-muted-foreground sm:mt-3.5 sm:text-base sm:leading-6">
-          The link may have expired, been burned after reading, or never existed.
-          <span className="hidden sm:inline"> Check the address, or start a fresh paste.</span>
+          {t("shareDescription")}
+          <span className="hidden sm:inline"> {t("shareAdvice")}</span>
         </p>
         <div className="mt-7 flex w-full max-w-[440px] flex-col gap-2.5 sm:mt-8 sm:w-auto sm:max-w-none sm:flex-row sm:gap-3">
           <NotFoundButton href="/" external>
-            Back to home
+            {t("home")}
           </NotFoundButton>
           <NotFoundButton href={`${appOrigin}/new`} outline external>
-            Create a paste
+            {t("createPaste")}
           </NotFoundButton>
         </div>
       </div>

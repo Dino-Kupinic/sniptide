@@ -11,6 +11,7 @@ import {
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, EyeIcon, EyeOffIcon, XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
@@ -105,13 +106,14 @@ export function ExpiryChips({
   options: { value: Expiry; label: string }[]
   currentExpiry?: string
 }) {
+  const t = useTranslations("Paste")
   const all: { value: Expiry | "keep"; label: string }[] = currentExpiry
-    ? [{ value: "keep", label: "Keep" }, ...options]
+    ? [{ value: "keep", label: t("keep") }, ...options]
     : options
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div role="radiogroup" aria-label="Expires after" className="flex flex-wrap gap-1.5">
+      <div role="radiogroup" aria-label={t("expiresAfter")} className="flex flex-wrap gap-1.5">
         {all.map((option) => (
           // biome-ignore lint/a11y/useSemanticElements: styled chips acting as a radio group
           <button
@@ -131,7 +133,9 @@ export function ExpiryChips({
         ))}
       </div>
       {currentExpiry && value === "keep" ? (
-        <p className="text-xs text-muted-foreground">Currently {currentExpiry}.</p>
+        <p className="text-xs text-muted-foreground">
+          {t("currentExpiry", { expiry: currentExpiry })}
+        </p>
       ) : null}
     </div>
   )
@@ -149,6 +153,7 @@ export function SlugInput({
   onCommit?: () => void
   status: SlugStatus
 }) {
+  const t = useTranslations("Paste")
   const host = useSiteHost()
   return (
     <div className="flex flex-col gap-1">
@@ -162,12 +167,12 @@ export function SlugInput({
           {host}/
         </span>
         <input
-          aria-label="Custom link"
+          aria-label={t("customLink")}
           value={value}
           onChange={(event) => onChange(event.target.value.replace(/[^A-Za-z0-9_-]/g, ""))}
           onBlur={onCommit}
           onKeyDown={commitOnEnter(onCommit)}
-          placeholder="random"
+          placeholder={t("random")}
           maxLength={40}
           spellCheck={false}
           autoCapitalize="none"
@@ -175,21 +180,21 @@ export function SlugInput({
         />
         {status === "ok" ? (
           <CheckIcon
-            aria-label="Available"
+            aria-label={t("available")}
             className="mr-2.5 size-[15px] text-link"
             strokeWidth={2.5}
           />
         ) : null}
         {status === "taken" ? (
           <XIcon
-            aria-label="Taken"
+            aria-label={t("taken")}
             className="mr-2.5 size-[15px] text-destructive"
             strokeWidth={2.5}
           />
         ) : null}
       </div>
       {status === "taken" ? (
-        <p className="text-xs text-destructive">That link is taken or reserved.</p>
+        <p className="text-xs text-destructive">{t("thatLinkIsTakenOrReserved")}</p>
       ) : null}
     </div>
   )
@@ -204,19 +209,22 @@ export function CollectionSelect({
   onChange: (value: string | null) => void
   collections: Collection[]
 }) {
+  const t = useTranslations("Paste")
   if (collections.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        No collections yet.{" "}
-        <a
-          href="/collections"
-          target="_blank"
-          rel="noopener"
-          className="font-medium text-link hover:underline"
-        >
-          Create one
-        </a>{" "}
-        to file pastes under it.
+        {t.rich("createCollectionHint", {
+          link: (chunks) => (
+            <a
+              href="/collections"
+              target="_blank"
+              rel="noopener"
+              className="font-medium text-link hover:underline"
+            >
+              {chunks}
+            </a>
+          ),
+        })}
       </p>
     )
   }
@@ -226,19 +234,19 @@ export function CollectionSelect({
       value={value ?? NO_COLLECTION}
       onValueChange={(next) => onChange(next === NO_COLLECTION ? null : (next as string))}
       items={[
-        { value: NO_COLLECTION, label: "No collection" },
+        { value: NO_COLLECTION, label: t("noCollection") },
         ...collections.map((c) => ({ value: c.slug, label: c.name })),
       ]}
     >
       <SelectTrigger
-        aria-label="Collection"
+        aria-label={t("collection")}
         className="h-[34px] w-full px-2.5 font-mono text-[13px]"
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={NO_COLLECTION} className="font-sans text-muted-foreground">
-          No collection
+          {t("noCollection")}
         </SelectItem>
         {collections.map((c) => (
           <SelectItem key={c.slug} value={c.slug} className="font-mono text-[13px]">
@@ -302,11 +310,12 @@ export function PasswordInput({
   onCommit?: () => void
   placeholder: string
 }) {
+  const t = useTranslations("Paste")
   const [visible, setVisible] = React.useState(false)
   return (
     <div className="relative">
       <Input
-        aria-label="Paste password"
+        aria-label={t("pastePassword")}
         type={visible ? "text" : "password"}
         autoComplete="new-password"
         value={value}
@@ -318,7 +327,7 @@ export function PasswordInput({
       />
       <button
         type="button"
-        aria-label={visible ? "Hide password" : "Show password"}
+        aria-label={visible ? t("hidePassword") : t("showPassword")}
         onClick={() => setVisible((current) => !current)}
         className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
       >
