@@ -3,6 +3,7 @@
 import { TooltipProvider } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CommandMenuProvider } from "@/components/command-menu/command-menu"
 import { ShortcutsProvider } from "@/components/shortcuts/shortcuts-help"
@@ -27,6 +28,7 @@ export function AppShell({
   initialSidebar,
   ...sidebarProps
 }: SidebarProps & { initialSidebar: SidebarState; children: React.ReactNode }) {
+  const t = useTranslations("Workspace")
   const pathname = usePathname()
   const router = useRouter()
   const chrome = mobileChrome(pathname)
@@ -100,7 +102,7 @@ export function AppShell({
           >
             <div className="flex min-h-svh bg-background lg:bg-sidebar">
               <aside
-                aria-label="Sidebar"
+                aria-label={t("sidebar")}
                 style={{ width }}
                 className={cn(
                   "sticky top-0 hidden h-svh shrink-0 lg:block",
@@ -192,6 +194,7 @@ function ResizeHandle({
   onDrag: (width: number | null) => void
   onRelease: (width: number) => void
 }) {
+  const t = useTranslations("Workspace")
   const [dragging, setDragging] = React.useState(false)
 
   function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
@@ -238,7 +241,7 @@ function ResizeHandle({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize sidebar"
+      aria-label={t("resize_sidebar")}
       aria-valuemin={SIDEBAR_MIN_WIDTH}
       aria-valuemax={maxWidth}
       aria-valuenow={Math.round(width)}

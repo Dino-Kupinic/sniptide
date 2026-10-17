@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { createCollection } from "@/lib/collections/actions"
 import { type Collection, defaultHue } from "@/lib/collections/types"
@@ -22,6 +23,7 @@ export function NewCollectionDialog({
   existing: number
   onCreated?: (slug: string) => void
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const [look, setLook] = React.useState<Pick<Collection, "icon" | "hue">>({
     icon: "square",
@@ -37,12 +39,12 @@ export function NewCollectionDialog({
     <CollectionNameDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="New collection"
-      description="Group related pastes under one name."
-      submitLabel="Create collection"
-      pendingLabel="Creating…"
-      label="Name"
-      placeholder="e.g. api-snippets"
+      title={t("new_collection")}
+      description={t("group_related_pastes_under_one_name")}
+      submitLabel={t("create_collection")}
+      pendingLabel={t("creating")}
+      label={t("name")}
+      placeholder={t("eg_apisnippets")}
       leading={
         <CollectionLookPicker
           icon={look.icon}

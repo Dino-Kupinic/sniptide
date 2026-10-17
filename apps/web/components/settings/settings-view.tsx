@@ -6,7 +6,9 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronRightIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import type { TokenSummary } from "@/lib/api/tokens"
 import { authClient } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
@@ -20,14 +22,6 @@ import { SettingsSection } from "./section"
 
 export type SettingsTab = "general" | "defaults" | "notifications" | "api" | "billing"
 
-const tabs: { value: SettingsTab; label: string }[] = [
-  { value: "general", label: "General" },
-  { value: "defaults", label: "Paste defaults" },
-  { value: "notifications", label: "Notifications" },
-  { value: "api", label: "API tokens" },
-  { value: "billing", label: "Billing" },
-]
-
 export interface WorkspaceCounts {
   shared: number
   collections: number
@@ -36,12 +30,13 @@ export interface WorkspaceCounts {
 }
 
 function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) {
+  const t = useTranslations("Settings")
   return (
     <div className="flex flex-col gap-3 border border-border p-4">
       <div className="flex items-center justify-between text-[15px] lg:text-sm">
-        <span className="font-medium">Storage</span>
+        <span className="font-medium">{t("storage")}</span>
         <span className="text-muted-foreground tabular-nums">
-          {usedMb} / {limitMb} MB
+          {t("storageUsage", { used: usedMb, limit: limitMb })}
         </span>
       </div>
       <Progress value={(usedMb / limitMb) * 100} />
@@ -66,6 +61,15 @@ export function SettingsView({
   storage: { usedMb: number; limitMb: number }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
+  const t = useTranslations("Settings")
+  const workspace = useTranslations("Workspace")
+  const tabs: { value: SettingsTab; label: string }[] = [
+    { value: "general", label: t("general") },
+    { value: "defaults", label: t("pasteDefaults") },
+    { value: "notifications", label: workspace("notifications") },
+    { value: "api", label: t("apiTokens") },
+    { value: "billing", label: t("billing") },
+  ]
   const router = useRouter()
   const [tab, setTab] = React.useState(initialTab)
 
@@ -83,23 +87,23 @@ export function SettingsView({
     <div className="flex flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-6 lg:gap-6 lg:p-7">
       <div className="flex flex-col gap-1">
         <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
-          Settings
+          {t("settings")}
         </h1>
         <p className="hidden text-sm text-muted-foreground lg:block">
-          Manage your profile, paste defaults and API access.
+          {t("manageYourProfilePasteDefaultsAnd")}
         </p>
       </div>
 
       {/* On phones Settings is also the "More" tab, so it carries the workspace links. */}
-      <section aria-label="Workspace" className="flex flex-col gap-2 lg:hidden">
+      <section aria-label={t("workspace")} className="flex flex-col gap-2 lg:hidden">
         <h2 className="px-1 text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase">
-          Workspace
+          {t("workspace")}
         </h2>
         <nav className="flex flex-col divide-y divide-border border border-border text-[15px]">
           {[
-            { href: "/shared", label: "Shared with me", count: counts.shared },
-            { href: "/collections", label: "Collections", count: counts.collections },
-            { href: "/trash", label: "Trash", count: counts.trash },
+            { href: "/shared", label: t("sharedWithMe"), count: counts.shared },
+            { href: "/collections", label: t("collections"), count: counts.collections },
+            { href: "/trash", label: t("trash"), count: counts.trash },
           ].map((item) => (
             <Link
               key={item.href}
@@ -118,7 +122,7 @@ export function SettingsView({
 
       <div
         role="tablist"
-        aria-label="Settings"
+        aria-label={t("settings")}
         className="-mx-4 flex gap-6 overflow-x-auto border-b border-border px-4 lg:mx-0 lg:px-0"
       >
         {tabs.map((item) => (
@@ -149,6 +153,9 @@ export function SettingsView({
         {tab === "general" ? (
           <>
             <ProfileSection profile={profile} />
+            <SettingsSection title={t("language")} description={t("languageDescription")}>
+              <LanguageSwitcher />
+            </SettingsSection>
             <EditorSection initial={preferences} />
             <DeleteAccountSection pasteCount={counts.pastes} />
           </>
@@ -168,15 +175,15 @@ export function SettingsView({
           </>
         ) : null}
         {tab === "billing" ? (
-          <SettingsSection title="Plan" description="Sniptide is free while it's in early access.">
+          <SettingsSection title={t("plan")} description={t("sniptideIsFreeWhileItS")}>
             <div className="flex items-center justify-between border border-border p-4">
               <div className="flex flex-col">
-                <span className="text-sm font-medium">Free</span>
+                <span className="text-sm font-medium">{t("free")}</span>
                 <span className="text-[13px] text-muted-foreground">
-                  {storage.limitMb} MB of pastes, unlimited share links
+                  {t("planStorage", { limit: storage.limitMb })}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">No payment method needed</span>
+              <span className="text-xs text-muted-foreground">{t("noPaymentMethodNeeded")}</span>
             </div>
             <StorageMeter usedMb={storage.usedMb} limitMb={storage.limitMb} />
           </SettingsSection>
@@ -196,7 +203,7 @@ export function SettingsView({
             router.refresh()
           }}
         >
-          Sign out
+          {t("signOut")}
         </Button>
       </div>
     </div>

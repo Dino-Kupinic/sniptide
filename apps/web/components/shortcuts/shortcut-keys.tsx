@@ -1,14 +1,9 @@
 "use client"
 
 import { Kbd } from "@sniptide/ui/components/kbd"
+import { useTranslations } from "next-intl"
 import * as React from "react"
-import {
-  detectMac,
-  formatShortcut,
-  type ShortcutId,
-  shortcut,
-  shortcutLabel,
-} from "@/lib/shortcuts"
+import { detectMac, formatShortcut, type ShortcutId, shortcut } from "@/lib/shortcuts"
 
 function subscribe() {
   return () => {}
@@ -41,5 +36,10 @@ export function ShortcutKeys({ id, className }: { id: ShortcutId; className?: st
 // The same as plain text, for tooltips.
 export function useShortcutLabel(id: ShortcutId) {
   const mac = useIsMac()
-  return shortcutLabel(shortcut(id), mac)
+  const t = useTranslations("Workspace")
+  const item = shortcut(id)
+  const labels = formatShortcut(item, mac)
+  return item.sequence
+    ? t("then_keys", { first: labels[0] ?? "", second: labels[1] ?? "" })
+    : labels.join("")
 }

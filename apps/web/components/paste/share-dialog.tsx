@@ -12,6 +12,7 @@ import {
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LockIcon, UserPlusIcon, UsersIcon, XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
@@ -28,9 +29,9 @@ import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
 import { WebhookShare } from "./webhook-share"
 
 const visibilityNote: Record<Visibility, { icon: typeof LockIcon; text: string }> = {
-  private: { icon: LockIcon, text: "Private. Everyone else gets a 404." },
-  unlisted: { icon: EyeIcon, text: "Unlisted. Anyone with the link can open it too." },
-  public: { icon: GlobeIcon, text: "Public. Anyone can find and open it too." },
+  private: { icon: LockIcon, text: "privateEveryoneElseGetsA404" },
+  unlisted: { icon: EyeIcon, text: "unlistedAnyoneWithTheLinkCan" },
+  public: { icon: GlobeIcon, text: "publicAnyoneCanFindAndOpen" },
 }
 
 // The owner's Share dialog from the Paper "Sharing" page: invite people with a Sniptide account
@@ -55,6 +56,8 @@ export function ShareDialog({
   webhookTargets?: WebhookTarget[]
   webhookAllowed?: boolean
 }) {
+  const t = useTranslations("Paste")
+  const feedbackT = useTranslations("Core")
   const [people, setPeople] = React.useState(initialPeople)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
@@ -78,7 +81,7 @@ export function ShareDialog({
       if (ok && success) toast.success(success)
       return ok
     } catch {
-      setError("Something went wrong. Try again.")
+      setError(t("somethingWentWrongTryAgain"))
       return false
     }
   }
@@ -86,7 +89,7 @@ export function ShareDialog({
   function invite(identifier: string, access: SharePerson["access"]) {
     return new Promise<boolean>((resolve) =>
       startTransition(async () => {
-        const ok = await run(() => invitePerson(slug, identifier, access), "Invitation sent")
+        const ok = await run(() => invitePerson(slug, identifier, access), t("invitationSent"))
         if (ok) track("paste_shared", { access })
         resolve(ok)
       }),
@@ -96,7 +99,7 @@ export function ShareDialog({
   function change(person: SharePerson, access: SharePerson["access"]) {
     if (access === person.access) return
     startTransition(async () => {
-      await run(() => setShareAccess(slug, person.id, access), "Access updated")
+      await run(() => setShareAccess(slug, person.id, access), t("accessUpdated"))
     })
   }
 
@@ -105,7 +108,8 @@ export function ShareDialog({
       const ok = await run(() => removeShare(slug, person.id))
       if (ok) {
         showUndo({
-          message: `Removed ${person.name}`,
+          labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+          message: t("removedPerson", { name: person.name }),
           undo: async () => {
             const result = await restoreRemovedShare(
               slug,
@@ -128,11 +132,11 @@ export function ShareDialog({
       {trigger === "button" ? (
         <DialogTrigger render={<Button variant="outline" size="lg" />}>
           <UsersIcon />
-          Share
+          {t("share")}
         </DialogTrigger>
       ) : (
         <DialogTrigger
-          render={<Button variant="ghost" size="icon-lg" aria-label="Share with people" />}
+          render={<Button variant="ghost" size="icon-lg" aria-label={t("shareWithPeople")} />}
         >
           <UserPlusIcon className="size-5" />
         </DialogTrigger>
@@ -148,31 +152,38 @@ export function ShareDialog({
         <div className="flex flex-col gap-4 p-4 lg:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 flex-col gap-1">
-              <DialogTitle className="truncate text-xl normal-case">Share “{title}”</DialogTitle>
-              <DialogDescription>Invite people with a Sniptide account.</DialogDescription>
+              <DialogTitle className="truncate text-xl normal-case">
+                {t("shareTitle", { title })}
+              </DialogTitle>
+              <DialogDescription>{t("invitePeopleWithASniptideAccount")}</DialogDescription>
             </div>
             <DialogClose
-              aria-label="Close"
+              aria-label={t("close")}
               className="-mt-1 -mr-1 hidden size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:flex"
             >
               <XIcon className="size-4" />
             </DialogClose>
           </div>
-          <InviteField onInvite={invite} submitLabel="Invite" error={error} pending={pending} />
+          <InviteField
+            onInvite={invite}
+            submitLabel={t("invite")}
+            error={error}
+            pending={pending}
+          />
         </div>
 
         <div className="flex items-center justify-between border-y border-border bg-sidebar px-4 py-2.5 text-[13px] lg:px-6">
-          <span className="font-medium">People with access</span>
+          <span className="font-medium">{t("peopleWithAccess")}</span>
           <span className="text-muted-foreground">
-            {people.length === 0 ? "Just you" : `${people.length} invited`}
+            {t("invitedCount", { count: people.length })}
           </span>
         </div>
 
         <ul className="flex max-h-[40svh] flex-col divide-y divide-border overflow-y-auto">
           <li className="flex items-center gap-3 px-4 py-2.5 lg:px-6">
             <ShareAvatar person={owner} className="size-8 text-[10px]" />
-            <PersonName name={`${owner.name} (you)`} handle={owner.handle} />
-            <span className="text-[13px] text-muted-foreground">Owner</span>
+            <PersonName name={t("ownerYou", { name: owner.name })} handle={owner.handle} />
+            <span className="text-[13px] text-muted-foreground">{t("owner")}</span>
           </li>
           {people.map((person) => (
             <li key={person.id} className="flex items-center gap-3 px-4 py-2.5 lg:px-6">
@@ -183,15 +194,14 @@ export function ShareDialog({
                 onChange={(access) => change(person, access)}
                 onRemove={() => remove(person)}
                 disabled={pending}
-                label={`Access for ${person.name}`}
+                label={t("accessFor", { name: person.name })}
               />
             </li>
           ))}
         </ul>
         {people.length === 0 ? (
           <p className="border-t border-border px-4 py-4 text-[13px] text-muted-foreground lg:px-6">
-            They'll see it under Shared with me as soon as you invite them. Remove access any time
-            and it disappears for them.
+            {t("theyLlSeeItUnderShared")}
           </p>
         ) : null}
 
@@ -199,10 +209,10 @@ export function ShareDialog({
         <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 lg:px-6">
           <span className="flex items-center gap-2 text-[13px]">
             <note.icon className="size-3.5 shrink-0" />
-            {note.text}
+            {t(note.text)}
           </span>
           <DialogClose render={<Button variant="inverted" size="lg" className="hidden lg:flex" />}>
-            Done
+            {t("done")}
           </DialogClose>
         </div>
       </DialogContent>

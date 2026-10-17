@@ -86,16 +86,16 @@ export const hueClass: Record<Hue, string> = {
 }
 
 export const hueLabel: Record<Hue, string> = {
-  ink: "Ink",
-  blue: "Blue",
-  sky: "Sky",
-  teal: "Teal",
-  green: "Green",
-  amber: "Amber",
-  orange: "Orange",
-  red: "Red",
-  pink: "Pink",
-  violet: "Violet",
+  ink: "ink",
+  blue: "blue",
+  sky: "sky",
+  teal: "teal",
+  green: "green",
+  amber: "amber",
+  orange: "orange",
+  red: "red",
+  pink: "pink",
+  violet: "violet",
 }
 
 export function CollectionIcon({

@@ -1,4 +1,7 @@
 import { mock } from "bun:test"
+import { createTranslator } from "next-intl"
+import { localeCookie, resolveLocale } from "@/lib/i18n/config"
+import { loadMessages } from "@/lib/i18n/messages"
 import { request } from "./request"
 
 // Stand-ins for what only exists inside a Next request.
@@ -34,6 +37,23 @@ mock.module("@/lib/auth", () => ({
 }))
 
 mock.module("next/cache", () => ({ revalidatePath: () => {} }))
+
+mock.module("next-intl/server", () => ({
+  getLocale: async () =>
+    resolveLocale(request.cookies.get(localeCookie), request.headers.get("accept-language")),
+  getTranslations: async (namespace?: string) => {
+    const locale = resolveLocale(
+      request.cookies.get(localeCookie),
+      request.headers.get("accept-language"),
+    )
+    return createTranslator({
+      locale,
+      messages: await loadMessages(locale),
+      namespace,
+      timeZone: "UTC",
+    })
+  },
+}))
 
 mock.module("next/headers", () => ({
   cookies: async () => ({

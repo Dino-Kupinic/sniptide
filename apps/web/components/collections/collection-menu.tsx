@@ -18,6 +18,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { showUndo } from "@/components/undo-toast"
 import { deleteCollection, restoreCollection } from "@/lib/collections/actions"
@@ -36,6 +37,8 @@ export function CollectionMenu({
   afterDelete?: string
   className?: string
 }) {
+  const t = useTranslations("Workspace")
+  const feedbackT = useTranslations("Core")
   const router = useRouter()
   const [renaming, setRenaming] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
@@ -45,7 +48,7 @@ export function CollectionMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label={`Actions for ${collection.name}`}
+          aria-label={t("actions_for", { name: collection.name })}
           className={
             className ??
             "flex size-8 items-center justify-center border border-border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
@@ -56,12 +59,12 @@ export function CollectionMenu({
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setRenaming(true)}>
             <PencilIcon />
-            Rename
+            {t("rename")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleting(true)}>
             <Trash2Icon />
-            Delete collection
+            {t("delete_collection")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -72,15 +75,17 @@ export function CollectionMenu({
 
       <AlertDialog open={deleting} onOpenChange={setDeleting}>
         <AlertDialogContent>
-          <AlertDialogTitle>Delete “{collection.name}”?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("delete_collection_title", { name: collection.name })}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {collection.pasteCount > 0
-              ? `Its ${collection.pasteCount} ${collection.pasteCount === 1 ? "paste is" : "pastes are"} kept and just leave the collection.`
-              : "The collection is empty, so no pastes are affected."}
+              ? t("collection_pastes_kept", { count: collection.pasteCount })
+              : t("the_collection_is_empty_so_no_pastes_are")}
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" size="lg" />}>
-              Cancel
+              {t("cancel")}
             </AlertDialogClose>
             <Button
               size="lg"
@@ -89,7 +94,7 @@ export function CollectionMenu({
               onClick={() =>
                 startTransition(async () => {
                   const result = await runAction(() => deleteCollection(collection.slug), {
-                    error: "Couldn't delete the collection. Try again.",
+                    error: t("couldnt_delete_the_collection_try_again"),
                   })
                   const snapshot = result.ok ? result.value : null
                   setDeleting(false)
@@ -98,7 +103,8 @@ export function CollectionMenu({
                   else router.refresh()
                   if (snapshot) {
                     showUndo({
-                      message: `Deleted “${collection.name}”`,
+                      labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                      message: t("deleted_named", { name: collection.name }),
                       undo: () => restoreCollection(snapshot),
                       onUndone: () => {
                         if (afterDelete) router.push(`/collections/${snapshot.slug}`)
@@ -108,7 +114,7 @@ export function CollectionMenu({
                 })
               }
             >
-              {pending ? "Deleting…" : "Delete collection"}
+              {pending ? t("deleting") : t("delete_collection")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

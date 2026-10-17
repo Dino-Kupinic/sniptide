@@ -60,6 +60,14 @@ test("password protection hides content until unlocked and resets in a fresh ses
   await screen.getByLabel("Password").fill(secrets.get("wrongPassword"))
   await screen.getByRole("button", "Unlock").tap()
   await expect(screen.getByRole("alert").filter({ hasText: "password" })).toBeVisible()
+  await screen.getByRole("combobox").selectOption({ value: "de" })
+  await expect(
+    screen.getByRole("alert").filter({ hasText: "Dieses Passwort ist falsch." }),
+  ).toHaveText("Dieses Passwort ist falsch.")
+  await screen.getByRole("combobox").selectOption({ value: "en" })
+  await expect(
+    screen.getByRole("alert").filter({ hasText: "That password isn't right." }),
+  ).toHaveText("That password isn't right.")
   await expect(browser.locator("body")).not.toContainText(content)
   await screen.getByLabel("Password").fill(secrets.get("pastePassword"))
   await screen.getByRole("button", "Unlock").tap()

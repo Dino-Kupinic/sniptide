@@ -3,6 +3,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { PanelLeftIcon, SearchIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ShortcutKeys, useShortcutLabel } from "@/components/shortcuts/shortcut-keys"
 import { pageTitle } from "./nav-config"
@@ -23,6 +24,7 @@ export function TopBar({
   onToggleSidebar: () => void
   sidebarOpen: boolean
 }) {
+  const t = useTranslations("Workspace")
   const pathname = usePathname()
   const { setTitle, setActions } = useHeaderSlotRefs()
 
@@ -40,7 +42,7 @@ export function TopBar({
         className="group/title flex min-w-0 flex-1 items-center text-[15px] font-semibold"
       >
         <span className="truncate group-has-data-header-title/title:hidden">
-          {pageTitle(pathname)}
+          {pageTitle(pathname) ? t(pageTitle(pathname)) : ""}
         </span>
       </div>
 
@@ -57,6 +59,7 @@ export function TopBar({
 
 // The sidebar's Search button is the usual way in; with the sidebar hidden this field stands in.
 function SearchField() {
+  const t = useTranslations("Workspace")
   const { open } = useCommandMenu()
   return (
     <button
@@ -65,7 +68,7 @@ function SearchField() {
       className="flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
     >
       <SearchIcon className="size-3.5" />
-      Search pastes, collections…
+      {t("search_pastes_collections")}
       <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
     </button>
   )
@@ -80,13 +83,14 @@ export function SidebarToggle({
   open: boolean
   className?: string
 }) {
+  const t = useTranslations("Workspace")
   const label = useShortcutLabel("toggle-sidebar")
   return (
     <Tooltip>
       <TooltipTrigger
         className={`${iconButtonClass} text-foreground/75 hover:text-foreground ${className ?? ""}`}
         onClick={onToggle}
-        aria-label={open ? "Hide sidebar" : "Show sidebar"}
+        aria-label={open ? t("hide_sidebar") : t("show_sidebar")}
         aria-expanded={open}
       >
         <PanelLeftIcon />

@@ -1,9 +1,12 @@
-import type { Metadata } from "next"
+import { getTranslations } from "next-intl/server"
 import { currentViewer } from "@/components/not-found/current-viewer"
 import { ShareNotFound } from "@/components/not-found/share-not-found"
 import { PublicHeader } from "@/components/public-header"
 
-export const metadata: Metadata = { title: "This page is gone · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("NotFound")
+  return { title: `${t("shareHeading")} · Sniptide` }
+}
 
 // Shown at sniptide.com/<slug> when no paste matches, or it expired or was burned. This is the
 // marketing 404 from Paper: sniptide.com proxies every link it has no page for to this app, so

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { getSession } from "@/lib/auth"
 import { deleteGroup } from "@/lib/env/store"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { hit, type Limit } from "@/lib/rate-limit"
 import { HOUR_SECONDS } from "@/lib/time"
 import { type CreateTokenResult, createToken, revokeToken, type TokenInput } from "./tokens"
@@ -17,12 +18,12 @@ const tokenCreate = (user: string): Limit => ({
 
 export async function createApiToken(input: TokenInput): Promise<CreateTokenResult> {
   const session = await getSession()
-  if (!session) return { ok: false, error: "Sign in again to create a token." }
+  if (!session) return { ok: false, error: await actionError("signInToken") }
   const limit = await hit([tokenCreate(session.user.id)])
-  if (!limit.allowed) return { ok: false, error: "You're creating tokens too often. Try later." }
+  if (!limit.allowed) return { ok: false, error: await actionError("tokenRateLimit") }
   const result = await createToken(session.user.id, input)
   if (result.ok) revalidatePath("/settings")
-  return result
+  return result.ok ? result : { ok: false, error: await translateActionError(result.error) }
 }
 
 export async function revokeApiToken(id: string): Promise<{ ok: boolean }> {

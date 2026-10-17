@@ -366,3 +366,15 @@ bun run format
 
 [AGPL-3.0](LICENSE). You can self-host and modify Sniptide; if you run a modified version as a
 network service, you have to publish your changes under the same license.
+
+## Languages
+
+The app supports English, German, Spanish, Simplified Chinese, and Japanese. It uses your browser's
+preferred language on the first visit. Choose a language on the sign-in page, in the account menu,
+or in Settings to save a preference for that browser. Public share pages also have a language
+selector. Paste contents, filenames, and programming language names keep their original text.
+
+Translations live in `apps/web/messages/<locale>/`. Each locale has the same namespaces and message
+keys. Use `next-intl` translations in components and complete ICU messages for sentences with
+counts or other values. Run `bun --filter web test` to check catalog completeness, arguments, and
+locale selection. Existing share links and API URLs do not change with the language.

@@ -9,6 +9,7 @@ import { z } from "zod"
 import { getAuth, getSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { NOTIFICATION_KINDS } from "@/lib/notifications/types"
 import { changePreferences } from "@/lib/preference-store"
 import type { Preferences } from "@/lib/preferences"
@@ -20,9 +21,8 @@ async function updateUser(body: Record<string, unknown>): Promise<Result> {
   const auth = await getAuth()
   try {
     await auth.api.updateUser({ headers: await headers(), body })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : ""
-    return { ok: false, error: message || "Couldn't save that. Try again." }
+  } catch {
+    return { ok: false, error: await actionError("saveFailed") }
   }
   revalidatePath("/", "layout")
   return { ok: true }
@@ -42,18 +42,21 @@ const profileSchema = z.object({
 
 export async function updateProfile(input: z.input<typeof profileSchema>): Promise<Result> {
   const session = await getSession()
-  if (!session) return { ok: false, error: "Sign in again to change your profile." }
+  if (!session) return { ok: false, error: await actionError("signInProfile") }
 
   const parsed = profileSchema.safeParse(input)
   if (!parsed.success)
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check your profile." }
+    return {
+      ok: false,
+      error: await translateActionError(parsed.error.issues[0]?.message ?? "Check your profile."),
+    }
 
   const { name, username } = parsed.data
   const body: Record<string, unknown> = { name }
   if (username !== session.user.username) {
     const auth = await getAuth()
     const { available } = await auth.api.isUsernameAvailable({ body: { username } })
-    if (!available) return { ok: false, error: `@${username} is taken.` }
+    if (!available) return { ok: false, error: await actionError("usernameTaken", { username }) }
     body.username = username
     body.displayUsername = username
   }
@@ -73,11 +76,16 @@ const avatarSchema = z
   .nullable()
 
 export async function updateAvatar(image: string | null): Promise<Result> {
-  if (!(await getSession())) return { ok: false, error: "Sign in again to change your avatar." }
+  if (!(await getSession())) return { ok: false, error: await actionError("signInAvatar") }
 
   const parsed = avatarSchema.safeParse(image)
   if (!parsed.success)
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "That image can't be used." }
+    return {
+      ok: false,
+      error: await translateActionError(
+        parsed.error.issues[0]?.message ?? "That image can't be used.",
+      ),
+    }
 
   return updateUser({ image: parsed.data })
 }
@@ -88,14 +96,14 @@ export async function updatePreferences(
   patch: Partial<Omit<Preferences, "notifications">>,
 ): Promise<Result> {
   const session = await getSession()
-  if (!session) return { ok: false, error: "Sign in again to change settings." }
+  if (!session) return { ok: false, error: await actionError("signInSettings") }
   const parsed = generalPatchSchema.safeParse(patch)
   if (!parsed.success) return { ok: false, error: "Check your settings." }
   const saved = await changePreferences(session.user.id, (current) => ({
     ...current,
     ...parsed.data,
   }))
-  if (!saved) return { ok: false, error: "Sign in again to change settings." }
+  if (!saved) return { ok: false, error: await actionError("signInSettings") }
   revalidatePath("/", "layout")
   return { ok: true }
 }

@@ -1,5 +1,6 @@
 import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { getTranslations } from "next-intl/server"
 import { type SettingsTab, SettingsView } from "@/components/settings/settings-view"
 import { listTokens } from "@/lib/api/tokens"
 import { requireSession } from "@/lib/auth"
@@ -14,7 +15,10 @@ import { readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
-export const metadata = { title: "Settings · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("Core")
+  return { title: `${t("settings")} · Sniptide` }
+}
 
 const tabs: SettingsTab[] = ["general", "defaults", "notifications", "api", "billing"]
 

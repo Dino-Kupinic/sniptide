@@ -3,13 +3,16 @@ import { toast } from "@sniptide/ui/components/toast"
 // Shared feedback for actions that have no button or form of their own to report on, like menu
 // items. Every such action ends in a success or an error toast, never silence.
 
-export async function copyText(text: string, success = "Link copied"): Promise<boolean> {
+export async function copyText(
+  text: string,
+  messages: { success: string; error: string },
+): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text)
-    toast.success(success)
+    toast.success(messages.success)
     return true
   } catch {
-    toast.error("Couldn't copy. Allow clipboard access and try again.")
+    toast.error(messages.error)
     return false
   }
 }

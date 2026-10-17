@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { getSiteOrigin } from "@/lib/site"
 import { limited, limits } from "./limits"
 import { readWebhookPaste } from "./store"
@@ -13,19 +14,19 @@ export async function shareToWebhook(
   target: WebhookTarget,
 ): Promise<WebhookShareResult> {
   const session = await getSession()
-  if (!session) return { ok: false, error: "Sign in to share a paste." }
-  if (!WEBHOOK_TARGETS.includes(target)) return { ok: false, error: "Choose Slack or Discord." }
+  if (!session) return { ok: false, error: await actionError("signInShare") }
+  if (!WEBHOOK_TARGETS.includes(target))
+    return { ok: false, error: await actionError("webhookTarget") }
   const endpoint = getConfig().webhooks[target]
-  if (!endpoint)
-    return { ok: false, error: "Ask your instance administrator to configure this webhook." }
+  if (!endpoint) return { ok: false, error: await actionError("webhookSetup") }
   const paste = await readWebhookPaste(slug)
   if (!paste)
     return {
       ok: false,
-      error:
-        "Only the owner can share a live public or unlisted paste without a password or one-time protection.",
+      error: await actionError("webhookPaste"),
     }
   const tooOften = await limited(limits.webhook(session.user.id))
-  if (tooOften) return { ok: false, error: tooOften }
-  return sendWebhook(target, endpoint, paste, (await getSiteOrigin()).origin)
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
+  const result = await sendWebhook(target, endpoint, paste, (await getSiteOrigin()).origin)
+  return result.ok ? result : { ok: false, error: await translateActionError(result.error) }
 }

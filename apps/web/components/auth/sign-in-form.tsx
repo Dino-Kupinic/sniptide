@@ -5,6 +5,7 @@ import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
@@ -22,6 +23,7 @@ export function SignInForm({
   socialProviders: SocialProvider[] | null
   signUpClosed?: boolean
 }) {
+  const t = useTranslations("Auth")
   const router = useRouter()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
@@ -38,14 +40,14 @@ export function SignInForm({
         email: String(form.get("email")),
         password: String(form.get("password")),
       })
-      .catch(() => ({ error: { status: 0, message: "Couldn't reach the server. Try again." } }))
+      .catch(() => ({ error: { status: 0 } }))
 
     if (error) {
       setPending(false)
       setError(
         error.status === 401
-          ? "That email and password don't match an account."
-          : (error.message ?? "Couldn't sign you in. Try again."),
+          ? t("errors.credentials")
+          : t(error.status === 0 ? "errors.network" : "errors.signIn"),
       )
       return
     }
@@ -73,7 +75,7 @@ export function SignInForm({
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              Email
+              {t("email")}
             </Label>
             <Input
               id="email"
@@ -88,7 +90,7 @@ export function SignInForm({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="password" className="text-sm lg:text-[13px]">
-                Password
+                {t("password")}
               </Label>
               <button
                 type="button"
@@ -96,7 +98,7 @@ export function SignInForm({
                 aria-expanded={showResetNote}
                 className="text-sm text-muted-foreground underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:text-[13px]"
               >
-                Forgot password?
+                {t("forgotPassword")}
               </button>
             </div>
             <Input
@@ -109,8 +111,7 @@ export function SignInForm({
             />
             {showResetNote ? (
               <p className="text-xs text-muted-foreground">
-                Password reset by email isn't available yet.
-                {socialProviders ? " Sign in with GitHub or Google if you linked one." : null}
+                {t(socialProviders ? "resetNoteSocial" : "resetNote")}
               </p>
             ) : null}
           </div>
@@ -119,15 +120,18 @@ export function SignInForm({
         <FormError message={error} />
 
         <Button type="submit" loading={pending} className={authSubmitClass}>
-          {pending ? "Signing in…" : "Sign in"}
+          {t(pending ? "signingIn" : "signIn")}
         </Button>
 
         {signUpClosed ? null : (
           <SwitchPrompt>
-            New to Sniptide?{" "}
-            <Link href="/sign-up" className={inlineLinkClass}>
-              {socialProviders ? "Create an account" : "Request access"}
-            </Link>
+            {t.rich(socialProviders ? "newAccountPrompt" : "requestAccessPrompt", {
+              link: (children) => (
+                <Link href="/sign-up" className={inlineLinkClass}>
+                  {children}
+                </Link>
+              ),
+            })}
           </SwitchPrompt>
         )}
       </form>
