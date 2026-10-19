@@ -26,8 +26,9 @@ import { TopBar } from "./top-bar"
 export function AppShell({
   children,
   initialSidebar,
+  demo = false,
   ...sidebarProps
-}: SidebarProps & { initialSidebar: SidebarState; children: React.ReactNode }) {
+}: SidebarProps & { initialSidebar: SidebarState; demo?: boolean; children: React.ReactNode }) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const router = useRouter()
@@ -154,6 +155,14 @@ export function AppShell({
                   layout.collapsed && "lg:ml-2",
                 )}
               >
+                {demo ? (
+                  <p
+                    role="note"
+                    className="border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
+                  >
+                    {t("demoBanner")}
+                  </p>
+                ) : null}
                 <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
                 {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
                 <main

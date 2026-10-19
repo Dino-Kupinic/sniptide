@@ -1308,6 +1308,7 @@ export const internalRoutes = [
   "/api/auth/[...all]",
   "/api/notifications",
   "/api/notifications/unsubscribe",
+  "/demo",
   "/api/locale",
   "/api/search",
   "/api/stats",

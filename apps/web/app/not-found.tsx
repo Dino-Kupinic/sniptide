@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
-import { LogoMark } from "@sniptide/ui/components/logo"
+import { Logo } from "@sniptide/ui/components/logo"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
@@ -24,10 +24,7 @@ export default async function NotFound() {
           aria-label="Sniptide"
           className="flex w-fit items-center gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
-          <LogoMark className="size-6 sm:size-7" />
-          <span className="hidden font-logo text-[25px] leading-7 font-bold tracking-[-0.01em] sm:inline">
-            SNIPTIDE
-          </span>
+          <Logo className="max-sm:[&>svg]:size-6 max-sm:[&>span]:hidden" />
         </Link>
         <span className="text-sm font-medium">{t("title")}</span>
         <div className="flex justify-end">
