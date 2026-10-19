@@ -28,4 +28,8 @@ export async function startBackgroundJobs() {
   schedulePurge()
   const { scheduleRollup } = await import("@/lib/pastes/rollup")
   scheduleRollup()
+  if (getConfig().demoMode) {
+    const { scheduleDemoReset } = await import("@/lib/demo/reset")
+    scheduleDemoReset()
+  }
 }

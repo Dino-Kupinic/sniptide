@@ -1,7 +1,9 @@
+import { Button } from "@sniptide/ui/components/button"
 import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
+import { authSubmitClass } from "@/components/auth/fields"
 import { SignInForm } from "@/components/auth/sign-in-form"
-import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { getInviteOnly, getSocialProviders, isDemoMode, isSignUpClosed } from "@/lib/auth"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata() {
@@ -23,6 +25,16 @@ export default async function Page() {
         note: t("expiresInDays", { days: 6 }),
       }}
     >
+      {isDemoMode() ? (
+        <Button
+          variant="outline"
+          className={authSubmitClass}
+          render={<a href="/demo" />}
+          nativeButton={false}
+        >
+          {t("continueAsGuest")}
+        </Button>
+      ) : null}
       <SignInForm
         socialProviders={getInviteOnly() ? null : await getSocialProviders()}
         signUpClosed={isSignUpClosed()}
