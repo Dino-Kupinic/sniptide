@@ -238,6 +238,7 @@ unless you turn them on:
 | GitHub and Google sign-in | Off; buttons render disabled | `GITHUB_CLIENT_ID`/`_SECRET`, `GOOGLE_CLIENT_ID`/`_SECRET` |
 | Open sign-up | On: anyone can create an account | `ALLOW_SIGN_UP=false` closes it for everyone; existing accounts keep signing in |
 | Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails (`WAITLIST_URL` adds an "apply" link) |
+| Public demo | Off | `DEMO_MODE=true` signs every visitor in to a shared guest account with example pastes and resets it every `DEMO_RESET_MINUTES` (60); use with `ALLOW_SIGN_UP=false` |
 | PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
 | Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
 

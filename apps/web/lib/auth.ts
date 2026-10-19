@@ -30,6 +30,7 @@ export async function getAuth() {
     cookiePrefix: config.cookiePrefix,
     allowSignUp: config.allowSignUp,
     allowedEmails: config.allowedEmails,
+    demo: config.demoMode,
     ipAddressHeaders: [RESOLVED_IP_HEADER],
     github: config.github,
     google: config.google,
@@ -49,6 +50,12 @@ export function isSignUpClosed() {
   return !getConfig().allowSignUp
 }
 
+// True on a public demo instance (DEMO_MODE=true): visitors are signed in to a shared guest account
+// with example data (lib/demo).
+export function isDemoMode() {
+  return getConfig().demoMode
+}
+
 // Set while ALLOWED_EMAILS limits sign-up: the sign-up page asks visitors to apply (at
 // WAITLIST_URL, when set) and sign-in drops the GitHub and Google buttons.
 export function getInviteOnly(): { applyUrl?: string } | null {
@@ -66,7 +73,8 @@ export const getSession = cache(async () => {
 // For pages behind sign-in: returns the session or sends the visitor to /sign-in.
 export async function requireSession() {
   const session = await getSession()
-  if (!session) redirect("/sign-in")
+  // On a demo instance anyone without a session becomes the guest instead of seeing sign-in.
+  if (!session) redirect(isDemoMode() ? "/demo" : "/sign-in")
 
   return session
 }

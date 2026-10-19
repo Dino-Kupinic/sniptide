@@ -2,8 +2,10 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
 import type { Database } from "@workspace/db"
 import * as schema from "@workspace/db/schema"
 import { type BetterAuthPlugin, betterAuth } from "better-auth"
+import { APIError, createAuthMiddleware } from "better-auth/api"
 import { username } from "better-auth/plugins/username"
 import { assertAllowed, assertSignUpOpen, parseAllowlist } from "./allowlist"
+import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_PATHS } from "./demo"
 import { boundUserFields } from "./user-fields"
 import { USERNAME_PATTERN } from "./username"
 
@@ -33,6 +35,9 @@ export interface AuthConfig {
   allowSignUp?: boolean
   // Comma-separated emails that may create an account. Unset or empty leaves sign-up open.
   allowedEmails?: string
+  // True on a public demo instance (DEMO_MODE): everyone shares one guest account, so the calls
+  // that would change or remove its sign-in details are refused.
+  demo?: boolean
   // Providers without credentials are left out, so the sign-in page can hide or disable them.
   github?: OAuthCredentials
   google?: OAuthCredentials
@@ -50,6 +55,7 @@ export function createAuth({
   rateLimitEnabled,
   allowSignUp = true,
   allowedEmails,
+  demo = false,
   github,
   google,
   plugins = [],
@@ -80,6 +86,12 @@ export function createAuth({
         preferences: { type: "string", required: false, input: true },
       },
       deleteUser: { enabled: true },
+    },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (demo && DEMO_LOCKED_PATHS.has(ctx.path))
+          throw new APIError("FORBIDDEN", { message: DEMO_LOCKED_MESSAGE })
+      }),
     },
     databaseHooks: {
       user: {
