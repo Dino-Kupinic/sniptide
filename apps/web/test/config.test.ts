@@ -94,3 +94,51 @@ describe("getConfig", () => {
     }
   })
 })
+
+describe("optional SMTP configuration", () => {
+  const complete = {
+    SMTP_HOST: "localhost",
+    SMTP_PORT: "2525",
+    SMTP_FROM: "sniptide@example.com",
+    BETTER_AUTH_URL: "https://sniptide.example.com",
+    BETTER_AUTH_SECRET: "a-secret-at-least-thirty-two-characters-long",
+  }
+  test("omitted SMTP stays disabled and configured SMTP requires TLS by default", () => {
+    expect(getConfig({}).smtp).toBeUndefined()
+    expect(getConfig(complete).smtp).toEqual({
+      host: "localhost",
+      port: 2525,
+      from: "sniptide@example.com",
+      secure: false,
+      requireTLS: true,
+      auth: undefined,
+    })
+    expect(
+      getConfig({
+        ...complete,
+        SMTP_SECURE: "true",
+        SMTP_REQUIRE_TLS: "false",
+        SMTP_USER: "user",
+        SMTP_PASSWORD: "password",
+      }).smtp,
+    ).toMatchObject({ secure: true, requireTLS: false, auth: { user: "user", pass: "password" } })
+  })
+  test("incomplete SMTP, unpaired credentials and short signing secret are rejected", () => {
+    for (const key of [
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_FROM",
+      "BETTER_AUTH_URL",
+      "BETTER_AUTH_SECRET",
+    ])
+      expect(() => getConfig({ ...complete, [key]: "" })).toThrow(/SMTP requires/)
+    expect(() => getConfig({ ...complete, SMTP_USER: "user" })).toThrow(/paired SMTP_USER/)
+    expect(() => getConfig({ ...complete, SMTP_PASSWORD: "password" })).toThrow(/paired SMTP_USER/)
+    expect(() => getConfig({ ...complete, BETTER_AUTH_SECRET: "short" })).toThrow(/at least 32/)
+  })
+  test("invalid SMTP values name their environment variable", () => {
+    expect(() => getConfig({ ...complete, SMTP_PORT: "0" })).toThrow(/SMTP_PORT/)
+    expect(() => getConfig({ ...complete, SMTP_FROM: "bad" })).toThrow(/SMTP_FROM/)
+    expect(() => getConfig({ ...complete, SMTP_REQUIRE_TLS: "maybe" })).toThrow(/SMTP_REQUIRE_TLS/)
+  })
+})

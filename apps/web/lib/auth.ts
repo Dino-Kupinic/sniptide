@@ -9,7 +9,9 @@ import { cache } from "react"
 import { RESOLVED_IP_HEADER } from "@/lib/client-ip"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
-import { parsePreferences } from "@/lib/preferences-schema"
+import { sendEmailVerification } from "@/lib/mail"
+import { readPreferences } from "@/lib/preference-store"
+import { defaultPreferences } from "@/lib/preferences"
 
 export type SocialProvider = "github" | "google"
 
@@ -21,6 +23,7 @@ export async function getAuth() {
   const config = getConfig()
   if (!config.authSecret) throw new Error("BETTER_AUTH_SECRET is not set")
 
+  const smtp = config.smtp
   auth ??= createAuth({
     db: getDb(),
     secret: config.authSecret,
@@ -35,6 +38,7 @@ export async function getAuth() {
     github: config.github,
     google: config.google,
     plugins: [nextCookies()],
+    emailVerification: smtp ? { sendVerificationEmail: sendEmailVerification } : undefined,
   })
   return auth
 }
@@ -82,5 +86,5 @@ export async function requireSession() {
 // The signed-in user's Settings preferences, or the defaults for visitors.
 export async function getPreferences() {
   const session = await getSession()
-  return parsePreferences(session?.user.preferences)
+  return session ? readPreferences(session.user.id) : defaultPreferences
 }

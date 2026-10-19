@@ -241,6 +241,23 @@ unless you turn them on:
 | Public demo | Off | `DEMO_MODE=true` signs every visitor in to a shared guest account with example pastes and resets it every `DEMO_RESET_MINUTES` (60); use with `ALLOW_SIGN_UP=false` |
 | PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
 | Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
+| Notification emails | Off; users opt in per event | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`; optional paired `SMTP_USER`/`SMTP_PASSWORD` |
+
+Settings > Notifications controls in-app and email delivery independently for shared pastes, burns,
+expiry warnings and view milestones. Existing accounts keep in-app notifications on and email off.
+Verify your email address from this tab before enabling email delivery. Verification sends are
+limited to three per account per hour. Password sign-in still works without verified email or SMTP.
+SMTP is optional. Set the host, port and sender together, plus `BETTER_AUTH_URL` and an auth secret
+of at least 32 characters. Port 587 uses STARTTLS by default; set `SMTP_SECURE=true` for implicit
+TLS on port 465. Leave `SMTP_REQUIRE_TLS=true` outside a trusted local SMTP test server.
+
+Email runs independently once a minute and uses a durable queue with bounded retries. Events older
+than 24 hours are skipped, including events queued while SMTP was unavailable. Delivery rechecks
+consent and access, and messages contain generic activity text with links to the signed-in app.
+Each email includes a confirmation link that stops only that event's emails. Opening it does not
+change preferences. Email is delivered at least once when retries succeed; a crash after SMTP
+acceptance and before recording success can cause a duplicate. A concurrent access change can
+still allow an already sending generic email to arrive.
 
 To run a private instance: sign up once, then set `ALLOW_SIGN_UP=false` and restart.
 

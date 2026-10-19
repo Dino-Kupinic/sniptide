@@ -1,7 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
 import type { Database } from "@workspace/db"
 import * as schema from "@workspace/db/schema"
-import { type BetterAuthPlugin, betterAuth } from "better-auth"
+import { type BetterAuthOptions, type BetterAuthPlugin, betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { username } from "better-auth/plugins/username"
 import { assertAllowed, assertSignUpOpen, parseAllowlist } from "./allowlist"
@@ -41,6 +41,10 @@ export interface AuthConfig {
   // Providers without credentials are left out, so the sign-in page can hide or disable them.
   github?: OAuthCredentials
   google?: OAuthCredentials
+  emailVerification?: Pick<
+    NonNullable<BetterAuthOptions["emailVerification"]>,
+    "sendVerificationEmail"
+  >
   plugins?: BetterAuthPlugin[]
 }
 
@@ -58,6 +62,7 @@ export function createAuth({
   demo = false,
   github,
   google,
+  emailVerification,
   plugins = [],
 }: AuthConfig) {
   const allowlist = parseAllowlist(allowedEmails)
@@ -77,6 +82,7 @@ export function createAuth({
     },
     // In Postgres rather than memory, so limits hold across restarts and deploys.
     rateLimit: { enabled: rateLimitEnabled, storage: "database", modelName: "authRateLimit" },
+    emailVerification,
     emailAndPassword: {
       enabled: true,
     },
