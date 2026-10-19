@@ -28,9 +28,9 @@ import { Button } from "@sniptide/ui/components/button"
 import { Logo } from "@sniptide/ui/components/logo"
 ```
 
-The theme reads four font variables, so set them on `<html>` (for example with `next/font`):
-`--font-sans` (Inter), `--font-mono` (JetBrains Mono), `--font-heading` (Stack Sans Headline) and
-`--font-logo` (Stack Sans Notch, used only by the wordmark).
+The theme reads three font variables, so set them on `<html>` (for example with `next/font`):
+`--font-sans` (Inter), `--font-mono` (JetBrains Mono) and `--font-heading` (Stack Sans Headline).
+The logo uses vector outlines and does not need a font.
 
 `globals.css` already tells Tailwind to scan this package's components; your own files are found
 by Tailwind's automatic source detection.
