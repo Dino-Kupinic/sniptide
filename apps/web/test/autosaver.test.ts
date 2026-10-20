@@ -314,6 +314,28 @@ describe("Autosaver", () => {
     autosaver.rebase(doc("a"))
     expect(autosaver.hasUnsavedChanges()).toBe(false)
   })
+
+  test("flushing a manual draft leaves it unsaved without calling the server", async () => {
+    const { autosaver, sent } = setup({ manual: true })
+
+    expect(await autosaver.flush()).toBe(true)
+    autosaver.update(doc("draft"))
+    expect(await autosaver.flush()).toBe(false)
+    expect(sent).toEqual([])
+    expect(autosaver.state.kind).toBe("dirty")
+    expect(autosaver.hasUnsavedChanges()).toBe(true)
+  })
+
+  test("reconnecting never sends a manual draft to the server", async () => {
+    const { autosaver, fake, sent } = setup({ manual: true })
+
+    autosaver.update(doc("draft"))
+    autosaver.retryNow()
+    await fake.advance(60_000)
+    expect(sent).toEqual([])
+    expect(autosaver.state.kind).toBe("dirty")
+    expect(autosaver.hasUnsavedChanges()).toBe(true)
+  })
 })
 
 describe("drafts", () => {

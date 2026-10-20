@@ -139,6 +139,7 @@ export class Autosaver<T> {
   // edits can't be saved right now (false).
   async flush() {
     if (this.disposed) return true
+    if (this.options.manual) return !this.hasUnsavedChanges()
     for (let round = 0; round < 3; round++) {
       if (this.inflight) await this.inflight
       if (!this.hasUnsavedChanges()) return true
@@ -223,7 +224,8 @@ export class Autosaver<T> {
   private run(): Promise<void> {
     this.cancelTimers()
     if (this.inflight) return this.inflight
-    if (this.disposed || this.conflicted || !this.hasUnsavedChanges()) return Promise.resolve()
+    if (this.disposed || this.options.manual || this.conflicted || !this.hasUnsavedChanges())
+      return Promise.resolve()
 
     const reason = this.options.validate?.(this.current) ?? null
     if (reason) {
