@@ -52,6 +52,7 @@
     "couldnTSaveThePasteCheck": "Paste konnte nicht gespeichert werden. Prüfe deine Verbindung und versuche es erneut.",
     "pasteCreated": "Paste erstellt",
     "draftSavedOnThisDevice": "Entwurf auf diesem Gerät gespeichert",
+    "draftSaveUnavailable": "Der Entwurf konnte auf diesem Gerät nicht gespeichert werden. Lass diesen Tab geöffnet und versuche es erneut.",
     "leaveEmptyToKeepTheCurrent": "Leer lassen, um das aktuelle beizubehalten",
     "password": "Passwort",
     "anyoneWithTheLinkCanOpenMessage": "Bis du ein Passwort setzt, können alle mit dem Link den Paste öffnen.",

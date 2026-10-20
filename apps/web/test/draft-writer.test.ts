@@ -32,7 +32,7 @@ describe("local draft lifetime", () => {
     const backup = writer(store)
     backup.update(dirty("first"))
     backup.update(dirty("latest"))
-    expect(await backup.flush()).toBe(true)
+    expect(await backup.flush()).toEqual({ kind: "saved" })
     expect((await backup.read())?.value).toBe("latest")
   })
 
@@ -43,7 +43,7 @@ describe("local draft lifetime", () => {
       ...memory,
       async put(key, draft) {
         writes += 1
-        await memory.put(key, draft)
+        return memory.put(key, draft)
       },
     })
     backup.update(dirty("latest"))
@@ -68,10 +68,10 @@ describe("local draft lifetime", () => {
     backup.update({ kind: "clean" })
     backup.update({ kind: "paused" })
     backup.update(dirty("created", 2))
-    expect(await backup.flush()).toBe(false)
+    expect(await backup.flush()).toEqual({ kind: "skipped" })
     expect(await backup.read()).toBeNull()
     backup.update(dirty("a later edit", 2))
-    expect(await backup.flush()).toBe(true)
+    expect(await backup.flush()).toEqual({ kind: "saved" })
     expect((await backup.read())?.value).toBe("a later edit")
   })
 
@@ -96,7 +96,7 @@ describe("local draft lifetime", () => {
       ...memory,
       async put(key, draft) {
         if (key === "account:paste") await blocked
-        await memory.put(key, draft)
+        return memory.put(key, draft)
       },
     }
     const departing = writer(store)
@@ -137,10 +137,92 @@ describe("local draft lifetime", () => {
 
   test("clean and paused snapshots never create drafts", async () => {
     const backup = writer(memoryDrafts())
-    expect(await backup.flush()).toBe(false)
+    expect(await backup.flush()).toEqual({ kind: "skipped" })
     backup.update(dirty("unsaved"))
     backup.update({ kind: "clean" })
-    expect(await backup.flush()).toBe(false)
+    expect(await backup.flush()).toEqual({ kind: "skipped" })
     expect(await backup.read()).toBeNull()
+  })
+})
+
+describe("local draft save outcomes", () => {
+  test("unavailable writes remain retryable without changing the edit", async () => {
+    const memory = memoryDrafts()
+    let attempts = 0
+    const backup = writer({
+      ...memory,
+      async put(key, draft) {
+        attempts += 1
+        if (attempts === 1) return { kind: "unavailable" }
+        return memory.put(key, draft)
+      },
+    })
+    backup.update(dirty("keep this edit"))
+    expect(await backup.flush()).toEqual({ kind: "unavailable" })
+    expect(await backup.flush()).toEqual({ kind: "saved" })
+    expect(attempts).toBe(2)
+    expect((await backup.read())?.value).toBe("keep this edit")
+  })
+
+  test("duplicate flushes await the same transaction outcome", async () => {
+    const memory = memoryDrafts()
+    let release: () => void = () => {}
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let writes = 0
+    let finished = 0
+    const backup = writer({
+      ...memory,
+      async put(key, draft) {
+        writes += 1
+        await pending
+        return memory.put(key, draft)
+      },
+    })
+    backup.update(dirty("pending"))
+    const first = backup.flush().then((result) => {
+      finished += 1
+      return result
+    })
+    const second = backup.flush().then((result) => {
+      finished += 1
+      return result
+    })
+    await Promise.resolve()
+    expect(writes).toBe(1)
+    expect(finished).toBe(0)
+    release()
+    expect(await Promise.all([first, second])).toEqual([{ kind: "saved" }, { kind: "saved" }])
+  })
+
+  test("an earlier unavailable write does not invalidate a newer pending save", async () => {
+    const memory = memoryDrafts()
+    let release: () => void = () => {}
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let writes = 0
+    const backup = writer({
+      ...memory,
+      async put(key, draft) {
+        writes += 1
+        if (draft.value === "first") {
+          await pending
+          return { kind: "unavailable" }
+        }
+        return memory.put(key, draft)
+      },
+    })
+    backup.update(dirty("first"))
+    const first = backup.flush()
+    backup.update(dirty("second"))
+    const second = backup.flush()
+    release()
+    expect(await first).toEqual({ kind: "unavailable" })
+    expect(await second).toEqual({ kind: "saved" })
+    expect(await backup.flush()).toEqual({ kind: "saved" })
+    expect(writes).toBe(2)
+    expect((await backup.read())?.value).toBe("second")
   })
 })

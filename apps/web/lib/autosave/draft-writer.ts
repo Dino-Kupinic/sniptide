@@ -1,5 +1,7 @@
 import type { Timers } from "./autosaver"
-import type { Draft, DraftStore } from "./drafts"
+import type { Draft, DraftStore, DraftWriteResult } from "./drafts"
+
+export type DraftSaveResult = DraftWriteResult | { kind: "skipped" }
 
 export type DraftSnapshot<T> =
   | { kind: "paused" }
@@ -27,7 +29,7 @@ export class DraftBackupWriter<T> {
   private snapshot: DraftSnapshot<T> = { kind: "paused" }
   private timer: unknown = null
   private suppressed: string | null = null
-  private lastWrite: { key: string; result: Promise<void> } | null = null
+  private lastWrite: { key: string; result: Promise<DraftWriteResult> } | null = null
   private readonly timers: Timers
 
   constructor(
@@ -70,11 +72,11 @@ export class DraftBackupWriter<T> {
     this.timer = this.timers.set(() => void this.flush(), this.options.delayMs ?? 400)
   }
 
-  async flush(): Promise<boolean> {
+  async flush(): Promise<DraftSaveResult> {
     this.cancel()
     const snapshot = this.snapshot
     if (snapshot.kind !== "dirty" || JSON.stringify(snapshot.value) === this.suppressed)
-      return false
+      return { kind: "skipped" }
     const key = JSON.stringify([snapshot.baseVersion, snapshot.value])
     if (this.lastWrite?.key !== key) {
       const draft = {
@@ -89,8 +91,10 @@ export class DraftBackupWriter<T> {
         ),
       }
     }
-    await this.lastWrite.result
-    return true
+    const write = this.lastWrite
+    const result = await write.result
+    if (result.kind === "unavailable" && this.lastWrite === write) this.lastWrite = null
+    return result
   }
 
   discard(): Promise<void> {
