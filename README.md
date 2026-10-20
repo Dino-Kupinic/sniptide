@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/sniptide-readme-dark.svg">
+    <img alt="Sniptide" src=".github/assets/sniptide-readme-light.svg" width="100%">
+  </picture>
+</p>
+
 # Sniptide
 
 Code snippet sharing at sniptide.com. A Bun + Turborepo monorepo with one Next.js app, run as a
