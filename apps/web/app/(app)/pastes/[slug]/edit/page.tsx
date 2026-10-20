@@ -47,7 +47,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
         collection: shared ? null : paste.collection,
         hasPassword: Boolean(paste.password),
         burnAfterRead: paste.burnAfterRead,
-        version: paste.updatedAt,
+        version: paste.version,
       }}
     />
   )

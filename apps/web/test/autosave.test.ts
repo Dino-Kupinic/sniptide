@@ -1,9 +1,21 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { paste, pasteRevision } from "@workspace/db/schema"
+import { collection, paste, pasteRevision } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { updateCapture } from "@/lib/api/pastes"
+import { deleteCollection, restoreCollection } from "@/lib/collections/store"
 import { getDb } from "@/lib/db"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
-import { getPaste, REVISION_WINDOW_MS } from "@/lib/pastes/store"
+import {
+  getPaste,
+  REVISION_WINDOW_MS,
+  readSharedPaste,
+  renamePaste,
+  restorePaste,
+  setPasteCollection,
+  setStarred,
+  trashPaste,
+  updateSharing,
+} from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // What the editor's auto-save relies on: stale edits are refused instead of overwriting, a burst of
@@ -29,7 +41,7 @@ async function create(overrides: Partial<SavePasteInput> = {}) {
   if (!result.ok) throw new Error(result.error)
   const created = await getPaste(result.slug)
   if (!created) throw new Error("created paste is missing")
-  return { slug: result.slug, version: created.updatedAt }
+  return { slug: result.slug, version: created.version }
 }
 
 async function revisions(slug: string) {
@@ -68,7 +80,7 @@ describeDb("autosavePaste", () => {
 
     const stored = await getPaste(slug)
     expect(stored?.title).toBe("Third")
-    expect(stored?.updatedAt).toBe(second.ok ? second.version : -1)
+    expect(stored?.version).toBe(second.ok ? second.version : -1)
   })
 
   test("refuses an edit made from an out-of-date copy and changes nothing", async () => {
@@ -101,6 +113,104 @@ describeDb("autosavePaste", () => {
 
     const stale = await autosavePaste("moved-link", input({ title: "Late" }), version)
     expect(stale).toEqual({ ok: false, conflict: true, version: moved.version, slug: "moved-link" })
+  })
+
+  for (const [name, mutate] of [
+    [
+      "sharing settings",
+      (slug: string) =>
+        updateSharing(slug, {
+          visibility: "private",
+          burnAfterRead: true,
+          allowRaw: false,
+          password: "new-password",
+          expiry: "1h",
+        }),
+    ],
+    ["rename", (slug: string) => renamePaste(slug, "Renamed")],
+    ["collection move", (slug: string) => setPasteCollection(slug, "other")],
+    [
+      "trash and restore",
+      async (slug: string) => {
+        await trashPaste(slug)
+        await restorePaste(slug)
+      },
+    ],
+    [
+      "collection deletion",
+      async () => {
+        await deleteCollection("mine")
+      },
+    ],
+    [
+      "collection restoration",
+      async () => {
+        const removed = await deleteCollection("mine")
+        if (!removed) throw new Error("missing collection")
+        await restoreCollection(removed)
+      },
+    ],
+  ] satisfies [string, (slug: string) => Promise<unknown>][]) {
+    test(`rejects a stale editor after ${name} without changing recent ordering`, async () => {
+      await getDb()
+        .insert(collection)
+        .values([
+          { ownerId: "owner", slug: "mine", name: "Mine" },
+          { ownerId: "owner", slug: "other", name: "Other" },
+        ])
+      const { slug, version } = await create({ collection: "mine" })
+      const before = await pasteRow(slug)
+      await mutate(slug)
+      const changed = await pasteRow(slug)
+
+      const stale = await autosavePaste(slug, input({ title: "Stale editor" }), version)
+      expect(stale).toMatchObject({ ok: false, conflict: true })
+      expect(await pasteRow(slug)).toEqual(changed)
+      expect(changed?.updatedAt).toEqual(before?.updatedAt)
+    })
+  }
+
+  test("rejects a stale browser editor after an API update", async () => {
+    const { slug, version } = await create()
+    await updateCapture("owner", slug, {
+      title: "API edit",
+      files: [{ name: "api.txt", content: "new" }],
+    })
+    const stale = await autosavePaste(slug, input({ title: "Stale editor" }), version)
+    expect(stale).toMatchObject({ ok: false, conflict: true })
+    expect((await getPaste(slug))?.title).toBe("API edit")
+  })
+
+  test("concurrent metadata writes each advance the version without moving recent order", async () => {
+    const { slug, version } = await create()
+    const before = await pasteRow(slug)
+    await Promise.all(Array.from({ length: 8 }, (_, index) => renamePaste(slug, `Name ${index}`)))
+    const after = await pasteRow(slug)
+    expect(after?.version).toBe(version + 8)
+    expect(after?.updatedAt).toEqual(before?.updatedAt)
+    expect(await autosavePaste(slug, input(), version)).toMatchObject({ ok: false, conflict: true })
+  })
+
+  test("ordinary views and stars leave the editor version valid", async () => {
+    const { slug, version } = await create()
+    signInAs(null)
+    expect((await readSharedPaste(slug, { visit: true })).status).toBe("ok")
+    signInAs("owner")
+    await setStarred(slug, true)
+    expect((await pasteRow(slug))?.version).toBe(version)
+    expect(await autosavePaste(slug, input({ title: "Still current" }), version)).toMatchObject({
+      ok: true,
+    })
+  })
+
+  test("burning and restoring a paste invalidates an editor opened before the burn", async () => {
+    const { slug, version } = await create({ burnAfterRead: true })
+    signInAs(null)
+    expect((await readSharedPaste(slug, { reveal: true })).status).toBe("ok")
+    signInAs("owner")
+    expect((await pasteRow(slug))?.version).toBe(version + 1)
+    await restorePaste(slug)
+    expect(await autosavePaste(slug, input(), version)).toMatchObject({ ok: false, conflict: true })
   })
 
   test("a burst of edits makes one revision, and a later one starts another", async () => {

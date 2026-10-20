@@ -1,5 +1,7 @@
 // Pastes and everything hanging off them.
+import { sql } from "drizzle-orm"
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -66,6 +68,9 @@ export const paste = pgTable(
     uniqueViews: integer("unique_views").notNull().default(0),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
+    version: bigint("version", { mode: "number" })
+      .notNull()
+      .default(sql`floor(extract(epoch from clock_timestamp()) * 1000)`),
     expiresAt: time("expires_at"),
     // Set while the paste is in the trash.
     deletedAt: time("deleted_at"),
