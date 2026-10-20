@@ -18,6 +18,14 @@
     "test:e2e": "bun --filter web test:e2e"
   },
   "catalogs": {
+    "docs": {
+      "@types/mdx": "^2.0.14",
+      "fumadocs-core": "16.17.7",
+      "fumadocs-mdx": "15.4.8",
+      "fumadocs-ui": "npm:@fumadocs/base-ui@16.17.7",
+      "lucide-react": "^1.60.0",
+      "zod": "4.6.7"
+    },
     "runtime": {
       "@better-auth/drizzle-adapter": "^1.7.3",
       "@scalar/api-reference-react": "^0.9.79",

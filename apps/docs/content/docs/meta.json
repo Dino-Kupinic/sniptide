@@ -1,0 +1,4 @@
+{
+  "title": "Sniptide docs",
+  "pages": ["index", "getting-started", "core-concepts", "cli", "mcp", "self-hosting"]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "docs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@sniptide/ui": "workspace:*",
+    "fumadocs-core": "catalog:docs",
+    "fumadocs-mdx": "catalog:docs",
+    "fumadocs-ui": "catalog:docs",
+    "lucide-react": "catalog:docs",
+    "next": "catalog:runtime",
+    "react": "catalog:runtime",
+    "react-dom": "catalog:runtime",
+    "zod": "catalog:docs"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:ui",
+    "@types/mdx": "catalog:docs",
+    "@types/node": "catalog:tooling",
+    "@types/react": "catalog:tooling",
+    "@types/react-dom": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  }
+}

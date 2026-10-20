@@ -12,6 +12,7 @@
       "!**/migrations",
       "!.idea",
       "!apps/web/app/icon0.svg",
+      "!apps/docs/app/icon0.svg",
       "!packages/ui/src/styles/shadcn.css"
     ]
   },
