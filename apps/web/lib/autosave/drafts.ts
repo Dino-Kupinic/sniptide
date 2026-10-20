@@ -10,9 +10,11 @@ export interface Draft<T> {
   value: T
 }
 
+export type DraftWriteResult = { kind: "saved" } | { kind: "unavailable" }
+
 export interface DraftStore {
   get<T>(key: string): Promise<Draft<T> | null>
-  put<T>(key: string, draft: Draft<T>): Promise<void>
+  put<T>(key: string, draft: Draft<T>): Promise<DraftWriteResult>
   delete(key: string): Promise<void>
 }
 
@@ -25,7 +27,10 @@ function open(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => request.result.createObjectStore(STORE)
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
-    request.onblocked = () => reject(new Error("IndexedDB is blocked"))
+    request.onblocked = () => {
+      request.onsuccess = () => request.result.close()
+      reject(new Error("IndexedDB is blocked"))
+    }
   })
 }
 
@@ -36,15 +41,20 @@ function run<R>(
   return open().then(
     (db) =>
       new Promise<R>((resolve, reject) => {
-        const transaction = db.transaction(STORE, mode)
-        const request = action(transaction.objectStore(STORE))
-        transaction.oncomplete = () => {
+        try {
+          const transaction = db.transaction(STORE, mode)
+          transaction.onerror = transaction.onabort = () => {
+            db.close()
+            reject(transaction.error)
+          }
+          const request = action(transaction.objectStore(STORE))
+          transaction.oncomplete = () => {
+            db.close()
+            resolve(request.result)
+          }
+        } catch (error) {
           db.close()
-          resolve(request.result)
-        }
-        transaction.onerror = transaction.onabort = () => {
-          db.close()
-          reject(transaction.error)
+          reject(error)
         }
       }),
   )
@@ -61,11 +71,12 @@ export const indexedDbDrafts: DraftStore = {
     }
   },
   async put<T>(key: string, draft: Draft<T>) {
-    if (typeof indexedDB === "undefined") return
     try {
+      if (typeof indexedDB === "undefined") return { kind: "unavailable" }
       await run("readwrite", (store) => store.put(draft, key))
+      return { kind: "saved" }
     } catch {
-      // No backup is better than an error in the middle of typing.
+      return { kind: "unavailable" }
     }
   },
   async delete(key: string) {
@@ -86,6 +97,7 @@ export function memoryDrafts(): DraftStore {
     },
     async put<T>(key: string, draft: Draft<T>) {
       drafts.set(key, draft)
+      return { kind: "saved" }
     },
     async delete(key: string) {
       drafts.delete(key)

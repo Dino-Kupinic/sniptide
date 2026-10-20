@@ -267,11 +267,120 @@ describe("Autosaver", () => {
   })
 
   test("flush reports false when the save is refused", async () => {
-    const { autosaver } = setup({ save: async () => ({ ok: false, error: "nope" }) })
+    const { autosaver, fake, sent } = setup({ save: async () => ({ ok: false, error: "nope" }) })
 
     autosaver.update(doc("a"))
     expect(await autosaver.flush()).toBe(false)
     expect(autosaver.hasUnsavedChanges()).toBe(true)
+    expect(sent).toEqual([doc("a")])
+    expect(await autosaver.flush()).toBe(false)
+    await fake.advance(60_000)
+    expect(sent).toEqual([doc("a")])
+    expect(autosaver.state).toEqual({ kind: "error", message: "nope" })
+  })
+
+  test("flush leaves a thrown save on its retry schedule", async () => {
+    let offline = true
+    const { autosaver, fake, sent } = setup({
+      save: async () => {
+        if (offline) throw new Error("network")
+        return { ok: true }
+      },
+    })
+
+    autosaver.update(doc("a"))
+    expect(await autosaver.flush()).toBe(false)
+    expect(sent).toEqual([doc("a")])
+    expect(autosaver.state).toEqual({ kind: "retrying", attempt: 1, offline: true })
+    expect(autosaver.hasUnsavedChanges()).toBe(true)
+    expect(await autosaver.flush()).toBe(false)
+    await fake.advance(1999)
+    expect(sent).toEqual([doc("a")])
+
+    offline = false
+    await fake.advance(1)
+    expect(sent).toEqual([doc("a"), doc("a")])
+    expect(autosaver.state.kind).toBe("saved")
+    expect(autosaver.hasUnsavedChanges()).toBe(false)
+  })
+
+  test("flush waits for an existing save and stops if it is refused", async () => {
+    let release: (() => void) | undefined
+    const { autosaver, fake, sent } = setup({
+      save: () => {
+        if (release) return Promise.resolve({ ok: false, error: "nope" })
+        return new Promise((resolve) => {
+          release = () => resolve({ ok: false, error: "nope" })
+        })
+      },
+    })
+
+    autosaver.update(doc("a"))
+    await fake.advance(1000)
+    const first = autosaver.flush()
+    const second = autosaver.flush()
+    release?.()
+    expect(await Promise.all([first, second])).toEqual([false, false])
+    expect(sent).toEqual([doc("a")])
+    expect(autosaver.hasUnsavedChanges()).toBe(true)
+  })
+
+  test("concurrent flushes drain edits made during a successful save once", async () => {
+    let release: (() => void) | undefined
+    const { autosaver, sent, overlapped } = setup({
+      save: (value) =>
+        value.text === "one"
+          ? new Promise((resolve) => {
+              release = () => resolve({ ok: true })
+            })
+          : Promise.resolve({ ok: true }),
+    })
+
+    autosaver.update(doc("one"))
+    const first = autosaver.flush()
+    const second = autosaver.flush()
+    autosaver.update(doc("two"))
+    release?.()
+    expect(await Promise.all([first, second])).toEqual([true, true])
+    expect(sent).toEqual([doc("one"), doc("two")])
+    expect(overlapped()).toBe(false)
+    expect(autosaver.hasUnsavedChanges()).toBe(false)
+  })
+
+  test("flush stops at a conflict until it is resolved", async () => {
+    let conflict = true
+    const { autosaver, fake, sent } = setup({
+      save: async () => (conflict ? { ok: false, conflict: true } : { ok: true }),
+    })
+
+    autosaver.update(doc("mine"))
+    expect(await autosaver.flush()).toBe(false)
+    autosaver.update(doc("mine, more"))
+    expect(await autosaver.flush()).toBe(false)
+    await fake.advance(60_000)
+    expect(sent).toEqual([doc("mine")])
+    expect(autosaver.state.kind).toBe("conflict")
+
+    conflict = false
+    autosaver.resolveConflict()
+    expect(await autosaver.flush()).toBe(true)
+    expect(sent).toEqual([doc("mine"), doc("mine, more")])
+  })
+
+  test("retryNow can retry a refused save explicitly", async () => {
+    let refuse = true
+    const { autosaver, fake, sent } = setup({
+      save: async () => (refuse ? { ok: false, error: "nope" } : { ok: true }),
+    })
+
+    autosaver.update(doc("a"))
+    expect(await autosaver.flush()).toBe(false)
+    expect(sent).toEqual([doc("a")])
+    refuse = false
+    autosaver.retryNow()
+    await fake.advance(0)
+    expect(sent).toEqual([doc("a"), doc("a")])
+    expect(autosaver.hasUnsavedChanges()).toBe(false)
   })
 
   test("treats the server's normalised value as the saved one", async () => {

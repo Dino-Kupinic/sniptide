@@ -28,7 +28,12 @@ import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marke
 import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
-import { PASTE_PAGE_SIZE, type PageInfo, type PasteListQuery } from "@/lib/pastes/list-query"
+import {
+  PASTE_PAGE_SIZE,
+  type PageInfo,
+  type PasteListQuery,
+  pasteListSearch,
+} from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
 import { ListHeader, Pagination, SearchField } from "./toolbar"
 import { useListQuery } from "./use-list-query"
@@ -132,7 +137,7 @@ export function TrashList({
 }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
-  const { query, update, pending } = useListQuery(serverQuery)
+  const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
 
   const emptyButton = (variant: "desktop" | "mobile") => (

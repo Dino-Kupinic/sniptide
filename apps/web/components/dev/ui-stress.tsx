@@ -27,11 +27,13 @@ export function UiStress({
   query,
   pagination,
   data,
+  shared,
 }: {
   dataset: Dataset
   screen: StressScreen
   query: PasteListQuery
   pagination: PageInfo
+  shared: Omit<React.ComponentProps<typeof SharedList>, "origin" | "host">
   data: ReturnType<typeof stressData>
 }) {
   const router = useRouter()
@@ -72,7 +74,7 @@ export function UiStress({
               languageOptions={["typescript", "objective-c", "text", "python"]}
             />
           ) : null}
-          {screen === "shared" ? <SharedList rows={data.rows} origin={origin} host={host} /> : null}
+          {screen === "shared" ? <SharedList {...shared} origin={origin} host={host} /> : null}
           {screen === "trash" ? (
             <TrashList
               rows={data.trash.slice(start, start + 10)}

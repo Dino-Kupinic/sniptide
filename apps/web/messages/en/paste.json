@@ -52,6 +52,7 @@
     "couldnTSaveThePasteCheck": "Couldn't save the paste. Check your connection and try again.",
     "pasteCreated": "Paste created",
     "draftSavedOnThisDevice": "Draft saved on this device",
+    "draftSaveUnavailable": "Couldn't save a draft on this device. Keep this tab open and try again.",
     "leaveEmptyToKeepTheCurrent": "Leave empty to keep the current one",
     "password": "Password",
     "anyoneWithTheLinkCanOpenMessage": "Anyone with the link can open it until you set a password.",
