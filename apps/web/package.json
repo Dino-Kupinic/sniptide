@@ -20,6 +20,7 @@
     "@dnd-kit/react": "^0.5.0",
     "@scalar/api-reference-react": "catalog:runtime",
     "@shikijs/langs": "catalog:runtime",
+    "@sniptide/contracts": "workspace:*",
     "@sniptide/mcp": "workspace:*",
     "@sniptide/ui": "workspace:*",
     "@workspace/auth": "workspace:*",
