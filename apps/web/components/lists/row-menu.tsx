@@ -19,7 +19,16 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import Link from "next/link"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import { useTranslations } from "next-intl"
+import { withUndo } from "@/components/undo-toast"
+import { copyText, runAction } from "@/lib/feedback"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import type { PasteRow } from "@/lib/pastes/rows"
 
 export function RowMenu({
@@ -32,52 +41,88 @@ export function RowMenu({
   // A row of Shared with me, which the viewer can drop from their list.
   shared?: boolean
 }) {
+  const t = useTranslations("Workspace")
+  const feedbackT = useTranslations("Core")
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={`Actions for ${row.title}`}
-        className="relative z-10 flex size-7 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+        aria-label={t("actions_for", { name: row.title })}
+        className="relative z-10 flex size-7 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
       >
         <MoreHorizontalIcon className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem render={<Link href={`/pastes/${row.slug}`} />}>
           <ExternalLinkIcon />
-          Open
+          {t("open")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(`${origin}/${row.slug}`)}>
+        <DropdownMenuItem
+          onClick={() =>
+            copyText(`${origin}/${row.slug}`, {
+              success: feedbackT("linkCopied"),
+              error: feedbackT("copyError"),
+            })
+          }
+        >
           <LinkIcon />
-          Copy link
+          {t("copy_link")}
         </DropdownMenuItem>
         {row.canEdit ? (
           <DropdownMenuItem render={<Link href={`/pastes/${row.slug}/edit`} />}>
             <PencilIcon />
-            Edit
+            {t("edit")}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem render={<Link href={`/new?from=${row.slug}`} />}>
           <CopyIcon />
-          Duplicate
+          {t("duplicate")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setStarred(row.slug, !row.starred)}>
+        <DropdownMenuItem
+          onClick={() =>
+            runAction(() => setStarred(row.slug, !row.starred), {
+              success: row.starred ? t("removed_from_starred") : t("starred"),
+              error: t("couldnt_update_the_star_try_again"),
+            })
+          }
+        >
           {row.starred ? <StarOffIcon /> : <StarIcon />}
-          {row.starred ? "Unstar" : "Star"}
+          {row.starred ? t("unstar") : t("star")}
         </DropdownMenuItem>
         {shared ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => leaveShare(row.slug)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() =>
+                withUndo(() => leaveShare(row.slug), {
+                  labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                  error: t("couldnt_remove_it_from_your_list_try_again"),
+                  message: t("removed_from_list", { name: row.title }),
+                  undo: () => restoreShare(row.slug),
+                })
+              }
+            >
               <LogOutIcon />
-              Remove from my list
+              {t("remove_from_my_list")}
             </DropdownMenuItem>
           </>
         ) : null}
         {row.owner ? null : (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => trashPaste(row.slug)}>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() =>
+                withUndo(() => trashPaste(row.slug), {
+                  labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                  error: t("couldnt_move_the_paste_to_trash_try_again"),
+                  message: t("moved_to_trash", { name: row.title }),
+                  undo: () => restorePaste(row.slug),
+                })
+              }
+            >
               <Trash2Icon />
-              Move to trash
+              {t("move_to_trash")}
             </DropdownMenuItem>
           </>
         )}

@@ -22,6 +22,7 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import type * as React from "react"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { formatNumber } from "@/lib/format"
@@ -29,7 +30,7 @@ import { formatNumber } from "@/lib/format"
 export function SearchField({
   value,
   onChange,
-  placeholder = "Filter by title or slug…",
+  placeholder,
   className,
 }: {
   value: string
@@ -37,6 +38,8 @@ export function SearchField({
   placeholder?: string
   className?: string
 }) {
+  const t = useTranslations("Workspace")
+  const searchPlaceholder = placeholder ?? t("filter_by_title_or_slug")
   return (
     <label
       className={cn(
@@ -50,16 +53,16 @@ export function SearchField({
       />
       <input
         type="search"
-        aria-label={placeholder.replace("…", "")}
+        aria-label={searchPlaceholder.replace("…", "")}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
+        placeholder={searchPlaceholder}
         className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground lg:text-[13px] [&::-webkit-search-cancel-button]:hidden"
       />
       {value ? (
         <button
           type="button"
-          aria-label="Clear filter"
+          aria-label={t("clear_filter")}
           onClick={() => onChange("")}
           className="text-muted-foreground hover:text-foreground"
         >
@@ -87,6 +90,7 @@ export function FilterMenu({
   selected: string[]
   onChange: (selected: string[]) => void
 }) {
+  const t = useTranslations("Workspace")
   const active = selected.length > 0
 
   return (
@@ -110,7 +114,7 @@ export function FilterMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-52">
         {options.length === 0 ? (
-          <p className="px-3 py-1.5 text-sm text-muted-foreground">Nothing to filter</p>
+          <p className="px-3 py-1.5 text-sm text-muted-foreground">{t("nothing_to_filter")}</p>
         ) : null}
         {options.map((option) => (
           <DropdownMenuCheckboxItem
@@ -132,7 +136,7 @@ export function FilterMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onChange([])} className="text-muted-foreground">
-              Clear filter
+              {t("clear_filter")}
             </DropdownMenuItem>
           </>
         ) : null}
@@ -217,12 +221,13 @@ export function ViewToggle({
   value: "list" | "grid"
   onChange: (value: "list" | "grid") => void
 }) {
+  const t = useTranslations("Workspace")
   return (
-    <div role="radiogroup" aria-label="Layout" className="flex gap-0.5 bg-muted p-[3px]">
+    <div role="radiogroup" aria-label={t("layout")} className="flex gap-0.5 bg-muted p-[3px]">
       {(
         [
-          { value: "list", label: "List", icon: ListIcon },
-          { value: "grid", label: "Grid", icon: LayoutGridIcon },
+          { value: "list", label: t("list"), icon: ListIcon },
+          { value: "grid", label: t("grid"), icon: LayoutGridIcon },
         ] as const
       ).map((option) => (
         // biome-ignore lint/a11y/useSemanticElements: icon toggle acting as a radio group
@@ -255,6 +260,7 @@ export function Pagination({
   pageCount: number
   onChange: (page: number) => void
 }) {
+  const t = useTranslations("Workspace")
   if (pageCount <= 1) return null
 
   // First, last, and the current page with its neighbours; gaps become an ellipsis.
@@ -263,10 +269,13 @@ export function Pagination({
     .sort((a, b) => a - b)
 
   return (
-    <nav aria-label="Pagination" className="flex items-center gap-1 text-[13px]">
+    <nav
+      aria-label={t("pagination")}
+      className="flex shrink-0 flex-wrap items-center gap-1 text-[13px]"
+    >
       <button
         type="button"
-        aria-label="Previous page"
+        aria-label={t("previous_page")}
         disabled={page === 1}
         onClick={() => onChange(page - 1)}
         className="flex size-8 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
@@ -274,7 +283,10 @@ export function Pagination({
         <ChevronLeftIcon className="size-3.5" />
       </button>
       {pages.map((candidate, index) => (
-        <span key={candidate} className="flex items-center gap-1">
+        <span
+          key={candidate}
+          className={cn("hidden items-center gap-1 sm:flex", candidate === page && "flex")}
+        >
           {index > 0 && candidate - (pages[index - 1] ?? candidate) > 1 ? (
             <span
               aria-hidden="true"
@@ -298,7 +310,7 @@ export function Pagination({
       ))}
       <button
         type="button"
-        aria-label="Next page"
+        aria-label={t("next_page")}
         disabled={page === pageCount}
         onClick={() => onChange(page + 1)}
         className="flex size-8 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
@@ -322,23 +334,28 @@ export function ListHeader({
   description?: React.ReactNode
   actions?: React.ReactNode
 }) {
+  const locale = useLocale()
   return (
     <div className="flex flex-col gap-1">
       <HeaderTitle>
-        <span className="truncate">{title}</span>
+        <span className="truncate" title={title}>
+          {title}
+        </span>
         {count !== undefined ? (
-          <span className="bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
-            {formatNumber(count)}
+          <span className="shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
+            {formatNumber(count, locale)}
           </span>
         ) : null}
       </HeaderTitle>
       {actions ? <HeaderActions>{actions}</HeaderActions> : null}
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
+        <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
           {title}
         </h1>
         {count !== undefined ? (
-          <span className="text-sm text-muted-foreground tabular-nums lg:hidden">{count}</span>
+          <span className="shrink-0 text-sm text-muted-foreground tabular-nums lg:hidden">
+            {formatNumber(count, locale)}
+          </span>
         ) : null}
       </div>
       {description ? (

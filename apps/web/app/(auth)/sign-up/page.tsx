@@ -1,28 +1,52 @@
+import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { RequestAccess } from "@/components/auth/request-access"
+import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
-import { getInviteOnly, getSocialProviders } from "@/lib/auth"
+import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
 import { getSiteOrigin } from "@/lib/site"
 
-export const metadata = { title: "Create account · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("Auth")
+  return { title: t("signUpTitle") }
+}
 
 export default async function Page({ searchParams }: PageProps<"/sign-up">) {
-  const { host } = await getSiteOrigin()
+  const [{ host }, t] = await Promise.all([getSiteOrigin(), getTranslations("Auth")])
   const inviteOnly = getInviteOnly()
-  const legal = "By creating an account you agree to the Terms and Privacy Policy."
+  const legal = t("signUpLegal")
+
+  // ALLOW_SIGN_UP=false: no accounts can be created, not even with ?invite.
+  if (isSignUpClosed()) {
+    return (
+      <AuthScreen
+        subtitle={t("signUpClosedSubtitle")}
+        legal={legal}
+        centered
+        pitch={{
+          title: [t("closedPitchTitle1"), t("closedPitchTitle2")],
+          body: t("closedPitchBody"),
+          link: `${host}/@you`,
+          note: t("profileAfterJoining"),
+        }}
+      >
+        <SignUpClosed />
+      </AuthScreen>
+    )
+  }
 
   // Invite-only: visitors get the request-access screen; ?invite opens the form for invitees.
   if (inviteOnly && !("invite" in (await searchParams))) {
     return (
       <AuthScreen
-        subtitle="Sniptide is invite-only while it's in early access. Apply and we'll send you an invite."
+        subtitle={t("inviteOnlySubtitle")}
         legal={legal}
         centered
         pitch={{
-          title: ["Early access,", "by invite."],
-          body: "Sniptide is still changing fast, so we're letting people in a few at a time. Apply and we'll add your email.",
+          title: [t("invitePitchTitle1"), t("invitePitchTitle2")],
+          body: t("invitePitchBody"),
           link: `${host}/@you`,
-          note: "yours once you're in",
+          note: t("profileAfterJoining"),
         }}
       >
         <RequestAccess applyUrl={inviteOnly.applyUrl} />
@@ -32,14 +56,14 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
 
   return (
     <AuthScreen
-      title="Create account"
-      subtitle="Free for up to 100 MB of pastes."
+      title={t("createAccount")}
+      subtitle={t("signUpSubtitle")}
       legal={legal}
       pitch={{
-        title: ["A profile for", "your public pastes."],
-        body: "Public pastes are listed on your profile. Private and unlisted pastes are only visible through their link.",
+        title: [t("signUpPitchTitle1"), t("signUpPitchTitle2")],
+        body: t("signUpPitchBody"),
         link: `${host}/@you`,
-        note: "your public profile",
+        note: t("publicProfile"),
       }}
     >
       <SignUpForm socialProviders={inviteOnly ? null : await getSocialProviders()} />

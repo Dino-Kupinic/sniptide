@@ -20,7 +20,12 @@ export function niceScale(max: number) {
 }
 
 // 750, 1k, 1.25k, 10k.
-export function formatTick(value: number) {
+export function formatTick(value: number, locale = "en") {
+  if (locale !== "en") {
+    return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 2 }).format(
+      value,
+    )
+  }
   return value >= 1000 ? `${+(value / 1000).toFixed(2)}k` : String(value)
 }
 

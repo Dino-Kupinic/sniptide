@@ -1,13 +1,16 @@
 import { notFound } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 import { PasteEditor } from "@/components/paste/paste-editor"
-import { getPreferences } from "@/lib/auth"
+import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
-import { formatDateTime } from "@/lib/format"
 import { getPaste, getShare } from "@/lib/pastes/store"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edit">) {
   const paste = await getPaste((await params).slug)
-  return { title: paste ? `Edit ${paste.title} · Sniptide` : "Paste not found · Sniptide" }
+  const t = await getTranslations("Core")
+  return {
+    title: `${paste ? t("editTitle", { title: paste.title }) : t("pasteNotFound")} · Sniptide`,
+  }
 }
 
 export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">) {
@@ -15,10 +18,11 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
   const paste = await getPaste(slug)
   if (!paste) notFound()
 
-  const [share, preferences, collections] = await Promise.all([
+  const [share, preferences, collections, session] = await Promise.all([
     getShare(slug),
     getPreferences(),
     listCollections(),
+    getSession(),
   ])
   const shared = Boolean(paste.owner)
   if (shared && share?.access !== "edit") notFound()
@@ -28,11 +32,10 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
       editing={slug}
       sharedEdit={shared}
       collections={collections}
+      draftScope={session?.user.id ?? ""}
       indentation={preferences.indentation}
       secretDetection={preferences.secretDetection}
-      currentExpiry={
-        paste.expiresAt ? `expires ${formatDateTime(paste.expiresAt)}` : "never expires"
-      }
+      currentExpiresAt={paste.expiresAt}
       initial={{
         title: paste.title,
         description: paste.description,
@@ -44,6 +47,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
         collection: shared ? null : paste.collection,
         hasPassword: Boolean(paste.password),
         burnAfterRead: paste.burnAfterRead,
+        version: paste.version,
       }}
     />
   )

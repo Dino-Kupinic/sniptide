@@ -1,8 +1,10 @@
 "use client"
 
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "lucide-react"
+import { CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
@@ -49,6 +51,7 @@ export function FileViewer({
   bodyClassName?: string
   footerClassName?: string
 }) {
+  const t = useTranslations("Paste")
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
   const [wrap, setWrap] = React.useState(false)
   const [expanded, setExpanded] = React.useState(false)
@@ -68,7 +71,7 @@ export function FileViewer({
           headerClassName,
         )}
       >
-        <div role="tablist" aria-label="Files" className="flex h-full min-w-0 overflow-x-auto">
+        <div role="tablist" aria-label={t("files")} className="flex h-full min-w-0 overflow-x-auto">
           {files.map((file) => {
             const selected = file.name === active.name
             return (
@@ -92,10 +95,10 @@ export function FileViewer({
           })}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
-          <Tool label={wrap ? "Don't wrap lines" : "Wrap lines"}>
+          <Tool label={wrap ? t("donTWrapLines") : t("wrapLines")}>
             <button
               type="button"
-              aria-label="Wrap lines"
+              aria-label={t("wrapLines")}
               aria-pressed={wrap}
               onClick={() => setWrap((value) => !value)}
               className={panelToolClass}
@@ -104,38 +107,37 @@ export function FileViewer({
             </button>
           </Tool>
           {rawAllowed ? (
-            <Tool label="View raw">
-              <a href={rawHref} aria-label="View raw" className={panelToolClass}>
+            <Tool label={t("viewRaw")}>
+              <a href={rawHref} aria-label={t("viewRaw")} className={panelToolClass}>
                 <FileCodeIcon />
               </a>
             </Tool>
           ) : null}
           {rawAllowed ? (
-            <Tool label="Download">
+            <Tool label={t("download")}>
               <a
                 href={`${rawHref}&download=1`}
-                aria-label={`Download ${active.name}`}
+                aria-label={t("downloadFile", { name: active.name })}
                 className={cn(panelToolClass, "hidden lg:inline-flex")}
               >
                 <DownloadIcon />
               </a>
             </Tool>
           ) : null}
-          <Tool label={copied ? "Copied" : "Copy"}>
+          <Tool label={copied ? t("copied") : t("copy")}>
             <button
               type="button"
-              aria-label="Copy file contents"
+              aria-label={t("copyFileContents")}
               onClick={async () => {
-                await copy(active.content)
-                reportCopy(slug)
+                if (await copy(active.content)) reportCopy(slug)
               }}
               className={cn(panelToolClass, "hidden lg:inline-flex")}
             >
-              {copied ? <CheckIcon /> : <CopyIcon />}
+              {copied ? <SuccessCheck /> : <CopyIcon />}
             </button>
           </Tool>
           <span aria-live="polite" className="sr-only">
-            {copied ? "Copied" : ""}
+            {copied ? t("copied") : ""}
           </span>
           {panelToggle ? <SidePanelToggle /> : null}
         </div>
@@ -156,7 +158,7 @@ export function FileViewer({
           onClick={() => setExpanded(true)}
           className="h-11 border-t border-border text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 lg:hidden"
         >
-          Show full file
+          {t("showFullFile")}
         </button>
       ) : null}
 

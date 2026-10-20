@@ -8,17 +8,22 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Switch } from "@sniptide/ui/components/switch"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { LanguageMarker } from "@/components/paste/language-marker"
+import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
+import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
 const DRAFT_KEY = "sniptide:quick-paste"
 
@@ -36,19 +41,6 @@ const emptyDraft: Draft = {
   expiry: "1w",
   visibility: "unlisted",
   burnAfterRead: false,
-}
-
-const expiryLabels: Record<Expiry, string> = {
-  "1h": "1 hour",
-  "1d": "1 day",
-  "1w": "1 week",
-  "1m": "1 month",
-  never: "Never",
-}
-const visibilityLabels: Record<Visibility, string> = {
-  private: "Private",
-  unlisted: "Unlisted",
-  public: "Public",
 }
 
 // Browser storage is only a convenience here: a lost draft costs a re-paste, nothing more.
@@ -89,6 +81,20 @@ export function QuickPaste({
   // Paste defaults from Settings, used for a fresh draft.
   defaults?: Pick<Draft, "expiry" | "visibility" | "burnAfterRead">
 }) {
+  const t = useTranslations("Workspace")
+  const expiryLabels: Record<Expiry, string> = {
+    "1h": t("1_hour"),
+    "1d": t("1_day"),
+    "1w": t("1_week"),
+    "1m": t("1_month"),
+    never: t("never"),
+  }
+  const visibilityLabels: Record<Visibility, string> = {
+    private: t("private"),
+    unlisted: t("unlisted"),
+    public: t("public"),
+  }
+
   const router = useRouter()
   const fresh = React.useMemo(() => ({ ...emptyDraft, ...defaults }), [defaults])
   const [draft, setDraft] = React.useState<Draft>(fresh)
@@ -127,7 +133,14 @@ export function QuickPaste({
     update({ name: `${base || "snippet"}.${extension}` })
   }
 
+  // ⌘S: write the draft now instead of waiting out the half-second delay.
+  function saveDraft() {
+    writeDraft(draft)
+    setSaved(Boolean(draft.content))
+  }
+
   function create() {
+    if (pending) return
     setError(null)
     startTransition(async () => {
       const result = await savePaste({
@@ -140,9 +153,11 @@ export function QuickPaste({
         collection: null,
         password: null,
         burnAfterRead: draft.burnAfterRead,
-      })
+      }).catch(() => null)
+      if (!result) return setError(t("couldnt_create_the_paste_try_again"))
       if (!result.ok) return setError(result.error)
       writeDraft(null)
+      toast.success(t("paste_created"))
       router.push(`/pastes/${result.slug}`)
     })
   }
@@ -152,19 +167,23 @@ export function QuickPaste({
       aria-labelledby="quick-paste-heading"
       className="flex min-w-0 flex-[1.8] flex-col border border-border"
       onKeyDown={(event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        if (matchesCombo(event, shortcut("submit").keys)) {
           event.preventDefault()
           create()
+        } else if (matchesCombo(event, shortcut("save").keys)) {
+          // Without this the browser offers to save the page.
+          event.preventDefault()
+          saveDraft()
         }
       }}
     >
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border pr-3 pl-4">
         <div className="flex items-center gap-2.5">
           <h2 id="quick-paste-heading" className="text-sm font-semibold">
-            Quick paste
+            {t("quick_paste")}
           </h2>
           <input
-            aria-label="File name"
+            aria-label={t("file_name")}
             value={draft.name}
             onChange={(event) => update({ name: event.target.value })}
             spellCheck={false}
@@ -178,7 +197,7 @@ export function QuickPaste({
             !saved && "invisible",
           )}
         >
-          Draft saved
+          {t("draft_saved")}
           <span className="size-1.5 bg-primary" />
         </span>
       </div>
@@ -195,11 +214,11 @@ export function QuickPaste({
           ))}
         </div>
         <HighlightedTextarea
-          aria-label="Code"
+          aria-label={t("code")}
           lines={highlighted}
           value={draft.content}
           onChange={(event) => update({ content: event.target.value })}
-          placeholder="Paste code here…"
+          placeholder={t("paste_code_here")}
           spellCheck={false}
           wrap="off"
           rows={Math.max(lines, 12)}
@@ -210,7 +229,7 @@ export function QuickPaste({
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <DropdownMenu>
-            <Chip label="Language">
+            <Chip label={t("language")}>
               <LanguageMarker language={language.id} />
               {language.name}
             </Chip>
@@ -228,7 +247,7 @@ export function QuickPaste({
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
-            <Chip label="Expires after">
+            <Chip label={t("expires_after")}>
               <ClockIcon />
               {expiryLabels[draft.expiry]}
             </Chip>
@@ -246,7 +265,7 @@ export function QuickPaste({
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
-            <Chip label="Visibility">
+            <Chip label={t("visibility")}>
               <LinkIcon />
               {visibilityLabels[draft.visibility]}
             </Chip>
@@ -269,25 +288,24 @@ export function QuickPaste({
               checked={draft.burnAfterRead}
               onCheckedChange={(burnAfterRead) => update({ burnAfterRead })}
             />
-            <span id="quick-burn">Burn after read</span>
+            <span id="quick-burn">{t("burn_after_read")}</span>
           </span>
         </div>
         <Button
           variant="inverted"
           size="lg"
-          disabled={pending}
+          loading={pending}
           onClick={create}
           className="h-8 gap-2 text-[13px]"
         >
-          {pending ? "Creating…" : "Create paste"}
-          <span className="font-mono text-[11px] text-background/70">⌘↵</span>
+          {pending ? t("creating") : t("create_paste")}
+          <ShortcutKeys
+            id="submit"
+            className="h-auto min-w-0 bg-transparent px-0 text-background/70"
+          />
         </Button>
       </div>
-      {error ? (
-        <p role="alert" className="border-t border-border px-4 py-2 text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError variant="inline" message={error} className="border-t border-border px-4 py-2" />
     </section>
   )
 }

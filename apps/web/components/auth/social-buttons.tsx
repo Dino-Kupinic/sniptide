@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { track, withAuthMarker } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
@@ -52,6 +53,7 @@ export function SocialButtons({
   callbackURL: string
   onError: (message: string) => void
 }) {
+  const t = useTranslations("Auth")
   const [pending, setPending] = React.useState<SocialProvider | null>(null)
 
   async function signIn(provider: SocialProvider) {
@@ -59,14 +61,16 @@ export function SocialButtons({
     // The account is created after the provider's redirect; this marks the attempt. The result
     // is reported on return: new accounts land on newUserCallbackURL, the rest on callbackURL.
     if (verb === "Sign up") track("sign_up_started", { method: provider })
-    const { error } = await authClient.signIn.social({
-      provider,
-      callbackURL: withAuthMarker(callbackURL, "signed_in", provider),
-      newUserCallbackURL: withAuthMarker(callbackURL, "signed_up", provider),
-    })
+    const { error } = await authClient.signIn
+      .social({
+        provider,
+        callbackURL: withAuthMarker(callbackURL, "signed_in", provider),
+        newUserCallbackURL: withAuthMarker(callbackURL, "signed_up", provider),
+      })
+      .catch(() => ({ error: { message: undefined } }))
     if (error) {
       setPending(null)
-      onError(error.message ?? "Couldn't reach the provider. Try again.")
+      onError(t("errors.provider"))
     }
   }
 
@@ -80,15 +84,19 @@ export function SocialButtons({
             key={id}
             type="button"
             variant="outline"
-            disabled={!available || pending !== null}
-            title={available ? undefined : `${name} sign-in isn't configured yet`}
+            disabled={!available || (pending !== null && pending !== id)}
+            loading={pending === id}
+            aria-label={t(verb === "Sign up" ? "socialSignUp" : "socialContinue", {
+              provider: name,
+            })}
+            title={available ? undefined : t("providerUnavailable", { provider: name })}
             onClick={() => signIn(id)}
             className="h-[46px] flex-1 gap-2 text-[15px] lg:h-10 lg:flex-none lg:gap-2.5 lg:text-sm"
           >
             <Icon />
             <span className="lg:hidden">{name}</span>
             <span className="hidden lg:inline">
-              {verb} with {name}
+              {t(verb === "Sign up" ? "socialSignUp" : "socialContinue", { provider: name })}
             </span>
           </Button>
         )
@@ -98,10 +106,11 @@ export function SocialButtons({
 }
 
 export function EmailDivider() {
+  const t = useTranslations("Auth")
   return (
     <div className="flex items-center gap-3 text-xs text-muted-foreground">
       <span className="h-px flex-1 bg-border" />
-      or with email
+      {t("emailDivider")}
       <span className="h-px flex-1 bg-border" />
     </div>
   )

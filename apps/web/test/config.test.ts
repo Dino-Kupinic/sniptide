@@ -32,6 +32,34 @@ describe("getConfig", () => {
     expect(config.githubToken).toBeUndefined()
   })
 
+  test("leaves self-hosted extras off and sign-up open by default", () => {
+    const config = getConfig({})
+    expect(config.analytics).toBeUndefined()
+    expect(config.github).toBeUndefined()
+    expect(config.google).toBeUndefined()
+    expect(config.allowedEmails).toBeUndefined()
+    expect(config.allowSignUp).toBe(true)
+  })
+
+  test("reads the sign-up toggle", () => {
+    for (const value of ["false", "FALSE", "0", "no", "off"]) {
+      expect(getConfig({ ALLOW_SIGN_UP: value }).allowSignUp).toBe(false)
+    }
+    for (const value of ["true", "1", "yes", "on", ""]) {
+      expect(getConfig({ ALLOW_SIGN_UP: value }).allowSignUp).toBe(true)
+    }
+    expect(() => getConfig({ ALLOW_SIGN_UP: "maybe" })).toThrow(/ALLOW_SIGN_UP must be "true"/)
+  })
+
+  test("boots with only the database and auth secret", () => {
+    const config = getConfig({
+      DATABASE_URL: "postgres://u:p@db/sniptide",
+      BETTER_AUTH_SECRET: "s",
+    })
+    expect(config.databaseUrl).toBe("postgres://u:p@db/sniptide")
+    expect(config.authSecret).toBe("s")
+  })
+
   test("treats an empty value as unset", () => {
     const config = getConfig({ MAX_PASTE_SIZE: "", SHARE_URL: "  ", GITHUB_TOKEN: "" })
     expect(config.maxPasteBytes).toBe(1024 * 1024)
@@ -64,5 +92,53 @@ describe("getConfig", () => {
     } finally {
       delete process.env.MAX_PASTE_SIZE
     }
+  })
+})
+
+describe("optional SMTP configuration", () => {
+  const complete = {
+    SMTP_HOST: "localhost",
+    SMTP_PORT: "2525",
+    SMTP_FROM: "sniptide@example.com",
+    BETTER_AUTH_URL: "https://sniptide.example.com",
+    BETTER_AUTH_SECRET: "a-secret-at-least-thirty-two-characters-long",
+  }
+  test("omitted SMTP stays disabled and configured SMTP requires TLS by default", () => {
+    expect(getConfig({}).smtp).toBeUndefined()
+    expect(getConfig(complete).smtp).toEqual({
+      host: "localhost",
+      port: 2525,
+      from: "sniptide@example.com",
+      secure: false,
+      requireTLS: true,
+      auth: undefined,
+    })
+    expect(
+      getConfig({
+        ...complete,
+        SMTP_SECURE: "true",
+        SMTP_REQUIRE_TLS: "false",
+        SMTP_USER: "user",
+        SMTP_PASSWORD: "password",
+      }).smtp,
+    ).toMatchObject({ secure: true, requireTLS: false, auth: { user: "user", pass: "password" } })
+  })
+  test("incomplete SMTP, unpaired credentials and short signing secret are rejected", () => {
+    for (const key of [
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_FROM",
+      "BETTER_AUTH_URL",
+      "BETTER_AUTH_SECRET",
+    ])
+      expect(() => getConfig({ ...complete, [key]: "" })).toThrow(/SMTP requires/)
+    expect(() => getConfig({ ...complete, SMTP_USER: "user" })).toThrow(/paired SMTP_USER/)
+    expect(() => getConfig({ ...complete, SMTP_PASSWORD: "password" })).toThrow(/paired SMTP_USER/)
+    expect(() => getConfig({ ...complete, BETTER_AUTH_SECRET: "short" })).toThrow(/at least 32/)
+  })
+  test("invalid SMTP values name their environment variable", () => {
+    expect(() => getConfig({ ...complete, SMTP_PORT: "0" })).toThrow(/SMTP_PORT/)
+    expect(() => getConfig({ ...complete, SMTP_FROM: "bad" })).toThrow(/SMTP_FROM/)
+    expect(() => getConfig({ ...complete, SMTP_REQUIRE_TLS: "maybe" })).toThrow(/SMTP_REQUIRE_TLS/)
   })
 })

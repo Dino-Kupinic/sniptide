@@ -1,7 +1,9 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import { CheckIcon, CopyIcon, DownloadIcon } from "lucide-react"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
+import { CopyIcon, DownloadIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { reportCopy, useCopy } from "./copy-button"
 
 // Raw / Download / Copy code on the public page, for the paste's first file.
@@ -17,10 +19,10 @@ export function ShareActions({
   content: string
   compact?: boolean
 }) {
+  const t = useTranslations("Paste")
   const { copied, copy } = useCopy()
   const copyCode = async () => {
-    await copy(content)
-    if (slug) reportCopy(slug)
+    if ((await copy(content)) && slug) reportCopy(slug)
   }
 
   if (compact) {
@@ -33,12 +35,12 @@ export function ShareActions({
             render={<a href={rawHref} />}
             nativeButton={false}
           >
-            Raw
+            {t("raw")}
           </Button>
         ) : null}
         <Button className="h-12 flex-1 gap-2 text-base font-semibold" onClick={copyCode}>
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          <span aria-live="polite">{copied ? "Copied" : "Copy code"}</span>
+          {copied ? <SuccessCheck /> : <CopyIcon />}
+          <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
         </Button>
       </div>
     )
@@ -49,7 +51,7 @@ export function ShareActions({
       {rawHref ? (
         <>
           <Button variant="outline" size="lg" render={<a href={rawHref} />} nativeButton={false}>
-            Raw
+            {t("raw")}
           </Button>
           <Button
             variant="outline"
@@ -58,13 +60,13 @@ export function ShareActions({
             nativeButton={false}
           >
             <DownloadIcon />
-            Download
+            {t("download")}
           </Button>
         </>
       ) : null}
       <Button size="lg" onClick={copyCode}>
-        {copied ? <CheckIcon /> : <CopyIcon />}
-        <span aria-live="polite">{copied ? "Copied" : "Copy code"}</span>
+        {copied ? <SuccessCheck /> : <CopyIcon />}
+        <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
       </Button>
     </div>
   )

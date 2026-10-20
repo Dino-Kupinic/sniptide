@@ -7,6 +7,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { USERNAME_PATTERN } from "@workspace/auth/username"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { useSiteHost } from "@/components/site-host"
 import { track } from "@/lib/analytics"
@@ -18,13 +19,12 @@ import { EmailDivider, SocialButtons } from "./social-buttons"
 
 type Availability = "idle" | "invalid" | "checking" | "available" | "taken"
 
-const availabilityText: Record<Availability, string> = {
-  idle: "",
-  invalid: "3–30 of a–z, 0–9, - and _",
-  checking: "Checking…",
-  available: "Available",
-  taken: "Taken",
-}
+const strengthHints = new Map([
+  ["Use at least 8 characters", "minimum"],
+  ["Add a symbol", "symbol"],
+  ["Add a number", "number"],
+  ["Mix upper and lower case", "case"],
+])
 
 function useUsernameAvailability(username: string) {
   const [status, setStatus] = React.useState<Availability>("idle")
@@ -50,6 +50,7 @@ function useUsernameAvailability(username: string) {
 }
 
 export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
+  const t = useTranslations("Auth")
   const host = useSiteHost()
   const router = useRouter()
   const [username, setUsername] = React.useState("")
@@ -58,15 +59,12 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
   const [pending, setPending] = React.useState(false)
   const availability = useUsernameAvailability(username)
   const strength = passwordStrength(password)
+  const strengthHint = strength.hint ? strengthHints.get(strength.hint) : undefined
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (availability === "invalid" || availability === "taken") {
-      setError(
-        availability === "taken"
-          ? "That username is taken. Try another one."
-          : "Usernames are 3–30 lowercase letters, numbers, hyphens or underscores.",
-      )
+      setError(t(availability === "taken" ? "errors.usernameTaken" : "errors.usernameInvalid"))
       return
     }
 
@@ -74,16 +72,18 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signUp.email({
-      name: username,
-      username,
-      email: String(form.get("email")),
-      password,
-    })
+    const { error } = await authClient.signUp
+      .email({
+        name: username,
+        username,
+        email: String(form.get("email")),
+        password,
+      })
+      .catch(() => ({ error: { status: 0 } }))
 
     if (error) {
       setPending(false)
-      setError(error.message ?? "Couldn't create your account. Try again.")
+      setError(t(error.status === 0 ? "errors.network" : "errors.signUp"))
       return
     }
 
@@ -110,7 +110,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="username" className="text-sm lg:text-[13px]">
-              Username
+              {t("username")}
             </Label>
             <div
               className={cn(
@@ -136,24 +136,24 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
                 aria-invalid={availability === "taken" || availability === "invalid"}
                 className="h-full min-w-0 flex-1 bg-transparent px-2.5 font-mono text-base outline-none lg:text-[13px]"
               />
-              <span
-                id="username-status"
-                aria-live="polite"
-                className={cn(
-                  "shrink-0 pr-3 text-xs font-medium",
-                  availability === "available" && "text-link",
-                  (availability === "taken" || availability === "invalid") && "text-destructive",
-                  availability === "checking" && "text-muted-foreground",
-                )}
-              >
-                {availabilityText[availability]}
-              </span>
             </div>
+            <span
+              id="username-status"
+              aria-live="polite"
+              className={cn(
+                "text-xs font-medium",
+                availability === "available" && "text-link",
+                (availability === "taken" || availability === "invalid") && "text-destructive",
+                availability === "checking" && "text-muted-foreground",
+              )}
+            >
+              {availability === "idle" ? null : t(`availability.${availability}`)}
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              Email
+              {t("email")}
             </Label>
             <Input
               id="email"
@@ -168,7 +168,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="password" className="text-sm lg:text-[13px]">
-              Password
+              {t("password")}
             </Label>
             <Input
               id="password"
@@ -183,8 +183,8 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
               className={authInputClass}
             />
             {password ? (
-              <div className="flex items-center gap-2">
-                <div className="flex flex-1 gap-1" aria-hidden="true">
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-1" aria-hidden="true">
                   {[1, 2, 3, 4].map((segment) => (
                     <span
                       key={segment}
@@ -196,7 +196,8 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
                   ))}
                 </div>
                 <p id="password-strength" className="text-xs text-muted-foreground">
-                  {strength.label}.{strength.hint ? ` ${strength.hint}.` : null}
+                  {t(`passwordStrength.${strength.score}`)}
+                  {strengthHint ? ` ${t(`passwordHint.${strengthHint}`)}` : null}
                 </p>
               </div>
             ) : null}
@@ -205,15 +206,18 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
 
         <FormError message={error} />
 
-        <Button type="submit" disabled={pending} className={authSubmitClass}>
-          {pending ? "Creating account…" : "Create account"}
+        <Button type="submit" loading={pending} className={authSubmitClass}>
+          {t(pending ? "creatingAccount" : "createAccount")}
         </Button>
 
         <SwitchPrompt>
-          Already have an account?{" "}
-          <Link href="/sign-in" className={inlineLinkClass}>
-            Sign in
-          </Link>
+          {t.rich("existingAccountPrompt", {
+            link: (children) => (
+              <Link href="/sign-in" className={inlineLinkClass}>
+                {children}
+              </Link>
+            ),
+          })}
         </SwitchPrompt>
       </form>
     </>

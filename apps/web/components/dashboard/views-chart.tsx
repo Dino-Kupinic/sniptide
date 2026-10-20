@@ -1,4 +1,5 @@
 import { cn } from "@sniptide/ui/lib/utils"
+import { useLocale, useTranslations } from "next-intl"
 import { formatNumber } from "@/lib/format"
 
 // Bar chart from the dashboard artboard: blue bars capped with three thin ink rules, the
@@ -12,6 +13,8 @@ export function ViewsBarChart({
   labels: string[]
   className?: string
 }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const max = Math.max(1, ...values)
   const peak = values.indexOf(max)
   const dense = values.length > 10
@@ -20,7 +23,11 @@ export function ViewsBarChart({
     <figure className={cn("flex flex-col gap-2", className)}>
       <div
         role="img"
-        aria-label={`Views per day: ${values.map((value, index) => `${labels[index]} ${value}`).join(", ")}`}
+        aria-label={t("views_per_day", {
+          values: values
+            .map((value, index) => `${labels[index]} ${formatNumber(value, locale)}`)
+            .join(", "),
+        })}
         className={cn(
           // A definite height on phones (percent bar heights need one); on desktop it fills the card.
           "flex h-40 items-end border-b border-foreground lg:h-auto lg:min-h-42 lg:flex-1",
@@ -34,7 +41,7 @@ export function ViewsBarChart({
           >
             {index === peak && value > 0 ? (
               <span className="bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] text-background">
-                {formatNumber(value)}
+                {formatNumber(value, locale)}
               </span>
             ) : null}
             <div

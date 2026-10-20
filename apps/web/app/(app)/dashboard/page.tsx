@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { requireSession } from "@/lib/auth"
 import { getDashboardData } from "@/lib/pastes/dashboard"
@@ -5,12 +6,16 @@ import { parsePreferences } from "@/lib/preferences-schema"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
-export const metadata = { title: "Dashboard · Sniptide" }
+export async function generateMetadata() {
+  const t = await getTranslations("Core")
+  return { title: `${t("dashboard")} · Sniptide` }
+}
 
 export default async function Page() {
+  const locale = await getLocale()
   const [session, data, { origin, host }] = await Promise.all([
     requireSession(),
-    getDashboardData(),
+    getDashboardData(locale),
     getSiteOrigin(),
   ])
   const firstName = viewerFromUser(session.user).name.split(/[\s._-]/)[0] || "there"

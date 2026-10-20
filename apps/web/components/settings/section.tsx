@@ -1,3 +1,5 @@
+import { FormError } from "@sniptide/ui/components/form-error"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import type * as React from "react"
 
 // Two-column settings row from the Paper Settings artboard: title and description on the left,
@@ -52,11 +54,10 @@ export function SettingRow({
 
 export function SaveStatus({ status }: { status: { ok: boolean; message: string } | null }) {
   if (!status) return null
+  if (!status.ok) return <FormError variant="inline" message={status.message} />
   return (
-    <p
-      role={status.ok ? "status" : "alert"}
-      className={status.ok ? "text-[13px] text-link" : "text-[13px] text-destructive"}
-    >
+    <p role="status" className="flex items-center gap-1.5 text-[13px] text-link">
+      <SuccessCheck className="size-3.5" />
       {status.message}
     </p>
   )

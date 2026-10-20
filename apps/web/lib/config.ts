@@ -1,6 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
+import { isWebhookUrl } from "@/lib/pastes/webhook-url"
 
 // Every setting the app reads from the environment, validated in one place. Each option, its
 // default and what it does is documented in apps/web/.env.example.
@@ -48,13 +49,30 @@ const size = z.string().transform((value, ctx) => {
   return bytes
 })
 
+// "true"/"false" (also 1/0, yes/no, on/off), in any case.
+const flag = z.string().transform((value, ctx) => {
+  const normalized = value.trim().toLowerCase()
+  if (["true", "1", "yes", "on"].includes(normalized)) return true
+  if (["false", "0", "no", "off"].includes(normalized)) return false
+  ctx.addIssue({ code: "custom", message: 'must be "true" or "false".' })
+  return z.NEVER
+})
+
 const origin = z.url({ message: "must be a full URL like https://sniptide.com." })
 
 const schema = z.object({
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  SMTP_SECURE: flag.default(false),
+  SMTP_REQUIRE_TLS: flag.default(true),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().email().optional(),
   DATABASE_URL: z.string().optional(),
   MIGRATIONS_DIR: z.string().optional(),
 
   BETTER_AUTH_SECRET: z.string().optional(),
+  ENV_SECRETS_KEY: z.string().min(32, { message: "must be at least 32 characters." }).optional(),
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
   COOKIE_DOMAIN: z.string().optional(),
@@ -62,9 +80,11 @@ const schema = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]+$/, { message: "may only contain letters, digits, - and _." })
     .optional(),
+  ALLOW_SIGN_UP: flag.default(true),
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
+  DEMO_MODE: flag.default(false),
 
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -72,6 +92,18 @@ const schema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 
   GITHUB_TOKEN: z.string().optional(),
+  SLACK_WEBHOOK_URL: z
+    .string()
+    .refine((value) => isWebhookUrl(value, "slack"), {
+      message: "must be a Slack incoming webhook URL.",
+    })
+    .optional(),
+  DISCORD_WEBHOOK_URL: z
+    .string()
+    .refine((value) => isWebhookUrl(value, "discord"), {
+      message: "must be a Discord incoming webhook URL.",
+    })
+    .optional(),
   MAX_PASTE_SIZE: size.default(1024 * 1024),
 
   POSTHOG_KEY: z.string().optional(),
@@ -93,21 +125,62 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     throw new Error(`Invalid configuration:\n  ${problems.join("\n  ")}`)
   }
   const value = parsed.data
+  const smtpPresent = [
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_SECURE",
+    "SMTP_REQUIRE_TLS",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "SMTP_FROM",
+  ].some((key) => present[key] !== undefined)
+  if (
+    smtpPresent &&
+    (!value.SMTP_HOST ||
+      !value.SMTP_PORT ||
+      !value.SMTP_FROM ||
+      !value.BETTER_AUTH_URL ||
+      !value.BETTER_AUTH_SECRET ||
+      value.BETTER_AUTH_SECRET.length < 32 ||
+      Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD))
+  ) {
+    throw new Error(
+      "Invalid configuration: SMTP requires SMTP_HOST, SMTP_PORT, SMTP_FROM, BETTER_AUTH_URL, BETTER_AUTH_SECRET (at least 32 characters), and paired SMTP_USER/SMTP_PASSWORD credentials.",
+    )
+  }
 
   return {
+    smtp:
+      smtpPresent && value.SMTP_HOST && value.SMTP_PORT && value.SMTP_FROM
+        ? {
+            host: value.SMTP_HOST,
+            port: value.SMTP_PORT,
+            from: value.SMTP_FROM,
+            secure: value.SMTP_SECURE,
+            requireTLS: value.SMTP_REQUIRE_TLS,
+            auth:
+              value.SMTP_USER && value.SMTP_PASSWORD
+                ? { user: value.SMTP_USER, pass: value.SMTP_PASSWORD }
+                : undefined,
+          }
+        : undefined,
     databaseUrl: value.DATABASE_URL,
     migrationsDir: value.MIGRATIONS_DIR,
     authSecret: value.BETTER_AUTH_SECRET,
+    envSecretsKey: value.ENV_SECRETS_KEY,
     appUrl: value.BETTER_AUTH_URL,
     trustedOrigins: value.BETTER_AUTH_TRUSTED_ORIGINS,
     cookieDomain: value.COOKIE_DOMAIN,
     cookiePrefix: value.COOKIE_PREFIX,
+    allowSignUp: value.ALLOW_SIGN_UP,
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
+    demoMode: value.DEMO_MODE,
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),
     githubToken: value.GITHUB_TOKEN,
+    webhooks: { slack: value.SLACK_WEBHOOK_URL, discord: value.DISCORD_WEBHOOK_URL },
     maxPasteBytes: value.MAX_PASTE_SIZE,
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

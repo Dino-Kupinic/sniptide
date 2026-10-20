@@ -8,7 +8,9 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@sniptide/ui/components/dialog"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { MAX_NAME_LENGTH } from "@/lib/collections/types"
 
@@ -24,7 +26,7 @@ export function CollectionNameDialog({
   pendingLabel,
   initialName = "",
   label,
-  fieldLabel = "Collection name",
+  fieldLabel,
   maxLength = MAX_NAME_LENGTH,
   placeholder = "api-snippets",
   leading,
@@ -47,6 +49,7 @@ export function CollectionNameDialog({
   leading?: React.ReactNode
   onSubmit: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>
 }) {
+  const t = useTranslations("Workspace")
   const nameId = React.useId()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
@@ -68,8 +71,12 @@ export function CollectionNameDialog({
             event.preventDefault()
             const name = String(new FormData(event.currentTarget).get("name") ?? "")
             startTransition(async () => {
-              const result = await onSubmit(name)
-              if (!result.ok) return setError(result.error)
+              try {
+                const result = await onSubmit(name)
+                if (!result.ok) return setError(result.error)
+              } catch {
+                return setError(t("something_went_wrong_try_again"))
+              }
               onOpenChange(false)
             })
           }}
@@ -85,7 +92,7 @@ export function CollectionNameDialog({
               key={initialName}
               id={nameId}
               name="name"
-              aria-label={label ? undefined : fieldLabel}
+              aria-label={label ? undefined : (fieldLabel ?? t("collection_name"))}
               placeholder={placeholder}
               defaultValue={initialName}
               maxLength={maxLength}
@@ -97,16 +104,12 @@ export function CollectionNameDialog({
               className="h-10 min-w-0 flex-1 font-mono text-base lg:text-[13px]"
             />
           </div>
-          {error ? (
-            <p role="alert" className="text-[13px] text-destructive">
-              {error}
-            </p>
-          ) : null}
+          <FormError variant="inline" message={error} />
           <div className="flex justify-end gap-2">
             <DialogClose render={<Button type="button" variant="outline" size="lg" />}>
-              Cancel
+              {t("cancel")}
             </DialogClose>
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button type="submit" size="lg" loading={pending}>
               {pending ? pendingLabel : submitLabel}
             </Button>
           </div>

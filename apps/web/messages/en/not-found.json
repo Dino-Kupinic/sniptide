@@ -1,0 +1,17 @@
+{
+  "NotFound": {
+    "title": "Not found",
+    "heading": "Nothing here.",
+    "description": "We couldn't find that paste or page. It may have been deleted, expired, or the link has a typo.",
+    "dashboard": "Go to dashboard",
+    "trash": "Open Trash",
+    "signIn": "Sign in",
+    "signedInAs": "Signed in as {email}",
+    "switchAccount": "Switch account",
+    "shareHeading": "This page is gone.",
+    "shareDescription": "The link may have expired, been burned after reading, or never existed.",
+    "shareAdvice": "Check the address, or start a fresh paste.",
+    "home": "Back to home",
+    "createPaste": "Create a paste"
+  }
+}

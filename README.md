@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/sniptide-readme-dark.svg">
+    <img alt="Sniptide" src=".github/assets/sniptide-readme-light.svg" width="100%">
+  </picture>
+</p>
+
 # Sniptide
 
 Code snippet sharing at sniptide.com. A Bun + Turborepo monorepo with one Next.js app, run as a
@@ -8,6 +15,7 @@ Docker container on Coolify with Cloudflare in front, backed by Postgres.
 ```bash
 bun install
 cp apps/web/.env.example apps/web/.env.local   # then set BETTER_AUTH_SECRET
+echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" > .env   # compose insists on one, even for `db`
 docker compose up -d db                        # local Postgres on localhost:5432
 bun dev
 ```
@@ -26,11 +34,53 @@ Commits and PR titles follow [Conventional Commits](https://www.conventionalcomm
 
 ## API reference
 
-The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics) are documented at
+The HTTP endpoints Sniptide serves (raw files, unlock, reveal, health, metrics, and the token API
+under `/api/v1` that the CLI uses) are documented at
 `/docs/api`, rendered by [Scalar](https://scalar.com) from the OpenAPI document at
 `/api/openapi.json`. The document lives in `apps/web/lib/openapi.ts`. When you add a route
 handler, document it there, or list it as internal if it only serves the web app; `bun test` fails
 until you do.
+
+## Link previews and channel sharing
+
+Public pastes without password or one-time protection include Open Graph and X cards with the
+title, language and the first ten lines of the first file. Private, unlisted and protected pastes
+have no code image. Preview requests neither count views nor consume one-time pastes; images
+are not cached by Sniptide. Messaging services may retain a preview they already fetched.
+
+Set `SLACK_WEBHOOK_URL` and/or `DISCORD_WEBHOOK_URL` on the app server to enable **Share → Share
+to Slack/Discord**. Create an incoming webhook in the destination channel, copy its URL into
+the matching environment variable, and restart the app. Each provider has one destination for
+the instance; the dialog tells owners that everyone in the channel receives the link. Only
+owners can send live public or unlisted pastes without password or one-time protection, with
+20 sends per hour per account across both providers. URLs remain server secrets. A failed or
+timed-out send reports an error without automatically retrying; check the channel before retrying.
+
+## CLI
+
+The [Sniptide CLI](packages/cli/README.md) captures files, folders or globs as pastes and restores their
+relative paths in another project, and syncs `.env` files with env groups (`sniptide env`). It
+authenticates with a personal API token from Settings → API tokens and talks to the `/api/v1`
+endpoints ([summary](packages/cli/API.md)). Env values are encrypted at rest with a key derived from
+`ENV_SECRETS_KEY`, or from `BETTER_AUTH_SECRET` when that isn't set (`apps/web/.env.example`).
+
+```sh
+bun --filter @sniptide/cli build
+node packages/cli/dist/sniptide.js --help
+bun run test:cli
+```
+
+## MCP for coding agents
+
+The [Sniptide MCP server](packages/mcp/README.md) exposes snippet search, reads, collection recipes,
+creation and updates. Connect Claude Code or Cursor to `/api/mcp` with a personal API token, or
+build `@sniptide/mcp` and run its local Node stdio executable. Both work with hosted and self-hosted
+instances. See the guide for client configuration and tool semantics.
+
+```sh
+bun --filter @sniptide/mcp build
+bun run test:mcp
+```
 
 ## Database
 
@@ -74,6 +124,9 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
   - optional: `SHARE_PROXY_SECRET`, a random string shared with the website so it can pass the
     visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
+- **Resources:** a memory limit of `768m` in the app's resource limits (see
+  [Memory](#self-hosting) below). Every PR preview is another server and database on the same box,
+  and each build runs `next build` there too.
 
 **PR previews.** Coolify's preview deployments get their own URL, secret and database, so they must
 not read production's session cookie. Better Auth names that cookie `better-auth.session_token`
@@ -99,21 +152,146 @@ Cloudflare handles DNS and proxies the domain to the server (orange cloud), with
 To try the production image locally with its database:
 
 ```bash
-BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose --profile app up -d --build
+BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose up -d --build
 ```
+
+### Docs site
+
+The documentation (`apps/docs`) is its own Coolify service, built from its own Dockerfile. Set it
+up next to the app:
+
+- **Source:** this repository, branch `main`, build pack **Dockerfile**, base directory `/`,
+  Dockerfile location `/apps/docs/Dockerfile`, auto-deploy on push.
+- **Port:** `3000`. **Health check:** `GET /`. It needs no database.
+- **Build variable:** `APP_URL`: `https://app.sniptide.com`, where the app runs. The nav's "API
+  reference" and "Open Sniptide" links point there. The pages are prerendered, so it is read when
+  the image is built; changing it means a redeploy.
+- **Domain:** `https://docs.sniptide.com`.
 
 ## Self-hosting
 
-Sniptide is the app container plus Postgres. `docker-compose.yml` runs both:
+The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM64 support.
+It contains the standalone Next.js server, static assets and database migrations. Settings come
+from environment variables at runtime; no database or auth credentials are needed to build it.
 
-```bash
-export BETTER_AUTH_SECRET=$(openssl rand -hex 32)   # keep it; sessions depend on it
-export BETTER_AUTH_URL=https://paste.example.com     # the URL people open
-docker compose --profile app up -d
+With an existing Postgres database, create a `sniptide.env` file (keep it out of source control):
+
+```dotenv
+DATABASE_URL=postgres://user:password@your-postgres-host:5432/sniptide
+BETTER_AUTH_SECRET=replace-with-a-long-random-secret
+BETTER_AUTH_URL=http://localhost:3000
 ```
 
-Put your reverse proxy (or Coolify) in front of port 3000, and back up the `postgres` volume
-(for example with `pg_dump`). Set `POSTGRES_PASSWORD` to change the database password.
+Generate the secret with `openssl rand -hex 32` and keep it across restarts. Use the public HTTPS
+URL for `BETTER_AUTH_URL` when serving through a reverse proxy. The database host must be reachable
+from the container; `localhost` inside it refers to the container itself.
+
+```bash
+docker run -d --name sniptide --restart unless-stopped --memory 768m --memory-swap 768m \
+  -p 3000:3000 --env-file sniptide.env ghcr.io/dino-kupinic/sniptide:latest
+```
+
+**Memory.** One server sits around 100 MB idle and 250 to 300 MB under load. The image caps the
+Node heap at 384 MB (`NODE_OPTIONS=--max-old-space-size=384`); without a cap Node sizes the heap
+from the host's RAM and keeps growing into it. Give the container a ceiling too (`--memory`, or
+`SNIPTIDE_MEMORY` with compose), so if it ever reaches it Docker restarts Sniptide instead of the
+kernel killing other processes on the server. On a bigger server raise both, keeping the heap at
+about half the ceiling, for example `--memory 1536m` with `NODE_OPTIONS=--max-old-space-size=768`.
+Building the image takes far more memory than running it (a `next build` can use 2 GB or more), so
+on a small server pull the published image rather than building there.
+
+On startup, Sniptide applies migrations before serving requests. `GET /api/health` checks the
+server and database, and the image includes a Docker health check. Back up your database before
+upgrading; see [the rollout guide](docs/scaling.md) for migration and rollback considerations.
+
+### Docker Compose
+
+For a new database, `docker-compose.yml` runs the published app image plus Postgres. On a fresh
+server with Docker installed, from zero to a running instance:
+
+```bash
+git clone https://github.com/Dino-Kupinic/sniptide.git && cd sniptide   # or download docker-compose.yml and .env.example
+printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<your-server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
+docker compose up -d
+```
+
+Keep the secret: sessions depend on it. `BETTER_AUTH_URL` must be the exact address you open in
+the browser (a domain with `https://` once you add HTTPS below); sign-in is rejected from any other
+origin. Open it and create your account; the first start applies the database migrations. `.env.example` lists every setting compose accepts (`BETTER_AUTH_URL`,
+`POSTGRES_PASSWORD`, sign-up and OAuth options, …); the app's own reference is
+`apps/web/.env.example`.
+
+Compose uses `latest` by default. For repeatable deployments, set
+`SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:1.2.3` (substitute an actual release), or pin an image
+digest. To update, run `docker compose pull` then `docker compose up -d`. To build from source
+instead, run `docker compose up -d --build`. Back up the `postgres` volume (for example with
+`pg_dump`). Set `POSTGRES_PASSWORD` in `.env` before the first start; Postgres keeps the password
+it was created with.
+
+**HTTPS on your own domain.** The optional `proxy` profile adds [Caddy](https://caddyserver.com),
+which gets and renews a Let's Encrypt certificate. Point the domain's DNS at the server, open ports
+80 and 443, then add this to `.env` and start with the profile:
+
+```dotenv
+SNIPTIDE_DOMAIN=paste.example.com
+BETTER_AUTH_URL=https://paste.example.com
+CLIENT_IP_SOURCE=x-forwarded-for
+TRUSTED_PROXIES=private
+SNIPTIDE_BIND=127.0.0.1   # optional: close port 3000 to the outside
+```
+
+```bash
+docker compose --profile proxy up -d
+```
+
+Already running nginx, Traefik or Coolify? Skip the profile and put your proxy in front of port
+3000 (see the table below for `CLIENT_IP_SOURCE`).
+
+### Coolify
+
+`deploy/coolify/sniptide.yaml` is a [Coolify](https://coolify.io) service template with the app
+and Postgres. Coolify generates the database credentials and the auth secret and assigns the
+domain, so there is nothing to fill in before the first deploy. In a Coolify project choose
+**Add Resource → Docker Compose Empty**, paste the file, set the domain for the `sniptide` service
+(port 3000), and deploy. It follows Coolify's service template format, so it can also be
+contributed to Coolify's one-click service list. The optional settings (sign-up, OAuth, webhooks,
+`MAX_PASTE_SIZE`) show up as environment variables on the resource.
+
+### Settings
+
+Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`; add `BETTER_AUTH_URL` so browsers
+can sign in (compose and the Coolify template set all three). Everything else is optional and documented with its default in `apps/web/.env.example`;
+a test fails when the app reads a variable that file doesn't list. The hosted-only extras are off
+unless you turn them on:
+
+| Feature | Default on a self-hosted instance | Setting |
+| --- | --- | --- |
+| Email and password sign-in | On, always | n/a |
+| GitHub and Google sign-in | Off; buttons render disabled | `GITHUB_CLIENT_ID`/`_SECRET`, `GOOGLE_CLIENT_ID`/`_SECRET` |
+| Open sign-up | On: anyone can create an account | `ALLOW_SIGN_UP=false` closes it for everyone; existing accounts keep signing in |
+| Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails (`WAITLIST_URL` adds an "apply" link) |
+| Public demo | Off | `DEMO_MODE=true` signs every visitor in to a shared guest account with example pastes and resets it every `DEMO_RESET_MINUTES` (60); use with `ALLOW_SIGN_UP=false` |
+| PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
+| Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
+| Notification emails | Off; users opt in per event | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`; optional paired `SMTP_USER`/`SMTP_PASSWORD` |
+
+Settings > Notifications controls in-app and email delivery independently for shared pastes, burns,
+expiry warnings and view milestones. Existing accounts keep in-app notifications on and email off.
+Verify your email address from this tab before enabling email delivery. Verification sends are
+limited to three per account per hour. Password sign-in still works without verified email or SMTP.
+SMTP is optional. Set the host, port and sender together, plus `BETTER_AUTH_URL` and an auth secret
+of at least 32 characters. Port 587 uses STARTTLS by default; set `SMTP_SECURE=true` for implicit
+TLS on port 465. Leave `SMTP_REQUIRE_TLS=true` outside a trusted local SMTP test server.
+
+Email runs independently once a minute and uses a durable queue with bounded retries. Events older
+than 24 hours are skipped, including events queued while SMTP was unavailable. Delivery rechecks
+consent and access, and messages contain generic activity text with links to the signed-in app.
+Each email includes a confirmation link that stops only that event's emails. Opening it does not
+change preferences. Email is delivered at least once when retries succeed; a crash after SMTP
+acceptance and before recording success can cause a duplicate. A concurrent access change can
+still allow an already sending generic email to arrive.
+
+To run a private instance: sign up once, then set `ALLOW_SIGN_UP=false` and restart.
 
 Rate limits (sign-in, password-protected pastes) count per visitor IP. Tell the app where that
 comes from with `CLIENT_IP_SOURCE`:
@@ -166,8 +344,33 @@ database and a production build.
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
-typecheck, `next build`, a `docker build` of the production image, Bun integration tests, and
+typecheck, `next build` (the app and the docs), production Docker builds and startup tests for the
+app and the docs site, Bun integration tests, and
 Chromium browser tests against an isolated PostgreSQL database and production build.
+
+### Container releases
+
+Push a semantic version tag, such as `v1.2.3` (or `1.2.3`), to publish a release. The
+`Publish Docker image` workflow builds and tests both architectures against fresh Postgres
+databases, then publishes one multi-platform image to GHCR using GitHub's built-in token.
+Stable releases get `1.2.3`, `1.2`, `1` (except major zero) and `latest` tags. Prereleases such as
+`v1.3.0-beta.1` get only `1.3.0-beta.1`, so they do not replace stable tags. Publish stable tags in
+version order, letting each workflow finish before the next; the last completed stable release
+updates `latest`.
+
+After the first publish, a repository owner must set the `sniptide` package's visibility to
+**Public** in [GitHub's package settings](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images) so self-hosters can pull it without signing in. Release
+tags do not create a GitHub Release automatically.
+
+The same container test runs on PRs. To run it locally after building:
+
+```bash
+docker build -t sniptide:test .
+bash scripts/test-docker.sh sniptide:test
+```
+
+The test creates and removes its own containers and network, without using host ports or an
+existing database.
 
 ## Checks
 
@@ -185,7 +388,11 @@ bun run format
 ## Workspace
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
+- `apps/docs`: the documentation site (Next.js and Fumadocs, MDX in `content/docs`); see
+  `apps/docs/README.md`
 - `packages/auth`: better-auth setup on the Drizzle adapter
+- `packages/cli`: code capture and restore CLI, with a dependency-free Node.js executable
+- `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable
 - `packages/db`: Drizzle schema, Postgres client and migrations
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
   theme. Published to npm for the website repo; see `packages/ui/README.md`
@@ -195,3 +402,15 @@ bun run format
 
 [AGPL-3.0](LICENSE). You can self-host and modify Sniptide; if you run a modified version as a
 network service, you have to publish your changes under the same license.
+
+## Languages
+
+The app supports English, German, Spanish, Simplified Chinese, and Japanese. It uses your browser's
+preferred language on the first visit. Choose a language on the sign-in page, in the account menu,
+or in Settings to save a preference for that browser. Public share pages also have a language
+selector. Paste contents, filenames, and programming language names keep their original text.
+
+Translations live in `apps/web/messages/<locale>/`. Each locale has the same namespaces and message
+keys. Use `next-intl` translations in components and complete ICU messages for sentences with
+counts or other values. Run `bun --filter web test` to check catalog completeness, arguments, and
+locale selection. Existing share links and API URLs do not change with the language.

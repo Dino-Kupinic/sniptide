@@ -3,6 +3,7 @@ import "server-only"
 import { rateLimit } from "@workspace/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import type { Seconds } from "@/lib/time"
 
 // Fixed-window counters in Postgres, so the limits hold across server instances and restarts. One
 // atomic upsert per hit means simultaneous requests can't all slip under the limit. Old counters
@@ -11,7 +12,7 @@ import { getDb } from "@/lib/db"
 export interface Limit {
   key: string
   max: number
-  windowSeconds: number
+  windowSeconds: Seconds
 }
 
 export type Hit = { allowed: true } | { allowed: false; retryAfterSeconds: number }
@@ -23,7 +24,8 @@ export async function hit(limits: Limit[]): Promise<Hit> {
   let retryAfterSeconds = 0
 
   for (const { key, max, windowSeconds } of limits) {
-    const fresh = sql`${rateLimit.windowStart} <= now() - make_interval(secs => ${windowSeconds}::int)`
+    const window = Number(windowSeconds)
+    const fresh = sql`${rateLimit.windowStart} <= now() - make_interval(secs => ${window}::int)`
     const [row] = await db
       .insert(rateLimit)
       .values({ key, count: 1 })
@@ -36,7 +38,7 @@ export async function hit(limits: Limit[]): Promise<Hit> {
       })
       .returning({
         count: rateLimit.count,
-        left: sql<number>`ceil(extract(epoch from (${rateLimit.windowStart} + make_interval(secs => ${windowSeconds}::int) - now())))::int`,
+        left: sql<number>`ceil(extract(epoch from (${rateLimit.windowStart} + make_interval(secs => ${window}::int) - now())))::int`,
       })
     if (row && row.count > max) retryAfterSeconds = Math.max(retryAfterSeconds, row.left, 1)
   }

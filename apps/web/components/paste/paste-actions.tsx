@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
@@ -20,9 +21,18 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
+import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
-import { leaveShare, setStarred, trashPaste } from "@/lib/pastes/actions"
+import { runAction } from "@/lib/feedback"
+import {
+  leaveShare,
+  restorePaste,
+  restoreShare,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import { useCopy } from "./copy-button"
 
 export function StarButton({
@@ -36,6 +46,7 @@ export function StarButton({
   className?: string
   variant?: "outline" | "ghost"
 }) {
+  const t = useTranslations("Paste")
   const [optimistic, setOptimistic] = React.useOptimistic(starred)
   const [, startTransition] = React.useTransition()
 
@@ -44,13 +55,17 @@ export function StarButton({
       type="button"
       variant={variant}
       size="icon-lg"
-      aria-label={optimistic ? "Unstar" : "Star"}
+      aria-label={optimistic ? t("unstar") : t("star")}
       aria-pressed={optimistic}
       className={className}
       onClick={() =>
         startTransition(async () => {
-          setOptimistic(!optimistic)
-          await setStarred(slug, !optimistic)
+          const next = !optimistic
+          setOptimistic(next)
+          await runAction(() => setStarred(slug, next), {
+            success: next ? t("starred") : t("removedFromStarred"),
+            error: t("couldnTUpdateTheStarTry"),
+          })
         })
       }
     >
@@ -60,6 +75,7 @@ export function StarButton({
 }
 
 export function CopyLinkButton({ url, className }: { url: string; className?: string }) {
+  const t = useTranslations("Paste")
   const { copied, copy } = useCopy()
 
   return (
@@ -72,8 +88,8 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
         return copy(url)
       }}
     >
-      <LinkIcon />
-      <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
+      {copied ? <SuccessCheck /> : <LinkIcon />}
+      <span aria-live="polite">{copied ? t("copied") : t("copyLink")}</span>
     </Button>
   )
 }
@@ -88,6 +104,7 @@ export function ShareButton({
   title: string
   className?: string
 }) {
+  const t = useTranslations("Paste")
   const { copied, copy } = useCopy()
 
   async function share() {
@@ -105,13 +122,24 @@ export function ShareButton({
 
   return (
     <Button type="button" className={className} onClick={share}>
-      <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
+      {copied ? <SuccessCheck /> : null}
+      <span aria-live="polite">{copied ? t("linkCopied") : t("share")}</span>
     </Button>
   )
 }
 
 // Drops a paste someone shared with the viewer from their list, then goes back to it.
-export function LeaveShareButton({ slug, className }: { slug: string; className?: string }) {
+export function LeaveShareButton({
+  slug,
+  title,
+  className,
+}: {
+  slug: string
+  title: string
+  className?: string
+}) {
+  const t = useTranslations("Paste")
+  const feedbackT = useTranslations("Core")
   const router = useRouter()
   const [pending, startTransition] = React.useTransition()
 
@@ -120,39 +148,49 @@ export function LeaveShareButton({ slug, className }: { slug: string; className?
       type="button"
       variant="outline"
       className={className}
-      disabled={pending}
+      loading={pending}
       onClick={() =>
         startTransition(async () => {
-          await leaveShare(slug)
-          router.push("/shared")
+          const result = await withUndo(() => leaveShare(slug), {
+            labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+            error: t("couldnTRemoveItFromYour"),
+            message: t("removedFromList", { title }),
+            undo: () => restoreShare(slug),
+            onUndone: () => router.push(`/pastes/${slug}`),
+          })
+          if (result.ok) router.push("/shared")
         })
       }
     >
-      Remove from my list
+      {t("removeFromMyList")}
     </Button>
   )
 }
 
 export function PasteOverflowMenu({
   slug,
+  title,
   canTrash,
   canLeave,
   rawHref,
   className,
 }: {
   slug: string
+  title: string
   canTrash: boolean
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
   rawHref?: string
   className?: string
 }) {
+  const t = useTranslations("Paste")
+  const feedbackT = useTranslations("Core")
   const router = useRouter()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="More actions"
+        aria-label={t("moreActions")}
         className={cn(
           "inline-flex size-9 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
           className,
@@ -163,12 +201,12 @@ export function PasteOverflowMenu({
       <DropdownMenuContent align="end">
         <DropdownMenuItem render={<Link href={`/new?from=${slug}`} />}>
           <CopyIcon />
-          Duplicate
+          {t("duplicate")}
         </DropdownMenuItem>
         {rawHref ? (
           <DropdownMenuItem render={<a href={rawHref} />}>
             <FileCodeIcon />
-            View raw
+            {t("viewRaw")}
           </DropdownMenuItem>
         ) : null}
         {canLeave ? (
@@ -177,12 +215,18 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await leaveShare(slug)
-                router.push("/shared")
+                const result = await withUndo(() => leaveShare(slug), {
+                  labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                  error: t("couldnTRemoveItFromYour"),
+                  message: t("removedFromList", { title }),
+                  undo: () => restoreShare(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
+                })
+                if (result.ok) router.push("/shared")
               }}
             >
               <LogOutIcon />
-              Remove from my list
+              {t("removeFromMyList")}
             </DropdownMenuItem>
           </>
         ) : null}
@@ -192,12 +236,18 @@ export function PasteOverflowMenu({
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {
-                await trashPaste(slug)
-                router.push("/pastes")
+                const result = await withUndo(() => trashPaste(slug), {
+                  labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                  error: t("couldnTMoveThePasteTo"),
+                  message: t("movedToTrash", { title }),
+                  undo: () => restorePaste(slug),
+                  onUndone: () => router.push(`/pastes/${slug}`),
+                })
+                if (result.ok) router.push("/pastes")
               }}
             >
               <Trash2Icon />
-              Move to trash
+              {t("moveToTrash")}
             </DropdownMenuItem>
           </>
         ) : null}

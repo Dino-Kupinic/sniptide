@@ -1,0 +1,36 @@
+{
+  "name": "@sniptide/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sniptide tools for coding agents over MCP.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts",
+    "./http": "./src/http.ts"
+  },
+  "bin": {
+    "sniptide-mcp": "dist/sniptide-mcp.js"
+  },
+  "scripts": {
+    "build": "bun build src/bin.ts --target=node --outfile=dist/sniptide-mcp.js",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test ./test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@sniptide/contracts": "workspace:*",
+    "zod": "catalog:runtime"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:tooling",
+    "@types/node": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

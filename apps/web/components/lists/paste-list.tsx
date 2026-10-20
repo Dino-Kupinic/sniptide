@@ -12,8 +12,10 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { StarIcon } from "lucide-react"
 import Link from "next/link"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
@@ -22,6 +24,7 @@ import {
   type PageInfo,
   type PasteListQuery,
   type PasteSort,
+  pasteListSearch,
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
@@ -38,19 +41,6 @@ import {
 import { useListQuery } from "./use-list-query"
 
 export type Sort = PasteSort
-const sortOptions: { value: Sort; label: string }[] = [
-  { value: "updated", label: "Last updated" },
-  { value: "views", label: "Most viewed" },
-  { value: "expires", label: "Expiring soonest" },
-  { value: "title", label: "Title" },
-]
-
-const visibilityOptions: { value: VisibilityFilter; label: string }[] = [
-  { value: "public", label: "Public" },
-  { value: "unlisted", label: "Unlisted" },
-  { value: "private", label: "Private" },
-  { value: "burn", label: "Burn after read" },
-]
 
 export function RowBadge({
   row,
@@ -62,28 +52,29 @@ export function RowBadge({
   short?: boolean
   className?: string
 }) {
+  const t = useTranslations("Workspace")
   const base = cn("h-5 px-2 text-xs", className)
   if (row.burnAfterRead)
     return (
       <Badge variant="primary" className={base}>
-        {short ? "Burn" : "Burn after read"}
+        {short ? t("burn") : t("burn_after_read")}
       </Badge>
     )
   if (row.visibility === "public")
     return (
       <Badge variant="solid" className={base}>
-        Public
+        {t("public")}
       </Badge>
     )
   if (row.visibility === "private")
     return (
       <Badge variant="muted" className={base}>
-        Private
+        {t("private")}
       </Badge>
     )
   return (
     <Badge variant="muted" className={cn(base, "text-foreground")}>
-      Unlisted
+      {t("unlisted")}
     </Badge>
   )
 }
@@ -115,33 +106,49 @@ export function PasteList({
   pagination: PageInfo
   languageOptions: string[]
 }) {
-  const { query, update, pending } = useListQuery(serverQuery)
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
+  const feedbackT = useTranslations("Core")
+  const sortOptions: { value: Sort; label: string }[] = [
+    { value: "updated", label: t("last_updated") },
+    { value: "views", label: t("most_viewed") },
+    { value: "expires", label: t("expiring_soonest") },
+    { value: "title", label: t("title") },
+  ]
+  const visibilityOptions: { value: VisibilityFilter; label: string }[] = [
+    { value: "public", label: t("public") },
+    { value: "unlisted", label: t("unlisted") },
+    { value: "private", label: t("private") },
+    { value: "burn", label: t("burn_after_read") },
+  ]
+
+  const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const { languages, visibility, collections: inCollections, owner, sort } = query
   const [view, setView] = React.useState<"list" | "grid">("list")
   const filtering = Boolean(
     query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
-  const range = `${start + 1}–${start + rows.length}`
+  const range = `${formatNumber(start + 1, locale)}–${formatNumber(start + rows.length, locale)}`
 
   const quick =
     mode === "starred" ? (
       <QuickChips
-        label="Show"
+        label={t("show")}
         value={owner}
         onChange={(owner) => update({ owner })}
         options={[
-          { value: "all", label: "All" },
-          { value: "mine", label: "Mine" },
-          { value: "shared", label: "Shared with me" },
+          { value: "all", label: t("all") },
+          { value: "mine", label: t("mine") },
+          { value: "shared", label: t("shared_with_me") },
         ]}
       />
     ) : (
       <QuickChips
-        label="Visibility"
+        label={t("visibility")}
         value={(visibility.length === 1 ? visibility[0] : "all") as "all" | VisibilityFilter}
         onChange={(next) => update({ visibility: next === "all" ? [] : [next] })}
-        options={[{ value: "all", label: "All" }, ...visibilityOptions]}
+        options={[{ value: "all", label: t("all") }, ...visibilityOptions]}
       />
     )
 
@@ -166,11 +173,11 @@ export function PasteList({
       </div>
 
       <div className="flex flex-col lg:border lg:border-border">
-        <div className="hidden items-center justify-between gap-3 p-3 lg:flex">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
-              label="Language"
+              label={t("language")}
               options={languageOptions.map((id) => ({
                 value: id,
                 label: <LanguageLabel language={id} />,
@@ -179,14 +186,14 @@ export function PasteList({
               onChange={(languages) => update({ languages })}
             />
             <FilterMenu
-              label="Visibility"
+              label={t("visibility")}
               options={visibilityOptions}
               selected={visibility}
               onChange={(visibility) => update({ visibility: visibility as VisibilityFilter[] })}
             />
             {mode === "collection" || collections.length === 0 ? null : (
               <FilterMenu
-                label="Collection"
+                label={t("collection")}
                 options={collections.map((c) => ({
                   value: c.slug,
                   label: <span className="font-mono">{c.name}</span>,
@@ -202,47 +209,48 @@ export function PasteList({
         {pagination.total === 0 ? (
           <EmptyState filtering={filtering} mode={mode} />
         ) : view === "grid" ? (
-          <ul className="hidden grid-cols-3 gap-3 border-t border-border p-3 lg:grid">
+          <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 border-t border-border p-3 lg:grid">
             {rows.map((row) => (
               <li
                 key={row.slug}
-                className="relative flex flex-col gap-3 border border-border p-4 hover:border-foreground/40"
+                className="relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link
                     href={`/pastes/${row.slug}`}
-                    className="text-sm font-medium after:absolute after:inset-0"
+                    title={row.title}
+                    className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
                   >
                     {row.title}
                   </Link>
                   <RowMenu row={row} origin={origin} />
                 </div>
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="[overflow-wrap:anywhere] font-mono text-xs text-muted-foreground">
                   {host}/{row.slug}
                 </span>
-                <div className="mt-auto flex items-center justify-between text-[13px] text-foreground/80">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[13px] text-foreground/80">
                   <LanguageLabel language={row.language} />
                   <RowBadge row={row} />
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="font-mono">{formatNumber(row.views)} views</span>
+                <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono">{t("views_count", { count: row.views })}</span>
                   <span>{row.updatedLabel}</span>
                 </div>
               </li>
             ))}
           </ul>
         ) : (
-          <Table className="hidden table-fixed lg:table">
+          <Table className="hidden min-w-[960px] table-fixed lg:table">
             <TableHeader className="bg-sidebar">
               <TableRow className="hover:bg-transparent">
-                <TableHead>Paste</TableHead>
-                <TableHead className="w-[130px]">Language</TableHead>
-                <TableHead className="w-[120px]">Visibility</TableHead>
-                <TableHead className="w-20 text-right">Views</TableHead>
-                <TableHead className="w-[130px] pl-7">Expires</TableHead>
-                <TableHead className="w-[116px]">Updated</TableHead>
+                <TableHead>{t("paste")}</TableHead>
+                <TableHead className="w-[130px]">{t("language")}</TableHead>
+                <TableHead className="w-[120px]">{t("visibility")}</TableHead>
+                <TableHead className="w-20 text-right">{t("views")}</TableHead>
+                <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
+                <TableHead className="w-[116px]">{t("updated")}</TableHead>
                 <TableHead className="w-12">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("actions")}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -252,6 +260,7 @@ export function PasteList({
                   <TableCell className="truncate">
                     <Link
                       href={`/pastes/${row.slug}`}
+                      title={row.title}
                       className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
                     >
                       {row.title}
@@ -268,7 +277,7 @@ export function PasteList({
                     <RowBadge row={row} />
                   </TableCell>
                   <TableCell className="text-right font-mono text-[13px] tabular-nums">
-                    {formatNumber(row.views)}
+                    {formatNumber(row.views, locale)}
                   </TableCell>
                   <TableCell
                     className={cn(
@@ -285,8 +294,15 @@ export function PasteList({
                     {mode === "starred" ? (
                       <button
                         type="button"
-                        aria-label={`Unstar ${row.title}`}
-                        onClick={() => setStarred(row.slug, false)}
+                        aria-label={t("unstar_named", { name: row.title })}
+                        onClick={async () => {
+                          await setStarred(row.slug, false)
+                          showUndo({
+                            labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                            message: t("removed_from_starred_named", { name: row.title }),
+                            undo: () => setStarred(row.slug, true),
+                          })
+                        }}
                         className="relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
                       >
                         <StarIcon className="size-4 fill-current" />
@@ -313,6 +329,7 @@ export function PasteList({
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <Link
                     href={`/pastes/${row.slug}`}
+                    title={row.title}
                     className="truncate text-[15px] font-medium after:absolute after:inset-0"
                   >
                     {row.title}
@@ -328,8 +345,8 @@ export function PasteList({
                     {row.burnAfterRead
                       ? row.expiresLabel
                       : row.expiresSoon
-                        ? `expires ${row.expiresLabel}`
-                        : `${formatNumber(row.views)} views`}
+                        ? t("expires_label", { time: row.expiresLabel })
+                        : t("views_count", { count: row.views })}
                   </span>
                 </div>
                 <RowBadge row={row} short className="shrink-0" />
@@ -339,10 +356,12 @@ export function PasteList({
         ) : null}
 
         {pagination.total > 0 ? (
-          <div className="flex items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
             <span className="text-[13px] text-muted-foreground">
-              Showing {range} of {pagination.total}
-              {filtering ? ` (filtered from ${pagination.totalAll})` : ""}
+              {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
+              {filtering
+                ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
+                : ""}
             </span>
             <Pagination
               page={pagination.page}
@@ -373,22 +392,23 @@ function EmptyState({
   filtering: boolean
   mode: "mine" | "starred" | "collection" | "folder"
 }) {
+  const t = useTranslations("Workspace")
   const text = filtering
-    ? "No pastes match these filters."
+    ? t("no_pastes_match_these_filters")
     : mode === "starred"
-      ? "Star a paste to keep it here."
+      ? t("star_a_paste_to_keep_it_here")
       : mode === "collection"
-        ? "No pastes in this collection yet."
+        ? t("no_pastes_in_this_collection_yet")
         : mode === "folder"
-          ? "No pastes in this folder yet."
-          : "No pastes yet."
+          ? t("no_pastes_in_this_folder_yet")
+          : t("no_pastes_yet")
 
   return (
     <div className="flex flex-col items-center gap-3 border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
       {text}
       {!filtering && mode !== "starred" ? (
         <Link href="/new" className="font-medium text-link hover:underline">
-          Create a paste
+          {t("create_a_paste")}
         </Link>
       ) : null}
     </div>

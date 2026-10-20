@@ -9,6 +9,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { Input } from "@sniptide/ui/components/input"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
@@ -19,8 +20,10 @@ import {
   ShieldIcon,
   UsersIcon,
 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { track } from "@/lib/analytics"
+import { runAction } from "@/lib/feedback"
 import { updateSharing } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { useCopy } from "./copy-button"
@@ -37,14 +40,15 @@ export interface SharingState {
 }
 
 const expiryChoices: { value: Expiry; label: string }[] = [
-  { value: "1h", label: "1 hour from now" },
-  { value: "1d", label: "1 day from now" },
-  { value: "1w", label: "1 week from now" },
-  { value: "1m", label: "1 month from now" },
-  { value: "never", label: "Never" },
+  { value: "1h", label: "1HourFromNow" },
+  { value: "1d", label: "1DayFromNow" },
+  { value: "1w", label: "1WeekFromNow" },
+  { value: "1m", label: "1MonthFromNow" },
+  { value: "never", label: "never" },
 ]
 
 export function ShareLinkField({ url, className }: { url: string; className?: string }) {
+  const t = useTranslations("Paste")
   const { copied, copy } = useCopy()
 
   return (
@@ -60,21 +64,17 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
           return copy(url)
         }}
       >
-        <span aria-live="polite">{copied ? "Copied" : "Copy"}</span>
+        {copied ? <SuccessCheck /> : null}
+        <span aria-live="polite">{copied ? t("copied") : t("copy")}</span>
       </Button>
     </div>
   )
 }
 
-const visibilityHelp: Record<Visibility, string> = {
-  private: "Only you and people you invite can open it.",
-  unlisted: "Anyone with the link can view. Hidden from search.",
-  public: "Listed on your profile and open to anyone.",
-}
-
 // The sharing controls, shared by the desktop side panel and the mobile settings list. Each
 // control saves on change through a server action and the page re-renders with the stored values.
 function useSharingControls(state: SharingState, list: boolean) {
+  const t = useTranslations("Paste")
   const [visibility, setVisibility] = React.useState(state.visibility)
   const [hasPassword, setHasPassword] = React.useState(state.hasPassword)
   const [settingPassword, setSettingPassword] = React.useState(false)
@@ -83,22 +83,30 @@ function useSharingControls(state: SharingState, list: boolean) {
   const [allowRaw, setAllowRaw] = React.useState(state.allowRaw)
   const [pending, startTransition] = React.useTransition()
 
-  function save(input: Parameters<typeof updateSharing>[1]) {
-    startTransition(() => updateSharing(state.slug, input))
+  // Reports every change, and puts the control back where it was when the save fails.
+  function save(input: Parameters<typeof updateSharing>[1], restore?: () => void) {
+    startTransition(async () => {
+      const result = await runAction(() => updateSharing(state.slug, input), {
+        success: t("sharingUpdated"),
+        error: t("couldnTUpdateSharingTryAgain"),
+      })
+      if (!result.ok) restore?.()
+    })
   }
 
   const visibilityControl = (
     <SegmentedControl
-      aria-label="Visibility"
+      aria-label={t("visibility")}
       value={visibility}
       onValueChange={(next) => {
+        const previous = visibility
         setVisibility(next)
-        save({ visibility: next })
+        save({ visibility: next }, () => setVisibility(previous))
       }}
       options={[
-        { value: "private", label: "Private" },
-        { value: "unlisted", label: "Unlisted" },
-        { value: "public", label: "Public" },
+        { value: "private", label: t("private") },
+        { value: "unlisted", label: t("unlisted") },
+        { value: "public", label: t("public") },
       ]}
       itemClassName={list ? "py-2 text-sm" : undefined}
     />
@@ -118,7 +126,7 @@ function useSharingControls(state: SharingState, list: boolean) {
       <DropdownMenuContent align="end">
         {expiryChoices.map((choice) => (
           <DropdownMenuItem key={choice.value} onClick={() => save({ expiry: choice.value })}>
-            {choice.label}
+            {t(choice.label)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -127,15 +135,15 @@ function useSharingControls(state: SharingState, list: boolean) {
 
   const protection = (
     <>
-      <SettingRow label="Password" list={list}>
+      <SettingRow label={t("password")} list={list}>
         <Switch
-          aria-label="Password"
+          aria-label={t("password")}
           checked={hasPassword || settingPassword}
           onCheckedChange={(checked) => {
             if (checked) return setSettingPassword(true)
             setSettingPassword(false)
             setHasPassword(false)
-            save({ password: null })
+            save({ password: null }, () => setHasPassword(true))
           }}
         />
       </SettingRow>
@@ -145,23 +153,24 @@ function useSharingControls(state: SharingState, list: boolean) {
           onSubmit={(event) => {
             event.preventDefault()
             if (!password) return
+            const had = hasPassword
             setHasPassword(true)
             setSettingPassword(false)
-            save({ password })
+            save({ password }, () => setHasPassword(had))
             setPassword("")
           }}
         >
           <Input
-            aria-label="New password"
+            aria-label={t("newPassword")}
             type="password"
             autoComplete="new-password"
-            placeholder={hasPassword ? "New password" : "Password"}
+            placeholder={hasPassword ? t("newPassword") : t("password")}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="h-8 text-base lg:text-[13px]"
           />
           <Button type="submit" size="sm" className="h-8" disabled={!password}>
-            Set
+            {t("set")}
           </Button>
         </form>
       ) : null}
@@ -174,26 +183,26 @@ function useSharingControls(state: SharingState, list: boolean) {
             list ? "px-4 py-2 text-left" : "-mt-1",
           )}
         >
-          Change password
+          {t("changePassword")}
         </button>
       ) : null}
-      <SettingRow label="Burn after reading" list={list}>
+      <SettingRow label={t("burnAfterReading")} list={list}>
         <Switch
-          aria-label="Burn after reading"
+          aria-label={t("burnAfterReading")}
           checked={burnAfterRead}
           onCheckedChange={(checked) => {
             setBurnAfterRead(checked)
-            save({ burnAfterRead: checked })
+            save({ burnAfterRead: checked }, () => setBurnAfterRead(!checked))
           }}
         />
       </SettingRow>
-      <SettingRow label="Allow raw access" list={list}>
+      <SettingRow label={t("allowRawAccess")} list={list}>
         <Switch
-          aria-label="Allow raw access"
+          aria-label={t("allowRawAccess")}
           checked={allowRaw}
           onCheckedChange={(checked) => {
             setAllowRaw(checked)
-            save({ allowRaw: checked })
+            save({ allowRaw: checked }, () => setAllowRaw(!checked))
           }}
         />
       </SettingRow>
@@ -202,7 +211,7 @@ function useSharingControls(state: SharingState, list: boolean) {
 
   const status = (
     <p aria-live="polite" className="sr-only">
-      {pending ? "Saving" : ""}
+      {pending ? t("savingMessage") : ""}
     </p>
   )
 
@@ -229,18 +238,19 @@ export function PasteDetailPanel({
   views: React.ReactNode
   revisions: React.ReactNode
 }) {
+  const t = useTranslations("Paste")
   const rest: PanelSection[] = [
-    { id: "views", label: "Views", icon: EyeIcon, content: views },
-    { id: "revisions", label: "Revisions", icon: HistoryIcon, content: revisions },
+    { id: "views", label: t("views"), icon: EyeIcon, content: views },
+    { id: "revisions", label: t("revisions"), icon: HistoryIcon, content: revisions },
   ]
   if (state) return <OwnerPanel state={state} rest={rest} />
 
   const shared: PanelSection[] = sharedNote
-    ? [{ id: "shared", label: "Shared with you", icon: UsersIcon, content: sharedNote }]
+    ? [{ id: "shared", label: t("sharedWithYou"), icon: UsersIcon, content: sharedNote }]
     : []
   return (
     <SidePanel
-      label="Paste details"
+      label={t("pasteDetails")}
       sections={[...shared, ...rest]}
       defaultOpen={sharedNote ? ["shared"] : undefined}
     />
@@ -248,30 +258,33 @@ export function PasteDetailPanel({
 }
 
 function OwnerPanel({ state, rest }: { state: SharingState; rest: PanelSection[] }) {
+  const t = useTranslations("Paste")
   const controls = useSharingControls(state, false)
   const sections: PanelSection[] = [
     {
       id: "sharing",
-      label: "Sharing",
+      label: t("sharing"),
       icon: LinkIcon,
       content: (
         <>
           <ShareLinkField url={state.url} />
           {controls.visibilityControl}
-          <p className="text-xs text-muted-foreground">{visibilityHelp[controls.visibility]}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("visibilityHelp", { value: controls.visibility })}
+          </p>
           {controls.status}
         </>
       ),
     },
     {
       id: "access",
-      label: "Access",
+      label: t("access"),
       icon: ShieldIcon,
       marked: controls.protectedNow,
       content: (
         <>
           <div className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground">Expires</span>
+            <span className="text-muted-foreground">{t("expires")}</span>
             {controls.expiry}
           </div>
           <div className="flex flex-col gap-2.5">{controls.protection}</div>
@@ -281,7 +294,7 @@ function OwnerPanel({ state, rest }: { state: SharingState; rest: PanelSection[]
     ...rest,
   ]
 
-  return <SidePanel label="Paste details" sections={sections} />
+  return <SidePanel label={t("pasteDetails")} sections={sections} />
 }
 
 // The mobile settings list on the paste detail page; takes extra read-only rows as children,
@@ -293,13 +306,14 @@ export function SharingPanel({
   state: SharingState
   children?: React.ReactNode
 }) {
+  const t = useTranslations("Paste")
   const controls = useSharingControls(state, true)
 
   return (
-    <section aria-label="Sharing" className="flex flex-col gap-3">
+    <section aria-label={t("sharing")} className="flex flex-col gap-3">
       {controls.visibilityControl}
       <div className="flex flex-col divide-y divide-border border border-border text-[15px]">
-        <SettingRow label="Expires" list>
+        <SettingRow label={t("expires")} list>
           {controls.expiry}
         </SettingRow>
         {children}

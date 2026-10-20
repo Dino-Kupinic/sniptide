@@ -3,10 +3,10 @@
 export type Scope = "all" | "pastes" | "collections" | "commands"
 
 export const SCOPES: { id: Scope; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "pastes", label: "Pastes" },
-  { id: "collections", label: "Collections" },
-  { id: "commands", label: "Commands" },
+  { id: "all", label: "all" },
+  { id: "pastes", label: "pastes" },
+  { id: "collections", label: "collections" },
+  { id: "commands", label: "commands" },
 ]
 
 // The scope a typed value implies and the text to search for: `>` limits results to commands.

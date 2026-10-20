@@ -10,6 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import {
   Table,
   TableBody,
@@ -18,12 +19,21 @@ import {
   TableHeader,
   TableRow,
 } from "@sniptide/ui/components/table"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { Trash2Icon } from "lucide-react"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { runAction } from "@/lib/feedback"
+import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
-import { PASTE_PAGE_SIZE, type PageInfo, type PasteListQuery } from "@/lib/pastes/list-query"
+import {
+  PASTE_PAGE_SIZE,
+  type PageInfo,
+  type PasteListQuery,
+  pasteListSearch,
+} from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
 import { ListHeader, Pagination, SearchField } from "./toolbar"
 import { useListQuery } from "./use-list-query"
@@ -32,40 +42,56 @@ function ConfirmDelete({
   title,
   description,
   confirmLabel,
+  successMessage,
   onConfirm,
   trigger,
 }: {
   title: string
   description: string
   confirmLabel: string
+  successMessage: string
   onConfirm: () => Promise<void>
   trigger: React.ReactElement
 }) {
+  const t = useTranslations("Workspace")
   const [pending, startTransition] = React.useTransition()
   const [open, setOpen] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        setError(null)
+      }}
+    >
       <AlertDialogTrigger render={trigger} />
       <AlertDialogContent>
         <AlertDialogTitle>{title}</AlertDialogTitle>
         <AlertDialogDescription>{description}</AlertDialogDescription>
+        <FormError variant="inline" message={error} />
         <AlertDialogFooter>
           <AlertDialogClose render={<Button variant="outline" size="lg" />}>
-            Cancel
+            {t("cancel")}
           </AlertDialogClose>
           <Button
             size="lg"
             className="bg-destructive text-white hover:bg-destructive/85"
-            disabled={pending}
+            loading={pending}
             onClick={() =>
               startTransition(async () => {
-                await onConfirm()
+                try {
+                  await onConfirm()
+                } catch {
+                  return setError(t("couldnt_delete_try_again"))
+                }
+                toast.success(successMessage)
                 setOpen(false)
               })
             }
           >
-            {pending ? "Deleting…" : confirmLabel}
+            {pending ? t("deleting") : confirmLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -74,16 +100,24 @@ function ConfirmDelete({
 }
 
 function RestoreButton({ slug, className }: { slug: string; className?: string }) {
+  const t = useTranslations("Workspace")
   const [pending, startTransition] = React.useTransition()
   return (
     <Button
       variant="outline"
       size="sm"
-      disabled={pending}
-      onClick={() => startTransition(() => restorePaste(slug))}
+      loading={pending}
+      onClick={() =>
+        startTransition(async () => {
+          await runAction(() => restorePaste(slug), {
+            success: t("paste_restored"),
+            error: t("couldnt_restore_the_paste_try_again"),
+          })
+        })
+      }
       className={cn("h-[30px] px-3 text-[13px]", className)}
     >
-      Restore
+      {t("restore")}
     </Button>
   )
 }
@@ -101,14 +135,17 @@ export function TrashList({
   query: PasteListQuery
   pagination: PageInfo
 }) {
-  const { query, update, pending } = useListQuery(serverQuery)
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
+  const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
 
   const emptyButton = (variant: "desktop" | "mobile") => (
     <ConfirmDelete
-      title="Empty trash?"
-      description={`${pagination.totalAll} ${pagination.totalAll === 1 ? "paste" : "pastes"} will be deleted for good. This can't be undone.`}
-      confirmLabel="Empty trash"
+      title={t("empty_trash_title")}
+      description={t("empty_trash_description", { count: pagination.totalAll })}
+      confirmLabel={t("empty_trash")}
+      successMessage={t("trash_emptied")}
       onConfirm={emptyTrash}
       trigger={
         variant === "desktop" ? (
@@ -119,7 +156,7 @@ export function TrashList({
             className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
           >
             <Trash2Icon />
-            Empty trash
+            {t("empty_trash")}
           </Button>
         ) : (
           <button
@@ -127,7 +164,7 @@ export function TrashList({
             disabled={pagination.totalAll === 0}
             className="shrink-0 text-sm text-destructive disabled:opacity-50"
           >
-            Empty trash
+            {t("empty_trash")}
           </button>
         )
       }
@@ -137,9 +174,9 @@ export function TrashList({
   return (
     <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
-        title="Trash"
+        title={t("trash")}
         count={pagination.totalAll}
-        description="Deleted pastes stay here for 30 days. Their links stop working right away."
+        description={t("deleted_pastes_stay_here_for_30_days_their")}
         actions={emptyButton("desktop")}
       />
 
@@ -147,10 +184,10 @@ export function TrashList({
         <SearchField
           value={query.q}
           onChange={(q) => update({ q }, true)}
-          placeholder="Search deleted pastes"
+          placeholder={t("search_deleted_pastes")}
         />
         <div className="flex items-center justify-between gap-4 border border-border bg-sidebar px-4 py-3 text-[13px] text-foreground/80">
-          <p>Deleted pastes are kept for 30 days. Their links no longer work.</p>
+          <p>{t("deleted_pastes_are_kept_for_30_days_their")}</p>
           {emptyButton("mobile")}
         </div>
       </div>
@@ -158,19 +195,19 @@ export function TrashList({
       <div className="flex flex-col lg:border lg:border-border">
         {pagination.total === 0 ? (
           <p className="px-4 py-14 text-center text-sm text-muted-foreground">
-            {query.q ? "No deleted pastes match." : "Trash is empty."}
+            {query.q ? t("no_deleted_pastes_match") : t("trash_is_empty")}
           </p>
         ) : (
           <>
-            <Table className="hidden table-fixed lg:table">
+            <Table className="hidden min-w-[960px] table-fixed lg:table">
               <TableHeader className="bg-sidebar">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>Paste</TableHead>
-                  <TableHead className="w-[130px]">Language</TableHead>
-                  <TableHead className="w-[130px]">Deleted</TableHead>
-                  <TableHead className="w-[206px]">Gone for good</TableHead>
+                  <TableHead>{t("paste")}</TableHead>
+                  <TableHead className="w-[130px]">{t("language")}</TableHead>
+                  <TableHead className="w-[130px]">{t("deleted")}</TableHead>
+                  <TableHead className="w-[206px]">{t("gone_for_good")}</TableHead>
                   <TableHead className="w-[136px]">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t("actions")}</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -207,14 +244,15 @@ export function TrashList({
                       <div className="flex items-center justify-end gap-1">
                         <RestoreButton slug={row.slug} />
                         <ConfirmDelete
-                          title="Delete forever?"
-                          description={`"${row.title}" will be deleted for good. This can't be undone.`}
-                          confirmLabel="Delete forever"
+                          title={t("delete_forever_title")}
+                          description={t("delete_paste_description", { name: row.title })}
+                          confirmLabel={t("delete_forever")}
+                          successMessage={t("paste_deleted")}
                           onConfirm={() => deleteForever(row.slug)}
                           trigger={
                             <button
                               type="button"
-                              aria-label={`Delete ${row.title} forever`}
+                              aria-label={t("delete_named_forever", { name: row.title })}
                               className="flex size-[30px] items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/40"
                             >
                               <Trash2Icon className="size-4" />
@@ -233,16 +271,16 @@ export function TrashList({
                 <li key={row.slug} className="flex items-center gap-3 border-b border-border py-3">
                   <LanguageMarker language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-[15px] text-foreground/70">{row.title}</span>
+                    <span title={row.title} className="truncate text-[15px] text-foreground/70">
+                      {row.title}
+                    </span>
                     <span
                       className={cn(
                         "text-[13px] text-muted-foreground",
                         row.goneSoon && "text-destructive",
                       )}
                     >
-                      Deleted{" "}
-                      {row.deletedLabel.toLowerCase() === "today" ? "today" : row.deletedLabel} ·
-                      gone {row.goneLabel}
+                      {t("trash_metadata", { deleted: row.deletedLabel, gone: row.goneLabel })}
                     </span>
                   </div>
                   <RestoreButton slug={row.slug} className="h-8" />
@@ -251,15 +289,18 @@ export function TrashList({
             </ul>
 
             <p className="hidden border-t border-border px-4 py-3 text-[13px] text-muted-foreground lg:block">
-              {pagination.totalAll} {pagination.totalAll === 1 ? "paste" : "pastes"} · {sizeLabel}
+              {t("paste_count", { count: pagination.totalAll })} · {sizeLabel}
             </p>
           </>
         )}
       </div>
       {pagination.total > 0 ? (
-        <div className="flex items-center justify-between gap-3 text-[13px] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
           <span>
-            Showing {start + 1}–{start + rows.length} of {pagination.total}
+            {t("pagination_summary", {
+              range: `${formatNumber(start + 1, locale)}–${formatNumber(start + rows.length, locale)}`,
+              total: formatNumber(pagination.total, locale),
+            })}
           </span>
           <Pagination
             page={pagination.page}

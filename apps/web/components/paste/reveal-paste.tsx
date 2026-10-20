@@ -1,11 +1,15 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { FlameIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { track } from "@/lib/analytics"
 import { FileViewer } from "./file-viewer"
 import { ShareActions } from "./share-actions"
+
+type RevealError = "couldnTReachTheServerTry" | "unlockFirst" | "thisPasteIsGoneSomeoneAlready"
 
 interface RevealedPaste {
   title: string
@@ -15,8 +19,9 @@ interface RevealedPaste {
 // The share page of a burn-after-read paste. Nothing of it is sent until the visitor asks: the
 // reveal route then hands it over once and burns it, so a link preview can't use it up first.
 export function RevealPaste({ slug }: { slug: string }) {
+  const t = useTranslations("Paste")
   const [paste, setPaste] = React.useState<RevealedPaste | null>(null)
-  const [error, setError] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<RevealError | null>(null)
   const [pending, startTransition] = React.useTransition()
 
   if (paste) {
@@ -30,8 +35,7 @@ export function RevealPaste({ slug }: { slug: string }) {
           {first ? <ShareActions content={first.content} /> : null}
         </div>
         <p className="border border-primary bg-primary/5 px-3 py-2 text-[13px] text-link">
-          This paste was set to burn after reading. It's gone once you leave this page, so copy what
-          you need now.
+          {t("thisPasteWasSetToBurn")}
         </p>
         <FileViewer slug={slug} files={paste.files} rawAllowed={false} bodyClassName="bg-sidebar" />
       </div>
@@ -42,36 +46,31 @@ export function RevealPaste({ slug }: { slug: string }) {
     <div className="flex w-full max-w-sm flex-col gap-4 self-center border border-foreground bg-background p-6 shadow-[8px_8px_0_0_var(--foreground)]">
       <FlameIcon className="size-5" />
       <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-bold tracking-[-0.02em] uppercase">Read once</h1>
-        <p className="text-sm text-muted-foreground">
-          This paste burns after reading. Opening it deletes it, so open it when you're ready to
-          copy what you need.
-        </p>
+        <h1 className="font-heading text-2xl font-bold tracking-[-0.02em]">{t("readOnce")}</h1>
+        <p className="text-sm text-muted-foreground">{t("thisPasteBurnsAfterReadingOpening")}</p>
       </div>
-      {error ? (
-        <p role="alert" className="text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError variant="inline" message={error ? t(error) : null} />
       <Button
         type="button"
-        disabled={pending}
+        loading={pending}
         className="h-10"
         onClick={() =>
           startTransition(async () => {
             const response = await fetch(`/${encodeURIComponent(slug)}/reveal`, {
               method: "POST",
             }).catch(() => null)
-            if (!response) return setError("Couldn't reach the server. Try again.")
+            if (!response) return setError("couldnTReachTheServerTry")
             const body = await response.json().catch(() => null)
             if (!response.ok || !body?.ok)
-              return setError(body?.error ?? "This paste is gone. Someone already read it.")
+              return setError(
+                response.status === 401 ? "unlockFirst" : "thisPasteIsGoneSomeoneAlready",
+              )
             track("burn_after_read_opened")
             setPaste({ title: body.title, files: body.files })
           })
         }
       >
-        {pending ? "Opening…" : "Open and burn"}
+        {pending ? t("opening") : t("openAndBurn")}
       </Button>
     </div>
   )

@@ -8,8 +8,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, UserIcon, XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { PersonAvatar } from "@/components/lists/shared-list"
 import type { Access, Person, SharePerson } from "@/lib/pastes/types"
@@ -53,7 +55,7 @@ export function AccessMenu({
   value,
   onChange,
   onRemove,
-  removeLabel = "Remove access",
+  removeLabel,
   disabled,
   className,
   label,
@@ -66,6 +68,7 @@ export function AccessMenu({
   className?: string
   label: string
 }) {
+  const t = useTranslations("Paste")
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -76,13 +79,13 @@ export function AccessMenu({
           className,
         )}
       >
-        {accessLabel[value]}
+        {t("accessLevel", { value })}
         <ChevronDownIcon className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44">
         {(["view", "edit"] as const).map((access) => (
           <DropdownMenuItem key={access} onClick={() => onChange(access)}>
-            {accessLabel[access]}
+            {t("accessLevel", { value: access })}
             {access === value ? <CheckIcon className="ml-auto text-link" /> : null}
           </DropdownMenuItem>
         ))}
@@ -90,7 +93,7 @@ export function AccessMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onRemove}>
-              {removeLabel}
+              {removeLabel ?? t("removeAccess")}
             </DropdownMenuItem>
           </>
         ) : null}
@@ -115,6 +118,7 @@ export function InviteField({
   pending: boolean
   compact?: boolean
 }) {
+  const t = useTranslations("Paste")
   const [identifier, setIdentifier] = React.useState("")
   const [access, setAccess] = React.useState<Access>("view")
   const errorId = React.useId()
@@ -136,7 +140,7 @@ export function InviteField({
           )}
         >
           {compact ? null : <UserIcon className="size-4 shrink-0 text-muted-foreground" />}
-          <span className="sr-only">Email or username</span>
+          <span className="sr-only">{t("emailOrUsername")}</span>
           <input
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
@@ -151,7 +155,7 @@ export function InviteField({
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}
-            placeholder="Email or username"
+            placeholder={t("emailOrUsername")}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : undefined}
             className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground lg:text-sm"
@@ -160,25 +164,22 @@ export function InviteField({
         <AccessMenu
           value={access}
           onChange={setAccess}
-          label="Access for the person you invite"
+          label={t("accessForThePersonYouInvite")}
           className={cn("border border-input px-3", compact ? "h-9" : "h-11 lg:h-9")}
         />
         {submitLabel ? (
           <Button
             type="button"
             className={cn("shrink-0 max-lg:flex-1", compact ? "h-9" : "h-11 lg:h-9")}
-            disabled={!identifier.trim() || pending}
+            disabled={!identifier.trim()}
+            loading={pending}
             onClick={() => void submit()}
           >
-            {pending ? "Inviting…" : submitLabel}
+            {pending ? t("inviting") : submitLabel}
           </Button>
         ) : null}
       </div>
-      {error ? (
-        <p id={errorId} role="alert" className="text-[13px] text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError id={errorId} variant="inline" message={error} />
     </div>
   )
 }

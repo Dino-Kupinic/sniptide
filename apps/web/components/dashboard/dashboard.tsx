@@ -12,6 +12,7 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon } from "lucide-react"
 import Link from "next/link"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { RowBadge } from "@/components/lists/paste-list"
@@ -26,23 +27,27 @@ import { ViewsBarChart } from "./views-chart"
 type Range = "1" | "7" | "30"
 type Tab = "all" | "public" | "unlisted" | "private"
 
-const rangeLabels: Record<Range, string> = { "1": "today", "7": "this week", "30": "this month" }
-
 function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0)
 }
 
-function trend(current: number, previous: number) {
+function trend(current: number, previous: number, locale: string) {
   if (previous === 0) return current > 0 ? "new" : null
   const change = ((current - previous) / previous) * 100
-  const rounded = Math.abs(change) < 10 ? change.toFixed(1) : Math.round(change).toString()
-  return `${change >= 0 ? "+" : ""}${rounded}%`
+  const digits = Math.abs(change) < 10 ? 1 : 0
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    signDisplay: "always",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(change / 100)
 }
 
 // Greets in the viewer's own time of day, which only the browser knows; the server renders a
 // neutral greeting first.
 function Greeting({ firstName }: { firstName: string }) {
-  const [part, setPart] = React.useState<string | null>(null)
+  const t = useTranslations("Workspace")
+  const [part, setPart] = React.useState<"morning" | "afternoon" | "evening" | null>(null)
 
   React.useEffect(() => {
     const hour = new Date().getHours()
@@ -50,8 +55,17 @@ function Greeting({ firstName }: { firstName: string }) {
   }, [])
 
   return (
-    <h1 className="font-heading text-[28px] leading-8 font-bold tracking-[-0.02em] uppercase lg:text-4xl lg:leading-10">
-      {part ? `Good ${part}` : "Hello"}, {firstName}
+    <h1 className="font-heading text-[28px] leading-8 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
+      {t(
+        part === "morning"
+          ? "good_morning"
+          : part === "afternoon"
+            ? "good_afternoon"
+            : part === "evening"
+              ? "good_evening"
+              : "hello_named",
+        { name: firstName },
+      )}
     </h1>
   )
 }
@@ -104,13 +118,20 @@ export function Dashboard({
   origin: string
   host: string
 }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
+  const rangeLabels: Record<Range, string> = {
+    "1": t("today"),
+    "7": t("this_week"),
+    "30": t("this_month"),
+  }
   const [range, setRange] = React.useState<Range>("7")
   const [tab, setTab] = React.useState<Tab>("all")
   const days = Number(range)
 
   const views = sum(data.dailyViews.slice(-days))
   const previousViews = sum(data.dailyViews.slice(-2 * days, -days))
-  const viewsTrend = trend(views, previousViews)
+  const viewsTrend = trend(views, previousViews, locale)
   const created = data.newPastes[range]
 
   // The chart always shows at least a week so a single day still has context.
@@ -129,21 +150,21 @@ export function Dashboard({
         <div className="flex flex-col gap-1.5">
           <Greeting firstName={firstName} />
           <p className="text-[15px] leading-5 text-muted-foreground lg:hidden">
-            {formatNumber(views)} opens {rangeLabels[range]}.{" "}
+            {t("opens_in_period", { count: views, period: rangeLabels[range] })}{" "}
             {data.expiringSoon > 0
-              ? `${data.expiringSoon} ${data.expiringSoon === 1 ? "link expires" : "links expire"} in the next 48 hours.`
-              : "Nothing expires in the next 48 hours."}
+              ? t("expiring_links", { count: data.expiringSoon })
+              : t("nothing_expires_in_the_next_48_hours")}
           </p>
         </div>
         <div className="hidden items-center gap-2 lg:flex">
           <SegmentedControl
-            aria-label="Range"
+            aria-label={t("range")}
             value={range}
             onValueChange={setRange}
             options={[
-              { value: "1", label: "24h" },
-              { value: "7", label: "7 days" },
-              { value: "30", label: "30 days" },
+              { value: "1", label: t("24h") },
+              { value: "7", label: t("7_days") },
+              { value: "30", label: t("30_days") },
             ]}
             className="w-56"
             itemClassName="py-[5px]"
@@ -154,37 +175,43 @@ export function Dashboard({
 
       <div className="grid grid-cols-2 border border-border lg:grid-cols-4">
         <Stat
-          label="Total pastes"
-          value={formatNumber(data.totalPastes)}
-          note={created > 0 ? `+${created} ${rangeLabels[range]}` : undefined}
+          label={t("total_pastes")}
+          value={formatNumber(data.totalPastes, locale)}
+          note={
+            created > 0
+              ? t("created_in_period", { count: created, period: rangeLabels[range] })
+              : undefined
+          }
           noteTone="primary"
           className="border-r border-b border-border lg:border-b-0"
         />
         <Stat
-          label="Views"
-          value={formatNumber(views)}
-          note={viewsTrend ?? undefined}
+          label={t("views")}
+          value={formatNumber(views, locale)}
+          note={viewsTrend === "new" ? t("new") : (viewsTrend ?? undefined)}
           noteTone="primary"
           className="border-b border-border lg:border-r lg:border-b-0"
         />
         <Stat
-          label="Active share links"
-          value={formatNumber(data.activeLinks)}
+          label={t("active_share_links")}
+          value={formatNumber(data.activeLinks, locale)}
           note={
-            data.passwordProtected > 0 ? `${data.passwordProtected} password-protected` : undefined
+            data.passwordProtected > 0
+              ? t("password_protected_count", { count: data.passwordProtected })
+              : undefined
           }
           className="border-r border-border"
         />
         <Stat
-          label="Expiring in 48h"
-          value={formatNumber(data.expiringSoon)}
+          label={t("expiring_in_48h")}
+          value={formatNumber(data.expiringSoon, locale)}
           note={
             data.expiringSoon > 0 ? (
               <Link
                 href="/pastes?sort=expires"
                 className="font-medium text-foreground underline underline-offset-2 hover:text-link"
               >
-                Review
+                {t("review")}
               </Link>
             ) : undefined
           }
@@ -203,12 +230,14 @@ export function Dashboard({
             <div className="flex flex-col gap-0.5">
               <h2 id="views-heading" className="text-sm font-semibold">
                 <span className="lg:hidden">
-                  Views {chartDays > 7 ? "this month" : "this week"}
+                  {t("views_in_period", {
+                    period: chartDays > 7 ? t("this_month") : t("this_week"),
+                  })}
                 </span>
-                <span className="hidden lg:inline">Views</span>
+                <span className="hidden lg:inline">{t("views")}</span>
               </h2>
               <p className="hidden text-[13px] text-muted-foreground lg:block">
-                Across all share links
+                {t("across_all_share_links")}
               </p>
             </div>
             <div className="flex flex-col items-end gap-1.5 pt-0.5">
@@ -216,16 +245,19 @@ export function Dashboard({
                 href="/analytics"
                 className="flex items-center gap-1 text-[13px] font-medium text-link outline-none hover:underline focus-visible:underline"
               >
-                View analytics
+                {t("view_analytics")}
                 <ArrowRightIcon className="size-3.5" />
               </Link>
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="hidden size-2 bg-link lg:block" />
                 <span className="hidden lg:inline">
-                  {chartDays > 7 ? "Last 30 days" : "Last 7 days"}
+                  {chartDays > 7 ? t("last_30_days") : t("last_7_days")}
                 </span>
                 <span className="lg:hidden">
-                  peak {chartLabels[peakIndex]} · {formatNumber(chartValues[peakIndex] ?? 0)}
+                  {t("peak_summary", {
+                    day: chartLabels[peakIndex] ?? "",
+                    count: formatNumber(chartValues[peakIndex] ?? 0, locale),
+                  })}
                 </span>
               </span>
             </div>
@@ -241,11 +273,11 @@ export function Dashboard({
         <div className="flex items-center justify-between gap-3 py-3 lg:border-b lg:border-border lg:px-4">
           <div className="flex items-center gap-4">
             <h2 id="recent-heading" className="text-[15px] font-semibold lg:text-[15px]">
-              Recent pastes
+              {t("recent_pastes")}
             </h2>
             <div
               role="tablist"
-              aria-label="Filter recent pastes"
+              aria-label={t("filter_recent_pastes")}
               className="hidden items-center gap-1 lg:flex"
             >
               {(["all", "public", "unlisted", "private"] as const).map((value) => (
@@ -260,7 +292,7 @@ export function Dashboard({
                     tab === value && "border border-border text-foreground",
                   )}
                 >
-                  {value}
+                  {t(value)}
                 </button>
               ))}
             </div>
@@ -269,16 +301,16 @@ export function Dashboard({
             href="/pastes"
             className="flex items-center gap-1 text-sm font-medium hover:text-link lg:text-[13px]"
           >
-            View all
+            {t("view_all")}
             <ArrowRightIcon className="size-3.5" />
           </Link>
         </div>
 
         {recent.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            No {tab === "all" ? "" : `${tab} `}pastes yet.{" "}
+            {t("no_recent_pastes", { visibility: tab })}{" "}
             <Link href="/new" className="font-medium text-link hover:underline">
-              Create one
+              {t("create_one")}
             </Link>
           </p>
         ) : (
@@ -314,18 +346,20 @@ export function Dashboard({
 }
 
 function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string; host: string }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   return (
     <Table className="hidden table-fixed lg:table">
       <TableHeader className="bg-sidebar">
         <TableRow className="hover:bg-transparent">
-          <TableHead>Paste</TableHead>
-          <TableHead className="w-[130px]">Language</TableHead>
-          <TableHead className="w-[120px]">Visibility</TableHead>
-          <TableHead className="w-20 text-right">Views</TableHead>
-          <TableHead className="w-[130px] pl-7">Expires</TableHead>
-          <TableHead className="w-[116px]">Updated</TableHead>
+          <TableHead>{t("paste")}</TableHead>
+          <TableHead className="w-[130px]">{t("language")}</TableHead>
+          <TableHead className="w-[120px]">{t("visibility")}</TableHead>
+          <TableHead className="w-20 text-right">{t("views")}</TableHead>
+          <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
+          <TableHead className="w-[116px]">{t("updated")}</TableHead>
           <TableHead className="w-12">
-            <span className="sr-only">Actions</span>
+            <span className="sr-only">{t("actions")}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -350,7 +384,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
               <RowBadge row={row} />
             </TableCell>
             <TableCell className="text-right font-mono text-[13px] tabular-nums">
-              {formatNumber(row.views)}
+              {formatNumber(row.views, locale)}
             </TableCell>
             <TableCell
               className={cn("pl-7 text-[13px] text-foreground/80", row.expiresSoon && "text-link")}

@@ -2,6 +2,7 @@
 
 import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon, XIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageMarker } from "@/components/paste/language-marker"
 import { detectLanguage } from "@/lib/pastes/languages"
@@ -32,12 +33,13 @@ export function FileTabs({
   // Pinned to the right end of the bar (the side panel toggle).
   trailing?: React.ReactNode
 }) {
+  const t = useTranslations("Paste")
   const [renamingId, setRenamingId] = React.useState<string | null>(null)
 
   return (
     <div
       role="tablist"
-      aria-label="Files"
+      aria-label={t("files")}
       className="flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar"
     >
       {files.map((file) => {
@@ -55,7 +57,7 @@ export function FileTabs({
               <input
                 // biome-ignore lint/a11y/noAutofocus: renaming starts right after the user asks for it
                 autoFocus
-                aria-label="File name"
+                aria-label={t("fileName")}
                 defaultValue={file.name}
                 onFocus={(event) => {
                   // Select the name without its extension, like a file manager would.
@@ -95,7 +97,7 @@ export function FileTabs({
             {selected && files.length > 1 ? (
               <button
                 type="button"
-                aria-label={`Remove ${file.name}`}
+                aria-label={t("removeFile", { name: file.name })}
                 onClick={() => onRemove(file.id)}
                 className="text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
               >
@@ -106,7 +108,7 @@ export function FileTabs({
         )
       })}
       <span id="rename-hint" className="sr-only">
-        Double-click to rename
+        {t("doubleClickToRename")}
       </span>
       {files.length < 10 ? (
         <button
@@ -115,7 +117,7 @@ export function FileTabs({
           className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
         >
           <PlusIcon className="size-3.5" />
-          <span className="hidden lg:inline">Add file</span>
+          <span className="hidden lg:inline">{t("addFile")}</span>
         </button>
       ) : null}
       {trailing ? (

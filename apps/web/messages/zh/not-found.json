@@ -1,0 +1,17 @@
+{
+  "NotFound": {
+    "title": "未找到",
+    "heading": "这里没有内容。",
+    "description": "找不到该粘贴或页面。内容可能已被删除或过期，也可能是链接有误。",
+    "dashboard": "前往控制台",
+    "trash": "打开回收站",
+    "signIn": "登录",
+    "signedInAs": "已登录为 {email}",
+    "switchAccount": "切换账户",
+    "shareHeading": "此页面已失效。",
+    "shareDescription": "链接可能已过期、在阅读后被销毁，或从未存在。",
+    "shareAdvice": "请检查地址，或创建新的粘贴。",
+    "home": "返回首页",
+    "createPaste": "创建粘贴"
+  }
+}

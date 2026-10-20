@@ -1,14 +1,19 @@
 "use client"
 
 import { cn } from "@sniptide/ui/lib/utils"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { formatNumber } from "@/lib/format"
 import type { AnalyticsReport, MetricId } from "@/lib/pastes/analytics"
 import { ViewsChart } from "./views-chart"
 
-function formatDelta(delta: number) {
-  const sign = delta > 0 ? "+" : delta < 0 ? "−" : ""
-  return `${sign}${Math.abs(delta).toFixed(1)}%`
+function formatDelta(delta: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    signDisplay: "exceptZero",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(delta / 100)
 }
 
 // The four tiles and the chart under them. A tile picks which metric the chart draws; Views is
@@ -18,6 +23,8 @@ export function Overview({
   points,
   rangeLabel,
 }: Pick<AnalyticsReport, "kpis" | "points" | "rangeLabel">) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const [selected, setSelected] = React.useState<MetricId>("views")
   const current = kpis.find((kpi) => kpi.id === selected) ?? kpis[0]
 
@@ -25,7 +32,7 @@ export function Overview({
     <>
       <div
         role="radiogroup"
-        aria-label="Chart metric"
+        aria-label={t("chart_metric")}
         className="grid grid-cols-2 border border-border lg:grid-cols-4"
       >
         {kpis.map((kpi, index) => {
@@ -58,7 +65,7 @@ export function Overview({
               </span>
               <span className="flex flex-wrap items-baseline gap-x-2">
                 <span className="font-heading text-[26px] leading-9 font-bold tracking-[-0.02em] tabular-nums lg:text-[30px]">
-                  {formatNumber(kpi.value)}
+                  {formatNumber(kpi.value, locale)}
                 </span>
                 {kpi.delta === null ? null : (
                   <span
@@ -67,7 +74,7 @@ export function Overview({
                       kpi.delta >= 0 ? "text-link" : "text-muted-foreground",
                     )}
                   >
-                    {formatDelta(kpi.delta)}
+                    {formatDelta(kpi.delta, locale)}
                   </span>
                 )}
               </span>
@@ -77,7 +84,7 @@ export function Overview({
       </div>
 
       <ViewsChart
-        title={current?.label ?? "Views"}
+        title={current?.label ?? t("views")}
         rangeLabel={rangeLabel}
         points={points}
         metric={selected}

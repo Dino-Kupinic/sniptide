@@ -33,15 +33,20 @@ export const storageUsage = cache(async () => {
     .where(eq(paste.ownerId, owner))
   return { bytes: row?.bytes ?? 0, pastes: row?.pastes ?? 0, limit }
 })
-// A user-row lock serializes creates/edits across replicas. Trash still occupies storage.
-// Deletion can only reduce usage, and an over-budget account may still shrink a paste.
+// Acquire the account lock before any paste-row lock to keep saves and restores in one order.
+export async function lockAccount(tx: Transaction, owner: string) {
+  await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
+}
+
+// Trash still occupies storage. Deletion can only reduce usage, and an over-budget account
+// may still shrink a paste.
 export async function enforceBudget(
   tx: Transaction,
   owner: string,
   bytes: number,
   editingId?: string,
 ) {
-  await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
+  await lockAccount(tx, owner)
   const [usage] = await tx
     .select({
       bytes: sql<number>`coalesce(sum(${paste.bytes}), 0)::float8`,

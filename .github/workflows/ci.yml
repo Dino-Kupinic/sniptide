@@ -39,11 +39,28 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
 
+      - run: bun run test:cli
+      - run: bun run test:mcp
+
       - run: bun run build
 
       # Builds the same image Coolify deploys, so a broken Dockerfile shows up in the PR.
       - name: Build the Docker image
         run: docker build --tag sniptide:ci .
+
+      - name: Verify the Docker image against a fresh database
+        run: bash scripts/test-docker.sh sniptide:ci
+
+      # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
+      - name: Build the docs Docker image
+        run: docker build --file apps/docs/Dockerfile --tag sniptide-docs:ci .
+
+      - name: Verify the docs Docker image
+        run: bash scripts/test-docs-image.sh sniptide-docs:ci
+
+      # docker-compose.yml and the Coolify template, the two ways self-hosters start Sniptide.
+      - name: Verify docker compose and the Coolify template
+        run: bash scripts/test-compose.sh sniptide:ci
 
   # Runs the store and routes against a real Postgres: the access rules and the one-time-read
   # claim live in SQL, so a mock would prove nothing.

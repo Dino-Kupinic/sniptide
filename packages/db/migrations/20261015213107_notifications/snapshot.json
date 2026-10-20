@@ -1,10 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "54a1192c-b1de-41a7-8d24-abf41192055c",
+  "id": "35282c49-fadf-49b4-9978-2a67be4c30b9",
   "prevIds": [
-    "905e8230-b54e-4780-9594-f77e520204f1",
-    "b1c2d137-a8cf-43f6-b905-82aa6abd18a0"
+    "951a3565-bbbd-438b-a2bf-d5816e62d2ae",
+    "c79bd001-5ea9-4a3e-8584-8cb90f5f81d4"
   ],
   "ddl": [
     {
@@ -24,6 +24,17 @@
         "copy"
       ],
       "name": "event_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "shared",
+        "burned",
+        "expiring",
+        "views"
+      ],
+      "name": "notification_kind",
       "entityType": "enums",
       "schema": "public"
     },
@@ -108,7 +119,19 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "folder",
+      "name": "env_group",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "env_variable",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "notification",
       "entityType": "tables",
       "schema": "public"
     },
@@ -157,6 +180,12 @@
     {
       "isRlsEnabled": false,
       "name": "rate_limit",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "api_token",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1042,7 +1071,7 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "type": "text",
@@ -1055,20 +1084,7 @@
       "name": "owner_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "parent_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "type": "text",
@@ -1078,10 +1094,10 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "name",
+      "name": "slug",
       "entityType": "columns",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "type": "timestamp with time zone",
@@ -1094,7 +1110,7 @@
       "name": "created_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "type": "timestamp with time zone",
@@ -1107,7 +1123,176 @@
       "name": "updated_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_variable"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "position",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_variable"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_variable"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "value",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_variable"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "notification_kind",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "kind",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "paste_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "actor_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dedupe_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "read_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
     },
     {
       "type": "uuid",
@@ -1253,14 +1438,27 @@
       "table": "paste"
     },
     {
-      "type": "uuid",
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 1,
+      "default": "'{}'",
+      "generated": null,
+      "identity": null,
+      "name": "tags",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste"
+    },
+    {
+      "type": "jsonb",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "folder_id",
+      "name": "source",
       "entityType": "columns",
       "schema": "public",
       "table": "paste"
@@ -1422,6 +1620,32 @@
       "table": "paste_file"
     },
     {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "start_line",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste_file"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "end_line",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste_file"
+    },
+    {
       "type": "serial",
       "typeSchema": null,
       "notNull": true,
@@ -1456,6 +1680,32 @@
       "generated": null,
       "identity": null,
       "name": "message",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste_revision"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "sealed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste_revision"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "snapshot",
       "entityType": "columns",
       "schema": "public",
       "table": "paste_revision"
@@ -1534,6 +1784,19 @@
       "generated": null,
       "identity": null,
       "name": "seen_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste_share"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "left_at",
       "entityType": "columns",
       "schema": "public",
       "table": "paste_share"
@@ -1706,6 +1969,123 @@
       "entityType": "columns",
       "schema": "public",
       "table": "rate_limit"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "owner_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "prefix",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 1,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "scopes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "last_used_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "api_token"
     },
     {
       "nameExplicit": true,
@@ -1963,50 +2343,22 @@
           "opclass": null
         },
         {
-          "value": "lower(\"name\")",
-          "isExpression": true,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"parent_id\" is null",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "folder_root_name_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "parent_id",
+          "value": "slug",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
           "opclass": null
-        },
-        {
-          "value": "lower(\"name\")",
-          "isExpression": true,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
         }
       ],
       "isUnique": true,
-      "where": "\"parent_id\" is not null",
+      "where": null,
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "folder_child_name_unique",
+      "name": "env_group_owner_slug_unique",
       "entityType": "indexes",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "nameExplicit": true,
@@ -2019,7 +2371,7 @@
           "opclass": null
         },
         {
-          "value": "created_at",
+          "value": "updated_at",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -2031,10 +2383,115 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "folder_owner_idx",
+      "name": "env_group_owner_idx",
       "entityType": "indexes",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": false,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "notification_user_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"read_at\" is null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "notification_unread_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "paste_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "notification_paste_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "dedupe_key",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "notification_dedupe_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "notification"
     },
     {
       "nameExplicit": true,
@@ -2131,48 +2588,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "folder_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "updated_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_folder_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "deleted_at",
           "isExpression": false,
           "asc": true,
@@ -2255,6 +2670,27 @@
       "method": "gin",
       "concurrently": false,
       "name": "paste_slug_search_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "paste"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "tags",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "gin",
+      "concurrently": false,
+      "name": "paste_tags_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "paste"
@@ -2435,6 +2871,55 @@
       "table": "rate_limit"
     },
     {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "hash",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "api_token_hash_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "owner_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "api_token_owner_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
       "nameExplicit": false,
       "columns": [
         "user_id"
@@ -2548,27 +3033,78 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
-      "name": "folder_owner_id_user_id_fkey",
+      "name": "env_group_owner_id_user_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "nameExplicit": false,
       "columns": [
-        "parent_id"
+        "group_id"
       ],
       "schemaTo": "public",
-      "tableTo": "folder",
+      "tableTo": "env_group",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "folder_parent_id_folder_id_fkey",
+      "onDelete": "CASCADE",
+      "name": "env_variable_group_id_env_group_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "folder"
+      "table": "env_variable"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "notification_user_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "paste_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "paste",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "notification_paste_id_paste_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "actor_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "notification_actor_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "notification"
     },
     {
       "nameExplicit": false,
@@ -2583,23 +3119,6 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "paste_owner_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "folder_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "folder",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "paste_folder_id_folder_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "paste"
@@ -2724,6 +3243,23 @@
       "table": "paste_view_day"
     },
     {
+      "nameExplicit": false,
+      "columns": [
+        "owner_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "api_token_owner_id_user_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "api_token"
+    },
+    {
       "columns": [
         "paste_id",
         "day",
@@ -2746,6 +3282,17 @@
       "entityType": "pks",
       "schema": "public",
       "table": "paste_stats_day"
+    },
+    {
+      "columns": [
+        "group_id",
+        "name"
+      ],
+      "nameExplicit": false,
+      "name": "env_variable_pkey",
+      "entityType": "pks",
+      "schema": "public",
+      "table": "env_variable"
     },
     {
       "columns": [
@@ -2865,9 +3412,19 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "folder_pkey",
+      "name": "env_group_pkey",
       "schema": "public",
-      "table": "folder",
+      "table": "env_group",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "notification_pkey",
+      "schema": "public",
+      "table": "notification",
       "entityType": "pks"
     },
     {
@@ -2918,6 +3475,16 @@
       "name": "rate_limit_pkey",
       "schema": "public",
       "table": "rate_limit",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "api_token_pkey",
+      "schema": "public",
+      "table": "api_token",
       "entityType": "pks"
     },
     {

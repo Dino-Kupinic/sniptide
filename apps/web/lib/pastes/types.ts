@@ -25,8 +25,11 @@ export interface Person {
 }
 
 export interface Revision {
+  id: number
   message: string
   createdAt: number
+  // False for history from before copies were kept, and for entries too old to keep one.
+  restorable: boolean
 }
 
 // What the lists read: a paste without its file contents or revision history.
@@ -61,6 +64,7 @@ export interface PasteSummary {
 
 // One paste in full, for the screens that show or edit its content.
 export interface Paste extends PasteSummary {
+  version: number
   files: PasteFile[]
   revisions: Revision[]
   revisionCount: number

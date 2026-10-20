@@ -3,8 +3,11 @@
 import { TooltipProvider } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
 import { usePathname, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CommandMenuProvider } from "@/components/command-menu/command-menu"
+import { ShortcutsProvider } from "@/components/shortcuts/shortcuts-help"
+import { matchesCombo, shortcut } from "@/lib/shortcuts"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
 import { HeaderSlotsProvider } from "./page-header"
@@ -23,8 +26,10 @@ import { TopBar } from "./top-bar"
 export function AppShell({
   children,
   initialSidebar,
+  demo = false,
   ...sidebarProps
-}: SidebarProps & { initialSidebar: SidebarState; children: React.ReactNode }) {
+}: SidebarProps & { initialSidebar: SidebarState; demo?: boolean; children: React.ReactNode }) {
+  const t = useTranslations("Workspace")
   const pathname = usePathname()
   const router = useRouter()
   const chrome = mobileChrome(pathname)
@@ -58,14 +63,14 @@ export function AppShell({
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+      if (matchesCombo(event, shortcut("toggle-sidebar").keys)) {
         // Below lg there is no sidebar to collapse; navigation lives in the tab bar.
         if (!window.matchMedia("(min-width: 1024px)").matches) return
         event.preventDefault()
         toggleSidebar()
       }
       // ⌘, opens settings, as shown in the account menu.
-      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+      if (matchesCombo(event, shortcut("settings").keys)) {
         event.preventDefault()
         router.push("/settings")
       }
@@ -91,79 +96,89 @@ export function AppShell({
   return (
     <TooltipProvider delay={300}>
       <HeaderSlotsProvider>
-        <CommandMenuProvider
-          recent={sidebarProps.data.recent}
-          collections={sidebarProps.collections}
-        >
-          <div className="flex min-h-svh bg-background lg:bg-sidebar">
-            <aside
-              aria-label="Sidebar"
-              style={{ width }}
-              className={cn(
-                "sticky top-0 hidden h-svh shrink-0 lg:block",
-                layout.collapsed && "lg:hidden",
-                dragWidth !== null && "select-none",
-              )}
-            >
+        <ShortcutsProvider>
+          <CommandMenuProvider
+            recent={sidebarProps.data.recent}
+            collections={sidebarProps.collections}
+          >
+            <div className="flex min-h-svh bg-background lg:bg-sidebar">
+              <aside
+                aria-label={t("sidebar")}
+                style={{ width }}
+                className={cn(
+                  "sticky top-0 hidden h-svh shrink-0 lg:block",
+                  layout.collapsed && "lg:hidden",
+                  dragWidth !== null && "select-none",
+                )}
+              >
+                <div
+                  className={cn(
+                    "h-full overflow-hidden transition-opacity",
+                    releaseToCollapse && "opacity-50",
+                  )}
+                >
+                  <Sidebar
+                    {...sidebarProps}
+                    closed={layout.closed}
+                    sectionOrder={layout.sectionOrder}
+                    collectionOrder={layout.collectionOrder}
+                    onReorderSections={(sectionOrder) =>
+                      update((state) => ({ ...state, sectionOrder }))
+                    }
+                    onReorderCollections={(collectionOrder) =>
+                      update((state) => ({ ...state, collectionOrder }))
+                    }
+                    onToggleSection={toggleSection}
+                    onToggleSidebar={toggleSidebar}
+                  />
+                </div>
+                <ResizeHandle
+                  width={width}
+                  settledWidth={settledWidth}
+                  maxWidth={maxWidth ?? settledWidth}
+                  onDrag={setDragWidth}
+                  onRelease={(next) => {
+                    setDragWidth(null)
+                    if (next < SIDEBAR_MIN_WIDTH) {
+                      // Collapse like the header button does, and come back at the last good width.
+                      update((state) => ({ ...state, collapsed: true }))
+                    } else {
+                      update((state) => ({ ...state, width: next }))
+                    }
+                  }}
+                />
+              </aside>
+
               <div
                 className={cn(
-                  "h-full overflow-hidden transition-opacity",
-                  releaseToCollapse && "opacity-50",
+                  "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
+                  layout.collapsed && "lg:ml-2",
                 )}
               >
-                <Sidebar
-                  {...sidebarProps}
-                  closed={layout.closed}
-                  sectionOrder={layout.sectionOrder}
-                  collectionOrder={layout.collectionOrder}
-                  onReorderSections={(sectionOrder) =>
-                    update((state) => ({ ...state, sectionOrder }))
-                  }
-                  onReorderCollections={(collectionOrder) =>
-                    update((state) => ({ ...state, collectionOrder }))
-                  }
-                  onToggleSection={toggleSection}
-                  onToggleSidebar={toggleSidebar}
-                />
+                {demo ? (
+                  <p
+                    role="note"
+                    className="border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
+                  >
+                    {t("demoBanner")}
+                  </p>
+                ) : null}
+                <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
+                {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
+                <main
+                  className={cn(
+                    "flex-1",
+                    chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+                  )}
+                >
+                  {children}
+                </main>
               </div>
-              <ResizeHandle
-                width={width}
-                settledWidth={settledWidth}
-                maxWidth={maxWidth ?? settledWidth}
-                onDrag={setDragWidth}
-                onRelease={(next) => {
-                  setDragWidth(null)
-                  if (next < SIDEBAR_MIN_WIDTH) {
-                    // Collapse like the header button does, and come back at the last good width.
-                    update((state) => ({ ...state, collapsed: true }))
-                  } else {
-                    update((state) => ({ ...state, width: next }))
-                  }
-                }}
-              />
-            </aside>
 
-            <div
-              className={cn(
-                "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
-                layout.collapsed && "lg:ml-2",
-              )}
-            >
-              <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
-              {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
-              <main
-                className={cn(
-                  "flex-1",
-                  chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
-                )}
-              >
-                {children}
-              </main>
+              {chrome.tabBar ? <TabBar /> : null}
             </div>
-
-            {chrome.tabBar ? <TabBar /> : null}
-          </div>
-        </CommandMenuProvider>
+          </CommandMenuProvider>
+        </ShortcutsProvider>
       </HeaderSlotsProvider>
     </TooltipProvider>
   )
@@ -188,6 +203,7 @@ function ResizeHandle({
   onDrag: (width: number | null) => void
   onRelease: (width: number) => void
 }) {
+  const t = useTranslations("Workspace")
   const [dragging, setDragging] = React.useState(false)
 
   function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
@@ -234,7 +250,7 @@ function ResizeHandle({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize sidebar"
+      aria-label={t("resize_sidebar")}
       aria-valuemin={SIDEBAR_MIN_WIDTH}
       aria-valuemax={maxWidth}
       aria-valuenow={Math.round(width)}

@@ -1,8 +1,11 @@
 // Pastes and everything hanging off them.
+import { sql } from "drizzle-orm"
 import {
+  bigint,
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -18,6 +21,28 @@ import { folder } from "./folders"
 export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
 
 const time = (name: string) => timestamp(name, { withTimezone: true })
+
+// Where captured code came from, recorded by the CLI (`sniptide push`). `dirty` marks code that
+// differs from the recorded commit.
+export interface PasteSource {
+  repository: string | null
+  commit: string | null
+  dirty: boolean
+}
+
+// What a revision restores: the paste's title, description and files as they were when it was
+// saved. Sharing settings, the link and the collection are not part of it.
+export interface RevisionSnapshot {
+  title: string
+  description: string
+  files: {
+    name: string
+    language: string
+    content: string
+    startLine?: number | null
+    endLine?: number | null
+  }[]
+}
 
 export const paste = pgTable(
   "paste",
@@ -40,10 +65,16 @@ export const paste = pgTable(
     // The folder the paste is filed in, if any. No cascade: a folder is never deleted while
     // pastes still point at it, so deleting one can't silently take pastes with it.
     folderId: uuid("folder_id").references(() => folder.id),
+    // Free-form labels for finding a paste again (`sniptide list --tag react`).
+    tags: text("tags").array().notNull().default([]),
+    source: jsonb("source").$type<PasteSource>(),
     views: integer("views").notNull().default(0),
     uniqueViews: integer("unique_views").notNull().default(0),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
+    version: bigint("version", { mode: "number" })
+      .notNull()
+      .default(sql`floor(extract(epoch from clock_timestamp()) * 1000)`),
     expiresAt: time("expires_at"),
     // Set while the paste is in the trash.
     deletedAt: time("deleted_at"),
@@ -57,6 +88,7 @@ export const paste = pgTable(
     index("paste_expired_idx").on(table.expiresAt),
     index("paste_title_search_idx").using("gin", table.title.op("gin_trgm_ops")),
     index("paste_slug_search_idx").using("gin", table.slug.op("gin_trgm_ops")),
+    index("paste_tags_idx").using("gin", table.tags),
   ],
 )
 
@@ -71,6 +103,9 @@ export const pasteFile = pgTable(
     name: text("name").notNull(),
     language: text("language").notNull(),
     content: text("content").notNull(),
+    // The source lines a capture took, 1-based and inclusive. Null for a whole file.
+    startLine: integer("start_line"),
+    endLine: integer("end_line"),
   },
   (table) => [index("paste_file_paste_idx").on(table.pasteId, table.position)],
 )
@@ -83,6 +118,11 @@ export const pasteRevision = pgTable(
       .notNull()
       .references(() => paste.id, { onDelete: "cascade" }),
     message: text("message").notNull(),
+    // Set when the editor is closed with Done: the next edit starts a new revision instead of
+    // folding into this one.
+    sealed: boolean("sealed").notNull().default(false),
+    // Null for revisions made before snapshots were kept and for ones pruned from a long history.
+    snapshot: jsonb("snapshot").$type<RevisionSnapshot>(),
     createdAt: time("created_at").notNull().defaultNow(),
   },
   (table) => [index("paste_revision_paste_idx").on(table.pasteId, table.createdAt)],
@@ -138,6 +178,9 @@ export const pasteShare = pgTable(
     createdAt: time("created_at").notNull().defaultNow(),
     // When the person first opened it; null keeps it marked as new in Shared with me.
     seenAt: time("seen_at"),
+    // When the person removed it from their Shared with me. The row stays so Undo is instant, but
+    // a paste they left gives them no access; the owner inviting them again clears it.
+    leftAt: time("left_at"),
   },
   (table) => [
     primaryKey({ columns: [table.pasteId, table.userId] }),

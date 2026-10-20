@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { renameCollection } from "@/lib/collections/actions"
 import type { Collection } from "@/lib/collections/types"
@@ -15,6 +16,7 @@ export function RenameCollectionDialog({
   collection: Collection
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const [look, setLook] = React.useState<Pick<Collection, "icon" | "hue">>({
     icon: collection.icon,
@@ -25,10 +27,10 @@ export function RenameCollectionDialog({
     <CollectionNameDialog
       open
       onOpenChange={onOpenChange}
-      title="Rename collection"
-      description="The collection keeps its link, and its pastes stay in it."
-      submitLabel="Save"
-      pendingLabel="Saving…"
+      title={t("rename_collection")}
+      description={t("the_collection_keeps_its_link_and_its_pastes")}
+      submitLabel={t("save")}
+      pendingLabel={t("saving")}
       initialName={collection.name}
       leading={
         <CollectionLookPicker

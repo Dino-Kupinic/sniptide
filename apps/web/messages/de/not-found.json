@@ -1,0 +1,17 @@
+{
+  "NotFound": {
+    "title": "Nicht gefunden",
+    "heading": "Hier ist nichts.",
+    "description": "Dieser Paste oder diese Seite wurde nicht gefunden. Der Inhalt wurde möglicherweise gelöscht, ist abgelaufen oder der Link enthält einen Tippfehler.",
+    "dashboard": "Zur Übersicht",
+    "trash": "Papierkorb öffnen",
+    "signIn": "Anmelden",
+    "signedInAs": "Angemeldet als {email}",
+    "switchAccount": "Konto wechseln",
+    "shareHeading": "Diese Seite gibt es nicht mehr.",
+    "shareDescription": "Der Link ist möglicherweise abgelaufen, wurde nach dem Lesen gelöscht oder hat nie existiert.",
+    "shareAdvice": "Prüfe die Adresse oder erstelle einen neuen Paste.",
+    "home": "Zur Startseite",
+    "createPaste": "Paste erstellen"
+  }
+}

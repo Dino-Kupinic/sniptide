@@ -5,6 +5,7 @@ import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
@@ -14,7 +15,15 @@ import { EmailDivider, SocialButtons } from "./social-buttons"
 
 // `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
 // newcomers to the request-access page.
-export function SignInForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
+// `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
+export function SignInForm({
+  socialProviders,
+  signUpClosed = false,
+}: {
+  socialProviders: SocialProvider[] | null
+  signUpClosed?: boolean
+}) {
+  const t = useTranslations("Auth")
   const router = useRouter()
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
@@ -26,17 +35,19 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signIn.email({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    })
+    const { error } = await authClient.signIn
+      .email({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      })
+      .catch(() => ({ error: { status: 0 } }))
 
     if (error) {
       setPending(false)
       setError(
         error.status === 401
-          ? "That email and password don't match an account."
-          : (error.message ?? "Couldn't sign you in. Try again."),
+          ? t("errors.credentials")
+          : t(error.status === 0 ? "errors.network" : "errors.signIn"),
       )
       return
     }
@@ -64,7 +75,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              Email
+              {t("email")}
             </Label>
             <Input
               id="email"
@@ -79,7 +90,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="password" className="text-sm lg:text-[13px]">
-                Password
+                {t("password")}
               </Label>
               <button
                 type="button"
@@ -87,7 +98,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
                 aria-expanded={showResetNote}
                 className="text-sm text-muted-foreground underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:text-[13px]"
               >
-                Forgot password?
+                {t("forgotPassword")}
               </button>
             </div>
             <Input
@@ -100,8 +111,7 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
             />
             {showResetNote ? (
               <p className="text-xs text-muted-foreground">
-                Password reset by email isn't available yet.
-                {socialProviders ? " Sign in with GitHub or Google if you linked one." : null}
+                {t(socialProviders ? "resetNoteSocial" : "resetNote")}
               </p>
             ) : null}
           </div>
@@ -109,16 +119,21 @@ export function SignInForm({ socialProviders }: { socialProviders: SocialProvide
 
         <FormError message={error} />
 
-        <Button type="submit" disabled={pending} className={authSubmitClass}>
-          {pending ? "Signing in…" : "Sign in"}
+        <Button type="submit" loading={pending} className={authSubmitClass}>
+          {t(pending ? "signingIn" : "signIn")}
         </Button>
 
-        <SwitchPrompt>
-          New to Sniptide?{" "}
-          <Link href="/sign-up" className={inlineLinkClass}>
-            {socialProviders ? "Create an account" : "Request access"}
-          </Link>
-        </SwitchPrompt>
+        {signUpClosed ? null : (
+          <SwitchPrompt>
+            {t.rich(socialProviders ? "newAccountPrompt" : "requestAccessPrompt", {
+              link: (children) => (
+                <Link href="/sign-up" className={inlineLinkClass}>
+                  {children}
+                </Link>
+              ),
+            })}
+          </SwitchPrompt>
+        )}
       </form>
     </>
   )

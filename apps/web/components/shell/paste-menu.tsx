@@ -17,6 +17,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import {
   CheckIcon,
@@ -33,17 +34,26 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { NewFolderDialog } from "@/components/folders/new-folder"
 import { useSiteHost } from "@/components/site-host"
+import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import type { Collection } from "@/lib/collections/types"
+import { copyText, runAction } from "@/lib/feedback"
 import { movePastes } from "@/lib/folders/actions"
 import { flattenTree } from "@/lib/folders/tree"
 import type { Folder } from "@/lib/folders/types"
-import { renamePaste, setPasteCollection, setStarred, trashPaste } from "@/lib/pastes/actions"
+import {
+  renamePaste,
+  restorePaste,
+  setPasteCollection,
+  setStarred,
+  trashPaste,
+} from "@/lib/pastes/actions"
 import type { SidebarPaste } from "@/lib/pastes/types"
 
 // The ⋯ menu on a sidebar paste row. Renaming, filing and deleting only apply to the viewer's own
@@ -59,6 +69,8 @@ export function PasteMenu({
   folders: Folder[]
   className?: string
 }) {
+  const t = useTranslations("Workspace")
+  const feedbackT = useTranslations("Core")
   const router = useRouter()
   const pathname = usePathname()
   const host = useSiteHost()
@@ -67,8 +79,22 @@ export function PasteMenu({
   const [creatingFolder, setCreatingFolder] = React.useState(false)
   const [, startTransition] = React.useTransition()
 
+  // Files the paste in `collection`, or takes it out of its current one with null. Undo puts it
+  // back where it was.
   function fileIn(collection: string | null) {
-    startTransition(() => setPasteCollection(paste.slug, collection).then(() => undefined))
+    const previous = paste.collection
+    const nameOf = (slug: string | null) =>
+      collections.find((candidate) => candidate.slug === slug)?.name
+    startTransition(async () => {
+      await withUndo(() => setPasteCollection(paste.slug, collection), {
+        labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+        error: t("couldnt_update_the_collection_try_again"),
+        message: collection
+          ? t("moved_to_collection", { name: nameOf(collection) ?? t("new_collection_fallback") })
+          : t("removed_from_collection", { name: nameOf(previous) ?? t("collection_fallback") }),
+        undo: () => setPasteCollection(paste.slug, previous),
+      })
+    })
   }
 
   function moveTo(folderId: string | null) {
@@ -78,42 +104,53 @@ export function PasteMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger aria-label={`Actions for ${paste.title}`} className={className}>
+        <DropdownMenuTrigger
+          aria-label={t("actions_for", { name: paste.title })}
+          className={className}
+        >
           <MoreHorizontalIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right" className="w-56">
           {paste.owned ? (
             <DropdownMenuItem onClick={() => setRenaming(true)}>
               <PencilLineIcon />
-              Rename
+              {t("rename")}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem
-            onClick={() => startTransition(() => setStarred(paste.slug, !paste.starred))}
+            onClick={() =>
+              startTransition(async () => {
+                await runAction(() => setStarred(paste.slug, !paste.starred), {
+                  success: paste.starred ? t("removed_from_starred") : t("starred"),
+                  error: t("couldnt_update_the_star_try_again"),
+                })
+              })
+            }
           >
             {paste.starred ? <StarOffIcon /> : <StarIcon />}
-            {paste.starred ? "Unstar" : "Star"}
+            {paste.starred ? t("unstar") : t("star")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push(`/pastes/${paste.slug}#sharing-heading`)}>
             <ShareIcon />
-            Share
+            {t("share")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
               track("share_link_copied", { from: "menu" })
-              return navigator.clipboard.writeText(
-                `${window.location.protocol}//${host}/${paste.slug}`,
-              )
+              return copyText(`${window.location.protocol}//${host}/${paste.slug}`, {
+                success: feedbackT("linkCopied"),
+                error: feedbackT("copyError"),
+              })
             }}
           >
             <CopyIcon />
-            Copy link
+            {t("copy_link")}
           </DropdownMenuItem>
           {paste.owned ? (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FolderIcon />
-                Add to collection
+                {t("add_to_collection")}
               </DropdownMenuSubTrigger>
               <DropdownMenuContent className="w-52">
                 {collections.map((collection) => {
@@ -137,7 +174,7 @@ export function PasteMenu({
                 {collections.length > 0 ? <DropdownMenuSeparator /> : null}
                 <DropdownMenuItem onClick={() => setCreating(true)}>
                   <PlusIcon />
-                  New collection
+                  {t("new_collection")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenuSub>
@@ -182,14 +219,23 @@ export function PasteMenu({
                 variant="destructive"
                 onClick={() =>
                   startTransition(async () => {
-                    await trashPaste(paste.slug)
+                    const onItsPage = pathname.startsWith(`/pastes/${paste.slug}`)
+                    const result = await withUndo(() => trashPaste(paste.slug), {
+                      labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                      error: t("couldnt_move_the_paste_to_trash_try_again"),
+                      message: t("moved_to_trash", { name: paste.title }),
+                      undo: () => restorePaste(paste.slug),
+                      onUndone: () => {
+                        if (onItsPage) router.push(`/pastes/${paste.slug}`)
+                      },
+                    })
                     // Its own page has nothing left to show.
-                    if (pathname.startsWith(`/pastes/${paste.slug}`)) router.push("/pastes")
+                    if (result.ok && onItsPage) router.push("/pastes")
                   })
                 }
               >
                 <Trash2Icon className="text-destructive!" />
-                Delete
+                {t("delete")}
               </DropdownMenuItem>
             </>
           ) : null}
@@ -228,6 +274,7 @@ function RenamePasteDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslations("Workspace")
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
@@ -240,16 +287,20 @@ function RenamePasteDialog({
       }}
     >
       <DialogContent>
-        <DialogTitle>Rename paste</DialogTitle>
-        <DialogDescription>Only the title changes. The link stays the same.</DialogDescription>
+        <DialogTitle>{t("rename_paste")}</DialogTitle>
+        <DialogDescription>{t("only_the_title_changes_the_link_stays_the")}</DialogDescription>
         <form
           className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault()
             const title = String(new FormData(event.currentTarget).get("title") ?? "")
             startTransition(async () => {
-              const result = await renamePaste(paste.slug, title)
-              if (!result.ok) return setError(result.error)
+              try {
+                const result = await renamePaste(paste.slug, title)
+                if (!result.ok) return setError(result.error)
+              } catch {
+                return setError(t("couldnt_rename_the_paste_try_again"))
+              }
               onOpenChange(false)
             })
           }}
@@ -257,7 +308,7 @@ function RenamePasteDialog({
           <Input
             key={paste.title}
             name="title"
-            aria-label="Title"
+            aria-label={t("title")}
             defaultValue={paste.title}
             maxLength={120}
             autoComplete="off"
@@ -267,17 +318,13 @@ function RenamePasteDialog({
             aria-invalid={Boolean(error)}
             className="h-10 text-base lg:text-sm"
           />
-          {error ? (
-            <p role="alert" className="text-[13px] text-destructive">
-              {error}
-            </p>
-          ) : null}
+          <FormError variant="inline" message={error} />
           <div className="flex justify-end gap-2">
             <DialogClose render={<Button type="button" variant="outline" size="lg" />}>
-              Cancel
+              {t("cancel")}
             </DialogClose>
-            <Button type="submit" size="lg" disabled={pending}>
-              {pending ? "Saving…" : "Save"}
+            <Button type="submit" size="lg" loading={pending}>
+              {pending ? t("saving") : t("save")}
             </Button>
           </div>
         </form>

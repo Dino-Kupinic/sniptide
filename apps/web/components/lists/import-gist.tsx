@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import { Checkbox } from "@sniptide/ui/components/checkbox"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import {
@@ -13,8 +14,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@sniptide/ui/components/sheet"
-import { ArrowUpRightIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, XIcon } from "lucide-react"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
+import { Spinner } from "@sniptide/ui/components/spinner"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
+import { ArrowUpRightIcon, DownloadIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { formatBytes } from "@/lib/format"
 import { type GistPreview, importGist, previewGist } from "@/lib/pastes/actions"
@@ -56,6 +61,7 @@ export function ImportGistSheet({
   onOpenChange: (open: boolean) => void
   children?: React.ReactNode
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const [step, setStep] = React.useState<Step>("link")
   const [link, setLink] = React.useState("")
@@ -91,7 +97,7 @@ export function ImportGistSheet({
     const result = await previewGist(value).catch(() => null)
     if (current !== attempt.current) return
     if (!result?.ok) {
-      setError(result?.error ?? "Something went wrong. Try again.")
+      setError(result?.error ?? t("something_went_wrong_try_again"))
       setStep("link")
       return
     }
@@ -121,7 +127,7 @@ export function ImportGistSheet({
       () => null,
     )
     if (!result?.ok) {
-      setImportError(result?.error ?? "Something went wrong. Try again.")
+      setImportError(result?.error ?? t("something_went_wrong_try_again"))
       setBusy(null)
       return
     }
@@ -150,13 +156,15 @@ export function ImportGistSheet({
       {children}
       <SheetContent side="right" className="w-[400px] max-w-full" initialFocus={inputRef}>
         <div className="flex h-14 shrink-0 items-center justify-between border-b pr-4 pl-6">
-          <SheetTitle className="text-[15px] leading-5 font-semibold">Import a gist</SheetTitle>
-          <SheetClose render={<Button variant="ghost" size="icon-sm" aria-label="Close" />}>
+          <SheetTitle className="text-[15px] leading-5 font-semibold">
+            {t("import_a_gist")}
+          </SheetTitle>
+          <SheetClose render={<Button variant="ghost" size="icon-sm" aria-label={t("close")} />}>
             <XIcon />
           </SheetClose>
         </div>
         <SheetDescription className="sr-only">
-          Copy files from a public GitHub gist into a new paste.
+          {t("copy_files_from_a_public_github_gist_into")}
         </SheetDescription>
 
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6">
@@ -185,10 +193,10 @@ export function ImportGistSheet({
               onSubmit={(event) => {
                 event.preventDefault()
                 if (GIST_LINK.test(link.trim())) read(link)
-                else setError("Paste a gist link like gist.github.com/you/1a2b3c…")
+                else setError(t("paste_a_gist_link_like_gistgithubcomyou1a2b3c"))
               }}
             >
-              <Label htmlFor="gist-link">Gist link</Label>
+              <Label htmlFor="gist-link">{t("gist_link")}</Label>
               <Input
                 ref={inputRef}
                 id="gist-link"
@@ -212,11 +220,12 @@ export function ImportGistSheet({
                 aria-describedby={error ? "gist-link-error" : undefined}
                 className="font-mono text-base lg:text-xs"
               />
-              {error ? (
-                <p id="gist-link-error" role="alert" className="text-xs leading-4 text-destructive">
-                  {error}
-                </p>
-              ) : null}
+              <FormError
+                id="gist-link-error"
+                variant="inline"
+                message={error}
+                className="text-xs leading-4"
+              />
             </form>
           )}
         </div>
@@ -231,17 +240,18 @@ export function ImportGistSheet({
               />
             }
           >
-            Cancel
+            {t("cancel")}
           </SheetClose>
           <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
               className={footerButton}
-              disabled={!canImport}
+              disabled={!canImport && busy !== "import"}
+              loading={busy === "import"}
               onClick={importNow}
             >
-              {busy === "import" ? "Importing…" : "Import now"}
+              {busy === "import" ? t("importing") : t("import_now")}
             </Button>
             <Button
               type="button"
@@ -249,7 +259,7 @@ export function ImportGistSheet({
               disabled={!canImport}
               onClick={openInEditor}
             >
-              Open in editor
+              {t("open_in_editor")}
             </Button>
           </div>
         </div>
@@ -260,13 +270,14 @@ export function ImportGistSheet({
 
 // The "Import gist" button of the list pages and the dashboard.
 export function ImportGistButton() {
+  const t = useTranslations("Workspace")
   const [open, setOpen] = React.useState(false)
 
   return (
     <ImportGistSheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button variant="outline" size="lg" />}>
         <DownloadIcon />
-        Import gist
+        {t("import_gist")}
       </SheetTrigger>
     </ImportGistSheet>
   )
@@ -277,30 +288,31 @@ function LinkBox({ link, status }: { link: string; status: "reading" | "read" })
     <div className="flex h-10 shrink-0 items-center justify-between gap-3 border px-3">
       <span className="truncate font-mono text-xs leading-4">{shortLink(link)}</span>
       {status === "reading" ? (
-        <LoaderCircleIcon className="size-4 animate-spin text-primary" aria-hidden />
+        <Spinner className="text-primary" />
       ) : (
-        <CheckIcon className="size-4 text-[#1F8A4C]" aria-hidden />
+        <SuccessCheck className="text-[#1F8A4C]" />
       )}
     </div>
   )
 }
 
 function ReadingStep({ link }: { link: string }) {
+  const t = useTranslations("Workspace")
   return (
     <>
       <LinkBox link={link} status="reading" />
       <p role="status" className="sr-only">
-        Reading the gist…
+        {t("reading_the_gist")}
       </p>
-      <div className="flex flex-col gap-2" aria-hidden>
-        <div className="h-5 w-[220px] bg-muted" />
-        <div className="h-3 w-40 bg-muted" />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-5 w-[220px]" />
+        <Skeleton className="h-3 w-40" />
       </div>
-      <div className="flex flex-col border" aria-hidden>
+      <div className="flex flex-col border">
         {[150, 120, 90].map((width) => (
           <div key={width} className="flex h-11 items-center gap-3 border-b px-3 last:border-b-0">
-            <div className="size-4 shrink-0 bg-muted" />
-            <div className="h-3 bg-muted" style={{ width }} />
+            <Skeleton className="size-4 shrink-0" />
+            <Skeleton className="h-3" style={{ width }} />
           </div>
         ))}
       </div>
@@ -325,6 +337,8 @@ function FilesStep({
   overLimit: boolean
   error: string | null
 }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
   const { owner } = gist
 
   return (
@@ -349,16 +363,16 @@ function FilesStep({
               {owner.login}
             </span>
             <ArrowUpRightIcon className="size-3 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="sr-only">(opens GitHub in a new tab)</span>
+            <span className="sr-only">{t("opens_github_in_a_new_tab")}</span>
           </a>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[13px] leading-[18px] font-medium">Files</span>
+          <span className="text-[13px] leading-[18px] font-medium">{t("files")}</span>
           <span className="text-xs leading-4 text-muted-foreground" aria-live="polite">
-            {selected.size} of {gist.files.length} selected
+            {t("files_selected", { selected: selected.size, total: gist.files.length })}
           </span>
         </div>
         <ul className="flex flex-col border">
@@ -395,7 +409,7 @@ function FilesStep({
                     ) : null}
                   </span>
                   <span className="w-14 shrink-0 text-right text-xs leading-4 text-muted-foreground">
-                    {formatBytes(file.size)}
+                    {formatBytes(file.size, locale)}
                   </span>
                 </label>
               </li>
@@ -406,15 +420,11 @@ function FilesStep({
           className={`text-xs leading-4 ${overLimit ? "text-destructive" : "text-muted-foreground"}`}
           aria-live="polite"
         >
-          {formatBytes(chosenBytes)} of {gist.limitLabel}
+          {t("bytes_of_limit", { size: formatBytes(chosenBytes, locale), limit: gist.limitLabel })}
         </p>
       </div>
 
-      {error ? (
-        <p role="alert" className="text-xs leading-4 text-destructive">
-          {error}
-        </p>
-      ) : null}
+      <FormError variant="inline" message={error} className="text-xs leading-4" />
     </>
   )
 }

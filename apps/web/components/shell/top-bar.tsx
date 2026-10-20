@@ -1,10 +1,11 @@
 "use client"
 
-import { Kbd } from "@sniptide/ui/components/kbd"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { PanelLeftIcon, SearchIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
+import { ShortcutKeys, useShortcutLabel } from "@/components/shortcuts/shortcut-keys"
 import { pageTitle } from "./nav-config"
 import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs } from "./page-header"
@@ -23,11 +24,12 @@ export function TopBar({
   onToggleSidebar: () => void
   sidebarOpen: boolean
 }) {
+  const t = useTranslations("Workspace")
   const pathname = usePathname()
   const { setTitle, setActions } = useHeaderSlotRefs()
 
   return (
-    <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6 lg:flex">
+    <header className="sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
       {sidebarOpen ? null : (
         <>
           <SidebarToggle onToggle={onToggleSidebar} open={false} className="-ml-2" />
@@ -40,11 +42,14 @@ export function TopBar({
         className="group/title flex min-w-0 flex-1 items-center text-[15px] font-semibold"
       >
         <span className="truncate group-has-data-header-title/title:hidden">
-          {pageTitle(pathname)}
+          {pageTitle(pathname) ? t(pageTitle(pathname)) : ""}
         </span>
       </div>
 
-      <div ref={setActions} className="flex shrink-0 items-center gap-2 empty:hidden" />
+      <div
+        ref={setActions}
+        className="flex max-w-full shrink-0 flex-wrap items-center gap-2 empty:hidden"
+      />
       {sidebarOpen ? null : <SearchField />}
       <span aria-hidden="true" className="h-5 w-px bg-border" />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />
@@ -54,6 +59,7 @@ export function TopBar({
 
 // The sidebar's Search button is the usual way in; with the sidebar hidden this field stands in.
 function SearchField() {
+  const t = useTranslations("Workspace")
   const { open } = useCommandMenu()
   return (
     <button
@@ -62,8 +68,8 @@ function SearchField() {
       className="flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
     >
       <SearchIcon className="size-3.5" />
-      Search pastes, collections…
-      <Kbd className="ml-auto border border-border">⌘K</Kbd>
+      {t("search_pastes_collections")}
+      <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
     </button>
   )
 }
@@ -77,17 +83,19 @@ export function SidebarToggle({
   open: boolean
   className?: string
 }) {
+  const t = useTranslations("Workspace")
+  const label = useShortcutLabel("toggle-sidebar")
   return (
     <Tooltip>
       <TooltipTrigger
         className={`${iconButtonClass} text-foreground/75 hover:text-foreground ${className ?? ""}`}
         onClick={onToggle}
-        aria-label={open ? "Hide sidebar" : "Show sidebar"}
+        aria-label={open ? t("hide_sidebar") : t("show_sidebar")}
         aria-expanded={open}
       >
         <PanelLeftIcon />
       </TooltipTrigger>
-      <TooltipContent side="bottom">⌘B</TooltipContent>
+      <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
   )
 }

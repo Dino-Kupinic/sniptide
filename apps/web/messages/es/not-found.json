@@ -1,0 +1,17 @@
+{
+  "NotFound": {
+    "title": "No se ha encontrado",
+    "heading": "Aquí no hay nada.",
+    "description": "No hemos encontrado ese paste o página. Puede que se haya eliminado, haya caducado o que el enlace tenga un error.",
+    "dashboard": "Ir al panel",
+    "trash": "Abrir la papelera",
+    "signIn": "Iniciar sesión",
+    "signedInAs": "Sesión iniciada como {email}",
+    "switchAccount": "Cambiar de cuenta",
+    "shareHeading": "Esta página ya no está disponible.",
+    "shareDescription": "Puede que el enlace haya caducado, se haya eliminado tras su lectura o nunca haya existido.",
+    "shareAdvice": "Comprueba la dirección o crea un paste nuevo.",
+    "home": "Volver al inicio",
+    "createPaste": "Crear un paste"
+  }
+}

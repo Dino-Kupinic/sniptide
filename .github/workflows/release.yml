@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Serialize version calculation and publication, including the image build.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+      issues: read
+    outputs:
+      published: ${{ steps.release.outputs.new_release_published }}
+      tag: ${{ steps.release.outputs.new_release_git_tag }}
+    steps:
+      - name: Require a merged PR at the current main commit
+        id: eligible
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.workflow_run.head_sha;
+            const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+            const pulls = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+              owner, repo, commit_sha: sha, per_page: 100,
+            });
+            const merged = pulls.some(pr => pr.merged_at && pr.base.ref === 'main' && pr.merge_commit_sha === sha);
+            core.setOutput('release', branch.commit.sha === sha && merged);
+      - uses: actions/checkout@v4
+        if: steps.eligible.outputs.release == 'true'
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify the checked-out commit passed CI
+        if: steps.eligible.outputs.release == 'true'
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+      - uses: actions/setup-node@v4
+        if: steps.eligible.outputs.release == 'true'
+        with:
+          node-version: 24
+      - name: Publish the version tag and GitHub release
+        id: release
+        if: steps.eligible.outputs.release == 'true'
+        uses: cycjimmy/semantic-release-action@9e1f8a3ef91f1097285028e799a5fb8bb90e8899 # v8
+        with:
+          semantic_version: 25.0.9
+          extra_plugins: conventional-changelog-conventionalcommits@8.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Tags created with GITHUB_TOKEN do not trigger push workflows. Call the same
+  # publisher directly so automated releases also produce their Docker images.
+  docker:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-docker.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}

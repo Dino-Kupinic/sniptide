@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import * as store from "./store"
 import { HUES, ICONS, MAX_COLLECTIONS, MAX_NAME_LENGTH } from "./types"
 
 async function assertSignedIn() {
-  if (!(await getSession())) throw new Error("Sign in to change collections.")
+  if (!(await getSession())) throw new Error(await actionError("signInCollections"))
 }
 
 const nameSchema = z
@@ -31,11 +32,15 @@ async function save(
   await assertSignedIn()
   const parsed = nameSchema.safeParse(name)
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the name." }
+    return {
+      ok: false,
+      error: await translateActionError(parsed.error.issues[0]?.message ?? "Check the name."),
+    }
   }
 
   const result = await write(parsed.data)
-  if (result.status !== "ok") return { ok: false, error: failures[result.status] }
+  if (result.status !== "ok")
+    return { ok: false, error: await translateActionError(failures[result.status]) }
 
   revalidatePath("/", "layout")
   return { ok: true, slug: result.collection.slug }
@@ -65,8 +70,41 @@ export async function setCollectionIcon(slug: string, icon: string, hue: string)
   revalidatePath("/", "layout")
 }
 
-export async function deleteCollection(slug: string) {
+// Returns what was removed, for `restoreCollection` to take back; null when it was already gone.
+export async function deleteCollection(slug: string): Promise<store.CollectionSnapshot | null> {
   await assertSignedIn()
-  await store.deleteCollection(slug)
+  const snapshot = await store.deleteCollection(slug)
   revalidatePath("/", "layout")
+  return snapshot
+}
+
+const snapshotSchema = z.object({
+  slug: z.string().min(1).max(60),
+  name: nameSchema,
+  icon: z.enum(ICONS),
+  hue: z.enum(HUES),
+  createdAt: z.number().int().positive(),
+  pastes: z.array(z.string().min(1).max(40)).max(10_000),
+})
+
+const restoreFailures = {
+  duplicate: "You already have a collection with that name.",
+  limit: `You can have up to ${MAX_COLLECTIONS} collections.`,
+  taken: "A collection with that link exists now.",
+} as const
+
+// Undoes `deleteCollection`: brings the collection back with its pastes.
+export async function restoreCollection(
+  snapshot: store.CollectionSnapshot,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await assertSignedIn()
+  const parsed = snapshotSchema.safeParse(snapshot)
+  if (!parsed.success) return { ok: false, error: await actionError("collectionRestore") }
+  // The date only places it in the list; it can't be from the future.
+  const createdAt = Math.min(parsed.data.createdAt, Date.now())
+  const result = await store.restoreCollection({ ...parsed.data, createdAt })
+  if (result.status !== "ok")
+    return { ok: false, error: await translateActionError(restoreFailures[result.status]) }
+  revalidatePath("/", "layout")
+  return { ok: true }
 }

@@ -2,7 +2,7 @@ import { cookies } from "next/headers"
 import { AppShell } from "@/components/shell/app-shell"
 import { parseSidebarState, SIDEBAR_COOKIE } from "@/components/shell/sidebar-state"
 import { SiteHostProvider } from "@/components/site-host"
-import { requireSession } from "@/lib/auth"
+import { isDemoMode, requireSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { listFolders } from "@/lib/folders/store"
 import { sidebarData } from "@/lib/pastes/store"
@@ -22,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <SiteHostProvider host={host}>
       <AppShell
+        demo={isDemoMode()}
         viewer={viewerFromUser(session.user)}
         data={data}
         collections={collections}
