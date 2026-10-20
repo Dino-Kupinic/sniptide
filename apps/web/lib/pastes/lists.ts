@@ -1,6 +1,6 @@
 import "server-only"
 
-import { pasteFile, paste as pasteTable } from "@workspace/db/schema"
+import { pasteFile, pasteShare, paste as pasteTable, user } from "@workspace/db/schema"
 import {
   and,
   asc,
@@ -21,11 +21,14 @@ import {
 } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { cursorKey, decodeCursor, encodeCursor } from "./cursor"
 import { PASTE_PAGE_SIZE, type PasteListQuery } from "./list-query"
 import { TRASH_DAYS } from "./purge"
-import { purgeTrash, readableStarsWhere, summarizePastes } from "./store"
+import type { SharedListQuery } from "./shared-list-query"
+import { purgeTrash, readableStarsWhere, sharedWithWhere, summarizePastes } from "./store"
+import type { Person } from "./types"
 
 export interface PasteListScope {
   mode: "mine" | "starred" | "collection" | "trash"
@@ -250,4 +253,115 @@ export async function trashTotals() {
     .leftJoin(pasteFile, eq(pasteFile.pasteId, pasteTable.id))
     .where(and(eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
   return row ?? { count: 0, bytes: 0 }
+}
+
+export async function listSharedPage(query: SharedListQuery) {
+  const viewer = (await getSession())?.user.id
+  if (!viewer)
+    return {
+      entries: [],
+      query: { ...query, page: 1 },
+      pagination: { page: 1, pageCount: 1, total: 0, totalAll: 0 },
+      languageOptions: [] as string[],
+      ownerOptions: [] as (Person & { id: string })[],
+      peopleCount: 0,
+    }
+  const db = getDb()
+  const language = db
+    .select({ language: pasteFile.language })
+    .from(pasteFile)
+    .where(eq(pasteFile.pasteId, pasteTable.id))
+    .orderBy(pasteFile.position, pasteFile.id)
+    .limit(1)
+  const firstLanguage = sql<string>`coalesce((${language}), 'text')`
+  const base = sharedWithWhere(viewer)
+  const needle = `%${query.q.replace(/[\\%_]/g, "\\$&")}%`
+  const filters = and(
+    base,
+    query.q ? or(ilike(pasteTable.title, needle), ilike(pasteTable.slug, needle)) : undefined,
+    query.languages.length ? inArray(firstLanguage, query.languages) : undefined,
+    query.owners.length ? inArray(pasteTable.ownerId, query.owners) : undefined,
+    query.access.length ? inArray(pasteShare.access, query.access) : undefined,
+  )
+  const [[all], [matching], languages, owners] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pasteShare)
+      .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+      .where(base),
+    db
+      .select({
+        count: sql<number>`count(*)::int`,
+        people: sql<number>`count(distinct ${pasteTable.ownerId})::int`,
+      })
+      .from(pasteShare)
+      .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+      .where(filters),
+    db
+      .selectDistinct({ language: firstLanguage })
+      .from(pasteShare)
+      .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+      .where(base),
+    db
+      .selectDistinct({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        displayUsername: user.displayUsername,
+      })
+      .from(pasteShare)
+      .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+      .innerJoin(user, eq(user.id, pasteTable.ownerId))
+      .where(base)
+      .orderBy(user.name, user.id),
+  ])
+  const total = matching?.count ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PASTE_PAGE_SIZE))
+  const page = Math.min(query.page, pageCount)
+  const orders: Record<SharedListQuery["sort"], SQL> = {
+    shared: desc(pasteShare.createdAt),
+    updated: desc(pasteTable.updatedAt),
+    title: asc(sql`lower(${pasteTable.title})`),
+  }
+  const records = await db
+    .select({ paste: pasteTable, share: pasteShare })
+    .from(pasteShare)
+    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+    .where(filters)
+    .orderBy(orders[query.sort], asc(pasteTable.id))
+    .limit(PASTE_PAGE_SIZE)
+    .offset((page - 1) * PASTE_PAGE_SIZE)
+  const summaries = await summarizePastes(
+    records.map(({ paste }) => paste),
+    viewer,
+  )
+  return {
+    entries: records.flatMap(({ paste, share }, index) => {
+      const summary = summaries[index]
+      return summary
+        ? [
+            {
+              paste: summary,
+              share: {
+                slug: paste.slug,
+                access: share.access,
+                sharedAt: share.createdAt.getTime(),
+                seen: share.seenAt !== null,
+              },
+            },
+          ]
+        : []
+    }),
+    query: { ...query, page },
+    pagination: { page, pageCount, total, totalAll: all?.count ?? 0 },
+    languageOptions: languages.map(({ language }) => language).sort(),
+    ownerOptions: owners.map((owner) => ({
+      id: owner.id,
+      name: owner.name,
+      username: owner.displayUsername ?? owner.username ?? owner.name,
+      initials: initials(owner.name),
+      tone: "foreground" as const,
+    })),
+    peopleCount: matching?.people ?? 0,
+  }
 }

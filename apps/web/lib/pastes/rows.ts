@@ -94,7 +94,7 @@ export async function toSharedRows(
   entries: { paste: PasteSummary; share: Share & { seen: boolean } }[],
   locale: Locale = "en",
 ): Promise<SharedRow[]> {
-  const starred = await starredSlugs()
+  const starred = await starredSlugs(entries.map(({ paste }) => paste.slug))
   const now = Date.now()
   return entries.map(({ paste, share }) => ({
     ...toRow(paste, starred, now, locale, share.access === "edit"),
