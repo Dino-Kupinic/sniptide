@@ -38,8 +38,13 @@ if [ "$ready" != true ]; then
   exit 1
 fi
 
-fetch /getting-started | grep -q "Getting started"
-fetch "/api/search?query=sniptide" | grep -q '"url"'
+# Read each response into a variable first: `grep -q` closing the pipe early would fail the
+# pipeline under pipefail (SIGPIPE).
+page="$(fetch /getting-started)"
+grep -q "Getting started" <<<"$page"
+search="$(fetch "/api/search?query=sniptide")"
+grep -q '"url"' <<<"$search"
 # The nav links to the app's API reference.
-fetch / | grep -q "/docs/api"
+home="$(fetch /)"
+grep -q "/docs/api" <<<"$home"
 echo "docs image OK"
