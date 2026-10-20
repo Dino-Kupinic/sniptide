@@ -1,0 +1,49 @@
+---
+title: Reverse proxy and client IP
+description: Put HTTPS in front of Sniptide and make rate limits see the real visitor.
+---
+
+Sniptide limits how often one visitor can try to sign in or unlock a password-protected paste. A
+limit needs to know who the visitor is, and behind a proxy the TCP connection comes from the
+proxy, not from them. `CLIENT_IP_SOURCE` tells the app where to read the visitor's address.
+
+## Pick the setting
+
+| What's in front of the app | Settings |
+| --- | --- |
+| Nothing: people connect to port 3000 | `CLIENT_IP_SOURCE=direct` (the default) |
+| A reverse proxy that appends to `X-Forwarded-For` (nginx, Caddy, Traefik, Coolify) | `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private` (or the proxy's addresses), or `TRUSTED_PROXY_HOPS=<number of proxies>` |
+| A reverse proxy that sets `X-Real-IP` | `CLIENT_IP_SOURCE=x-real-ip` (in nginx: `proxy_set_header X-Real-IP $remote_addr;`) |
+| Cloudflare, with the origin closed to everything else | `CLIENT_IP_SOURCE=cloudflare` |
+
+When the chosen header is missing or invalid, the app falls back to the TCP peer.
+
+## Why it matters
+
+- `direct` can't be fooled by headers, but behind a proxy it sees only the proxy's address, so
+  every visitor shares one limit until you pick the matching source.
+- A header-based source is only safe if clients can't reach the app without passing through
+  whatever sets that header. If someone can connect to port 3000 directly, they can send their own
+  `X-Forwarded-For` and dodge the limits. Bind the app to localhost (`SNIPTIDE_BIND=127.0.0.1` in
+  compose) or firewall it.
+- `cloudflare` trusts `CF-Connecting-IP`, so use it only when the server accepts traffic from
+  Cloudflare alone (a firewall to Cloudflare's ranges, or a Cloudflare Tunnel).
+
+With `x-forwarded-for`, either list your proxies in `TRUSTED_PROXIES` (the visitor is the first
+address from the right that isn't one of them; `private` covers loopback and the private ranges
+Docker networks use), or set `TRUSTED_PROXY_HOPS` to how many proxies append to the header
+(default 1).
+
+## Compose with Caddy
+
+The bundled `proxy` profile needs `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`.
+See [Docker Compose](/self-hosting/docker-compose#https-with-the-bundled-proxy).
+
+## Other things to set behind a proxy
+
+- `BETTER_AUTH_URL` is the public `https://` address.
+- Set the proxy's request and upstream timeouts to suit you: the database deadlines limit SQL
+  and lock waits, not the whole HTTP request.
+- If you use a second domain for share links, point it at the same app and set `SHARE_URL`.
+  Copied links then use that domain, and the app's own pages on it redirect back to
+  `BETTER_AUTH_URL`.

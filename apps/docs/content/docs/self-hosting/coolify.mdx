@@ -1,0 +1,48 @@
+---
+title: Coolify
+description: Deploy Sniptide and Postgres from one Coolify service template.
+---
+
+[Coolify](https://coolify.io) can run Sniptide from a service template that includes the app and
+its Postgres database. Coolify generates the database credentials and the auth secret and assigns
+the domain, so there is nothing to fill in before the first deploy.
+
+<Steps>
+<Step>
+
+In a Coolify project choose **Add Resource → Docker Compose Empty**.
+
+</Step>
+<Step>
+
+Paste the contents of `deploy/coolify/sniptide.yaml` from the repository.
+
+</Step>
+<Step>
+
+Set the domain for the `sniptide` service (port 3000), then deploy.
+
+</Step>
+</Steps>
+
+The template follows Coolify's service format, so it can also be contributed to Coolify's one-click
+service list.
+
+## What the template sets
+
+- The image `ghcr.io/dino-kupinic/sniptide:latest` and `postgres:17-alpine`, with the database in a
+  named volume.
+- `BETTER_AUTH_SECRET` (generated) and `BETTER_AUTH_URL` (from the domain you assign).
+- `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`, because Coolify's proxy appends
+  the visitor's address to `X-Forwarded-For`. See [Reverse proxy and client IP](/self-hosting/reverse-proxy).
+- A memory ceiling for each container (768 MB for the app, 512 MB for Postgres) and a heap cap for
+  Node. See [Memory](/self-hosting/memory).
+- A health check against `/api/health` with a 30-second start period.
+
+The optional settings (sign-up, OAuth, webhooks, `MAX_PASTE_SIZE`, SMTP) show up as environment
+variables on the resource. Set the ones you want from [Configuration](/self-hosting/configuration)
+and redeploy.
+
+## Upgrading
+
+Redeploy the service to run a newer image, after taking a backup. See [Upgrading](/self-hosting/upgrading).

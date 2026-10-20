@@ -1,0 +1,39 @@
+---
+title: Self-hosting
+description: Run Sniptide on your own server, with Docker Compose, Docker or Coolify.
+---
+
+Sniptide is one container plus a Postgres database. It sends nothing anywhere by default: no
+analytics, no OAuth, no outgoing mail until you configure them.
+
+## What you need
+
+- A server with Docker (and the Compose plugin for the Compose route). The image is
+  `ghcr.io/dino-kupinic/sniptide`, for Linux AMD64 and ARM64.
+- Postgres 17, which Sniptide is built and tested against. Compose and the Coolify template bring
+  their own.
+- About 768 MB of memory for the app (see [Memory](/self-hosting/memory)) and a few hundred
+  megabytes for Postgres. One server sits around 100 MB idle and 250 to 300 MB under load.
+- Two settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (see [Configuration](/self-hosting/configuration)).
+
+Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`. Add `BETTER_AUTH_URL` so browsers
+can sign in.
+
+## Pick an install
+
+<Cards>
+  <Card title="Docker Compose" href="/self-hosting/docker-compose" description="The app and Postgres together, with optional HTTPS. The easiest route." />
+  <Card title="Docker" href="/self-hosting/docker" description="One container against a Postgres you already run." />
+  <Card title="Coolify" href="/self-hosting/coolify" description="A one-file service template: Coolify fills in the secrets and the domain." />
+</Cards>
+
+## Then
+
+- [Configuration](/self-hosting/configuration): every setting, with its default.
+- [Reverse proxy and client IP](/self-hosting/reverse-proxy): put HTTPS in front, and make rate
+  limits see the real visitor.
+- [Upgrading](/self-hosting/upgrading) and [Backups](/self-hosting/backups).
+
+On startup Sniptide applies its database migrations before it serves requests, so there is no
+separate setup step. `GET /api/health` reports the server and the database, and the image carries a
+Docker health check against it.

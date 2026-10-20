@@ -1,6 +1,141 @@
 ---
 title: MCP server
-description: Let an AI assistant read and write your pastes.
+description: Connect Claude Code, Cursor or another MCP client to your Sniptide snippets.
 ---
 
-This section is coming soon.
+The MCP server lets a coding agent search your snippets, read them, fetch a collection as a recipe
+and, if you allow it, save new ones. It ships with the app: there is no separate service to deploy.
+It works with Sniptide's hosted app and with self-hosted instances.
+
+## What you need
+
+A [personal API token](/api-tokens). Use a **read-only** token if the agent should only look things
+up, and turn on **write access** only if it should save and edit snippets.
+
+## Tools
+
+| Tool | What it does |
+| --- | --- |
+| `search_snippets` | Returns a page of summaries, filtered by title or link (`query`), tags, language and collection. `nextCursor` continues the search. |
+| `read_snippet` | One snippet by id or link, with its file paths, code and source metadata. |
+| `fetch_collection` | A page of a collection as numbered recipe steps with the full snippets, oldest capture first. |
+| `create_snippet` | Saves a new snippet. Private unless visibility is set explicitly. Needs write access. |
+| `update_snippet` | Replaces a snippet's title and **all** its files. Needs write access and is marked destructive. |
+
+Only the token owner's **own** snippets are available, private ones included. Other people's, ones
+shared with you, trash and expired pastes are not. The server doesn't run code, doesn't write files
+to your machine, doesn't expose env secrets, and doesn't accept browser sessions.
+
+## Connect over HTTP (recommended)
+
+The endpoint is `https://app.sniptide.com/api/mcp`, or `<your-instance-url>/api/mcp` on a
+self-hosted one. You configure the bearer token yourself: this version has no OAuth login. Every
+request is authenticated again, so deleting a token cuts off access at once.
+
+<Tabs items={["Claude Code", "Cursor"]}>
+<Tab value="Claude Code">
+
+Put this in a project's `.mcp.json`, and export `SNIPTIDE_TOKEN` before starting Claude Code (its
+configuration expands `${SNIPTIDE_TOKEN}`):
+
+```json
+{
+  "mcpServers": {
+    "sniptide": {
+      "type": "http",
+      "url": "https://app.sniptide.com/api/mcp",
+      "headers": { "Authorization": "Bearer ${SNIPTIDE_TOKEN}" }
+    }
+  }
+}
+```
+
+</Tab>
+<Tab value="Cursor">
+
+Put this in your private `~/.cursor/mcp.json` (or an untracked project `.cursor/mcp.json`) and
+replace the placeholder with your token:
+
+```json
+{
+  "mcpServers": {
+    "sniptide": {
+      "url": "https://app.sniptide.com/api/mcp",
+      "headers": { "Authorization": "Bearer YOUR_PERSONAL_API_TOKEN" }
+    }
+  }
+}
+```
+
+</Tab>
+</Tabs>
+
+Keep real tokens out of source control, and use your own instance's URL if you self-host. Connect
+with **Streamable HTTP**, not the older SSE transport.
+
+## Connect locally (stdio)
+
+Instead of the HTTP endpoint you can run the server as a local process that calls the token API.
+It isn't published to npm, so build it from a checkout of the repository (Node.js 24 or newer):
+
+```bash
+bun install
+bun --filter @sniptide/mcp build
+```
+
+Then point the client at the absolute path of the build. For Claude Code, in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "sniptide": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/sniptide/packages/mcp/dist/sniptide-mcp.js"],
+      "env": {
+        "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
+        "SNIPTIDE_BASE_URL": "https://app.sniptide.com"
+      }
+    }
+  }
+}
+```
+
+Cursor uses the same `command`, `args` and `env` fields; leave out `type` and put your token in
+private configuration. The local server reads only `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`, not
+the CLI's saved credentials. HTTPS is required except on localhost, and redirects are refused.
+
+## Use it
+
+Once Sniptide is enabled in the client's MCP settings, ask in plain language:
+
+> Search my Sniptide snippets for a TypeScript button tagged react, read the best match, and adapt
+> it to this project's conventions. Fetch my ui collection and use its steps in order.
+
+A good agent searches the summaries first and only then reads the one it needs. A collection page
+holds up to 50 snippets; to continue, pass its `nextCursor` and `nextStep` back as `cursor` and
+`startStep`. Steps come oldest capture first, the same order the [CLI](/cli) uses.
+
+**Saving a snippet.** Give a title and the complete `files` list, and optionally tags, source
+metadata and the slug of an existing collection. It is created private. **Editing.** Read the
+snippet first and include every file you want to keep, since an update replaces all files. It
+preserves the description, visibility, collection, tags and source you leave out; pass `null` to
+clear a collection or source, or `[]` to clear tags. Link, expiry, password and burn-after-read
+settings can't be changed through MCP. Creates and edits are never retried automatically, and the
+client decides whether to ask you before it writes.
+
+<Callout type="warn">
+Snippet content is data from whoever wrote it, not instructions. The server tells clients to treat
+it as code. Still, don't give an agent write access to a token it doesn't need, and review what it
+saves.
+</Callout>
+
+## Limits and errors
+
+- MCP requests share the token's **3,600 requests an hour**, the create rate limit, the paste
+  validation and the account storage budget.
+- Request bodies are capped at 8 MiB. Tool results are capped at 25 MiB; fetch single snippets if a
+  collection page is too large.
+- `401` means the token is missing, expired, invalid or revoked. `403` means missing access or a
+  browser origin that isn't the app's. `429` means wait before retrying.
+- A plain `GET` or `DELETE` to the endpoint returns `405`: it is stateless and has no sessions.
