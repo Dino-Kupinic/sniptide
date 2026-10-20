@@ -51,6 +51,13 @@ jobs:
       - name: Verify the Docker image against a fresh database
         run: bash scripts/test-docker.sh sniptide:ci
 
+      # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
+      - name: Build the docs Docker image
+        run: docker build --file apps/docs/Dockerfile --tag sniptide-docs:ci .
+
+      - name: Verify the docs Docker image
+        run: bash scripts/test-docs-image.sh sniptide-docs:ci
+
       # docker-compose.yml and the Coolify template, the two ways self-hosters start Sniptide.
       - name: Verify docker compose and the Coolify template
         run: bash scripts/test-compose.sh sniptide:ci

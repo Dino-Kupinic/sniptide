@@ -155,6 +155,19 @@ To try the production image locally with its database:
 BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose up -d --build
 ```
 
+### Docs site
+
+The documentation (`apps/docs`) is its own Coolify service, built from its own Dockerfile. Set it
+up next to the app:
+
+- **Source:** this repository, branch `main`, build pack **Dockerfile**, base directory `/`,
+  Dockerfile location `/apps/docs/Dockerfile`, auto-deploy on push.
+- **Port:** `3000`. **Health check:** `GET /`. It needs no database.
+- **Build variable:** `APP_URL`: `https://app.sniptide.com`, where the app runs. The nav's "API
+  reference" and "Open Sniptide" links point there. The pages are prerendered, so it is read when
+  the image is built; changing it means a redeploy.
+- **Domain:** `https://docs.sniptide.com`.
+
 ## Self-hosting
 
 The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM64 support.
@@ -331,7 +344,8 @@ database and a production build.
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
-typecheck, `next build`, a production Docker build and startup test, Bun integration tests, and
+typecheck, `next build` (the app and the docs), production Docker builds and startup tests for the
+app and the docs site, Bun integration tests, and
 Chromium browser tests against an isolated PostgreSQL database and production build.
 
 ### Container releases
@@ -374,6 +388,8 @@ bun run format
 ## Workspace
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
+- `apps/docs`: the documentation site (Next.js and Fumadocs, MDX in `content/docs`); see
+  `apps/docs/README.md`
 - `packages/auth`: better-auth setup on the Drizzle adapter
 - `packages/cli`: code capture and restore CLI, with a dependency-free Node.js executable
 - `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable
