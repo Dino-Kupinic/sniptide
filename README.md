@@ -124,6 +124,9 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
   - optional: `SHARE_PROXY_SECRET`, a random string shared with the website so it can pass the
     visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
+- **Resources:** a memory limit of `768m` in the app's resource limits (see
+  [Memory](#self-hosting) below). Every PR preview is another server and database on the same box,
+  and each build runs `next build` there too.
 
 **PR previews.** Coolify's preview deployments get their own URL, secret and database, so they must
 not read production's session cookie. Better Auth names that cookie `better-auth.session_token`
@@ -171,9 +174,18 @@ URL for `BETTER_AUTH_URL` when serving through a reverse proxy. The database hos
 from the container; `localhost` inside it refers to the container itself.
 
 ```bash
-docker run -d --name sniptide --restart unless-stopped \
+docker run -d --name sniptide --restart unless-stopped --memory 768m --memory-swap 768m \
   -p 3000:3000 --env-file sniptide.env ghcr.io/dino-kupinic/sniptide:latest
 ```
+
+**Memory.** One server sits around 100 MB idle and 250 to 300 MB under load. The image caps the
+Node heap at 384 MB (`NODE_OPTIONS=--max-old-space-size=384`); without a cap Node sizes the heap
+from the host's RAM and keeps growing into it. Give the container a ceiling too (`--memory`, or
+`SNIPTIDE_MEMORY` with compose), so if it ever reaches it Docker restarts Sniptide instead of the
+kernel killing other processes on the server. On a bigger server raise both, keeping the heap at
+about half the ceiling, for example `--memory 1536m` with `NODE_OPTIONS=--max-old-space-size=768`.
+Building the image takes far more memory than running it (a `next build` can use 2 GB or more), so
+on a small server pull the published image rather than building there.
 
 On startup, Sniptide applies migrations before serving requests. `GET /api/health` checks the
 server and database, and the image includes a Docker health check. Back up your database before
