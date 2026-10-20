@@ -52,6 +52,7 @@
     "couldnTSaveThePasteCheck": "Paste を保存できませんでした。接続を確認して、もう一度お試しください。",
     "pasteCreated": "Paste を作成しました",
     "draftSavedOnThisDevice": "この端末に下書きを保存しました",
+    "draftSaveUnavailable": "この端末に下書きを保存できませんでした。このタブを開いたまま、もう一度お試しください。",
     "leaveEmptyToKeepTheCurrent": "現在のパスワードを使う場合は空欄に",
     "password": "パスワード",
     "anyoneWithTheLinkCanOpenMessage": "パスワードを設定するまでは、リンクを知っている人なら誰でも開けます。",

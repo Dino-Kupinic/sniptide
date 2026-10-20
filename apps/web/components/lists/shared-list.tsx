@@ -16,7 +16,9 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import type { PageInfo } from "@/lib/pastes/list-query"
 import type { SharedRow } from "@/lib/pastes/rows"
+import { type SharedListQuery, sharedListSearch } from "@/lib/pastes/shared-list-query"
 import type { Person } from "@/lib/pastes/types"
 import { RowMenu } from "./row-menu"
 import {
@@ -26,13 +28,9 @@ import {
   QuickChips,
   SearchField,
   SortMenu,
-  usePaged,
   ViewToggle,
 } from "./toolbar"
-
-const PAGE_SIZE = 10
-
-type Sort = "shared" | "updated" | "title"
+import { useListQuery } from "./use-list-query"
 
 const toneClass: Record<Person["tone"], string> = {
   primary: "bg-primary text-primary-foreground",
@@ -70,73 +68,50 @@ function AccessBadge({ access }: { access: SharedRow["access"] }) {
 
 export function SharedList({
   rows,
+  query: serverQuery,
+  pagination,
+  languageOptions,
+  ownerOptions,
+  peopleCount,
   origin,
   host,
 }: {
   rows: SharedRow[]
+  query: SharedListQuery
+  pagination: PageInfo
+  languageOptions: string[]
+  ownerOptions: (Person & { id: string })[]
+  peopleCount: number
   origin: string
   host: string
 }) {
   const t = useTranslations("Workspace")
-  const sortOptions: { value: Sort; label: string }[] = [
+  const sortOptions: { value: SharedListQuery["sort"]; label: string }[] = [
     { value: "shared", label: t("recently_shared") },
     { value: "updated", label: t("last_updated") },
     { value: "title", label: t("title") },
   ]
 
-  const [query, setQuery] = React.useState("")
-  const [languages, setLanguages] = React.useState<string[]>([])
-  const [people, setPeople] = React.useState<string[]>([])
-  const [access, setAccess] = React.useState<string[]>([])
-  const [sort, setSort] = React.useState<Sort>("shared")
+  const { query, update, pending } = useListQuery(serverQuery, sharedListSearch)
   const [view, setView] = React.useState<"list" | "grid">("list")
-  const [page, setPage] = React.useState(1)
-
-  const filtered = React.useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return rows
-      .filter(
-        (row) =>
-          !needle ||
-          row.title.toLowerCase().includes(needle) ||
-          row.slug.toLowerCase().includes(needle),
-      )
-      .filter((row) => languages.length === 0 || languages.includes(row.language))
-      .filter((row) => people.length === 0 || (row.owner && people.includes(row.owner.username)))
-      .filter((row) => access.length === 0 || access.includes(row.access))
-      .sort((a, b) =>
-        sort === "title"
-          ? a.title.localeCompare(b.title)
-          : sort === "updated"
-            ? b.updatedAt - a.updatedAt
-            : b.sharedAt - a.sharedAt,
-      )
-  }, [rows, query, languages, people, access, sort])
-
-  React.useEffect(() => setPage(1), [query, languages, people, access, sort])
-
-  const paged = usePaged(filtered, page, PAGE_SIZE)
-  const owners = [
-    ...new Map(
-      rows.flatMap((row) => (row.owner ? [[row.owner.username, row.owner] as const] : [])),
-    ).values(),
-  ]
-  const filtering = Boolean(query || languages.length || people.length || access.length)
+  const filtering = Boolean(
+    query.q || query.languages.length || query.owners.length || query.access.length,
+  )
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
+    <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         title={t("shared_with_me")}
-        count={rows.length}
+        count={pagination.totalAll}
         actions={<ViewToggle value={view} onChange={setView} />}
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query} onChange={setQuery} />
+        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
         <QuickChips
           label={t("access")}
-          value={(access.length === 1 ? access[0] : "all") as "all" | "edit" | "view"}
-          onChange={(next) => setAccess(next === "all" ? [] : [next])}
+          value={query.access.length === 1 ? (query.access[0] ?? "all") : "all"}
+          onChange={(next) => update({ access: next === "all" ? [] : [next] })}
           options={[
             { value: "all", label: t("all") },
             { value: "edit", label: t("can_edit") },
@@ -148,19 +123,20 @@ export function SharedList({
       <div className="flex flex-col lg:border lg:border-border">
         <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
           <div className="flex flex-wrap items-center gap-2">
-            <SearchField value={query} onChange={setQuery} />
+            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label={t("language")}
-              options={[...new Set(rows.map((row) => row.language))]
-                .sort()
-                .map((id) => ({ value: id, label: <LanguageLabel language={id} /> }))}
-              selected={languages}
-              onChange={setLanguages}
+              options={languageOptions.map((id) => ({
+                value: id,
+                label: <LanguageLabel language={id} />,
+              }))}
+              selected={query.languages}
+              onChange={(languages) => update({ languages })}
             />
             <FilterMenu
               label={t("shared_by")}
-              options={owners.map((person) => ({
-                value: person.username,
+              options={ownerOptions.map((person) => ({
+                value: person.id,
                 label: (
                   <span className="flex items-center gap-2">
                     <PersonAvatar person={person} className="size-5" />
@@ -168,8 +144,8 @@ export function SharedList({
                   </span>
                 ),
               }))}
-              selected={people}
-              onChange={setPeople}
+              selected={query.owners}
+              onChange={(owners) => update({ owners })}
             />
             <FilterMenu
               label={t("access")}
@@ -177,14 +153,24 @@ export function SharedList({
                 { value: "edit", label: t("can_edit") },
                 { value: "view", label: t("can_view") },
               ]}
-              selected={access}
-              onChange={setAccess}
+              selected={query.access}
+              onChange={(access) =>
+                update({
+                  access: access.filter(
+                    (value): value is SharedRow["access"] => value === "edit" || value === "view",
+                  ),
+                })
+              }
             />
           </div>
-          <SortMenu value={sort} options={sortOptions} onChange={setSort} />
+          <SortMenu
+            value={query.sort}
+            options={sortOptions}
+            onChange={(sort) => update({ sort })}
+          />
         </div>
 
-        {filtered.length === 0 ? (
+        {pagination.total === 0 ? (
           filtering ? (
             <p className="border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
               {t("no_pastes_match_these_filters")}
@@ -213,7 +199,7 @@ export function SharedList({
           )
         ) : view === "grid" ? (
           <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 border-t border-border p-3 lg:grid">
-            {paged.items.map((row) => (
+            {rows.map((row) => (
               <li
                 key={row.slug}
                 className="relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
@@ -263,7 +249,7 @@ export function SharedList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.items.map((row) => (
+              {rows.map((row) => (
                 <TableRow key={row.slug} className="relative border-border/60">
                   <TableCell className="truncate">
                     <span className="flex items-center gap-2">
@@ -316,9 +302,9 @@ export function SharedList({
           </Table>
         )}
 
-        {filtered.length > 0 ? (
+        {pagination.total > 0 ? (
           <ul className="flex flex-col lg:hidden">
-            {paged.items.map((row) => (
+            {rows.map((row) => (
               <li
                 key={row.slug}
                 className="relative flex items-center gap-3 border-b border-border py-3"
@@ -350,15 +336,19 @@ export function SharedList({
           </ul>
         ) : null}
 
-        {filtered.length > 0 ? (
+        {pagination.total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
             <span className="hidden text-[13px] text-muted-foreground lg:inline">
               {t("shared_summary", {
-                count: filtered.length,
-                people: new Set(filtered.map((row) => row.owner?.username)).size,
+                count: pagination.total,
+                people: peopleCount,
               })}
             </span>
-            <Pagination page={paged.page} pageCount={paged.pageCount} onChange={setPage} />
+            <Pagination
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              onChange={(page) => update({ page })}
+            />
           </div>
         ) : null}
       </div>

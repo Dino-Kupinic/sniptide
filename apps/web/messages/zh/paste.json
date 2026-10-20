@@ -52,6 +52,7 @@
     "couldnTSaveThePasteCheck": "无法保存 Paste。请检查网络连接后重试。",
     "pasteCreated": "Paste 已创建",
     "draftSavedOnThisDevice": "草稿已保存在此设备上",
+    "draftSaveUnavailable": "无法在此设备上保存草稿。请保持此标签页打开，然后重试。",
     "leaveEmptyToKeepTheCurrent": "留空以保留当前密码",
     "password": "密码",
     "anyoneWithTheLinkCanOpenMessage": "设置密码之前，任何持有链接的人都可以打开。",
