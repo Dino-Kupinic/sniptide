@@ -104,5 +104,5 @@ docker compose pull && docker compose up -d
 Back up the `postgres` volume first (for example with `pg_dump`). To stay on a known release,
 set `SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:<version>` in `.env`.
 
-Every setting is listed in `.env.example` next to the compose file, and in `apps/web/.env.example`
-in the repository.
+Every setting, with its default, is in [Configuration](/self-hosting/configuration). Memory limits,
+backups and upgrades have their own pages under [Self-hosting](/self-hosting).

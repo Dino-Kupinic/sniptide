@@ -1,0 +1,115 @@
+---
+title: Configuration
+description: Every setting Sniptide reads from the environment, with its default.
+---
+
+Sniptide is configured with environment variables, read when the server starts (not baked into the
+image). They are checked together at startup: a value the app can't understand stops the server
+with the variable's name, instead of silently using a default. A variable that is set but empty
+counts as unset.
+
+The reference file is `apps/web/.env.example` in the repository, and a test fails when the app
+reads a variable that file doesn't list. Compose and the Coolify template pass these through.
+
+## Required
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Postgres 17 is what Sniptide is tested against. Compose sets it for you. |
+| `BETTER_AUTH_SECRET` | none | Signs sessions and, unless `ENV_SECRETS_KEY` is set, encrypts env group values. Generate with `openssl rand -hex 32` and keep it across restarts: changing it signs everyone out and makes stored env values unreadable. |
+| `BETTER_AUTH_URL` | none | The exact URL people open in the browser (`https://…` behind a proxy). The app boots without it, but sign-in and sign-up are rejected from any other origin ("Invalid origin"), and OAuth callbacks and printed links use it. |
+
+## Sign-in and sign-up
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone; existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. |
+| `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). Existing accounts keep signing in. |
+| `WAITLIST_URL` | unset | With `ALLOWED_EMAILS`, the sign-up page links here so visitors can apply for an invite. |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in. Until both are set the button shows as disabled. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
+| `COOKIE_DOMAIN` | unset | Share the session cookie with other subdomains. Leave unset on one domain. |
+| `COOKIE_PREFIX` | `better-auth` | Prefix for the auth cookies' names (letters, digits, `-`, `_`). Set a different one on a deployment that shares a parent domain with another one (a preview next to production). Changing it signs everyone out. |
+| `DEMO_MODE` | `false` | A public demo: every visitor is signed in to one shared guest account with example data, reset on a schedule. Pastes made in the demo are visible to every visitor and deleted at the next reset. Use it with `ALLOW_SIGN_UP=false` so the guest is the only account. |
+| `DEMO_RESET_MINUTES` | `60` | With `DEMO_MODE`, minutes between resets (5 to 1440). The guest is also reset at server start. |
+
+Email and password sign-in always works. See also [closing sign-up](/getting-started/self-hosted).
+
+## Pastes and sharing
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. |
+| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Leave unset to serve everything on one domain. |
+| `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
+| `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
+| `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks for Share → Share to Slack/Discord. One channel per provider; every signed-in paste owner can post to it (20 shares an hour per account). Keep the URLs secret. |
+| `ENV_SECRETS_KEY` | derived from `BETTER_AUTH_SECRET` | Key (at least 32 characters) that encrypts env group values. Set it before rotating the auth secret; changing whichever key is in use makes stored env values unreadable until they're pushed again. |
+
+## Email
+
+Notification emails are off until you configure SMTP. In-app notifications and password sign-in
+work without it. Set the host, port and sender together, plus `BETTER_AUTH_URL` and a
+`BETTER_AUTH_SECRET` of at least 32 characters. Users verify their address and opt in per event in
+**Settings → Notifications**.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` | unset | Server, port and sender address. All three are needed. |
+| `SMTP_USER`, `SMTP_PASSWORD` | unset | Credentials; supply both or neither. |
+| `SMTP_SECURE` | `false` | `true` for implicit TLS (port 465). |
+| `SMTP_REQUIRE_TLS` | `true` | Require STARTTLS otherwise. Only set `false` for a trusted local test server. |
+
+## Client IP
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `CLIENT_IP_SOURCE` | `direct` | Where rate limits get the visitor's IP: `direct`, `x-forwarded-for`, `x-real-ip` or `cloudflare`. |
+| `TRUSTED_PROXIES` | unset | With `x-forwarded-for`: the proxies' addresses or ranges (`private` covers loopback and Docker's private ranges). |
+| `TRUSTED_PROXY_HOPS` | `1` | With `x-forwarded-for` and no list: how many proxies append to the header. |
+
+Pick these to match what sits in front of the app: see [Reverse proxy and client IP](/self-hosting/reverse-proxy).
+
+## Database and capacity
+
+Pool size is per process: replicas × pool size, plus migration and admin connections, must fit
+Postgres' connection budget. Invalid values stop the server with the allowed range.
+
+| Variable | Default | Range | What it does |
+| --- | --- | --- | --- |
+| `DATABASE_POOL_SIZE` | `10` | 1 to 100 | Connections per process. |
+| `DATABASE_CONNECT_TIMEOUT_SECONDS` | `10` | 1 to 120 | Opening a database connection. |
+| `DATABASE_IDLE_TIMEOUT_SECONDS` | `20` | 1 to 3600 | Retire idle connections. |
+| `DATABASE_MAX_LIFETIME_SECONDS` | `1800` | 60 to 86400 | Recycle connections. |
+| `DATABASE_STATEMENT_TIMEOUT_MS` | `10000` | 100 to 300000 | SQL execution deadline. |
+| `DATABASE_LOCK_TIMEOUT_MS` | `3000` | 100 to 300000 | Lock wait deadline. |
+| `DATABASE_IDLE_TRANSACTION_TIMEOUT_MS` | `15000` | 100 to 300000 | Abandoned-transaction deadline. |
+| `ACCOUNT_STORAGE_BYTES` | `1073741824` | 524288 to 1 TiB | Per-account paste content budget. |
+| `ACCOUNT_PASTE_LIMIT` | `10000` | 1 to 1000000 | Per-account paste count, trash included. |
+| `VIEW_HISTORY_RETENTION_DAYS` | `90` | 60 to 3650 | Daily view history kept for the charts. |
+| `ANALYTICS_RETENTION_DAYS` | `180` | 180 to 3650 | Daily analytics rollups kept. |
+| `PURGE_BATCH_SIZE` | `500` | 1 to 5000 | Most rows deleted per batch by the hourly cleanup. |
+| `PURGE_TIME_BUDGET_MS` | `2000` | 100 to 60000 | How long one cleanup run may keep starting new batches. |
+| `HIGHLIGHT_CACHE_BYTES` | `33554432` | 0 to 256 MiB | Syntax-highlight cache per process; `0` turns it off. |
+| `SLOW_QUERY_MS` | `500` | 1 to 60000 | Threshold for slow-query log events. |
+| `MIGRATIONS_DIR` | set by the image | n/a | Where migrations are read from at startup. Leave unset outside the image. |
+
+Trash and expired pastes are removed after 30 days by a cleanup that runs at startup and hourly.
+
+## Monitoring
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `METRICS_TOKEN` | unset | A long random bearer token enables `GET /api/metrics` (latency histograms, query counts, memory, event-loop delay, cleanup progress, database size and locks). Without it the endpoint returns 404. Keep it behind your normal access controls, and scrape every replica. |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set, so a self-hosted instance sends nothing. Cookieless, no session replay, events never include paste content or links' slugs. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). |
+
+The Analytics page inside the app counts views, copies and referrers in your own database; nothing
+is sent anywhere else.
+
+## Build-time settings
+
+These are Docker build arguments for people building the image themselves, not runtime settings.
+`DEPLOYMENT_VERSION` (a commit SHA) sets Next's deployment id, so all replicas of a release agree.
+For independently built replicas, a stable Server Actions key can be passed as a BuildKit secret,
+`server_actions_key`. You don't need either when running the published image.
