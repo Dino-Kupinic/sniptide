@@ -404,7 +404,6 @@ export async function listCaptures(
           .select({
             pasteId: pasteFile.pasteId,
             language: pasteFile.language,
-            content: pasteFile.content,
           })
           .from(pasteFile)
           .where(
