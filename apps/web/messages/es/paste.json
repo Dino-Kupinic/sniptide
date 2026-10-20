@@ -52,6 +52,7 @@
     "couldnTSaveThePasteCheck": "No se pudo guardar el paste. Comprueba tu conexión e inténtalo de nuevo.",
     "pasteCreated": "Paste creado",
     "draftSavedOnThisDevice": "Borrador guardado en este dispositivo",
+    "draftSaveUnavailable": "No se pudo guardar el borrador en este dispositivo. Mantén esta pestaña abierta e inténtalo de nuevo.",
     "leaveEmptyToKeepTheCurrent": "Déjalo vacío para mantener la actual",
     "password": "Contraseña",
     "anyoneWithTheLinkCanOpenMessage": "Cualquier persona con el enlace puede abrirlo hasta que establezcas una contraseña.",
