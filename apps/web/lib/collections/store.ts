@@ -208,7 +208,7 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
     if (!row) return null
     const pastes = await tx
       .update(pasteTable)
-      .set({ collection: null })
+      .set({ collection: null, version: sql`${pasteTable.version} + 1` })
       .where(and(eq(pasteTable.ownerId, owner), eq(pasteTable.collection, slug)))
       .returning({ slug: pasteTable.slug })
     await tx
@@ -254,7 +254,7 @@ export async function restoreCollection(snapshot: CollectionSnapshot): Promise<R
     if (snapshot.pastes.length > 0) {
       await tx
         .update(pasteTable)
-        .set({ collection: snapshot.slug })
+        .set({ collection: snapshot.slug, version: sql`${pasteTable.version} + 1` })
         .where(
           and(
             eq(pasteTable.ownerId, owner),

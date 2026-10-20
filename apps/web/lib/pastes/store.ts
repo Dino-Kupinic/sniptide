@@ -288,6 +288,7 @@ async function hydrate(
 
   return {
     ...summary,
+    version: record.version,
     revisionCount,
     revisionPage,
     revisionPageCount,
@@ -832,6 +833,7 @@ async function claimVisit(id: string) {
     const [row] = await tx
       .update(pasteTable)
       .set({
+        version: sql`CASE WHEN ${pasteTable.burnAfterRead} THEN ${pasteTable.version} + 1 ELSE ${pasteTable.version} END`,
         views: sql`${pasteTable.views} + 1`,
         uniqueViews: sql`${pasteTable.uniqueViews} + 1`,
         deletedAt: sql`CASE WHEN ${pasteTable.burnAfterRead} THEN ${now.toISOString()}::timestamptz ELSE ${pasteTable.deletedAt} END`,
@@ -1217,7 +1219,7 @@ async function findEditable(slug: string) {
 export const REVISION_WINDOW_MS = 10 * 60_000
 
 export interface UpdateOptions {
-  // Only save if the paste is still at this version (its `updatedAt`), so an edit made from a stale
+  // Only save if the paste is still at this version, so an edit made from a stale
   // copy can't silently overwrite a newer one.
   expectedVersion?: number
   // Fold the edit into the latest revision when it is recent (see REVISION_WINDOW_MS).
@@ -1268,9 +1270,7 @@ export async function updatePaste(
         ? await hashPassword(data.password)
         : null
   const expiresAt = resolveExpiry(data.expiry, record.expiresAt, now.getTime())
-  // A version always moves forward, even if two saves land in the same millisecond.
-  const version = Math.max(now.getTime(), record.updatedAt.getTime() + 1)
-  const stamp = new Date(version)
+  const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
 
   const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   return getDb().transaction(async (tx): Promise<UpdateResult> => {
@@ -1288,24 +1288,25 @@ export async function updatePaste(
         collection: data.collection,
         expiresAt,
         updatedAt: stamp,
+        version: sql`${pasteTable.version} + 1`,
       })
       .where(
         and(
           eq(pasteTable.id, record.id),
           options.expectedVersion === undefined
             ? undefined
-            : eq(pasteTable.updatedAt, new Date(options.expectedVersion)),
+            : eq(pasteTable.version, options.expectedVersion),
         ),
       )
-      .returning({ id: pasteTable.id })
-    if (changed.length === 0) {
+      .returning({ version: pasteTable.version })
+    if (!changed[0]) {
       const [latest] = await tx
-        .select({ updatedAt: pasteTable.updatedAt, slug: pasteTable.slug })
+        .select({ version: pasteTable.version, slug: pasteTable.slug })
         .from(pasteTable)
         .where(eq(pasteTable.id, record.id))
       return {
         conflict: true,
-        version: ms(latest?.updatedAt ?? record.updatedAt),
+        version: latest?.version ?? record.version,
         slug: latest?.slug ?? record.slug,
       }
     }
@@ -1346,7 +1347,7 @@ export async function updatePaste(
 
     return {
       slug: data.slug || slug,
-      version,
+      version: changed[0].version,
       expiresAt: ms(expiresAt),
       hasPassword: passwordHash !== null,
     }
@@ -1432,8 +1433,8 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       throw error
     }
 
-    const version = Math.max(Date.now(), locked.updatedAt.getTime() + 1)
-    const stamp = new Date(version)
+    const version = locked.version + 1
+    const stamp = new Date(Math.max(Date.now(), locked.updatedAt.getTime() + 1))
     await tx
       .update(pasteTable)
       .set({
@@ -1441,6 +1442,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
         description: snapshot.description,
         bytes,
         updatedAt: stamp,
+        version: sql`${pasteTable.version} + 1`,
       })
       .where(eq(pasteTable.id, record.id))
     await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
@@ -1475,6 +1477,7 @@ export async function updateSharing(slug: string, input: SharingInput) {
     .update(pasteTable)
     .set({
       ...rest,
+      version: sql`${pasteTable.version} + 1`,
       ...(password !== undefined
         ? { passwordHash: password ? await hashPassword(password) : null }
         : {}),
@@ -1506,7 +1509,10 @@ export async function setStarred(slug: string, starred: boolean) {
 export async function renamePaste(slug: string, title: string) {
   const record = await findOwned(slug)
   if (!record || record.deletedAt) return
-  await getDb().update(pasteTable).set({ title }).where(eq(pasteTable.id, record.id))
+  await getDb()
+    .update(pasteTable)
+    .set({ title, version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, record.id))
 }
 
 // Files the paste in a collection, or takes it out of its collection with null. The caller
@@ -1514,7 +1520,10 @@ export async function renamePaste(slug: string, title: string) {
 export async function setPasteCollection(slug: string, collection: string | null) {
   const record = await findOwned(slug)
   if (!record || record.deletedAt) return
-  await getDb().update(pasteTable).set({ collection }).where(eq(pasteTable.id, record.id))
+  await getDb()
+    .update(pasteTable)
+    .set({ collection, version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, record.id))
 }
 
 export async function trashPaste(slug: string) {
@@ -1522,7 +1531,7 @@ export async function trashPaste(slug: string) {
   if (!record) return
   await getDb()
     .update(pasteTable)
-    .set({ deletedAt: new Date() })
+    .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })
     .where(eq(pasteTable.id, record.id))
 }
 
@@ -1530,7 +1539,10 @@ export async function trashPaste(slug: string) {
 export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
   if (!record) return false
-  await getDb().update(pasteTable).set({ deletedAt: null }).where(eq(pasteTable.id, record.id))
+  await getDb()
+    .update(pasteTable)
+    .set({ deletedAt: null, version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, record.id))
   return true
 }
 

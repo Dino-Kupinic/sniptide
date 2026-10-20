@@ -336,6 +336,7 @@ export async function updateCapture(
           tags: capture.tags,
           source: capture.source,
           updatedAt: now,
+          version: sql`${pasteTable.version} + 1`,
         })
         .where(eq(pasteTable.id, record.id))
       await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))

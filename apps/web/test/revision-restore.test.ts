@@ -127,7 +127,7 @@ describeDb("restoreRevision", () => {
   test("a burst of auto-saves is restored as the state it ended in", async () => {
     const slug = await create()
     const first = await getPaste(slug)
-    let version = first?.updatedAt ?? 0
+    let version = first?.version ?? 0
     for (const title of ["a", "ab", "abc"]) {
       const saved = await autosavePaste(slug, input({ title, expiry: "keep" }), version)
       if (!saved.ok || "conflict" in saved) throw new Error("expected a save")
@@ -146,7 +146,7 @@ describeDb("restoreRevision", () => {
   test("a save from an editor opened before the rollback is turned away", async () => {
     const slug = await create()
     await edit(slug, { title: "v2" })
-    const opened = (await getPaste(slug))?.updatedAt ?? 0
+    const opened = (await getPaste(slug))?.version ?? 0
     const created = (await history(slug))[1]
 
     await restoreRevision(slug, created?.id ?? -1)
