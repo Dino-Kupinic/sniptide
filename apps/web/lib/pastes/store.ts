@@ -36,7 +36,7 @@ import { initials } from "@/lib/format"
 import { viewMilestone } from "@/lib/notifications/describe"
 import { recordNotifications } from "@/lib/notifications/record"
 import { DAY } from "@/lib/time"
-import { enforceBudget, PasteBudgetError } from "./budget"
+import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
 import { recordPasteEvent } from "./events"
 import { insertPaste } from "./insert"
@@ -1385,6 +1385,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
   const { record } = editable
 
   return getDb().transaction(async (tx): Promise<RestoreResult> => {
+    await lockAccount(tx, record.ownerId)
     const [locked] = await tx
       .select()
       .from(pasteTable)
