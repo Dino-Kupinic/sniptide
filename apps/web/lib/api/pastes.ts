@@ -1,8 +1,25 @@
 import "server-only"
 
 import {
+  type CodeFile as ApiFile,
+  type ApiPaste,
+  type ApiPasteSummary,
+  apiReplacementSchema,
+  apiTagSchema,
+  apiCaptureSchema as captureSchema,
+  MAX_TAGS,
+} from "@sniptide/contracts"
+
+export {
+  type ApiPaste,
+  type ApiPasteSummary,
+  apiCaptureSchema as captureSchema,
+  type CaptureInput,
+  type CodeFile as ApiFile,
+} from "@sniptide/contracts"
+
+import {
   collection as collectionTable,
-  type PasteSource,
   pasteFile,
   pasteRevision,
   paste as pasteTable,
@@ -31,7 +48,6 @@ import { limited, limits } from "@/lib/pastes/limits"
 import { parsePasteInput } from "@/lib/pastes/schema"
 import { pruneSnapshots, snapshotOf } from "@/lib/pastes/snapshot"
 import { randomSlug } from "@/lib/pastes/store"
-import { VISIBILITIES } from "@/lib/pastes/types"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
 
@@ -41,97 +57,9 @@ import { ApiError } from "./http"
 
 export const LIST_LIMIT = 100
 export const COLLECTION_PAGE_SIZE = 50
-export const MAX_TAGS = 20
+export { MAX_TAGS } from "@sniptide/contracts"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-export interface ApiFile {
-  name: string
-  language: string
-  content: string
-  lines?: { start: number; end: number }
-}
-
-export interface ApiPaste {
-  id: string
-  slug: string
-  url: string
-  title: string
-  description: string
-  visibility: (typeof VISIBILITIES)[number]
-  collection: string | null
-  tags: string[]
-  source: PasteSource | null
-  files: ApiFile[]
-  createdAt: string
-  updatedAt: string
-  expiresAt: string | null
-}
-
-export type ApiPasteSummary = Omit<ApiPaste, "files"> & { languages: string[]; bytes: number }
-
-const tag = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(1, "Tags can't be empty.")
-  .max(50, "Tags are limited to 50 characters.")
-  .regex(/^[^\s,]+$/, "Tags can't contain spaces or commas.")
-
-const lineRange = z
-  .object({ start: z.int().min(1), end: z.int().min(1) })
-  .refine((lines) => lines.end >= lines.start, "A line range must end after it starts.")
-
-const repository = z
-  .string()
-  .trim()
-  .min(1)
-  .max(2048)
-  .refine((value) => {
-    try {
-      const url = new URL(value)
-      return !url.username && !url.password
-    } catch {
-      // scp-style remotes like git@github.com:org/repo.git aren't URLs.
-      return true
-    }
-  }, "Leave credentials out of the repository URL.")
-
-export const captureSchema = z.object({
-  title: z.string(),
-  description: z.string().default(""),
-  visibility: z.enum(VISIBILITIES).default("private"),
-  collection: z.string().trim().min(1).max(40).nullable().default(null),
-  tags: z
-    .array(tag)
-    .max(MAX_TAGS, `A paste can have up to ${MAX_TAGS} tags.`)
-    .default([])
-    .transform((tags) => [...new Set(tags)]),
-  source: z
-    .object({
-      repository: repository.nullable(),
-      commit: z
-        .string()
-        .regex(/^[0-9a-f]{7,64}$/i, "A commit is a hexadecimal hash.")
-        .nullable(),
-      dirty: z.boolean(),
-    })
-    .nullable()
-    .default(null),
-  files: z
-    .array(
-      z.object({
-        name: z.string(),
-        // The server detects the language from the file name; a client's guess is ignored.
-        language: z.string().optional(),
-        content: z.string(),
-        lines: lineRange.optional(),
-      }),
-    )
-    .min(1, "A paste needs at least one file.")
-    .max(10, "A paste can hold up to 10 files."),
-})
-export type CaptureInput = z.input<typeof captureSchema>
 
 type PasteRecord = typeof pasteTable.$inferSelect
 type FileRecord = typeof pasteFile.$inferSelect
@@ -289,7 +217,7 @@ export async function updateCapture(
   idOrSlug: string,
   input: unknown,
 ): Promise<ApiPaste> {
-  const replacement = captureSchema.pick({ title: true, files: true }).passthrough().parse(input)
+  const replacement = apiReplacementSchema.parse(input)
   const data = parsePasteInput({
     title: replacement.title,
     description: "",
@@ -411,7 +339,7 @@ function decodeCursor(value: string | null): Cursor | null {
 
 export const listQuerySchema = z.object({
   q: z.string().trim().max(120).default(""),
-  tags: z.array(tag).max(MAX_TAGS).default([]),
+  tags: z.array(apiTagSchema).max(MAX_TAGS).default([]),
   language: z.string().trim().max(40).optional(),
   collection: z.string().trim().max(40).optional(),
   limit: z.coerce.number().int().min(1).max(LIST_LIMIT).default(20),

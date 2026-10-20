@@ -1,7 +1,59 @@
-// The OpenAPI document behind the API reference at /docs/api, served as JSON from
-// /api/openapi.json. It is written by hand next to the routes it describes, and
-// test/openapi.test.ts fails when a route handler exists that this file neither documents nor lists
-// as internal, so a new endpoint can't ship without a reference entry.
+import {
+  apiCaptureSchema,
+  apiPasteSchema,
+  apiPasteSummarySchema,
+  mcpCaptureSchema,
+  responseFileSchema,
+  sourceSchema,
+} from "@sniptide/contracts"
+import { z } from "zod"
+
+function jsonSchema(schema: z.ZodType) {
+  const { $schema, ...fields } = z.toJSONSchema(schema, { io: "input" })
+  return fields
+}
+
+const captureInput = jsonSchema(apiCaptureSchema)
+const captureProperties = {
+  ...captureInput.properties,
+  title: jsonSchema(mcpCaptureSchema.shape.title),
+  description: { ...jsonSchema(mcpCaptureSchema.shape.description), default: "" },
+  collection: {
+    ...jsonSchema(apiCaptureSchema.shape.collection),
+    description: "An existing collection's slug.",
+  },
+  tags: {
+    ...jsonSchema(apiCaptureSchema.shape.tags),
+    description: "Stored lowercase, without duplicates.",
+  },
+  source: { $ref: "#/components/schemas/Source" },
+  files: {
+    ...jsonSchema(apiCaptureSchema.shape.files),
+    items: { $ref: "#/components/schemas/CaptureFile" },
+  },
+}
+const pasteInput = jsonSchema(apiPasteSchema)
+const pasteProperties = {
+  id: { type: "string", format: "uuid" },
+  url: { type: "string", description: "The share link." },
+  source: { $ref: "#/components/schemas/Source" },
+  createdAt: { type: "string", format: "date-time" },
+  updatedAt: { type: "string", format: "date-time" },
+  expiresAt: { type: ["string", "null"], format: "date-time" },
+}
+const fileProperties = {
+  ...jsonSchema(responseFileSchema).properties,
+  name: {
+    ...jsonSchema(mcpCaptureSchema.shape.files.element.shape.name),
+    description: "A relative path, kept when the paste is pulled into another project.",
+    examples: ["src/components/button.tsx"],
+  },
+  language: { type: "string", examples: ["typescript"] },
+  lines: {
+    ...jsonSchema(responseFileSchema.shape.lines),
+    description: "The source lines a capture took, 1-based and inclusive. Absent for a whole file.",
+  },
+}
 
 const slugParameter = {
   name: "slug",
@@ -1002,148 +1054,47 @@ export const openApiDocument = {
         description: "What the token may do. Every token can read; write also creates.",
       },
       File: {
-        type: "object",
-        required: ["name", "language", "content"],
-        properties: {
-          name: {
-            type: "string",
-            maxLength: 120,
-            description: "A relative path, kept when the paste is pulled into another project.",
-            examples: ["src/components/button.tsx"],
-          },
-          language: { type: "string", examples: ["typescript"] },
-          content: { type: "string" },
-          lines: {
-            type: "object",
-            description:
-              "The source lines a capture took, 1-based and inclusive. Absent for a whole file.",
-            required: ["start", "end"],
-            properties: { start: { type: "integer" }, end: { type: "integer" } },
-          },
-        },
+        ...jsonSchema(responseFileSchema),
+        properties: fileProperties,
+      },
+      CaptureFile: {
+        ...jsonSchema(apiCaptureSchema.shape.files.element),
+        properties: fileProperties,
       },
       Source: {
-        type: ["object", "null"],
-        description: "The Git repository and commit the code was captured from.",
-        required: ["repository", "commit", "dirty"],
-        properties: {
-          repository: { type: ["string", "null"] },
-          commit: { type: ["string", "null"] },
-          dirty: {
-            type: "boolean",
-            description: "Whether the working tree differed from the commit.",
-          },
-        },
+        ...jsonSchema(sourceSchema.nullable()),
+        description:
+          "The Git repository and commit the code was captured from. The dirty flag marks changes in the working tree.",
       },
       Capture: {
-        type: "object",
-        required: ["title", "files"],
-        properties: {
-          title: { type: "string", minLength: 1, maxLength: 120 },
-          description: { type: "string", maxLength: 280, default: "" },
-          visibility: { enum: ["private", "unlisted", "public"], default: "private" },
-          collection: { type: ["string", "null"], description: "An existing collection's slug." },
-          tags: {
-            type: "array",
-            maxItems: 20,
-            items: { type: "string", maxLength: 50 },
-            description: "Stored lowercase, without duplicates.",
-          },
-          source: { $ref: "#/components/schemas/Source" },
-          files: {
-            type: "array",
-            minItems: 1,
-            maxItems: 10,
-            items: { $ref: "#/components/schemas/File" },
-          },
-        },
+        ...captureInput,
+        properties: captureProperties,
       },
       CaptureUpdate: {
-        type: "object",
-        required: ["title", "files"],
+        ...captureInput,
         description:
           "Replaces title/files; omitted metadata is preserved. No creation defaults apply.",
         properties: {
-          title: { type: "string", minLength: 1, maxLength: 120 },
-          description: { type: "string", maxLength: 280 },
-          visibility: { enum: ["private", "unlisted", "public"] },
-          collection: { type: ["string", "null"] },
-          tags: { type: "array", maxItems: 20, items: { type: "string", maxLength: 50 } },
-          source: { $ref: "#/components/schemas/Source" },
-          files: {
-            type: "array",
-            minItems: 1,
-            maxItems: 10,
-            items: { $ref: "#/components/schemas/File" },
-          },
+          ...captureProperties,
+          description: jsonSchema(mcpCaptureSchema.shape.description),
+          visibility: jsonSchema(mcpCaptureSchema.shape.visibility),
+          collection: jsonSchema(apiCaptureSchema.shape.collection.removeDefault()),
+          tags: jsonSchema(apiCaptureSchema.shape.tags.in.removeDefault()),
         },
       },
       PasteSummary: {
-        type: "object",
-        required: [
-          "id",
-          "slug",
-          "url",
-          "title",
-          "description",
-          "visibility",
-          "collection",
-          "tags",
-          "source",
-          "languages",
-          "bytes",
-          "createdAt",
-          "updatedAt",
-          "expiresAt",
-        ],
+        ...jsonSchema(apiPasteSummarySchema),
         properties: {
-          id: { type: "string", format: "uuid" },
-          slug: { type: "string" },
-          url: { type: "string", description: "The share link." },
-          title: { type: "string" },
-          description: { type: "string" },
-          visibility: { enum: ["private", "unlisted", "public"] },
-          collection: { type: ["string", "null"] },
-          tags: { type: "array", items: { type: "string" } },
-          source: { $ref: "#/components/schemas/Source" },
-          languages: { type: "array", items: { type: "string" } },
-          bytes: { type: "integer" },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
-          expiresAt: { type: ["string", "null"], format: "date-time" },
+          ...jsonSchema(apiPasteSummarySchema).properties,
+          ...pasteProperties,
         },
       },
       Paste: {
-        type: "object",
-        required: [
-          "id",
-          "slug",
-          "url",
-          "title",
-          "description",
-          "visibility",
-          "collection",
-          "tags",
-          "source",
-          "files",
-          "createdAt",
-          "updatedAt",
-          "expiresAt",
-        ],
+        ...pasteInput,
         properties: {
-          id: { type: "string", format: "uuid" },
-          slug: { type: "string" },
-          url: { type: "string", description: "The share link." },
-          title: { type: "string" },
-          description: { type: "string" },
-          visibility: { enum: ["private", "unlisted", "public"] },
-          collection: { type: ["string", "null"] },
-          tags: { type: "array", items: { type: "string" } },
-          source: { $ref: "#/components/schemas/Source" },
+          ...pasteInput.properties,
+          ...pasteProperties,
           files: { type: "array", items: { $ref: "#/components/schemas/File" } },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
-          expiresAt: { type: ["string", "null"], format: "date-time" },
         },
       },
       EnvGroup: {
