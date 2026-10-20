@@ -1,0 +1,43 @@
+---
+title: Import a GitHub gist
+description: Copy the files of a public GitHub gist into a new paste.
+---
+
+If your snippets already live in GitHub gists, import them instead of retyping.
+
+<Steps>
+<Step>
+
+Choose **Import gist** in the sidebar.
+
+</Step>
+<Step>
+
+Paste the gist's link (for example `gist.github.com/you/1a2b3c…`) or just its id. Sniptide reads
+the gist and lists its files with their sizes. Nothing is saved yet.
+
+</Step>
+<Step>
+
+Choose the files to bring in (at least one, at most 10) and select **Import now**. A file that
+can't be imported is marked with the reason, for example that it is over the size limit.
+
+</Step>
+</Steps>
+
+The files become a new **unlisted** paste that never expires, titled after the gist's description (or its first
+file's name), with the description "Imported from gist …". Open it to change the title,
+visibility, expiry or collection like any other paste.
+
+## Good to know
+
+- Only public gists can be imported. For a gist that doesn't exist or isn't public, Sniptide says
+  so.
+- The usual paste limits apply: at most 10 files, 120 characters per file name, and 1 MB per
+  paste (administrators can change the size with `MAX_PASTE_SIZE`).
+- What is saved is what GitHub has at the moment you import, even if the gist changed after you
+  pasted the link.
+- Reading gists is limited to 20 per hour per account, and an import counts as a new paste toward
+  the limit of 30 new pastes per hour.
+- A self-hosted instance reads gists from GitHub without signing in, which shares GitHub's quota
+  of 60 requests an hour. An administrator can set `GITHUB_TOKEN` (no scopes needed) to raise it.
