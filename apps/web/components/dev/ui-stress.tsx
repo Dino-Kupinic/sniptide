@@ -51,14 +51,15 @@ export function UiStress({
           viewer={data.viewer}
           initialSidebar={defaultSidebarState}
           collections={data.collections}
+          folders={[]}
           data={{
             counts: {
               pastes: data.pastes.length,
               starred: starred.length,
               shared: data.rows.length,
             },
-            recent: data.pastes.slice(0, 8).map((row) => ({ ...row, owned: true })),
-            starred: starred.slice(0, 3).map((row) => ({ ...row, owned: true })),
+            recent: data.pastes.slice(0, 8).map((row) => ({ ...row, owned: true, folderId: null })),
+            starred: starred.slice(0, 3).map((row) => ({ ...row, owned: true, folderId: null })),
           }}
         >
           {screen === "pastes" ? (

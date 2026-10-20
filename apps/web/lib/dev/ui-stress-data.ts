@@ -58,7 +58,6 @@ export function stressData(dataset: Dataset) {
       updatedAt: now - index * 86400000,
       updatedLabel: ["just now", "1 hour ago", "Yesterday", "Oct 1"][index % 4] ?? "Oct 1",
       collection: null,
-      folderId: null,
       starred: index % 2 === 0,
       owner: {
         name,
