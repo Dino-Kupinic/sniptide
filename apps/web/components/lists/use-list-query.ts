@@ -2,11 +2,13 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
-import { type PasteListQuery, pasteListSearch } from "@/lib/pastes/list-query"
 
 // Keep rapid filter changes together while a route request is pending. Search is debounced;
 // filter and page controls immediately navigate to a URL the server can query and bookmark.
-export function useListQuery(query: PasteListQuery) {
+export function useListQuery<Query extends { page: number; cursor?: string }>(
+  query: Query,
+  serialize: (query: Query) => string,
+) {
   const router = useRouter()
   const pathname = usePathname()
   const [draft, setDraft] = React.useState(query)
@@ -27,14 +29,14 @@ export function useListQuery(query: PasteListQuery) {
     [],
   )
 
-  function update(patch: Partial<PasteListQuery>, debounce = false) {
+  function update(patch: Partial<Query>, debounce = false) {
     const next = { ...latest.current, ...patch, cursor: patch.cursor, page: patch.page ?? 1 }
     latest.current = next
     setDraft(next)
     if (timer.current !== null) clearTimeout(timer.current)
     const navigate = () => {
       timer.current = null
-      const search = pasteListSearch(next)
+      const search = serialize(next)
       startTransition(() =>
         router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false }),
       )

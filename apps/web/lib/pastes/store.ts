@@ -166,7 +166,7 @@ async function summarize(
       })
       .from(pasteFile)
       .where(inArray(pasteFile.pasteId, ids))
-      .orderBy(pasteFile.position),
+      .orderBy(pasteFile.position, pasteFile.id),
     withHistory
       ? db
           .select()
@@ -367,7 +367,7 @@ export async function listTrash() {
 // What makes a paste show up for someone it's shared with: a share row for them on a live paste
 // someone else owns. A burn-after-read paste is read once through its link, so a share never
 // opens it in the app, and an expired one is gone for everyone but its owner.
-function sharedWithWhere(viewer: string) {
+export function sharedWithWhere(viewer: string) {
   return and(
     eq(pasteShare.userId, viewer),
     isNull(pasteShare.leftAt),

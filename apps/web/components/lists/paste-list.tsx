@@ -24,6 +24,7 @@ import {
   type PageInfo,
   type PasteListQuery,
   type PasteSort,
+  pasteListSearch,
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
@@ -118,7 +119,7 @@ export function PasteList({
     { value: "burn", label: t("burn_after_read") },
   ]
 
-  const { query, update, pending } = useListQuery(serverQuery)
+  const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const { languages, visibility, collections: inCollections, owner, sort } = query
   const [view, setView] = React.useState<"list" | "grid">("list")
   const filtering = Boolean(
