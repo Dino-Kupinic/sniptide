@@ -99,6 +99,8 @@ adding better-auth plugins.
 
 Keep migrations additive (new tables and columns) where possible: the old container keeps
 serving until the new one is healthy, and it runs against the migrated database.
+Migration rules (transactional statements only, never editing a released migration) are in
+[CONTRIBUTING.md](CONTRIBUTING.md#database-migrations).
 
 ## Deploy
 
@@ -257,6 +259,25 @@ domain, so there is nothing to fill in before the first deploy. In a Coolify pro
 contributed to Coolify's one-click service list. The optional settings (sign-up, OAuth, webhooks,
 `MAX_PASTE_SIZE`) show up as environment variables on the resource.
 
+### Backups, restore and upgrades
+
+Everything lives in Postgres. With the Compose setup, from the folder with `docker-compose.yml`:
+
+```bash
+bash scripts/backup.sh                            # ./backups/sniptide-<UTC time>.dump
+bash scripts/restore.sh backups/sniptide-….dump   # replaces the database; works on a new server too
+docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d   # scheduled backups
+```
+
+Keep `BETTER_AUTH_SECRET` (and `ENV_SECRETS_KEY`, if set) with the backups: without them sessions
+are lost and env groups can't be decrypted. Back up before every upgrade. Migrations apply on
+startup in one transaction, so a failed upgrade leaves the database as it was; there is no
+downgrade, so you go back by restoring the backup. For Coolify, add the container from
+`deploy/coolify/backup-sidecar.yaml`. The full procedure is in the docs
+(`apps/docs/content/docs/self-hosting/backups.mdx`), and CI proves it on every pull request with
+`scripts/test-upgrade.sh`: seed the latest release, back up, upgrade, and restore into the running
+stack and into a new one.
+
 ### Settings
 
 Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`; add `BETTER_AUTH_URL` so browsers
@@ -345,7 +366,8 @@ database and a production build.
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
 typecheck, `next build` (the app and the docs), production Docker builds and startup tests for the
-app and the docs site, Bun integration tests, and
+app and the docs site, an upgrade, backup and restore check against the latest release, Bun
+integration tests, and
 Chromium browser tests against an isolated PostgreSQL database and production build.
 
 ### Container releases

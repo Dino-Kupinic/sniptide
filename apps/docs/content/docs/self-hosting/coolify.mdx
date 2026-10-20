@@ -43,6 +43,12 @@ The optional settings (sign-up, OAuth, webhooks, `MAX_PASTE_SIZE`, SMTP) show up
 variables on the resource. Set the ones you want from [Configuration](/self-hosting/configuration)
 and redeploy.
 
+## Backups
+
+The template doesn't schedule backups on its own. Add the backup container from
+`deploy/coolify/backup-sidecar.yaml` to it, and copy the files off the server; see
+[Backups and restore](/self-hosting/backups).
+
 ## Upgrading
 
 Redeploy the service to run a newer image, after taking a backup. See [Upgrading](/self-hosting/upgrading).
