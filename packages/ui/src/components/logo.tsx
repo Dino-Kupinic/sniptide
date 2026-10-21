@@ -72,8 +72,8 @@ const markStripes = [
   "2,20.15 22,16.81 22,21.27 2,21.27",
 ]
 
-const flowClasses = "transition-[fill] duration-150 motion-reduce:transition-none"
-const hoverFill = "[a:hover_&]:fill-link [a:focus-visible_&]:fill-link"
+const hoverGrow =
+  "origin-left transition-transform duration-150 motion-reduce:transition-none [a:hover_&]:scale-[1.04] [a:focus-visible_&]:scale-[1.04]"
 
 export function LogoMark({
   className,
@@ -92,12 +92,7 @@ export function LogoMark({
       viewBox="2 2 20 19.27"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
-      className={cn(
-        "h-7 w-[29.05px] shrink-0 fill-[#2A26EC] dark:fill-white",
-        flowClasses,
-        hoverFill,
-        className,
-      )}
+      className={cn("h-7 w-[29.05px] shrink-0 fill-[#2A26EC] dark:fill-white", className)}
     >
       {markStripes.map((points) => (
         <polygon key={points} points={points} />
@@ -151,7 +146,7 @@ export function Logo({ className }: { className?: string }) {
       ref={ref}
       role="img"
       aria-label="SNIPTIDE"
-      className={cn("flex shrink-0 items-center gap-2", className)}
+      className={cn("flex shrink-0 items-center gap-2", hoverGrow, className)}
     >
       <LogoMark flowing={flowing} onFlowEnd={() => setFlowing(false)} />
       <span className="shrink-0 pt-px">
@@ -159,7 +154,7 @@ export function Logo({ className }: { className?: string }) {
           viewBox="1341 238 4340 683"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
-          className={cn("h-auto w-[130px] fill-[#0A0A0A] dark:fill-white", flowClasses, hoverFill)}
+          className="h-auto w-[130px] fill-[#0A0A0A] dark:fill-white"
         >
           <g transform="translate(0,1080) scale(0.1,-0.1)">
             <path
