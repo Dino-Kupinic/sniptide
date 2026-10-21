@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
 import { Logo } from "@sniptide/ui/components/logo"
+import { Reveal } from "@sniptide/ui/components/reveal"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   ChartColumnIcon,
@@ -517,22 +518,21 @@ function Section({
           className="flex min-w-0 flex-1 items-center gap-1 self-stretch text-left text-xs font-medium outline-none focus-visible:underline"
         >
           {title}
-          {open ? (
-            <ChevronDownIcon className="size-3 shrink-0" />
-          ) : (
-            <ChevronRightIcon className="size-3 shrink-0" />
-          )}
+          <ChevronDownIcon
+            className={cn(
+              "size-3 shrink-0 transition-transform duration-200 motion-reduce:transition-none",
+              !open && "-rotate-90",
+            )}
+          />
         </button>
         <DragHandle ref={handleRef} label={t("reorder_section", { name: title })} />
         {filter}
         {menu}
         {add}
       </div>
-      {open ? (
-        <div id={contentId} className="flex flex-col gap-0.5">
-          {children}
-        </div>
-      ) : null}
+      <Reveal open={open} id={contentId} className="flex flex-col gap-0.5">
+        {children}
+      </Reveal>
     </section>
   )
 }

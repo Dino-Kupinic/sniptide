@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -275,17 +276,17 @@ export function Pagination({
   return (
     <nav
       aria-label={t("pagination")}
-      className="flex shrink-0 flex-wrap items-center gap-1 text-[13px]"
+      className="flex shrink-0 flex-wrap items-center gap-1.5 text-[13px]"
     >
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="icon"
         aria-label={t("previous_page")}
         disabled={page === 1}
         onClick={() => onChange(page - 1)}
-        className="rounded-lg flex size-8 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
       >
         <ChevronLeftIcon className="size-3.5" />
-      </button>
+      </Button>
       {pages.map((candidate, index) => (
         <span
           key={candidate}
@@ -299,28 +300,26 @@ export function Pagination({
               …
             </span>
           ) : null}
-          <button
-            type="button"
+          <Button
+            variant={candidate === page ? "inverted" : "outline"}
+            size="icon"
             aria-current={candidate === page ? "page" : undefined}
             onClick={() => onChange(candidate)}
-            className={cn(
-              "rounded-lg flex size-8 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-              candidate === page && "bg-foreground font-medium text-background hover:bg-foreground",
-            )}
+            className="text-[13px] tabular-nums"
           >
             {candidate}
-          </button>
+          </Button>
         </span>
       ))}
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="icon"
         aria-label={t("next_page")}
         disabled={page === pageCount}
         onClick={() => onChange(page + 1)}
-        className="rounded-lg flex size-8 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
       >
         <ChevronRightIcon className="size-3.5" />
-      </button>
+      </Button>
     </nav>
   )
 }

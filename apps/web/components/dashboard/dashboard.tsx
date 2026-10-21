@@ -354,7 +354,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
         <TableRow className="hover:bg-transparent">
           <TableHead>{t("paste")}</TableHead>
           <TableHead className="w-[130px]">{t("language")}</TableHead>
-          <TableHead className="w-[120px]">{t("visibility")}</TableHead>
+          <TableHead className="w-[156px]">{t("visibility")}</TableHead>
           <TableHead className="w-20 text-right">{t("views")}</TableHead>
           <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
           <TableHead className="w-[116px]">{t("updated")}</TableHead>

@@ -2,7 +2,8 @@
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { PanelLeftIcon, SearchIcon } from "lucide-react"
+import { ChevronRightIcon, PanelLeftIcon, SearchIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
@@ -38,9 +39,21 @@ export function TopBar({
         </>
       )}
 
+      {/* Every page sits under "Workspace >", with the page's own title (or the one it sets)
+          after the chevron. */}
+      <nav aria-label={t("breadcrumb")} className="flex shrink-0 items-center gap-1.5 text-sm">
+        <Link
+          href="/dashboard"
+          className="rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+        >
+          {t("workspace")}
+        </Link>
+        <ChevronRightIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+      </nav>
       <div
         ref={setTitle}
-        className="group/title flex min-w-0 flex-1 items-center text-[15px] font-semibold"
+        aria-current="page"
+        className="group/title -ml-1.5 flex min-w-0 flex-1 items-center text-sm font-medium"
       >
         <span className="truncate group-has-data-header-title/title:hidden">
           {pageTitle(pathname) ? t(pageTitle(pathname)) : ""}

@@ -10,7 +10,15 @@ import {
   TableRow,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  FlameIcon,
+  GlobeIcon,
+  LinkIcon,
+  LockIcon,
+  StarIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
@@ -245,12 +253,36 @@ export function PasteList({
             <Table className="hidden min-w-[960px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>{t("paste")}</TableHead>
+                  <SortHead value="title" sort={sort} onSort={(sort) => update({ sort })}>
+                    {t("paste")}
+                  </SortHead>
                   <TableHead className="w-[130px]">{t("language")}</TableHead>
-                  <TableHead className="w-[120px]">{t("visibility")}</TableHead>
-                  <TableHead className="w-20 text-right">{t("views")}</TableHead>
-                  <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
-                  <TableHead className="w-[116px]">{t("updated")}</TableHead>
+                  <TableHead className="w-[156px]">{t("visibility")}</TableHead>
+                  <SortHead
+                    value="views"
+                    sort={sort}
+                    onSort={(sort) => update({ sort })}
+                    className="w-20 text-right"
+                    alignEnd
+                  >
+                    {t("views")}
+                  </SortHead>
+                  <SortHead
+                    value="expires"
+                    sort={sort}
+                    onSort={(sort) => update({ sort })}
+                    className="w-[130px] pl-7"
+                  >
+                    {t("expires")}
+                  </SortHead>
+                  <SortHead
+                    value="updated"
+                    sort={sort}
+                    onSort={(sort) => update({ sort })}
+                    className="w-[116px]"
+                  >
+                    {t("updated")}
+                  </SortHead>
                   <TableHead className="w-12">
                     <span className="sr-only">{t("actions")}</span>
                   </TableHead>
@@ -382,6 +414,53 @@ export function PasteList({
         </div>
       </div>
     </div>
+  )
+}
+
+// A column header that sorts the list by that column. Title and expiry sort ascending (A to Z,
+// soonest first), views and updated descending (most, newest first); the arrow says which.
+function SortHead({
+  value,
+  sort,
+  onSort,
+  className,
+  alignEnd = false,
+  children,
+}: {
+  value: Sort
+  sort: Sort
+  onSort: (sort: Sort) => void
+  className?: string
+  alignEnd?: boolean
+  children: React.ReactNode
+}) {
+  const active = sort === value
+  const ascending = value === "title" || value === "expires"
+  const Arrow = ascending ? ArrowUpIcon : ArrowDownIcon
+  return (
+    <TableHead
+      aria-sort={active ? (ascending ? "ascending" : "descending") : "none"}
+      className={className}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(value)}
+        className={cn(
+          "group/sort -mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+          active && "text-foreground",
+          alignEnd && "flex-row-reverse",
+        )}
+      >
+        {children}
+        <Arrow
+          aria-hidden="true"
+          className={cn(
+            "size-3 transition-opacity",
+            active ? "opacity-100" : "opacity-0 group-hover/sort:opacity-60",
+          )}
+        />
+      </button>
+    </TableHead>
   )
 }
 
