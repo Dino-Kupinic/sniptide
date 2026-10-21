@@ -1,5 +1,7 @@
 import "server-only"
 
+import { allowedPaste } from "@workspace/db/moderation"
+
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { cache } from "react"
@@ -70,6 +72,7 @@ export const listCollections = cache(async (): Promise<Collection[]> => {
     .leftJoin(
       pasteTable,
       and(
+        allowedPaste(),
         eq(pasteTable.ownerId, collectionTable.ownerId),
         eq(pasteTable.collection, collectionTable.slug),
         isNull(pasteTable.deletedAt),
@@ -166,6 +169,7 @@ export async function renameCollection(
       .from(pasteTable)
       .where(
         and(
+          allowedPaste(),
           eq(pasteTable.ownerId, owner),
           eq(pasteTable.collection, slug),
           isNull(pasteTable.deletedAt),
@@ -210,7 +214,7 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
       .update(pasteTable)
       .set({ collection: null, version: sql`${pasteTable.version} + 1` })
       .where(and(eq(pasteTable.ownerId, owner), eq(pasteTable.collection, slug)))
-      .returning({ slug: pasteTable.slug })
+      .returning({ slug: pasteTable.slug, moderationState: pasteTable.moderationState })
     await tx
       .delete(collectionTable)
       .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
@@ -221,7 +225,9 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
       icon,
       hue,
       createdAt: row.createdAt.getTime(),
-      pastes: pastes.map((paste) => paste.slug),
+      pastes: pastes
+        .filter((paste) => paste.moderationState === "allowed")
+        .map((paste) => paste.slug),
     }
   })
 }
@@ -257,6 +263,7 @@ export async function restoreCollection(snapshot: CollectionSnapshot): Promise<R
         .set({ collection: snapshot.slug, version: sql`${pasteTable.version} + 1` })
         .where(
           and(
+            allowedPaste(),
             eq(pasteTable.ownerId, owner),
             isNull(pasteTable.collection),
             inArray(pasteTable.slug, snapshot.pastes),

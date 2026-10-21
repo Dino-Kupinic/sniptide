@@ -1,8 +1,9 @@
 import "server-only"
 import type { Database } from "@workspace/db"
 import { envInteger } from "@workspace/db/config"
+import { allowedPaste } from "@workspace/db/moderation"
 import { paste, user } from "@workspace/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
@@ -30,7 +31,7 @@ export const storageUsage = cache(async () => {
       pastes: sql<number>`count(*)::int`,
     })
     .from(paste)
-    .where(eq(paste.ownerId, owner))
+    .where(and(allowedPaste(), eq(paste.ownerId, owner)))
   return { bytes: row?.bytes ?? 0, pastes: row?.pastes ?? 0, limit }
 })
 // Acquire the account lock before any paste-row lock to keep saves and restores in one order.

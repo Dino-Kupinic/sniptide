@@ -1,5 +1,7 @@
 import "server-only"
 
+import { allowedParent } from "@workspace/db/moderation"
+
 import { notification, paste, user } from "@workspace/db/schema"
 import { and, desc, eq, isNull, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
@@ -36,7 +38,12 @@ export async function listNotifications(
       .from(notification)
       .innerJoin(paste, eq(paste.id, notification.pasteId))
       .leftJoin(user, eq(user.id, notification.actorId))
-      .where(and(eq(notification.userId, viewer), eq(notification.inApp, true)))
+      .where(
+        and(
+          and(allowedParent(notification.pasteId), eq(notification.userId, viewer)),
+          eq(notification.inApp, true),
+        ),
+      )
       .orderBy(desc(notification.createdAt), desc(notification.id))
       .limit(NOTIFICATION_LIMIT),
     db
@@ -44,7 +51,7 @@ export async function listNotifications(
       .from(notification)
       .where(
         and(
-          eq(notification.userId, viewer),
+          and(allowedParent(notification.pasteId), eq(notification.userId, viewer)),
           eq(notification.inApp, true),
           isNull(notification.readAt),
         ),
@@ -84,7 +91,7 @@ export async function markNotificationRead(id: string) {
     .where(
       and(
         eq(notification.id, id),
-        eq(notification.userId, viewer),
+        and(allowedParent(notification.pasteId), eq(notification.userId, viewer)),
         eq(notification.inApp, true),
         isNull(notification.readAt),
       ),
@@ -100,7 +107,7 @@ export async function markAllNotificationsRead() {
     .set({ readAt: new Date() })
     .where(
       and(
-        eq(notification.userId, viewer),
+        and(allowedParent(notification.pasteId), eq(notification.userId, viewer)),
         eq(notification.inApp, true),
         isNull(notification.readAt),
       ),
