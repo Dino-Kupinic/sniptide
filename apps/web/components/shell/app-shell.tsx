@@ -130,6 +130,18 @@ export function AppShell({
                     }
                     onToggleSection={toggleSection}
                     onToggleSidebar={toggleSidebar}
+                    views={layout.views}
+                    onChangeViews={(views) => {
+                      const refetch =
+                        JSON.stringify(views.pastes) !== JSON.stringify(layout.views.pastes) ||
+                        JSON.stringify(views.starred) !== JSON.stringify(layout.views.starred)
+                      // Write the cookie before refreshing, so the server lists what the filter
+                      // asks for.
+                      const next = { ...layout, views }
+                      writeSidebarState(next)
+                      setLayout(next)
+                      if (refetch) router.refresh()
+                    }}
                   />
                 </div>
                 <ResizeHandle

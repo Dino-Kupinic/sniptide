@@ -148,7 +148,7 @@ export function SlugInput({
     <div className="flex flex-col gap-1">
       <div
         className={cn(
-          "rounded-lg flex h-[34px] items-center border border-input focus-within:border-primary",
+          "flex h-[34px] items-center overflow-hidden rounded-lg border border-input focus-within:border-primary",
           status === "taken" && "border-destructive",
         )}
       >

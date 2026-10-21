@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   completeSidebarOrder,
   defaultSidebarState,
+  defaultSidebarViews,
   parseSidebarState,
   SECTIONS,
   type SidebarState,
@@ -66,5 +67,21 @@ describe("sidebar preferences", () => {
     expect(`sidebar=${cookie(state)}; path=/; max-age=31536000; samesite=lax`.length).toBeLessThan(
       4096,
     )
+  })
+
+  test("section filters survive serialization and unknown values fall back to the defaults", () => {
+    const views = {
+      pastes: { visibility: "private", sort: "title", limit: 15 },
+      starred: { visibility: "public", sort: "views", limit: 5 },
+      collections: { sort: "name" },
+    }
+    expect(parseSidebarState(cookie({ views })).views).toEqual(views as typeof defaultSidebarViews)
+    expect(
+      parseSidebarState(
+        cookie({
+          views: { pastes: { visibility: "secret", sort: "expires", limit: 999 }, starred: "x" },
+        }),
+      ).views,
+    ).toEqual(defaultSidebarViews)
   })
 })
