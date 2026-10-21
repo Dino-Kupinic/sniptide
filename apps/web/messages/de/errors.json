@@ -75,5 +75,14 @@
     "webhookInvalid": "Dieser Webhook ist nicht richtig eingerichtet.",
     "webhookDelivery": "Der Webhook hat die Zustellung nicht bestätigt. Prüfe den Kanal, bevor du es erneut versuchst.",
     "validationTooLong": "Verwende höchstens {max} Zeichen."
+  },
+  "ServerError": {
+    "title": "Etwas ist schiefgelaufen",
+    "heading": "Etwas ist schiefgelaufen.",
+    "description": "Diese Seite konnte nicht geladen werden. Versuche es erneut. Falls das Problem bleibt, schau in ein paar Minuten noch einmal vorbei.",
+    "retry": "Erneut versuchen",
+    "dashboard": "Zur Übersicht",
+    "home": "Zur Startseite",
+    "reference": "Fehlerreferenz {digest}"
   }
 }

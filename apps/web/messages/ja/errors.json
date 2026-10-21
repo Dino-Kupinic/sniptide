@@ -75,5 +75,14 @@
     "webhookInvalid": "この Webhook は正しく設定されていません。",
     "webhookDelivery": "Webhook の配信を確認できませんでした。再試行する前にチャンネルを確認してください。",
     "validationTooLong": "{max} 文字以内で入力してください。"
+  },
+  "ServerError": {
+    "title": "問題が発生しました",
+    "heading": "問題が発生しました。",
+    "description": "このページを読み込めませんでした。もう一度お試しください。解決しない場合は、数分後にもう一度アクセスしてください。",
+    "retry": "もう一度試す",
+    "dashboard": "ダッシュボードへ",
+    "home": "ホームに戻る",
+    "reference": "エラー参照番号 {digest}"
   }
 }

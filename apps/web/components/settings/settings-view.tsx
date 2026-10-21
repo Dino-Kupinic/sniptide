@@ -39,7 +39,7 @@ function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) 
           {t("storageUsage", { used: usedMb, limit: limitMb })}
         </span>
       </div>
-      <Progress value={(usedMb / limitMb) * 100} />
+      <Progress value={(usedMb / limitMb) * 100} aria-label={t("storage")} />
     </div>
   )
 }

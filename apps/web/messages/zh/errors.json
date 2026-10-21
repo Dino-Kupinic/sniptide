@@ -75,5 +75,14 @@
     "webhookInvalid": "该 Webhook 配置不正确。",
     "webhookDelivery": "Webhook 未确认送达，请先查看频道，再决定是否重试。",
     "validationTooLong": "最多可输入 {max} 个字符。"
+  },
+  "ServerError": {
+    "title": "出了点问题",
+    "heading": "出了点问题。",
+    "description": "无法加载此页面。请重试；如果问题持续出现，请几分钟后再来。",
+    "retry": "重试",
+    "dashboard": "前往控制台",
+    "home": "返回首页",
+    "reference": "错误参考编号 {digest}"
   }
 }

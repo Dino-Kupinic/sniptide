@@ -906,7 +906,7 @@ export function PasteEditor({
               <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
                 <div
                   aria-hidden="true"
-                  className="hidden shrink-0 text-right text-muted-foreground/60 select-none lg:block"
+                  className="hidden shrink-0 text-right text-muted-foreground select-none lg:block"
                 >
                   {Array.from({ length: lineCount }, (_, index) => (
                     <div key={index}>{index + 1}</div>

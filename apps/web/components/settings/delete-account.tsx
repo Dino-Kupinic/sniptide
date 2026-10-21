@@ -41,7 +41,10 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
         >
           <AlertDialogTrigger
             render={
-              <Button size="lg" className="bg-destructive text-white hover:bg-destructive/85" />
+              <Button
+                size="lg"
+                className="bg-destructive text-white hover:bg-destructive/85 dark:text-background"
+              />
             }
           >
             {t("deleteAccount")}

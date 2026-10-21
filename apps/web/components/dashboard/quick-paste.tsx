@@ -203,10 +203,7 @@ export function QuickPaste({
       </div>
 
       <div className="flex flex-1 gap-4 bg-sidebar/60 px-4 py-3.5 font-mono text-[13px] leading-[21px]">
-        <div
-          aria-hidden="true"
-          className="shrink-0 text-right text-muted-foreground/60 select-none"
-        >
+        <div aria-hidden="true" className="shrink-0 text-right text-muted-foreground select-none">
           {Array.from({ length: Math.max(lines, 12) }, (_, index) => (
             <div key={index} className={index >= lines ? "invisible" : undefined}>
               {index + 1}

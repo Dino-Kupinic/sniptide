@@ -113,6 +113,7 @@ export function FileTabs({
       {files.length < 10 ? (
         <button
           type="button"
+          aria-label={t("addFile")}
           onClick={() => setRenamingId(onAdd())}
           className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
         >

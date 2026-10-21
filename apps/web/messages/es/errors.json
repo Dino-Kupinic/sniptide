@@ -75,5 +75,14 @@
     "webhookInvalid": "Ese webhook no está configurado correctamente.",
     "webhookDelivery": "El webhook no ha confirmado la entrega. Revisa el canal antes de volver a intentarlo.",
     "validationTooLong": "Usa como máximo {max} caracteres."
+  },
+  "ServerError": {
+    "title": "Algo salió mal",
+    "heading": "Algo salió mal.",
+    "description": "No pudimos cargar esta página. Inténtalo de nuevo y, si el problema continúa, vuelve en unos minutos.",
+    "retry": "Reintentar",
+    "dashboard": "Ir al panel",
+    "home": "Volver al inicio",
+    "reference": "Referencia del error {digest}"
   }
 }

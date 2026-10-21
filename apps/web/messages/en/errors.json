@@ -75,5 +75,14 @@
     "webhookInvalid": "That webhook isn't configured correctly.",
     "webhookDelivery": "The webhook didn't confirm delivery. Check the channel before trying again.",
     "validationTooLong": "Too big: expected string to have <={max} characters"
+  },
+  "ServerError": {
+    "title": "Something went wrong",
+    "heading": "Something went wrong.",
+    "description": "We couldn't load this page. Try again, and if it keeps happening, come back in a few minutes.",
+    "retry": "Try again",
+    "dashboard": "Go to dashboard",
+    "home": "Back to home",
+    "reference": "Error reference {digest}"
   }
 }

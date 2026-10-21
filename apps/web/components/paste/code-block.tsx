@@ -62,7 +62,7 @@ export function CodeBlock({
               hidden={!lineNumbers}
               aria-hidden="true"
               style={{ minWidth: gutter }}
-              className="shrink-0 text-right text-muted-foreground/60 select-none"
+              className="shrink-0 text-right text-muted-foreground select-none"
             >
               {index + 1}
             </span>
