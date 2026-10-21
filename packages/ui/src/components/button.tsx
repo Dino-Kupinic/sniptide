@@ -7,9 +7,10 @@ import { cn } from "cn"
 // and edge together are as tall as the size. Hover lifts the face 1px and a
 // press pushes it down onto the edge. Popup triggers skip the press so their menu doesn't jump.
 // The press lands in 60ms so even a quick click shows it, and the release springs back with a
-// slight overshoot. Under reduced motion the states switch without moving.
+// slight overshoot. Under reduced motion the states switch without moving. A disabled button sits
+// down on its edge, so a greyed face never rests on a coloured edge.
 const raised =
-  "duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:duration-[60ms] active:ease-out motion-reduce:transition-colors shadow-[0_2px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_3px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[2px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_2px_0_0_var(--depth)]"
+  "duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:duration-[60ms] active:ease-out motion-reduce:transition-colors shadow-[0_2px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_3px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[2px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_2px_0_0_var(--depth)] disabled:translate-y-[2px] disabled:shadow-none"
 const flat = "active:not-aria-[haspopup]:translate-y-px"
 const raisedVariants: ("default" | "inverted" | "outline" | "secondary" | "destructive")[] = [
   "default",

@@ -15,12 +15,13 @@ import {
   HourglassIcon,
   type LucideIcon,
   Share2Icon,
+  XIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { timeAgo } from "@/lib/format"
-import { markAllRead, markRead } from "@/lib/notifications/actions"
+import { dismiss, markAllRead, markRead } from "@/lib/notifications/actions"
 import {
   NOTIFICATION_POLL_MS,
   type NotificationFeed,
@@ -112,6 +113,19 @@ export function NotificationsMenu({ className }: { className?: string }) {
       () => markRead(id),
     )
 
+  const remove = (id: string) =>
+    mark(
+      (current) => {
+        const target = current.items.find((item) => item.id === id)
+        if (!target) return current
+        return {
+          unread: target.read ? current.unread : Math.max(0, current.unread - 1),
+          items: current.items.filter((item) => item.id !== id),
+        }
+      },
+      () => dismiss(id),
+    )
+
   const markAll = () =>
     mark(
       (current) => ({ unread: 0, items: current.items.map((item) => ({ ...item, read: true })) }),
@@ -157,29 +171,40 @@ export function NotificationsMenu({ className }: { className?: string }) {
             {loaded.items.map((item) => {
               const Icon = icons[item.kind]
               return (
-                <DropdownMenuItem
-                  key={item.id}
-                  render={<Link href={item.href} />}
-                  onClick={() => markOne(item.id)}
-                  // Full-width rows: the list runs edge to edge, so these skip the inset menu highlight.
-                  className="h-auto items-start gap-2.5 rounded-none py-2.5"
-                >
-                  <Icon className="mt-0.5" />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className={cn("break-words", !item.read && "font-medium")}>
-                      {item.title}
+                // The x sits beside the row's link rather than inside it, and only shows on hover
+                // or focus (always on touch screens).
+                <div key={item.id} className="group/notification relative">
+                  <DropdownMenuItem
+                    render={<Link href={item.href} />}
+                    onClick={() => markOne(item.id)}
+                    // Full-width rows: the list runs edge to edge, so these skip the inset menu highlight.
+                    className="h-auto items-start gap-2.5 rounded-none py-2.5 pr-10"
+                  >
+                    <Icon className="mt-0.5" />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className={cn("break-words", !item.read && "font-medium")}>
+                        {item.title}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{item.detail}</span>
                     </span>
-                    <span className="text-xs text-muted-foreground">{item.detail}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-                    {timeAgo(item.createdAt, undefined, locale)}
-                    <span
-                      aria-hidden="true"
-                      className={cn("size-1.5", item.read ? "bg-transparent" : "bg-primary")}
-                    />
-                    {item.read ? null : <span className="sr-only">{t("unread")}</span>}
-                  </span>
-                </DropdownMenuItem>
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                      {timeAgo(item.createdAt, undefined, locale)}
+                      <span
+                        aria-hidden="true"
+                        className={cn("size-1.5", item.read ? "bg-transparent" : "bg-primary")}
+                      />
+                      {item.read ? null : <span className="sr-only">{t("unread")}</span>}
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    closeOnClick={false}
+                    aria-label={t("remove_notification", { title: item.title })}
+                    onClick={() => remove(item.id)}
+                    className="absolute top-2 right-2 size-6 justify-center rounded-md px-0 opacity-0 group-hover/notification:opacity-100 data-highlighted:opacity-100 [@media(hover:none)]:opacity-100 [&_svg]:size-3.5"
+                  >
+                    <XIcon />
+                  </DropdownMenuItem>
+                </div>
               )
             })}
           </div>

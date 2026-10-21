@@ -48,7 +48,7 @@ const shortLink = (link: string) => link.trim().replace(/^https?:\/\//i, "")
 
 // Disabled looks the same for both footer buttons, as in the design: a flat grey button.
 const footerButton =
-  "h-[34px] px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+  "h-8 px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
 
 // The import sheet. The caller owns `open`, so the Import gist buttons and the sidebar's More menu
 // can open the same one; `children` is where a trigger goes when the sheet has its own.

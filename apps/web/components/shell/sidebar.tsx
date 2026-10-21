@@ -109,26 +109,29 @@ export function Sidebar({
         <SidebarToggle onToggle={onToggleSidebar} open />
       </div>
 
-      <button
-        type="button"
-        onClick={openCommandMenu}
-        className="flex h-8.5 shrink-0 items-center gap-2 rounded-lg border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
-      >
-        <SearchIcon className="size-3.5" />
-        {t("search")}
-        <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
-      </button>
+      {/* Search and New paste read as one group, so they sit closer than the other groups. */}
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={openCommandMenu}
+          className="flex h-8.5 shrink-0 items-center gap-2 rounded-lg border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
+        >
+          <SearchIcon className="size-3.5" />
+          {t("search")}
+          <ShortcutKeys id="command-menu" className="ml-auto border border-border" />
+        </button>
 
-      <Button
-        size="lg"
-        className="h-[34px] shrink-0 justify-start gap-2 pr-1.5 pl-3"
-        render={<Link href="/new" />}
-        nativeButton={false}
-      >
-        <PlusIcon />
-        {t("new_paste")}
-        <ShortcutKeys id="new-paste" className="ml-auto border border-white/30" />
-      </Button>
+        <Button
+          size="lg"
+          className="h-[34px] shrink-0 justify-start gap-2 pr-1.5 pl-3"
+          render={<Link href="/new" />}
+          nativeButton={false}
+        >
+          <PlusIcon />
+          {t("new_paste")}
+          <ShortcutKeys id="new-paste" className="ml-auto border border-white/30" />
+        </Button>
+      </div>
 
       <nav aria-label={t("main")} className="flex flex-col gap-0.5">
         <NavLink href="/dashboard" pathname={pathname}>

@@ -1,6 +1,7 @@
 "use client"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
+import { cn } from "@sniptide/ui/lib/utils"
 import { PanelLeftIcon, SearchIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -29,7 +30,7 @@ export function TopBar({
   const { setTitle, setActions } = useHeaderSlotRefs()
 
   return (
-    <header className="sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
+    <header className="group/header sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
       {sidebarOpen ? null : (
         <>
           <SidebarToggle onToggle={onToggleSidebar} open={false} className="-ml-2" />
@@ -48,10 +49,19 @@ export function TopBar({
 
       <div
         ref={setActions}
+        data-header-actions=""
         className="flex max-w-full shrink-0 flex-wrap items-center gap-2 empty:hidden"
       />
       {sidebarOpen ? null : <SearchField />}
-      <span aria-hidden="true" className="h-5 w-px bg-border" />
+      {/* Separates the page's own actions (or the search field) from the bell, so it only shows
+          when something sits before it. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "h-5 w-px bg-border",
+          sidebarOpen && "hidden group-has-[[data-header-actions]:not(:empty)]/header:block",
+        )}
+      />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>
   )

@@ -35,6 +35,22 @@ export function Card({
   )
 }
 
+// What a card shows when its period has no data: one sentence, and an action where one helps.
+export function CardEmpty({
+  children,
+  action,
+}: {
+  children: React.ReactNode
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="flex min-h-40 flex-1 flex-col items-center justify-center gap-2 px-6 py-10 text-center">
+      <p className="max-w-64 text-sm text-muted-foreground">{children}</p>
+      {action}
+    </div>
+  )
+}
+
 // Horizontal bar on a track: `value` is 0 to 1. Decorative; the number next to it says it in text.
 export function Meter({
   value,
@@ -46,9 +62,15 @@ export function Meter({
   className?: string
 }) {
   return (
-    <div aria-hidden="true" className={cn("flex h-1.5 shrink-0 bg-border", className)}>
+    <div
+      aria-hidden="true"
+      className={cn("flex h-1.5 shrink-0 overflow-hidden rounded-full bg-border", className)}
+    >
       <div
-        className={cn("h-full", tone === "link" ? "bg-link" : "bg-muted-foreground/40")}
+        className={cn(
+          "h-full rounded-full",
+          tone === "link" ? "bg-link" : "bg-muted-foreground/40",
+        )}
         style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}
       />
     </div>

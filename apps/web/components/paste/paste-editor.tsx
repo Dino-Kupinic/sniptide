@@ -9,6 +9,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { Sheet, SheetContent, SheetTitle } from "@sniptide/ui/components/sheet"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
@@ -1039,40 +1040,54 @@ export function PasteEditor({
               large
             />
             {passwordField}
-            {mobileMore ? (
-              <>
-                <OptionGroup label={t("customLink")} id="slug-label-mobile">
-                  <SlugInput
-                    value={slug}
-                    onChange={setSlug}
-                    onCommit={editing ? () => setCommittedSlug(slug) : undefined}
-                    status={slugStatus}
+            {/* The rarer options wait in a sheet, so the panel stays short. */}
+            <button
+              type="button"
+              onClick={() => setMobileMore(true)}
+              className="self-start text-sm text-muted-foreground underline underline-offset-2"
+            >
+              {t("moreOptions")}
+            </button>
+            <Sheet open={mobileMore} onOpenChange={setMobileMore}>
+              <SheetContent side="bottom">
+                <span aria-hidden="true" className="mx-auto mt-2 h-1 w-9 rounded-full bg-border" />
+                <SheetTitle className="px-4 pt-3 text-[15px] font-semibold">
+                  {t("moreOptions")}
+                </SheetTitle>
+                <div className="flex flex-col gap-4 overflow-y-auto px-4 pt-4 pb-4">
+                  <OptionGroup label={t("customLink")} id="slug-label-mobile">
+                    <SlugInput
+                      value={slug}
+                      onChange={setSlug}
+                      onCommit={editing ? () => setCommittedSlug(slug) : undefined}
+                      status={slugStatus}
+                    />
+                  </OptionGroup>
+                  <OptionGroup label={t("collection")} id="collection-label-mobile">
+                    <CollectionSelect
+                      value={collection}
+                      onChange={setCollection}
+                      collections={collections}
+                    />
+                  </OptionGroup>
+                  <ToggleRow
+                    label={t("burnAfterRead")}
+                    description={t("deleteAfterTheFirstView")}
+                    checked={burnAfterRead}
+                    onCheckedChange={setBurnAfterRead}
+                    large
                   />
-                </OptionGroup>
-                <OptionGroup label={t("collection")} id="collection-label-mobile">
-                  <CollectionSelect
-                    value={collection}
-                    onChange={setCollection}
-                    collections={collections}
-                  />
-                </OptionGroup>
-                <ToggleRow
-                  label={t("burnAfterRead")}
-                  description={t("deleteAfterTheFirstView")}
-                  checked={burnAfterRead}
-                  onCheckedChange={setBurnAfterRead}
-                  large
-                />
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMobileMore(true)}
-                className="self-start text-sm text-muted-foreground underline underline-offset-2"
-              >
-                {t("moreOptions")}
-              </button>
-            )}
+                  <Button
+                    type="button"
+                    variant="inverted"
+                    onClick={() => setMobileMore(false)}
+                    className="h-[46px] text-base"
+                  >
+                    {t("done")}
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </>
         )}
         <Button type="submit" loading={pending} className="h-12 text-base font-semibold">

@@ -3,9 +3,10 @@ import { notification, paste, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { GET as feedRoute } from "@/app/api/notifications/route"
 import { getDb } from "@/lib/db"
-import { markAllRead, markRead } from "@/lib/notifications/actions"
+import { dismiss, markAllRead, markRead } from "@/lib/notifications/actions"
 import { notifyExpiringPastes } from "@/lib/notifications/expiring"
 import {
+  dismissNotification,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -274,6 +275,35 @@ describeDb("notifications", () => {
     expect((await feedFor("friend")).unread).toBe(1)
   })
 
+  test("dismissing removes one notification from the bell, only for its owner", async () => {
+    const { id } = await seedPaste({ slug: "p", owner: "owner" })
+    await getDb()
+      .insert(notification)
+      .values([
+        { userId: "owner", kind: "views", pasteId: id, count: 10 },
+        { userId: "owner", kind: "views", pasteId: id, count: 50 },
+      ])
+    const first = (await feedFor("owner")).items[0]
+    if (!first) throw new Error("expected a notification")
+
+    signInAs("reader")
+    expect(await dismiss(first.id)).toEqual({ ok: true })
+    expect((await feedFor("owner")).items).toHaveLength(2)
+
+    signInAs("owner")
+    expect(await dismiss("not-an-id")).toEqual({ ok: false })
+    expect(await dismiss(first.id)).toEqual({ ok: true })
+    expect(await dismiss(first.id)).toEqual({ ok: true })
+    const after = await feedFor("owner")
+    expect(after.items.map((item) => item.id)).not.toContain(first.id)
+    expect(after.items).toHaveLength(1)
+    expect(after.unread).toBe(1)
+    // Kept as read for a pending email, and for the maintenance job to delete later.
+    const [row] = await getDb().select().from(notification).where(eq(notification.id, first.id))
+    expect(row?.inApp).toBe(false)
+    expect(row?.readAt).not.toBeNull()
+  })
+
   test("signed-out calls change nothing", async () => {
     const { id } = await seedPaste({ slug: "p", owner: "owner" })
     await getDb().insert(notification).values({ userId: "owner", kind: "views", pasteId: id })
@@ -281,6 +311,7 @@ describeDb("notifications", () => {
     signInAs(null)
     expect(await markNotificationRead(row?.id ?? "")).toBe(false)
     expect(await markAllNotificationsRead()).toBe(false)
+    expect(await dismissNotification(row?.id ?? "")).toBe(false)
     expect((await feedFor("owner")).unread).toBe(1)
   })
 
