@@ -86,7 +86,7 @@ export function TopPastes({
         </CardEmpty>
       ) : (
         <Table className="table-fixed">
-          <TableHeader className="bg-sidebar">
+          <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="h-9 px-4 text-xs font-medium">{t("paste")}</TableHead>
               <TableHead className="h-9 w-20 px-0 text-right text-xs font-medium">
@@ -105,7 +105,7 @@ export function TopPastes({
               const rowShare = share(row.views, total)
 
               return (
-                <TableRow key={row.slug} className="relative border-border/60">
+                <TableRow key={row.slug} className="relative">
                   <TableCell className="h-14 min-w-0 truncate px-4">
                     <div className="flex items-center gap-2.5">
                       <span className="flex w-3.5 shrink-0 justify-center">

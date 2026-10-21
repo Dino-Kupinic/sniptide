@@ -15,7 +15,7 @@ import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
-import { RowBadge } from "@/components/lists/paste-list"
+import { expiryClass, RowBadge } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
 import { formatNumber } from "@/lib/format"
@@ -350,7 +350,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
   const t = useTranslations("Workspace")
   return (
     <Table className="hidden table-fixed lg:table">
-      <TableHeader className="bg-sidebar">
+      <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>{t("paste")}</TableHead>
           <TableHead className="w-[130px]">{t("language")}</TableHead>
@@ -365,7 +365,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
       </TableHeader>
       <TableBody>
         {rows.map((row) => (
-          <TableRow key={row.slug} className="relative border-border/60">
+          <TableRow key={row.slug} className="relative">
             <TableCell className="truncate">
               <Link
                 href={`/pastes/${row.slug}`}
@@ -386,9 +386,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
             <TableCell className="text-right font-mono text-[13px] tabular-nums">
               {formatNumber(row.views, locale)}
             </TableCell>
-            <TableCell
-              className={cn("pl-7 text-[13px] text-foreground/80", row.expiresSoon && "text-link")}
-            >
+            <TableCell className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}>
               {row.expiresLabel}
             </TableCell>
             <TableCell className="text-[13px] text-muted-foreground">{row.updatedLabel}</TableCell>

@@ -200,7 +200,7 @@ export function TrashList({
         ) : (
           <>
             <Table className="hidden min-w-[960px] table-fixed lg:table">
-              <TableHeader className="bg-sidebar">
+              <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t("paste")}</TableHead>
                   <TableHead className="w-[130px]">{t("language")}</TableHead>
@@ -213,7 +213,7 @@ export function TrashList({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.slug} className="border-border/60">
+                  <TableRow key={row.slug}>
                     <TableCell className="truncate">
                       <span className="block truncate text-sm text-foreground/70">{row.title}</span>
                       <span className="block truncate font-mono text-xs text-muted-foreground/80 line-through">

@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import { StarIcon } from "lucide-react"
+import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
@@ -42,6 +42,8 @@ import { useListQuery } from "./use-list-query"
 
 export type Sort = PasteSort
 
+// Visibility as a quiet outlined label with an icon, so a column of them doesn't shout. Burn after
+// read keeps the blue, since it is the one that changes what happens to the paste.
 export function RowBadge({
   row,
   short = false,
@@ -53,30 +55,28 @@ export function RowBadge({
   className?: string
 }) {
   const t = useTranslations("Workspace")
-  const base = cn("h-5 px-2 text-xs", className)
+  const base = cn("h-6 gap-1.5 px-2 text-xs font-normal [&_svg]:size-3", className)
   if (row.burnAfterRead)
     return (
-      <Badge variant="primary" className={base}>
+      <Badge variant="muted" className={cn(base, "border-link/40 text-link")}>
+        <FlameIcon aria-hidden="true" />
         {short ? t("burn") : t("burn_after_read")}
       </Badge>
     )
-  if (row.visibility === "public")
-    return (
-      <Badge variant="solid" className={base}>
-        {t("public")}
-      </Badge>
-    )
-  if (row.visibility === "private")
-    return (
-      <Badge variant="muted" className={base}>
-        {t("private")}
-      </Badge>
-    )
+  const Icon =
+    row.visibility === "public" ? GlobeIcon : row.visibility === "private" ? LockIcon : LinkIcon
   return (
-    <Badge variant="muted" className={cn(base, "text-foreground")}>
-      {t("unlisted")}
+    <Badge variant="muted" className={cn(base, "text-foreground/80")}>
+      <Icon aria-hidden="true" className="text-muted-foreground" />
+      {t(row.visibility)}
     </Badge>
   )
+}
+
+// Expiring soon reads in blue; already expired reads muted, since nothing is left to do about it.
+export function expiryClass(row: Pick<PasteRow, "expiresSoon" | "expiresAt">) {
+  if (row.expiresAt !== null && row.expiresAt <= Date.now()) return "text-muted-foreground"
+  return row.expiresSoon ? "text-link" : undefined
 }
 
 // The table renders one authorized page. Filters, sorting and paging are URL-driven server reads.
@@ -167,8 +167,9 @@ export function PasteList({
         {quick}
       </div>
 
-      <div className="lg:overflow-hidden lg:rounded-lg flex flex-col lg:border lg:border-border">
-        <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
+      {/* The filters sit above the table on the page, and the table gets its own card. */}
+      <div className="flex flex-col gap-3">
+        <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
@@ -201,180 +202,184 @@ export function PasteList({
           <SortMenu value={sort} options={sortOptions} onChange={(sort) => update({ sort })} />
         </div>
 
-        {pagination.total === 0 ? (
-          <EmptyState filtering={filtering} mode={mode} />
-        ) : view === "grid" ? (
-          <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 border-t border-border p-3 lg:grid">
-            {rows.map((row) => (
-              <li
-                key={row.slug}
-                className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <Link
-                    href={`/pastes/${row.slug}`}
-                    title={row.title}
-                    className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
-                  >
-                    {row.title}
-                  </Link>
-                  <RowMenu row={row} origin={origin} />
-                </div>
-                <span className="[overflow-wrap:anywhere] font-mono text-xs text-muted-foreground">
-                  {host}/{row.slug}
-                </span>
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[13px] text-foreground/80">
-                  <LanguageLabel language={row.language} />
-                  <RowBadge row={row} />
-                </div>
-                <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                  <span className="font-mono">{t("views_count", { count: row.views })}</span>
-                  <span>{row.updatedLabel}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Table className="hidden min-w-[960px] table-fixed lg:table">
-            <TableHeader className="bg-sidebar">
-              <TableRow className="hover:bg-transparent">
-                <TableHead>{t("paste")}</TableHead>
-                <TableHead className="w-[130px]">{t("language")}</TableHead>
-                <TableHead className="w-[120px]">{t("visibility")}</TableHead>
-                <TableHead className="w-20 text-right">{t("views")}</TableHead>
-                <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
-                <TableHead className="w-[116px]">{t("updated")}</TableHead>
-                <TableHead className="w-12">
-                  <span className="sr-only">{t("actions")}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <div
+          className={cn(
+            "flex flex-col",
+            view !== "grid" && "lg:overflow-hidden lg:rounded-lg lg:border lg:border-border",
+          )}
+        >
+          {pagination.total === 0 ? (
+            <EmptyState filtering={filtering} mode={mode} />
+          ) : view === "grid" ? (
+            <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 lg:grid">
               {rows.map((row) => (
-                <TableRow key={row.slug} className="relative border-border/60">
-                  <TableCell className="truncate">
+                <li
+                  key={row.slug}
+                  className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
+                >
+                  <div className="flex items-start justify-between gap-2">
                     <Link
                       href={`/pastes/${row.slug}`}
                       title={row.title}
-                      className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                      className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
                     >
                       {row.title}
                     </Link>
-                    <span className="block truncate font-mono text-xs text-muted-foreground">
-                      {row.owner ? `@${row.owner.username} · ` : ""}
-                      {host}/{row.slug}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-[13px] text-foreground/80">
-                    <LanguageLabel language={row.language} />
-                  </TableCell>
-                  <TableCell>
-                    <RowBadge row={row} />
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-[13px] tabular-nums">
-                    {formatNumber(row.views, locale)}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "pl-7 text-[13px] text-foreground/80",
-                      row.expiresSoon && "text-link",
-                    )}
-                  >
-                    {row.expiresLabel}
-                  </TableCell>
-                  <TableCell className="text-[13px] text-muted-foreground">
-                    {row.updatedLabel}
-                  </TableCell>
-                  <TableCell className="pr-3 text-right">
-                    {mode === "starred" ? (
-                      <button
-                        type="button"
-                        aria-label={t("unstar_named", { name: row.title })}
-                        onClick={async () => {
-                          await setStarred(row.slug, false)
-                          showUndo({
-                            labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
-                            message: t("removed_from_starred_named", { name: row.title }),
-                            undo: () => setStarred(row.slug, true),
-                          })
-                        }}
-                        className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
-                      >
-                        <StarIcon className="size-4 fill-current" />
-                      </button>
-                    ) : (
-                      <RowMenu row={row} origin={origin} />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-
-        {/* Mobile list */}
-        {pagination.total > 0 ? (
-          <ul className="flex flex-col lg:hidden">
-            {rows.map((row) => (
-              <li
-                key={row.slug}
-                className="relative flex items-center gap-3 border-b border-border py-3"
-              >
-                <LanguageMarker language={row.language} />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <Link
-                    href={`/pastes/${row.slug}`}
-                    title={row.title}
-                    className="truncate text-[15px] font-medium after:absolute after:inset-0"
-                  >
-                    {row.title}
-                  </Link>
-                  <span
-                    className={cn(
-                      "truncate font-mono text-xs text-muted-foreground",
-                      row.expiresSoon && "text-link",
-                    )}
-                  >
-                    {row.owner ? `@${row.owner.username}` : `${host}/${row.slug}`}
-                    {" · "}
-                    {row.burnAfterRead
-                      ? row.expiresLabel
-                      : row.expiresSoon
-                        ? t("expires_label", { time: row.expiresLabel })
-                        : t("views_count", { count: row.views })}
+                    <RowMenu row={row} origin={origin} />
+                  </div>
+                  <span className="[overflow-wrap:anywhere] font-mono text-xs text-muted-foreground">
+                    {host}/{row.slug}
                   </span>
-                </div>
-                <RowBadge row={row} short className="shrink-0" />
-              </li>
-            ))}
-          </ul>
-        ) : null}
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[13px] text-foreground/80">
+                    <LanguageLabel language={row.language} />
+                    <RowBadge row={row} />
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono">{t("views_count", { count: row.views })}</span>
+                    <span>{row.updatedLabel}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Table className="hidden min-w-[960px] table-fixed lg:table">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t("paste")}</TableHead>
+                  <TableHead className="w-[130px]">{t("language")}</TableHead>
+                  <TableHead className="w-[120px]">{t("visibility")}</TableHead>
+                  <TableHead className="w-20 text-right">{t("views")}</TableHead>
+                  <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
+                  <TableHead className="w-[116px]">{t("updated")}</TableHead>
+                  <TableHead className="w-12">
+                    <span className="sr-only">{t("actions")}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.slug} className="relative">
+                    <TableCell className="truncate">
+                      <Link
+                        href={`/pastes/${row.slug}`}
+                        title={row.title}
+                        className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                      >
+                        {row.title}
+                      </Link>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        {row.owner ? `@${row.owner.username} · ` : ""}
+                        {host}/{row.slug}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-[13px] text-foreground/80">
+                      <LanguageLabel language={row.language} />
+                    </TableCell>
+                    <TableCell>
+                      <RowBadge row={row} />
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-[13px] tabular-nums">
+                      {formatNumber(row.views, locale)}
+                    </TableCell>
+                    <TableCell
+                      className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}
+                    >
+                      {row.expiresLabel}
+                    </TableCell>
+                    <TableCell className="text-[13px] text-muted-foreground">
+                      {row.updatedLabel}
+                    </TableCell>
+                    <TableCell className="pr-3 text-right">
+                      {mode === "starred" ? (
+                        <button
+                          type="button"
+                          aria-label={t("unstar_named", { name: row.title })}
+                          onClick={async () => {
+                            await setStarred(row.slug, false)
+                            showUndo({
+                              labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                              message: t("removed_from_starred_named", { name: row.title }),
+                              undo: () => setStarred(row.slug, true),
+                            })
+                          }}
+                          className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                        >
+                          <StarIcon className="size-4 fill-current" />
+                        </button>
+                      ) : (
+                        <RowMenu row={row} origin={origin} />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
 
-        {pagination.total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
-            <span className="text-[13px] text-muted-foreground">
-              {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
-              {filtering
-                ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
-                : ""}
-            </span>
-            <Pagination
-              page={pagination.page}
-              pageCount={pagination.pageCount}
-              onChange={(page) =>
-                update({
-                  page,
-                  cursor:
-                    page === pagination.page + 1
-                      ? pagination.nextCursor
-                      : page === pagination.page - 1
-                        ? pagination.previousCursor
-                        : undefined,
-                })
-              }
-            />
-          </div>
-        ) : null}
+          {/* Mobile list */}
+          {pagination.total > 0 ? (
+            <ul className="flex flex-col lg:hidden">
+              {rows.map((row) => (
+                <li
+                  key={row.slug}
+                  className="relative flex items-center gap-3 border-b border-border py-3"
+                >
+                  <LanguageMarker language={row.language} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <Link
+                      href={`/pastes/${row.slug}`}
+                      title={row.title}
+                      className="truncate text-[15px] font-medium after:absolute after:inset-0"
+                    >
+                      {row.title}
+                    </Link>
+                    <span
+                      className={cn(
+                        "truncate font-mono text-xs text-muted-foreground",
+                        expiryClass(row),
+                      )}
+                    >
+                      {row.owner ? `@${row.owner.username}` : `${host}/${row.slug}`}
+                      {" · "}
+                      {row.burnAfterRead
+                        ? row.expiresLabel
+                        : row.expiresSoon
+                          ? t("expires_label", { time: row.expiresLabel })
+                          : t("views_count", { count: row.views })}
+                    </span>
+                  </div>
+                  <RowBadge row={row} short className="shrink-0" />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {pagination.total > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-5">
+              <span className="text-[13px] text-muted-foreground">
+                {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
+                {filtering
+                  ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
+                  : ""}
+              </span>
+              <Pagination
+                page={pagination.page}
+                pageCount={pagination.pageCount}
+                onChange={(page) =>
+                  update({
+                    page,
+                    cursor:
+                      page === pagination.page + 1
+                        ? pagination.nextCursor
+                        : page === pagination.page - 1
+                          ? pagination.previousCursor
+                          : undefined,
+                  })
+                }
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
@@ -397,7 +402,7 @@ function EmptyState({
         : t("no_pastes_yet")
 
   return (
-    <div className="flex flex-col items-center gap-3 border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
+    <div className="flex flex-col items-center gap-3 px-4 py-14 text-center text-sm text-muted-foreground">
       {text}
       {!filtering && mode !== "starred" ? (
         <Link href="/new" className="font-medium text-link hover:underline">

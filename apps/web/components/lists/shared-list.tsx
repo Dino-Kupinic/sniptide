@@ -120,8 +120,9 @@ export function SharedList({
         />
       </div>
 
-      <div className="lg:overflow-hidden lg:rounded-lg flex flex-col lg:border lg:border-border">
-        <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
+      {/* The filters sit above the table on the page, and the table gets its own card. */}
+      <div className="flex flex-col gap-3">
+        <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex flex-wrap items-center gap-2">
             <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
@@ -170,93 +171,161 @@ export function SharedList({
           />
         </div>
 
-        {pagination.total === 0 ? (
-          filtering ? (
-            <p className="border-t border-border px-4 py-14 text-center text-sm text-muted-foreground">
-              {t("no_pastes_match_these_filters")}
-            </p>
-          ) : (
-            <div className="flex flex-col items-start gap-3 border-border py-10 lg:border-t lg:px-8 lg:py-14">
-              <span className="rounded-md flex size-10 items-center justify-center bg-muted">
-                <UsersIcon className="size-5" />
-              </span>
-              <div className="flex flex-col gap-1">
-                <p className="text-base font-medium">{t("nothing_shared_with_you_yet")}</p>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  {t("when_someone_invites_you_to_a_private_paste")}
-                </p>
+        <div
+          className={cn(
+            "flex flex-col",
+            view !== "grid" && "lg:overflow-hidden lg:rounded-lg lg:border lg:border-border",
+          )}
+        >
+          {pagination.total === 0 ? (
+            filtering ? (
+              <p className="px-4 py-14 text-center text-sm text-muted-foreground">
+                {t("no_pastes_match_these_filters")}
+              </p>
+            ) : (
+              <div className="flex flex-col items-start gap-3 py-10 lg:px-8 lg:py-14">
+                <span className="rounded-md flex size-10 items-center justify-center bg-muted">
+                  <UsersIcon className="size-5" />
+                </span>
+                <div className="flex flex-col gap-1">
+                  <p className="text-base font-medium">{t("nothing_shared_with_you_yet")}</p>
+                  <p className="max-w-md text-sm text-muted-foreground">
+                    {t("when_someone_invites_you_to_a_private_paste")}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  render={<Link href="/pastes" />}
+                  nativeButton={false}
+                  className="hidden lg:inline-flex"
+                >
+                  {t("share_one_of_your_pastes")}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="lg"
-                render={<Link href="/pastes" />}
-                nativeButton={false}
-                className="hidden lg:inline-flex"
-              >
-                {t("share_one_of_your_pastes")}
-              </Button>
-            </div>
-          )
-        ) : view === "grid" ? (
-          <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 border-t border-border p-3 lg:grid">
-            {rows.map((row) => (
-              <li
-                key={row.slug}
-                className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <Link
-                    href={`/pastes/${row.slug}`}
-                    title={row.title}
-                    className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
-                  >
-                    {row.title}
-                  </Link>
-                  <RowMenu row={row} origin={origin} shared />
-                </div>
-                <LanguageLabel language={row.language} className="text-[13px] text-foreground/80" />
-                {row.owner ? (
-                  <span className="mt-auto flex min-w-0 items-start gap-2 text-[13px]">
-                    <PersonAvatar person={row.owner} />
-                    <span
-                      dir="auto"
-                      title={row.owner.name || row.owner.username}
-                      className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
-                    >
-                      {row.owner.name || row.owner.username}
-                    </span>
-                  </span>
-                ) : null}
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <AccessBadge access={row.access} />
-                  {row.sharedLabel}
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <Table className="hidden min-w-[960px] table-fixed lg:table">
-            <TableHeader className="bg-sidebar">
-              <TableRow className="hover:bg-transparent">
-                <TableHead>{t("paste")}</TableHead>
-                <TableHead className="w-[130px]">{t("language")}</TableHead>
-                <TableHead className="w-[200px]">{t("shared_by")}</TableHead>
-                <TableHead className="w-[120px]">{t("access")}</TableHead>
-                <TableHead className="w-[116px]">{t("shared")}</TableHead>
-                <TableHead className="w-12">
-                  <span className="sr-only">{t("actions")}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+            )
+          ) : view === "grid" ? (
+            <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 lg:grid">
               {rows.map((row) => (
-                <TableRow key={row.slug} className="relative border-border/60">
-                  <TableCell className="truncate">
+                <li
+                  key={row.slug}
+                  className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={`/pastes/${row.slug}`}
+                      title={row.title}
+                      className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
+                    >
+                      {row.title}
+                    </Link>
+                    <RowMenu row={row} origin={origin} shared />
+                  </div>
+                  <LanguageLabel
+                    language={row.language}
+                    className="text-[13px] text-foreground/80"
+                  />
+                  {row.owner ? (
+                    <span className="mt-auto flex min-w-0 items-start gap-2 text-[13px]">
+                      <PersonAvatar person={row.owner} />
+                      <span
+                        dir="auto"
+                        title={row.owner.name || row.owner.username}
+                        className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
+                      >
+                        {row.owner.name || row.owner.username}
+                      </span>
+                    </span>
+                  ) : null}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <AccessBadge access={row.access} />
+                    {row.sharedLabel}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Table className="hidden min-w-[960px] table-fixed lg:table">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t("paste")}</TableHead>
+                  <TableHead className="w-[130px]">{t("language")}</TableHead>
+                  <TableHead className="w-[200px]">{t("shared_by")}</TableHead>
+                  <TableHead className="w-[120px]">{t("access")}</TableHead>
+                  <TableHead className="w-[116px]">{t("shared")}</TableHead>
+                  <TableHead className="w-12">
+                    <span className="sr-only">{t("actions")}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.slug} className="relative">
+                    <TableCell className="truncate">
+                      <span className="flex items-center gap-2">
+                        <Link
+                          href={`/pastes/${row.slug}`}
+                          title={row.title}
+                          className="min-w-0 truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                        >
+                          {row.title}
+                        </Link>
+                        {row.unseen ? (
+                          <span className="size-1.5 shrink-0 bg-primary">
+                            <span className="sr-only">{t("new")}</span>
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        {host}/{row.slug}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-[13px] text-foreground/80">
+                      <LanguageLabel language={row.language} />
+                    </TableCell>
+                    <TableCell className="text-[13px]">
+                      {row.owner ? (
+                        <span className="flex min-w-0 items-start gap-2">
+                          <PersonAvatar person={row.owner} />
+                          <span
+                            dir="auto"
+                            title={row.owner.name || row.owner.username}
+                            className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
+                          >
+                            {row.owner.name || row.owner.username}
+                          </span>
+                        </span>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <AccessBadge access={row.access} />
+                    </TableCell>
+                    <TableCell className="text-[13px] text-muted-foreground">
+                      {row.sharedLabel}
+                    </TableCell>
+                    <TableCell className="pr-3 text-right">
+                      <RowMenu row={row} origin={origin} shared />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {pagination.total > 0 ? (
+            <ul className="flex flex-col lg:hidden">
+              {rows.map((row) => (
+                <li
+                  key={row.slug}
+                  className="relative flex items-center gap-3 border-b border-border py-3"
+                >
+                  <LanguageMarker language={row.language} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-center gap-2">
                       <Link
                         href={`/pastes/${row.slug}`}
                         title={row.title}
-                        className="min-w-0 truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                        className="min-w-0 truncate text-[15px] font-medium after:absolute after:inset-0"
                       >
                         {row.title}
                       </Link>
@@ -266,91 +335,33 @@ export function SharedList({
                         </span>
                       ) : null}
                     </span>
-                    <span className="block truncate font-mono text-xs text-muted-foreground">
-                      {host}/{row.slug}
+                    <span className="truncate text-[13px] text-muted-foreground">
+                      {row.owner ? `${row.owner.name || row.owner.username} · ` : ""}
+                      {row.sharedLabel}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-[13px] text-foreground/80">
-                    <LanguageLabel language={row.language} />
-                  </TableCell>
-                  <TableCell className="text-[13px]">
-                    {row.owner ? (
-                      <span className="flex min-w-0 items-start gap-2">
-                        <PersonAvatar person={row.owner} />
-                        <span
-                          dir="auto"
-                          title={row.owner.name || row.owner.username}
-                          className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
-                        >
-                          {row.owner.name || row.owner.username}
-                        </span>
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <AccessBadge access={row.access} />
-                  </TableCell>
-                  <TableCell className="text-[13px] text-muted-foreground">
-                    {row.sharedLabel}
-                  </TableCell>
-                  <TableCell className="pr-3 text-right">
-                    <RowMenu row={row} origin={origin} shared />
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <AccessBadge access={row.access} />
+                </li>
               ))}
-            </TableBody>
-          </Table>
-        )}
+            </ul>
+          ) : null}
 
-        {pagination.total > 0 ? (
-          <ul className="flex flex-col lg:hidden">
-            {rows.map((row) => (
-              <li
-                key={row.slug}
-                className="relative flex items-center gap-3 border-b border-border py-3"
-              >
-                <LanguageMarker language={row.language} />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="flex items-center gap-2">
-                    <Link
-                      href={`/pastes/${row.slug}`}
-                      title={row.title}
-                      className="min-w-0 truncate text-[15px] font-medium after:absolute after:inset-0"
-                    >
-                      {row.title}
-                    </Link>
-                    {row.unseen ? (
-                      <span className="size-1.5 shrink-0 bg-primary">
-                        <span className="sr-only">{t("new")}</span>
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="truncate text-[13px] text-muted-foreground">
-                    {row.owner ? `${row.owner.name || row.owner.username} · ` : ""}
-                    {row.sharedLabel}
-                  </span>
-                </div>
-                <AccessBadge access={row.access} />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {pagination.total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-4">
-            <span className="hidden text-[13px] text-muted-foreground lg:inline">
-              {t("shared_summary", {
-                count: pagination.total,
-                people: peopleCount,
-              })}
-            </span>
-            <Pagination
-              page={pagination.page}
-              pageCount={pagination.pageCount}
-              onChange={(page) => update({ page })}
-            />
-          </div>
-        ) : null}
+          {pagination.total > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-5">
+              <span className="hidden text-[13px] text-muted-foreground lg:inline">
+                {t("shared_summary", {
+                  count: pagination.total,
+                  people: peopleCount,
+                })}
+              </span>
+              <Pagination
+                page={pagination.page}
+                pageCount={pagination.pageCount}
+                onChange={(page) => update({ page })}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
