@@ -14,7 +14,7 @@ The service operator owns this checklist. Record decisions in an access-controll
 
 | Decision | Required result | Current status |
 | --- | --- | --- |
-| Operator and jurisdiction | Legal entity, establishment, relevant service territories, and counsel contact | Unconfirmed |
+| Operator and jurisdiction | Legal entity, establishment, relevant service territories, and counsel contact | Austria confirmed as operating country; legal entity, service territories, and counsel unconfirmed |
 | Reporting obligations | Applicable triggers, authorities, secure reporting channels, deadlines, and emergency procedure | Requires legal confirmation |
 | Preservation and disposal | Legal basis, scope, periods, authority to issue or release a hold, and backup treatment | Requires legal confirmation |
 | Incident ownership | Named primary responder, backup, escalation route, availability, and response targets | Unassigned |
