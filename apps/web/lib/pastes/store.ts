@@ -100,10 +100,13 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
 // image routes of the marketing site (Dino-Kupinic/sniptide-web), which answers them before this app
 // sees the request on sniptide.com. Add a route there and its name here.
 const RESERVED = new Set([
+  "analytics",
   "api",
   "collections",
   "dashboard",
+  "demo",
   "docs",
+  "folders",
   "new",
   "pastes",
   "settings",
