@@ -173,7 +173,7 @@ export function Dashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 border border-border lg:grid-cols-4">
+      <div className="grid grid-cols-2 rounded-lg border border-border lg:grid-cols-4">
         <Stat
           label={t("total_pastes")}
           value={formatNumber(data.totalPastes, locale)}
@@ -224,7 +224,7 @@ export function Dashboard({
         </div>
         <section
           aria-labelledby="views-heading"
-          className="flex min-w-0 flex-1 flex-col gap-4 border border-border px-4 py-4 lg:px-5"
+          className="flex min-w-0 flex-1 flex-col gap-4 rounded-lg border border-border px-4 py-4 lg:px-5"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-0.5">
@@ -268,7 +268,7 @@ export function Dashboard({
 
       <section
         aria-labelledby="recent-heading"
-        className="flex flex-col lg:border lg:border-border"
+        className="flex flex-col lg:overflow-hidden lg:rounded-lg lg:border lg:border-border"
       >
         <div className="flex items-center justify-between gap-3 py-3 lg:border-b lg:border-border lg:px-4">
           <div className="flex items-center gap-4">
@@ -288,7 +288,7 @@ export function Dashboard({
                   aria-selected={tab === value}
                   onClick={() => setTab(value)}
                   className={cn(
-                    "h-7 px-3 text-[13px] text-muted-foreground capitalize outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+                    "h-7 rounded-md px-3 text-[13px] text-muted-foreground capitalize outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                     tab === value && "border border-border text-foreground",
                   )}
                 >

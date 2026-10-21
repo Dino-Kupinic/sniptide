@@ -66,7 +66,7 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
   return (
     <DropdownMenuTrigger
       aria-label={label}
-      className="flex h-8 shrink-0 items-center gap-1.5 border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground [&_svg]:size-3.5"
+      className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground [&_svg]:size-3.5"
     >
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
@@ -165,7 +165,7 @@ export function QuickPaste({
   return (
     <section
       aria-labelledby="quick-paste-heading"
-      className="flex min-w-0 flex-[1.8] flex-col border border-border"
+      className="flex min-w-0 flex-[1.8] flex-col overflow-hidden rounded-lg border border-border"
       onKeyDown={(event) => {
         if (matchesCombo(event, shortcut("submit").keys)) {
           event.preventDefault()

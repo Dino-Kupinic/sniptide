@@ -56,14 +56,14 @@ export interface SidebarProps {
 }
 
 const rowClass =
-  "group/row relative flex h-8 shrink-0 items-center gap-0.5 pr-1 pl-2 text-sm text-foreground/80 hover:bg-muted has-data-popup-open:bg-muted data-[active=true]:bg-muted data-[active=true]:font-medium data-[active=true]:text-foreground"
+  "group/row relative flex h-8 shrink-0 rounded-md items-center gap-0.5 pr-1 pl-2 text-sm text-foreground/80 hover:bg-muted has-data-popup-open:bg-muted data-[active=true]:bg-muted data-[active=true]:font-medium data-[active=true]:text-foreground"
 
 // Reveal row/header controls on hover or focus; touch-only devices always need them visible.
 const revealClass =
   "opacity-0 [@media(hover:none)]:opacity-100 group-hover/row:opacity-100 group-has-focus-visible/row:opacity-100 group-has-data-popup-open/row:opacity-100"
 
 const iconButtonClass =
-  "relative z-10 flex size-6 shrink-0 items-center justify-center text-foreground/75 outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10 [&_svg]:size-3.5"
+  "relative z-10 flex size-6 shrink-0 rounded-md items-center justify-center text-foreground/75 outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10 [&_svg]:size-3.5"
 
 export function Sidebar({
   viewer,
@@ -112,7 +112,7 @@ export function Sidebar({
       <button
         type="button"
         onClick={openCommandMenu}
-        className="flex h-8.5 shrink-0 items-center gap-2 border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="flex h-8.5 shrink-0 items-center gap-2 rounded-lg border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         <SearchIcon className="size-3.5" />
         {t("search")}
@@ -266,7 +266,7 @@ export function Sidebar({
       {/* A hairline across the full sidebar width separates the account menu from the lists. */}
       <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
+          <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
             <Avatar className="size-6 font-heading text-[11px] font-bold">
               {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
               <AvatarFallback>{viewer.initials}</AvatarFallback>
@@ -400,7 +400,7 @@ function Section({
         isDragSource && "relative z-20 bg-sidebar shadow-sm",
       )}
     >
-      <div className="group/row flex h-7 shrink-0 items-center gap-0.5 pr-1 pl-2 text-muted-foreground hover:bg-muted hover:text-foreground has-data-popup-open:bg-muted">
+      <div className="group/row flex h-7 shrink-0 rounded-md items-center gap-0.5 pr-1 pl-2 text-muted-foreground hover:bg-muted hover:text-foreground has-data-popup-open:bg-muted">
         <button
           type="button"
           aria-expanded={open}

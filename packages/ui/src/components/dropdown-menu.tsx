@@ -23,7 +23,7 @@ function DropdownMenuContent({
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "min-w-48 py-1 border border-offset-shadow bg-popover text-popover-foreground shadow-[4px_4px_0_0_var(--offset-shadow)] outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
+            "min-w-48 rounded-lg py-1 border border-offset-shadow bg-popover text-popover-foreground shadow-[4px_4px_0_0_var(--offset-shadow)] outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
             className,
           )}
           {...props}
@@ -65,7 +65,7 @@ function DropdownMenuCheckboxItem({
       )}
       {...props}
     >
-      <span className="flex size-4 items-center justify-center border border-input in-data-checked:border-foreground in-data-checked:bg-foreground">
+      <span className="flex size-4 items-center justify-center rounded-sm border border-input in-data-checked:border-foreground in-data-checked:bg-foreground">
         <MenuPrimitive.CheckboxItemIndicator className="text-background">
           <CheckIcon className="size-3" strokeWidth={3} />
         </MenuPrimitive.CheckboxItemIndicator>

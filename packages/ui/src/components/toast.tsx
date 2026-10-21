@@ -101,7 +101,7 @@ function Toaster({
           key={item.id}
           role={item.kind === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-auto flex max-w-sm items-center gap-2 border bg-popover py-2 pr-1.5 pl-3 text-[13px] text-popover-foreground shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
+            "pointer-events-auto flex max-w-sm items-center gap-2 rounded-lg border bg-popover py-2 pr-1.5 pl-3 text-[13px] text-popover-foreground shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
             item.kind === "error" ? "border-destructive/40" : "border-border",
           )}
         >
