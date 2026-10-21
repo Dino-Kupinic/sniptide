@@ -5,8 +5,10 @@ import { cn } from "cn"
 
 // Raised variants sit on a 3px edge in a darker shade (--depth). Hover lifts the face 1px and a
 // press pushes it down onto the edge. Popup triggers skip the press so their menu doesn't jump.
+// The press lands in 60ms so even a quick click shows it, and the release springs back with a
+// slight overshoot. Under reduced motion the states switch without moving.
 const raised =
-  "shadow-[0_3px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_4px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[3px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_3px_0_0_var(--depth)]"
+  "duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:duration-[60ms] active:ease-out motion-reduce:transition-colors shadow-[0_3px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_4px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[3px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_3px_0_0_var(--depth)]"
 const flat = "active:not-aria-[haspopup]:translate-y-px"
 
 const buttonVariants = cva(

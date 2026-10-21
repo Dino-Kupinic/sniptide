@@ -241,7 +241,7 @@ The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-i
 | Menu open | 100ms, scale from 0.98 |
 | Popover and dialog open | 150ms, scale from 0.98 |
 | Sheet and toast | 200ms |
-| Button press | Raised variants `translate-y-[3px]` onto the edge, flat variants `translate-y-px` |
+| Button press | Raised variants drop 3px onto the edge in 60ms, then spring back over 200ms with a slight overshoot. Flat variants `translate-y-px` |
 | Button hover, raised variants | Lift 1px, edge grows to 4px |
 | Hover, neutral controls | `bg-muted` |
 | Hover, filled blue controls | `bg-primary/85`, or 8% lighter on raised buttons |
