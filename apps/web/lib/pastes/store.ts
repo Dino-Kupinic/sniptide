@@ -96,7 +96,9 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
   "1m": 30 * DAY,
 }
 
-// Paths the app already uses, so a custom link can't shadow a page.
+// Paths the app already uses, so a custom link can't shadow a page. The last group are pages and
+// image routes of the marketing site (Dino-Kupinic/sniptide-web), which answers them before this app
+// sees the request on sniptide.com. Add a route there and its name here.
 const RESERVED = new Set([
   "api",
   "collections",
@@ -113,6 +115,12 @@ const RESERVED = new Set([
   "raw",
   "_next",
   "_site",
+  "home",
+  "impressum",
+  "opengraph-image",
+  "privacy",
+  "terms",
+  "twitter-image",
 ])
 
 export const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
