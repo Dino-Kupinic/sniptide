@@ -97,7 +97,7 @@ export function FilterMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex h-8 items-center gap-1.5 border border-dashed border-input px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground",
+          "flex h-8 items-center gap-1.5 border border-dashed border-input px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40",
           active && "border-solid border-foreground",
         )}
       >
@@ -158,7 +158,7 @@ export function SortMenu<Value extends string>({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex h-8 items-center gap-1.5 border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground">
+      <DropdownMenuTrigger className="flex h-8 items-center gap-1.5 border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40">
         <ListFilterIcon aria-hidden="true" className="size-3.5 text-foreground/75" />
         {current?.label}
         <ChevronDownIcon aria-hidden="true" className="size-3 text-muted-foreground" />

@@ -145,7 +145,7 @@ export function ShareDialog({
         className={cn(
           "gap-0 p-0 lg:max-w-[540px]",
           // A bottom sheet on phones.
-          "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)]",
+          "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-b-none max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)]",
         )}
       >
         <span aria-hidden="true" className="mx-auto mt-2 h-1 w-9 bg-border lg:hidden" />

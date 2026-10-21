@@ -11,7 +11,7 @@ function SelectTrigger({ className, children, ...props }: SelectPrimitive.Trigge
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none select-none focus-visible:border-primary data-popup-open:border-foreground disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+        "inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none select-none focus-visible:border-primary data-popup-open:border-foreground/40 disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ function SelectContent({ className, children, ...props }: SelectPrimitive.Popup.
         <SelectPrimitive.Popup
           data-slot="select-content"
           className={cn(
-            "max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-y-auto rounded-lg py-1 border border-offset-shadow bg-popover text-popover-foreground shadow-[3px_3px_0_0_var(--offset-shadow)] outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
+            "max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-y-auto rounded-lg py-1 border border-border bg-popover text-popover-foreground shadow-[3px_3px_0_0_var(--offset-shadow)] outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
             className,
           )}
           {...props}

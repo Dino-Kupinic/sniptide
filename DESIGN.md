@@ -36,7 +36,8 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Gallery | `#FAFAFA` | `--sidebar` | Sidebar background |
 | Fill | `#F4F4F4` | `--muted`, `--secondary`, `--accent` | Hover rows, tracks, secondary buttons, code chips |
 | Hairline | `#E8E8E8` | `--border`, `--input` | Borders and dividers |
-| Ink | `#1B1919` | `--foreground`, `--offset-shadow` | Text, inverted buttons, offset shadows |
+| Ink | `#1B1919` | `--foreground` | Text, inverted buttons |
+| Shadow grey | `#C4C1C1` | `--offset-shadow` | Offset shadows on menus, dialogs and cards |
 | Graphite | `#6B6B6B` | `--muted-foreground` | Secondary text and icons |
 | Tide Blue | `#2A26EC` | `--primary`, `--ring`, `--link` | Primary actions, focus, links, active data |
 | Red | `oklch(0.577 0.245 27.325)` | `--destructive` | Destructive actions and invalid fields |
@@ -54,7 +55,7 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Ash | `#A3A3A3` | `--muted-foreground` | Secondary text and icons |
 | Tide Blue | `#3A36FF` | `--primary`, `--ring` | Button fills (white on it is 6.7:1) |
 | Sky Blue | `#6AA3FF` | `--link` | Links, code keywords, stars, collection icons, chart bars (7.5:1 on the surfaces) |
-| Offset grey | `#4A4646` | `--offset-shadow` | Offset shadows, because white shadows glare on dark surfaces |
+| Offset grey | `#3A3737` | `--offset-shadow` | Offset shadows, because white shadows glare on dark surfaces |
 
 ### Brand
 
@@ -262,7 +263,7 @@ Floating layers animate from `--transform-origin`. Toast animations switch off u
 
 ## Elevation
 
-Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `border-offset-shadow` and a hard offset shadow. Raised buttons carry a solid edge below them, which is a pressable part of the control rather than an elevation.
+Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `--border` hairline and a hard offset shadow in `--offset-shadow`, and clip their content to the rounded corners. Raised buttons carry a solid edge below them, which is a pressable part of the control rather than an elevation.
 
 | Layer | Shadow |
 | --- | --- |
@@ -396,6 +397,6 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 ### Example component prompts
 
 1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 3px darker-blue edge, lifts 1px on hover and presses down onto the edge.
-2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--offset-shadow` border with a 3px offset shadow.
+2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--border` hairline with a 3px offset shadow in `--offset-shadow`.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.
