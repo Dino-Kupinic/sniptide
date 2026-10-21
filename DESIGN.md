@@ -294,6 +294,65 @@ These rules apply to the interface, the landing page, the docs, commit messages,
 9. State security facts plainly, with no fear language. Jokes belong in empty states and never in errors or security copy.
 10. Name what Sniptide does not do when a claim could be read too broadly.
 
+## Writing and typography rules
+
+- Headings use sentence case and state the claim or the reader's question.
+- Prose lines run 60 to 68 characters. A stranded word in a large heading gets fixed by rewriting the copy or adjusting the measure, never by shrinking that one element.
+- Peers share one type role, size, weight and line height. A longer string or a larger value never resizes a single peer.
+- Numbers that line up in columns use tabular numerals.
+- JetBrains Mono sets identifiers only: paste slugs, code, paths, commands, shortcuts and tokens. The sentence around an identifier stays in Inter.
+- Paragraphs separate with space and carry no first-line indent.
+- Body text keeps a comfortable size and line height, and dense layouts get more room instead of smaller text.
+
+## Data and tables
+
+- Numeric columns and their headers align right, and text columns and their headers align left.
+- Charts label series directly and skip legends where a label fits.
+- Repeated bars share one scale, one label lane, one value lane and a zero baseline, and only the fill length varies.
+- Units, periods and the basis of a comparison sit next to the evidence they qualify.
+- A caption states what the reader should notice. Material chart data also has a semantic table or a short text alternative.
+- Tables use the full width of the content area.
+
+## Accessibility and responsive behavior
+
+- Pages use landmarks, one descriptive `h1`, ordered headings and a skip link.
+- Controls are native elements with accessible names and visible focus.
+- Text and controls meet WCAG AA, and color never carries meaning alone.
+- Grid and flex children set `min-width: 0`. Layouts reflow before text shrinks, and page overflow stays visible so it gets fixed.
+- Light and dark keep the same hierarchy and contrast.
+- Source order matches reading order.
+
+## Localization
+
+- The app ships in five languages (en, de, es, ja, zh) through next-intl, with messages in `apps/web/messages`.
+- Layouts leave room for strings that run longer than the English source.
+- Interface text lives in messages with placeholders. A sentence is never assembled from fragments.
+- Dates and numbers go through the locale formatters.
+
+## Design reflexes to reject
+
+Do not ship any of these recognizable defaults:
+
+- All-caps or tracked eyebrows, kickers, overlines and decorative numbered section labels.
+- Em dashes.
+- Decorative gradients, glows, blobs, stripes, textures, glass or ornamental shadows.
+- Generic centered hero copy followed by a card grid.
+- Repeated metric boxes when one composed relationship would be clearer.
+- A badge, pill or rounded capsule for ordinary metadata, chart annotations or editorial labels.
+- Cards nested inside cards, or borders used to repair weak hierarchy.
+- A dark rounded rectangle around every chart or calculator.
+- Arbitrary icon tiles, oversized icons or mixed icon styles.
+- Tiny muted prose, arbitrary font sizes, inconsistent peer values or misaligned baselines.
+- A narrow table floating inside a wide section, or a wide table compressed into broken words.
+- Decorative charts, redundant visualizations, legends that replace direct labels, or color without meaning.
+- Repeated full-width bars that do not share a scale or encode a visible difference.
+- Identical section silhouettes across unrelated reader questions.
+- Repeated recommendation, summary, rationale and conclusion sections that say the same thing.
+- Narration about how a page was organized, why a representation was chosen, or how source fields were renamed.
+- Visible theme controls, stock imagery, fake screenshots or decorative brand marks.
+
+Avoiding these defaults must not produce a sterile template. Precise hierarchy, excellent typography, clear evidence and strong alignment give a page its character. The landing page's stripe horizon and the `Badge` component are the established exceptions to the stripe and badge items.
+
 ## Do's and Don'ts
 
 ### Do
