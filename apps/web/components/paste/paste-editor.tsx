@@ -594,11 +594,27 @@ export function PasteEditor({
   // Latest handlers for the window listener below, which is attached once.
   const saveRef = React.useRef<() => void>(() => {})
   React.useEffect(() => {
-    saveRef.current = () => {
+    saveRef.current = async () => {
       // An open paste saves as you go, so ⌘S just pushes the pending edit out. A new paste has
       // nowhere to be saved yet, so ⌘S keeps what's typed as a draft on this device.
       if (editing) void autosaver.flush()
-      else if (saveDraftNow()) toast.success(t("draftSavedOnThisDevice"))
+      else {
+        const result = await saveDraftNow()
+        switch (result.kind) {
+          case "saved":
+            toast.success(t("draftSavedOnThisDevice"))
+            break
+          case "unavailable":
+            toast.error(t("draftSaveUnavailable"))
+            break
+          case "skipped":
+            break
+          default: {
+            const exhaustive: never = result
+            return exhaustive
+          }
+        }
+      }
     }
   })
 

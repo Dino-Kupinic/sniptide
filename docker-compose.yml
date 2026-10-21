@@ -8,10 +8,24 @@
 # HTTPS on your own domain, add the bundled Caddy proxy (see the "proxy" service below).
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db
+#
+# Memory: each container has a ceiling (SNIPTIDE_MEMORY, POSTGRES_MEMORY), so a busy app is
+# restarted on its own instead of the kernel killing whatever else runs on the server. Raise them
+# on a bigger server; NODE_OPTIONS sets the app's heap and should stay well below SNIPTIDE_MEMORY.
+
+# Docker keeps container logs forever by default; the app writes a line per request.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    mem_limit: ${POSTGRES_MEMORY:-512m}
+    logging: *logging
     environment:
       POSTGRES_USER: sniptide
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sniptide}
@@ -33,15 +47,22 @@ services:
       args:
         DEPLOYMENT_VERSION: ${DEPLOYMENT_VERSION:-}
     restart: unless-stopped
+    mem_limit: ${SNIPTIDE_MEMORY:-768m}
+    # The same as mem_limit: no swap, so a runaway restarts at the ceiling instead of thrashing.
+    memswap_limit: ${SNIPTIDE_MEMORY:-768m}
+    logging: *logging
     depends_on:
       db:
         condition: service_healthy
     environment:
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=384}
       DATABASE_URL: postgres://sniptide:${POSTGRES_PASSWORD:-sniptide}@db:5432/sniptide
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32) in .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       ALLOW_SIGN_UP: ${ALLOW_SIGN_UP:-true}
       ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEMO_RESET_MINUTES: ${DEMO_RESET_MINUTES:-60}
       WAITLIST_URL: ${WAITLIST_URL:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
@@ -57,6 +78,13 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
       DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS:-}
       POSTHOG_KEY: ${POSTHOG_KEY:-}
       POSTHOG_HOST: ${POSTHOG_HOST:-}
       DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
@@ -93,6 +121,7 @@ services:
   proxy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *logging
     profiles: [proxy]
     depends_on:
       app:

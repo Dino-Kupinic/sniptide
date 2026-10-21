@@ -61,6 +61,13 @@ const flag = z.string().transform((value, ctx) => {
 const origin = z.url({ message: "must be a full URL like https://sniptide.com." })
 
 const schema = z.object({
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  SMTP_SECURE: flag.default(false),
+  SMTP_REQUIRE_TLS: flag.default(true),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().email().optional(),
   DATABASE_URL: z.string().optional(),
   MIGRATIONS_DIR: z.string().optional(),
 
@@ -77,6 +84,7 @@ const schema = z.object({
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
+  DEMO_MODE: flag.default(false),
 
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -117,8 +125,45 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     throw new Error(`Invalid configuration:\n  ${problems.join("\n  ")}`)
   }
   const value = parsed.data
+  const smtpPresent = [
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_SECURE",
+    "SMTP_REQUIRE_TLS",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "SMTP_FROM",
+  ].some((key) => present[key] !== undefined)
+  if (
+    smtpPresent &&
+    (!value.SMTP_HOST ||
+      !value.SMTP_PORT ||
+      !value.SMTP_FROM ||
+      !value.BETTER_AUTH_URL ||
+      !value.BETTER_AUTH_SECRET ||
+      value.BETTER_AUTH_SECRET.length < 32 ||
+      Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD))
+  ) {
+    throw new Error(
+      "Invalid configuration: SMTP requires SMTP_HOST, SMTP_PORT, SMTP_FROM, BETTER_AUTH_URL, BETTER_AUTH_SECRET (at least 32 characters), and paired SMTP_USER/SMTP_PASSWORD credentials.",
+    )
+  }
 
   return {
+    smtp:
+      smtpPresent && value.SMTP_HOST && value.SMTP_PORT && value.SMTP_FROM
+        ? {
+            host: value.SMTP_HOST,
+            port: value.SMTP_PORT,
+            from: value.SMTP_FROM,
+            secure: value.SMTP_SECURE,
+            requireTLS: value.SMTP_REQUIRE_TLS,
+            auth:
+              value.SMTP_USER && value.SMTP_PASSWORD
+                ? { user: value.SMTP_USER, pass: value.SMTP_PASSWORD }
+                : undefined,
+          }
+        : undefined,
     databaseUrl: value.DATABASE_URL,
     migrationsDir: value.MIGRATIONS_DIR,
     authSecret: value.BETTER_AUTH_SECRET,
@@ -131,6 +176,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
+    demoMode: value.DEMO_MODE,
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),
     githubToken: value.GITHUB_TOKEN,

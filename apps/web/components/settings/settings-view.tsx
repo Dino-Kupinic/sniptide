@@ -15,18 +15,12 @@ import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
 import { DeleteAccountSection } from "./delete-account"
+import { NotificationSection } from "./notification-section"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-export type SettingsTab = "general" | "defaults" | "api" | "billing"
-
-const tabs: { value: SettingsTab; label: string }[] = [
-  { value: "general", label: "general" },
-  { value: "defaults", label: "pasteDefaults" },
-  { value: "api", label: "apiTokens" },
-  { value: "billing", label: "billing" },
-]
+export type SettingsTab = "general" | "defaults" | "notifications" | "api" | "billing"
 
 export interface WorkspaceCounts {
   shared: number
@@ -54,6 +48,7 @@ export function SettingsView({
   initialTab,
   profile,
   preferences,
+  emailAvailable,
   counts,
   storage,
   api,
@@ -61,12 +56,21 @@ export function SettingsView({
   initialTab: SettingsTab
   profile: ProfileState
   preferences: Preferences
+  emailAvailable: boolean
   counts: WorkspaceCounts
   storage: { usedMb: number; limitMb: number }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
   const secretsT = useTranslations("Secrets")
+  const workspace = useTranslations("Workspace")
+  const tabs: { value: SettingsTab; label: string }[] = [
+    { value: "general", label: t("general") },
+    { value: "defaults", label: t("pasteDefaults") },
+    { value: "notifications", label: workspace("notifications") },
+    { value: "api", label: t("apiTokens") },
+    { value: "billing", label: t("billing") },
+  ]
   const router = useRouter()
   const [tab, setTab] = React.useState(initialTab)
 
@@ -137,7 +141,7 @@ export function SettingsView({
               tab === item.value && "border-primary font-medium text-foreground",
             )}
           >
-            {t(item.label)}
+            {item.label}
           </button>
         ))}
       </div>
@@ -159,6 +163,13 @@ export function SettingsView({
           </>
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
+        {tab === "notifications" ? (
+          <NotificationSection
+            initial={preferences.notifications}
+            emailAvailable={emailAvailable}
+            emailVerified={profile.emailVerified}
+          />
+        ) : null}
         {tab === "api" ? (
           <>
             <ApiTokensSection tokens={api.tokens} origin={api.origin} />

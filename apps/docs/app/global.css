@@ -1,0 +1,22 @@
+@import "@sniptide/ui/globals.css";
+@import "fumadocs-ui/css/shadcn.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Fumadocs' own sources (its components live in node_modules). */
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Page titles and section headings use the same display face as the app. */
+#nd-page :is(h1, h2, h3) {
+  font-family: var(--font-heading);
+}
+
+/* The brand blue is a fill colour in dark mode; as text (active sidebar items, links) it is too
+   dark on these surfaces, so Fumadocs' primary becomes the lighter link blue there. */
+.dark {
+  --color-fd-primary: var(--link);
+  --color-fd-primary-foreground: var(--background);
+}

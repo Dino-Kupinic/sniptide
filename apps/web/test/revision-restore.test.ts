@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { collection, pasteRevision } from "@workspace/db/schema"
-import { eq } from "drizzle-orm"
+import { collection, paste, pasteRevision } from "@workspace/db/schema"
+import { eq, sql } from "drizzle-orm"
+import { updateCapture } from "@/lib/api/pastes"
 import { getDb } from "@/lib/db"
 import {
   autosavePaste,
@@ -10,7 +11,7 @@ import {
   savePaste,
 } from "@/lib/pastes/actions"
 import { SNAPSHOT_LIMIT } from "@/lib/pastes/snapshot"
-import { getPaste, sharePaste } from "@/lib/pastes/store"
+import { getPaste, sharePaste, updatePaste } from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedUser, signInAs } from "./harness"
 
 // Rolling a paste back to an earlier revision: its title, description and files return, nothing
@@ -127,7 +128,7 @@ describeDb("restoreRevision", () => {
   test("a burst of auto-saves is restored as the state it ended in", async () => {
     const slug = await create()
     const first = await getPaste(slug)
-    let version = first?.updatedAt ?? 0
+    let version = first?.version ?? 0
     for (const title of ["a", "ab", "abc"]) {
       const saved = await autosavePaste(slug, input({ title, expiry: "keep" }), version)
       if (!saved.ok || "conflict" in saved) throw new Error("expected a save")
@@ -146,13 +147,115 @@ describeDb("restoreRevision", () => {
   test("a save from an editor opened before the rollback is turned away", async () => {
     const slug = await create()
     await edit(slug, { title: "v2" })
-    const opened = (await getPaste(slug))?.updatedAt ?? 0
+    const opened = (await getPaste(slug))?.version ?? 0
     const created = (await history(slug))[1]
 
     await restoreRevision(slug, created?.id ?? -1)
     const stale = await autosavePaste(slug, input({ title: "typing", expiry: "keep" }), opened)
     expect(stale).toMatchObject({ ok: false, conflict: true })
     expect((await getPaste(slug))?.title).toBe("v1")
+  })
+
+  for (const editor of ["browser", "api"] as const) {
+    test(`a restore and ${editor} save both finish when they overlap`, async () => {
+      const slug = await create()
+      await edit(slug, { title: "v2" })
+      const created = (await history(slug))[1]
+      const row = await pasteRow(slug)
+      if (!row || !created) throw new Error("missing paste history")
+      const db = getDb()
+      const operations: Promise<unknown>[] = []
+
+      async function waitForBlocked(excluded = 0) {
+        const deadline = Date.now() + 2000
+        while (Date.now() < deadline) {
+          const blocked = await db
+            .select({ pid: sql<number>`pid` })
+            .from(sql`pg_stat_activity`)
+            .where(sql`datname = current_database() AND application_name = 'sniptide'
+              AND wait_event_type = 'Lock' AND cardinality(pg_blocking_pids(pid)) > 0
+              AND pid <> ${excluded}`)
+          const waiter = blocked[0]
+          if (waiter) return waiter.pid
+        }
+        throw new Error("concurrent operation did not reach its lock barrier")
+      }
+
+      try {
+        await db.transaction(async (gate) => {
+          await gate.select({ id: paste.id }).from(paste).where(eq(paste.id, row.id)).for("update")
+          operations.push(restoreRevision(slug, created.id))
+          const restoring = await waitForBlocked()
+          operations.push(
+            editor === "browser"
+              ? updatePaste(
+                  slug,
+                  {
+                    ...input({ title: "concurrent", expiry: "keep" }),
+                    files: [{ name: "a.txt", content: "one", language: "text" }],
+                  },
+                  "Edited",
+                )
+              : updateCapture("owner", slug, {
+                  title: "concurrent",
+                  files: [{ name: "a.txt", content: "one" }],
+                }),
+          )
+          await waitForBlocked(restoring)
+        })
+      } finally {
+        await Promise.allSettled(operations)
+      }
+      for (const result of await Promise.allSettled(operations)) {
+        if (result.status === "rejected") throw result.reason
+      }
+
+      const saved = await getPaste(slug)
+      expect(saved?.title).toBe("concurrent")
+      expect(saved?.files[0]?.content).toBe("one")
+      expect(saved?.bytes).toBe(3)
+      expect(saved?.revisions.map((revision) => revision.message).sort()).toEqual(
+        [
+          editor === "browser" ? "Edited" : "Edited via API",
+          "Restored revision 1",
+          "Edited",
+          "Created",
+        ].sort(),
+      )
+    })
+  }
+
+  test("refuses a restore that would exceed storage without changing the paste or history", async () => {
+    const slug = await create({ files: [{ name: "large.txt", content: "a".repeat(524288) }] })
+    await edit(slug, { title: "v2" })
+    await create({ title: "other" })
+    const before = await getPaste(slug)
+    const created = before?.revisions[1]
+    const previous = process.env.ACCOUNT_STORAGE_BYTES
+    process.env.ACCOUNT_STORAGE_BYTES = "524288"
+    try {
+      expect(await restoreRevision(slug, created?.id ?? -1)).toMatchObject({ ok: false })
+      expect(await getPaste(slug)).toEqual(before)
+    } finally {
+      if (previous === undefined) delete process.env.ACCOUNT_STORAGE_BYTES
+      else process.env.ACCOUNT_STORAGE_BYTES = previous
+    }
+  })
+
+  test("allows a shrinking restore when the account is over its storage limit", async () => {
+    const slug = await create()
+    await edit(slug, { title: "v2", files: [{ name: "large.txt", content: "a".repeat(524288) }] })
+    await create({ title: "other" })
+    const created = (await history(slug))[1]
+    const previous = process.env.ACCOUNT_STORAGE_BYTES
+    process.env.ACCOUNT_STORAGE_BYTES = "524288"
+    try {
+      expect(await restoreRevision(slug, created?.id ?? -1)).toMatchObject({ ok: true })
+      expect(await getPaste(slug)).toMatchObject({ title: "v1", bytes: 3 })
+    } finally {
+      if (previous === undefined) delete process.env.ACCOUNT_STORAGE_BYTES
+      else process.env.ACCOUNT_STORAGE_BYTES = previous
+    }
   })
 
   test("refuses the current version, history without a copy, and other pastes' revisions", async () => {

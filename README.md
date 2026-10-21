@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/sniptide-readme-dark.svg">
+    <img alt="Sniptide" src=".github/assets/sniptide-readme-light.svg" width="100%">
+  </picture>
+</p>
+
 # Sniptide
 
 Code snippet sharing at sniptide.com. A Bun + Turborepo monorepo with one Next.js app, run as a
@@ -117,6 +124,9 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
   - optional: `SHARE_PROXY_SECRET`, a random string shared with the website so it can pass the
     visitor's IP (`X-Sniptide-Client-IP`) on share pages it proxies, for the unlock rate limits
 - **Domain:** `https://app.sniptide.com`.
+- **Resources:** a memory limit of `768m` in the app's resource limits (see
+  [Memory](#self-hosting) below). Every PR preview is another server and database on the same box,
+  and each build runs `next build` there too.
 
 **PR previews.** Coolify's preview deployments get their own URL, secret and database, so they must
 not read production's session cookie. Better Auth names that cookie `better-auth.session_token`
@@ -145,6 +155,19 @@ To try the production image locally with its database:
 BETTER_AUTH_SECRET=$(openssl rand -hex 32) docker compose up -d --build
 ```
 
+### Docs site
+
+The documentation (`apps/docs`) is its own Coolify service, built from its own Dockerfile. Set it
+up next to the app:
+
+- **Source:** this repository, branch `main`, build pack **Dockerfile**, base directory `/`,
+  Dockerfile location `/apps/docs/Dockerfile`, auto-deploy on push.
+- **Port:** `3000`. **Health check:** `GET /`. It needs no database.
+- **Build variable:** `APP_URL`: `https://app.sniptide.com`, where the app runs. The nav's "API
+  reference" and "Open Sniptide" links point there. The pages are prerendered, so it is read when
+  the image is built; changing it means a redeploy.
+- **Domain:** `https://docs.sniptide.com`.
+
 ## Self-hosting
 
 The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM64 support.
@@ -164,9 +187,18 @@ URL for `BETTER_AUTH_URL` when serving through a reverse proxy. The database hos
 from the container; `localhost` inside it refers to the container itself.
 
 ```bash
-docker run -d --name sniptide --restart unless-stopped \
+docker run -d --name sniptide --restart unless-stopped --memory 768m --memory-swap 768m \
   -p 3000:3000 --env-file sniptide.env ghcr.io/dino-kupinic/sniptide:latest
 ```
+
+**Memory.** One server sits around 100 MB idle and 250 to 300 MB under load. The image caps the
+Node heap at 384 MB (`NODE_OPTIONS=--max-old-space-size=384`); without a cap Node sizes the heap
+from the host's RAM and keeps growing into it. Give the container a ceiling too (`--memory`, or
+`SNIPTIDE_MEMORY` with compose), so if it ever reaches it Docker restarts Sniptide instead of the
+kernel killing other processes on the server. On a bigger server raise both, keeping the heap at
+about half the ceiling, for example `--memory 1536m` with `NODE_OPTIONS=--max-old-space-size=768`.
+Building the image takes far more memory than running it (a `next build` can use 2 GB or more), so
+on a small server pull the published image rather than building there.
 
 On startup, Sniptide applies migrations before serving requests. `GET /api/health` checks the
 server and database, and the image includes a Docker health check. Back up your database before
@@ -238,8 +270,26 @@ unless you turn them on:
 | GitHub and Google sign-in | Off; buttons render disabled | `GITHUB_CLIENT_ID`/`_SECRET`, `GOOGLE_CLIENT_ID`/`_SECRET` |
 | Open sign-up | On: anyone can create an account | `ALLOW_SIGN_UP=false` closes it for everyone; existing accounts keep signing in |
 | Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails (`WAITLIST_URL` adds an "apply" link) |
+| Public demo | Off | `DEMO_MODE=true` signs every visitor in to a shared guest account with example pastes and resets it every `DEMO_RESET_MINUTES` (60); use with `ALLOW_SIGN_UP=false` |
 | PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
 | Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
+| Notification emails | Off; users opt in per event | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`; optional paired `SMTP_USER`/`SMTP_PASSWORD` |
+
+Settings > Notifications controls in-app and email delivery independently for shared pastes, burns,
+expiry warnings and view milestones. Existing accounts keep in-app notifications on and email off.
+Verify your email address from this tab before enabling email delivery. Verification sends are
+limited to three per account per hour. Password sign-in still works without verified email or SMTP.
+SMTP is optional. Set the host, port and sender together, plus `BETTER_AUTH_URL` and an auth secret
+of at least 32 characters. Port 587 uses STARTTLS by default; set `SMTP_SECURE=true` for implicit
+TLS on port 465. Leave `SMTP_REQUIRE_TLS=true` outside a trusted local SMTP test server.
+
+Email runs independently once a minute and uses a durable queue with bounded retries. Events older
+than 24 hours are skipped, including events queued while SMTP was unavailable. Delivery rechecks
+consent and access, and messages contain generic activity text with links to the signed-in app.
+Each email includes a confirmation link that stops only that event's emails. Opening it does not
+change preferences. Email is delivered at least once when retries succeed; a crash after SMTP
+acceptance and before recording success can cause a duplicate. A concurrent access change can
+still allow an already sending generic email to arrive.
 
 To run a private instance: sign up once, then set `ALLOW_SIGN_UP=false` and restart.
 
@@ -317,7 +367,8 @@ database and a production build.
 ## CI
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
-typecheck, `next build`, a production Docker build and startup test, Bun integration tests, and
+typecheck, `next build` (the app and the docs), production Docker builds and startup tests for the
+app and the docs site, Bun integration tests, and
 Chromium browser tests against an isolated PostgreSQL database and production build.
 
 ### Container releases
@@ -360,6 +411,8 @@ bun run format
 ## Workspace
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
+- `apps/docs`: the documentation site (Next.js and Fumadocs, MDX in `content/docs`); see
+  `apps/docs/README.md`
 - `packages/auth`: better-auth setup on the Drizzle adapter
 - `packages/cli`: code capture and restore CLI, with a dependency-free Node.js executable
 - `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable

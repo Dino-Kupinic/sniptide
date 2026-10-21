@@ -34,9 +34,9 @@ import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { viewMilestone } from "@/lib/notifications/describe"
-import { recordNotification } from "@/lib/notifications/record"
+import { recordNotifications } from "@/lib/notifications/record"
 import { DAY } from "@/lib/time"
-import { enforceBudget, PasteBudgetError } from "./budget"
+import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
 import { recordPasteEvent } from "./events"
 import { insertPaste } from "./insert"
@@ -168,7 +168,7 @@ async function summarize(
       })
       .from(pasteFile)
       .where(inArray(pasteFile.pasteId, ids))
-      .orderBy(pasteFile.position),
+      .orderBy(pasteFile.position, pasteFile.id),
     withHistory
       ? db
           .select()
@@ -290,6 +290,7 @@ async function hydrate(
 
   return {
     ...summary,
+    version: record.version,
     revisionCount,
     revisionPage,
     revisionPageCount,
@@ -368,7 +369,7 @@ export async function listTrash() {
 // What makes a paste show up for someone it's shared with: a share row for them on a live paste
 // someone else owns. A burn-after-read paste is read once through its link, so a share never
 // opens it in the app, and an expired one is gone for everyone but its owner.
-function sharedWithWhere(viewer: string) {
+export function sharedWithWhere(viewer: string) {
   return and(
     eq(pasteShare.userId, viewer),
     isNull(pasteShare.leftAt),
@@ -530,77 +531,92 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
   if (!record || record.deletedAt || userId === record.ownerId) return false
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
   if (!person) return false
-  const [before] = await getDb()
-    .select({ leftAt: pasteShare.leftAt })
-    .from(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
-  await getDb()
-    .insert(pasteShare)
-    .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
-    .onConflictDoUpdate({
-      target: [pasteShare.pasteId, pasteShare.userId],
-      // Inviting someone who left starts a fresh share: new, unseen, and open to them again.
-      set: {
-        access,
-        createdAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.createdAt} else now() end`,
-        seenAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.seenAt} else null end`,
-        leftAt: null,
-      },
-    })
-  // Tell the person about a new invite, or one after they left; changing their access or undoing a
-  // revoke is not news.
-  if (!sharedAt && (!before || before.leftAt)) {
-    await recordNotification(getDb(), {
-      userId,
-      kind: "shared",
-      pasteId: record.id,
-      actorId: record.ownerId,
-    })
-  }
-  return true
+  return getDb().transaction(async (tx) => {
+    const [locked] = await tx
+      .select({ id: pasteTable.id, deletedAt: pasteTable.deletedAt })
+      .from(pasteTable)
+      .where(and(eq(pasteTable.id, record.id), eq(pasteTable.ownerId, record.ownerId)))
+      .for("update")
+    if (!locked || locked.deletedAt) return false
+    const [before] = await tx
+      .select({ leftAt: pasteShare.leftAt })
+      .from(pasteShare)
+      .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+    await tx
+      .insert(pasteShare)
+      .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
+      .onConflictDoUpdate({
+        target: [pasteShare.pasteId, pasteShare.userId],
+        set: {
+          access,
+          createdAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.createdAt} else now() end`,
+          seenAt: sql`case when ${pasteShare.leftAt} is null then ${pasteShare.seenAt} else null end`,
+          leftAt: null,
+        },
+      })
+    if (!sharedAt && (!before || before.leftAt)) {
+      await recordNotifications(tx, [
+        { userId, kind: "shared", pasteId: record.id, actorId: record.ownerId },
+      ])
+    }
+    return true
+  })
 }
 
-// Drops the "shared with you" notification for a paste the person can no longer open.
-function forgetShareNotice(pasteId: string, userId: string) {
-  return getDb()
-    .delete(notification)
-    .where(
-      and(
-        eq(notification.pasteId, pasteId),
-        eq(notification.userId, userId),
-        eq(notification.kind, "shared"),
-      ),
-    )
-}
-
-// Takes someone's access away. The paste leaves their Shared with me and its link 404s for them
-// again, unless its visibility lets anyone in.
 export async function unsharePaste(slug: string, userId: string) {
   const record = await findOwned(slug)
   if (!record) return
-  await getDb()
-    .delete(pasteShare)
-    .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
-  await forgetShareNotice(record.id, userId)
+  await getDb().transaction(async (tx) => {
+    await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(eq(pasteTable.id, record.id))
+      .for("update")
+    await tx
+      .delete(pasteShare)
+      .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+    await tx
+      .delete(notification)
+      .where(
+        and(
+          eq(notification.pasteId, record.id),
+          eq(notification.userId, userId),
+          eq(notification.kind, "shared"),
+        ),
+      )
+  })
 }
 
-// The viewer drops a paste someone shared with them. The owner can invite them again, and
-// `restoreShare` takes it back until then. The row stays, marked left, so that's instant.
 export async function leaveShare(slug: string) {
   const viewer = await requireViewerId()
   const record = await findRecord(slug)
   if (!record) return
-  await getDb()
-    .update(pasteShare)
-    .set({ leftAt: new Date() })
-    .where(
-      and(
-        eq(pasteShare.pasteId, record.id),
-        eq(pasteShare.userId, viewer),
-        isNull(pasteShare.leftAt),
-      ),
-    )
-  await forgetShareNotice(record.id, viewer)
+  await getDb().transaction(async (tx) => {
+    await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(eq(pasteTable.id, record.id))
+      .for("update")
+    await tx
+      .update(pasteShare)
+      .set({ leftAt: new Date() })
+      .where(
+        and(
+          eq(pasteShare.pasteId, record.id),
+          eq(pasteShare.userId, viewer),
+          isNull(pasteShare.leftAt),
+        ),
+      )
+    await tx
+      .delete(notification)
+      .where(
+        and(
+          eq(notification.pasteId, record.id),
+          eq(notification.userId, viewer),
+          eq(notification.kind, "shared"),
+        ),
+      )
+  })
 }
 
 // Undoes `leaveShare`. False when there's nothing to take back: the viewer never left, or the
@@ -819,6 +835,7 @@ async function claimVisit(id: string) {
     const [row] = await tx
       .update(pasteTable)
       .set({
+        version: sql`CASE WHEN ${pasteTable.burnAfterRead} THEN ${pasteTable.version} + 1 ELSE ${pasteTable.version} END`,
         views: sql`${pasteTable.views} + 1`,
         uniqueViews: sql`${pasteTable.uniqueViews} + 1`,
         deletedAt: sql`CASE WHEN ${pasteTable.burnAfterRead} THEN ${now.toISOString()}::timestamptz ELSE ${pasteTable.deletedAt} END`,
@@ -841,15 +858,17 @@ async function claimVisit(id: string) {
         set: { views: sql`${pasteViewDay.views} + 1` },
       })
     if (row.burnAfterRead) {
-      await recordNotification(tx, { userId: row.ownerId, kind: "burned", pasteId: id })
+      await recordNotifications(tx, [{ userId: row.ownerId, kind: "burned", pasteId: id }])
     } else if (viewMilestone(row.views)) {
-      await recordNotification(tx, {
-        userId: row.ownerId,
-        kind: "views",
-        pasteId: id,
-        count: row.views,
-        dedupeKey: `views:${id}:${row.views}`,
-      })
+      await recordNotifications(tx, [
+        {
+          userId: row.ownerId,
+          kind: "views",
+          pasteId: id,
+          count: row.views,
+          dedupeKey: `views:${id}:${row.views}`,
+        },
+      ])
     }
     return row
   })
@@ -1202,7 +1221,7 @@ async function findEditable(slug: string) {
 export const REVISION_WINDOW_MS = 10 * 60_000
 
 export interface UpdateOptions {
-  // Only save if the paste is still at this version (its `updatedAt`), so an edit made from a stale
+  // Only save if the paste is still at this version, so an edit made from a stale
   // copy can't silently overwrite a newer one.
   expectedVersion?: number
   // Fold the edit into the latest revision when it is recent (see REVISION_WINDOW_MS).
@@ -1253,9 +1272,7 @@ export async function updatePaste(
         ? await hashPassword(data.password)
         : null
   const expiresAt = resolveExpiry(data.expiry, record.expiresAt, now.getTime())
-  // A version always moves forward, even if two saves land in the same millisecond.
-  const version = Math.max(now.getTime(), record.updatedAt.getTime() + 1)
-  const stamp = new Date(version)
+  const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
 
   const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   return getDb().transaction(async (tx): Promise<UpdateResult> => {
@@ -1273,24 +1290,25 @@ export async function updatePaste(
         collection: data.collection,
         expiresAt,
         updatedAt: stamp,
+        version: sql`${pasteTable.version} + 1`,
       })
       .where(
         and(
           eq(pasteTable.id, record.id),
           options.expectedVersion === undefined
             ? undefined
-            : eq(pasteTable.updatedAt, new Date(options.expectedVersion)),
+            : eq(pasteTable.version, options.expectedVersion),
         ),
       )
-      .returning({ id: pasteTable.id })
-    if (changed.length === 0) {
+      .returning({ version: pasteTable.version })
+    if (!changed[0]) {
       const [latest] = await tx
-        .select({ updatedAt: pasteTable.updatedAt, slug: pasteTable.slug })
+        .select({ version: pasteTable.version, slug: pasteTable.slug })
         .from(pasteTable)
         .where(eq(pasteTable.id, record.id))
       return {
         conflict: true,
-        version: ms(latest?.updatedAt ?? record.updatedAt),
+        version: latest?.version ?? record.version,
         slug: latest?.slug ?? record.slug,
       }
     }
@@ -1331,7 +1349,7 @@ export async function updatePaste(
 
     return {
       slug: data.slug || slug,
-      version,
+      version: changed[0].version,
       expiresAt: ms(expiresAt),
       hasPassword: passwordHash !== null,
     }
@@ -1369,6 +1387,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
   const { record } = editable
 
   return getDb().transaction(async (tx): Promise<RestoreResult> => {
+    await lockAccount(tx, record.ownerId)
     const [locked] = await tx
       .select()
       .from(pasteTable)
@@ -1417,8 +1436,8 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       throw error
     }
 
-    const version = Math.max(Date.now(), locked.updatedAt.getTime() + 1)
-    const stamp = new Date(version)
+    const version = locked.version + 1
+    const stamp = new Date(Math.max(Date.now(), locked.updatedAt.getTime() + 1))
     await tx
       .update(pasteTable)
       .set({
@@ -1426,6 +1445,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
         description: snapshot.description,
         bytes,
         updatedAt: stamp,
+        version: sql`${pasteTable.version} + 1`,
       })
       .where(eq(pasteTable.id, record.id))
     await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
@@ -1460,6 +1480,7 @@ export async function updateSharing(slug: string, input: SharingInput) {
     .update(pasteTable)
     .set({
       ...rest,
+      version: sql`${pasteTable.version} + 1`,
       ...(password !== undefined
         ? { passwordHash: password ? await hashPassword(password) : null }
         : {}),
@@ -1491,7 +1512,10 @@ export async function setStarred(slug: string, starred: boolean) {
 export async function renamePaste(slug: string, title: string) {
   const record = await findOwned(slug)
   if (!record || record.deletedAt) return
-  await getDb().update(pasteTable).set({ title }).where(eq(pasteTable.id, record.id))
+  await getDb()
+    .update(pasteTable)
+    .set({ title, version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, record.id))
 }
 
 // Files the paste in a collection, or takes it out of its collection with null. The caller
@@ -1499,7 +1523,10 @@ export async function renamePaste(slug: string, title: string) {
 export async function setPasteCollection(slug: string, collection: string | null) {
   const record = await findOwned(slug)
   if (!record || record.deletedAt) return
-  await getDb().update(pasteTable).set({ collection }).where(eq(pasteTable.id, record.id))
+  await getDb()
+    .update(pasteTable)
+    .set({ collection, version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, record.id))
 }
 
 export async function trashPaste(slug: string) {
@@ -1507,7 +1534,7 @@ export async function trashPaste(slug: string) {
   if (!record) return
   await getDb()
     .update(pasteTable)
-    .set({ deletedAt: new Date() })
+    .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })
     .where(eq(pasteTable.id, record.id))
 }
 
@@ -1515,7 +1542,10 @@ export async function trashPaste(slug: string) {
 export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
   if (!record) return false
-  await getDb().update(pasteTable).set({ deletedAt: null }).where(eq(pasteTable.id, record.id))
+  await getDb()
+    .update(pasteTable)
+    .set({ deletedAt: null, version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, record.id))
   return true
 }
 

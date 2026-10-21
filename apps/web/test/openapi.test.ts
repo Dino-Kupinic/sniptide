@@ -59,6 +59,17 @@ describe("API reference", () => {
     expect(handlers.length).toBeGreaterThan(5)
   })
 
+  test("distinguishes creation defaults, metadata-preserving updates and detected file languages", () => {
+    const schemas = openApiDocument.components.schemas
+    expect(schemas.Capture.required).toEqual(["title", "files"])
+    expect(schemas.CaptureUpdate.required).toEqual(["title", "files"])
+    expect(schemas.Capture.properties).toHaveProperty("visibility.default", "private")
+    for (const field of Object.values(schemas.CaptureUpdate.properties))
+      expect(field).not.toHaveProperty("default")
+    expect(schemas.File.required).toEqual(["name", "language", "content"])
+    expect(schemas.CaptureFile.required).toEqual(["name", "content"])
+  })
+
   test("documents every route handler that isn't internal", () => {
     const missing = handlers
       .filter(({ route }) => !(internalRoutes as readonly string[]).includes(route))

@@ -111,6 +111,26 @@ describe("Sniptide MCP tools", () => {
     await client.callTool({ name: "update_snippet", arguments: { id: "paste1", ...input } })
     expect(calls[1]).toEqual({ id: "paste1", input })
   })
+  test("normalizes agent requests while leaving omitted metadata for the API", async () => {
+    const client = await connected()
+    await client.callTool({
+      name: "create_snippet",
+      arguments: {
+        title: " A ",
+        description: " description ",
+        tags: [" React ", "react"],
+        files: [{ name: " a.ts ", content: "1" }],
+      },
+    })
+    expect(calls).toEqual([
+      {
+        title: "A",
+        description: "description",
+        tags: ["react", "react"],
+        files: [{ name: "a.ts", content: "1" }],
+      },
+    ])
+  })
   test("invalid identifiers, limits and reversed lines never reach the backend", async () => {
     const client = await connected()
     for (const args of [

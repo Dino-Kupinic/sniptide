@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "16d41c56-7856-41e5-89e6-1fd9d630c0f1",
+  "id": "bf810096-e095-496d-82fd-b73bc018667f",
   "prevIds": [
     "35282c49-fadf-49b4-9978-2a67be4c30b9"
   ],
@@ -23,6 +23,18 @@
         "copy"
       ],
       "name": "event_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "disabled",
+        "pending",
+        "sent",
+        "skipped",
+        "failed"
+      ],
+      "name": "notification_email_status",
       "entityType": "enums",
       "schema": "public"
     },
@@ -119,12 +131,6 @@
     {
       "isRlsEnabled": false,
       "name": "env_group",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "env_share",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1105,45 +1111,6 @@
       "table": "env_group"
     },
     {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "project",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_group"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "environment",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_group"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "revision",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_group"
-    },
-    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -1168,97 +1135,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "env_group"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "group_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "token_hash",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "password_hash",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "revoked_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "env_share"
     },
     {
       "type": "uuid",
@@ -1425,6 +1301,84 @@
       "generated": null,
       "identity": null,
       "name": "read_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "in_app",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "notification_email_status",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'disabled'",
+      "generated": null,
+      "identity": null,
+      "name": "email_status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "email_attempts",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email_next_attempt_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email_claim_token",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "notification"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email_sent_at",
       "entityType": "columns",
       "schema": "public",
       "table": "notification"
@@ -2527,7 +2481,14 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "group_id",
+          "value": "email_next_attempt_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -2535,14 +2496,14 @@
         }
       ],
       "isUnique": false,
-      "where": null,
+      "where": "\"email_status\" = 'pending'",
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "env_share_group_idx",
+      "name": "notification_email_due_idx",
       "entityType": "indexes",
       "schema": "public",
-      "table": "env_share"
+      "table": "notification"
     },
     {
       "nameExplicit": true,
@@ -3206,23 +3167,6 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
-      "name": "env_share_group_id_env_group_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "env_share"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "group_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "env_group",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
       "name": "env_variable_group_id_env_group_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -3595,16 +3539,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "env_share_pkey",
-      "schema": "public",
-      "table": "env_share",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "notification_pkey",
       "schema": "public",
       "table": "notification",
@@ -3690,17 +3624,6 @@
       "name": "user_email_key",
       "schema": "public",
       "table": "user",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "token_hash"
-      ],
-      "nullsNotDistinct": false,
-      "name": "env_share_token_hash_key",
-      "schema": "public",
-      "table": "env_share",
       "entityType": "uniques"
     },
     {

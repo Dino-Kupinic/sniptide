@@ -22,6 +22,9 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test ./test"
   },
+  "dependencies": {
+    "@sniptide/contracts": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "catalog:tooling",
     "@types/node": "catalog:tooling",

@@ -2,6 +2,7 @@
 // was away.
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   index,
   integer,
   pgEnum,
@@ -21,6 +22,14 @@ export const notificationKind = pgEnum("notification_kind", [
   "burned",
   "expiring",
   "views",
+])
+
+export const notificationEmailStatus = pgEnum("notification_email_status", [
+  "disabled",
+  "pending",
+  "sent",
+  "skipped",
+  "failed",
 ])
 
 const time = (name: string) => timestamp(name, { withTimezone: true })
@@ -48,8 +57,17 @@ export const notification = pgTable(
     createdAt: time("created_at").notNull().defaultNow(),
     // Null while unread.
     readAt: time("read_at"),
+    inApp: boolean("in_app").notNull().default(true),
+    emailStatus: notificationEmailStatus("email_status").notNull().default("disabled"),
+    emailAttempts: integer("email_attempts").notNull().default(0),
+    emailNextAttemptAt: time("email_next_attempt_at"),
+    emailClaimToken: uuid("email_claim_token"),
+    emailSentAt: time("email_sent_at"),
   },
   (table) => [
+    index("notification_email_due_idx")
+      .on(table.emailNextAttemptAt, table.id)
+      .where(sql`${table.emailStatus} = 'pending'`),
     index("notification_user_idx").on(table.userId, table.createdAt.desc(), table.id),
     index("notification_unread_idx").on(table.userId).where(sql`${table.readAt} is null`),
     index("notification_paste_idx").on(table.pasteId),

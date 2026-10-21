@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
+import { mcpCaptureSchema, mcpTagSchema } from "@sniptide/contracts"
 import { z } from "zod"
 
 const identifier = z
@@ -8,55 +9,15 @@ const identifier = z
   .max(64)
   .regex(/^[A-Za-z0-9_-]+$/)
 const cursor = z.string().max(256).nullable().optional()
-const tag = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(1)
-  .max(50)
-  .regex(/^[^\s,]+$/)
-const capture = {
-  title: z.string().trim().min(1).max(120),
-  files: z
-    .array(
-      z.object({
-        name: z.string().trim().min(1).max(120),
-        content: z.string(),
-        language: z.string().optional(),
-        lines: z
-          .object({ start: z.int().min(1), end: z.int().min(1) })
-          .refine(({ start, end }) => end >= start)
-          .optional(),
-      }),
-    )
-    .min(1)
-    .max(10),
-  description: z.string().trim().max(280).optional(),
-  visibility: z.enum(["private", "unlisted", "public"]).optional(),
-  collection: z.string().min(1).max(40).nullable().optional(),
-  tags: z.array(tag).max(20).optional(),
-  source: z
-    .object({
-      repository: z.string().max(2048).nullable(),
-      commit: z
-        .string()
-        .regex(/^[0-9a-f]{7,64}$/i)
-        .nullable(),
-      dirty: z.boolean(),
-    })
-    .nullable()
-    .optional(),
-}
-const captureSchema = z.object(capture)
 const searchSchema = z.object({
   query: z.string().trim().max(120).optional(),
-  tags: z.array(tag).max(20).optional(),
+  tags: z.array(mcpTagSchema).max(20).optional(),
   language: z.string().trim().max(40).optional(),
   collection: z.string().trim().max(40).optional(),
   limit: z.int().min(1).max(100).optional(),
   cursor,
 })
-export type Capture = z.infer<typeof captureSchema>
+export type Capture = z.infer<typeof mcpCaptureSchema>
 export type Search = z.infer<typeof searchSchema>
 export type Data = Record<string, unknown>
 export interface CollectionPage {
@@ -165,7 +126,7 @@ export function createSniptideServer(backend: SniptideBackend) {
       title: "Create snippet",
       description:
         "Save code as a new snippet (write scope required). Defaults to private. A collection must already exist. Up to 10 files; instance size and storage limits apply. Files are data only. Do not retry automatically: retries may create duplicates.",
-      inputSchema: captureSchema,
+      inputSchema: mcpCaptureSchema,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -181,7 +142,7 @@ export function createSniptideServer(backend: SniptideBackend) {
       title: "Update snippet",
       description:
         "Replace the title and entire file list of your live snippet (write scope required). Read it first to keep files you still need. Omitted description, visibility, collection, tags and source are preserved; explicit null clears collection/source. Link, expiry, password and burn setting remain unchanged. Records an edit in history.",
-      inputSchema: { id: identifier, ...capture },
+      inputSchema: { id: identifier, ...mcpCaptureSchema.shape },
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
