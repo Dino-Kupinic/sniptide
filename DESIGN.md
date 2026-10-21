@@ -2,7 +2,7 @@
 
 **Theme:** light and dark, switched with the `.dark` class
 
-Sniptide uses white or near-black surfaces, one saturated blue, square corners and thin borders. Menus and dialogs carry a hard offset shadow, which is the interface's single flourish. The values below mirror `packages/ui/src/styles/globals.css`.
+Sniptide uses white or near-black surfaces, one saturated blue, slightly rounded corners and thin borders. Buttons sit on a raised edge that presses down, and menus and dialogs carry a hard offset shadow. The values below mirror `packages/ui/src/styles/globals.css`.
 
 ## Sources of truth
 
@@ -130,11 +130,13 @@ Paper tokens `--spacing-3xs` to `--spacing-7xl` use these values. Components in 
 
 ### Border radius
 
-| Element | Value |
-| --- | --- |
-| Buttons, inputs, badges, cards, dialogs, menus, tags | 0 |
+| Class | Value | Element |
+| --- | --- | --- |
+| `rounded-lg` | 6px (`--radius`) | Buttons, inputs, selects, segmented control, panels, cards, menus, popovers, dialogs, toasts |
+| `rounded-md` | 4.8px | Badges, tabs, chips, sidebar rows, skeletons |
+| `rounded-sm` | 3.6px | Kbd, checkboxes |
 
-Every corner is square. `--radius` is `0`, so the `rounded-*` utilities resolve to square corners and new components skip them.
+`--radius` in `globals.css` is the one value to tune. `rounded-md` and `rounded-sm` derive from it at 0.8 and 0.6 times. A panel whose header or body has its own fill also sets `overflow-hidden` so the fill follows the corner.
 
 ### Layout
 
@@ -155,7 +157,7 @@ All components live in `packages/ui/src/components`. Use them before writing new
 ### Button
 **Role:** Every action.
 
-Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. A pressed button moves down 1px. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
+Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 3px edge in a darker shade of its fill (`--depth`), hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
 
 ### Input and Textarea
 **Role:** Text entry.
@@ -239,9 +241,10 @@ The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-i
 | Menu open | 100ms, scale from 0.98 |
 | Popover and dialog open | 150ms, scale from 0.98 |
 | Sheet and toast | 200ms |
-| Button press | `translate-y-px` |
+| Button press | Raised variants `translate-y-[3px]` onto the edge, flat variants `translate-y-px` |
+| Button hover, raised variants | Lift 1px, edge grows to 4px |
 | Hover, neutral controls | `bg-muted` |
-| Hover, filled blue controls | `bg-primary/85` |
+| Hover, filled blue controls | `bg-primary/85`, or 8% lighter on raised buttons |
 | Focus on buttons | `ring-3 ring-ring/30` |
 | Focus on tabs, switches, toast buttons | `ring-2 ring-ring/40` |
 | Disabled | 50% opacity, no pointer events |
@@ -259,13 +262,14 @@ Floating layers animate from `--transform-origin`. Toast animations switch off u
 
 ## Elevation
 
-Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `border-offset-shadow` and a hard offset shadow.
+Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `border-offset-shadow` and a hard offset shadow. Raised buttons carry a solid edge below them, which is a pressable part of the control rather than an elevation.
 
 | Layer | Shadow |
 | --- | --- |
 | Dropdown menu, popover | `4px 4px 0 0 var(--offset-shadow)` |
 | Dialog, alert dialog | `8px 8px 0 0 var(--offset-shadow)` |
 | Toast | `shadow-md` with a plain border |
+| Raised button edge | `0 3px 0 0 var(--depth)`, a darker shade of the button fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
 | Tooltip | None, inverted `bg-foreground` fill |
 
@@ -368,7 +372,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 
 ### Don't
 
-- Don't use `rounded-*` classes or set a radius above `0`.
+- Don't round anything past `rounded-lg`, and don't write pixel radii. Tune `--radius` instead.
 - Don't write hex values in components. Use the variables.
 - Don't add shadows to cards, rows or inputs.
 - Don't use red for anything other than destructive actions and invalid fields.
@@ -391,7 +395,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 
 ### Example component prompts
 
-1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding, square corners and no shadow. It moves down 1px when pressed.
+1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 3px darker-blue edge, lifts 1px on hover and presses down onto the edge.
 2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--offset-shadow` border with a 4px offset shadow.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.

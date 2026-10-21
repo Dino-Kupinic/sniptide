@@ -3,22 +3,42 @@ import { Spinner } from "@sniptide/ui/components/spinner"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
+// Raised variants sit on a 3px edge in a darker shade (--depth). Hover lifts the face 1px and a
+// press pushes it down onto the edge. Popup triggers skip the press so their menu doesn't jump.
+const raised =
+  "shadow-[0_3px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_4px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[3px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_3px_0_0_var(--depth)]"
+const flat = "active:not-aria-[haspopup]:translate-y-px"
+
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 rounded-lg items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-loading:[&_svg:not([data-slot=spinner])]:hidden",
+  "group/button inline-flex shrink-0 items-center rounded-lg justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-loading:[&_svg:not([data-slot=spinner])]:hidden",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/85",
-        inverted: "bg-foreground text-background hover:bg-foreground/85",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-transparent dark:hover:bg-input/30",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
+        default: [
+          raised,
+          "bg-primary text-primary-foreground [--depth:color-mix(in_oklch,var(--primary),black_38%)] hover:bg-[color-mix(in_oklch,var(--primary),white_8%)]",
+        ],
+        inverted: [
+          raised,
+          "bg-foreground text-background [--depth:color-mix(in_oklch,var(--foreground),var(--background)_55%)] hover:bg-foreground/90",
+        ],
+        outline: [
+          raised,
+          "border-border bg-background [--depth:var(--border)] hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-card dark:hover:bg-muted",
+        ],
+        secondary: [
+          raised,
+          "bg-secondary [--depth:color-mix(in_oklch,var(--secondary),var(--foreground)_14%)] text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+        ],
+        ghost: [
+          flat,
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-link underline-offset-4 hover:underline",
+        ],
+        destructive: [
+          raised,
+          "bg-destructive/10 [--depth:color-mix(in_oklch,var(--destructive)_30%,transparent)] text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        ],
+        link: [flat, "text-link underline-offset-4 hover:underline"],
       },
       size: {
         default:
