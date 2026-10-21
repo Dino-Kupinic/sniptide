@@ -187,7 +187,7 @@ Minimum width 192px with 4px vertical padding. Rows are 32px tall with 12px padd
 ### Dialog and alert dialog
 **Role:** Focused tasks and confirmations.
 
-Centered, at most 448px wide, with 24px padding, a 16px gap, the 8px offset shadow and a 20px heading-font title. Content scales in from 0.98.
+Centered, at most 448px wide, with 24px padding, a 16px gap, the 4px offset shadow and a 20px heading-font title. Content scales in from 0.98.
 
 ### Sheet
 **Role:** The mobile sidebar.
@@ -266,8 +266,8 @@ Surfaces separate with a 1px `--border` or a background step and carry no shadow
 
 | Layer | Shadow |
 | --- | --- |
-| Dropdown menu, popover | `4px 4px 0 0 var(--offset-shadow)` |
-| Dialog, alert dialog | `8px 8px 0 0 var(--offset-shadow)` |
+| Dropdown menu, popover | `3px 3px 0 0 var(--offset-shadow)` |
+| Dialog, alert dialog | `4px 4px 0 0 var(--offset-shadow)` |
 | Toast | `shadow-md` with a plain border |
 | Raised button edge | `0 3px 0 0 var(--depth)`, a darker shade of the button fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
@@ -396,6 +396,6 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 ### Example component prompts
 
 1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 3px darker-blue edge, lifts 1px on hover and presses down onto the edge.
-2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--offset-shadow` border with a 4px offset shadow.
+2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--offset-shadow` border with a 3px offset shadow.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.
