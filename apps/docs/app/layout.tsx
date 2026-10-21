@@ -2,6 +2,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { RootProvider } from "fumadocs-ui/provider/next"
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono, Stack_Sans_Headline } from "next/font/google"
+import { siteDescription, siteName, siteUrl } from "@/lib/site"
 import "./global.css"
 
 // The same three faces as the app (apps/web/app/layout.tsx), so the docs read as Sniptide.
@@ -22,8 +23,12 @@ const fontMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: { default: "Sniptide docs", template: "%s · Sniptide docs" },
-  description: "Guides and concepts for Sniptide, the self-hostable pastebin.",
+  metadataBase: new URL(siteUrl()),
+  title: { default: siteName, template: `%s · ${siteName}` },
+  description: siteDescription,
+  applicationName: siteName,
+  openGraph: { type: "website", siteName, locale: "en_US" },
+  twitter: { card: "summary_large_image" },
 }
 
 export default function Layout({ children }: LayoutProps<"/">) {
