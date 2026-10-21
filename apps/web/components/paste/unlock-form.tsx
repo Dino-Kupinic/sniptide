@@ -66,7 +66,7 @@ export function UnlockForm({ slug }: { slug: string }) {
         className="h-10 text-base lg:text-sm"
       />
       <FormError variant="inline" message={error ? t(error) : null} />
-      <Button type="submit" loading={pending} className="h-10">
+      <Button type="submit" loading={pending} className="h-[38px]">
         {pending ? t("checking") : t("unlock")}
       </Button>
     </form>

@@ -121,7 +121,7 @@ export function Sidebar({
 
       <Button
         size="lg"
-        className="h-9 shrink-0 justify-start gap-2 pr-1.5 pl-3"
+        className="h-[34px] shrink-0 justify-start gap-2 pr-1.5 pl-3"
         render={<Link href="/new" />}
         nativeButton={false}
       >

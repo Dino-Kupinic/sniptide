@@ -53,7 +53,7 @@ export function RevealPaste({ slug }: { slug: string }) {
       <Button
         type="button"
         loading={pending}
-        className="h-10"
+        className="h-[38px]"
         onClick={() =>
           startTransition(async () => {
             const response = await fetch(`/${encodeURIComponent(slug)}/reveal`, {

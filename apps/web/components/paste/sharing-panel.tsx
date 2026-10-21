@@ -63,7 +63,7 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
         type="button"
         variant="inverted"
         size="sm"
-        className="mr-1 h-7 text-xs"
+        className="mr-1 h-[26px] text-xs"
         onClick={() => {
           track("share_link_copied", { from: "sharing_panel" })
           return copy(url)
@@ -174,7 +174,7 @@ function useSharingControls(state: SharingState, list: boolean) {
             onChange={(event) => setPassword(event.target.value)}
             className="h-8 text-base lg:text-[13px]"
           />
-          <Button type="submit" size="sm" className="h-8" disabled={!password}>
+          <Button type="submit" size="sm" className="h-[30px]" disabled={!password}>
             {t("set")}
           </Button>
         </form>

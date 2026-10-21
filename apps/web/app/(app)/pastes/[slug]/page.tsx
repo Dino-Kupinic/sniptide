@@ -389,7 +389,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         {canEdit ? (
           <Button
             variant="outline"
-            className="h-12 flex-1 text-base"
+            className="h-[46px] flex-1 text-base"
             render={<Link href={`/pastes/${slug}/edit`} />}
             nativeButton={false}
           >

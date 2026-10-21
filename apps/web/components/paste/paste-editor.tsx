@@ -1075,7 +1075,7 @@ export function PasteEditor({
             )}
           </>
         )}
-        <Button type="submit" loading={pending} className="h-[50px] text-base font-semibold">
+        <Button type="submit" loading={pending} className="h-12 text-base font-semibold">
           {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>
       </div>
