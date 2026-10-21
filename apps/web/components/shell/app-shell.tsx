@@ -151,7 +151,7 @@ export function AppShell({
 
               <div
                 className={cn(
-                  "lg:rounded-lg flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:border lg:border-border",
+                  "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
                   layout.collapsed && "lg:ml-2",
                 )}
               >

@@ -223,7 +223,11 @@ export function ViewToggle({
 }) {
   const t = useTranslations("Workspace")
   return (
-    <div role="radiogroup" aria-label={t("layout")} className="flex gap-0.5 bg-muted p-[3px]">
+    <div
+      role="radiogroup"
+      aria-label={t("layout")}
+      className="flex gap-0.5 rounded-lg bg-muted p-[3px]"
+    >
       {(
         [
           { value: "list", label: t("list"), icon: ListIcon },
