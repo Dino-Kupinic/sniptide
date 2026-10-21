@@ -1,7 +1,11 @@
 "use client"
 
+import { launchConfetti } from "@sniptide/ui/lib/confetti"
 import { cn } from "@sniptide/ui/lib/utils"
 import { useEffect, useId, useRef, useState } from "react"
+
+const confettiClicks = 5
+const confettiClickWindow = 1500
 
 /**
  * The tide that flows through the logo on click: a band that starts below the
@@ -129,13 +133,25 @@ export function Logo({ className }: { className?: string }) {
 
   // The effect belongs to a logo that links somewhere, so a logo shown as plain
   // branding stays still. The listener sits on the link so that keyboard
-  // activation triggers it too. Reduced motion skips it entirely.
+  // activation triggers it too. Reduced motion skips it entirely. Five clicks
+  // in quick succession, each within a second and a half of the last, set off
+  // confetti.
   useEffect(() => {
     const link = ref.current?.closest("a")
     if (!link) return
+    let clicks = 0
+    let lastClick = 0
     const startFlow = () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
       setFlowing(true)
+
+      const now = performance.now()
+      clicks = now - lastClick < confettiClickWindow ? clicks + 1 : 1
+      lastClick = now
+      if (clicks >= confettiClicks) {
+        clicks = 0
+        launchConfetti()
+      }
     }
     link.addEventListener("click", startFlow)
     return () => link.removeEventListener("click", startFlow)
