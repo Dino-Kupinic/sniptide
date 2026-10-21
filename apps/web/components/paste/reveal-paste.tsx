@@ -43,7 +43,7 @@ export function RevealPaste({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="rounded-lg flex w-full max-w-sm flex-col gap-4 self-center border border-border bg-background p-6 shadow-[4px_4px_0_0_var(--offset-shadow)]">
+    <div className="rounded-lg flex w-full max-w-sm flex-col gap-4 self-center border border-border bg-background p-6 shadow-(--dialog-shadow)">
       <FlameIcon className="size-5" />
       <div className="flex flex-col gap-1">
         <h1 className="font-heading text-2xl font-bold tracking-[-0.02em]">{t("readOnce")}</h1>

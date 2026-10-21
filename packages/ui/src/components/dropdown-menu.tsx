@@ -23,7 +23,7 @@ function DropdownMenuContent({
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "min-w-48 rounded-lg py-1 border border-border bg-popover text-popover-foreground shadow-[3px_3px_0_0_var(--offset-shadow)] outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
+            "min-w-48 rounded-lg p-1 border border-border bg-popover text-popover-foreground shadow-(--float-shadow) outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
             className,
           )}
           {...props}
@@ -43,7 +43,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-variant={variant}
       className={cn(
-        "flex h-8 cursor-default items-center gap-2 px-3 text-sm outline-none select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-muted data-[variant=destructive]:text-destructive [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+        "flex h-8 cursor-default items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-muted data-[variant=destructive]:text-destructive [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -60,7 +60,7 @@ function DropdownMenuCheckboxItem({
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       className={cn(
-        "flex h-8 cursor-default items-center gap-2 pr-3 pl-2 text-sm outline-none select-none data-highlighted:bg-muted [&_svg]:size-4 [&_svg]:shrink-0",
+        "flex h-8 cursor-default items-center gap-2 rounded-md pr-3 pl-2 text-sm outline-none select-none data-highlighted:bg-muted [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -82,7 +82,7 @@ function DropdownMenuRadioItem({ className, children, ...props }: MenuPrimitive.
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       className={cn(
-        "grid h-8 cursor-default grid-cols-[1fr_1rem] items-center gap-2 px-3 text-sm outline-none select-none data-highlighted:bg-muted",
+        "grid h-8 cursor-default grid-cols-[1fr_1rem] items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-highlighted:bg-muted",
         className,
       )}
       {...props}
@@ -97,7 +97,7 @@ function DropdownMenuRadioItem({ className, children, ...props }: MenuPrimitive.
 
 // A plain heading row. Use MenuPrimitive.GroupLabel inside a DropdownMenuGroup for labelled groups.
 function DropdownMenuLabel({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("px-3 py-1.5 text-xs text-muted-foreground", className)} {...props} />
+  return <div className={cn("px-2 py-1.5 text-xs text-muted-foreground", className)} {...props} />
 }
 
 // A nested menu: wrap a DropdownMenuSubTrigger and a DropdownMenuContent in DropdownMenuSub.
@@ -112,7 +112,7 @@ function DropdownMenuSubTrigger({
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
       className={cn(
-        "flex h-8 cursor-default items-center gap-2 px-3 text-sm outline-none select-none data-highlighted:bg-muted data-popup-open:bg-muted [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+        "flex h-8 cursor-default items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-highlighted:bg-muted data-popup-open:bg-muted [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -124,7 +124,9 @@ function DropdownMenuSubTrigger({
 }
 
 function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
-  return <MenuPrimitive.Separator className={cn("my-1 h-px bg-border", className)} {...props} />
+  return (
+    <MenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
+  )
 }
 
 export {

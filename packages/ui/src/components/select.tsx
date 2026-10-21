@@ -33,7 +33,7 @@ function SelectContent({ className, children, ...props }: SelectPrimitive.Popup.
         <SelectPrimitive.Popup
           data-slot="select-content"
           className={cn(
-            "max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-y-auto rounded-lg py-1 border border-border bg-popover text-popover-foreground shadow-[3px_3px_0_0_var(--offset-shadow)] outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
+            "max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-y-auto rounded-lg p-1 border border-border bg-popover text-popover-foreground shadow-(--float-shadow) outline-none origin-[var(--transform-origin)] transition-[scale,opacity] duration-100 data-starting-style:scale-[0.98] data-starting-style:opacity-0 data-ending-style:scale-[0.98] data-ending-style:opacity-0",
             className,
           )}
           {...props}
@@ -50,7 +50,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "grid h-8 cursor-default grid-cols-[1fr_1rem] items-center gap-2 px-3 text-sm outline-none select-none data-highlighted:bg-muted",
+        "grid h-8 cursor-default grid-cols-[1fr_1rem] items-center gap-2 rounded-md px-3 text-sm outline-none select-none data-highlighted:bg-muted",
         className,
       )}
       {...props}

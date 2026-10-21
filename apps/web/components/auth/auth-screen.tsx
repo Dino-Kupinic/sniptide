@@ -77,7 +77,7 @@ export function AuthScreen({
 
       <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border lg:flex">
         <Stripes className="inset-0 size-full" />
-        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7 shadow-[4px_4px_0_0_var(--offset-shadow)]">
+        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7 shadow-(--dialog-shadow)">
           <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em]">
             {pitch.title[0]}
             <br />

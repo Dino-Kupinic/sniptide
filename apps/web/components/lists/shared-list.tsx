@@ -43,7 +43,7 @@ export function PersonAvatar({ person, className }: { person: Person; className?
     <span
       aria-hidden="true"
       className={cn(
-        "flex size-6 shrink-0 items-center justify-center font-heading text-[9px] font-bold",
+        "flex size-6 shrink-0 items-center justify-center rounded-md font-heading text-[9px] font-bold",
         toneClass[person.tone],
         className,
       )}

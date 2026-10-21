@@ -2,7 +2,7 @@
 
 **Theme:** light and dark, switched with the `.dark` class
 
-Sniptide uses white or near-black surfaces, one saturated blue, slightly rounded corners and thin borders. Buttons sit on a raised edge that presses down, and menus and dialogs carry a hard offset shadow. The values below mirror `packages/ui/src/styles/globals.css`.
+Sniptide uses white or near-black surfaces, one saturated blue, slightly rounded corners and thin borders. Buttons sit on a raised edge that presses down, and menus and dialogs float on a hairline border with a soft shadow. The values below mirror `packages/ui/src/styles/globals.css`.
 
 ## Sources of truth
 
@@ -37,7 +37,6 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Fill | `#F4F4F4` | `--muted`, `--secondary`, `--accent` | Hover rows, tracks, secondary buttons, code chips |
 | Hairline | `#E8E8E8` | `--border`, `--input` | Borders and dividers |
 | Ink | `#1B1919` | `--foreground` | Text, inverted buttons |
-| Shadow grey | `#C4C1C1` | `--offset-shadow` | Offset shadows on menus, dialogs and cards |
 | Graphite | `#6B6B6B` | `--muted-foreground` | Secondary text and icons |
 | Tide Blue | `#2A26EC` | `--primary`, `--ring`, `--link` | Primary actions, focus, links, active data |
 | Red | `oklch(0.577 0.245 27.325)` | `--destructive` | Destructive actions and invalid fields |
@@ -55,7 +54,6 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Ash | `#A3A3A3` | `--muted-foreground` | Secondary text and icons |
 | Tide Blue | `#3A36FF` | `--primary`, `--ring` | Button fills (white on it is 6.7:1) |
 | Sky Blue | `#6AA3FF` | `--link` | Links, code keywords, stars, collection icons, chart bars (7.5:1 on the surfaces) |
-| Offset grey | `#3A3737` | `--offset-shadow` | Offset shadows, because white shadows glare on dark surfaces |
 
 ### Brand
 
@@ -185,12 +183,12 @@ A radio group on a `--muted` track with 3px padding. The checked option sits on 
 ### Dropdown menu
 **Role:** Actions and the account menu.
 
-Minimum width 192px with 4px vertical padding. Rows are 32px tall with 12px padding and a 16px icon in `--muted-foreground`. The highlighted row uses `bg-muted`. Checkable items use a 16px square box that fills with the foreground color. Labels are 12px in `--muted-foreground`.
+Minimum width 192px with 4px padding on every side. Rows are 32px tall with 12px padding and a 16px icon in `--muted-foreground`. The highlighted row uses `bg-muted`. Checkable items use a 16px square box that fills with the foreground color. Labels are 12px in `--muted-foreground`.
 
 ### Dialog and alert dialog
 **Role:** Focused tasks and confirmations.
 
-Centered, at most 448px wide, with 24px padding, a 16px gap, the 4px offset shadow and a 20px heading-font title. Content scales in from 0.98.
+Centered, at most 448px wide, with 24px padding, a 16px gap, `--dialog-shadow` and a 20px heading-font title. Content scales in from 0.98.
 
 ### Sheet
 **Role:** The mobile sidebar.
@@ -265,12 +263,12 @@ Floating layers animate from `--transform-origin`. Toast animations switch off u
 
 ## Elevation
 
-Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `--border` hairline and a hard offset shadow in `--offset-shadow`, and clip their content to the rounded corners. Raised buttons carry a solid edge below them, which is a pressable part of the control rather than an elevation.
+Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `--border` hairline and a soft shadow from `--float-shadow` or `--dialog-shadow`, and clip their content to the rounded corners. Menu rows sit inside 4px of padding with `rounded-md` highlights. Raised buttons carry a solid edge below them, which is a pressable part of the control rather than an elevation.
 
 | Layer | Shadow |
 | --- | --- |
-| Dropdown menu, popover | `3px 3px 0 0 var(--offset-shadow)` |
-| Dialog, alert dialog | `4px 4px 0 0 var(--offset-shadow)` |
+| Dropdown menu, popover, select | `--float-shadow`: `0 1px 2px` at 6% plus `0 8px 24px -6px` at 14% (40% and 60% black in dark) |
+| Dialog, alert dialog, sign-in and unlock cards | `--dialog-shadow`: `0 2px 4px` at 6% plus `0 24px 48px -12px` at 22% (40% and 70% black in dark) |
 | Toast | `shadow-md` with a plain border |
 | Raised button edge | `0 2px 0 0 var(--depth)`, a darker shade of the button fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
@@ -368,7 +366,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 - Use tokens through Tailwind classes, and add a new color, size or spacing value to `globals.css` first.
 - Build light and dark together, and check contrast for any new text color on both backgrounds.
 - Build the mobile layout in the same change as the desktop layout.
-- Use the offset shadow on floating layers only.
+- Use `--float-shadow` and `--dialog-shadow` on floating layers only.
 - Use `--link` for blue text and `--primary` for blue fills, so dark mode keeps its contrast.
 - Add a variant to an existing component when two screens need different looks.
 - Remove an element before adding one, and keep information on the surface and avoid nesting cards.
@@ -399,6 +397,6 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 ### Example component prompts
 
 1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 2px darker-blue edge, lifts 1px on hover and presses down onto the edge.
-2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--border` hairline with a 3px offset shadow in `--offset-shadow`.
+2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--border` hairline, 4px padding and `--float-shadow`. Highlighted rows are `rounded-md`.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.

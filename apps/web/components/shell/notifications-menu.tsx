@@ -140,7 +140,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
           </span>
         ) : null}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 py-0">
+      <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex h-10 items-center justify-between border-b border-border px-3">
           <span className="text-sm font-medium">{t("notifications")}</span>
           <button
