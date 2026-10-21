@@ -44,6 +44,7 @@ const expiryChoices: { value: Expiry; label: string }[] = [
   { value: "1d", label: "1DayFromNow" },
   { value: "1w", label: "1WeekFromNow" },
   { value: "1m", label: "1MonthFromNow" },
+  { value: "1y", label: "1YearFromNow" },
   { value: "never", label: "never" },
 ]
 

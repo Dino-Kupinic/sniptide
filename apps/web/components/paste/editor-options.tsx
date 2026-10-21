@@ -39,6 +39,7 @@ export const expiryOptions: { value: Expiry; label: string }[] = [
   { value: "1d", label: "1d" },
   { value: "1w", label: "1w" },
   { value: "1m", label: "1m" },
+  { value: "1y", label: "1y" },
   { value: "never", label: "Never" },
 ]
 

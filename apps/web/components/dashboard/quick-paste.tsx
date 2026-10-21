@@ -87,6 +87,7 @@ export function QuickPaste({
     "1d": t("1_day"),
     "1w": t("1_week"),
     "1m": t("1_month"),
+    "1y": t("1_year"),
     never: t("never"),
   }
   const visibilityLabels: Record<Visibility, string> = {

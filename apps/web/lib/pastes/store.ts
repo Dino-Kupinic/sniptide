@@ -94,6 +94,7 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
   "1d": DAY,
   "1w": 7 * DAY,
   "1m": 30 * DAY,
+  "1y": 365 * DAY,
 }
 
 // Paths the app already uses, so a custom link can't shadow a page.

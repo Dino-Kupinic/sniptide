@@ -4,9 +4,11 @@ import { Slider } from "@base-ui/react/slider"
 import { cn } from "cn"
 import type * as React from "react"
 
-// A slider that snaps between a few named stops, such as Expires after: 1h, 1d, 1w, 1mo, Never.
+// A slider that snaps between a few named stops, such as Expires after: 1h, 1d, 1w, 1mo, 1y, Never.
 // The chosen stop's name sits above the track, the track fills blue up to the thumb, and a dot
-// marks every stop. Arrow keys move one stop at a time.
+// marks every stop. Arrow keys move one stop at a time. The thumb and fill spring to the next
+// stop with a slight overshoot, the thumb grows while it is held, and the label pops when the
+// stop changes. Under reduced motion everything snaps.
 function StepSlider<Value extends string>({
   value,
   onValueChange,
@@ -43,12 +45,16 @@ function StepSlider<Value extends string>({
       className={cn("flex flex-col gap-2", className)}
       disabled={props.disabled}
     >
-      <span aria-hidden="true" className="text-center text-sm font-medium text-link">
+      <span
+        key={current?.value}
+        aria-hidden="true"
+        className="animate-pop text-center text-sm font-medium text-link motion-reduce:animate-none"
+      >
         {current?.valueLabel ?? current?.label}
       </span>
       <Slider.Control className="flex touch-none items-center select-none data-disabled:opacity-50">
-        <Slider.Track className="relative h-8 w-full rounded-lg bg-muted">
-          <Slider.Indicator className="rounded-l-lg bg-primary" />
+        <Slider.Track className="relative h-6 w-full rounded-md bg-muted">
+          <Slider.Indicator className="rounded-l-md bg-primary transition-[width] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] in-data-dragging:transition-none motion-reduce:transition-none" />
           {options.map((option, stop) => (
             <span
               key={option.value}
@@ -66,7 +72,7 @@ function StepSlider<Value extends string>({
             aria-label={props["aria-label"]}
             aria-labelledby={props["aria-labelledby"]}
             getAriaValueText={(_, stop) => options[stop]?.label ?? ""}
-            className="size-8 rounded-lg border border-border bg-background shadow-[0_1px_3px_rgb(0_0_0/0.18)] outline-none transition-[left] duration-150 ease-out focus-visible:ring-3 focus-visible:ring-ring/30 data-dragging:transition-none motion-reduce:transition-none dark:bg-foreground"
+            className="h-6 w-8 rounded-md border border-border bg-background shadow-[0_1px_3px_rgb(0_0_0/0.18)] outline-none transition-[left,scale] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] focus-visible:ring-3 focus-visible:ring-ring/30 active:scale-110 data-dragging:scale-110 data-dragging:transition-[scale] motion-reduce:transition-none dark:bg-foreground"
           />
         </Slider.Track>
       </Slider.Control>

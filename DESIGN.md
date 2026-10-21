@@ -178,7 +178,7 @@ A radio group on a `--muted` track with 3px padding. The checked option sits on 
 ### Step slider
 **Role:** Choosing one of a few ordered stops, such as Expires after.
 
-A 32px `--muted` track with `rounded-lg` corners and a dot at every stop. The track fills with `--primary` up to a 32px `--background` thumb that stays inside the track. The chosen stop's full name sits above the track in `--link` at 14px weight 500. Arrow keys move one stop at a time.
+A 24px `--muted` track with `rounded-md` corners and a dot at every stop. The track fills with `--primary` up to a 32px by 24px `--background` thumb that stays inside the track. The chosen stop's full name sits above the track in `--link` at 14px weight 500. Arrow keys move one stop at a time. Thumb and fill spring to the next stop over 300ms with a slight overshoot, the thumb grows to 110% while held, and the name pops in when the stop changes. Under reduced motion it snaps.
 
 ### Tabs
 **Role:** Switching views.
