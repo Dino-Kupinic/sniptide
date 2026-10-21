@@ -84,7 +84,7 @@ Keywords share the brand blue and the other hues stay muted, so blue leads. Ever
 
 | Family | Token | Used for |
 | --- | --- | --- |
-| Stack Sans Headline, weight 700 | `--font-heading` | Page titles, dialog titles, stat numbers, landing headlines |
+| Archivo, weight 700 | `--font-heading` | Page titles, dialog titles, stat numbers, landing headlines |
 | Inter | `--font-sans` | Body text, controls, menus |
 | JetBrains Mono | `--font-mono` | Paste slugs, code, shortcuts, tooltips, stat labels |
 | Stack Sans Notch | Paper `--font-display` | Landing hero display type |
