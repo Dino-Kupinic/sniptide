@@ -179,6 +179,7 @@
     "sharedTo": "Shared to {target}",
     "shareTo": "Share to {target}",
     "expiryValue": "{value, select, 1h {1h} 1d {1d} 1w {1w} 1m {1mo} never {Never} other {Keep}}",
+    "expiryLong": "{value, select, 1h {1 hour} 1d {1 day} 1w {1 week} 1m {1 month} never {Never} other {Keep}}",
     "visibilityValue": "{value, select, private {Private} unlisted {Unlisted} other {Public}}",
     "visibilityHelp": "{value, select, private {Only you and people you invite can open it.} unlisted {Anyone with the link can open it. It isn't listed on your profile.} other {Listed on your profile and open to anyone.}}",
     "accessLevel": "{value, select, edit {Can edit} other {Can view}}",

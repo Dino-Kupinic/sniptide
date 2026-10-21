@@ -683,6 +683,7 @@ export function PasteEditor({
               options={expiryOptions.map((option) => ({
                 ...option,
                 label: t("expiryValue", { value: option.value }),
+                valueLabel: t("expiryLong", { value: option.value }),
               }))}
               currentExpiry={expiryLabel}
             />
@@ -1017,17 +1018,16 @@ export function PasteEditor({
             {!editing && visibility === "private" ? (
               <InvitePeople invites={invites} onChange={setInvites} large />
             ) : null}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2">
               <span className="text-[15px]">{t("expiresAfter")}</span>
               <ExpiryChips
                 value={expiry}
                 onChange={setExpiry}
-                options={expiryOptions
-                  .filter((option) => ["1d", "1w", "never"].includes(option.value))
-                  .map((option) => ({
-                    ...option,
-                    label: t("expiryValue", { value: option.value }),
-                  }))}
+                options={expiryOptions.map((option) => ({
+                  ...option,
+                  label: t("expiryValue", { value: option.value }),
+                  valueLabel: t("expiryLong", { value: option.value }),
+                }))}
                 currentExpiry={expiryLabel}
               />
             </div>

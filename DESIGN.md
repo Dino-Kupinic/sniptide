@@ -175,6 +175,11 @@ The input is 40px tall with a 1px `--input` border and 12px padding. Focus chang
 
 A radio group on a `--muted` track with 3px padding. The checked option sits on `--background` with weight 500.
 
+### Step slider
+**Role:** Choosing one of a few ordered stops, such as Expires after.
+
+A 32px `--muted` track with `rounded-lg` corners and a dot at every stop. The track fills with `--primary` up to a 32px `--background` thumb that stays inside the track. The chosen stop's full name sits above the track in `--link` at 14px weight 500. Arrow keys move one stop at a time.
+
 ### Tabs
 **Role:** Switching views.
 

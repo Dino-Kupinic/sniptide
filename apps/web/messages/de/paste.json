@@ -179,6 +179,7 @@
     "sharedTo": "In {target} geteilt",
     "shareTo": "In {target} teilen",
     "expiryValue": "{value, select, 1h {1 Std.} 1d {1 Tag} 1w {1 Wo.} 1m {1 Mon.} never {Nie} other {Beibehalten}}",
+    "expiryLong": "{value, select, 1h {1 Stunde} 1d {1 Tag} 1w {1 Woche} 1m {1 Monat} never {Nie} other {Beibehalten}}",
     "visibilityValue": "{value, select, private {Privat} unlisted {Nicht gelistet} other {Öffentlich}}",
     "visibilityHelp": "{value, select, private {Nur du und eingeladene Personen können diesen Paste öffnen.} unlisted {Alle mit dem Link können ihn öffnen. Er erscheint nicht auf deinem Profil.} other {Erscheint auf deinem Profil und ist für alle zugänglich.}}",
     "accessLevel": "{value, select, edit {Kann bearbeiten} other {Kann ansehen}}",
