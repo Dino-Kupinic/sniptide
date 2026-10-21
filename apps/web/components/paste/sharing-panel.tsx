@@ -52,7 +52,12 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
   const { copied, copy } = useCopy()
 
   return (
-    <div className={cn("flex h-9 items-center border border-border bg-sidebar pl-2.5", className)}>
+    <div
+      className={cn(
+        "rounded-lg flex h-9 items-center border border-border bg-sidebar pl-2.5",
+        className,
+      )}
+    >
       <span className="min-w-0 flex-1 truncate font-mono text-xs">{url}</span>
       <Button
         type="button"
@@ -312,7 +317,7 @@ export function SharingPanel({
   return (
     <section aria-label={t("sharing")} className="flex flex-col gap-3">
       {controls.visibilityControl}
-      <div className="flex flex-col divide-y divide-border border border-border text-[15px]">
+      <div className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
         <SettingRow label={t("expires")} list>
           {controls.expiry}
         </SettingRow>

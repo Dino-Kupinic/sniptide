@@ -87,7 +87,7 @@ export function NotificationSection({
           </Button>
         </div>
       ) : null}
-      <div className="divide-y divide-border border border-border">
+      <div className="overflow-hidden rounded-lg divide-y divide-border border border-border">
         <div className="grid grid-cols-[minmax(0,1fr)_60px_60px] items-center gap-2 px-3 py-3 text-xs text-muted-foreground sm:grid-cols-[minmax(0,1fr)_90px_90px] sm:px-4">
           <span>Activity</span>
           <span className="text-center">In-app</span>

@@ -11,7 +11,7 @@ import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs } from "./page-header"
 
 const iconButtonClass =
-  "inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
+  "rounded-lg inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
 
 // Desktop top bar (lg and up): the page title on the left, the page's own actions on the right,
 // then the bell. There is no breadcrumb; the sidebar already marks where you are. The sidebar
@@ -65,7 +65,7 @@ function SearchField() {
     <button
       type="button"
       onClick={open}
-      className="flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
+      className="rounded-lg flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
     >
       <SearchIcon className="size-3.5" />
       {t("search_pastes_collections")}

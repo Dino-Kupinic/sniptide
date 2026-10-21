@@ -114,7 +114,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
             </Label>
             <div
               className={cn(
-                "flex h-[46px] items-center border border-input focus-within:border-2 focus-within:border-primary lg:h-10",
+                "rounded-lg flex h-[46px] items-center border border-input focus-within:border-2 focus-within:border-primary lg:h-10",
                 (availability === "taken" || availability === "invalid") && "border-destructive",
               )}
             >

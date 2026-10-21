@@ -397,7 +397,7 @@ function Section({
       aria-label={title}
       className={cn(
         "flex shrink-0 flex-col gap-0.5",
-        isDragSource && "relative z-20 bg-sidebar shadow-sm",
+        isDragSource && "rounded-md relative z-20 bg-sidebar shadow-sm",
       )}
     >
       <div className="group/row flex h-7 shrink-0 rounded-md items-center gap-0.5 pr-1 pl-2 text-muted-foreground hover:bg-muted hover:text-foreground has-data-popup-open:bg-muted">
@@ -472,7 +472,11 @@ function CollectionRow({
     <div
       ref={ref}
       data-active={isActivePath(pathname, href)}
-      className={cn(rowClass, "gap-1.5 pl-1.5", isDragSource && "z-20 bg-sidebar shadow-sm")}
+      className={cn(
+        rowClass,
+        "rounded-md gap-1.5 pl-1.5",
+        isDragSource && "z-20 bg-sidebar shadow-sm",
+      )}
     >
       <CollectionIconPicker collection={collection} />
       <Link

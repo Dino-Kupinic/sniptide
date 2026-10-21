@@ -300,7 +300,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                               {entry.message}
                             </span>
                             {current ? (
-                              <span className="border border-border px-1 text-[11px] text-muted-foreground">
+                              <span className="rounded-sm border border-border px-1 text-[11px] text-muted-foreground">
                                 {t("current")}
                               </span>
                             ) : null}
@@ -363,7 +363,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               </SettingRow>
             </SharingPanel>
           ) : (
-            <dl className="divide-y divide-border border border-border text-[15px]">
+            <dl className="overflow-hidden rounded-lg divide-y divide-border border border-border text-[15px]">
               {share ? (
                 <MobileRow
                   label={t("yourAccess")}
@@ -444,8 +444,8 @@ async function SharedWithYou({
         <span
           className={
             share.access === "edit"
-              ? "bg-foreground px-2 py-0.5 font-medium text-background"
-              : "border border-border px-2 py-0.5 font-medium"
+              ? "rounded-md bg-foreground px-2 py-0.5 font-medium text-background"
+              : "rounded-md border border-border px-2 py-0.5 font-medium"
           }
         >
           {t(share.access === "edit" ? "canEdit" : "canView")}

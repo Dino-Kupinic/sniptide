@@ -19,7 +19,10 @@ export function Card({
   return (
     <section
       aria-labelledby={id}
-      className={cn("flex min-w-0 flex-col border border-border", className)}
+      className={cn(
+        "overflow-hidden rounded-lg flex min-w-0 flex-col border border-border",
+        className,
+      )}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border py-3 pr-3 pl-4">
         <h2 id={id} className="text-sm font-semibold">

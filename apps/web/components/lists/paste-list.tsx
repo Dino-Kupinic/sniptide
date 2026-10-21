@@ -167,7 +167,7 @@ export function PasteList({
         {quick}
       </div>
 
-      <div className="flex flex-col lg:border lg:border-border">
+      <div className="lg:overflow-hidden lg:rounded-lg flex flex-col lg:border lg:border-border">
         <div className="hidden flex-wrap items-center justify-between gap-3 p-3 lg:flex">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
@@ -208,7 +208,7 @@ export function PasteList({
             {rows.map((row) => (
               <li
                 key={row.slug}
-                className="relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
+                className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link
@@ -298,7 +298,7 @@ export function PasteList({
                             undo: () => setStarred(row.slug, true),
                           })
                         }}
-                        className="relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                        className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
                       >
                         <StarIcon className="size-4 fill-current" />
                       </button>

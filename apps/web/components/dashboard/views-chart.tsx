@@ -40,7 +40,7 @@ export function ViewsBarChart({
             className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
           >
             {index === peak && value > 0 ? (
-              <span className="bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] text-background">
+              <span className="rounded-sm bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] text-background">
                 {formatNumber(value, locale)}
               </span>
             ) : null}

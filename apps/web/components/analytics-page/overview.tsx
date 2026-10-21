@@ -33,7 +33,7 @@ export function Overview({
       <div
         role="radiogroup"
         aria-label={t("chart_metric")}
-        className="grid grid-cols-2 border border-border lg:grid-cols-4"
+        className="rounded-lg grid grid-cols-2 border border-border lg:grid-cols-4"
       >
         {kpis.map((kpi, index) => {
           const active = kpi.id === selected

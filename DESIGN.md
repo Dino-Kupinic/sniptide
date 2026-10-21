@@ -133,9 +133,11 @@ Paper tokens `--spacing-3xs` to `--spacing-7xl` use these values. Components in 
 
 | Class | Value | Element |
 | --- | --- | --- |
-| `rounded-lg` | 6px (`--radius`) | Buttons, inputs, selects, segmented control, panels, cards, menus, popovers, dialogs, toasts |
-| `rounded-md` | 4.8px | Badges, tabs, chips, sidebar rows, skeletons |
-| `rounded-sm` | 3.6px | Kbd, checkboxes |
+| `rounded-lg` | 6px (`--radius`) | Buttons, icon buttons from 32px up, inputs, selects, segmented control, panels, cards, tables, banners, menus, popovers, dialogs, toasts, the app content area |
+| `rounded-md` | 4.8px | Badges, tabs, chips, pills, icon buttons under 32px, sidebar rows, avatars, tooltips, skeletons |
+| `rounded-sm` | 3.6px | Kbd, checkboxes, counters, the switch, progress tracks, chart labels |
+
+Only surfaces attached to a screen edge stay square: the mobile top bar, the tab bar and sheets.
 
 `--radius` in `globals.css` is the one value to tune. `rounded-md` and `rounded-sm` derive from it at 0.8 and 0.6 times. A panel whose header or body has its own fill also sets `overflow-hidden` so the fill follows the corner.
 
@@ -158,7 +160,7 @@ All components live in `packages/ui/src/components`. Use them before writing new
 ### Button
 **Role:** Every action.
 
-Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 3px edge in a darker shade of its fill (`--depth`), hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
+Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 2px edge in a darker shade of its fill (`--depth`), hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
 
 ### Input and Textarea
 **Role:** Text entry.
@@ -242,8 +244,8 @@ The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-i
 | Menu open | 100ms, scale from 0.98 |
 | Popover and dialog open | 150ms, scale from 0.98 |
 | Sheet and toast | 200ms |
-| Button press | Raised variants drop 3px onto the edge in 60ms, then spring back over 200ms with a slight overshoot. Flat variants `translate-y-px` |
-| Button hover, raised variants | Lift 1px, edge grows to 4px |
+| Button press | Raised variants drop 2px onto the edge in 60ms, then spring back over 200ms with a slight overshoot. Flat variants `translate-y-px` |
+| Button hover, raised variants | Lift 1px, edge grows to 3px |
 | Hover, neutral controls | `bg-muted` |
 | Hover, filled blue controls | `bg-primary/85`, or 8% lighter on raised buttons |
 | Focus on buttons | `ring-3 ring-ring/30` |
@@ -270,7 +272,7 @@ Surfaces separate with a 1px `--border` or a background step and carry no shadow
 | Dropdown menu, popover | `3px 3px 0 0 var(--offset-shadow)` |
 | Dialog, alert dialog | `4px 4px 0 0 var(--offset-shadow)` |
 | Toast | `shadow-md` with a plain border |
-| Raised button edge | `0 3px 0 0 var(--depth)`, a darker shade of the button fill |
+| Raised button edge | `0 2px 0 0 var(--depth)`, a darker shade of the button fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
 | Tooltip | None, inverted `bg-foreground` fill |
 
@@ -396,7 +398,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 
 ### Example component prompts
 
-1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 3px darker-blue edge, lifts 1px on hover and presses down onto the edge.
+1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 2px darker-blue edge, lifts 1px on hover and presses down onto the edge.
 2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--border` hairline with a 3px offset shadow in `--offset-shadow`.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.

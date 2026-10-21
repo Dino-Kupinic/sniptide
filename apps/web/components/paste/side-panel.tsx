@@ -38,7 +38,7 @@ export function SidePanelProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const panelToolClass =
-  "inline-flex size-8 shrink-0 items-center justify-center text-foreground/75 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:bg-muted aria-pressed:text-foreground [&_svg]:size-4"
+  "rounded-lg inline-flex size-8 shrink-0 items-center justify-center text-foreground/75 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:bg-muted aria-pressed:text-foreground [&_svg]:size-4"
 
 // Lives in the code card's bar, after a divider. Desktop only, like the panel.
 export function SidePanelToggle() {
@@ -87,7 +87,7 @@ export function SidePanel({
       <nav
         aria-label={label}
         className={cn(
-          "hidden w-11 shrink-0 flex-col items-center border border-border lg:flex",
+          "overflow-hidden rounded-lg hidden w-11 shrink-0 flex-col items-center border border-border lg:flex",
           className,
         )}
       >
@@ -131,7 +131,7 @@ export function SidePanel({
     <section
       aria-label={label}
       className={cn(
-        "hidden w-[272px] shrink-0 flex-col divide-y divide-border border border-border lg:flex xl:w-[300px]",
+        "overflow-hidden rounded-lg hidden w-[272px] shrink-0 flex-col divide-y divide-border border border-border lg:flex xl:w-[300px]",
         className,
       )}
     >

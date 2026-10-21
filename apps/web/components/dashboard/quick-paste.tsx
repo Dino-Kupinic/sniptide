@@ -66,7 +66,7 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
   return (
     <DropdownMenuTrigger
       aria-label={label}
-      className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_3px_0_0_var(--border)] dark:bg-card dark:shadow-[0_3px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
+      className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
     >
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
@@ -187,7 +187,7 @@ export function QuickPaste({
             value={draft.name}
             onChange={(event) => update({ name: event.target.value })}
             spellCheck={false}
-            className="w-32 bg-muted px-2 py-[3px] font-mono text-xs text-foreground/80 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="rounded-md w-32 bg-muted px-2 py-[3px] font-mono text-xs text-foreground/80 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
         </div>
         <span

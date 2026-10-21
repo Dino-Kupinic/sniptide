@@ -159,7 +159,7 @@ export function ShareDialog({
             </div>
             <DialogClose
               aria-label={t("close")}
-              className="-mt-1 -mr-1 hidden size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:flex"
+              className="rounded-lg -mt-1 -mr-1 hidden size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:flex"
             >
               <XIcon className="size-4" />
             </DialogClose>

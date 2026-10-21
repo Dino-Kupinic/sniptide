@@ -882,7 +882,7 @@ export function PasteEditor({
 
       <SidePanelProvider>
         <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
-          <div className="mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
+          <div className="overflow-hidden rounded-lg mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
             <FileTabs
               files={files}
               activeId={active?.id}
@@ -958,7 +958,7 @@ export function PasteEditor({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label={t("languageName", { name: language.name })}
-                  className="-ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+                  className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
                 >
                   <LanguageMarker language={language.id} />
                   <span className="font-medium text-foreground">{language.name}</span>

@@ -123,7 +123,7 @@ export function ExpiryChips({
             aria-checked={value === option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "border border-border px-2.5 py-[5px] text-[13px] leading-[18px] text-foreground/80 outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40",
+              "rounded-md border border-border px-2.5 py-[5px] text-[13px] leading-[18px] text-foreground/80 outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40",
               value === option.value &&
                 "border-foreground bg-foreground font-medium text-background hover:border-foreground",
             )}
@@ -159,7 +159,7 @@ export function SlugInput({
     <div className="flex flex-col gap-1">
       <div
         className={cn(
-          "flex h-[34px] items-center border border-input focus-within:border-primary",
+          "rounded-lg flex h-[34px] items-center border border-input focus-within:border-primary",
           status === "taken" && "border-destructive",
         )}
       >

@@ -30,7 +30,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
       title={t("deleteAccount")}
       description={t("deleteAccountDescription", { count: pasteCount })}
     >
-      <div className="flex flex-col gap-3 border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-lg flex flex-col gap-3 border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[13px] text-foreground/80">{t("copyAnythingYouWantToKeep")}</p>
         <AlertDialog
           open={open}
