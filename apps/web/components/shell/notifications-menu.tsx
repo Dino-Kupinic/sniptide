@@ -161,7 +161,8 @@ export function NotificationsMenu({ className }: { className?: string }) {
                   key={item.id}
                   render={<Link href={item.href} />}
                   onClick={() => markOne(item.id)}
-                  className="h-auto items-start gap-2.5 py-2.5"
+                  // Full-width rows: the list runs edge to edge, so these skip the inset menu highlight.
+                  className="h-auto items-start gap-2.5 rounded-none py-2.5"
                 >
                   <Icon className="mt-0.5" />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
