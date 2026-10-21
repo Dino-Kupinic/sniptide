@@ -11,17 +11,18 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, FolderIcon, HomeIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { moveFolder } from "@/lib/folders/actions"
 import { checkMove, flattenTree, type MoveCheck } from "@/lib/folders/tree"
 import type { Folder } from "@/lib/folders/types"
 
-const reasons: Partial<Record<MoveCheck, string>> = {
-  same: "Current location",
-  cycle: "Inside this folder",
-  depth: "Too deeply nested",
-  duplicate: "Name already used there",
-}
+const reasons = {
+  same: "move_reason_same",
+  cycle: "move_reason_cycle",
+  depth: "move_reason_depth",
+  duplicate: "move_reason_duplicate",
+} as const satisfies Partial<Record<MoveCheck, string>>
 
 // Pick the folder (or the top level) to move a folder under. Destinations the folder can't go to
 // are shown disabled with the reason, using the same rules the server applies.
@@ -35,13 +36,14 @@ export function MoveFolderDialog({
   folders: Folder[]
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const [target, setTarget] = React.useState<string | null | undefined>(undefined)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
   const options = [
-    { id: null, name: "Top level", depth: 0, icon: HomeIcon },
+    { id: null, name: t("move_top_level"), depth: 0, icon: HomeIcon },
     ...flattenTree(folders).map((option) => ({
       id: option.folder.id as string | null,
       name: option.folder.name,
@@ -53,12 +55,10 @@ export function MoveFolderDialog({
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogTitle>Move “{folder.name}”</DialogTitle>
-        <DialogDescription>
-          Choose where it goes. Everything inside moves with it.
-        </DialogDescription>
+        <DialogTitle>{t("move_folder_title", { name: folder.name })}</DialogTitle>
+        <DialogDescription>{t("move_folder_description")}</DialogDescription>
         <fieldset className="min-w-0 flex max-h-72 flex-col overflow-y-auto border border-border">
-          <legend className="sr-only">Destination</legend>
+          <legend className="sr-only">{t("move_destination")}</legend>
           {options.map((option) => {
             const check = checkMove(folders, folder.id, option.id)
             const disabled = check !== "ok"
@@ -79,7 +79,9 @@ export function MoveFolderDialog({
                 <option.icon className="text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{option.name}</span>
                 {disabled ? (
-                  <span className="shrink-0 text-xs text-muted-foreground">{reasons[check]}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {t(reasons[check])}
+                  </span>
                 ) : null}
                 {selected ? <CheckIcon className="text-primary" /> : null}
               </button>
@@ -93,7 +95,7 @@ export function MoveFolderDialog({
         ) : null}
         <div className="flex justify-end gap-2">
           <DialogClose render={<Button type="button" variant="outline" size="lg" />}>
-            Cancel
+            {t("cancel")}
           </DialogClose>
           <Button
             size="lg"
@@ -108,7 +110,7 @@ export function MoveFolderDialog({
               })
             }
           >
-            {pending ? "Moving…" : "Move here"}
+            {pending ? t("moving") : t("move_here")}
           </Button>
         </div>
       </DialogContent>

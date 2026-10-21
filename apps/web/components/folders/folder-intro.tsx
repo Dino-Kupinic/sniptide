@@ -1,22 +1,25 @@
 import { ChevronRightIcon, FolderIcon } from "lucide-react"
 import Link from "next/link"
+import { useLocale, useTranslations } from "next-intl"
 import { childrenOf, folderPath } from "@/lib/folders/tree"
 import type { Folder } from "@/lib/folders/types"
 import { formatNumber } from "@/lib/format"
 
 // Above a folder's pastes: where it sits in the tree, and the folders directly inside it.
 export function FolderIntro({ folder, folders }: { folder: Folder; folders: Folder[] }) {
+  const t = useTranslations("Workspace")
+  const locale = useLocale()
   const trail = folderPath(folders, folder.id)
   const subfolders = childrenOf(folders, folder.id)
 
   return (
     <div className="flex flex-col gap-4">
       <nav
-        aria-label="Folder path"
+        aria-label={t("folder_path")}
         className="flex flex-wrap items-center gap-1 text-[13px] text-muted-foreground"
       >
         <Link href="/folders" className="hover:text-foreground hover:underline">
-          Folders
+          {t("folders")}
         </Link>
         {trail.map((step, index) => (
           <span key={step.id} className="flex items-center gap-1">
@@ -34,7 +37,7 @@ export function FolderIntro({ folder, folders }: { folder: Folder; folders: Fold
         ))}
       </nav>
       {subfolders.length > 0 ? (
-        <ul aria-label="Subfolders" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <ul aria-label={t("subfolders")} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {subfolders.map((child) => (
             <li key={child.id}>
               <Link
@@ -44,7 +47,7 @@ export function FolderIntro({ folder, folders }: { folder: Folder; folders: Fold
                 <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{child.name}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  {formatNumber(child.pasteCount)}
+                  {formatNumber(child.pasteCount, locale)}
                 </span>
               </Link>
             </li>

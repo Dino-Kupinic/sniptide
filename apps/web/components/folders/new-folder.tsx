@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { CollectionNameDialog } from "@/components/collections/name-dialog"
 import { createFolder } from "@/lib/folders/actions"
 import { MAX_FOLDER_NAME_LENGTH } from "@/lib/folders/types"
@@ -22,24 +23,25 @@ export function NewFolderDialog({
   parentName?: string
   onCreated?: (id: string) => void
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
 
   return (
     <CollectionNameDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={parentName ? "New subfolder" : "New folder"}
+      title={parentName ? t("new_subfolder") : t("new_folder")}
       description={
         parentName
-          ? `Created inside “${parentName}”.`
-          : "Arrange pastes in a folder, like on a disk."
+          ? t("folder_created_inside", { name: parentName })
+          : t("folder_create_description")
       }
-      submitLabel="Create folder"
-      pendingLabel="Creating…"
-      label="Name"
-      fieldLabel="Folder name"
+      submitLabel={t("create_folder")}
+      pendingLabel={t("creating")}
+      label={t("name")}
+      fieldLabel={t("folder_name")}
       maxLength={MAX_FOLDER_NAME_LENGTH}
-      placeholder="e.g. Work"
+      placeholder={t("folder_name_placeholder")}
       onSubmit={async (name) => {
         const result = await createFolder(name, parentId)
         if (result.ok) {

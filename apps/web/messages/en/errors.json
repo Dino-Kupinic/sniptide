@@ -74,6 +74,17 @@
     "webhookPaste": "Only the owner can share a live public or unlisted paste without a password or one-time protection.",
     "webhookInvalid": "That webhook isn't configured correctly.",
     "webhookDelivery": "The webhook didn't confirm delivery. Check the channel before trying again.",
-    "validationTooLong": "Too big: expected string to have <={max} characters"
+    "validationTooLong": "Too big: expected string to have <={max} characters",
+    "signInFolders": "Sign in to change folders.",
+    "folderName": "Give the folder a name.",
+    "folderDuplicate": "A folder with that name is already there.",
+    "folderLimit": "You can have up to {max} folders.",
+    "folderDepth": "Folders can be nested {max} levels deep.",
+    "folderMissing": "That folder no longer exists.",
+    "folderCycle": "A folder can't go inside itself.",
+    "checkFolder": "Check the folder and try again.",
+    "folderContents": "Choose what happens to the pastes inside.",
+    "movePastesLimit": "Move up to {max} pastes at once.",
+    "checkPastes": "Check the pastes."
   }
 }

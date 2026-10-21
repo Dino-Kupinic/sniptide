@@ -183,12 +183,12 @@ export function PasteMenu({
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FolderInputIcon />
-                Move to folder
+                {t("move_to_folder")}
               </DropdownMenuSubTrigger>
               <DropdownMenuContent className="max-h-80 w-56 overflow-y-auto">
                 <DropdownMenuItem onClick={() => moveTo(null)}>
                   <HomeIcon />
-                  <span className="truncate">No folder</span>
+                  <span className="truncate">{t("no_folder")}</span>
                   {paste.folderId === null ? <CheckIcon className="ml-auto text-primary!" /> : null}
                 </DropdownMenuItem>
                 {flattenTree(folders).map(({ folder, depth }) => (
@@ -207,7 +207,7 @@ export function PasteMenu({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setCreatingFolder(true)}>
                   <PlusIcon />
-                  New folder
+                  {t("new_folder")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenuSub>

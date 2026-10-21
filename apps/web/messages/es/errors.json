@@ -74,6 +74,17 @@
     "webhookPaste": "Solo el propietario puede compartir un paste activo público o no listado sin contraseña ni protección de un solo uso.",
     "webhookInvalid": "Ese webhook no está configurado correctamente.",
     "webhookDelivery": "El webhook no ha confirmado la entrega. Revisa el canal antes de volver a intentarlo.",
-    "validationTooLong": "Usa como máximo {max} caracteres."
+    "validationTooLong": "Usa como máximo {max} caracteres.",
+    "signInFolders": "Inicia sesión para modificar carpetas.",
+    "folderName": "Ponle un nombre a la carpeta.",
+    "folderDuplicate": "Ya hay una carpeta con ese nombre.",
+    "folderLimit": "Puedes tener hasta {max} carpetas.",
+    "folderDepth": "Las carpetas se pueden anidar hasta {max} niveles.",
+    "folderMissing": "Esa carpeta ya no existe.",
+    "folderCycle": "Una carpeta no puede ir dentro de sí misma.",
+    "checkFolder": "Revisa la carpeta e inténtalo de nuevo.",
+    "folderContents": "Elige qué ocurre con los fragmentos que contiene.",
+    "movePastesLimit": "Mueve hasta {max} fragmentos a la vez.",
+    "checkPastes": "Revisa los fragmentos."
   }
 }

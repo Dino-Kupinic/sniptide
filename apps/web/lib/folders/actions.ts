@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
+import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { SLUG_PATTERN } from "@/lib/pastes/store"
 import * as store from "./store"
 import {
@@ -15,7 +16,7 @@ import {
 } from "./types"
 
 async function assertSignedIn() {
-  if (!(await getSession())) throw new Error("Sign in to change folders.")
+  if (!(await getSession())) throw new Error(await actionError("signInFolders"))
 }
 
 const nameSchema = z
@@ -38,17 +39,19 @@ const failures = {
   cycle: "A folder can't go inside itself.",
 } as const
 
-function done(result: store.FolderResult): FolderActionResult {
-  if (result.status !== "ok") return { ok: false, error: failures[result.status] }
+// Messages are written in English here and translated to the viewer's language on the way out.
+async function fail(message: string) {
+  return { ok: false as const, error: await translateActionError(message) }
+}
+
+async function done(result: store.FolderResult): Promise<FolderActionResult> {
+  if (result.status !== "ok") return fail(failures[result.status])
   revalidatePath("/", "layout")
   return { ok: true, id: result.folder.id }
 }
 
 function invalid(error: z.ZodError) {
-  return {
-    ok: false as const,
-    error: error.issues[0]?.message ?? "Check the folder and try again.",
-  }
+  return fail(error.issues[0]?.message ?? "Check the folder and try again.")
 }
 
 // `parentId` is the folder to create it in; null or left out makes a top-level folder.
@@ -96,10 +99,10 @@ export async function deleteFolder(
   if (!parsedId.success) return invalid(parsedId.error)
   const parsedContents = z.enum(DELETE_CONTENTS).safeParse(contents)
   if (!parsedContents.success) {
-    return { ok: false, error: "Choose what happens to the pastes inside." }
+    return fail("Choose what happens to the pastes inside.")
   }
   const result = await store.deleteFolder(parsedId.data, parsedContents.data)
-  if (result.status === "missing") return { ok: false, error: failures.missing }
+  if (result.status === "missing") return fail(failures.missing)
   revalidatePath("/", "layout")
   return { ok: true, folders: result.folders, pastes: result.pastes }
 }
@@ -119,12 +122,12 @@ export async function movePastes(
   await assertSignedIn()
   const parsedSlugs = slugsSchema.safeParse(slugs)
   if (!parsedSlugs.success) {
-    return { ok: false, error: parsedSlugs.error.issues[0]?.message ?? "Check the pastes." }
+    return fail(parsedSlugs.error.issues[0]?.message ?? "Check the pastes.")
   }
   const folder = parentSchema.safeParse(folderId)
   if (!folder.success) return invalid(folder.error)
   const result = await store.movePastes([...new Set(parsedSlugs.data)], folder.data)
-  if (result.status === "missing") return { ok: false, error: failures.missing }
+  if (result.status === "missing") return fail(failures.missing)
   revalidatePath("/", "layout")
   return { ok: true, moved: result.moved }
 }

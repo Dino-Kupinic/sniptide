@@ -9,12 +9,11 @@ import {
   AlertDialogTitle,
 } from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { deleteFolder } from "@/lib/folders/actions"
 import { descendantIds, subtreePasteCount } from "@/lib/folders/tree"
 import type { DeleteContents, Folder } from "@/lib/folders/types"
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 // Deleting a folder asks what happens to what's inside. There is no preselected answer and no
 // "delete everything": the contents either move up a level or, for pastes, go to the trash where
@@ -30,6 +29,7 @@ export function DeleteFolderDialog({
   onOpenChange: (open: boolean) => void
   onDeleted: () => void
 }) {
+  const t = useTranslations("Workspace")
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
   const subfolders = descendantIds(folders, folder.id).length
@@ -46,21 +46,16 @@ export function DeleteFolderDialog({
     })
   }
 
-  const inside = [
-    pastes > 0 ? plural(pastes, "paste") : null,
-    subfolders > 0 ? plural(subfolders, "subfolder") : null,
-  ]
-    .filter(Boolean)
-    .join(" and ")
+  const shape = pastes > 0 && subfolders > 0 ? "both" : pastes > 0 ? "pastes" : "subfolders"
 
   return (
     <AlertDialog open onOpenChange={onOpenChange}>
       <AlertDialogContent>
-        <AlertDialogTitle>Delete “{folder.name}”?</AlertDialogTitle>
+        <AlertDialogTitle>{t("delete_folder_title", { name: folder.name })}</AlertDialogTitle>
         <AlertDialogDescription>
           {empty
-            ? "The folder is empty, so nothing else is affected."
-            : `It holds ${inside}. Choose what happens to ${pastes + subfolders === 1 ? "it" : "them"}; nothing is deleted for good.`}
+            ? t("delete_folder_empty")
+            : t("delete_folder_holds", { shape, pastes, subfolders })}
         </AlertDialogDescription>
         {error ? (
           <p role="alert" className="text-[13px] text-destructive">
@@ -69,7 +64,7 @@ export function DeleteFolderDialog({
         ) : null}
         <AlertDialogFooter className="flex-wrap">
           <AlertDialogClose render={<Button variant="outline" size="lg" />}>
-            Cancel
+            {t("cancel")}
           </AlertDialogClose>
           {empty ? (
             <Button
@@ -78,12 +73,14 @@ export function DeleteFolderDialog({
               disabled={pending}
               onClick={() => remove("move")}
             >
-              {pending ? "Deleting…" : "Delete folder"}
+              {pending ? t("deleting") : t("delete_folder")}
             </Button>
           ) : (
             <>
               <Button variant="outline" size="lg" disabled={pending} onClick={() => remove("move")}>
-                Move contents to {parent ? `“${parent.name}”` : "the top level"}
+                {parent
+                  ? t("delete_folder_move_contents_to", { name: parent.name })
+                  : t("delete_folder_move_contents_top")}
               </Button>
               <Button
                 size="lg"
@@ -91,7 +88,9 @@ export function DeleteFolderDialog({
                 disabled={pending}
                 onClick={() => remove("trash")}
               >
-                {pastes > 0 ? `Move ${plural(pastes, "paste")} to trash` : "Delete with subfolders"}
+                {pastes > 0
+                  ? t("delete_folder_trash_pastes", { count: pastes })
+                  : t("delete_folder_with_subfolders")}
               </Button>
             </>
           )}

@@ -74,6 +74,17 @@
     "webhookPaste": "只有所有者才能分享未设置密码或阅后即焚保护的、仍有效的公开或不公开列出的代码片段。",
     "webhookInvalid": "该 Webhook 配置不正确。",
     "webhookDelivery": "Webhook 未确认送达，请先查看频道，再决定是否重试。",
-    "validationTooLong": "最多可输入 {max} 个字符。"
+    "validationTooLong": "最多可输入 {max} 个字符。",
+    "signInFolders": "请登录后修改文件夹。",
+    "folderName": "请为文件夹填写名称。",
+    "folderDuplicate": "此处已有同名文件夹。",
+    "folderLimit": "最多可创建 {max} 个文件夹。",
+    "folderDepth": "文件夹最多可嵌套 {max} 层。",
+    "folderMissing": "该文件夹已不存在。",
+    "folderCycle": "文件夹不能放入自身。",
+    "checkFolder": "请检查文件夹后重试。",
+    "folderContents": "请选择如何处理其中的粘贴。",
+    "movePastesLimit": "一次最多可移动 {max} 个粘贴。",
+    "checkPastes": "请检查粘贴。"
   }
 }

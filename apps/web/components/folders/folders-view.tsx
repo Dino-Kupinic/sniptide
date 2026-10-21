@@ -3,44 +3,45 @@
 import { Button } from "@sniptide/ui/components/button"
 import { FolderIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { ListHeader } from "@/components/lists/toolbar"
 import { flattenTree } from "@/lib/folders/tree"
 import type { Folder } from "@/lib/folders/types"
-import { formatNumber } from "@/lib/format"
 import { FolderMenu } from "./folder-menu"
 import { NewFolderDialog } from "./new-folder"
 
 // The Folders page: every folder as a tree with its paste count, and the way to make a new one.
 // It is also where phones, which have no sidebar, manage folders.
 export function FoldersView({ folders }: { folders: Folder[] }) {
+  const t = useTranslations("Workspace")
   const [creating, setCreating] = React.useState(false)
   const create = (
     <Button size="lg" onClick={() => setCreating(true)}>
       <PlusIcon />
-      New folder
+      {t("new_folder")}
     </Button>
   )
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
-        title="Folders"
+        title={t("folders")}
         count={folders.length}
-        description="Arrange pastes in folders, nested as deep as you like."
+        description={t("folders_description")}
         actions={create}
       />
       <div className="lg:hidden">{create}</div>
 
       {folders.length === 0 ? (
         <div className="flex flex-col items-center gap-3 border border-border px-4 py-14 text-center text-sm text-muted-foreground">
-          No folders yet.
+          {t("no_folders_yet")}
           <button
             type="button"
             onClick={() => setCreating(true)}
             className="font-medium text-link hover:underline"
           >
-            Create your first folder
+            {t("create_your_first_folder")}
           </button>
         </div>
       ) : (
@@ -59,7 +60,7 @@ export function FoldersView({ folders }: { folders: Folder[] }) {
                 {folder.name}
               </Link>
               <span className="text-xs text-muted-foreground tabular-nums">
-                {formatNumber(folder.pasteCount)} {folder.pasteCount === 1 ? "paste" : "pastes"}
+                {t("paste_count", { count: folder.pasteCount })}
               </span>
               <FolderMenu
                 folder={folder}

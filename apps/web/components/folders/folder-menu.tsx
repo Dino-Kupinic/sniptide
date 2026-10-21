@@ -15,6 +15,7 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { depthOf, descendantIds } from "@/lib/folders/tree"
 import { type Folder, MAX_FOLDER_DEPTH } from "@/lib/folders/types"
@@ -36,6 +37,7 @@ export function FolderMenu({
   folders: Folder[]
   className?: string
 }) {
+  const t = useTranslations("Workspace")
   const router = useRouter()
   const pathname = usePathname()
   const [dialog, setDialog] = React.useState<"new" | "rename" | "move" | "delete" | null>(null)
@@ -56,7 +58,7 @@ export function FolderMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label={`Actions for ${folder.name}`}
+          aria-label={t("actions_for", { name: folder.name })}
           className={
             className ??
             "flex size-8 items-center justify-center border border-border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
@@ -68,21 +70,21 @@ export function FolderMenu({
           {depthOf(folders, folder.id) < MAX_FOLDER_DEPTH ? (
             <DropdownMenuItem onClick={() => setDialog("new")}>
               <FolderPlusIcon />
-              New subfolder
+              {t("new_subfolder")}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onClick={() => setDialog("rename")}>
             <PencilIcon />
-            Rename
+            {t("rename")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setDialog("move")}>
             <FolderInputIcon />
-            Move to…
+            {t("move_to_ellipsis")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDialog("delete")}>
             <Trash2Icon />
-            Delete folder…
+            {t("delete_folder_ellipsis")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

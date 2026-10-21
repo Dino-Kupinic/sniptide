@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { getLocale, getTranslations } from "next-intl/server"
 import { FolderIntro } from "@/components/folders/folder-intro"
 import { FolderMenu } from "@/components/folders/folder-menu"
 import { PasteList } from "@/components/lists/paste-list"
@@ -12,10 +13,12 @@ import { getSiteOrigin } from "@/lib/site"
 export async function generateMetadata({ params }: PageProps<"/folders/[id]">) {
   const id = (await params).id
   const folder = (await listFolders()).find((candidate) => candidate.id === id)
-  return { title: `${folder?.name ?? "Folder"} · Sniptide` }
+  const t = await getTranslations("Core")
+  return { title: `${folder?.name ?? t("folder")} · Sniptide` }
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/folders/[id]">) {
+  const locale = await getLocale()
   const { id } = await params
   const query = parsePasteListQuery(await searchParams)
   const [folders, data, collections, { origin, host }] = await Promise.all([
@@ -27,7 +30,7 @@ export default async function Page({ params, searchParams }: PageProps<"/folders
   const folder = folders.find((candidate) => candidate.id === id)
   if (!folder) notFound()
 
-  const rows = await toRows(data.pastes)
+  const rows = await toRows(data.pastes, locale)
 
   return (
     <PasteList

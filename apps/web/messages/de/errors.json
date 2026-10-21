@@ -74,6 +74,17 @@
     "webhookPaste": "Nur der Eigentümer kann einen aktiven öffentlichen oder ungelisteten Paste ohne Passwort- oder Einmalschutz teilen.",
     "webhookInvalid": "Dieser Webhook ist nicht richtig eingerichtet.",
     "webhookDelivery": "Der Webhook hat die Zustellung nicht bestätigt. Prüfe den Kanal, bevor du es erneut versuchst.",
-    "validationTooLong": "Verwende höchstens {max} Zeichen."
+    "validationTooLong": "Verwende höchstens {max} Zeichen.",
+    "signInFolders": "Melde dich an, um Ordner zu ändern.",
+    "folderName": "Gib dem Ordner einen Namen.",
+    "folderDuplicate": "Hier gibt es bereits einen Ordner mit diesem Namen.",
+    "folderLimit": "Du kannst bis zu {max} Ordner haben.",
+    "folderDepth": "Ordner können bis zu {max} Ebenen tief verschachtelt sein.",
+    "folderMissing": "Dieser Ordner existiert nicht mehr.",
+    "folderCycle": "Ein Ordner kann nicht in sich selbst liegen.",
+    "checkFolder": "Prüfe den Ordner und versuche es erneut.",
+    "folderContents": "Wähle, was mit den enthaltenen Pastes geschieht.",
+    "movePastesLimit": "Verschiebe höchstens {max} Pastes auf einmal.",
+    "checkPastes": "Prüfe die Pastes."
   }
 }

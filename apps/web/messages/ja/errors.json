@@ -74,6 +74,17 @@
     "webhookPaste": "所有者のみが、パスワード保護や一度限りの閲覧制限がなく、有効な公開または限定公開のペーストを共有できます。",
     "webhookInvalid": "この Webhook は正しく設定されていません。",
     "webhookDelivery": "Webhook の配信を確認できませんでした。再試行する前にチャンネルを確認してください。",
-    "validationTooLong": "{max} 文字以内で入力してください。"
+    "validationTooLong": "{max} 文字以内で入力してください。",
+    "signInFolders": "フォルダを変更するにはログインしてください。",
+    "folderName": "フォルダの名前を入力してください。",
+    "folderDuplicate": "同じ名前のフォルダがすでにあります。",
+    "folderLimit": "作成できるフォルダは {max} 個までです。",
+    "folderDepth": "フォルダは最大 {max} 階層まで入れ子にできます。",
+    "folderMissing": "このフォルダはもう存在しません。",
+    "folderCycle": "フォルダを自分自身の中に移動することはできません。",
+    "checkFolder": "フォルダを確認して、もう一度お試しください。",
+    "folderContents": "中にあるペーストをどうするか選んでください。",
+    "movePastesLimit": "一度に移動できるペーストは {max} 件までです。",
+    "checkPastes": "ペーストを確認してください。"
   }
 }

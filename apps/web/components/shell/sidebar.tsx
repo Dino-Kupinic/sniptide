@@ -33,7 +33,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { CollectionIconPicker } from "@/components/collections/icon-picker"
@@ -237,13 +237,13 @@ export function Sidebar({
                     key={id}
                     id="folders"
                     index={index}
-                    title="Folders"
+                    title={t("folders")}
                     open={!closed.includes("folders")}
                     onToggle={onToggleSection}
                     add={
                       <button
                         type="button"
-                        aria-label="New folder"
+                        aria-label={t("new_folder")}
                         onClick={() => setCreatingFolder(true)}
                         className={iconButtonClass}
                       >
@@ -254,7 +254,7 @@ export function Sidebar({
                     <FolderTree folders={folders} pathname={pathname} />
                     {folders.length === 0 ? (
                       <p className="px-2 py-1.5 text-[13px] text-muted-foreground">
-                        No folders yet.
+                        {t("no_folders_yet")}
                       </p>
                     ) : null}
                   </Section>
@@ -616,6 +616,8 @@ function FolderRow({
   active: boolean
   onToggle: () => void
 }) {
+  const t = useTranslations("Workspace")
+  const locale = useLocale()
   const Icon = open ? FolderOpenIcon : FolderIcon
   return (
     <div
@@ -626,7 +628,7 @@ function FolderRow({
       {nested ? (
         <button
           type="button"
-          aria-label={`${open ? "Collapse" : "Expand"} ${folder.name}`}
+          aria-label={t(open ? "collapse_folder" : "expand_folder", { name: folder.name })}
           aria-expanded={open}
           onClick={onToggle}
           className={iconButtonClass}
@@ -644,7 +646,7 @@ function FolderRow({
         {folder.name}
       </Link>
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums group-hover/row:hidden group-has-focus-visible/row:hidden group-has-data-popup-open/row:hidden">
-        {folder.pasteCount > 0 ? formatNumber(folder.pasteCount) : null}
+        {folder.pasteCount > 0 ? formatNumber(folder.pasteCount, locale) : null}
       </span>
       <FolderMenu folder={folder} folders={folders} className={cn(iconButtonClass, revealClass)} />
     </div>

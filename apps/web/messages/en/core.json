@@ -90,6 +90,8 @@
     "notificationExpiring": "“{title}” expires {time}",
     "notificationExpiringDetail": "Extend it from the paste's sharing panel",
     "notificationViews": "“{title}” reached {count, number} views",
-    "notificationViewsDetail": "See where they came from in Analytics"
+    "notificationViewsDetail": "See where they came from in Analytics",
+    "folders": "Folders",
+    "folder": "Folder"
   }
 }
