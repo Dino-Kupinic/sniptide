@@ -160,7 +160,7 @@ All components live in `packages/ui/src/components`. Use them before writing new
 ### Button
 **Role:** Every action.
 
-Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 2px edge in a darker shade of its fill (`--depth`), hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
+Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: a 3px bottom border in a darker shade of its fill (`--depth`) forms an edge inside the button's own height, so a raised button is exactly as tall as its size says. Hover lifts it 1px, and a press thins the edge to 1px while the label sinks 2px. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
 
 ### Input and Textarea
 **Role:** Text entry.
@@ -244,8 +244,8 @@ The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-i
 | Menu open | 100ms, scale from 0.98 |
 | Popover and dialog open | 150ms, scale from 0.98 |
 | Sheet and toast | 200ms |
-| Button press | Raised variants drop 2px onto the edge in 60ms, then spring back over 200ms with a slight overshoot. Flat variants `translate-y-px` |
-| Button hover, raised variants | Lift 1px, edge grows to 3px |
+| Button press | Raised variants thin the edge to 1px and sink the label 2px in 60ms, then spring back over 200ms with a slight overshoot. Flat variants `translate-y-px` |
+| Button hover, raised variants | Lift 1px |
 | Hover, neutral controls | `bg-muted` |
 | Hover, filled blue controls | `bg-primary/85`, or 8% lighter on raised buttons |
 | Focus on buttons | `ring-3 ring-ring/30` |
@@ -272,7 +272,7 @@ Surfaces separate with a 1px `--border` or a background step and carry no shadow
 | Dropdown menu, popover | `3px 3px 0 0 var(--offset-shadow)` |
 | Dialog, alert dialog | `4px 4px 0 0 var(--offset-shadow)` |
 | Toast | `shadow-md` with a plain border |
-| Raised button edge | `0 2px 0 0 var(--depth)`, a darker shade of the button fill |
+| Raised button edge | A 3px `--depth` bottom border inside the button, a darker shade of its fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
 | Tooltip | None, inverted `bg-foreground` fill |
 
@@ -398,7 +398,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 
 ### Example component prompts
 
-1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 2px darker-blue edge, lifts 1px on hover and presses down onto the edge.
+1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. A 3px darker-blue bottom edge sits inside its 32px, it lifts 1px on hover, and a press thins the edge while the label sinks.
 2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--border` hairline with a 3px offset shadow in `--offset-shadow`.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.

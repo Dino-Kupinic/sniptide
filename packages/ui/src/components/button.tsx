@@ -3,12 +3,14 @@ import { Spinner } from "@sniptide/ui/components/spinner"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
-// Raised variants sit on a 2px edge in a darker shade (--depth). Hover lifts the face 1px and a
-// press pushes it down onto the edge. Popup triggers skip the press so their menu doesn't jump.
-// The press lands in 60ms so even a quick click shows it, and the release springs back with a
-// slight overshoot. Under reduced motion the states switch without moving.
+// Raised variants draw a 3px bottom border in a darker shade (--depth) inside their own height,
+// so a raised button is as tall as a flat one. It comes after the variant colors so its bottom
+// border color wins. Hover lifts it 1px and a press thins the edge to
+// 1px while the label sinks 2px. Popup triggers skip the press so their menu doesn't jump. The
+// press lands in 60ms so even a quick click shows it, and the release springs back with a slight
+// overshoot. Under reduced motion the states switch without moving.
 const raised =
-  "duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:duration-[60ms] active:ease-out motion-reduce:transition-colors shadow-[0_2px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_3px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[2px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_2px_0_0_var(--depth)]"
+  "border-b-[3px] border-b-(--depth) duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:duration-[60ms] active:ease-out motion-reduce:transition-colors not-disabled:hover:-translate-y-px not-aria-[haspopup]:active:translate-y-0 not-aria-[haspopup]:active:border-b-[1px] not-aria-[haspopup]:active:pt-[2px] aria-expanded:translate-y-0"
 const flat = "active:not-aria-[haspopup]:translate-y-px"
 
 const buttonVariants = cva(
@@ -17,28 +19,28 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: [
-          raised,
           "bg-primary text-primary-foreground [--depth:color-mix(in_oklch,var(--primary),black_38%)] hover:bg-[color-mix(in_oklch,var(--primary),white_8%)]",
+          raised,
         ],
         inverted: [
-          raised,
           "bg-foreground text-background [--depth:color-mix(in_oklch,var(--foreground),var(--background)_55%)] dark:[--depth:color-mix(in_oklch,var(--foreground),black_45%)] hover:bg-foreground/90",
+          raised,
         ],
         outline: [
-          raised,
           "border-border bg-background [--depth:var(--border)] dark:[--depth:color-mix(in_oklch,var(--border),var(--foreground)_22%)] hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-card dark:hover:bg-muted",
+          raised,
         ],
         secondary: [
-          raised,
           "bg-secondary [--depth:color-mix(in_oklch,var(--secondary),var(--foreground)_14%)] text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          raised,
         ],
         ghost: [
           flat,
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         ],
         destructive: [
-          raised,
           "bg-destructive/10 [--depth:color-mix(in_oklch,var(--destructive)_30%,transparent)] text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          raised,
         ],
         link: [flat, "text-link underline-offset-4 hover:underline"],
       },

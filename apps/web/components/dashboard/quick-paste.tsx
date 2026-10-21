@@ -66,7 +66,7 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
   return (
     <DropdownMenuTrigger
       aria-label={label}
-      className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
+      className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 border-b-[3px] dark:bg-card dark:border-b-[color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
     >
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
