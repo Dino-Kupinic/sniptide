@@ -28,6 +28,7 @@ import {
   ChevronsUpDownIcon as ExpandIcon,
   FolderIcon,
   GripVerticalIcon,
+  KeyRoundIcon,
   LayoutGridIcon,
   ListFilterIcon,
   MoreHorizontalIcon,
@@ -171,6 +172,10 @@ export function Sidebar({
         <NavLink href="/analytics" pathname={pathname}>
           <ChartColumnIcon />
           {t("analytics")}
+        </NavLink>
+        <NavLink href="/secrets" pathname={pathname}>
+          <KeyRoundIcon />
+          {t("secrets")}
         </NavLink>
         <MoreMenu pathname={pathname} shared={counts.shared} />
       </nav>

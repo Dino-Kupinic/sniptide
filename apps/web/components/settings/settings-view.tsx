@@ -62,6 +62,7 @@ export function SettingsView({
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
+  const secretsT = useTranslations("Secrets")
   const workspace = useTranslations("Workspace")
   const tabs: { value: SettingsTab; label: string }[] = [
     { value: "general", label: t("general") },
@@ -101,6 +102,7 @@ export function SettingsView({
         </h2>
         <nav className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
           {[
+            { href: "/secrets", label: secretsT("title"), count: null },
             { href: "/shared", label: t("sharedWithMe"), count: counts.shared },
             { href: "/collections", label: t("collections"), count: counts.collections },
             { href: "/trash", label: t("trash"), count: counts.trash },
