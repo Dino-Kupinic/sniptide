@@ -326,7 +326,9 @@
     "corner": "Ecke",
     "shared_summary": "{count, plural, one {# Paste} other {# Pastes}} von {people, plural, one {# Person} other {# Personen}}",
     "view_all_count": "Alle {count, number} ansehen",
-    "secrets": "Geheimnisse"
+    "secrets": "Geheimnisse",
+    "workflows": "Workflows",
+    "coming_soon": "Demnächst"
   },
   "Secrets": {
     "title": "Geheimnisse",

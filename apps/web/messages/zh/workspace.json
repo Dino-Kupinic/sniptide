@@ -326,7 +326,9 @@
     "corner": "拐角",
     "shared_summary": "来自 {people, number} 人的 {count, number} 个粘贴",
     "view_all_count": "查看全部 {count, number} 个",
-    "secrets": "密钥"
+    "secrets": "密钥",
+    "workflows": "工作流",
+    "coming_soon": "即将推出"
   },
   "Secrets": {
     "title": "密钥",
