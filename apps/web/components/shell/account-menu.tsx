@@ -36,10 +36,10 @@ import { authClient } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeNames, locales } from "@/lib/i18n/config"
 
-// Where the resource links go. There is no marketing site or docs site in this app yet.
+// Where the resource links go: the marketing site, the docs site (apps/docs) and GitHub issues.
 const links = {
   homepage: "https://sniptide.com",
-  documentation: "https://github.com/Dino-Kupinic/sniptide#readme",
+  documentation: "https://docs.sniptide.com",
   help: "https://github.com/Dino-Kupinic/sniptide/issues",
 }
 
