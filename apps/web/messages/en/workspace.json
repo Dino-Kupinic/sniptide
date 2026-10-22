@@ -326,7 +326,9 @@
     "corner": "Corner",
     "shared_summary": "{count, plural, one {# paste} other {# pastes}} from {people, plural, one {# person} other {# people}}",
     "view_all_count": "View all {count, number}",
-    "secrets": "Secrets"
+    "secrets": "Secrets",
+    "workflows": "Workflows",
+    "coming_soon": "Coming soon"
   },
   "Secrets": {
     "title": "Secrets",

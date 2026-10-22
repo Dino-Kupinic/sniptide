@@ -326,7 +326,9 @@
     "corner": "Esquina",
     "shared_summary": "{count, plural, one {# fragmento} other {# fragmentos}} de {people, plural, one {# persona} other {# personas}}",
     "view_all_count": "Ver los {count, number}",
-    "secrets": "Secretos"
+    "secrets": "Secretos",
+    "workflows": "Flujos",
+    "coming_soon": "Próximamente"
   },
   "Secrets": {
     "title": "Secretos",

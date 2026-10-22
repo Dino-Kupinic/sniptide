@@ -101,6 +101,12 @@ export function SettingsView({
           {t("workspace")}
         </h2>
         <nav className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
+          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-3 text-muted-foreground">
+            {workspace("workflows")}
+            <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] leading-none">
+              {workspace("coming_soon")}
+            </span>
+          </div>
           {[
             { href: "/secrets", label: secretsT("title"), count: null },
             { href: "/shared", label: t("sharedWithMe"), count: counts.shared },

@@ -326,7 +326,9 @@
     "corner": "角",
     "shared_summary": "{people, number} 人からの {count, number} 件のペースト",
     "view_all_count": "全 {count, number} 件を表示",
-    "secrets": "シークレット"
+    "secrets": "シークレット",
+    "workflows": "ワークフロー",
+    "coming_soon": "近日公開"
   },
   "Secrets": {
     "title": "シークレット",
