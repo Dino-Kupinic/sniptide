@@ -20,7 +20,7 @@ How Sniptide compares with the tools people use today to share snippets and secr
 | Collections / organization | Collections, tags, search, stars, trash, per-paste revisions | Folders (accounts only) | Starring; each gist is a git repo | None documented | None documented |
 | Visibility | Public, unlisted, private | Public, unlisted, private | Public and secret (secret gists are unlisted, **not private**) | Link-only; the key lives in the URL fragment | Link-only |
 | Sharing | Share with specific people with view or edit access; Slack and Discord share; link previews | Link | Link; fork and clone | Link | Link |
-| Expiry | 1 hour, 1 day, 1 week, 1 month, never | 10 minutes up to 1 year, or never | Not documented | Configurable by the admin, including never | Not documented |
+| Expiry | 1 hour, 1 day, 1 week, 1 month, 1 year, never | 10 minutes up to 1 year, or never | Not documented | Configurable by the admin, including never | Not documented |
 | Burn after reading | Yes | Not documented | Not documented | Yes | Not documented |
 | Password protection | Yes (scrypt hash) | Not documented | Not documented | Yes | Not documented |
 | Encryption | Passwords hashed; HTTPS in transit. Paste content is stored as plain text in Postgres, so the operator can read it. Not zero-knowledge | Not documented | Not documented | Client-side AES-256-GCM, key in the URL fragment; the server cannot read pastes | Not documented |
@@ -82,8 +82,8 @@ where the overlap ends.
 5. **MCP auth is bearer-token only.** No OAuth login or discovery yet.
 6. **Reach.** Gist is where developers already are, with discovery, comments and embeds. Pastebin
    has years of search traffic. Sniptide has neither network effect yet.
-7. **Expiry granularity.** Pastebin offers 10 minutes, 2 weeks, 6 months and 1 year; Sniptide's
-   shortest expiry is 1 hour and its longest finite one is 1 month.
+7. **Expiry granularity.** Pastebin offers 10 minutes, 2 weeks and 6 months; Sniptide's shortest
+   expiry is 1 hour and it has nothing between 1 month and 1 year.
 
 ## Sniptide evidence
 

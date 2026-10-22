@@ -32,7 +32,7 @@ export interface WorkspaceCounts {
 function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) {
   const t = useTranslations("Settings")
   return (
-    <div className="flex flex-col gap-3 border border-border p-4">
+    <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
       <div className="flex items-center justify-between text-[15px] lg:text-sm">
         <span className="font-medium">{t("storage")}</span>
         <span className="text-muted-foreground tabular-nums">
@@ -99,7 +99,7 @@ export function SettingsView({
         <h2 className="px-1 text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase">
           {t("workspace")}
         </h2>
-        <nav className="flex flex-col divide-y divide-border border border-border text-[15px]">
+        <nav className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
           {[
             { href: "/shared", label: t("sharedWithMe"), count: counts.shared },
             { href: "/collections", label: t("collections"), count: counts.collections },
@@ -176,7 +176,7 @@ export function SettingsView({
         ) : null}
         {tab === "billing" ? (
           <SettingsSection title={t("plan")} description={t("sniptideIsFreeWhileItS")}>
-            <div className="flex items-center justify-between border border-border p-4">
+            <div className="rounded-lg flex items-center justify-between border border-border p-4">
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{t("free")}</span>
                 <span className="text-[13px] text-muted-foreground">

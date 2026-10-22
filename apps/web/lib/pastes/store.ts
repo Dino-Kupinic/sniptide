@@ -30,6 +30,11 @@ import {
 } from "drizzle-orm"
 import { cookies } from "next/headers"
 import { cache } from "react"
+import {
+  defaultSidebarViews,
+  type PasteSectionView,
+  type SidebarViews,
+} from "@/components/shell/sidebar-state"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
@@ -64,13 +69,7 @@ import type {
   SharingInput,
   SidebarData,
 } from "./types"
-import {
-  PASTE_SEARCH_LIMIT,
-  PASTE_SEARCH_MAX_LENGTH,
-  type PasteSearchResult,
-  SIDEBAR_RECENT,
-  SIDEBAR_STARRED,
-} from "./types"
+import { PASTE_SEARCH_LIMIT, PASTE_SEARCH_MAX_LENGTH, type PasteSearchResult } from "./types"
 import { unlockCookieName, unlockToken } from "./unlock"
 
 // Pastes in Postgres (packages/db/src/schema/pastes.ts). Every paste belongs to one account; the
@@ -94,6 +93,7 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
   "1d": DAY,
   "1w": 7 * DAY,
   "1m": 30 * DAY,
+  "1y": 365 * DAY,
 }
 
 // Paths the app already uses, so a custom link can't shadow a page.
@@ -1045,46 +1045,67 @@ export async function navCounts(): Promise<NavCounts> {
   return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared }
 }
 
-export const sidebarData = cache(async (): Promise<SidebarData> => {
-  const viewer = await viewerId()
-  if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
-  const db = getDb()
-  const stars = await readableStarsWhere(viewer)
-  const [[own], [starCount], recent, starred, shared] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(pasteTable)
-      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
-    db
-      .select()
-      .from(pasteTable)
-      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
-      .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
-      .limit(SIDEBAR_RECENT),
-    db
-      .select()
-      .from(pasteTable)
-      .where(stars)
-      .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
-      .limit(SIDEBAR_STARRED),
-    sharedCount(viewer),
-  ])
-  const starSlugs = await starredSlugs([...recent, ...starred].map((record) => record.slug))
-  const row = (record: PasteRecord) => ({
-    slug: record.slug,
-    title: record.title,
-    owned: record.ownerId === viewer,
-    starred: starSlugs.has(record.slug),
-    collection: record.ownerId === viewer ? record.collection : null,
-    updatedAt: record.updatedAt.getTime(),
-  })
-  return {
-    counts: { pastes: own?.count ?? 0, starred: starCount?.count ?? 0, shared },
-    recent: recent.map(row),
-    starred: starred.map(row),
-  }
-})
+// The order a sidebar section lists its pastes in, from its filter menu.
+function sidebarOrder(sort: PasteSectionView["sort"]) {
+  if (sort === "views") return [desc(pasteTable.views), desc(pasteTable.updatedAt), pasteTable.id]
+  if (sort === "title") return [asc(sql`lower(${pasteTable.title})`), pasteTable.id]
+  return [desc(pasteTable.updatedAt), pasteTable.id]
+}
+
+function sidebarVisibility(visibility: PasteSectionView["visibility"]) {
+  return visibility === "all" ? undefined : eq(pasteTable.visibility, visibility)
+}
+
+// The sidebar's sections. `views` holds each section's filter, sort and length from the sidebar
+// cookie; the counts for "View all" stay unfiltered.
+export const sidebarData = cache(
+  async (views: SidebarViews = defaultSidebarViews): Promise<SidebarData> => {
+    const viewer = await viewerId()
+    if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
+    const db = getDb()
+    const stars = await readableStarsWhere(viewer)
+    const [[own], [starCount], recent, starred, shared] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(pasteTable)
+        .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
+      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+      db
+        .select()
+        .from(pasteTable)
+        .where(
+          and(
+            eq(pasteTable.ownerId, viewer),
+            isNull(pasteTable.deletedAt),
+            sidebarVisibility(views.pastes.visibility),
+          ),
+        )
+        .orderBy(...sidebarOrder(views.pastes.sort))
+        .limit(views.pastes.limit),
+      db
+        .select()
+        .from(pasteTable)
+        .where(and(stars, sidebarVisibility(views.starred.visibility)))
+        .orderBy(...sidebarOrder(views.starred.sort))
+        .limit(views.starred.limit),
+      sharedCount(viewer),
+    ])
+    const starSlugs = await starredSlugs([...recent, ...starred].map((record) => record.slug))
+    const row = (record: PasteRecord) => ({
+      slug: record.slug,
+      title: record.title,
+      owned: record.ownerId === viewer,
+      starred: starSlugs.has(record.slug),
+      collection: record.ownerId === viewer ? record.collection : null,
+      updatedAt: record.updatedAt.getTime(),
+    })
+    return {
+      counts: { pastes: own?.count ?? 0, starred: starCount?.count ?? 0, shared },
+      recent: recent.map(row),
+      starred: starred.map(row),
+    }
+  },
+)
 
 // The command menu's paste search: the viewer's own pastes whose title or slug contains the text,
 // latest first. File contents are never searched.

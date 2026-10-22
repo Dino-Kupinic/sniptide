@@ -1,11 +1,11 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { RootProvider } from "fumadocs-ui/provider/next"
 import type { Metadata } from "next"
-import { Inter, JetBrains_Mono, Stack_Sans_Headline } from "next/font/google"
+import { Archivo, Inter, JetBrains_Mono } from "next/font/google"
 import "./global.css"
 
 // The same three faces as the app (apps/web/app/layout.tsx), so the docs read as Sniptide.
-const fontHeading = Stack_Sans_Headline({
+const fontHeading = Archivo({
   subsets: ["latin"],
   weight: "700",
   variable: "--font-heading",

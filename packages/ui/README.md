@@ -29,7 +29,7 @@ import { Logo } from "@sniptide/ui/components/logo"
 ```
 
 The theme reads three font variables, so set them on `<html>` (for example with `next/font`):
-`--font-sans` (Inter), `--font-mono` (JetBrains Mono) and `--font-heading` (Stack Sans Headline).
+`--font-sans` (Inter), `--font-mono` (JetBrains Mono) and `--font-heading` (Archivo).
 The logo uses vector outlines and does not need a font.
 
 `globals.css` already tells Tailwind to scan this package's components; your own files are found

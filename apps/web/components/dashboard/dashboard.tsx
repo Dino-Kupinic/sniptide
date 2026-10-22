@@ -15,7 +15,7 @@ import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
-import { RowBadge } from "@/components/lists/paste-list"
+import { expiryClass, RowBadge } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
 import { formatNumber } from "@/lib/format"
@@ -173,7 +173,7 @@ export function Dashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 border border-border lg:grid-cols-4">
+      <div className="grid grid-cols-2 rounded-lg border border-border lg:grid-cols-4">
         <Stat
           label={t("total_pastes")}
           value={formatNumber(data.totalPastes, locale)}
@@ -224,7 +224,7 @@ export function Dashboard({
         </div>
         <section
           aria-labelledby="views-heading"
-          className="flex min-w-0 flex-1 flex-col gap-4 border border-border px-4 py-4 lg:px-5"
+          className="flex min-w-0 flex-1 flex-col gap-4 rounded-lg border border-border px-4 py-4 lg:px-5"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-0.5">
@@ -268,7 +268,7 @@ export function Dashboard({
 
       <section
         aria-labelledby="recent-heading"
-        className="flex flex-col lg:border lg:border-border"
+        className="flex flex-col lg:overflow-hidden lg:rounded-lg lg:border lg:border-border"
       >
         <div className="flex items-center justify-between gap-3 py-3 lg:border-b lg:border-border lg:px-4">
           <div className="flex items-center gap-4">
@@ -288,7 +288,7 @@ export function Dashboard({
                   aria-selected={tab === value}
                   onClick={() => setTab(value)}
                   className={cn(
-                    "h-7 px-3 text-[13px] text-muted-foreground capitalize outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+                    "h-7 rounded-md px-3 text-[13px] text-muted-foreground capitalize outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                     tab === value && "border border-border text-foreground",
                   )}
                 >
@@ -350,11 +350,11 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
   const t = useTranslations("Workspace")
   return (
     <Table className="hidden table-fixed lg:table">
-      <TableHeader className="bg-sidebar">
+      <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>{t("paste")}</TableHead>
           <TableHead className="w-[130px]">{t("language")}</TableHead>
-          <TableHead className="w-[120px]">{t("visibility")}</TableHead>
+          <TableHead className="w-[156px]">{t("visibility")}</TableHead>
           <TableHead className="w-20 text-right">{t("views")}</TableHead>
           <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
           <TableHead className="w-[116px]">{t("updated")}</TableHead>
@@ -365,7 +365,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
       </TableHeader>
       <TableBody>
         {rows.map((row) => (
-          <TableRow key={row.slug} className="relative border-border/60">
+          <TableRow key={row.slug} className="relative">
             <TableCell className="truncate">
               <Link
                 href={`/pastes/${row.slug}`}
@@ -386,9 +386,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
             <TableCell className="text-right font-mono text-[13px] tabular-nums">
               {formatNumber(row.views, locale)}
             </TableCell>
-            <TableCell
-              className={cn("pl-7 text-[13px] text-foreground/80", row.expiresSoon && "text-link")}
-            >
+            <TableCell className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}>
               {row.expiresLabel}
             </TableCell>
             <TableCell className="text-[13px] text-muted-foreground">{row.updatedLabel}</TableCell>

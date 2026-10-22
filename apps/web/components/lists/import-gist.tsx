@@ -48,7 +48,7 @@ const shortLink = (link: string) => link.trim().replace(/^https?:\/\//i, "")
 
 // Disabled looks the same for both footer buttons, as in the design: a flat grey button.
 const footerButton =
-  "h-[34px] px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+  "h-8 px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
 
 // The import sheet. The caller owns `open`, so the Import gist buttons and the sidebar's More menu
 // can open the same one; `children` is where a trigger goes when the sheet has its own.
@@ -285,7 +285,7 @@ export function ImportGistButton() {
 
 function LinkBox({ link, status }: { link: string; status: "reading" | "read" }) {
   return (
-    <div className="flex h-10 shrink-0 items-center justify-between gap-3 border px-3">
+    <div className="rounded-lg flex h-10 shrink-0 items-center justify-between gap-3 border px-3">
       <span className="truncate font-mono text-xs leading-4">{shortLink(link)}</span>
       {status === "reading" ? (
         <Spinner className="text-primary" />
@@ -308,7 +308,7 @@ function ReadingStep({ link }: { link: string }) {
         <Skeleton className="h-5 w-[220px]" />
         <Skeleton className="h-3 w-40" />
       </div>
-      <div className="flex flex-col border">
+      <div className="overflow-hidden rounded-lg flex flex-col border">
         {[150, 120, 90].map((width) => (
           <div key={width} className="flex h-11 items-center gap-3 border-b px-3 last:border-b-0">
             <Skeleton className="size-4 shrink-0" />
@@ -375,7 +375,7 @@ function FilesStep({
             {t("files_selected", { selected: selected.size, total: gist.files.length })}
           </span>
         </div>
-        <ul className="flex flex-col border">
+        <ul className="overflow-hidden rounded-lg flex flex-col border">
           {gist.files.map((file, index) => {
             const checked = selected.has(file.name)
             const disabled = Boolean(file.skipped) || (!checked && selected.size >= MAX_FILES)

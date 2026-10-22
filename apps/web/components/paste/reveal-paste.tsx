@@ -34,7 +34,7 @@ export function RevealPaste({ slug }: { slug: string }) {
           </h1>
           {first ? <ShareActions content={first.content} /> : null}
         </div>
-        <p className="border border-primary bg-primary/5 px-3 py-2 text-[13px] text-link">
+        <p className="rounded-lg border border-primary bg-primary/5 px-3 py-2 text-[13px] text-link">
           {t("thisPasteWasSetToBurn")}
         </p>
         <FileViewer slug={slug} files={paste.files} rawAllowed={false} bodyClassName="bg-sidebar" />
@@ -43,7 +43,7 @@ export function RevealPaste({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="flex w-full max-w-sm flex-col gap-4 self-center border border-foreground bg-background p-6 shadow-[8px_8px_0_0_var(--foreground)]">
+    <div className="rounded-lg flex w-full max-w-sm flex-col gap-4 self-center border border-border bg-background p-6 shadow-(--dialog-shadow)">
       <FlameIcon className="size-5" />
       <div className="flex flex-col gap-1">
         <h1 className="font-heading text-2xl font-bold tracking-[-0.02em]">{t("readOnce")}</h1>
@@ -53,7 +53,7 @@ export function RevealPaste({ slug }: { slug: string }) {
       <Button
         type="button"
         loading={pending}
-        className="h-10"
+        className="h-[38px]"
         onClick={() =>
           startTransition(async () => {
             const response = await fetch(`/${encodeURIComponent(slug)}/reveal`, {

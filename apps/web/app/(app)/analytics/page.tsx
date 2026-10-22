@@ -1,5 +1,4 @@
 import { getLocale, getTranslations } from "next-intl/server"
-import { AnalyticsBreadcrumb } from "@/components/analytics-page/breadcrumb"
 import { AnalyticsControls } from "@/components/analytics-page/controls"
 import { Overview } from "@/components/analytics-page/overview"
 import {
@@ -45,7 +44,6 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
 
   return (
     <>
-      <AnalyticsBreadcrumb />
       <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
         <PageHeader
           title={t("analytics")}

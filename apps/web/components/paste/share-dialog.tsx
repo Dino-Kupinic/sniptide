@@ -145,7 +145,7 @@ export function ShareDialog({
         className={cn(
           "gap-0 p-0 lg:max-w-[540px]",
           // A bottom sheet on phones.
-          "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)]",
+          "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-b-none max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)]",
         )}
       >
         <span aria-hidden="true" className="mx-auto mt-2 h-1 w-9 bg-border lg:hidden" />
@@ -159,7 +159,7 @@ export function ShareDialog({
             </div>
             <DialogClose
               aria-label={t("close")}
-              className="-mt-1 -mr-1 hidden size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:flex"
+              className="rounded-lg -mt-1 -mr-1 hidden size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:flex"
             >
               <XIcon className="size-4" />
             </DialogClose>
