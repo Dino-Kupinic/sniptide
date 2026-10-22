@@ -9,9 +9,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sniptide/ui/components/dialog"
+import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
-import { EyeIcon, GlobeIcon, LockIcon, UserPlusIcon, UsersIcon, XIcon } from "lucide-react"
+import { EyeIcon, GlobeIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { showUndo } from "@/components/undo-toast"
@@ -25,6 +26,8 @@ import {
 } from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
+import { useCopy } from "./copy-button"
+import { useNativeShare } from "./paste-actions"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
 import { WebhookShare } from "./webhook-share"
 
@@ -36,10 +39,12 @@ const visibilityNote: Record<Visibility, { icon: typeof LockIcon; text: string }
 
 // The owner's Share dialog from the Paper "Sharing" page: invite people with a Sniptide account
 // by exact email or username, change what they can do, or take their access away. On phones it
-// sits at the bottom of the screen like a sheet.
+// sits at the bottom of the screen like a sheet and is the page's one Share entry, so it also
+// holds the link with Copy and the system share sheet.
 export function ShareDialog({
   slug,
   title,
+  url,
   visibility,
   owner,
   people: initialPeople,
@@ -49,6 +54,7 @@ export function ShareDialog({
 }: {
   slug: string
   title: string
+  url: string
   visibility: Visibility
   owner: { id: string; name: string; handle: string; initials: string }
   people: SharePerson[]
@@ -136,19 +142,20 @@ export function ShareDialog({
         </DialogTrigger>
       ) : (
         <DialogTrigger
-          render={<Button variant="ghost" size="icon-lg" aria-label={t("shareWithPeople")} />}
+          render={
+            <Button variant="ghost" size="icon-lg" aria-label={t("share")} className="size-10" />
+          }
         >
-          <UserPlusIcon className="size-5" />
+          <ShareIcon className="size-5" />
         </DialogTrigger>
       )}
       <DialogContent
         className={cn(
           "gap-0 p-0 lg:max-w-[540px]",
           // A bottom sheet on phones.
-          "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-b-none max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)]",
+          "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-b-none max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)] max-lg:max-h-[90dvh] max-lg:overflow-y-auto",
         )}
       >
-        <span aria-hidden="true" className="mx-auto mt-2 h-1 w-9 bg-border lg:hidden" />
         <div className="flex flex-col gap-4 p-4 lg:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 flex-col gap-1">
@@ -159,11 +166,12 @@ export function ShareDialog({
             </div>
             <DialogClose
               aria-label={t("close")}
-              className="rounded-lg -mt-1 -mr-1 hidden size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:flex"
+              className="rounded-lg -mt-1 -mr-1 flex size-10 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:size-8"
             >
-              <XIcon className="size-4" />
+              <XIcon className="size-5 lg:size-4" />
             </DialogClose>
           </div>
+          <MobileLinkRow url={url} title={title} />
           <InviteField
             onInvite={invite}
             submitLabel={t("invite")}
@@ -206,12 +214,17 @@ export function ShareDialog({
         ) : null}
 
         <WebhookShare slug={slug} targets={webhookTargets} allowed={webhookAllowed} />
-        <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 lg:px-6">
+        <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 max-lg:flex-col max-lg:items-stretch lg:px-6">
           <span className="flex items-center gap-2 text-[13px]">
             <note.icon className="size-3.5 shrink-0" />
             {t(note.text)}
           </span>
           <DialogClose render={<Button variant="inverted" size="lg" className="hidden lg:flex" />}>
+            {t("done")}
+          </DialogClose>
+          <DialogClose
+            render={<Button variant="inverted" size="xl" className="w-full lg:hidden" />}
+          >
             {t("done")}
           </DialogClose>
         </div>
@@ -226,5 +239,39 @@ function PersonName({ name, handle }: { name: string; handle: string }) {
       <span className="truncate text-sm font-medium">{name}</span>
       <span className="truncate text-xs text-muted-foreground">{handle}</span>
     </span>
+  )
+}
+
+// Phones only: the paste's link with Copy, and the system share sheet where the browser has one.
+function MobileLinkRow({ url, title }: { url: string; title: string }) {
+  const t = useTranslations("Paste")
+  const { copied, copy } = useCopy()
+  const { share } = useNativeShare(url, title, "share_dialog")
+  const [canShare, setCanShare] = React.useState(false)
+  React.useEffect(() => setCanShare(typeof navigator.share === "function"), [])
+  return (
+    <div className="flex flex-col gap-2 lg:hidden">
+      <div className="rounded-lg flex h-10 items-center gap-2 border border-border bg-sidebar pr-1 pl-3">
+        <span className="min-w-0 flex-1 truncate font-mono text-xs">{url}</span>
+        <Button
+          type="button"
+          variant="inverted"
+          size="sm"
+          onClick={() => {
+            track("share_link_copied", { from: "share_dialog" })
+            return copy(url)
+          }}
+        >
+          {copied ? <SuccessCheck /> : null}
+          <span aria-live="polite">{copied ? t("copied") : t("copy")}</span>
+        </Button>
+      </div>
+      {canShare ? (
+        <Button type="button" variant="outline" size="xl" onClick={share}>
+          <ShareIcon />
+          {t("shareVia")}
+        </Button>
+      ) : null}
+    </div>
   )
 }

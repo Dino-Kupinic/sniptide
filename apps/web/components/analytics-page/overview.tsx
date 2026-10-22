@@ -17,12 +17,14 @@ function formatDelta(delta: number, locale: string) {
 }
 
 // The four tiles and the chart under them. A tile picks which metric the chart draws; Views is
-// selected to begin with and marked by a blue top border.
+// selected to begin with and marked by a blue top border. `empty` (no views in the period) drops
+// the chart on phones, where the page shows its own empty state instead.
 export function Overview({
   kpis,
   points,
   rangeLabel,
-}: Pick<AnalyticsReport, "kpis" | "points" | "rangeLabel">) {
+  empty = false,
+}: Pick<AnalyticsReport, "kpis" | "points" | "rangeLabel"> & { empty?: boolean }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const [selected, setSelected] = React.useState<MetricId>("views")
@@ -90,6 +92,7 @@ export function Overview({
         rangeLabel={rangeLabel}
         points={points}
         metric={selected}
+        className={empty ? "max-lg:hidden" : undefined}
       />
     </>
   )

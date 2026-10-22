@@ -1,12 +1,21 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { Input } from "@sniptide/ui/components/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sniptide/ui/components/select"
+import { toast } from "@sniptide/ui/components/toast"
 import { useRouter } from "next/navigation"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
 import type { SecretDetail } from "@/lib/env/web-store"
-import { fieldClass, SecretRequestError, useSecretRequest } from "./client"
+import { SecretRequestError, useSecretRequest } from "./client"
 
 export function SecretSharing({ group }: { group: SecretDetail }) {
   const t = useTranslations("Secrets")
@@ -16,11 +25,17 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
   const [link, setLink] = useState("")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const expiries = [
+    { value: "1", label: t("hour") },
+    { value: "24", label: t("day") },
+    { value: "168", label: t("week") },
+  ]
   return (
-    <section className="space-y-4 border-t border-border pt-6">
-      <div>
+    <section className="flex flex-col gap-4 border-t border-border pt-6">
+      <div className="flex flex-col gap-1">
         <h2 className="font-medium">{t("sharing")}</h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("sharing_description")}</p>
+        <p className="max-w-2xl text-sm text-muted-foreground">{t("sharing_description")}</p>
       </div>
       <form
         autoComplete="off"
@@ -49,10 +64,11 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
           }
         }}
       >
-        <label className="min-w-48 flex-1 space-y-2 text-sm">
+        {/* biome-ignore lint/a11y/noLabelWithoutControl: the Input inside is the control */}
+        <label className="flex min-w-48 flex-1 flex-col gap-2 text-sm font-medium">
           {t("password")}
-          <input
-            className={fieldClass}
+          <Input
+            className="text-base lg:text-sm"
             type="password"
             name="password"
             required
@@ -62,24 +78,35 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
             placeholder={t("password_hint")}
           />
         </label>
-        <label className="space-y-2 text-sm">
-          {t("expires_in")}
-          <select className={fieldClass} name="hours" defaultValue="24">
-            <option value="1">{t("hour")}</option>
-            <option value="24">{t("day")}</option>
-            <option value="168">{t("week")}</option>
-          </select>
-        </label>
-        <Button type="submit" disabled={busy}>
+        <div className="flex flex-col gap-2 text-sm font-medium max-sm:flex-1">
+          <span id="secret-share-expiry">{t("expires_in")}</span>
+          <Select name="hours" defaultValue="24" items={expiries}>
+            <SelectTrigger
+              aria-labelledby="secret-share-expiry"
+              className="h-10 w-full min-w-32 text-base font-normal lg:text-sm"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {expiries.map((expiry) => (
+                <SelectItem key={expiry.value} value={expiry.value} className="h-10">
+                  {expiry.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" size="xl" className="max-sm:w-full" loading={busy}>
           {busy ? t("creating") : t("create_link")}
         </Button>
       </form>
       {link && (
-        <div className="space-y-2 border border-border p-4">
-          <label className="block text-sm">
+        <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          {/* biome-ignore lint/a11y/noLabelWithoutControl: the Input inside is the control */}
+          <label className="flex flex-col gap-2 text-sm font-medium">
             {t("protected_link")}
-            <input
-              className={`${fieldClass} mt-2 font-mono`}
+            <Input
+              className="font-mono text-base lg:text-sm"
               readOnly
               value={link}
               onFocus={(event) => event.currentTarget.select()}
@@ -87,10 +114,12 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
           </label>
           <Button
             variant="outline"
-            size="sm"
+            size="xl"
+            className="self-start"
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(link)
+                toast.success(t("copy_link"))
               } catch {
                 setError(t("copy_link_error"))
               }
@@ -101,15 +130,12 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
           <p className="text-xs text-muted-foreground">{t("link_notice")}</p>
         </div>
       )}
-      <div className="space-y-2">
-        {group.shares.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("private_notice")}</p>
-        ) : (
-          group.shares.map((share) => (
-            <div
-              key={share.id}
-              className="flex items-center justify-between gap-3 border border-border px-4 py-2"
-            >
+      {group.shares.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("private_notice")}</p>
+      ) : (
+        <ul className="overflow-hidden rounded-lg divide-y divide-border border border-border">
+          {group.shares.map((share) => (
+            <li key={share.id} className="flex items-center justify-between gap-3 py-1 pr-1 pl-4">
               <span className="text-sm">
                 {t("expires", {
                   date: format.dateTime(new Date(share.expiresAt), {
@@ -124,7 +150,7 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
                 })}
               </span>
               <Button
-                size="sm"
+                size="xl"
                 variant="ghost"
                 onClick={async () => {
                   try {
@@ -138,33 +164,46 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
               >
                 {t("revoke")}
               </Button>
-            </div>
-          ))
-        )}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
-      <details>
-        <summary className="cursor-pointer text-sm text-destructive">{t("delete_group")}</summary>
-        <p className="my-3 text-sm text-muted-foreground">{t("delete_notice")}</p>
+      <div className="flex flex-col items-start gap-3">
         <Button
-          variant="destructive"
-          onClick={async () => {
-            try {
-              await secretRequest({ operation: "delete", id: group.id })
-              router.push("/secrets")
-              router.refresh()
-            } catch {
-              setError(t("delete_error"))
-            }
-          }}
+          variant="ghost"
+          size="xl"
+          className="-ml-3 text-destructive"
+          aria-expanded={confirmDelete}
+          onClick={() => setConfirmDelete((open) => !open)}
         >
-          {t("permanently_delete")}
+          {t("delete_group")}
         </Button>
-      </details>
+        {confirmDelete ? (
+          <>
+            <p className="text-sm text-muted-foreground">{t("delete_notice")}</p>
+            <Button
+              variant="destructive"
+              size="xl"
+              onClick={async () => {
+                try {
+                  await secretRequest({ operation: "delete", id: group.id })
+                  router.push("/secrets")
+                  router.refresh()
+                } catch {
+                  setError(t("delete_error"))
+                }
+              }}
+            >
+              {t("permanently_delete")}
+            </Button>
+          </>
+        ) : null}
+      </div>
     </section>
   )
 }

@@ -20,11 +20,46 @@ interface ViewerFile {
   lines?: HighlightedLines
 }
 
+// The file open in the code card, for actions that live outside it (the mobile bottom bar's Copy
+// code, Download in the overflow menu). The card reports its active tab here when a provider wraps
+// the page.
+const ActiveFileContext = React.createContext<{
+  file: Pick<ViewerFile, "name" | "content"> | null
+  setFile: (file: Pick<ViewerFile, "name" | "content">) => void
+} | null>(null)
+
+export function ActiveFileProvider({ children }: { children: React.ReactNode }) {
+  const [file, setFile] = React.useState<Pick<ViewerFile, "name" | "content"> | null>(null)
+  const value = React.useMemo(() => ({ file, setFile }), [file])
+  return <ActiveFileContext.Provider value={value}>{children}</ActiveFileContext.Provider>
+}
+
+export function useActiveFile() {
+  return React.useContext(ActiveFileContext)?.file ?? null
+}
+
+const desktopQuery = "(min-width: 1024px)"
+function subscribeDesktop(onChange: () => void) {
+  const query = window.matchMedia(desktopQuery)
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
+}
+
+// Whether the lg layout is showing. The server renders the desktop answer.
+function useDesktop() {
+  return React.useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia(desktopQuery).matches,
+    () => true,
+  )
+}
+
 // Code card on the paste pages: file tabs (or the single file name), icon buttons for Wrap /
 // Raw / Download / Copy (named in tooltips), the side panel toggle, the code, and an optional
 // footer. `collapseAt` shows only the first lines below the lg
 // breakpoint, wrapped, with a "Show full file" button, as on the mobile artboards. The collapse
-// is CSS-only so the same render serves desktop and mobile.
+// is CSS-only so the same render serves desktop and mobile. Download sits in the page's menus on
+// phones, so the bar there holds Wrap, Raw and Copy.
 export function FileViewer({
   slug,
   files,
@@ -53,11 +88,18 @@ export function FileViewer({
 }) {
   const t = useTranslations("Paste")
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
-  const [wrap, setWrap] = React.useState(false)
+  // null until the toggle is used: a card that collapses on phones wraps there and not on desktop.
+  const [wrapChoice, setWrapChoice] = React.useState<boolean | null>(null)
   const [expanded, setExpanded] = React.useState(false)
   const { copied, copy } = useCopy()
+  const desktop = useDesktop()
+  const report = React.useContext(ActiveFileContext)?.setFile
   const active = files.find((file) => file.name === activeName) ?? files[0]
+  React.useEffect(() => {
+    if (active) report?.({ name: active.name, content: active.content })
+  }, [active, report])
   if (!active) return null
+  const wrap = wrapChoice ?? (collapseAt !== undefined && !desktop)
 
   const rawHref = `/${slug}/raw?file=${encodeURIComponent(active.name)}`
   const lines = active.content.replace(/\n$/, "").split("\n").length
@@ -105,7 +147,7 @@ export function FileViewer({
               type="button"
               aria-label={t("wrapLines")}
               aria-pressed={wrap}
-              onClick={() => setWrap((value) => !value)}
+              onClick={() => setWrapChoice(!wrap)}
               className={panelToolClass}
             >
               <WrapTextIcon />
@@ -136,7 +178,7 @@ export function FileViewer({
               onClick={async () => {
                 if (await copy(active.content)) reportCopy(slug)
               }}
-              className={cn(panelToolClass, "hidden lg:inline-flex")}
+              className={panelToolClass}
             >
               {copied ? <SuccessCheck /> : <CopyIcon />}
             </button>
@@ -151,7 +193,7 @@ export function FileViewer({
       <CodeBlock
         content={active.content}
         highlighted={active.lines}
-        wrap={wrap || (collapseAt !== undefined && "mobile")}
+        wrap={wrapChoice ?? (collapseAt !== undefined && "mobile")}
         mobileMaxLines={collapsed ? collapseAt : undefined}
         lineNumbers={lineNumbers}
         className={cn("flex-1", bodyClassName)}

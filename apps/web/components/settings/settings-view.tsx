@@ -3,9 +3,17 @@
 import { Button } from "@sniptide/ui/components/button"
 import { Progress } from "@sniptide/ui/components/progress"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ChevronRightIcon } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import {
+  BellIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CreditCardIcon,
+  KeyRoundIcon,
+  type LucideIcon,
+  SlidersHorizontalIcon,
+  UserIcon,
+} from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -20,20 +28,24 @@ import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-export type SettingsTab = "general" | "defaults" | "notifications" | "api" | "billing"
+const SETTINGS_TABS = ["general", "defaults", "notifications", "api", "billing"] as const
+export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
-export interface WorkspaceCounts {
-  shared: number
-  collections: number
-  trash: number
-  pastes: number
+function parseTab(value: string | null): SettingsTab | null {
+  return SETTINGS_TABS.find((candidate) => candidate === value) ?? null
 }
+
+function tabHref(tab: SettingsTab) {
+  return tab === "general" ? "/settings" : `/settings?tab=${tab}`
+}
+
+const titleClass = "font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]"
 
 function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) {
   const t = useTranslations("Settings")
   return (
     <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
-      <div className="flex items-center justify-between text-[15px] lg:text-sm">
+      <div className="flex items-center justify-between gap-3 text-sm">
         <span className="font-medium">{t("storage")}</span>
         <span className="text-muted-foreground tabular-nums">
           {t("storageUsage", { used: usedMb, limit: limitMb })}
@@ -44,88 +56,126 @@ function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) 
   )
 }
 
+// Desktop shows the sections as tabs. On phones /settings is a list of section rows, and
+// /settings?tab=… opens one section on its own screen with a back button.
 export function SettingsView({
-  initialTab,
   profile,
   preferences,
   emailAvailable,
-  counts,
+  pasteCount,
   storage,
   api,
 }: {
-  initialTab: SettingsTab
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
-  counts: WorkspaceCounts
+  pasteCount: number
   storage: { usedMb: number; limitMb: number }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
-  const secretsT = useTranslations("Secrets")
-  const workspace = useTranslations("Workspace")
-  const tabs: { value: SettingsTab; label: string }[] = [
-    { value: "general", label: t("general") },
-    { value: "defaults", label: t("pasteDefaults") },
-    { value: "notifications", label: workspace("notifications") },
-    { value: "api", label: t("apiTokens") },
-    { value: "billing", label: t("billing") },
+  const tabs: { value: SettingsTab; label: string; icon: LucideIcon }[] = [
+    { value: "general", label: t("general"), icon: UserIcon },
+    { value: "defaults", label: t("pasteDefaults"), icon: SlidersHorizontalIcon },
+    { value: "notifications", label: t("notifications"), icon: BellIcon },
+    { value: "api", label: t("apiTokens"), icon: KeyRoundIcon },
+    { value: "billing", label: t("billing"), icon: CreditCardIcon },
   ]
   const router = useRouter()
-  const [tab, setTab] = React.useState(initialTab)
+  // The tab lives in the URL, so it survives a reload, can be linked to, and the phone back
+  // gesture closes an open section. pushState and replaceState update useSearchParams.
+  const opened = parseTab(useSearchParams().get("tab"))
+  const tab = opened ?? "general"
+  const pushed = React.useRef(false)
+  const current = tabs.find((item) => item.value === tab)
 
   function selectTab(next: SettingsTab) {
-    setTab(next)
-    // Keep the tab in the URL so it survives a reload and can be linked to.
-    window.history.replaceState(
-      null,
-      "",
-      next === "general" ? "/settings" : `/settings?tab=${next}`,
-    )
+    window.history.replaceState(null, "", tabHref(next))
+  }
+
+  function openSection(next: SettingsTab) {
+    pushed.current = true
+    window.history.pushState(null, "", `/settings?tab=${next}`)
+    window.scrollTo(0, 0)
+  }
+
+  function closeSection() {
+    if (pushed.current) {
+      pushed.current = false
+      window.history.back()
+    } else {
+      window.history.replaceState(null, "", "/settings")
+    }
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-6 lg:gap-6 lg:p-7">
-      <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
-          {t("settings")}
-        </h1>
+    <div className="flex flex-col gap-5 px-4 pt-4 pb-6 lg:gap-6 lg:p-7">
+      <div className={cn("flex flex-col gap-1", opened && "max-lg:hidden")}>
+        <h1 className={cn(titleClass, "lg:text-4xl lg:leading-10")}>{t("settings")}</h1>
         <p className="hidden text-sm text-muted-foreground lg:block">
           {t("manageYourProfilePasteDefaultsAnd")}
         </p>
       </div>
 
-      {/* On phones Settings is also the "More" tab, so it carries the workspace links. */}
-      <section aria-label={t("workspace")} className="flex flex-col gap-2 lg:hidden">
-        <h2 className="px-1 text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase">
-          {t("workspace")}
-        </h2>
-        <nav className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
-          {[
-            { href: "/secrets", label: secretsT("title"), count: null },
-            { href: "/shared", label: t("sharedWithMe"), count: counts.shared },
-            { href: "/collections", label: t("collections"), count: counts.collections },
-            { href: "/trash", label: t("trash"), count: counts.trash },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex h-12 items-center justify-between px-4 active:bg-muted"
-            >
-              {item.label}
-              <span className="flex items-center gap-1 text-muted-foreground">
-                {item.count}
-                <ChevronRightIcon className="size-4" />
-              </span>
-            </Link>
-          ))}
-        </nav>
-      </section>
+      {opened ? (
+        <div className="-ml-2 flex items-center gap-1 lg:hidden">
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            aria-label={t("backToSettings")}
+            onClick={closeSection}
+            className="size-10"
+          >
+            <ChevronLeftIcon />
+          </Button>
+          <h1 className={cn(titleClass, "min-w-0 truncate")}>{current?.label}</h1>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5 lg:hidden">
+          <nav
+            aria-label={t("settings")}
+            className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
+          >
+            {tabs.map((item) => (
+              <a
+                key={item.value}
+                href={`/settings?tab=${item.value}`}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey) return
+                  event.preventDefault()
+                  openSection(item.value)
+                }}
+                className="flex h-12 items-center gap-3 px-4 text-sm font-medium outline-none focus-visible:bg-muted active:bg-muted"
+              >
+                <item.icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <ChevronRightIcon
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-muted-foreground"
+                />
+              </a>
+            ))}
+          </nav>
+          <StorageMeter usedMb={storage.usedMb} limitMb={storage.limitMb} />
+          <Button
+            variant="outline"
+            size="xl"
+            className="w-full"
+            onClick={async () => {
+              await authClient.signOut()
+              router.replace("/sign-in")
+              router.refresh()
+            }}
+          >
+            {t("signOut")}
+          </Button>
+        </div>
+      )}
 
       <div
         role="tablist"
         aria-label={t("settings")}
-        className="-mx-4 flex gap-6 overflow-x-auto border-b border-border px-4 lg:mx-0 lg:px-0"
+        className="hidden gap-6 border-b border-border lg:flex"
       >
         {tabs.map((item) => (
           <button
@@ -150,7 +200,7 @@ export function SettingsView({
         id="settings-panel"
         role="tabpanel"
         aria-labelledby={`tab-${tab}`}
-        className="flex flex-col"
+        className={cn("flex flex-col", !opened && "max-lg:hidden")}
       >
         {tab === "general" ? (
           <>
@@ -159,7 +209,7 @@ export function SettingsView({
               <LanguageSwitcher />
             </SettingsSection>
             <EditorSection initial={preferences} />
-            <DeleteAccountSection pasteCount={counts.pastes} />
+            <DeleteAccountSection pasteCount={pasteCount} />
           </>
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
@@ -178,8 +228,8 @@ export function SettingsView({
         ) : null}
         {tab === "billing" ? (
           <SettingsSection title={t("plan")} description={t("sniptideIsFreeWhileItS")}>
-            <div className="rounded-lg flex items-center justify-between border border-border p-4">
-              <div className="flex flex-col">
+            <div className="rounded-lg flex flex-col gap-1 border border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex min-w-0 flex-col">
                 <span className="text-sm font-medium">{t("free")}</span>
                 <span className="text-[13px] text-muted-foreground">
                   {t("planStorage", { limit: storage.limitMb })}
@@ -190,23 +240,6 @@ export function SettingsView({
             <StorageMeter usedMb={storage.usedMb} limitMb={storage.limitMb} />
           </SettingsSection>
         ) : null}
-      </div>
-
-      <div className="flex flex-col items-center gap-4 lg:hidden">
-        <div className="w-full">
-          <StorageMeter usedMb={storage.usedMb} limitMb={storage.limitMb} />
-        </div>
-        <Button
-          variant="ghost"
-          className="text-[15px]"
-          onClick={async () => {
-            await authClient.signOut()
-            router.replace("/sign-in")
-            router.refresh()
-          }}
-        >
-          {t("signOut")}
-        </Button>
       </div>
     </div>
   )

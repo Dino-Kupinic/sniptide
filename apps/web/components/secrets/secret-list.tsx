@@ -1,7 +1,9 @@
+import { Badge } from "@sniptide/ui/components/badge"
 import { Button } from "@sniptide/ui/components/button"
-import { KeyRoundIcon, PlusIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
+import { ListHeader } from "@/components/lists/toolbar"
 import type { SecretSummary } from "@/lib/env/web-store"
 
 export async function SecretList({ groups }: { groups: SecretSummary[] }) {
@@ -14,52 +16,66 @@ export async function SecretList({ groups }: { groups: SecretSummary[] }) {
     projects.set(project, items)
   }
   return (
-    <main className="ph-no-capture mx-auto w-full max-w-5xl space-y-8 p-5 sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("list_description")}</p>
-        </div>
-        <Button render={<Link href="/secrets/new" />} nativeButton={false}>
-          <PlusIcon />
-          {t("new_group")}
-        </Button>
-      </div>
-      <p className="border-l-2 border-primary pl-3 text-sm text-muted-foreground">
-        {t("mask_notice")}
-      </p>
+    <div className="ph-no-capture flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
+      <ListHeader
+        title={t("title")}
+        count={groups.length}
+        description={t("list_description")}
+        actions={
+          <Button size="lg" render={<Link href="/secrets/new" />} nativeButton={false}>
+            <PlusIcon />
+            {t("new_group")}
+          </Button>
+        }
+        mobileActions={
+          <Button
+            size="xl"
+            aria-label={t("new_group")}
+            render={<Link href="/secrets/new" />}
+            nativeButton={false}
+            className="w-10 px-0"
+          >
+            <PlusIcon />
+          </Button>
+        }
+      />
       {groups.length === 0 ? (
-        <div className="border border-dashed border-border p-10 text-center">
-          <KeyRoundIcon className="mx-auto mb-3 size-6 text-muted-foreground" />
-          <h2 className="font-medium">{t("empty_title")}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{t("empty_description")}</p>
+        <div className="rounded-lg flex flex-col items-center gap-3 border border-border px-4 py-14 text-center text-sm text-muted-foreground">
+          {t("empty_sentence")}
+          <Link href="/secrets/new" className="font-medium text-link hover:underline">
+            {t("new_group")}
+          </Link>
         </div>
       ) : (
-        [...projects].map(([project, items]) => (
-          <section key={project} className="space-y-3">
-            <h2 className="font-medium">{project}</h2>
-            <div className="divide-y divide-border border border-border">
-              {items.map((group) => (
-                <Link
-                  key={group.id}
-                  href={`/secrets/${group.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 p-4 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <div>
-                    <span className="font-mono text-sm">{group.slug}</span>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {t("variable_count", { count: group.count })}
-                    </p>
-                  </div>
-                  <span className="border border-border px-2 py-1 text-xs">
-                    {group.environment ?? t("no_environment")}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))
+        <>
+          <p className="max-w-[68ch] text-sm text-muted-foreground">{t("mask_notice")}</p>
+          {[...projects].map(([project, items]) => (
+            <section key={project} className="flex flex-col gap-3">
+              <h2 className="text-base font-semibold">{project}</h2>
+              <ul className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border">
+                {items.map((group) => (
+                  <li key={group.id}>
+                    <Link
+                      href={`/secrets/${group.id}`}
+                      className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 outline-none hover:bg-muted/50 focus-visible:bg-muted"
+                    >
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="truncate font-mono text-[13px]">{group.slug}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {t("variable_count", { count: group.count })}
+                        </span>
+                      </span>
+                      <Badge variant="muted" className="max-w-[45%] text-xs font-normal">
+                        <span className="truncate">{group.environment ?? t("no_environment")}</span>
+                      </Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </>
       )}
-    </main>
+    </div>
   )
 }

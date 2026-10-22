@@ -9,13 +9,16 @@ import {
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
+import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
+  DownloadIcon,
   FileCodeIcon,
   LinkIcon,
   LogOutIcon,
   MoreHorizontalIcon,
+  ShareIcon,
   StarIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -33,7 +36,8 @@ import {
   setStarred,
   trashPaste,
 } from "@/lib/pastes/actions"
-import { useCopy } from "./copy-button"
+import { reportCopy, useCopy } from "./copy-button"
+import { useActiveFile } from "./file-viewer"
 
 export function StarButton({
   slug,
@@ -94,7 +98,26 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
   )
 }
 
-// Mobile "Share" button: the native share sheet where there is one, otherwise copy the link.
+// Opens the native share sheet where there is one, otherwise copies the link. `icon` is the
+// mobile header's version for people who can't open the owner's Share dialog.
+export function useNativeShare(url: string, title: string, from: string) {
+  const { copied, copy } = useCopy()
+  async function share() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ url, title })
+        return
+      } catch (error) {
+        // Dismissed: nothing more to do. Unsupported for this payload: fall back to copying.
+        if (error instanceof DOMException && error.name === "AbortError") return
+      }
+    }
+    track("share_link_copied", { from })
+    await copy(url)
+  }
+  return { copied, share }
+}
+
 export function ShareButton({
   url,
   title,
@@ -105,25 +128,38 @@ export function ShareButton({
   className?: string
 }) {
   const t = useTranslations("Paste")
-  const { copied, copy } = useCopy()
-
-  async function share() {
-    if (navigator.share) {
-      try {
-        await navigator.share({ url, title })
-        return
-      } catch {
-        // Dismissed or unsupported for this payload; fall back to copying.
-      }
-    }
-    track("share_link_copied", { from: "share_button" })
-    await copy(url)
-  }
-
+  const { copied, share } = useNativeShare(url, title, "share_button")
   return (
-    <Button type="button" className={className} onClick={share}>
-      {copied ? <SuccessCheck /> : null}
-      <span aria-live="polite">{copied ? t("linkCopied") : t("share")}</span>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-lg"
+      aria-label={copied ? t("linkCopied") : t("share")}
+      className={className}
+      onClick={share}
+    >
+      {copied ? <SuccessCheck /> : <ShareIcon />}
+    </Button>
+  )
+}
+
+// The mobile bottom bar's primary action: copies the file open in the code card.
+export function CopyCodeButton({ slug, className }: { slug: string; className?: string }) {
+  const t = useTranslations("Paste")
+  const file = useActiveFile()
+  const { copied, copy } = useCopy()
+  return (
+    <Button
+      type="button"
+      size="xl"
+      className={className}
+      disabled={!file}
+      onClick={async () => {
+        if (file && (await copy(file.content))) reportCopy(slug)
+      }}
+    >
+      {copied ? <SuccessCheck /> : <CopyIcon />}
+      <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
     </Button>
   )
 }
@@ -172,7 +208,8 @@ export function PasteOverflowMenu({
   title,
   canTrash,
   canLeave,
-  rawHref,
+  rawAllowed,
+  url,
   className,
 }: {
   slug: string
@@ -180,34 +217,55 @@ export function PasteOverflowMenu({
   canTrash: boolean
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
-  rawHref?: string
+  // View raw and Download, for the file open in the code card.
+  rawAllowed?: boolean
+  url: string
   className?: string
 }) {
   const t = useTranslations("Paste")
   const feedbackT = useTranslations("Core")
   const router = useRouter()
+  const file = useActiveFile()
+  const { copy } = useCopy()
+  const rawHref =
+    rawAllowed && file ? `/${slug}/raw?file=${encodeURIComponent(file.name)}` : undefined
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t("moreActions")}
         className={cn(
-          "rounded-lg inline-flex size-9 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+          "rounded-lg inline-flex size-10 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
           className,
         )}
       >
-        <MoreHorizontalIcon className="size-5" />
+        <MoreHorizontalIcon className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem render={<Link href={`/new?from=${slug}`} />}>
           <CopyIcon />
           {t("duplicate")}
         </DropdownMenuItem>
-        {rawHref ? (
-          <DropdownMenuItem render={<a href={rawHref} />}>
-            <FileCodeIcon />
-            {t("viewRaw")}
-          </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={async () => {
+            track("share_link_copied", { from: "overflow_menu" })
+            if (await copy(url)) toast.success(t("linkCopied"))
+          }}
+        >
+          <LinkIcon />
+          {t("copyLink")}
+        </DropdownMenuItem>
+        {rawHref && file ? (
+          <>
+            <DropdownMenuItem render={<a href={rawHref} />}>
+              <FileCodeIcon />
+              {t("viewRaw")}
+            </DropdownMenuItem>
+            <DropdownMenuItem render={<a href={`${rawHref}&download=1`} />}>
+              <DownloadIcon />
+              {t("downloadFile", { name: file.name })}
+            </DropdownMenuItem>
+          </>
         ) : null}
         {canLeave ? (
           <>

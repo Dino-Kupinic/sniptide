@@ -57,5 +57,3 @@ export function useSecretValues() {
   }
   return { values, setValues, clear, begin }
 }
-export const fieldClass =
-  "h-10 w-full border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"

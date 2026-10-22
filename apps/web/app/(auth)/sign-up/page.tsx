@@ -4,6 +4,7 @@ import { RequestAccess } from "@/components/auth/request-access"
 import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata() {
@@ -57,7 +58,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
   return (
     <AuthScreen
       title={t("createAccount")}
-      subtitle={t("signUpSubtitle")}
+      subtitle={t("signUpSubtitle", { limit: accountBudget().bytes / 1024 / 1024 })}
       legal={legal}
       pitch={{
         title: [t("signUpPitchTitle1"), t("signUpPitchTitle2")],

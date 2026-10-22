@@ -111,6 +111,34 @@
     "storageUsage": "{used, number} / {limit, number} MB",
     "language": "Idioma",
     "languageDescription": "Elige el idioma de Sniptide.",
-    "planStorage": "{limit, number} MB de pastes, enlaces ilimitados"
+    "planStorage": "{limit, number} MB de pastes, enlaces ilimitados",
+    "backToSettings": "Volver a la configuración",
+    "notifications": "Notificaciones",
+    "notificationsDescription": "Elige cómo te enteras de la actividad en tus pastes. El correo está desactivado por defecto.",
+    "notificationEmailUnavailable": "El envío de correo no está configurado en este servidor. Las notificaciones en la app siguen funcionando.",
+    "notificationEmailUnverified": "Verifica tu dirección de correo antes de activar las notificaciones por correo.",
+    "sendVerificationEmail": "Enviar correo de verificación",
+    "verificationEmailSent": "Correo de verificación enviado. Abre el enlace en tu bandeja de entrada y vuelve a cargar esta configuración.",
+    "couldnTSendVerificationEmail": "No se pudo enviar el correo de verificación. Inténtalo de nuevo.",
+    "notificationActivity": "Actividad",
+    "notificationInApp": "En la app",
+    "notificationEmail": "Correo",
+    "notificationSwitch": "{event}, {channel}",
+    "notificationEvents": {
+      "shared": { "label": "Compartido contigo", "description": "Alguien te invita a un paste." },
+      "burned": {
+        "label": "Borrar tras leer",
+        "description": "Tu paste se leyó y se movió a la papelera."
+      },
+      "expiring": {
+        "label": "Caduca pronto",
+        "description": "Tu paste caducará en menos de un día."
+      },
+      "views": { "label": "Hitos de vistas", "description": "Tu paste alcanza un hito de vistas." }
+    },
+    "revokeTokenTitle": "¿Revocar {name}?",
+    "revokeTokenDescription": "Los scripts y agentes que usan este token dejan de funcionar al instante. No se puede deshacer.",
+    "deleteEnvGroupTitle": "¿Eliminar {slug}?",
+    "deleteEnvGroupDescription": "Sus variables se eliminan para siempre y la CLI ya no podrá descargarlas. No se puede deshacer."
   }
 }

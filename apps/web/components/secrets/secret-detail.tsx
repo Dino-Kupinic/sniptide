@@ -1,6 +1,8 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { toast } from "@sniptide/ui/components/toast"
+import { ChevronLeftIcon, CopyIcon, EyeIcon, EyeOffIcon, PencilIcon, XIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -23,34 +25,47 @@ export function SecretDetail({ group }: { group: Detail }) {
         .object({ value: z.string() })
         .parse(await secretRequest({ operation: "reveal", id: group.id, name }))
       if (!active()) return
-      if (copy) await navigator.clipboard.writeText(result.value)
-      else setValues((previous) => ({ ...previous, [name]: result.value }))
+      if (copy) {
+        await navigator.clipboard.writeText(result.value)
+        toast.success(t("value_copied", { name }))
+      } else setValues((previous) => ({ ...previous, [name]: result.value }))
       setError("")
     } catch {
       setError(t("reveal_error"))
     }
   }
+  const revealed = (name: string) => Object.hasOwn(values, name)
   return (
-    <main className="ph-no-capture mx-auto w-full max-w-5xl space-y-7 p-5 sm:p-8">
-      <Link href="/secrets" className="text-sm text-muted-foreground hover:text-foreground">
-        {t("back")}
-      </Link>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="break-all font-mono text-2xl font-semibold">{group.slug}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {group.project ?? t("ungrouped")} · {group.environment ?? t("no_environment")}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            clear()
-            setEditing(!editing)
-          }}
+    <div className="ph-no-capture mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 pt-4 pb-8 lg:p-8">
+      <div className="flex flex-col gap-3">
+        <Link
+          href="/secrets"
+          className="-ml-2 inline-flex h-10 items-center gap-1 self-start rounded-lg px-2 text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
         >
-          {editing ? t("close_editor") : t("edit_group")}
-        </Button>
+          <ChevronLeftIcon className="size-4" />
+          {t("title")}
+        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] break-all">
+              {group.slug}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {group.project ?? t("ungrouped")} · {group.environment ?? t("no_environment")}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="xl"
+            onClick={() => {
+              clear()
+              setEditing(!editing)
+            }}
+          >
+            {editing ? <XIcon /> : <PencilIcon />}
+            {editing ? t("close_editor") : t("edit_group")}
+          </Button>
+        </div>
       </div>
       {editing ? (
         <SecretEditor
@@ -60,36 +75,36 @@ export function SecretDetail({ group }: { group: Detail }) {
           onCancel={() => setEditing(false)}
         />
       ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <p className="text-sm text-muted-foreground">{t("hide_notice")}</p>
-            <Button variant="ghost" size="sm" onClick={clear}>
+            <Button variant="ghost" size="xl" className="-mr-2" onClick={clear}>
+              <EyeOffIcon />
               {t("hide_all")}
             </Button>
           </div>
-          <div className="divide-y divide-border border border-border">
+          <ul className="overflow-hidden rounded-lg divide-y divide-border border border-border">
             {group.entries.length === 0 && (
-              <p className="p-5 text-sm text-muted-foreground">{t("no_variables")}</p>
+              <li className="p-4 text-sm text-muted-foreground">{t("no_variables")}</li>
             )}
             {group.entries.map((entry) => (
-              <div
+              <li
                 key={entry.name}
-                className="flex flex-wrap items-center justify-between gap-4 p-4"
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 flex-1">
-                  <h2 className="break-all font-mono text-sm font-medium">{entry.name}</h2>
-                  <p className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-sm">
-                    {Object.hasOwn(values, entry.name)
-                      ? values[entry.name] || t("empty_value")
-                      : "••••••••••••"}
+                  <h2 className="font-mono text-sm font-medium break-all">{entry.name}</h2>
+                  <p className="mt-1 max-h-48 overflow-auto font-mono text-sm break-all whitespace-pre-wrap text-muted-foreground">
+                    {revealed(entry.name) ? values[entry.name] || t("empty_value") : "••••••••••••"}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    size="sm"
+                    size="xl"
                     variant="outline"
+                    className="max-sm:flex-1"
                     onClick={() =>
-                      Object.hasOwn(values, entry.name)
+                      revealed(entry.name)
                         ? setValues((previous) =>
                             Object.fromEntries(
                               Object.entries(previous).filter(([name]) => name !== entry.name),
@@ -98,16 +113,23 @@ export function SecretDetail({ group }: { group: Detail }) {
                         : void reveal(entry.name, false)
                     }
                   >
-                    {Object.hasOwn(values, entry.name) ? t("hide") : t("reveal")}
+                    {revealed(entry.name) ? <EyeOffIcon /> : <EyeIcon />}
+                    {revealed(entry.name) ? t("hide") : t("reveal")}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => reveal(entry.name, true)}>
+                  <Button
+                    size="xl"
+                    variant="outline"
+                    className="max-sm:flex-1"
+                    onClick={() => reveal(entry.name, true)}
+                  >
+                    <CopyIcon />
                     {t("copy")}
                   </Button>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-        </>
+          </ul>
+        </section>
       )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
@@ -115,6 +137,6 @@ export function SecretDetail({ group }: { group: Detail }) {
         </p>
       )}
       <SecretSharing group={group} />
-    </main>
+    </div>
   )
 }

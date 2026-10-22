@@ -10,6 +10,7 @@ import { ShortcutsProvider } from "@/components/shortcuts/shortcuts-help"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
+import { NotificationsProvider } from "./notifications-menu"
 import { HeaderSlotsProvider } from "./page-header"
 import { Sidebar, type SidebarProps } from "./sidebar"
 import {
@@ -23,12 +24,31 @@ import {
 import { TabBar } from "./tab-bar"
 import { TopBar } from "./top-bar"
 
+type SidebarUpdate = (change: (state: SidebarState) => SidebarState) => void
+
+const SidebarUpdateContext = React.createContext<SidebarUpdate | null>(null)
+
+// Changes the sidebar layout from outside the sidebar, such as reordering collections on the
+// Collections page, so the open sidebar and its cookie stay in step.
+export function useSidebarUpdate() {
+  const update = React.useContext(SidebarUpdateContext)
+  if (!update) throw new Error("useSidebarUpdate must be used inside AppShell")
+  return update
+}
+
 export function AppShell({
   children,
   initialSidebar,
   demo = false,
+  trashCount = 0,
   ...sidebarProps
-}: SidebarProps & { initialSidebar: SidebarState; demo?: boolean; children: React.ReactNode }) {
+}: SidebarProps & {
+  initialSidebar: SidebarState
+  demo?: boolean
+  // For the More sheet; the sidebar's own counts don't cover Trash.
+  trashCount?: number
+  children: React.ReactNode
+}) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const router = useRouter()
@@ -94,105 +114,118 @@ export function AppShell({
   const releaseToCollapse = dragWidth !== null && dragWidth < SIDEBAR_MIN_WIDTH
 
   return (
-    <TooltipProvider delay={300}>
-      <HeaderSlotsProvider>
-        <ShortcutsProvider>
-          <CommandMenuProvider
-            recent={sidebarProps.data.recent}
-            collections={sidebarProps.collections}
-          >
-            <div className="flex min-h-svh bg-background lg:bg-sidebar">
-              <aside
-                aria-label={t("sidebar")}
-                style={{ width }}
-                className={cn(
-                  "sticky top-0 hidden h-svh shrink-0 lg:block",
-                  layout.collapsed && "lg:hidden",
-                  dragWidth !== null && "select-none",
-                )}
+    <SidebarUpdateContext.Provider value={update}>
+      <TooltipProvider delay={300}>
+        <HeaderSlotsProvider>
+          <NotificationsProvider>
+            <ShortcutsProvider>
+              <CommandMenuProvider
+                recent={sidebarProps.data.recent}
+                collections={sidebarProps.collections}
               >
-                <div
-                  className={cn(
-                    "h-full overflow-hidden transition-opacity",
-                    releaseToCollapse && "opacity-50",
-                  )}
-                >
-                  <Sidebar
-                    {...sidebarProps}
-                    closed={layout.closed}
-                    sectionOrder={layout.sectionOrder}
-                    collectionOrder={layout.collectionOrder}
-                    onReorderSections={(sectionOrder) =>
-                      update((state) => ({ ...state, sectionOrder }))
-                    }
-                    onReorderCollections={(collectionOrder) =>
-                      update((state) => ({ ...state, collectionOrder }))
-                    }
-                    onToggleSection={toggleSection}
-                    onToggleSidebar={toggleSidebar}
-                    views={layout.views}
-                    onChangeViews={(views) => {
-                      const refetch =
-                        JSON.stringify(views.pastes) !== JSON.stringify(layout.views.pastes) ||
-                        JSON.stringify(views.starred) !== JSON.stringify(layout.views.starred)
-                      // Write the cookie before refreshing, so the server lists what the filter
-                      // asks for.
-                      const next = { ...layout, views }
-                      writeSidebarState(next)
-                      setLayout(next)
-                      if (refetch) router.refresh()
-                    }}
-                  />
-                </div>
-                <ResizeHandle
-                  width={width}
-                  settledWidth={settledWidth}
-                  maxWidth={maxWidth ?? settledWidth}
-                  onDrag={setDragWidth}
-                  onRelease={(next) => {
-                    setDragWidth(null)
-                    if (next < SIDEBAR_MIN_WIDTH) {
-                      // Collapse like the header button does, and come back at the last good width.
-                      update((state) => ({ ...state, collapsed: true }))
-                    } else {
-                      update((state) => ({ ...state, width: next }))
-                    }
-                  }}
-                />
-              </aside>
-
-              <div
-                className={cn(
-                  "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
-                  layout.collapsed && "lg:ml-2",
-                )}
-              >
-                {demo ? (
-                  <p
-                    role="note"
-                    className="border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
+                <div className="flex min-h-svh bg-background lg:bg-sidebar">
+                  <aside
+                    aria-label={t("sidebar")}
+                    style={{ width }}
+                    className={cn(
+                      "sticky top-0 hidden h-svh shrink-0 lg:block",
+                      layout.collapsed && "lg:hidden",
+                      dragWidth !== null && "select-none",
+                    )}
                   >
-                    {t("demoBanner")}
-                  </p>
-                ) : null}
-                <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
-                {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
-                <main
-                  className={cn(
-                    "flex-1",
-                    chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
-                  )}
-                >
-                  {children}
-                </main>
-              </div>
+                    <div
+                      className={cn(
+                        "h-full overflow-hidden transition-opacity",
+                        releaseToCollapse && "opacity-50",
+                      )}
+                    >
+                      <Sidebar
+                        {...sidebarProps}
+                        closed={layout.closed}
+                        sectionOrder={layout.sectionOrder}
+                        collectionOrder={layout.collectionOrder}
+                        onReorderSections={(sectionOrder) =>
+                          update((state) => ({ ...state, sectionOrder }))
+                        }
+                        onReorderCollections={(collectionOrder) =>
+                          update((state) => ({ ...state, collectionOrder }))
+                        }
+                        onToggleSection={toggleSection}
+                        onToggleSidebar={toggleSidebar}
+                        views={layout.views}
+                        onChangeViews={(views) => {
+                          const refetch =
+                            JSON.stringify(views.pastes) !== JSON.stringify(layout.views.pastes) ||
+                            JSON.stringify(views.starred) !== JSON.stringify(layout.views.starred)
+                          // Write the cookie before refreshing, so the server lists what the filter
+                          // asks for.
+                          const next = { ...layout, views }
+                          writeSidebarState(next)
+                          setLayout(next)
+                          if (refetch) router.refresh()
+                        }}
+                      />
+                    </div>
+                    <ResizeHandle
+                      width={width}
+                      settledWidth={settledWidth}
+                      maxWidth={maxWidth ?? settledWidth}
+                      onDrag={setDragWidth}
+                      onRelease={(next) => {
+                        setDragWidth(null)
+                        if (next < SIDEBAR_MIN_WIDTH) {
+                          // Collapse like the header button does, and come back at the last good width.
+                          update((state) => ({ ...state, collapsed: true }))
+                        } else {
+                          update((state) => ({ ...state, width: next }))
+                        }
+                      }}
+                    />
+                  </aside>
 
-              {chrome.tabBar ? <TabBar /> : null}
-            </div>
-          </CommandMenuProvider>
-        </ShortcutsProvider>
-      </HeaderSlotsProvider>
-    </TooltipProvider>
+                  <div
+                    className={cn(
+                      "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
+                      layout.collapsed && "lg:ml-2",
+                    )}
+                  >
+                    {demo ? (
+                      <p
+                        role="note"
+                        className="border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
+                      >
+                        {t("demoBanner")}
+                      </p>
+                    ) : null}
+                    <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
+                    {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
+                    <main
+                      className={cn(
+                        "flex-1",
+                        chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+                      )}
+                    >
+                      {children}
+                    </main>
+                  </div>
+
+                  {chrome.tabBar ? (
+                    <TabBar
+                      viewer={sidebarProps.viewer}
+                      counts={{
+                        collections: sidebarProps.collections.length,
+                        shared: sidebarProps.data.counts.shared,
+                        trash: trashCount,
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </CommandMenuProvider>
+            </ShortcutsProvider>
+          </NotificationsProvider>
+        </HeaderSlotsProvider>
+      </TooltipProvider>
+    </SidebarUpdateContext.Provider>
   )
 }
 

@@ -12,12 +12,14 @@ export default async function Page() {
   const t = await getTranslations("Secrets")
   if (!(await getSession())) redirect("/sign-in")
   return (
-    <main className="ph-no-capture mx-auto w-full max-w-5xl space-y-7 p-5 sm:p-8">
-      <div>
-        <h1 className="text-2xl font-semibold">{t("new_group")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("new_description")}</p>
+    <div className="ph-no-capture mx-auto flex w-full max-w-5xl flex-col gap-7 p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:p-7">
+      <div className="flex flex-col gap-2">
+        <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
+          {t("new_group")}
+        </h1>
+        <p className="text-sm text-muted-foreground">{t("new_description")}</p>
       </div>
       <SecretEditor />
-    </main>
+    </div>
   )
 }

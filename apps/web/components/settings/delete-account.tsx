@@ -39,11 +39,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
             setError(null)
           }}
         >
-          <AlertDialogTrigger
-            render={
-              <Button size="lg" className="bg-destructive text-white hover:bg-destructive/85" />
-            }
-          >
+          <AlertDialogTrigger render={<Button variant="destructive" size="lg" />}>
             {t("deleteAccount")}
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -78,12 +74,7 @@ export function DeleteAccountSection({ pasteCount }: { pasteCount: number }) {
                 <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>
                   {t("cancel")}
                 </AlertDialogClose>
-                <Button
-                  type="submit"
-                  size="lg"
-                  loading={pending}
-                  className="bg-destructive text-white hover:bg-destructive/85"
-                >
+                <Button type="submit" variant="destructive" size="lg" loading={pending}>
                   {pending ? t("deleting") : t("deleteAccount")}
                 </Button>
               </AlertDialogFooter>

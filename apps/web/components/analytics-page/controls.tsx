@@ -61,50 +61,58 @@ export function AnalyticsControls({
     ...options.map((option) => ({ value: option.slug, label: option.title })),
   ]
 
+  // Phones: the paste picker and an icon-only Export share the first row, and the range takes the
+  // full second row. From lg everything sits on one row with Export last.
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Select
-        value={shown.paste ?? ALL}
-        onValueChange={(value) =>
-          choose({ range: shown.range, paste: value === ALL || value === null ? undefined : value })
-        }
-        items={items}
-      >
-        <SelectTrigger
-          aria-label={t("pastes")}
-          className="h-[34px] max-w-48 gap-1.5 pr-2.5 pl-3 text-[13px] font-medium"
+    <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center">
+      <div className="flex min-w-0 items-center gap-2 lg:contents">
+        <Select
+          value={shown.paste ?? ALL}
+          onValueChange={(value) =>
+            choose({
+              range: shown.range,
+              paste: value === ALL || value === null ? undefined : value,
+            })
+          }
+          items={items}
         >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="min-w-48">
-          {items.map((item) => (
-            <SelectItem key={item.value} value={item.value} className="text-[13px]">
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            aria-label={t("pastes")}
+            className="h-10 min-w-0 flex-1 gap-1.5 pr-2.5 pl-3 font-medium lg:h-9 lg:max-w-48 lg:flex-none [&>span]:truncate"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="min-w-48">
+            {items.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <a
+          href={analyticsHref("/analytics/export", shown.range, shown.paste)}
+          download
+          aria-label={t("export_csv")}
+          className={cn(
+            buttonVariants({ variant: "outline", size: "lg" }),
+            "gap-1.5 px-3 max-lg:h-[38px] max-lg:w-10 max-lg:px-0 lg:order-last",
+          )}
+        >
+          <DownloadIcon />
+          <span className="max-lg:hidden">{t("export_csv")}</span>
+        </a>
+      </div>
 
       <SegmentedControl
         aria-label={t("range")}
         value={shown.range}
         onValueChange={(next) => choose({ range: next, paste: shown.paste })}
         options={rangeOptions}
-        className="w-fit"
-        itemClassName="px-2.5 whitespace-nowrap"
+        className="w-full lg:w-fit"
+        itemClassName="px-2.5 whitespace-nowrap max-lg:py-[9px]"
       />
-
-      <a
-        href={analyticsHref("/analytics/export", shown.range, shown.paste)}
-        download
-        className={cn(
-          buttonVariants({ variant: "outline" }),
-          "h-[34px] gap-1.5 px-3 text-[13px] [&_svg]:size-[15px]",
-        )}
-      >
-        <DownloadIcon />
-        {t("export_csv")}
-      </a>
     </div>
   )
 }

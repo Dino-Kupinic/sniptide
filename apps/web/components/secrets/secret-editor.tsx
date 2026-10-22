@@ -1,15 +1,30 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { Checkbox } from "@sniptide/ui/components/checkbox"
+import { Input } from "@sniptide/ui/components/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sniptide/ui/components/select"
+import { Textarea } from "@sniptide/ui/components/textarea"
+import { toast } from "@sniptide/ui/components/toast"
+import { cn } from "@sniptide/ui/lib/utils"
+import { ChevronDownIcon, PlusIcon, Trash2Icon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { z } from "zod"
 import { parseEnvFile } from "@/lib/env/dotenv"
 import type { SecretDetail } from "@/lib/env/web-store"
-import { fieldClass, SecretRequestError, useSecretRequest } from "./client"
+import { SecretRequestError, useSecretRequest } from "./client"
+
+// 16px text on phones so iOS doesn't zoom into the field on focus.
+const fieldText = "text-base lg:text-sm"
 
 export function SecretEditor({
   group,
@@ -37,6 +52,17 @@ export function SecretEditor({
   const [source, setSource] = useState("")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  // Saving keeps the form as it is until the group's page has loaded, so a slow navigation never
+  // looks like a save that emptied the form.
+  const [navigating, startNavigation] = useTransition()
+  const environments = [
+    { value: "dev", label: t("dev") },
+    { value: "staging", label: t("staging") },
+    { value: "prod", label: t("prod") },
+  ]
+  const updateEntry = (key: string, patch: Partial<(typeof entries)[number]>) =>
+    setEntries((rows) => rows.map((row) => (row.key === key ? { ...row, ...patch } : row)))
   function importFile() {
     try {
       const imported = parseEnvFile(source)
@@ -57,6 +83,7 @@ export function SecretEditor({
       })
       setSource("")
       setError("")
+      setImportOpen(false)
     } catch {
       setError(t("syntax_error"))
     }
@@ -64,7 +91,7 @@ export function SecretEditor({
   return (
     <form
       autoComplete="off"
-      className="ph-no-capture space-y-6"
+      className="ph-no-capture flex flex-col gap-6"
       onSubmit={async (event) => {
         event.preventDefault()
         setBusy(true)
@@ -87,183 +114,212 @@ export function SecretEditor({
               },
             }),
           )
-          setEntries([])
-          setSource("")
+          toast.success(t("saved"))
           onSaved?.()
-          router.push(`/secrets/${result.id}`)
-          router.refresh()
+          startNavigation(() => {
+            router.push(`/secrets/${result.id}`)
+            router.refresh()
+          })
         } catch (error) {
-          setError(error instanceof SecretRequestError ? error.message : t("save_error"))
+          const message = error instanceof SecretRequestError ? error.message : t("save_error")
+          setError(message)
+          toast.error(message)
         } finally {
           setBusy(false)
         }
       }}
     >
       <div className="grid gap-4 sm:grid-cols-3">
-        <label className="space-y-2 text-sm">
+        {/* biome-ignore lint/a11y/noLabelWithoutControl: the Input inside is the control */}
+        <label className="flex flex-col gap-2 text-sm font-medium">
           {t("group_name")}
-          <input
+          <Input
             name="slug"
-            className={fieldClass}
+            className={cn("font-mono", fieldText)}
             defaultValue={group?.slug}
             disabled={Boolean(group)}
             required
             pattern={"[a-z0-9][a-z0-9._\\-]{0,63}"}
+            autoCapitalize="none"
+            spellCheck={false}
             placeholder="my-app-dev"
           />
         </label>
-        <label className="space-y-2 text-sm">
+        {/* biome-ignore lint/a11y/noLabelWithoutControl: the Input inside is the control */}
+        <label className="flex flex-col gap-2 text-sm font-medium">
           {t("project")}
-          <input
+          <Input
             name="project"
-            className={fieldClass}
+            className={fieldText}
             defaultValue={group?.project ?? ""}
             required
             maxLength={100}
             placeholder={t("project_placeholder")}
           />
         </label>
-        <label className="space-y-2 text-sm">
-          {t("environment")}
-          <select
+        <div className="flex flex-col gap-2 text-sm font-medium">
+          <span id="secret-environment">{t("environment")}</span>
+          <Select
             name="environment"
-            className={fieldClass}
             defaultValue={group?.environment ?? "dev"}
+            items={environments}
           >
-            <option value="dev">{t("dev")}</option>
-            <option value="staging">{t("staging")}</option>
-            <option value="prod">{t("prod")}</option>
-          </select>
-        </label>
+            <SelectTrigger
+              aria-labelledby="secret-environment"
+              className={cn("h-10 w-full font-normal", fieldText)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {environments.map((environment) => (
+                <SelectItem key={environment.value} value={environment.value} className="h-10">
+                  {environment.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div>
+      <div className="flex flex-col gap-1">
         <h2 className="font-medium">{t("variables")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {group ? t("keep_values") : t("encrypted_notice")}
         </p>
       </div>
-      <div className="space-y-3">
-        {entries.map((entry, index) => (
-          <div
-            key={entry.key}
-            className="grid gap-2 border border-border p-3 sm:grid-cols-[1fr_1fr_auto]"
-          >
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {t("variable_name")}
-              <input
-                className={`${fieldClass} font-mono`}
+      {entries.length > 0 ? (
+        <ul className="overflow-hidden rounded-lg divide-y divide-border border border-border">
+          {entries.map((entry, index) => (
+            <li
+              key={entry.key}
+              className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+            >
+              <Input
+                className={cn("font-mono", fieldText)}
                 aria-label={t("variable_name_index", { index: index + 1 })}
                 value={entry.name}
                 readOnly={entry.existing}
-                onChange={(event) =>
-                  setEntries((rows) =>
-                    rows.map((row) =>
-                      row.key === entry.key ? { ...row, name: event.target.value } : row,
-                    ),
-                  )
-                }
+                autoCapitalize="none"
+                spellCheck={false}
+                onChange={(event) => updateEntry(entry.key, { name: event.target.value })}
                 placeholder="API_KEY"
               />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {entry.existing ? t("new_value") : t("value")}
-              <input
+              <Input
                 type="password"
                 autoComplete="new-password"
                 spellCheck={false}
-                className={`${fieldClass} font-mono`}
+                aria-label={entry.existing ? t("new_value") : t("value")}
+                className={cn("col-start-1 font-mono sm:col-start-auto", fieldText)}
                 value={entry.value}
                 disabled={entry.existing && entry.replace && entry.value === ""}
-                onChange={(event) =>
-                  setEntries((rows) =>
-                    rows.map((row) =>
-                      row.key === entry.key ? { ...row, value: event.target.value } : row,
-                    ),
-                  )
-                }
+                onChange={(event) => updateEntry(entry.key, { value: event.target.value })}
                 placeholder={entry.existing ? t("keep_value") : t("enter_value")}
               />
-            </label>
-            <Button
-              type="button"
-              variant="ghost"
-              className="self-end"
-              aria-label={t("remove_variable_index", { index: index + 1 })}
-              onClick={() => {
-                if (entry.existing) setDeleted((names) => [...names, entry.name])
-                setEntries((rows) => rows.filter((row) => row.key !== entry.key))
-              }}
-            >
-              <Trash2Icon />
-            </Button>
-            {entry.existing && (
-              <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-3">
-                <input
-                  type="checkbox"
-                  checked={entry.replace && entry.value === ""}
-                  onChange={(event) =>
-                    setEntries((rows) =>
-                      rows.map((row) =>
-                        row.key === entry.key
-                          ? { ...row, value: "", replace: event.target.checked }
-                          : row,
-                      ),
-                    )
-                  }
-                />
-                {t("clear_value")}
-              </label>
-            )}
-          </div>
-        ))}
-      </div>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() =>
-          setEntries((rows) => [
-            ...rows,
-            { name: "", value: "", replace: false, existing: false, key: crypto.randomUUID() },
-          ])
-        }
-      >
-        <PlusIcon />
-        {t("add_variable")}
-      </Button>
-      <details className="border border-border p-4">
-        <summary className="cursor-pointer text-sm font-medium">{t("paste_file")}</summary>
-        <label className="mt-3 block space-y-2 text-sm">
-          {t("file_contents")}
-          <textarea
-            autoComplete="off"
-            spellCheck={false}
-            className={`${fieldClass} h-36 py-3 font-mono`}
-            value={source}
-            onChange={(event) => setSource(event.target.value)}
-            placeholder={'API_KEY="your value"'}
-          />
-        </label>
-        <Button type="button" variant="outline" className="mt-3" onClick={importFile}>
-          {t("import_variables")}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                className="col-start-2 row-start-1 size-10 text-muted-foreground sm:col-start-3"
+                aria-label={t("remove_variable_index", { index: index + 1 })}
+                onClick={() => {
+                  if (entry.existing) setDeleted((names) => [...names, entry.name])
+                  setEntries((rows) => rows.filter((row) => row.key !== entry.key))
+                }}
+              >
+                <Trash2Icon />
+              </Button>
+              {entry.existing && (
+                // biome-ignore lint/a11y/noLabelWithoutControl: the Checkbox inside is the control
+                <label className="col-span-full flex min-h-10 items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox
+                    checked={entry.replace && entry.value === ""}
+                    onCheckedChange={(checked) =>
+                      updateEntry(entry.key, { value: "", replace: checked })
+                    }
+                  />
+                  {t("clear_value")}
+                </label>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="xl"
+          onClick={() =>
+            setEntries((rows) => [
+              ...rows,
+              { name: "", value: "", replace: false, existing: false, key: crypto.randomUUID() },
+            ])
+          }
+        >
+          <PlusIcon />
+          {t("add_variable")}
         </Button>
-      </details>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xl"
+          aria-expanded={importOpen}
+          aria-controls="secret-import"
+          onClick={() => setImportOpen((open) => !open)}
+        >
+          {t("paste_file")}
+          <ChevronDownIcon
+            className={cn(
+              "text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
+              importOpen && "rotate-180",
+            )}
+          />
+        </Button>
+      </div>
+      {importOpen ? (
+        <div id="secret-import" className="flex flex-col gap-3">
+          {/* biome-ignore lint/a11y/noLabelWithoutControl: the Textarea inside is the control */}
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            {t("file_contents")}
+            <Textarea
+              autoComplete="off"
+              spellCheck={false}
+              className={cn("h-36 font-mono", fieldText)}
+              value={source}
+              onChange={(event) => setSource(event.target.value)}
+              placeholder={'API_KEY="your value"'}
+            />
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="xl"
+            className="self-start"
+            onClick={importFile}
+          >
+            {t("import_variables")}
+          </Button>
+        </div>
+      ) : null}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
-      <div className="flex gap-3">
-        <Button type="submit" disabled={busy}>
-          {busy ? t("saving") : t("save")}
+      {/* A 56px bottom bar on phones, as in the paste editor, so Save stays in reach however many
+          variables there are. It covers the tab bar while a group is edited in place. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:static lg:z-auto lg:h-auto lg:border-0 lg:bg-transparent lg:p-0">
+        <Button type="submit" size="xl" className="max-lg:flex-1" loading={busy || navigating}>
+          {busy || navigating ? t("saving") : t("save")}
         </Button>
         {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" size="xl" onClick={onCancel}>
             {t("cancel")}
           </Button>
         ) : (
           <Button
             type="button"
             variant="outline"
+            size="xl"
             render={<Link href={group ? `/secrets/${group.id}` : "/secrets"} />}
             nativeButton={false}
           >

@@ -171,8 +171,8 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
       </div>
 
       <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="display-name">{t("displayName")}</Label>
             <Input
               id="display-name"
@@ -183,7 +183,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
               className="text-base lg:text-sm"
             />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="settings-username">{t("username")}</Label>
             <div
               className={cn(
@@ -193,7 +193,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
               )}
             >
               <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-3 font-mono text-xs text-muted-foreground">
-                {host}/@
+                <span className="max-lg:hidden">{host}/</span>@
               </span>
               <input
                 id="settings-username"
@@ -209,7 +209,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
                 autoCapitalize="none"
                 spellCheck={false}
                 aria-describedby="settings-username-status"
-                className="h-full min-w-0 flex-1 bg-transparent px-2.5 font-mono text-base outline-none lg:text-[13px]"
+                className="h-full w-0 min-w-0 flex-1 bg-transparent px-2.5 font-mono text-base outline-none lg:text-[13px]"
               />
               <span
                 id="settings-username-status"
@@ -228,6 +228,10 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
                       : ""}
               </span>
             </div>
+            {/* Phones show only "@" in the field, so the full address sits under it. */}
+            <p className="truncate font-mono text-xs text-muted-foreground lg:hidden">
+              {host}/@{username}
+            </p>
           </div>
         </div>
         <div className="flex flex-col gap-1.5">

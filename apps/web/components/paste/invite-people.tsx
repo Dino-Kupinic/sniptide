@@ -46,7 +46,11 @@ export function InvitePeople({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
-        <span className={large ? "flex items-center gap-2 text-[15px]" : "flex items-center gap-2"}>
+        <span
+          className={
+            large ? "flex items-center gap-2 text-sm font-medium" : "flex items-center gap-2"
+          }
+        >
           <UsersIcon className="size-4" />
           {t("invitePeople")}
         </span>

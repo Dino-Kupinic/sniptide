@@ -59,7 +59,7 @@ export function SignInForm({
 
   return (
     <>
-      {socialProviders ? (
+      {socialProviders?.length ? (
         <>
           <SocialButtons
             enabled={socialProviders}
@@ -74,9 +74,7 @@ export function SignInForm({
       <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              {t("email")}
-            </Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               name="email"
@@ -89,14 +87,12 @@ export function SignInForm({
           </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-sm lg:text-[13px]">
-                {t("password")}
-              </Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <button
                 type="button"
                 onClick={() => setShowResetNote((value) => !value)}
                 aria-expanded={showResetNote}
-                className="text-sm text-muted-foreground underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:text-[13px]"
+                className="text-sm text-muted-foreground underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 {t("forgotPassword")}
               </button>
@@ -111,7 +107,7 @@ export function SignInForm({
             />
             {showResetNote ? (
               <p className="text-xs text-muted-foreground">
-                {t(socialProviders ? "resetNoteSocial" : "resetNote")}
+                {t(socialProviders?.length ? "resetNoteSocial" : "resetNote")}
               </p>
             ) : null}
           </div>
@@ -119,7 +115,7 @@ export function SignInForm({
 
         <FormError message={error} />
 
-        <Button type="submit" loading={pending} className={authSubmitClass}>
+        <Button type="submit" size="xl" loading={pending} className={authSubmitClass}>
           {t(pending ? "signingIn" : "signIn")}
         </Button>
 

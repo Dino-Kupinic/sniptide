@@ -94,7 +94,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
 
   return (
     <>
-      {socialProviders ? (
+      {socialProviders?.length ? (
         <>
           <SocialButtons
             enabled={socialProviders}
@@ -109,17 +109,15 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
       <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="username" className="text-sm lg:text-[13px]">
-              {t("username")}
-            </Label>
+            <Label htmlFor="username">{t("username")}</Label>
             <div
               className={cn(
-                "rounded-lg flex h-[46px] items-center border border-input focus-within:border-2 focus-within:border-primary lg:h-10",
+                "rounded-lg flex h-10 items-center overflow-hidden border border-input focus-within:border-2 focus-within:border-primary",
                 (availability === "taken" || availability === "invalid") && "border-destructive",
               )}
             >
               <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-3 font-mono text-xs text-muted-foreground">
-                {host}/@
+                <span className="max-lg:hidden">{host}/</span>@
               </span>
               <input
                 id="username"
@@ -134,9 +132,13 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
                 onChange={(event) => setUsername(event.target.value.toLowerCase().trim())}
                 aria-describedby="username-status"
                 aria-invalid={availability === "taken" || availability === "invalid"}
-                className="h-full min-w-0 flex-1 bg-transparent px-2.5 font-mono text-base outline-none lg:text-[13px]"
+                className="h-full w-0 min-w-0 flex-1 bg-transparent px-2.5 font-mono text-base outline-none lg:text-[13px]"
               />
             </div>
+            {/* Phones show only "@" in the field, so the full address sits under it. */}
+            <p className="truncate font-mono text-xs text-muted-foreground lg:hidden">
+              {host}/@{username}
+            </p>
             <span
               id="username-status"
               aria-live="polite"
@@ -152,9 +154,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              {t("email")}
-            </Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               name="email"
@@ -167,9 +167,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password" className="text-sm lg:text-[13px]">
-              {t("password")}
-            </Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               name="password"
@@ -206,7 +204,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
 
         <FormError message={error} />
 
-        <Button type="submit" loading={pending} className={authSubmitClass}>
+        <Button type="submit" size="xl" loading={pending} className={authSubmitClass}>
           {t(pending ? "creatingAccount" : "createAccount")}
         </Button>
 

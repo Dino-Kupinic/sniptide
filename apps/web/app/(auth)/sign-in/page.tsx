@@ -28,6 +28,7 @@ export default async function Page() {
       {isDemoMode() ? (
         <Button
           variant="outline"
+          size="xl"
           className={authSubmitClass}
           render={<a href="/demo" />}
           nativeButton={false}

@@ -111,6 +111,34 @@
     "storageUsage": "{used, number} / {limit, number} MB",
     "language": "Language",
     "languageDescription": "Choose the language used throughout Sniptide.",
-    "planStorage": "{limit, number} MB of pastes, unlimited share links"
+    "planStorage": "{limit, number} MB of pastes, unlimited share links",
+    "backToSettings": "Back to settings",
+    "notifications": "Notifications",
+    "notificationsDescription": "Choose how you hear about activity on your pastes. Email is off by default.",
+    "notificationEmailUnavailable": "Email delivery is not configured on this server. Your in-app notifications still work.",
+    "notificationEmailUnverified": "Verify your email address before turning on notification emails.",
+    "sendVerificationEmail": "Send verification email",
+    "verificationEmailSent": "Verification email sent. Open the link in your inbox, then reload these settings.",
+    "couldnTSendVerificationEmail": "Couldn't send the verification email. Try again.",
+    "notificationActivity": "Activity",
+    "notificationInApp": "In-app",
+    "notificationEmail": "Email",
+    "notificationSwitch": "{event}, {channel}",
+    "notificationEvents": {
+      "shared": { "label": "Shared with you", "description": "Someone invites you to a paste." },
+      "burned": {
+        "label": "Burn after read",
+        "description": "Your paste is read and moved to trash."
+      },
+      "expiring": {
+        "label": "Expiring soon",
+        "description": "Your paste will expire within a day."
+      },
+      "views": { "label": "View milestones", "description": "Your paste reaches a view milestone." }
+    },
+    "revokeTokenTitle": "Revoke {name}?",
+    "revokeTokenDescription": "Scripts and agents that use this token stop working right away. This can't be undone.",
+    "deleteEnvGroupTitle": "Delete {slug}?",
+    "deleteEnvGroupDescription": "Its variables are deleted for good, and the CLI can no longer pull them. This can't be undone."
   }
 }
