@@ -46,8 +46,12 @@ export const secretMetadataSchema = z.object({
   project: z.string().trim().min(1).max(100),
   environment: z.enum(["dev", "staging", "prod"]),
 })
+// Project and environment can be left out when updating a group, which keeps them as they are,
+// so groups the CLI made without them can still change their variables.
 export const secretSaveSchema = secretMetadataSchema
   .extend({
+    project: secretMetadataSchema.shape.project.optional(),
+    environment: secretMetadataSchema.shape.environment.optional(),
     revision: z.number().int().min(0).optional(),
     entries: z
       .array(

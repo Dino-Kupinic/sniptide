@@ -63,6 +63,7 @@ export async function saveSecret(owner: string, id: string | null, input: Secret
     if (id && !group) return { status: "missing" } as const
     if (group && group.revision !== input.revision) return { status: "conflict" } as const
     if (!group) {
+      if (!input.project || !input.environment) return { status: "invalid" } as const
       const [count] = await tx
         .select({ count: sql<number>`count(*)::int` })
         .from(envGroup)
@@ -119,8 +120,8 @@ export async function saveSecret(owner: string, id: string | null, input: Secret
     await tx
       .update(envGroup)
       .set({
-        project: input.project,
-        environment: input.environment,
+        project: input.project ?? group.project,
+        environment: input.environment ?? group.environment,
         revision: sql`${envGroup.revision} + 1`,
         updatedAt: new Date(),
       })
