@@ -41,7 +41,7 @@ function variablesRead() {
     const patterns = [
       /process\.env\.([A-Z][A-Z0-9_]+)/g,
       /envInteger\(\s*"([A-Z][A-Z0-9_]+)"/g,
-      /^\s{2}([A-Z][A-Z0-9_]+): [a-z.]*(?:z\.|origin|size|flag)/gm,
+      /^\s{2}([A-Z][A-Z0-9_]+): [A-Za-z.]*(?:z\.|origin|size|flag|Cap)/gm,
     ]
     // lib/config.ts declares its schema keys as `NAME: z.…`; client-ip.ts destructures process.env.
     for (const [, list] of text.matchAll(/const \{([^}]+)\} = process\.env/g)) {

@@ -29,8 +29,10 @@ export interface WorkspaceCounts {
   pastes: number
 }
 
-function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) {
+// No limit (a self-hosted server that turned it off) leaves nothing to measure against.
+function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number | null }) {
   const t = useTranslations("Settings")
+  if (limitMb === null) return null
   return (
     <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
       <div className="flex items-center justify-between text-[15px] lg:text-sm">
@@ -58,7 +60,7 @@ export function SettingsView({
   preferences: Preferences
   emailAvailable: boolean
   counts: WorkspaceCounts
-  storage: { usedMb: number; limitMb: number }
+  storage: { usedMb: number; limitMb: number | null }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
@@ -187,9 +189,11 @@ export function SettingsView({
             <div className="rounded-lg flex items-center justify-between border border-border p-4">
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{t("free")}</span>
-                <span className="text-[13px] text-muted-foreground">
-                  {t("planStorage", { limit: storage.limitMb })}
-                </span>
+                {storage.limitMb === null ? null : (
+                  <span className="text-[13px] text-muted-foreground">
+                    {t("planStorage", { limit: storage.limitMb })}
+                  </span>
+                )}
               </div>
               <span className="text-xs text-muted-foreground">{t("noPaymentMethodNeeded")}</span>
             </div>

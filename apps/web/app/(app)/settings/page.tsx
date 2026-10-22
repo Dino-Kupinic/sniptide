@@ -65,7 +65,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
       api={{ tokens, envGroups, origin: getConfig().appUrl ?? site.origin }}
       storage={{
         usedMb: Math.round((storage.bytes / 1024 / 1024) * 10) / 10,
-        limitMb: storage.limit.bytes / 1024 / 1024,
+        limitMb: storage.limit.bytes === null ? null : storage.limit.bytes / 1024 / 1024,
       }}
     />
   )
