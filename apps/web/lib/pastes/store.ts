@@ -1,5 +1,8 @@
 import "server-only"
 
+import type { Database } from "@workspace/db"
+import { allowedParent, allowedPaste } from "@workspace/db/moderation"
+
 import {
   notification,
   pasteFile,
@@ -152,9 +155,9 @@ async function summarize(
   records: PasteRecord[],
   viewer: string | null,
   withHistory = false,
+  db: Pick<Database, "select"> = getDb(),
 ): Promise<PasteSummary[]> {
   if (records.length === 0) return []
-  const db = getDb()
   const ids = records.map((record) => record.id)
   const today = utcDay(Date.now())
   const firstDay = today - VIEW_HISTORY_DAYS + 1
@@ -167,7 +170,7 @@ async function summarize(
         bytes: sql<number>`octet_length(${pasteFile.content})::int`,
       })
       .from(pasteFile)
-      .where(inArray(pasteFile.pasteId, ids))
+      .where(and(allowedParent(pasteFile.pasteId), inArray(pasteFile.pasteId, ids)))
       .orderBy(pasteFile.position, pasteFile.id),
     withHistory
       ? db
@@ -175,7 +178,7 @@ async function summarize(
           .from(pasteViewDay)
           .where(
             and(
-              inArray(pasteViewDay.pasteId, ids),
+              and(allowedParent(pasteViewDay.pasteId), inArray(pasteViewDay.pasteId, ids)),
               gte(pasteViewDay.day, firstDay),
               lt(pasteViewDay.day, today + 1),
             ),
@@ -219,40 +222,42 @@ async function summarize(
     }
     series[day.day - firstDay] = day.views
   }
-  return records.map((record) => {
-    const viewsByDay = withHistory
-      ? (history.get(record.id) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0))
-      : []
-    const author = people.get(record.ownerId) ?? {
-      username: "unknown",
-      name: "Unknown",
-      initials: "?",
-      tone: "muted",
-    }
-    const own = fileSummaries.get(record.id)
+  return records
+    .filter((record) => fileSummaries.has(record.id))
+    .map((record) => {
+      const viewsByDay = withHistory
+        ? (history.get(record.id) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0))
+        : []
+      const author = people.get(record.ownerId) ?? {
+        username: "unknown",
+        name: "Unknown",
+        initials: "?",
+        tone: "muted",
+      }
+      const own = fileSummaries.get(record.id)
 
-    return {
-      slug: record.slug,
-      title: record.title,
-      description: record.description,
-      language: own?.language ?? "text",
-      bytes: own?.bytes ?? 0,
-      visibility: record.visibility,
-      password: record.passwordHash,
-      burnAfterRead: record.burnAfterRead,
-      allowRaw: record.allowRaw,
-      collection: record.collection,
-      owner: record.ownerId === viewer ? null : author,
-      author,
-      views: record.views,
-      uniqueViews: record.uniqueViews,
-      viewsByDay,
-      createdAt: ms(record.createdAt),
-      updatedAt: ms(record.updatedAt),
-      expiresAt: ms(record.expiresAt),
-      deletedAt: ms(record.deletedAt),
-    }
-  })
+      return {
+        slug: record.slug,
+        title: record.title,
+        description: record.description,
+        language: own?.language ?? "text",
+        bytes: own?.bytes ?? 0,
+        visibility: record.visibility,
+        password: record.passwordHash,
+        burnAfterRead: record.burnAfterRead,
+        allowRaw: record.allowRaw,
+        collection: record.collection,
+        owner: record.ownerId === viewer ? null : author,
+        author,
+        views: record.views,
+        uniqueViews: record.uniqueViews,
+        viewsByDay,
+        createdAt: ms(record.createdAt),
+        updatedAt: ms(record.updatedAt),
+        expiresAt: ms(record.expiresAt),
+        deletedAt: ms(record.deletedAt),
+      }
+    })
 }
 
 // The full Paste for one record the viewer may read: its summary plus every file's content and
@@ -266,13 +271,17 @@ async function hydrate(
   const [revisionTotal] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(pasteRevision)
-    .where(eq(pasteRevision.pasteId, record.id))
+    .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
   const revisionCount = revisionTotal?.count ?? 0
   const revisionPageCount = Math.max(1, Math.ceil(revisionCount / 20))
   const revisionPage = Math.min(Math.max(1, requestedRevisionPage), revisionPageCount)
   const [[summary], files, revisions] = await Promise.all([
     summarize([record], viewer, true),
-    db.select().from(pasteFile).where(eq(pasteFile.pasteId, record.id)).orderBy(pasteFile.position),
+    db
+      .select()
+      .from(pasteFile)
+      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
+      .orderBy(pasteFile.position),
     db
       .select({
         id: pasteRevision.id,
@@ -281,12 +290,12 @@ async function hydrate(
         restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
       })
       .from(pasteRevision)
-      .where(eq(pasteRevision.pasteId, record.id))
+      .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
       .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
       .limit(20)
       .offset((revisionPage - 1) * 20),
   ])
-  if (!summary) return null
+  if (!summary || files.length === 0) return null
 
   return {
     ...summary,
@@ -304,15 +313,18 @@ async function hydrate(
   }
 }
 
-async function findRecord(slug: string) {
-  const [record] = await getDb().select().from(pasteTable).where(eq(pasteTable.slug, slug))
+async function findRecord(slug: string, includeRestricted = false) {
+  const [record] = await getDb()
+    .select()
+    .from(pasteTable)
+    .where(and(includeRestricted ? undefined : allowedPaste(), eq(pasteTable.slug, slug)))
   return record ?? null
 }
 
 // A paste the viewer owns, trashed or not.
-async function findOwned(slug: string) {
+async function findOwned(slug: string, includeRestricted = false) {
   const viewer = await requireViewerId()
-  const record = await findRecord(slug)
+  const record = await findRecord(slug, includeRestricted)
   return record && record.ownerId === viewer ? record : null
 }
 
@@ -344,7 +356,7 @@ export async function listOwnPastes() {
   const records = await getDb()
     .select()
     .from(pasteTable)
-    .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
+    .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
     .orderBy(desc(pasteTable.updatedAt))
   return summarize(records, viewer)
 }
@@ -358,6 +370,7 @@ export async function listTrash() {
     .from(pasteTable)
     .where(
       and(
+        allowedPaste(),
         eq(pasteTable.ownerId, viewer),
         sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()}`,
       ),
@@ -374,6 +387,7 @@ export function sharedWithWhere(viewer: string) {
     eq(pasteShare.userId, viewer),
     isNull(pasteShare.leftAt),
     ne(pasteTable.ownerId, viewer),
+    allowedPaste(),
     isNull(pasteTable.deletedAt),
     eq(pasteTable.burnAfterRead, false),
     or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
@@ -398,15 +412,18 @@ export async function listShared(): Promise<
   const rows = await getDb()
     .select({ paste: pasteTable, share: pasteShare })
     .from(pasteShare)
-    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+    .innerJoin(
+      pasteTable,
+      and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
+    )
     .where(sharedWithWhere(viewer))
     .orderBy(desc(pasteShare.createdAt), pasteTable.id)
   const summaries = await summarize(
     rows.map((row) => row.paste),
     viewer,
   )
-  return rows.flatMap((row, index) => {
-    const paste = summaries[index]
+  return rows.flatMap((row) => {
+    const paste = summaries.find((summary) => summary.slug === row.paste.slug)
     return paste ? [{ share: toShare(row.paste.slug, row.share), paste }] : []
   })
 }
@@ -418,8 +435,11 @@ export async function getShare(slug: string): Promise<(Share & { seen: boolean }
   const [row] = await getDb()
     .select({ share: pasteShare })
     .from(pasteShare)
-    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
-    .where(and(eq(pasteTable.slug, slug), sharedWithWhere(viewer)))
+    .innerJoin(
+      pasteTable,
+      and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
+    )
+    .where(and(allowedPaste(), eq(pasteTable.slug, slug), sharedWithWhere(viewer)))
   return row ? toShare(slug, row.share) : null
 }
 
@@ -435,7 +455,10 @@ export async function markShareSeen(slug: string) {
         isNull(pasteShare.seenAt),
         inArray(
           pasteShare.pasteId,
-          getDb().select({ id: pasteTable.id }).from(pasteTable).where(eq(pasteTable.slug, slug)),
+          getDb()
+            .select({ id: pasteTable.id })
+            .from(pasteTable)
+            .where(and(allowedPaste(), eq(pasteTable.slug, slug))),
         ),
       ),
     )
@@ -448,7 +471,7 @@ async function isSharedWith(record: PasteRecord, viewer: string | null) {
     .from(pasteShare)
     .where(
       and(
-        eq(pasteShare.pasteId, record.id),
+        and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
         eq(pasteShare.userId, viewer),
         isNull(pasteShare.leftAt),
       ),
@@ -481,7 +504,12 @@ export async function listPasteShares(slug: string): Promise<SharePerson[] | nul
     })
     .from(pasteShare)
     .innerJoin(user, eq(pasteShare.userId, user.id))
-    .where(and(eq(pasteShare.pasteId, record.id), isNull(pasteShare.leftAt)))
+    .where(
+      and(
+        and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
+        isNull(pasteShare.leftAt),
+      ),
+    )
     .orderBy(asc(pasteShare.createdAt), user.id)
   return rows.map((row) => ({
     id: row.id,
@@ -535,13 +563,20 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
     const [locked] = await tx
       .select({ id: pasteTable.id, deletedAt: pasteTable.deletedAt })
       .from(pasteTable)
-      .where(and(eq(pasteTable.id, record.id), eq(pasteTable.ownerId, record.ownerId)))
+      .where(
+        and(allowedPaste(), eq(pasteTable.id, record.id), eq(pasteTable.ownerId, record.ownerId)),
+      )
       .for("update")
     if (!locked || locked.deletedAt) return false
     const [before] = await tx
       .select({ leftAt: pasteShare.leftAt })
       .from(pasteShare)
-      .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+      .where(
+        and(
+          and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
+          eq(pasteShare.userId, userId),
+        ),
+      )
     await tx
       .insert(pasteShare)
       .values({ pasteId: record.id, userId, access, ...(sharedAt ? { createdAt: sharedAt } : {}) })
@@ -570,11 +605,16 @@ export async function unsharePaste(slug: string, userId: string) {
     await tx
       .select({ id: pasteTable.id })
       .from(pasteTable)
-      .where(eq(pasteTable.id, record.id))
+      .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
       .for("update")
     await tx
       .delete(pasteShare)
-      .where(and(eq(pasteShare.pasteId, record.id), eq(pasteShare.userId, userId)))
+      .where(
+        and(
+          and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
+          eq(pasteShare.userId, userId),
+        ),
+      )
     await tx
       .delete(notification)
       .where(
@@ -595,14 +635,14 @@ export async function leaveShare(slug: string) {
     await tx
       .select({ id: pasteTable.id })
       .from(pasteTable)
-      .where(eq(pasteTable.id, record.id))
+      .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
       .for("update")
     await tx
       .update(pasteShare)
       .set({ leftAt: new Date() })
       .where(
         and(
-          eq(pasteShare.pasteId, record.id),
+          and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
           eq(pasteShare.userId, viewer),
           isNull(pasteShare.leftAt),
         ),
@@ -625,18 +665,26 @@ export async function restoreShare(slug: string) {
   const viewer = await requireViewerId()
   const record = await findRecord(slug)
   if (!record) return false
-  const restored = await getDb()
-    .update(pasteShare)
-    .set({ leftAt: null })
-    .where(
-      and(
-        eq(pasteShare.pasteId, record.id),
-        eq(pasteShare.userId, viewer),
-        isNotNull(pasteShare.leftAt),
-      ),
-    )
-    .returning({ pasteId: pasteShare.pasteId })
-  return restored.length > 0
+  return getDb().transaction(async (tx) => {
+    const [locked] = await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+      .for("update")
+    if (!locked) return false
+    const restored = await tx
+      .update(pasteShare)
+      .set({ leftAt: null })
+      .where(
+        and(
+          eq(pasteShare.pasteId, record.id),
+          eq(pasteShare.userId, viewer),
+          isNotNull(pasteShare.leftAt),
+        ),
+      )
+      .returning({ pasteId: pasteShare.pasteId })
+    return restored.length > 0
+  })
 }
 
 // Whether the viewer may open this paste right now: their own, one shared with them, or one whose
@@ -681,6 +729,7 @@ export async function readableStarsWhere(viewer: string) {
     )
   ).filter((id) => id !== null)
   return and(
+    allowedPaste(),
     isNull(pasteTable.deletedAt),
     exists(
       getDb()
@@ -689,7 +738,7 @@ export async function readableStarsWhere(viewer: string) {
         .where(and(eq(pasteStar.userId, viewer), eq(pasteStar.pasteId, pasteTable.id))),
     ),
     or(
-      eq(pasteTable.ownerId, viewer),
+      and(allowedPaste(), eq(pasteTable.ownerId, viewer)),
       and(
         eq(pasteTable.burnAfterRead, false),
         or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
@@ -700,7 +749,7 @@ export async function readableStarsWhere(viewer: string) {
             .where(
               and(
                 eq(pasteShare.userId, viewer),
-                eq(pasteShare.pasteId, pasteTable.id),
+                and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
                 isNull(pasteShare.leftAt),
               ),
             ),
@@ -739,7 +788,7 @@ export async function isStarred(slug: string) {
     .select({ userId: pasteStar.userId })
     .from(pasteStar)
     .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
-    .where(and(eq(pasteStar.userId, viewer), eq(pasteTable.slug, slug)))
+    .where(and(eq(pasteStar.userId, viewer), allowedPaste(), eq(pasteTable.slug, slug)))
   return Boolean(row)
 }
 
@@ -751,21 +800,36 @@ export async function starredSlugs(slugs?: string[]) {
     .select({ slug: pasteTable.slug })
     .from(pasteStar)
     .innerJoin(pasteTable, eq(pasteStar.pasteId, pasteTable.id))
-    .where(and(eq(pasteStar.userId, viewer), slugs ? inArray(pasteTable.slug, slugs) : undefined))
+    .where(
+      and(
+        allowedPaste(),
+        eq(pasteStar.userId, viewer),
+        slugs ? inArray(pasteTable.slug, slugs) : undefined,
+      ),
+    )
   return new Set(rows.map((row) => row.slug))
 }
 
 // Pastes the app's screens open for the viewer: their own, and ones shared with them.
 function appPasteWhere(slug: string, viewer: string) {
   return and(
+    allowedPaste(),
     eq(pasteTable.slug, slug),
     or(
-      and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)),
+      and(
+        and(allowedPaste(), eq(pasteTable.ownerId, viewer)),
+        and(allowedPaste(), isNull(pasteTable.deletedAt)),
+      ),
       exists(
         getDb()
           .select({ id: pasteShare.pasteId })
           .from(pasteShare)
-          .where(and(eq(pasteShare.pasteId, pasteTable.id), sharedWithWhere(viewer))),
+          .where(
+            and(
+              and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
+              sharedWithWhere(viewer),
+            ),
+          ),
       ),
     ),
   )
@@ -842,6 +906,7 @@ async function claimVisit(id: string) {
       })
       .where(
         and(
+          allowedPaste(),
           eq(pasteTable.id, id),
           isNull(pasteTable.deletedAt),
           or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, now)),
@@ -901,13 +966,14 @@ export async function readSharedPaste(
     db
       .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
       .from(pasteFile)
-      .where(eq(pasteFile.pasteId, record.id))
+      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
       .orderBy(pasteFile.position, pasteFile.id),
     db
       .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
       .from(user)
       .where(eq(user.id, record.ownerId)),
   ])
+  if (files.length === 0) return { status: "missing" }
   const paste: SharedPaste = {
     slug: record.slug,
     title: record.title,
@@ -955,7 +1021,7 @@ export async function readRawFile(slug: string, name: string | null): Promise<Ra
   const [file] = await getDb()
     .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
     .from(pasteFile)
-    .where(eq(pasteFile.pasteId, record.id))
+    .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
     .orderBy(
       name === null ? asc(pasteFile.position) : desc(sql`${pasteFile.name} = ${name}`),
       pasteFile.position,
@@ -979,7 +1045,17 @@ export async function recordCopy(slug: string) {
 export async function readSharedMeta(slug: string) {
   const access = await sharedAccess(slug)
   if (access.status !== "ok" || access.record.burnAfterRead) return null
-  return { title: access.record.title, visibility: access.record.visibility }
+  const [metadata] = await getDb()
+    .select({ title: pasteTable.title, visibility: pasteTable.visibility })
+    .from(pasteTable)
+    .where(
+      and(
+        allowedPaste(),
+        eq(pasteTable.id, access.record.id),
+        eq(pasteTable.version, access.record.version),
+      ),
+    )
+  return metadata ?? null
 }
 
 // Public card data ignores sessions and unlock cookies. Even the owner cannot expose a
@@ -994,7 +1070,7 @@ export async function readPublicPreview(slug: string): Promise<PastePreview | nu
       content: sql<string>`left(${pasteFile.content}, 4000)`,
     })
     .from(pasteFile)
-    .where(eq(pasteFile.pasteId, record.id))
+    .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)
   return file ? { slug: record.slug, title: record.title, ...file } : null
@@ -1026,7 +1102,10 @@ async function sharedCount(viewer: string) {
   const [row] = await getDb()
     .select({ count: sql<number>`count(*)::int` })
     .from(pasteShare)
-    .innerJoin(pasteTable, eq(pasteShare.pasteId, pasteTable.id))
+    .innerJoin(
+      pasteTable,
+      and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
+    )
     .where(sharedWithWhere(viewer))
   return row?.count ?? 0
 }
@@ -1040,7 +1119,7 @@ export async function navCounts(): Promise<NavCounts> {
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
-      .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
+      .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
     db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
     sharedCount(viewer),
   ])
@@ -1070,13 +1149,14 @@ export const sidebarData = cache(
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(pasteTable)
-        .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
+        .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
       db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
       db
         .select()
         .from(pasteTable)
         .where(
           and(
+            allowedPaste(),
             eq(pasteTable.ownerId, viewer),
             isNull(pasteTable.deletedAt),
             sidebarVisibility(views.pastes.visibility),
@@ -1120,6 +1200,7 @@ export async function searchOwnPastes(
   if (!viewer || !query) return { hits: [], total: 0 }
   const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`
   const where = and(
+    allowedPaste(),
     eq(pasteTable.ownerId, viewer),
     isNull(pasteTable.deletedAt),
     or(ilike(pasteTable.title, pattern), ilike(pasteTable.slug, pattern)),
@@ -1141,13 +1222,17 @@ export async function searchOwnPastes(
 }
 
 // The dashboard can hydrate its bounded recent selections without exposing the SQL layer.
-export async function summarizePastes(records: PasteRecord[], viewer: string) {
-  return summarize(records, viewer)
+export async function summarizePastes(
+  records: PasteRecord[],
+  viewer: string,
+  db: Pick<Database, "select"> = getDb(),
+) {
+  return summarize(records, viewer, false, db)
 }
 
 export async function isSlugAvailable(slug: string, except?: string) {
   if (!SLUG_PATTERN.test(slug) || RESERVED.has(slug.toLowerCase())) return false
-  return slug === except || !(await findRecord(slug))
+  return slug === except || !(await findRecord(slug, true))
 }
 
 export function randomSlug() {
@@ -1168,7 +1253,7 @@ export async function createPaste(input: PasteInput, invites: ShareInvite[] = []
   let slug = data.slug
   if (!slug) {
     do slug = randomSlug()
-    while (await findRecord(slug))
+    while (await findRecord(slug, true))
   }
 
   const now = new Date()
@@ -1227,7 +1312,7 @@ async function findEditable(slug: string) {
     .from(pasteShare)
     .where(
       and(
-        eq(pasteShare.pasteId, record.id),
+        and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
         eq(pasteShare.userId, viewer),
         isNull(pasteShare.leftAt),
       ),
@@ -1296,7 +1381,7 @@ export async function updatePaste(
   const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
 
   const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-  return getDb().transaction(async (tx): Promise<UpdateResult> => {
+  return getDb().transaction(async (tx): Promise<UpdateResult | null> => {
     await enforceBudget(tx, record.ownerId, bytes, record.id)
     const changed = await tx
       .update(pasteTable)
@@ -1315,6 +1400,7 @@ export async function updatePaste(
       })
       .where(
         and(
+          allowedPaste(),
           eq(pasteTable.id, record.id),
           options.expectedVersion === undefined
             ? undefined
@@ -1326,7 +1412,8 @@ export async function updatePaste(
       const [latest] = await tx
         .select({ version: pasteTable.version, slug: pasteTable.slug })
         .from(pasteTable)
-        .where(eq(pasteTable.id, record.id))
+        .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+      if (!latest) return null
       return {
         conflict: true,
         version: latest?.version ?? record.version,
@@ -1339,16 +1426,18 @@ export async function updatePaste(
       ? await tx
           .select({ name: pasteFile.name, content: pasteFile.content })
           .from(pasteFile)
-          .where(eq(pasteFile.pasteId, record.id))
+          .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
       : []
-    await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
+    await tx
+      .delete(pasteFile)
+      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
     await tx.insert(pasteFile).values(fileRows(record.id, data.files))
 
     const [latest] = options.batchRevision
       ? await tx
           .select()
           .from(pasteRevision)
-          .where(eq(pasteRevision.pasteId, record.id))
+          .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
           .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
           .limit(1)
       : []
@@ -1382,17 +1471,26 @@ export async function updatePaste(
 export async function sealRevision(slug: string, message: string): Promise<boolean> {
   const editable = await findEditable(slug)
   if (!editable) return false
-  const db = getDb()
-  const [latest] = await db
-    .select({ id: pasteRevision.id, message: pasteRevision.message })
-    .from(pasteRevision)
-    .where(eq(pasteRevision.pasteId, editable.record.id))
-    .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-    .limit(1)
-  if (latest?.message === message) {
-    await db.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
-  }
-  return true
+  return getDb().transaction(async (tx) => {
+    const [locked] = await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(
+        and(allowedPaste(), eq(pasteTable.id, editable.record.id), isNull(pasteTable.deletedAt)),
+      )
+      .for("update")
+    if (!locked) return false
+    const [latest] = await tx
+      .select({ id: pasteRevision.id, message: pasteRevision.message })
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, locked.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+      .limit(1)
+    if (latest?.message === message) {
+      await tx.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
+    }
+    return true
+  })
 }
 
 export type RestoreResult =
@@ -1412,14 +1510,19 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
     const [locked] = await tx
       .select()
       .from(pasteTable)
-      .where(eq(pasteTable.id, record.id))
+      .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
       .for("update")
     if (!locked || locked.deletedAt) return { ok: false, error: "That paste no longer exists." }
 
     const [target] = await tx
       .select()
       .from(pasteRevision)
-      .where(and(eq(pasteRevision.id, revisionId), eq(pasteRevision.pasteId, record.id)))
+      .where(
+        and(
+          eq(pasteRevision.id, revisionId),
+          and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)),
+        ),
+      )
     const snapshot = target?.snapshot
     if (!target || !snapshot || snapshot.files.length === 0) {
       return { ok: false, error: "That version can't be restored." }
@@ -1428,7 +1531,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
     const [newest] = await tx
       .select({ id: pasteRevision.id })
       .from(pasteRevision)
-      .where(eq(pasteRevision.pasteId, record.id))
+      .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
       .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
       .limit(1)
     if (newest?.id === target.id) return { ok: false, error: "That is the current version." }
@@ -1438,7 +1541,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       .from(pasteRevision)
       .where(
         and(
-          eq(pasteRevision.pasteId, record.id),
+          and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)),
           or(
             lt(pasteRevision.createdAt, target.createdAt),
             and(eq(pasteRevision.createdAt, target.createdAt), lte(pasteRevision.id, target.id)),
@@ -1468,8 +1571,10 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
         updatedAt: stamp,
         version: sql`${pasteTable.version} + 1`,
       })
-      .where(eq(pasteTable.id, record.id))
-    await tx.delete(pasteFile).where(eq(pasteFile.pasteId, record.id))
+      .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+    await tx
+      .delete(pasteFile)
+      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
     await tx.insert(pasteFile).values(
       snapshot.files.map((file, index) => ({
         pasteId: record.id,
@@ -1497,7 +1602,7 @@ export async function updateSharing(slug: string, input: SharingInput) {
   if (!record || record.deletedAt) return null
 
   const { expiry, password, ...rest } = input
-  await getDb()
+  const changed = await getDb()
     .update(pasteTable)
     .set({
       ...rest,
@@ -1507,8 +1612,9 @@ export async function updateSharing(slug: string, input: SharingInput) {
         : {}),
       ...(expiry ? { expiresAt: at(expiresAtFor(expiry)) } : {}),
     })
-    .where(eq(pasteTable.id, record.id))
-  return { slug }
+    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+    .returning({ id: pasteTable.id })
+  return changed.length ? { slug } : null
 }
 
 export async function setStarred(slug: string, starred: boolean) {
@@ -1521,7 +1627,18 @@ export async function setStarred(slug: string, starred: boolean) {
     // Starring a paste you can't open would put its title in your list. Quietly do nothing, as
     // for a paste that doesn't exist. Taking a star off is always allowed.
     if (!(await viewerMayRead(record, viewer))) return
-    await db.insert(pasteStar).values({ userId: viewer, pasteId: record.id }).onConflictDoNothing()
+    await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(pasteTable)
+        .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+        .for("update")
+      if (!locked || !(await viewerMayRead(locked, viewer))) return
+      await tx
+        .insert(pasteStar)
+        .values({ userId: viewer, pasteId: record.id })
+        .onConflictDoNothing()
+    })
   } else {
     await db
       .delete(pasteStar)
@@ -1536,7 +1653,7 @@ export async function renamePaste(slug: string, title: string) {
   await getDb()
     .update(pasteTable)
     .set({ title, version: sql`${pasteTable.version} + 1` })
-    .where(eq(pasteTable.id, record.id))
+    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
 }
 
 // Files the paste in a collection, or takes it out of its collection with null. The caller
@@ -1547,11 +1664,11 @@ export async function setPasteCollection(slug: string, collection: string | null
   await getDb()
     .update(pasteTable)
     .set({ collection, version: sql`${pasteTable.version} + 1` })
-    .where(eq(pasteTable.id, record.id))
+    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
 }
 
 export async function trashPaste(slug: string) {
-  const record = await findOwned(slug)
+  const record = await findOwned(slug, true)
   if (!record) return
   await getDb()
     .update(pasteTable)
@@ -1563,15 +1680,16 @@ export async function trashPaste(slug: string) {
 export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
   if (!record) return false
-  await getDb()
+  const changed = await getDb()
     .update(pasteTable)
     .set({ deletedAt: null, version: sql`${pasteTable.version} + 1` })
-    .where(eq(pasteTable.id, record.id))
-  return true
+    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+    .returning({ id: pasteTable.id })
+  return changed.length > 0
 }
 
 export async function deleteForever(slug: string) {
-  const record = await findOwned(slug)
+  const record = await findOwned(slug, true)
   if (!record?.deletedAt) return
   await getDb().delete(pasteTable).where(eq(pasteTable.id, record.id))
 }

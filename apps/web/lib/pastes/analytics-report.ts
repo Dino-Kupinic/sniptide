@@ -1,5 +1,7 @@
 import "server-only"
 
+import { allowedPaste } from "@workspace/db/moderation"
+
 import { collection as collectionTable, paste as pasteTable } from "@workspace/db/schema"
 import { and, desc, eq, isNull, type SQL, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
@@ -83,7 +85,7 @@ function add(into: Totals, row: Omit<SeriesRow, "slot">) {
 // The viewer's live pastes, optionally narrowed, as a subquery of ids.
 function pasteIds(viewer: string | null, narrow?: SQL) {
   if (!viewer) return sql`SELECT id FROM paste WHERE false`
-  return sql`SELECT id FROM paste WHERE owner_id = ${viewer} AND deleted_at IS NULL${
+  return sql`SELECT id FROM paste WHERE owner_id = ${viewer} AND ${allowedPaste()} AND deleted_at IS NULL${
     narrow ? sql` AND ${narrow}` : sql``
   }`
 }
@@ -99,6 +101,7 @@ async function resolveScope(viewer: string | null, query: AnalyticsQuery) {
       .from(pasteTable)
       .where(
         and(
+          allowedPaste(),
           eq(pasteTable.ownerId, viewer),
           isNull(pasteTable.deletedAt),
           eq(pasteTable.slug, query.paste),
@@ -359,7 +362,7 @@ export async function getAnalyticsReport(
       ? db
           .select({ slug: pasteTable.slug, title: pasteTable.title })
           .from(pasteTable)
-          .where(and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
+          .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
           .orderBy(desc(pasteTable.views), desc(pasteTable.updatedAt), pasteTable.id)
           .limit(OPTIONS)
       : [],
@@ -387,15 +390,21 @@ export async function getAnalyticsReport(
   const firstPoint = points[0]
   const lastPoint = points.at(-1)
   // The selected paste is always in the list, even when it isn't among the most viewed.
-  const pasteOptions =
-    scope?.type === "paste" && !options.some((option) => option.slug === scope.slug)
-      ? [...options, { slug: scope.slug, title: scope.title }]
+  const currentScope = scope?.type === "paste" ? (await resolveScope(viewer, query)).scope : scope
+  const currentOptions =
+    scope?.type === "paste" && currentScope?.type !== "paste"
+      ? options.filter((option) => option.slug !== scope.slug)
       : options
+  const pasteOptions =
+    currentScope?.type === "paste" &&
+    !currentOptions.some((option) => option.slug === currentScope.slug)
+      ? [...currentOptions, { slug: currentScope.slug, title: currentScope.title }]
+      : currentOptions
 
   return {
     range,
     pasteCount: counted?.n ?? 0,
-    scope,
+    scope: currentScope,
     pasteOptions,
     rangeLabel: `${firstPoint?.label ?? ""} – ${lastPoint?.label ?? ""}`,
     kpis,

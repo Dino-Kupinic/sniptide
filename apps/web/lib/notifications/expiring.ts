@@ -12,7 +12,7 @@ export async function notifyExpiringPastes(now = new Date()) {
       SELECT p.owner_id AS "userId", p.id AS "pasteId",
         'expiring:' || p.id::text || ':' || extract(epoch FROM p.expires_at)::bigint::text AS "dedupeKey"
       FROM paste p
-      WHERE p.deleted_at IS NULL
+      WHERE p.moderation_state = 'allowed' AND p.deleted_at IS NULL
         AND p.expires_at > ${now.toISOString()} AND p.expires_at <= ${soon.toISOString()}
         AND p.expires_at - p.created_at >= interval '2 days'
         AND NOT EXISTS (SELECT 1 FROM notification n WHERE n.user_id = p.owner_id
