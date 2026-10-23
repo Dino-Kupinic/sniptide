@@ -1,0 +1,24 @@
+---
+title: Backups
+description: What to back up, and where the restore guide will live.
+---
+
+<Callout type="info">
+A tested backup and restore procedure is still being written (tracked as WRK-98). Until it is
+published here, treat what's below as the minimum, not a complete procedure.
+</Callout>
+
+## What to protect
+
+- **The Postgres database.** Everything Sniptide stores (accounts, pastes, collections, revisions,
+  API tokens and analytics) lives there. With compose it is the `postgres` volume; back it up
+  regularly, for example with `pg_dump`, and always before an [upgrade](/self-hosting/upgrading).
+- **Your secrets.** Keep `BETTER_AUTH_SECRET` (and `ENV_SECRETS_KEY` if you set it) with the
+  backup. Env groups pushed with the CLI are encrypted with a key derived from them, so a restored
+  database is missing those values without the same key.
+
+## What is coming
+
+WRK-98 will define and test: dumping and restoring Postgres into a fresh instance, the safe
+upgrade path between tagged versions, and a versioning and changelog policy. This page will be
+updated when it lands.
