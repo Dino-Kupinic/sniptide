@@ -9,7 +9,7 @@ const PLOT = 240
 // Bars shorter than this lose their striped cap (three ink rules) and draw as one block.
 const CAP_MIN = 20
 
-// The Analytics bar chart: link-blue bars capped with three thin ink rules, the peak in ink with
+// The Analytics bar chart: Tide Blue bars capped with three thin ink rules, the peak in pink with
 // its value above it.
 export function ViewsChart({
   title,
@@ -55,11 +55,11 @@ export function ViewsChart({
         </div>
         <div className="flex items-center gap-4 pt-0.5 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2 bg-link" />
+            <span aria-hidden="true" className="size-2 bg-chart-1" />
             {title}
           </span>
           <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2 bg-foreground" />
+            <span aria-hidden="true" className="size-2 bg-highlight" />
             {t("peak_day")}
           </span>
         </div>
@@ -135,7 +135,9 @@ export function ViewsChart({
                         <span className="h-[3px] shrink-0 bg-foreground" />
                       </>
                     ) : null}
-                    <span className={cn("min-h-0 flex-1", isPeak ? "bg-foreground" : "bg-link")} />
+                    <span
+                      className={cn("min-h-0 flex-1", isPeak ? "bg-highlight" : "bg-chart-1")}
+                    />
                   </div>
                 )
               })}
