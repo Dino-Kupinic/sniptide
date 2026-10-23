@@ -36,6 +36,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
+  // The paste link-preview image reads its fonts from disk at request time.
+  outputFileTracingIncludes: { "/[slug]/preview": ["./assets/fonts/*.woff"] },
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },
   poweredByHeader: false,
