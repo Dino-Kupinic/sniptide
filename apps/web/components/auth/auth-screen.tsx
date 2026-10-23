@@ -3,6 +3,7 @@ import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { getHomeUrl } from "@/lib/site"
 
 export interface Pitch {
   title: [string, string]
@@ -37,10 +38,10 @@ export function AuthScreen({
         </div>
 
         <div className="hidden px-2 py-1.5 lg:block">
-          <Logo />
+          <HomeLogo />
         </div>
 
-        {centered ? <Logo className="px-5 pt-6 lg:hidden" /> : null}
+        {centered ? <HomeLogo className="mx-5 mt-6 lg:hidden" /> : null}
 
         <main
           className={cn(
@@ -49,7 +50,7 @@ export function AuthScreen({
           )}
         >
           <div className="flex w-full flex-col gap-5 lg:max-w-[360px] lg:gap-6">
-            {centered ? null : <Logo className="lg:hidden" />}
+            {centered ? null : <HomeLogo className="lg:hidden" />}
             <div className="flex flex-col gap-1.5 lg:gap-2">
               {title ? (
                 <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
@@ -91,5 +92,21 @@ export function AuthScreen({
         </div>
       </aside>
     </div>
+  )
+}
+
+// Plain <a>: on sniptide.com the landing page is a different app than the auth screens.
+function HomeLogo({ className }: { className?: string }) {
+  return (
+    <a
+      href={getHomeUrl()}
+      aria-label="Sniptide"
+      className={cn(
+        "flex w-fit outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+        className,
+      )}
+    >
+      <Logo />
+    </a>
   )
 }
