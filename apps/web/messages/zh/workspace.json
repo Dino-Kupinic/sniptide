@@ -402,7 +402,6 @@
     "key": "键",
     "add_another": "再添加一个",
     "import_env": "导入 .env",
-    "paste_hint": "将 .env 文件粘贴到键字段中，即可一次添加所有变量。",
     "imported": "已导入 {count, number} 个变量。",
     "variable_value_index": "值 {index, number}",
     "create_group": "创建组",

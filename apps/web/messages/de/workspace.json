@@ -402,7 +402,6 @@
     "key": "Schlüssel",
     "add_another": "Weitere hinzufügen",
     "import_env": ".env importieren",
-    "paste_hint": "Füge eine .env-Datei in ein Schlüsselfeld ein, um alle Variablen auf einmal hinzuzufügen.",
     "imported": "{count, plural, one {# Variable importiert.} other {# Variablen importiert.}}",
     "variable_value_index": "Wert {index, number}",
     "create_group": "Gruppe erstellen",

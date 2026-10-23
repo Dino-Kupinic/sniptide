@@ -137,7 +137,6 @@ export function VariableRows({
             if (picked) merge(await picked.text())
           }}
         />
-        <p className="text-[13px] text-muted-foreground">{t("paste_hint")}</p>
       </div>
     </div>
   )

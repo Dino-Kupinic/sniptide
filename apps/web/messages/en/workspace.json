@@ -402,7 +402,6 @@
     "key": "Key",
     "add_another": "Add another",
     "import_env": "Import .env",
-    "paste_hint": "Paste a .env file into a key field to add every variable at once.",
     "imported": "{count, plural, one {Imported # variable.} other {Imported # variables.}}",
     "variable_value_index": "Value {index, number}",
     "create_group": "Create group",

@@ -402,7 +402,6 @@
     "key": "キー",
     "add_another": "さらに追加",
     "import_env": ".env をインポート",
-    "paste_hint": "キーの欄に .env ファイルを貼り付けると、すべての変数を一度に追加できます。",
     "imported": "{count, number} 個の変数をインポートしました。",
     "variable_value_index": "値 {index, number}",
     "create_group": "グループを作成",
