@@ -75,6 +75,7 @@ describe("getConfig", () => {
   test("names the variable that is wrong", () => {
     expect(() => getConfig({ MAX_PASTE_SIZE: "lots" })).toThrow(/MAX_PASTE_SIZE must be a size/)
     expect(() => getConfig({ SHARE_URL: "sniptide.com" })).toThrow(/SHARE_URL must be a full URL/)
+    expect(() => getConfig({ HOME_URL: "example" })).toThrow(/HOME_URL must be a full URL/)
   })
 
   test("turns an OAuth provider on only when both halves are set", () => {

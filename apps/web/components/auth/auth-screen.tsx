@@ -3,7 +3,7 @@ import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
-import { getHomeUrl } from "@/lib/site"
+import { getConfig } from "@/lib/config"
 
 export interface Pitch {
   title: [string, string]
@@ -95,11 +95,16 @@ export function AuthScreen({
   )
 }
 
-// Plain <a>: on sniptide.com the landing page is a different app than the auth screens.
+// HOME_URL points the logo at a landing page (sniptide.com/home, which skips the landing page's
+// redirect for visitors with a session cookie). A plain <a>, since the landing page is another app.
+// Without HOME_URL there is nowhere to go, so the logo stays a logo, confetti included.
 function HomeLogo({ className }: { className?: string }) {
+  const { homeUrl } = getConfig()
+  if (!homeUrl) return <Logo className={className} />
+
   return (
     <a
-      href={getHomeUrl()}
+      href={homeUrl}
       aria-label="Sniptide"
       className={cn(
         "flex w-fit outline-none focus-visible:ring-2 focus-visible:ring-ring/40",

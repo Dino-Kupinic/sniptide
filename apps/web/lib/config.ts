@@ -118,6 +118,7 @@ const schema = z.object({
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
+  HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),
   DEMO_MODE: flag.default(false),
 
   GITHUB_CLIENT_ID: z.string().optional(),
@@ -212,6 +213,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
+    homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),

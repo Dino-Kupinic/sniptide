@@ -35,11 +35,3 @@ export function getAppOrigin() {
   const app = new URL(appUrl)
   return app.host === new URL(shareUrl).host ? "" : app.origin
 }
-
-// Where the logo on the auth screens leads. With SHARE_URL set it's the root of that domain, which
-// serves the landing page (sniptide.com); a self-hosted instance has no landing page, so its own
-// root sends visitors on to sign in or the demo.
-export function getHomeUrl() {
-  const { shareUrl } = getConfig()
-  return shareUrl ? `${new URL(shareUrl).origin}/` : "/"
-}

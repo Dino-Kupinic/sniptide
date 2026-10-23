@@ -26,6 +26,7 @@ reads a variable that file doesn't list. Compose and the Coolify template pass t
 | `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone; existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. |
 | `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). Existing accounts keep signing in. |
 | `WAITLIST_URL` | unset | With `ALLOWED_EMAILS`, the sign-up page links here so visitors can apply for an invite. |
+| `HOME_URL` | unset | The logo on the sign-in screens links here, for example to your landing page. Unset, the logo is not a link. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in. Until both are set the button shows as disabled. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
