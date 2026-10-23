@@ -44,6 +44,7 @@ const expiryChoices: { value: Expiry; label: string }[] = [
   { value: "1d", label: "1DayFromNow" },
   { value: "1w", label: "1WeekFromNow" },
   { value: "1m", label: "1MonthFromNow" },
+  { value: "1y", label: "1YearFromNow" },
   { value: "never", label: "never" },
 ]
 
@@ -52,13 +53,18 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
   const { copied, copy } = useCopy()
 
   return (
-    <div className={cn("flex h-9 items-center border border-border bg-sidebar pl-2.5", className)}>
+    <div
+      className={cn(
+        "rounded-lg flex h-9 items-center border border-border bg-sidebar pl-2.5",
+        className,
+      )}
+    >
       <span className="min-w-0 flex-1 truncate font-mono text-xs">{url}</span>
       <Button
         type="button"
         variant="inverted"
         size="sm"
-        className="mr-1 h-7 text-xs"
+        className="mr-1 h-[26px] text-xs"
         onClick={() => {
           track("share_link_copied", { from: "sharing_panel" })
           return copy(url)
@@ -169,7 +175,7 @@ function useSharingControls(state: SharingState, list: boolean) {
             onChange={(event) => setPassword(event.target.value)}
             className="h-8 text-base lg:text-[13px]"
           />
-          <Button type="submit" size="sm" className="h-8" disabled={!password}>
+          <Button type="submit" size="sm" className="h-[30px]" disabled={!password}>
             {t("set")}
           </Button>
         </form>
@@ -312,7 +318,7 @@ export function SharingPanel({
   return (
     <section aria-label={t("sharing")} className="flex flex-col gap-3">
       {controls.visibilityControl}
-      <div className="flex flex-col divide-y divide-border border border-border text-[15px]">
+      <div className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
         <SettingRow label={t("expires")} list>
           {controls.expiry}
         </SettingRow>

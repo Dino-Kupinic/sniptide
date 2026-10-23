@@ -77,14 +77,14 @@ export function AuthScreen({
 
       <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border lg:flex">
         <Stripes className="inset-0 size-full" />
-        <div className="relative flex w-[400px] flex-col gap-[18px] border border-offset-shadow bg-background p-7 shadow-[8px_8px_0_0_var(--offset-shadow)]">
+        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7 shadow-(--dialog-shadow)">
           <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em]">
             {pitch.title[0]}
             <br />
             {pitch.title[1]}
           </p>
           <p className="text-sm leading-[21px] text-foreground/80">{pitch.body}</p>
-          <div className="flex items-center justify-between bg-muted px-3 py-2.5">
+          <div className="rounded-md flex items-center justify-between bg-muted px-3 py-2.5">
             <span className="font-mono text-[13px] text-link">{pitch.link}</span>
             <span className="text-xs text-muted-foreground">{pitch.note}</span>
           </div>

@@ -16,18 +16,22 @@ import { EmailDivider, SocialButtons } from "./social-buttons"
 // `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
 // newcomers to the request-access page.
 // `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
+// `initialError` explains a failed GitHub or Google sign-in, `notice` confirms a password reset.
 export function SignInForm({
   socialProviders,
   signUpClosed = false,
+  initialError = null,
+  notice = null,
 }: {
   socialProviders: SocialProvider[] | null
   signUpClosed?: boolean
+  initialError?: string | null
+  notice?: string | null
 }) {
   const t = useTranslations("Auth")
   const router = useRouter()
-  const [error, setError] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<string | null>(initialError)
   const [pending, setPending] = React.useState(false)
-  const [showResetNote, setShowResetNote] = React.useState(false)
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -59,6 +63,14 @@ export function SignInForm({
 
   return (
     <>
+      {notice ? (
+        <p
+          role="status"
+          className="rounded-lg border border-border bg-muted px-3 py-2 text-[13px] text-foreground"
+        >
+          {notice}
+        </p>
+      ) : null}
       {socialProviders ? (
         <>
           <SocialButtons
@@ -92,14 +104,12 @@ export function SignInForm({
               <Label htmlFor="password" className="text-sm lg:text-[13px]">
                 {t("password")}
               </Label>
-              <button
-                type="button"
-                onClick={() => setShowResetNote((value) => !value)}
-                aria-expanded={showResetNote}
+              <Link
+                href="/forgot-password"
                 className="text-sm text-muted-foreground underline underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 lg:text-[13px]"
               >
                 {t("forgotPassword")}
-              </button>
+              </Link>
             </div>
             <Input
               id="password"
@@ -109,11 +119,6 @@ export function SignInForm({
               required
               className={authInputClass}
             />
-            {showResetNote ? (
-              <p className="text-xs text-muted-foreground">
-                {t(socialProviders ? "resetNoteSocial" : "resetNote")}
-              </p>
-            ) : null}
           </div>
         </div>
 

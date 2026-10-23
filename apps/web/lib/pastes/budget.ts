@@ -1,24 +1,17 @@
 import "server-only"
 import type { Database } from "@workspace/db"
-import { envInteger } from "@workspace/db/config"
 import { paste, user } from "@workspace/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
+import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 export class PasteBudgetError extends Error {}
+// The limits from ACCOUNT_STORAGE_BYTES and ACCOUNT_PASTE_LIMIT; null means no limit.
 export function accountBudget() {
-  return {
-    bytes: envInteger(
-      "ACCOUNT_STORAGE_BYTES",
-      1024 * 1024 * 1024,
-      524288,
-      1024 * 1024 * 1024 * 1024,
-    ),
-    pastes: envInteger("ACCOUNT_PASTE_LIMIT", 10000, 1, 1000000),
-  }
+  return getConfig().accountLimits
 }
 export const storageUsage = cache(async () => {
   const owner = (await getSession())?.user.id
@@ -47,6 +40,8 @@ export async function enforceBudget(
   editingId?: string,
 ) {
   await lockAccount(tx, owner)
+  const limit = accountBudget()
+  if (limit.bytes === null && limit.pastes === null) return
   const [usage] = await tx
     .select({
       bytes: sql<number>`coalesce(sum(${paste.bytes}), 0)::float8`,
@@ -58,12 +53,11 @@ export async function enforceBudget(
     ? await tx.select({ bytes: paste.bytes }).from(paste).where(eq(paste.id, editingId))
     : []
   const delta = bytes - (existing?.bytes ?? 0)
-  const limit = accountBudget()
-  if (!editingId && (usage?.pastes ?? 0) >= limit.pastes)
+  if (!editingId && limit.pastes !== null && (usage?.pastes ?? 0) >= limit.pastes)
     throw new PasteBudgetError(
       "You've reached your paste limit. Permanently delete some pastes to create another.",
     )
-  if (delta > 0 && (usage?.bytes ?? 0) + delta > limit.bytes)
+  if (limit.bytes !== null && delta > 0 && (usage?.bytes ?? 0) + delta > limit.bytes)
     throw new PasteBudgetError(
       "You've reached your storage limit. Permanently delete some pastes or reduce their size.",
     )

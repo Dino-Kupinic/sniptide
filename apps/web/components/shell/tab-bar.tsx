@@ -31,7 +31,7 @@ export function TabBar() {
           aria-label={t("new_paste")}
           className="flex w-15 justify-center outline-none focus-visible:[&>span]:ring-2 focus-visible:[&>span]:ring-ring/40 focus-visible:[&>span]:ring-offset-2"
         >
-          <span className="flex h-10 w-12 items-center justify-center bg-primary text-primary-foreground">
+          <span className="flex h-10 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <PlusIcon className="size-[22px]" strokeWidth={2.4} />
           </span>
         </Link>

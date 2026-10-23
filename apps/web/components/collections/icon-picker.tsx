@@ -25,7 +25,7 @@ export function CollectionLookPicker({
     <Popover>
       <PopoverTrigger
         aria-label={t("choose_an_icon")}
-        className="flex h-10 shrink-0 items-center gap-1 border border-input px-2.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
+        className="rounded-lg flex h-10 shrink-0 items-center gap-1 border border-input px-2.5 outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-primary"
       >
         <CollectionIcon icon={icon} hue={hue} className="size-3.5" />
         <ChevronDownIcon className="size-3 text-muted-foreground" />
@@ -91,7 +91,7 @@ export function CollectionIconPicker({
       <PopoverTrigger
         aria-label={t("change_icon_for", { name: collection.name })}
         className={cn(
-          "relative z-10 flex size-5 shrink-0 items-center justify-center outline-none hover:bg-foreground/10 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10",
+          "rounded-md relative z-10 flex size-5 shrink-0 items-center justify-center outline-none hover:bg-foreground/10 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10",
           className,
         )}
       >
@@ -99,7 +99,7 @@ export function CollectionIconPicker({
       </PopoverTrigger>
       <PopoverContent side="right" className="w-72" sideOffset={10}>
         <div className="flex items-center gap-2 border-b border-border p-3">
-          <span className="flex size-9 shrink-0 items-center justify-center border border-border">
+          <span className="rounded-lg flex size-9 shrink-0 items-center justify-center border border-border">
             <CollectionIcon icon={icon} hue={hue} className="size-4" />
           </span>
           <input
@@ -116,7 +116,7 @@ export function CollectionIconPicker({
               }
             }}
             aria-invalid={Boolean(error)}
-            className="h-9 min-w-0 flex-1 border border-border bg-transparent px-2.5 font-mono text-[13px] outline-none focus:border-primary aria-invalid:border-destructive"
+            className="rounded-lg h-9 min-w-0 flex-1 border border-border bg-transparent px-2.5 font-mono text-[13px] outline-none focus:border-primary aria-invalid:border-destructive"
           />
         </div>
         <FormError variant="inline" message={error} className="px-3 pt-2 text-xs" />
@@ -158,7 +158,7 @@ export function IconOptions({
               aria-pressed={option === icon}
               onClick={() => onPick({ icon: option })}
               className={cn(
-                "flex size-10 items-center justify-center border border-transparent outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:border-current aria-pressed:bg-current/5",
+                "rounded-lg flex size-10 items-center justify-center border border-transparent outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:border-current aria-pressed:bg-current/5",
                 hueClass[hue],
               )}
             >

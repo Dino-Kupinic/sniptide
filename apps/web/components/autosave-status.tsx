@@ -76,7 +76,7 @@ export function ConflictBanner({
   return (
     <div
       role="alert"
-      className="mx-4 flex flex-col gap-3 border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:justify-between lg:mx-0"
+      className="rounded-lg mx-4 flex flex-col gap-3 border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:justify-between lg:mx-0"
     >
       <p>{t("conflictDescription")}</p>
       <div className="flex shrink-0 gap-2">
@@ -102,7 +102,7 @@ export function DraftNotice({
   return (
     <div
       role="status"
-      className="mx-4 flex flex-col gap-3 border border-primary bg-primary/5 px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:justify-between lg:mx-0"
+      className="rounded-lg mx-4 flex flex-col gap-3 border border-primary bg-primary/5 px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:justify-between lg:mx-0"
     >
       <p>{message}</p>
       <div className="flex shrink-0 gap-2">

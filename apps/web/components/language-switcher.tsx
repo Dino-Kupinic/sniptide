@@ -40,7 +40,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
               })
             }}
             className={cn(
-              "h-9 min-w-0 appearance-none rounded-none border border-input bg-background py-1 pr-9 pl-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50",
+              "h-9 min-w-0 appearance-none rounded-lg border border-input bg-background py-1 pr-9 pl-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50",
               compact ? "w-26 sm:w-auto" : "min-w-32",
             )}
           >

@@ -49,6 +49,35 @@ const size = z.string().transform((value, ctx) => {
   return bytes
 })
 
+// "0", "unlimited", "none" or "off" in a per-account limit removes it.
+const NO_LIMIT = /^(0|unlimited|none|off)$/i
+
+// A per-account storage limit: a size like "100MB", or null for no limit.
+const sizeCap = z.string().transform((value, ctx) => {
+  if (NO_LIMIT.test(value.trim())) return null
+  const bytes = parseSize(value)
+  if (bytes === null) {
+    ctx.addIssue({
+      code: "custom",
+      message: 'must be a size like "100MB" or "unlimited".',
+    })
+    return z.NEVER
+  }
+  return bytes
+})
+
+// A per-account count limit: a whole number, or null for no limit.
+const countCap = z.string().transform((value, ctx) => {
+  const trimmed = value.trim()
+  if (NO_LIMIT.test(trimmed)) return null
+  const count = /^\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN
+  if (!Number.isSafeInteger(count)) {
+    ctx.addIssue({ code: "custom", message: 'must be a whole number like 1000 or "unlimited".' })
+    return z.NEVER
+  }
+  return count
+})
+
 // "true"/"false" (also 1/0, yes/no, on/off), in any case.
 const flag = z.string().transform((value, ctx) => {
   const normalized = value.trim().toLowerCase()
@@ -59,6 +88,11 @@ const flag = z.string().transform((value, ctx) => {
 })
 
 const origin = z.url({ message: "must be a full URL like https://sniptide.com." })
+
+// What one account can keep before it has to delete something, so open sign-up can't fill the
+// database. Trash counts until it is emptied. Self-hosters can raise both or switch them off.
+export const DEFAULT_ACCOUNT_STORAGE_BYTES = 100 * 1024 ** 2
+export const DEFAULT_ACCOUNT_PASTES = 1000
 
 const schema = z.object({
   SMTP_HOST: z.string().optional(),
@@ -105,6 +139,8 @@ const schema = z.object({
     })
     .optional(),
   MAX_PASTE_SIZE: size.default(1024 * 1024),
+  ACCOUNT_STORAGE_BYTES: sizeCap.default(DEFAULT_ACCOUNT_STORAGE_BYTES),
+  ACCOUNT_PASTE_LIMIT: countCap.default(DEFAULT_ACCOUNT_PASTES),
 
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
@@ -182,6 +218,11 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     githubToken: value.GITHUB_TOKEN,
     webhooks: { slack: value.SLACK_WEBHOOK_URL, discord: value.DISCORD_WEBHOOK_URL },
     maxPasteBytes: value.MAX_PASTE_SIZE,
+    // null means no limit.
+    accountLimits: {
+      bytes: value.ACCOUNT_STORAGE_BYTES,
+      pastes: value.ACCOUNT_PASTE_LIMIT,
+    },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }
       : undefined,

@@ -25,7 +25,8 @@ local database is set up and kept current by `bun dev`.
 
 GitHub and Google sign-in are optional: set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` and
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` to turn them on. Until then their buttons render
-disabled.
+disabled. The callback URLs are `<BETTER_AUTH_URL>/api/auth/callback/github` and
+`<BETTER_AUTH_URL>/api/auth/callback/google`.
 
 ## Contributing
 
@@ -276,6 +277,14 @@ unless you turn them on:
 | PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
 | Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
 | Notification emails | Off; users opt in per event | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`; optional paired `SMTP_USER`/`SMTP_PASSWORD` |
+| Password reset by email | Off; the forgot-password page asks people to contact the administrator | The same SMTP settings |
+
+Settings > Account lets people change their email and password, add a password to a GitHub or
+Google account, connect or disconnect GitHub and Google, see their signed-in devices and sign them
+out, and delete the account. With SMTP, a verified email changes only after the old address
+approves it and the new address is verified. Without SMTP no address is ever verified, so a change
+applies at once after the current password is confirmed. Reset links work once, for one hour, at
+most three per account per hour, and using one signs the account out everywhere.
 
 Settings > Notifications controls in-app and email delivery independently for shared pastes, burns,
 expiry warnings and view milestones. Existing accounts keep in-app notifications on and email off.
@@ -336,6 +345,29 @@ app pages (`/`, `/sign-in`, `/dashboard`, …) redirect to `BETTER_AUTH_URL` (`a
 
 See [the early-growth operations guide](docs/scaling.md) for connection budgets, account limits,
 retention, telemetry, migration rollout, and deployment coordination at 100k pastes.
+
+## Encrypted secrets
+
+Open **Secrets** to create an env group, assign a project and a development, staging, or production
+environment, and add variables or paste a `.env` file. Existing CLI groups appear here too. The group
+name stays compatible with `sniptide env push`, `pull`, and `run`. A CLI push replaces the entire group;
+a web editor opened before that push must reload before saving.
+
+Values are encrypted with AES-256-GCM before reaching Postgres, using `ENV_SECRETS_KEY` or a key
+derived from `BETTER_AUTH_SECRET`. The server can decrypt them, so this is encryption at rest.
+Keep that key stable and backed up. Changing it makes existing values unreadable. Project labels,
+environment names, group names, and variable names are metadata and are not encrypted.
+
+Values remain masked on normal page loads. Reveal and Copy make an explicit, private, uncached
+request. Revealed values clear after one minute, on hide, and when the window loses focus. The
+Secrets screens have no browser drafts or autosave and do not send analytics events. Copy places
+plaintext on your system clipboard.
+
+Groups are private by default. Owners can create links with a password of at least 12 characters and
+an expiry of one hour, one day, or seven days, then revoke them at any time. Links expose the **current**
+values, including future web edits and CLI pushes. Share the password separately. Tokens and passwords
+are stored only as hashes, and every reveal checks the password, expiry, revocation, and request limits.
+When `SHARE_URL` uses another host, that host must route `/secret-share/*` to this app as well as paste links.
 
 ## Load testing
 

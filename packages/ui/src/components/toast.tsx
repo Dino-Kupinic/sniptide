@@ -101,7 +101,7 @@ function Toaster({
           key={item.id}
           role={item.kind === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-auto flex max-w-sm items-center gap-2 border bg-popover py-2 pr-1.5 pl-3 text-[13px] text-popover-foreground shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
+            "pointer-events-auto flex max-w-sm items-center gap-2 rounded-lg border bg-popover py-2 pr-1.5 pl-3 text-[13px] text-popover-foreground shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
             item.kind === "error" ? "border-destructive/40" : "border-border",
           )}
         >
@@ -118,7 +118,7 @@ function Toaster({
                 dismiss(item.id)
                 void item.action?.run()
               }}
-              className="shrink-0 px-2 py-1 text-[13px] font-semibold text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="rounded-md shrink-0 px-2 py-1 text-[13px] font-semibold text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               {item.action.label}
             </button>
@@ -127,7 +127,7 @@ function Toaster({
             type="button"
             aria-label={dismissLabel}
             onClick={() => dismiss(item.id)}
-            className="flex size-6 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="rounded-md flex size-6 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <XIcon className="size-3.5" />
           </button>
