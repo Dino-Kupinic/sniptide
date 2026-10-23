@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Autosaver, type AutosaveState, type SaveOutcome } from "./autosaver"
+import { DraftBackupWriter, type DraftSnapshot } from "./draft-writer"
 import { type Draft, type DraftStore, indexedDbDrafts } from "./drafts"
 
 // React glue for Autosaver: keeps it fed with the latest value and saves when the page is about
@@ -77,8 +78,6 @@ export function useAutosave<T>({
   return { autosaver, state }
 }
 
-const DRAFT_WRITE_DELAY_MS = 400
-
 // Reads the draft saved for `key` once, and keeps it up to date while `dirty`: written shortly
 // after each change, removed as soon as the value is stored. Nothing is written or removed until
 // `enabled`, so the editor can decide what to do with an old draft first.
@@ -97,61 +96,54 @@ export function useDraftBackup<T>({
   enabled: boolean
   store?: DraftStore
 }) {
-  // undefined while the draft is being read.
-  const [draft, setDraft] = React.useState<Draft<T> | null | undefined>(undefined)
+  const writer = React.useMemo(() => new DraftBackupWriter<T>({ key, store }), [key, store])
+  const [loaded, setLoaded] = React.useState<{
+    writer: DraftBackupWriter<T>
+    draft: Draft<T> | null
+  } | null>(null)
+  const snapshot = React.useMemo<DraftSnapshot<T>>(
+    () =>
+      !enabled
+        ? { kind: "paused" }
+        : dirty
+          ? { kind: "dirty", value, baseVersion }
+          : { kind: "clean" },
+    [enabled, dirty, value, baseVersion],
+  )
+
+  React.useLayoutEffect(() => writer.update(snapshot), [writer, snapshot])
 
   React.useEffect(() => {
     let cancelled = false
-    store.get<T>(key).then((found) => {
-      if (!cancelled) setDraft(found)
+    writer.read().then((draft) => {
+      if (!cancelled) setLoaded({ writer, draft })
     })
     return () => {
       cancelled = true
     }
-  }, [key, store])
+  }, [writer])
 
-  const latest = React.useRef({ value, baseVersion, dirty, enabled })
-  latest.current = { value, baseVersion, dirty, enabled }
-
-  React.useEffect(() => {
-    if (!enabled) return
-    if (!dirty) {
-      void store.delete(key)
-      return
-    }
-    const timer = setTimeout(() => {
-      void store.put(key, { baseVersion, savedAt: Date.now(), value })
-    }, DRAFT_WRITE_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [enabled, dirty, value, baseVersion, key, store])
-
-  // Writes the backup now instead of waiting out the delay. False when there was nothing to keep.
-  const saveNow = React.useCallback(() => {
-    const current = latest.current
-    if (!current.enabled || !current.dirty) return false
-    void store.put(key, {
-      baseVersion: current.baseVersion,
-      savedAt: Date.now(),
-      value: current.value,
-    })
-    return true
-  }, [key, store])
-
-  // Don't wait out the delay when the tab is hidden or closing.
-  React.useEffect(() => {
-    if (!enabled) return
+  React.useLayoutEffect(() => {
     function onVisibility() {
-      if (document.visibilityState === "hidden") saveNow()
+      if (document.visibilityState === "hidden") void writer.flush()
+    }
+    function onPageHide() {
+      void writer.flush()
     }
     document.addEventListener("visibilitychange", onVisibility)
-    window.addEventListener("pagehide", saveNow)
+    window.addEventListener("pagehide", onPageHide)
     return () => {
       document.removeEventListener("visibilitychange", onVisibility)
-      window.removeEventListener("pagehide", saveNow)
+      window.removeEventListener("pagehide", onPageHide)
+      void writer.flush()
     }
-  }, [enabled, saveNow])
+  }, [writer])
 
-  return { draft, discard: () => store.delete(key).then(() => setDraft(null)), saveNow }
+  return {
+    draft: loaded?.writer === writer ? loaded.draft : undefined,
+    discard: () => writer.discard().then(() => setLoaded({ writer, draft: null })),
+    saveNow: React.useCallback(() => writer.flush(), [writer]),
+  }
 }
 
 export interface PasteBroadcast {

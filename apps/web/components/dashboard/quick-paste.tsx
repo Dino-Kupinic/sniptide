@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
-import { Switch } from "@sniptide/ui/components/switch"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
@@ -66,7 +65,7 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
   return (
     <DropdownMenuTrigger
       aria-label={label}
-      className="flex h-8 shrink-0 items-center gap-1.5 border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground [&_svg]:size-3.5"
+      className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
     >
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
@@ -87,6 +86,7 @@ export function QuickPaste({
     "1d": t("1_day"),
     "1w": t("1_week"),
     "1m": t("1_month"),
+    "1y": t("1_year"),
     never: t("never"),
   }
   const visibilityLabels: Record<Visibility, string> = {
@@ -103,7 +103,6 @@ export function QuickPaste({
   const [pending, startTransition] = React.useTransition()
   const loaded = React.useRef(false)
   const language = detectLanguage(draft.name)
-  const lines = draft.content.split("\n").length
   const highlighted = useHighlight(draft.content, draft.name)
 
   React.useEffect(() => {
@@ -165,7 +164,7 @@ export function QuickPaste({
   return (
     <section
       aria-labelledby="quick-paste-heading"
-      className="flex min-w-0 flex-[1.8] flex-col border border-border"
+      className="flex min-w-0 flex-[1.8] flex-col overflow-hidden rounded-lg border border-border"
       onKeyDown={(event) => {
         if (matchesCombo(event, shortcut("submit").keys)) {
           event.preventDefault()
@@ -178,18 +177,9 @@ export function QuickPaste({
       }}
     >
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border pr-3 pl-4">
-        <div className="flex items-center gap-2.5">
-          <h2 id="quick-paste-heading" className="text-sm font-semibold">
-            {t("quick_paste")}
-          </h2>
-          <input
-            aria-label={t("file_name")}
-            value={draft.name}
-            onChange={(event) => update({ name: event.target.value })}
-            spellCheck={false}
-            className="w-32 bg-muted px-2 py-[3px] font-mono text-xs text-foreground/80 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-          />
-        </div>
+        <h2 id="quick-paste-heading" className="text-sm font-semibold">
+          {t("quick_paste")}
+        </h2>
         <span
           aria-live="polite"
           className={cn(
@@ -202,17 +192,8 @@ export function QuickPaste({
         </span>
       </div>
 
-      <div className="flex flex-1 gap-4 bg-sidebar/60 px-4 py-3.5 font-mono text-[13px] leading-[21px]">
-        <div
-          aria-hidden="true"
-          className="shrink-0 text-right text-muted-foreground/60 select-none"
-        >
-          {Array.from({ length: Math.max(lines, 12) }, (_, index) => (
-            <div key={index} className={index >= lines ? "invisible" : undefined}>
-              {index + 1}
-            </div>
-          ))}
-        </div>
+      {/* A fixed height that scrolls inside, so a long or wide paste never stretches the card. */}
+      <div className="flex min-h-0 flex-1 bg-sidebar/60 px-4 py-3.5 font-mono text-[13px] leading-[21px]">
         <HighlightedTextarea
           aria-label={t("code")}
           lines={highlighted}
@@ -221,13 +202,13 @@ export function QuickPaste({
           placeholder={t("paste_code_here")}
           spellCheck={false}
           wrap="off"
-          rows={Math.max(lines, 12)}
+          rows={12}
           metricsClassName="leading-[21px]"
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <DropdownMenu>
             <Chip label={t("language")}>
               <LanguageMarker language={language.id} />
@@ -282,21 +263,13 @@ export function QuickPaste({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="flex items-center gap-2 px-2 text-[13px] text-foreground/80">
-            <Switch
-              aria-labelledby="quick-burn"
-              checked={draft.burnAfterRead}
-              onCheckedChange={(burnAfterRead) => update({ burnAfterRead })}
-            />
-            <span id="quick-burn">{t("burn_after_read")}</span>
-          </span>
         </div>
         <Button
           variant="inverted"
           size="lg"
           loading={pending}
           onClick={create}
-          className="h-8 gap-2 text-[13px]"
+          className="h-[30px] gap-2 text-[13px]"
         >
           {pending ? t("creating") : t("create_paste")}
           <ShortcutKeys

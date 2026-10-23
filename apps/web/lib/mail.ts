@@ -64,6 +64,7 @@ export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.
   }
 }
 
+// Verifies an address: on request from Settings, and for the new address after an email change.
 export async function sendEmailVerification({
   user,
   url,
@@ -82,6 +83,56 @@ export async function sendEmailVerification({
     from: smtp.from,
     to: user.email,
     subject: "Verify your Sniptide email",
-    text: `Verify your email address to enable notification emails:\n\n${url}\n\nIf you did not request this email, you can ignore it.`,
+    text: `Open this link to confirm that this address belongs to your Sniptide account:\n\n${url}\n\nIf you did not request this email, you can ignore it.`,
   })
+}
+
+// Sent to the current, verified address before an email change. Approving it sends a
+// verification link to the new address.
+export async function sendEmailChangeConfirmation({
+  user,
+  newEmail,
+  url,
+}: {
+  user: { id: string; email: string }
+  newEmail: string
+  url: string
+}) {
+  const smtp = getConfig().smtp
+  if (!smtp) throw new Error("Email delivery is not configured.")
+  const allowance = await hit([
+    { key: `email:change:${user.id}`, max: 3, windowSeconds: HOUR_SECONDS },
+  ])
+  if (!allowance.allowed) throw new Error("Please wait before changing your email again.")
+  await sendMail(smtp, {
+    from: smtp.from,
+    to: user.email,
+    subject: "Approve your Sniptide email change",
+    text: `Someone asked to change the email of your Sniptide account to ${newEmail}. Open this link to approve it, and we'll send a verification link to the new address:\n\n${url}\n\nIf you didn't ask for this, ignore this email and change your password.`,
+  })
+}
+
+// Password reset links go out in the background and failures are only logged, so the response
+// to "forgot password" takes the same time and says the same thing whether the account exists.
+export async function sendPasswordReset({
+  user,
+  url,
+}: {
+  user: { id: string; email: string }
+  url: string
+}) {
+  const smtp = getConfig().smtp
+  if (!smtp) return
+  void (async () => {
+    const allowance = await hit([
+      { key: `email:reset:${user.id}`, max: 3, windowSeconds: HOUR_SECONDS },
+    ])
+    if (!allowance.allowed) return
+    await sendMail(smtp, {
+      from: smtp.from,
+      to: user.email,
+      subject: "Reset your Sniptide password",
+      text: `Open this link to choose a new password for your Sniptide account. It works once, for one hour:\n\n${url}\n\nChanging your password signs you out on every device. If you didn't ask for this, you can ignore this email.`,
+    })
+  })().catch((error) => console.error("Password reset email failed", error))
 }

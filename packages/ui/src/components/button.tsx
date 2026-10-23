@@ -3,22 +3,53 @@ import { Spinner } from "@sniptide/ui/components/spinner"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
+// Raised variants sit on a 2px edge in a darker shade (--depth) and are 2px shorter, so face
+// and edge together are as tall as the size. Hover lifts the face 1px and a
+// press pushes it down onto the edge. Popup triggers skip the press so their menu doesn't jump.
+// The press lands in 60ms so even a quick click shows it, and the release springs back with a
+// slight overshoot. Under reduced motion the states switch without moving. A disabled button sits
+// down on its edge, so a greyed face never rests on a coloured edge.
+const raised =
+  "duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:duration-[60ms] active:ease-out motion-reduce:transition-colors shadow-[0_2px_0_0_var(--depth)] not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_3px_0_0_var(--depth)] not-aria-[haspopup]:active:translate-y-[2px] not-aria-[haspopup]:active:shadow-none aria-expanded:translate-y-0 aria-expanded:shadow-[0_2px_0_0_var(--depth)] disabled:translate-y-[2px] disabled:shadow-none"
+const flat = "active:not-aria-[haspopup]:translate-y-px"
+const raisedVariants: ("default" | "inverted" | "outline" | "secondary" | "destructive")[] = [
+  "default",
+  "inverted",
+  "outline",
+  "secondary",
+  "destructive",
+]
+
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-loading:[&_svg:not([data-slot=spinner])]:hidden",
+  "group/button inline-flex shrink-0 items-center rounded-lg justify-center border border-transparent text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-loading:[&_svg:not([data-slot=spinner])]:hidden",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/85",
-        inverted: "bg-foreground text-background hover:bg-foreground/85",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-transparent dark:hover:bg-input/30",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
+        default: [
+          raised,
+          "bg-primary text-primary-foreground [--depth:color-mix(in_oklch,var(--primary),black_38%)] hover:bg-[color-mix(in_oklch,var(--primary),white_8%)]",
+        ],
+        inverted: [
+          raised,
+          "bg-foreground text-background [--depth:color-mix(in_oklch,var(--foreground),var(--background)_55%)] dark:[--depth:color-mix(in_oklch,var(--foreground),black_45%)] hover:bg-foreground/90",
+        ],
+        outline: [
+          raised,
+          "border-border bg-background [--depth:var(--border)] dark:[--depth:color-mix(in_oklch,var(--border),var(--foreground)_22%)] hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-card dark:hover:bg-muted",
+        ],
+        secondary: [
+          raised,
+          "bg-secondary [--depth:color-mix(in_oklch,var(--secondary),var(--foreground)_14%)] text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+        ],
+        ghost: [
+          flat,
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-link underline-offset-4 hover:underline",
+        ],
+        destructive: [
+          raised,
+          "bg-destructive/10 [--depth:color-mix(in_oklch,var(--destructive)_30%,transparent)] text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        ],
+        link: [flat, "text-link underline-offset-4 hover:underline"],
       },
       size: {
         default:
@@ -32,6 +63,17 @@ const buttonVariants = cva(
         "icon-lg": "size-9",
       },
     },
+    // Raised variants are 2px shorter than their size, so face and edge together fill it.
+    compoundVariants: [
+      { variant: raisedVariants, size: "default", className: "h-[30px]" },
+      { variant: raisedVariants, size: "xs", className: "h-[22px]" },
+      { variant: raisedVariants, size: "sm", className: "h-[26px]" },
+      { variant: raisedVariants, size: "lg", className: "h-[34px]" },
+      { variant: raisedVariants, size: "icon", className: "h-[30px] w-8" },
+      { variant: raisedVariants, size: "icon-xs", className: "h-[22px] w-6" },
+      { variant: raisedVariants, size: "icon-sm", className: "h-[26px] w-7" },
+      { variant: raisedVariants, size: "icon-lg", className: "h-[34px] w-9" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

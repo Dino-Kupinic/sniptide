@@ -192,7 +192,7 @@ export function PasteOverflowMenu({
       <DropdownMenuTrigger
         aria-label={t("moreActions")}
         className={cn(
-          "inline-flex size-9 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
+          "rounded-lg inline-flex size-9 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
           className,
         )}
       >

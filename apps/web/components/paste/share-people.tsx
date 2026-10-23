@@ -75,7 +75,7 @@ export function AccessMenu({
         aria-label={label}
         disabled={disabled}
         className={cn(
-          "flex shrink-0 items-center gap-1.5 px-2 py-1 text-[13px] outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 data-popup-open:bg-muted",
+          "rounded-md flex shrink-0 items-center gap-1.5 px-2 py-1 text-[13px] outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50 data-popup-open:bg-muted",
           className,
         )}
       >
@@ -133,7 +133,7 @@ export function InviteField({
       <div className={cn("flex gap-2", submitLabel && "max-lg:flex-wrap")}>
         <label
           className={cn(
-            "flex min-w-0 flex-1 items-center gap-2 border border-input bg-background px-3 focus-within:border-foreground",
+            "rounded-lg flex min-w-0 flex-1 items-center gap-2 border border-input bg-background px-3 focus-within:border-foreground",
             submitLabel && "max-lg:basis-full",
             compact ? "h-9" : "h-11 lg:h-9",
             error && "border-destructive focus-within:border-destructive",
@@ -165,7 +165,7 @@ export function InviteField({
           value={access}
           onChange={setAccess}
           label={t("accessForThePersonYouInvite")}
-          className={cn("border border-input px-3", compact ? "h-9" : "h-11 lg:h-9")}
+          className={cn("rounded-lg border border-input px-3", compact ? "h-9" : "h-11 lg:h-9")}
         />
         {submitLabel ? (
           <Button
@@ -190,7 +190,7 @@ export function RemoveButton({ label, onClick }: { label: string; onClick: () =>
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex size-7 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+      className="rounded-md flex size-7 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
     >
       <XIcon className="size-4" />
     </button>

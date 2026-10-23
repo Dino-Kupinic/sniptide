@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 @source "../**/*.{ts,tsx}";
 
-/* Sniptide palette, taken from the Paper designs. Corners are square everywhere (--radius: 0). */
+/* Sniptide palette, taken from the Paper designs. --radius is the one knob for corner rounding:
+   rounded-lg uses it as is, rounded-md and rounded-sm are 0.8x and 0.6x of it. */
 :root {
   --background: #ffffff;
   --foreground: #1b1919;
@@ -30,7 +31,7 @@
   --chart-3: #6b6b6b;
   --chart-4: #8a8a8a;
   --chart-5: #e8e8e8;
-  --radius: 0rem;
+  --radius: 0.375rem;
   --sidebar: #fafafa;
   --sidebar-foreground: #1b1919;
   --sidebar-primary: #2a26ec;
@@ -39,8 +40,10 @@
   --sidebar-accent-foreground: #1b1919;
   --sidebar-border: #e8e8e8;
   --sidebar-ring: #2a26ec;
-  /* The hard offset shadow (and its border) on menus, dialogs and cards. */
-  --offset-shadow: #1b1919;
+  /* Floating layers: a hairline border plus a soft shadow. Menus and popovers sit close to the
+     page, dialogs and standalone cards float higher. */
+  --float-shadow: 0 1px 2px rgb(27 25 25 / 0.06), 0 8px 24px -6px rgb(27 25 25 / 0.14);
+  --dialog-shadow: 0 2px 4px rgb(27 25 25 / 0.06), 0 24px 48px -12px rgb(27 25 25 / 0.22);
   --logo-primary: #2a26ec;
   --logo-ink: #1b1919;
   --logo-hatch: #000000;
@@ -92,8 +95,9 @@
   --sidebar-accent-foreground: #f4f4f4;
   --sidebar-border: #2f2c2c;
   --sidebar-ring: #3a36ff;
-  /* A mid grey: white offset shadows glare on the dark surfaces. */
-  --offset-shadow: #4a4646;
+  /* Darker and denser in dark mode, where a light shadow would not read. */
+  --float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -6px rgb(0 0 0 / 0.6);
+  --dialog-shadow: 0 2px 4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.7);
   /* The inverse logo from the Paper brand page: its own deep blue, light grey blocks and dim
      hatching. */
   --logo-primary: #1b17c6;
@@ -157,7 +161,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --color-offset-shadow: var(--offset-shadow);
   --color-logo-primary: var(--logo-primary);
   --color-logo-ink: var(--logo-ink);
   --color-logo-hatch: var(--logo-hatch);
@@ -200,5 +203,21 @@
   }
   &:hover::-webkit-scrollbar-thumb {
     background: color-mix(in oklab, var(--foreground) 18%, transparent);
+  }
+}
+
+/* A small springy pop, used when a value label changes (the step slider). */
+@theme {
+  --animate-pop: pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  @keyframes pop {
+    from {
+      opacity: 0.4;
+      transform: translateY(3px) scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 }

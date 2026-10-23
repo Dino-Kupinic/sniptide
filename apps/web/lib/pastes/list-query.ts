@@ -29,10 +29,7 @@ export interface PageInfo {
 // Bounded query inputs shared by list pages. Repeated parameters and comma-separated values
 // both work, so a filtered view can be bookmarked or opened in another tab.
 export function parsePasteListQuery(params: SearchParams): PasteListQuery {
-  const values = (key: string) =>
-    [...new Set([params[key]].flat().flatMap((value) => value?.split(",") ?? []))].slice(0, 50)
-  const first = (key: string) => [params[key]].flat()[0]
-  const requestedPage = Number(first("page"))
+  const { values, first, page } = listQueryFields(params)
   return {
     cursor: first("cursor")?.slice(0, 2048),
     q: (first("q") ?? "").trim().slice(0, 120),
@@ -43,10 +40,7 @@ export function parsePasteListQuery(params: SearchParams): PasteListQuery {
     collections: values("collection").filter((value) => /^[a-z0-9-]{1,40}$/.test(value)),
     owner: first("owner") === "mine" ? "mine" : first("owner") === "shared" ? "shared" : "all",
     sort: PASTE_SORTS.find((value) => value === first("sort")) ?? "updated",
-    page:
-      Number.isSafeInteger(requestedPage) && requestedPage > 0
-        ? Math.min(requestedPage, 1_000_000)
-        : 1,
+    page,
   }
 }
 
@@ -61,4 +55,19 @@ export function pasteListSearch(query: PasteListQuery) {
   if (query.page !== 1) params.set("page", String(query.page))
   if (query.cursor) params.set("cursor", query.cursor)
   return params.toString()
+}
+
+export function listQueryFields(params: SearchParams) {
+  const values = (key: string) =>
+    [...new Set([params[key]].flat().flatMap((value) => value?.split(",") ?? []))].slice(0, 50)
+  const first = (key: string) => [params[key]].flat()[0]
+  const requestedPage = Number(first("page"))
+  return {
+    values,
+    first,
+    page:
+      Number.isSafeInteger(requestedPage) && requestedPage > 0
+        ? Math.min(requestedPage, 1_000_000)
+        : 1,
+  }
 }

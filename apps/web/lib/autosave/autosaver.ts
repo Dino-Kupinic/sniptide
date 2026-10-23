@@ -143,7 +143,13 @@ export class Autosaver<T> {
     for (let round = 0; round < 3; round++) {
       if (this.inflight) await this.inflight
       if (!this.hasUnsavedChanges()) return true
-      if (this.conflicted || this.options.validate?.(this.current)) return false
+      if (
+        this.conflicted ||
+        this.lastState.kind === "error" ||
+        this.lastState.kind === "retrying" ||
+        this.options.validate?.(this.current)
+      )
+        return false
       await this.run()
     }
     return !this.hasUnsavedChanges()

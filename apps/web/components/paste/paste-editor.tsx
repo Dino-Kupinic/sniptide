@@ -9,6 +9,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { Sheet, SheetContent, SheetTitle } from "@sniptide/ui/components/sheet"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
@@ -593,11 +594,27 @@ export function PasteEditor({
   // Latest handlers for the window listener below, which is attached once.
   const saveRef = React.useRef<() => void>(() => {})
   React.useEffect(() => {
-    saveRef.current = () => {
+    saveRef.current = async () => {
       // An open paste saves as you go, so ⌘S just pushes the pending edit out. A new paste has
       // nowhere to be saved yet, so ⌘S keeps what's typed as a draft on this device.
       if (editing) void autosaver.flush()
-      else if (saveDraftNow()) toast.success(t("draftSavedOnThisDevice"))
+      else {
+        const result = await saveDraftNow()
+        switch (result.kind) {
+          case "saved":
+            toast.success(t("draftSavedOnThisDevice"))
+            break
+          case "unavailable":
+            toast.error(t("draftSaveUnavailable"))
+            break
+          case "skipped":
+            break
+          default: {
+            const exhaustive: never = result
+            return exhaustive
+          }
+        }
+      }
     }
   })
 
@@ -667,6 +684,7 @@ export function PasteEditor({
               options={expiryOptions.map((option) => ({
                 ...option,
                 label: t("expiryValue", { value: option.value }),
+                valueLabel: t("expiryLong", { value: option.value }),
               }))}
               currentExpiry={expiryLabel}
             />
@@ -866,7 +884,7 @@ export function PasteEditor({
 
       <SidePanelProvider>
         <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
-          <div className="mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
+          <div className="overflow-hidden rounded-lg mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
             <FileTabs
               files={files}
               activeId={active?.id}
@@ -942,7 +960,7 @@ export function PasteEditor({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label={t("languageName", { name: language.name })}
-                  className="-ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+                  className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
                 >
                   <LanguageMarker language={language.id} />
                   <span className="font-medium text-foreground">{language.name}</span>
@@ -1001,17 +1019,16 @@ export function PasteEditor({
             {!editing && visibility === "private" ? (
               <InvitePeople invites={invites} onChange={setInvites} large />
             ) : null}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2">
               <span className="text-[15px]">{t("expiresAfter")}</span>
               <ExpiryChips
                 value={expiry}
                 onChange={setExpiry}
-                options={expiryOptions
-                  .filter((option) => ["1d", "1w", "never"].includes(option.value))
-                  .map((option) => ({
-                    ...option,
-                    label: t("expiryValue", { value: option.value }),
-                  }))}
+                options={expiryOptions.map((option) => ({
+                  ...option,
+                  label: t("expiryValue", { value: option.value }),
+                  valueLabel: t("expiryLong", { value: option.value }),
+                }))}
                 currentExpiry={expiryLabel}
               />
             </div>
@@ -1023,43 +1040,57 @@ export function PasteEditor({
               large
             />
             {passwordField}
-            {mobileMore ? (
-              <>
-                <OptionGroup label={t("customLink")} id="slug-label-mobile">
-                  <SlugInput
-                    value={slug}
-                    onChange={setSlug}
-                    onCommit={editing ? () => setCommittedSlug(slug) : undefined}
-                    status={slugStatus}
+            {/* The rarer options wait in a sheet, so the panel stays short. */}
+            <button
+              type="button"
+              onClick={() => setMobileMore(true)}
+              className="self-start text-sm text-muted-foreground underline underline-offset-2"
+            >
+              {t("moreOptions")}
+            </button>
+            <Sheet open={mobileMore} onOpenChange={setMobileMore}>
+              <SheetContent side="bottom">
+                <span aria-hidden="true" className="mx-auto mt-2 h-1 w-9 rounded-full bg-border" />
+                <SheetTitle className="px-4 pt-3 text-[15px] font-semibold">
+                  {t("moreOptions")}
+                </SheetTitle>
+                <div className="flex flex-col gap-4 overflow-y-auto px-4 pt-4 pb-4">
+                  <OptionGroup label={t("customLink")} id="slug-label-mobile">
+                    <SlugInput
+                      value={slug}
+                      onChange={setSlug}
+                      onCommit={editing ? () => setCommittedSlug(slug) : undefined}
+                      status={slugStatus}
+                    />
+                  </OptionGroup>
+                  <OptionGroup label={t("collection")} id="collection-label-mobile">
+                    <CollectionSelect
+                      value={collection}
+                      onChange={setCollection}
+                      collections={collections}
+                    />
+                  </OptionGroup>
+                  <ToggleRow
+                    label={t("burnAfterRead")}
+                    description={t("deleteAfterTheFirstView")}
+                    checked={burnAfterRead}
+                    onCheckedChange={setBurnAfterRead}
+                    large
                   />
-                </OptionGroup>
-                <OptionGroup label={t("collection")} id="collection-label-mobile">
-                  <CollectionSelect
-                    value={collection}
-                    onChange={setCollection}
-                    collections={collections}
-                  />
-                </OptionGroup>
-                <ToggleRow
-                  label={t("burnAfterRead")}
-                  description={t("deleteAfterTheFirstView")}
-                  checked={burnAfterRead}
-                  onCheckedChange={setBurnAfterRead}
-                  large
-                />
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setMobileMore(true)}
-                className="self-start text-sm text-muted-foreground underline underline-offset-2"
-              >
-                {t("moreOptions")}
-              </button>
-            )}
+                  <Button
+                    type="button"
+                    variant="inverted"
+                    onClick={() => setMobileMore(false)}
+                    className="h-[46px] text-base"
+                  >
+                    {t("done")}
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </>
         )}
-        <Button type="submit" loading={pending} className="h-[50px] text-base font-semibold">
+        <Button type="submit" loading={pending} className="h-12 text-base font-semibold">
           {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>
       </div>

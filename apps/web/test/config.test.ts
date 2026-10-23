@@ -27,7 +27,7 @@ describe("getConfig", () => {
   test("points the account menu's resource links at the project by default", () => {
     expect(getConfig({}).resourceLinks).toEqual({
       homepage: "https://sniptide.com",
-      documentation: "https://github.com/Dino-Kupinic/sniptide#readme",
+      documentation: "https://docs.sniptide.com",
       help: "https://github.com/Dino-Kupinic/sniptide/issues",
     })
   })

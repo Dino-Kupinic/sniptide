@@ -28,7 +28,12 @@ import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marke
 import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
-import { PASTE_PAGE_SIZE, type PageInfo, type PasteListQuery } from "@/lib/pastes/list-query"
+import {
+  PASTE_PAGE_SIZE,
+  type PageInfo,
+  type PasteListQuery,
+  pasteListSearch,
+} from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
 import { ListHeader, Pagination, SearchField } from "./toolbar"
 import { useListQuery } from "./use-list-query"
@@ -132,7 +137,7 @@ export function TrashList({
 }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
-  const { query, update, pending } = useListQuery(serverQuery)
+  const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
 
   const emptyButton = (variant: "desktop" | "mobile") => (
@@ -181,13 +186,13 @@ export function TrashList({
           onChange={(q) => update({ q }, true)}
           placeholder={t("search_deleted_pastes")}
         />
-        <div className="flex items-center justify-between gap-4 border border-border bg-sidebar px-4 py-3 text-[13px] text-foreground/80">
+        <div className="rounded-lg flex items-center justify-between gap-4 border border-border bg-sidebar px-4 py-3 text-[13px] text-foreground/80">
           <p>{t("deleted_pastes_are_kept_for_30_days_their")}</p>
           {emptyButton("mobile")}
         </div>
       </div>
 
-      <div className="flex flex-col lg:border lg:border-border">
+      <div className="lg:overflow-hidden lg:rounded-lg flex flex-col lg:border lg:border-border">
         {pagination.total === 0 ? (
           <p className="px-4 py-14 text-center text-sm text-muted-foreground">
             {query.q ? t("no_deleted_pastes_match") : t("trash_is_empty")}
@@ -195,7 +200,7 @@ export function TrashList({
         ) : (
           <>
             <Table className="hidden min-w-[960px] table-fixed lg:table">
-              <TableHeader className="bg-sidebar">
+              <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t("paste")}</TableHead>
                   <TableHead className="w-[130px]">{t("language")}</TableHead>
@@ -208,7 +213,7 @@ export function TrashList({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.slug} className="border-border/60">
+                  <TableRow key={row.slug}>
                     <TableCell className="truncate">
                       <span className="block truncate text-sm text-foreground/70">{row.title}</span>
                       <span className="block truncate font-mono text-xs text-muted-foreground/80 line-through">
@@ -248,7 +253,7 @@ export function TrashList({
                             <button
                               type="button"
                               aria-label={t("delete_named_forever", { name: row.title })}
-                              className="flex size-[30px] items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/40"
+                              className="rounded-md flex size-[30px] items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/40"
                             >
                               <Trash2Icon className="size-4" />
                             </button>
