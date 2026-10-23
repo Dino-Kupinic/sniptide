@@ -24,7 +24,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { Trash2Icon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
-import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
@@ -269,7 +269,7 @@ export function TrashList({
             <ul className="flex flex-col lg:hidden">
               {rows.map((row) => (
                 <li key={row.slug} className="flex items-center gap-3 border-b border-border py-3">
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span title={row.title} className="truncate text-[15px] text-foreground/70">
                       {row.title}
