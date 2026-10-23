@@ -166,7 +166,7 @@ All components live in `packages/ui/src/components`. Use them before writing new
 ### Button
 **Role:** Every action.
 
-Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 2px edge in a darker shade of its fill (`--depth`) and its face is 2px shorter than the size, so face and edge together are 32px on a `default` button. Hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
+Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, `xl` 40px for the primary action in mobile bars and sheets, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 2px edge in a darker shade of its fill (`--depth`) and its face is 2px shorter than the size, so face and edge together are 32px on a `default` button. Hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
 
 ### Input and Textarea
 **Role:** Text entry.
@@ -204,9 +204,9 @@ Minimum width 192px with 4px padding on every side. Rows are 32px tall with 12px
 Centered, at most 448px wide, with 24px padding, a 16px gap, `--dialog-shadow` and a 20px heading-font title. Content scales in from 0.98.
 
 ### Sheet
-**Role:** The mobile sidebar.
+**Role:** Menus, settings and secondary views on phones.
 
-288px wide and at most 85vw. It slides in from the edge in 200ms.
+Side sheets are 288px wide and at most 85vw. Bottom sheets are full width, at most 85% of the viewport tall, with `rounded-t-lg` and safe-area padding. Both slide in from the edge in 200ms. A bottom sheet starts with `SheetHeader`, which sets a 20px heading-font title and a 40px close button, and scrolls its content in `SheetBody` with the 16px gutter. List rows inside it use `sheetRowClass`: 48px tall, a 16px icon in `--muted-foreground`, a 14px label and an optional value at the end.
 
 ### Checkbox and Switch
 **Role:** Boolean choices.
@@ -247,6 +247,19 @@ Six horizontal stripes that taper from a hairline at the top to a full bar at th
 **Role:** Decorative motif.
 
 The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-in screen and the share-link page.
+
+## Mobile
+
+Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.
+
+- The mobile top bar holds the wordmark, search, notifications and the account avatar.
+- The tab bar holds Home, Pastes, the new-paste block, Starred and More. More opens a bottom sheet with Analytics, Collections, Secrets, Shared with me, Trash, Import gist, Settings and the account.
+- Page actions that sit in the desktop header render next to the page title on phones.
+- List rows end in a 40px menu button with the same actions as the desktop row menu. Sort and filters open in a bottom sheet next to the search field.
+- Screens with their own primary action (the editor, paste detail, secrets) replace the tab bar with a 56px bottom bar: one `xl` primary button and at most one secondary control. The editor hides this bar while the on-screen keyboard is open.
+- Touch targets are at least 40px. Keyboard shortcut hints are hidden on devices without hover, and the action they label stays.
+- Fixed bars pad for the safe-area insets on every edge they touch.
+- Every screen fits 360px without horizontal scrolling.
 
 ## Interaction and motion
 

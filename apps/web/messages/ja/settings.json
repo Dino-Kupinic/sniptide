@@ -152,6 +152,40 @@
     "otherSessionsSignedOut": "ほかのデバイスはログアウトされました。",
     "signOutOtherSessions": "{count, plural, other {ほかの#台のデバイスからログアウト}}",
     "confirmDeleteNoPassword": "アカウント、セッション、ペーストは完全に削除されます。",
-    "signInAgainToDelete": "安全のため、一度ログアウトして再度ログインしてから削除してください。"
+    "signInAgainToDelete": "安全のため、一度ログアウトして再度ログインしてから削除してください。",
+    "backToSettings": "設定に戻る",
+    "notifications": "通知",
+    "notificationsDescription": "ペーストのアクティビティを知らせる方法を選びます。メールは初期設定でオフです。",
+    "notificationEmailUnavailable": "このサーバーではメール送信が設定されていません。アプリ内通知は引き続き使えます。",
+    "notificationEmailUnverified": "通知メールをオンにする前に、メールアドレスを確認してください。",
+    "sendVerificationEmail": "確認メールを送信",
+    "verificationEmailSent": "確認メールを送信しました。受信トレイのリンクを開いてから、この設定を再読み込みしてください。",
+    "couldnTSendVerificationEmail": "確認メールを送信できませんでした。もう一度お試しください。",
+    "notificationActivity": "アクティビティ",
+    "notificationInApp": "アプリ内",
+    "notificationEmail": "メール",
+    "notificationSwitch": "{event}、{channel}",
+    "notificationEvents": {
+      "shared": {
+        "label": "あなたと共有",
+        "description": "誰かがあなたをペーストに招待しました。"
+      },
+      "burned": {
+        "label": "閲覧後に削除",
+        "description": "ペーストが閲覧され、ゴミ箱に移動しました。"
+      },
+      "expiring": {
+        "label": "まもなく期限切れ",
+        "description": "ペーストが1日以内に期限切れになります。"
+      },
+      "views": {
+        "label": "閲覧数の節目",
+        "description": "ペーストの閲覧数が節目に達しました。"
+      }
+    },
+    "revokeTokenTitle": "{name}を無効にしますか？",
+    "revokeTokenDescription": "このトークンを使うスクリプトとエージェントはすぐに動かなくなります。元に戻せません。",
+    "deleteEnvGroupTitle": "{slug}を削除しますか？",
+    "deleteEnvGroupDescription": "変数は完全に削除され、CLIから取得できなくなります。元に戻せません。"
   }
 }

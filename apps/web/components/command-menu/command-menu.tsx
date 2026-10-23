@@ -6,6 +6,7 @@ import { useTheme } from "next-themes"
 import * as React from "react"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { ImportGistSheet } from "@/components/lists/import-gist"
+import { useIsDesktop } from "@/components/shell/use-media-query"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import type { Collection } from "@/lib/collections/types"
 import { shouldIgnoreSingleKey } from "@/lib/keyboard"
@@ -14,9 +15,18 @@ import { isPlainKey, matchesCombo, SHORTCUTS, type Shortcut, shortcut } from "@/
 import { CommandMenuDialog } from "./command-menu-dialog"
 import { createCommands } from "./commands"
 
-const CommandMenuContext = React.createContext<{ open: () => void }>({ open: () => {} })
+// importGist is null outside the provider (the root 404 renders the tab bar without the app
+// shell), so callers can hide the action instead of offering a button that does nothing.
+const CommandMenuContext = React.createContext<{
+  open: () => void
+  importGist: (() => void) | null
+}>({
+  open: () => {},
+  importGist: null,
+})
 
-// Opens the ⌘K menu from the sidebar's Search button, the header field and the mobile top bar.
+// Opens the ⌘K menu from the sidebar's Search button, the header field and the mobile top bar,
+// and the Import gist sheet from the mobile More sheet.
 export function useCommandMenu() {
   return React.useContext(CommandMenuContext)
 }
@@ -59,7 +69,11 @@ export function CommandMenuProvider({
       }).map((command) => ({ ...command, label: t(command.label) })),
     [resolvedTheme, setTheme, shortcuts.open, t],
   )
-  const menu = React.useMemo(() => ({ open: () => setOpen(true) }), [])
+  const menu = React.useMemo(
+    () => ({ open: () => setOpen(true), importGist: () => setImporting(true) }),
+    [],
+  )
+  const desktop = useIsDesktop()
 
   React.useEffect(() => {
     let armed: { leader: string; at: number } | null = null
@@ -117,7 +131,11 @@ export function CommandMenuProvider({
         onOpenChange={setCreating}
         existing={collections.length}
       />
-      <ImportGistSheet open={importing} onOpenChange={setImporting} />
+      <ImportGistSheet
+        open={importing}
+        onOpenChange={setImporting}
+        side={desktop ? "right" : "bottom"}
+      />
     </CommandMenuContext>
   )
 }

@@ -64,11 +64,11 @@ export function Meter({
   return (
     <div
       aria-hidden="true"
-      className={cn("flex h-1.5 shrink-0 overflow-hidden rounded-full bg-border", className)}
+      className={cn("flex h-1.5 shrink-0 overflow-hidden rounded-sm bg-border", className)}
     >
       <div
         className={cn(
-          "h-full rounded-full",
+          "h-full rounded-sm",
           tone === "link" ? "bg-chart-1" : "bg-muted-foreground/40",
         )}
         style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}

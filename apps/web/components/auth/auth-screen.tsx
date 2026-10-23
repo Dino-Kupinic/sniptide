@@ -12,7 +12,8 @@ export interface Pitch {
 }
 
 // Split auth layout from the Paper Sign in / Sign up artboards: form on the left, barcode
-// stripes with a pitch card on the right. Below lg the stripes become a strip above the form.
+// stripes with a pitch card on the right. Below lg the stripes become a strip above the form and
+// the pitch body moves under the subtitle.
 // `centered` is for short screens (request access): on phones the content sits mid-screen, centered.
 export function AuthScreen({
   title,
@@ -52,7 +53,7 @@ export function AuthScreen({
             {centered ? null : <Logo className="lg:hidden" />}
             <div className="flex flex-col gap-1.5 lg:gap-2">
               {title ? (
-                <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
+                <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
                   {title}
                 </h1>
               ) : null}
@@ -64,6 +65,9 @@ export function AuthScreen({
               >
                 {subtitle}
               </p>
+              {centered ? null : (
+                <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
+              )}
             </div>
             {children}
           </div>

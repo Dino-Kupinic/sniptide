@@ -57,6 +57,8 @@ const buttonVariants = cva(
         xs: "h-6 gap-1 px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 px-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         lg: "h-9 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+        // Touch size for the primary action in mobile bars and sheets.
+        xl: "h-10 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         icon: "size-8",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",
@@ -69,6 +71,7 @@ const buttonVariants = cva(
       { variant: raisedVariants, size: "xs", className: "h-[22px]" },
       { variant: raisedVariants, size: "sm", className: "h-[26px]" },
       { variant: raisedVariants, size: "lg", className: "h-[34px]" },
+      { variant: raisedVariants, size: "xl", className: "h-[38px]" },
       { variant: raisedVariants, size: "icon", className: "h-[30px] w-8" },
       { variant: raisedVariants, size: "icon-xs", className: "h-[22px] w-6" },
       { variant: raisedVariants, size: "icon-sm", className: "h-[26px] w-7" },

@@ -15,7 +15,7 @@ import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
-import { expiryClass, RowBadge } from "@/components/lists/paste-list"
+import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
 import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
 import { formatNumber } from "@/lib/format"
@@ -55,7 +55,7 @@ function Greeting({ firstName }: { firstName: string }) {
   }, [])
 
   return (
-    <h1 className="font-heading text-[28px] leading-8 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
+    <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
       {t(
         part === "morning"
           ? "good_morning"
@@ -156,7 +156,8 @@ export function Dashboard({
               : t("nothing_expires_in_the_next_48_hours")}
           </p>
         </div>
-        <div className="hidden items-center gap-2 lg:flex">
+        {/* Phones get the range full width under the greeting; Import gist lives in the More sheet. */}
+        <div className="mt-2 flex items-center gap-2 lg:mt-0">
           <SegmentedControl
             aria-label={t("range")}
             value={range}
@@ -166,10 +167,12 @@ export function Dashboard({
               { value: "7", label: t("7_days") },
               { value: "30", label: t("30_days") },
             ]}
-            className="w-56"
-            itemClassName="py-[5px]"
+            className="w-full lg:w-56"
+            itemClassName="py-[9px] lg:py-[5px]"
           />
-          <ImportGistButton />
+          <span className="hidden lg:contents">
+            <ImportGistButton />
+          </span>
         </div>
       </div>
 
@@ -270,15 +273,15 @@ export function Dashboard({
         aria-labelledby="recent-heading"
         className="flex flex-col lg:overflow-hidden lg:rounded-lg lg:border lg:border-border"
       >
-        <div className="flex items-center justify-between gap-3 py-3 lg:border-b lg:border-border lg:px-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 lg:flex-nowrap lg:border-b lg:border-border lg:px-4">
+          <div className="contents lg:flex lg:items-center lg:gap-4">
             <h2 id="recent-heading" className="text-[15px] font-semibold lg:text-[15px]">
               {t("recent_pastes")}
             </h2>
             <div
               role="tablist"
               aria-label={t("filter_recent_pastes")}
-              className="hidden items-center gap-1 lg:flex"
+              className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] lg:order-none lg:mx-0 lg:w-auto lg:px-0"
             >
               {(["all", "public", "unlisted", "private"] as const).map((value) => (
                 <button
@@ -288,7 +291,7 @@ export function Dashboard({
                   aria-selected={tab === value}
                   onClick={() => setTab(value)}
                   className={cn(
-                    "h-7 rounded-md px-3 text-[13px] text-muted-foreground capitalize outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+                    "h-10 shrink-0 rounded-md px-3 text-sm text-muted-foreground capitalize lg:h-7 lg:text-[13px] outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                     tab === value && "border border-border text-foreground",
                   )}
                 >
@@ -330,11 +333,14 @@ export function Dashboard({
                     >
                       {row.title}
                     </Link>
-                    <span className="truncate font-mono text-xs text-muted-foreground">
-                      {host}/{row.slug} · {row.updatedLabel}
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                      <VisibilityIcon row={row} />
+                      <span className="truncate">
+                        <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
+                      </span>
                     </span>
                   </div>
-                  <RowBadge row={row} short />
+                  <RowMenu row={row} origin={origin} variant="sheet" />
                 </li>
               ))}
             </ul>
