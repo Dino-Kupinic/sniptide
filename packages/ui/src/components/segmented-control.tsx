@@ -27,7 +27,7 @@ function SegmentedControl<Value extends string>({
     <RadioGroup
       value={value}
       onValueChange={(next) => onValueChange(next as Value)}
-      className={cn("flex gap-0.5 bg-muted p-[3px]", className)}
+      className={cn("flex gap-0.5 rounded-lg bg-muted p-[3px]", className)}
       {...props}
     >
       {options.map((option) => (
@@ -35,7 +35,7 @@ function SegmentedControl<Value extends string>({
           key={option.value}
           value={option.value}
           className={cn(
-            "flex-1 py-[5px] text-center text-[13px] leading-[18px] text-muted-foreground outline-none select-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-checked:bg-background data-checked:font-medium data-checked:text-foreground data-checked:shadow-[0_1px_2px_rgb(0_0_0/0.08)] data-disabled:opacity-50",
+            "flex-1 rounded-md py-[5px] text-center text-[13px] leading-[18px] text-muted-foreground outline-none select-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-checked:bg-background data-checked:font-medium data-checked:text-foreground data-checked:shadow-[0_1px_2px_rgb(0_0_0/0.08)] data-disabled:opacity-50",
             itemClassName,
           )}
         >

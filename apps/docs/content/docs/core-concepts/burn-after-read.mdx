@@ -1,0 +1,38 @@
+---
+title: Burn after read
+description: Share something once. The paste deletes itself after its first read.
+---
+
+**Burn after reading** makes a paste one-time: the first person to open it gets the code, and then
+the paste is gone. Use it for things that should be read once, like a one-off credential or a
+snippet you don't want to linger.
+
+Turn it on in the editor under **Visibility & expiry**, or make it your default under Settings.
+
+## What the reader sees
+
+Opening a burn-after-read link doesn't burn it. The reader first sees a sealed page explaining that
+the paste burns when opened, with an **Open and burn** button. Only that explicit choice reveals
+the code and deletes the paste. They should copy what they need straight away: once they leave
+the page it is gone.
+
+This also makes the paste safe to put in a chat. Link previews, mail scanners, search crawlers and
+browser prefetches only load the sealed page, so they can't use it up.
+
+## What happens to the paste
+
+- **Only one reader gets it.** If two people open it at the same moment, one wins and the other
+  sees the paste as gone.
+- **It moves to your trash**, not into thin air. You can **Restore** it for 30 days; after that it
+  is deleted. The link stops working immediately.
+- **You get a notification** (and an email, if you turned those on) that it was read.
+- **You aren't a reader.** Opening your own burn-after-read paste doesn't burn it.
+- **No raw access** for anyone but you, and it can't be posted to a Slack or Discord channel.
+- **It isn't listed under Shared with me** for people you invited. Like any other reader, they
+  read it once through its link.
+
+## Combining with other settings
+
+A burn-after-read paste can still have a password, which the reader enters before the seal is
+offered, and an expiry, after which it is gone unread. A paste that expires unread is removed
+like any other expired paste.

@@ -139,6 +139,7 @@ const expiryOptions: { value: Preferences["defaultExpiry"]; label: string }[] = 
   { value: "1d", label: "1Day" },
   { value: "1w", label: "1Week" },
   { value: "1m", label: "1Month" },
+  { value: "1y", label: "1Year" },
   { value: "never", label: "never" },
 ]
 

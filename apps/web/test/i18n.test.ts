@@ -4,6 +4,8 @@ import path from "node:path"
 import { type MessageFormatElement, parse, TYPE } from "@formatjs/icu-messageformat-parser"
 import { createTranslator, type TranslationValues } from "next-intl"
 import { POST as changeLocale } from "@/app/api/locale/route"
+import { POST as revealSharedSecrets } from "@/app/secret-share/[token]/reveal/route"
+import { POST as manageSecrets } from "@/app/secrets/manage/route"
 import { formatBytes, formatNumber, timeAgo, timeUntil } from "@/lib/format"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeCookie, locales, resolveLocale } from "@/lib/i18n/config"
@@ -163,5 +165,33 @@ test("all five catalogs have the same messages and valid ICU arguments", async (
         expect(t.rich(key, richValues)).toBeDefined()
       }
     }
+  }
+})
+
+test("secret endpoints translate safe errors and prevent caching", async () => {
+  request.cookies.set(localeCookie, "de")
+  try {
+    const refused = await manageSecrets(
+      new Request("https://app.example.test/secrets/manage", {
+        method: "POST",
+        headers: { origin: "https://other.example.test" },
+      }),
+    )
+    expect(refused.status).toBe(403)
+    expect(await refused.json()).toEqual({ error: "Anfrage abgelehnt." })
+    expect(refused.headers.get("cache-control")).toContain("no-store")
+
+    request.cookies.set(localeCookie, "ja")
+    const unavailable = await revealSharedSecrets(
+      new Request("https://app.example.test/secret-share/invalid/reveal", { method: "POST" }),
+      { params: Promise.resolve({ token: "invalid" }) },
+    )
+    expect(unavailable.status).toBe(403)
+    expect(await unavailable.json()).toEqual({
+      error: "リンクが利用できないか、パスワードが正しくありません。",
+    })
+    expect(unavailable.headers.get("cache-control")).toContain("no-store")
+  } finally {
+    request.cookies.clear()
   }
 })

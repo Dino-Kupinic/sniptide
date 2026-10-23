@@ -74,6 +74,21 @@
     "webhookPaste": "只有所有者才能分享未设置密码或阅后即焚保护的、仍有效的公开或不公开列出的代码片段。",
     "webhookInvalid": "该 Webhook 配置不正确。",
     "webhookDelivery": "Webhook 未确认送达，请先查看频道，再决定是否重试。",
-    "validationTooLong": "最多可输入 {max} 个字符。"
+    "validationTooLong": "最多可输入 {max} 个字符。",
+    "signInAccount": "请重新登录后再更改账户。",
+    "emailInvalid": "请输入有效的邮箱地址。",
+    "emailSame": "这已经是你的邮箱。",
+    "emailUnavailable": "这个邮箱无法使用，请换一个。",
+    "emailDeliveryOff": "更改已验证的邮箱需要邮件发送功能，而此实例尚未设置。",
+    "emailChangeFailed": "无法更改你的邮箱，请重试。",
+    "wrongPassword": "密码不正确。",
+    "passwordTooShort": "请至少使用 8 个字符。",
+    "passwordTooLong": "请最多使用 128 个字符。",
+    "passwordSetFailed": "无法添加密码，请重试。",
+    "sessionRevokeFailed": "无法让该设备退出登录，请重试。",
+    "unlinkLast": "请至少保留一种登录方式。先添加密码或关联其他账户。",
+    "unlinkFailed": "无法取消关联该账户，请重试。",
+    "demoLocked": "演示中不提供此功能。",
+    "signInFresh": "为了安全，请先退出并重新登录，然后重试。"
   }
 }

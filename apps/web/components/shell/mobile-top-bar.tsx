@@ -32,7 +32,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
           type="button"
           aria-label={t("search")}
           onClick={openCommandMenu}
-          className="inline-flex size-9 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-[17px]"
+          className="rounded-lg inline-flex size-9 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-[17px]"
         >
           <SearchIcon />
         </button>
@@ -41,7 +41,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             aria-label={t("account")}
             className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
-            <Avatar className="size-9 font-heading text-[13px] font-bold">
+            <Avatar className="size-9 rounded-lg font-heading text-[13px] font-bold">
               {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
               <AvatarFallback>{viewer.initials}</AvatarFallback>
             </Avatar>

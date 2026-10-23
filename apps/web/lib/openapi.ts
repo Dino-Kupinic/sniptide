@@ -633,7 +633,7 @@ export const openApiDocument = {
             "That collection doesn't exist. Create it in Sniptide first.",
           ),
           "413": jsonError(
-            "The body, the paste or the account's storage is over its limit.",
+            "The body, the paste, the account's storage or the account's paste count is over its limit.",
             "You've reached your storage limit. Permanently delete some pastes or reduce their size.",
           ),
           ...tokenErrors,
@@ -1263,4 +1263,6 @@ export const internalRoutes = [
   "/api/locale",
   "/api/search",
   "/api/stats",
+  "/secrets/manage",
+  "/secret-share/[token]/reveal",
 ] as const

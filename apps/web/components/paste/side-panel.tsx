@@ -1,14 +1,9 @@
 "use client"
 
+import { Reveal } from "@sniptide/ui/components/reveal"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import {
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronUpIcon,
-  type LucideIcon,
-  PanelRightIcon,
-} from "lucide-react"
+import { ChevronDownIcon, ChevronLeftIcon, type LucideIcon, PanelRightIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 
@@ -38,7 +33,7 @@ export function SidePanelProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const panelToolClass =
-  "inline-flex size-8 shrink-0 items-center justify-center text-foreground/75 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:bg-muted aria-pressed:text-foreground [&_svg]:size-4"
+  "rounded-lg inline-flex size-8 shrink-0 items-center justify-center text-foreground/75 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:bg-muted aria-pressed:text-foreground [&_svg]:size-4"
 
 // Lives in the code card's bar, after a divider. Desktop only, like the panel.
 export function SidePanelToggle() {
@@ -87,7 +82,7 @@ export function SidePanel({
       <nav
         aria-label={label}
         className={cn(
-          "hidden w-11 shrink-0 flex-col items-center border border-border lg:flex",
+          "overflow-hidden rounded-lg hidden w-11 shrink-0 flex-col items-center border border-border lg:flex",
           className,
         )}
       >
@@ -131,14 +126,13 @@ export function SidePanel({
     <section
       aria-label={label}
       className={cn(
-        "hidden w-[272px] shrink-0 flex-col divide-y divide-border border border-border lg:flex xl:w-[300px]",
+        "overflow-hidden rounded-lg hidden w-[272px] shrink-0 flex-col divide-y divide-border border border-border lg:flex xl:w-[300px]",
         className,
       )}
     >
       {sections.map((section) => {
         const expanded = open.includes(section.id)
         const contentId = `panel-${section.id}`
-        const Chevron = expanded ? ChevronUpIcon : ChevronDownIcon
         return (
           <div key={section.id} className="flex flex-col">
             <h2>
@@ -153,14 +147,21 @@ export function SidePanel({
                   className={cn("size-3.5 shrink-0", !expanded && "text-muted-foreground")}
                 />
                 {section.label}
-                <Chevron className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+                <ChevronDownIcon
+                  className={cn(
+                    "ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
+                    expanded && "rotate-180",
+                  )}
+                />
               </button>
             </h2>
-            {expanded ? (
-              <div id={contentId} className="flex flex-col gap-3 px-3.5 pt-3 pb-4 text-[13px]">
-                {section.content}
-              </div>
-            ) : null}
+            <Reveal
+              open={expanded}
+              id={contentId}
+              className="flex flex-col gap-3 px-3.5 pt-3 pb-4 text-[13px]"
+            >
+              {section.content}
+            </Reveal>
           </div>
         )
       })}

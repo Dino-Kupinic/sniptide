@@ -114,3 +114,18 @@ export async function markAllNotificationsRead() {
     )
   return true
 }
+
+// Removes one of the viewer's notifications from the bell. The row stays (hidden from the bell and
+// marked read) so a pending email still goes out, and the maintenance job deletes it with the
+// other read ones. Someone else's notification, or one already removed, changes nothing.
+export async function dismissNotification(id: string) {
+  const viewer = (await getSession())?.user.id
+  if (!viewer) return false
+  await getDb()
+    .update(notification)
+    .set({ inApp: false, readAt: sql`coalesce(${notification.readAt}, now())` })
+    .where(
+      and(eq(notification.id, id), eq(notification.userId, viewer), eq(notification.inApp, true)),
+    )
+  return true
+}

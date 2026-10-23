@@ -1,0 +1,4 @@
+{
+  "title": "Core concepts",
+  "pages": ["index", "pastes", "collections", "sharing", "burn-after-read", "revisions"]
+}

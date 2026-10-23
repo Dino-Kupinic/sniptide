@@ -9,12 +9,13 @@ import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [session, data, { host }, collections, cookieStore] = await Promise.all([
+  // The sidebar cookie also holds each section's filter, which picks what sidebarData lists.
+  const sidebar = parseSidebarState((await cookies()).get(SIDEBAR_COOKIE)?.value)
+  const [session, data, { host }, collections] = await Promise.all([
     requireSession(),
-    sidebarData(),
+    sidebarData(sidebar.views),
     getSiteOrigin(),
     listCollections(),
-    cookies(),
   ])
 
   return (
@@ -24,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         viewer={viewerFromUser(session.user)}
         data={data}
         collections={collections}
-        initialSidebar={parseSidebarState(cookieStore.get(SIDEBAR_COOKIE)?.value)}
+        initialSidebar={sidebar}
       >
         {children}
       </AppShell>

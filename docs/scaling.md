@@ -44,7 +44,8 @@ before deciding to batch ordinary analytics. Do not batch burn claims with analy
 ## Connection and execution budgets
 
 All settings below are runtime environment variables except the deployment build settings.
-Invalid integer settings fail explicitly. Size the pool from the database's usable connection
+Invalid integer settings fail explicitly. The account limits count only current paste content, so
+older revisions (the newest 20 per paste keep a copy) add to the real database size. Size the pool from the database's usable connection
 budget, not from traffic alone:
 
 `maximum app connections = app processes (including overlapping releases) × DATABASE_POOL_SIZE`
@@ -65,8 +66,8 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | DATABASE_STATEMENT_TIMEOUT_MS | 10000 | SQL execution deadline |
 | DATABASE_LOCK_TIMEOUT_MS | 3000 | Lock wait deadline |
 | DATABASE_IDLE_TRANSACTION_TIMEOUT_MS | 15000 | Abandoned transaction deadline |
-| ACCOUNT_STORAGE_BYTES | 1073741824 | Per-account current-content budget |
-| ACCOUNT_PASTE_LIMIT | 10000 | Per-account paste count, including trash |
+| ACCOUNT_STORAGE_BYTES | 100MB | Per-account current-content budget; a size, bytes, or `unlimited` |
+| ACCOUNT_PASTE_LIMIT | 1000 | Per-account paste count, including trash; a number or `unlimited` |
 | VIEW_HISTORY_RETENTION_DAYS | 90 | Retained daily chart history |
 | ANALYTICS_RETENTION_DAYS | 180 | Retained daily analytics rollups (at least 180) |
 | PURGE_BATCH_SIZE | 500 | Maximum deletions per table in each transaction |

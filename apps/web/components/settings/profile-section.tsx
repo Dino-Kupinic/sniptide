@@ -127,7 +127,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
   return (
     <SettingsSection title={t("profile")} description={t("shownOnYourPublicPastesAnd")}>
       <div className="flex items-center gap-3">
-        <Avatar className="size-14 font-heading text-lg font-bold">
+        <Avatar className="size-14 rounded-lg font-heading text-lg font-bold">
           {image ? <AvatarImage src={image} alt="" /> : null}
           <AvatarFallback>{profile.initials}</AvatarFallback>
         </Avatar>
@@ -187,7 +187,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
             <Label htmlFor="settings-username">{t("username")}</Label>
             <div
               className={cn(
-                "flex h-10 items-center border border-input focus-within:border-2 focus-within:border-primary",
+                "flex h-10 items-center overflow-hidden rounded-lg border border-input focus-within:border-2 focus-within:border-primary",
                 (usernameStatus === "taken" || usernameStatus === "invalid") &&
                   "border-destructive",
               )}
@@ -229,29 +229,6 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
               </span>
             </div>
           </div>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="settings-email">{t("email")}</Label>
-          <div className="flex h-10 items-center border border-input bg-sidebar px-3">
-            <input
-              id="settings-email"
-              value={profile.email}
-              readOnly
-              aria-describedby="settings-email-note"
-              className="min-w-0 flex-1 bg-transparent text-base outline-none lg:text-sm"
-            />
-            <span
-              className={cn(
-                "text-xs font-medium",
-                profile.emailVerified ? "text-link" : "text-muted-foreground",
-              )}
-            >
-              {profile.emailVerified ? t("verified") : t("notVerified")}
-            </span>
-          </div>
-          <p id="settings-email-note" className="text-xs text-muted-foreground">
-            {t("changingYourEmailNeedsVerificationBy")}
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <AutosaveStatus state={state} />
