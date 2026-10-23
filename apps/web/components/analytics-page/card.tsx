@@ -67,7 +67,10 @@ export function Meter({
       className={cn("flex h-1.5 shrink-0 overflow-hidden rounded-sm bg-border", className)}
     >
       <div
-        className={cn("h-full rounded-sm", tone === "link" ? "bg-link" : "bg-muted-foreground/40")}
+        className={cn(
+          "h-full rounded-sm",
+          tone === "link" ? "bg-chart-1" : "bg-muted-foreground/40",
+        )}
         style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}
       />
     </div>

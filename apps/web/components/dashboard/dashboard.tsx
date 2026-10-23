@@ -252,7 +252,7 @@ export function Dashboard({
                 <ArrowRightIcon className="size-3.5" />
               </Link>
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="hidden size-2 bg-link lg:block" />
+                <span className="hidden size-2 bg-chart-1 lg:block" />
                 <span className="hidden lg:inline">
                   {chartDays > 7 ? t("last_30_days") : t("last_7_days")}
                 </span>

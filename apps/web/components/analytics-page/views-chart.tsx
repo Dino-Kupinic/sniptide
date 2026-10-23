@@ -30,7 +30,7 @@ function toWeeks(points: SeriesPoint[]): SeriesPoint[] {
   return weeks
 }
 
-// The Analytics bar chart: link-blue bars capped with three thin ink rules, the peak in ink with
+// The Analytics bar chart: Tide Blue bars capped with three thin ink rules, the peak in pink with
 // its value above it. Tapping or arrowing to a bar shows its value in place of the range label.
 export function ViewsChart({
   className,
@@ -111,22 +111,34 @@ function Chart({
         className,
       )}
     >
-      <div className="flex flex-col gap-0.5">
-        <h2 id={`${id}-title`} className="text-sm font-semibold">
-          {title}
-        </h2>
-        <p aria-live="polite" className="text-[13px] text-muted-foreground">
-          {selectedPoint ? (
-            <span className="text-foreground">
-              {t("chart_point", {
-                day: pointLabel(selectedPoint),
-                value: formatNumber(values[selected ?? 0] ?? 0, locale),
-              })}
-            </span>
-          ) : (
-            rangeLabel
-          )}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-0.5">
+          <h2 id={`${id}-title`} className="text-sm font-semibold">
+            {title}
+          </h2>
+          <p aria-live="polite" className="text-[13px] text-muted-foreground">
+            {selectedPoint ? (
+              <span className="text-foreground">
+                {t("chart_point", {
+                  day: pointLabel(selectedPoint),
+                  value: formatNumber(values[selected ?? 0] ?? 0, locale),
+                })}
+              </span>
+            ) : (
+              rangeLabel
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 pt-0.5 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="size-2 bg-chart-1" />
+            {title}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="size-2 bg-highlight" />
+            {t("peak_day")}
+          </span>
+        </div>
       </div>
 
       {total === 0 ? (
@@ -246,7 +258,7 @@ function Chart({
                         </>
                       ) : null}
                       <span
-                        className={cn("min-h-0 flex-1", isPeak ? "bg-foreground" : "bg-link")}
+                        className={cn("min-h-0 flex-1", isPeak ? "bg-highlight" : "bg-chart-1")}
                       />
                     </span>
                   </button>

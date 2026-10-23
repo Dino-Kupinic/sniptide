@@ -25,7 +25,8 @@ local database is set up and kept current by `bun dev`.
 
 GitHub and Google sign-in are optional: set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` and
 `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` to turn them on. Until then their buttons render
-disabled.
+disabled. The callback URLs are `<BETTER_AUTH_URL>/api/auth/callback/github` and
+`<BETTER_AUTH_URL>/api/auth/callback/google`.
 
 ## Contributing
 
@@ -271,9 +272,18 @@ unless you turn them on:
 | Open sign-up | On: anyone can create an account | `ALLOW_SIGN_UP=false` closes it for everyone; existing accounts keep signing in |
 | Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails (`WAITLIST_URL` adds an "apply" link) |
 | Public demo | Off | `DEMO_MODE=true` signs every visitor in to a shared guest account with example pastes and resets it every `DEMO_RESET_MINUTES` (60); use with `ALLOW_SIGN_UP=false` |
+| Account menu links | Homepage, Documentation and Help point at the Sniptide project | `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` |
 | PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
 | Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
 | Notification emails | Off; users opt in per event | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`; optional paired `SMTP_USER`/`SMTP_PASSWORD` |
+| Password reset by email | Off; the forgot-password page asks people to contact the administrator | The same SMTP settings |
+
+Settings > Account lets people change their email and password, add a password to a GitHub or
+Google account, connect or disconnect GitHub and Google, see their signed-in devices and sign them
+out, and delete the account. With SMTP, a verified email changes only after the old address
+approves it and the new address is verified. Without SMTP no address is ever verified, so a change
+applies at once after the current password is confirmed. Reset links work once, for one hour, at
+most three per account per hour, and using one signs the account out everywhere.
 
 Settings > Notifications controls in-app and email delivery independently for shared pastes, burns,
 expiry warnings and view milestones. Existing accounts keep in-app notifications on and email off.

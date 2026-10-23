@@ -57,3 +57,5 @@ export function useSecretValues() {
   }
   return { values, setValues, clear, begin }
 }
+export const ENVIRONMENTS = ["dev", "staging", "prod"] as const
+export type Environment = (typeof ENVIRONMENTS)[number]

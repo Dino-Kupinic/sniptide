@@ -408,7 +408,7 @@ export function PasteList({
                               undo: () => setStarred(row.slug, true),
                             })
                           }}
-                          className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                          className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-highlight outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
                         >
                           <StarIcon className="size-4 fill-current" />
                         </button>

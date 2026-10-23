@@ -37,6 +37,7 @@ import {
   StarIcon,
   Trash2Icon,
   UsersIcon,
+  WorkflowIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -173,6 +174,13 @@ export function Sidebar({
           <ChartColumnIcon />
           {t("analytics")}
         </NavLink>
+        <div className="flex h-8 shrink-0 items-center gap-2 pr-1 pl-2 text-sm text-muted-foreground [&_svg]:size-4">
+          <WorkflowIcon className="shrink-0" />
+          <span className="min-w-0 flex-1">{t("workflows")}</span>
+          <span className="shrink-0 rounded border border-border px-1 py-0.5 text-[10px] leading-none font-normal text-muted-foreground">
+            {t("coming_soon")}
+          </span>
+        </div>
         <NavLink href="/secrets" pathname={pathname}>
           <KeyRoundIcon />
           {t("secrets")}
@@ -834,7 +842,7 @@ function PasteRow({
         }}
         className={cn(iconButtonClass, !(alwaysShowStar && starred) && revealClass)}
       >
-        <StarIcon className={cn(starred && "fill-link text-link")} />
+        <StarIcon className={cn(starred && "fill-highlight text-highlight")} />
       </button>
     </div>
   )

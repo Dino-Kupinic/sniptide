@@ -74,6 +74,21 @@
     "webhookPaste": "Solo el propietario puede compartir un paste activo público o no listado sin contraseña ni protección de un solo uso.",
     "webhookInvalid": "Ese webhook no está configurado correctamente.",
     "webhookDelivery": "El webhook no ha confirmado la entrega. Revisa el canal antes de volver a intentarlo.",
-    "validationTooLong": "Usa como máximo {max} caracteres."
+    "validationTooLong": "Usa como máximo {max} caracteres.",
+    "signInAccount": "Vuelve a iniciar sesión para cambiar tu cuenta.",
+    "emailInvalid": "Escribe un correo válido.",
+    "emailSame": "Ese ya es tu correo.",
+    "emailUnavailable": "Ese correo no se puede usar. Prueba con otro.",
+    "emailDeliveryOff": "Para cambiar un correo verificado hace falta el envío de correos, que no está configurado en esta instancia.",
+    "emailChangeFailed": "No se pudo cambiar tu correo. Vuelve a intentarlo.",
+    "wrongPassword": "Esa contraseña no es correcta.",
+    "passwordTooShort": "Usa al menos 8 caracteres.",
+    "passwordTooLong": "Usa como máximo 128 caracteres.",
+    "passwordSetFailed": "No se pudo añadir la contraseña. Vuelve a intentarlo.",
+    "sessionRevokeFailed": "No se pudo cerrar la sesión en ese dispositivo. Vuelve a intentarlo.",
+    "unlinkLast": "Conserva al menos una forma de iniciar sesión. Añade antes una contraseña o conecta otra cuenta.",
+    "unlinkFailed": "No se pudo desconectar esa cuenta. Vuelve a intentarlo.",
+    "demoLocked": "Esto no está disponible en la demo.",
+    "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo."
   }
 }

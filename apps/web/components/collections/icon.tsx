@@ -81,7 +81,7 @@ export const hueClass: Record<Hue, string> = {
   amber: "text-[#E0A100]",
   orange: "text-[#EF6820]",
   red: "text-[#D92D20]",
-  pink: "text-[#DD2590]",
+  pink: "text-highlight",
   violet: "text-[#7A5AF8]",
 }
 

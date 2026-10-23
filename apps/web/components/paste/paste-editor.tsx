@@ -217,7 +217,6 @@ export function PasteEditor({
   sharedEdit?: boolean
 }) {
   const t = useTranslations("Paste")
-  const secretsT = useTranslations("Secrets")
   const feedbackT = useTranslations("Core")
   const locale: Locale = useLocale()
   const host = useSiteHost()
@@ -920,16 +919,6 @@ export function PasteEditor({
           <ShortcutKeys id="submit" className="bg-primary-foreground/20 text-primary-foreground" />
         </Button>
       </HeaderActions>
-
-      {!editing && (
-        <p className="px-4 pb-3 text-sm text-muted-foreground lg:p-0">
-          {secretsT("credentials_prompt")}{" "}
-          <Link href="/secrets/new" className="text-link underline underline-offset-4">
-            {secretsT("credentials_link")}
-          </Link>
-          .
-        </p>
-      )}
 
       <div className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
         <textarea

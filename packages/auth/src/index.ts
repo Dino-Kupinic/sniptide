@@ -45,6 +45,15 @@ export interface AuthConfig {
     NonNullable<BetterAuthOptions["emailVerification"]>,
     "sendVerificationEmail"
   >
+  // The three senders below need an email transport. Without one, password reset is off and an
+  // email change applies at once (no address is verified then, so there's nothing to confirm).
+  sendResetPassword?: NonNullable<BetterAuthOptions["emailAndPassword"]>["sendResetPassword"]
+  // Asks the current, verified address to approve a change before the new one is verified.
+  sendChangeEmailConfirmation?: NonNullable<
+    NonNullable<BetterAuthOptions["user"]>["changeEmail"]
+  >["sendChangeEmailConfirmation"]
+  // Where GitHub and Google sign-in failures land, with the reason as ?error=<code>.
+  errorURL?: string
   plugins?: BetterAuthPlugin[]
 }
 
@@ -63,6 +72,9 @@ export function createAuth({
   github,
   google,
   emailVerification,
+  sendResetPassword,
+  sendChangeEmailConfirmation,
+  errorURL,
   plugins = [],
 }: AuthConfig) {
   const allowlist = parseAllowlist(allowedEmails)
@@ -85,11 +97,28 @@ export function createAuth({
     emailVerification,
     emailAndPassword: {
       enabled: true,
+      sendResetPassword,
+      // Whoever reset the password gets the only session; a stolen session ends with it.
+      revokeSessionsOnPasswordReset: true,
     },
+    account: {
+      accountLinking: {
+        // Linking from Settings happens while signed in, so the GitHub or Google account may use
+        // another address than the Sniptide one. Sign-in still links only matching, verified
+        // emails on its own.
+        allowDifferentEmails: true,
+      },
+    },
+    ...(errorURL ? { onAPIError: { errorURL } } : {}),
     user: {
       additionalFields: {
         // Settings page preferences as JSON; parsed and validated in the web app.
         preferences: { type: "string", required: false, input: true },
+      },
+      changeEmail: {
+        enabled: true,
+        updateEmailWithoutVerification: true,
+        sendChangeEmailConfirmation,
       },
       deleteUser: { enabled: true },
     },

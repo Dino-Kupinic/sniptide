@@ -10,6 +10,7 @@ import {
   CreditCardIcon,
   KeyRoundIcon,
   type LucideIcon,
+  ShieldIcon,
   SlidersHorizontalIcon,
   UserIcon,
 } from "lucide-react"
@@ -17,18 +18,26 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
+import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
+import {
+  ConnectedAccountsSection,
+  DeleteAccountSection,
+  EmailSection,
+  PasswordSection,
+  SessionsSection,
+} from "./account-sections"
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
-import { DeleteAccountSection } from "./delete-account"
 import { NotificationSection } from "./notification-section"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-const SETTINGS_TABS = ["general", "defaults", "notifications", "api", "billing"] as const
+const SETTINGS_TABS = ["general", "account", "defaults", "notifications", "api", "billing"] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function parseTab(value: string | null): SettingsTab | null {
@@ -41,8 +50,10 @@ function tabHref(tab: SettingsTab) {
 
 const titleClass = "font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]"
 
-function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) {
+// No limit (a self-hosted server that turned it off) leaves nothing to measure against.
+function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number | null }) {
   const t = useTranslations("Settings")
+  if (limitMb === null) return null
   return (
     <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
       <div className="flex items-center justify-between gap-3 text-sm">
@@ -65,17 +76,24 @@ export function SettingsView({
   pasteCount,
   storage,
   api,
+  security,
 }: {
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
+  security: AccountSecurity & {
+    providers: SocialProvider[]
+    linkError: string | null
+    demo: boolean
+  }
   pasteCount: number
-  storage: { usedMb: number; limitMb: number }
+  storage: { usedMb: number; limitMb: number | null }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
   const tabs: { value: SettingsTab; label: string; icon: LucideIcon }[] = [
     { value: "general", label: t("general"), icon: UserIcon },
+    { value: "account", label: t("account"), icon: ShieldIcon },
     { value: "defaults", label: t("pasteDefaults"), icon: SlidersHorizontalIcon },
     { value: "notifications", label: t("notifications"), icon: BellIcon },
     { value: "api", label: t("apiTokens"), icon: KeyRoundIcon },
@@ -209,7 +227,24 @@ export function SettingsView({
               <LanguageSwitcher />
             </SettingsSection>
             <EditorSection initial={preferences} />
-            <DeleteAccountSection pasteCount={pasteCount} />
+          </>
+        ) : null}
+        {tab === "account" ? (
+          <>
+            <EmailSection
+              email={profile.email}
+              emailVerified={profile.emailVerified}
+              hasPassword={security.hasPassword}
+              emailAvailable={emailAvailable}
+            />
+            <PasswordSection hasPassword={security.hasPassword} />
+            <ConnectedAccountsSection
+              linked={security.linked}
+              available={security.providers}
+              linkError={security.linkError}
+            />
+            <SessionsSection sessions={security.sessions} demo={security.demo} />
+            <DeleteAccountSection pasteCount={pasteCount} hasPassword={security.hasPassword} />
           </>
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
@@ -231,9 +266,11 @@ export function SettingsView({
             <div className="rounded-lg flex flex-col gap-1 border border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex min-w-0 flex-col">
                 <span className="text-sm font-medium">{t("free")}</span>
-                <span className="text-[13px] text-muted-foreground">
-                  {t("planStorage", { limit: storage.limitMb })}
-                </span>
+                {storage.limitMb === null ? null : (
+                  <span className="text-[13px] text-muted-foreground">
+                    {t("planStorage", { limit: storage.limitMb })}
+                  </span>
+                )}
               </div>
               <span className="text-xs text-muted-foreground">{t("noPaymentMethodNeeded")}</span>
             </div>

@@ -286,11 +286,11 @@ export function Countries({ rows, total }: { rows: CountryRow[]; total: number }
 }
 
 const deviceIcons = {
-  desktop: { icon: MonitorIcon, tone: "text-link", fill: "bg-link" },
+  desktop: { icon: MonitorIcon, tone: "text-link", fill: "bg-chart-1" },
   mobile: {
     icon: SmartphoneIcon,
-    tone: "text-[color-mix(in_oklab,var(--link)_45%,var(--background))]",
-    fill: "bg-[color-mix(in_oklab,var(--link)_45%,var(--background))]",
+    tone: "text-highlight",
+    fill: "bg-highlight",
   },
   cli: {
     icon: TerminalIcon,

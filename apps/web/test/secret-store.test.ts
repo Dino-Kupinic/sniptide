@@ -87,6 +87,23 @@ describeDb("encrypted web secrets", () => {
       await createSecretShare("bob", id, secretShareSchema.parse({ password, hours: 1 })),
     ).toBeNull()
   })
+  test("an update without project or environment keeps them, and a new group needs both", async () => {
+    const id = await create()
+    const update = secretSaveSchema.parse({
+      slug: "project-dev",
+      revision: 1,
+      entries: [{ name: "SECOND", value: "fake-second", replace: true }],
+    })
+    expect(await saveSecret("ada", id, update)).toEqual({ status: "ok", id })
+    const detail = await secretDetail("ada", id)
+    expect(detail?.project).toBe("Example")
+    expect(detail?.environment).toBe("dev")
+    expect(detail?.entries).toEqual([{ name: "API_KEY" }, { name: "SECOND" }])
+    expect(await revealSecret("ada", id, "API_KEY")).toBe(marker)
+    expect(
+      await saveSecret("ada", null, secretSaveSchema.parse({ slug: "bare", entries: [] })),
+    ).toEqual({ status: "invalid" })
+  })
   test("preserves blank existing ciphertext, supports explicit empty values and deletion", async () => {
     const id = await create()
     const [before] = await getDb().select().from(envVariable).where(eq(envVariable.groupId, id))

@@ -14,17 +14,10 @@ import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
-import { passwordStrength } from "./password-strength"
+import { NewPasswordField } from "./password-field"
 import { EmailDivider, SocialButtons } from "./social-buttons"
 
 type Availability = "idle" | "invalid" | "checking" | "available" | "taken"
-
-const strengthHints = new Map([
-  ["Use at least 8 characters", "minimum"],
-  ["Add a symbol", "symbol"],
-  ["Add a number", "number"],
-  ["Mix upper and lower case", "case"],
-])
 
 function useUsernameAvailability(username: string) {
   const [status, setStatus] = React.useState<Availability>("idle")
@@ -58,8 +51,6 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
   const availability = useUsernameAvailability(username)
-  const strength = passwordStrength(password)
-  const strengthHint = strength.hint ? strengthHints.get(strength.hint) : undefined
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -166,40 +157,14 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">{t("password")}</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              aria-describedby="password-strength"
-              className={authInputClass}
-            />
-            {password ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-1" aria-hidden="true">
-                  {[1, 2, 3, 4].map((segment) => (
-                    <span
-                      key={segment}
-                      className={cn(
-                        "h-[3px] flex-1 bg-border",
-                        segment <= strength.score && "bg-primary",
-                      )}
-                    />
-                  ))}
-                </div>
-                <p id="password-strength" className="text-xs text-muted-foreground">
-                  {t(`passwordStrength.${strength.score}`)}
-                  {strengthHint ? ` ${t(`passwordHint.${strengthHint}`)}` : null}
-                </p>
-              </div>
-            ) : null}
-          </div>
+          <NewPasswordField
+            id="password"
+            label={t("password")}
+            value={password}
+            onChange={setPassword}
+            className={authInputClass}
+            labelClassName="text-sm lg:text-[13px]"
+          />
         </div>
 
         <FormError message={error} />

@@ -1,9 +1,11 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
+import { Label } from "@sniptide/ui/components/label"
 import { toast } from "@sniptide/ui/components/toast"
-import { CopyIcon, EyeOffIcon, LockIcon } from "lucide-react"
+import { CopyIcon, EyeOffIcon, KeyRoundIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
@@ -16,11 +18,11 @@ export function SharedSecret({ token }: { token: string }) {
   const { values, setValues, clear, begin } = useSecretValues()
   const entries = Object.entries(values)
   return (
-    <main className="ph-no-capture flex flex-1 flex-col items-center px-4 py-10 lg:py-16">
-      <div className="flex w-full max-w-xl flex-col gap-5 rounded-lg border border-border bg-background p-6 shadow-(--dialog-shadow)">
-        <LockIcon className="size-5" />
+    <main className="ph-no-capture mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-16">
+      <div className="flex w-full max-w-sm flex-col gap-4 self-center rounded-lg border border-border bg-background p-6 shadow-(--dialog-shadow)">
+        <KeyRoundIcon aria-hidden="true" className="size-5" />
         <div className="flex flex-col gap-1">
-          <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
+          <h1 className="font-heading text-2xl font-bold tracking-[-0.02em]">
             {t("protected_title")}
           </h1>
           <p className="text-sm text-muted-foreground">{t("unlock_description")}</p>
@@ -61,71 +63,65 @@ export function SharedSecret({ token }: { token: string }) {
             }
           }}
         >
-          {/* biome-ignore lint/a11y/noLabelWithoutControl: the Input inside is the control */}
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            {t("password")}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="shared-secret-password">{t("password")}</Label>
             <Input
-              className="text-base lg:text-sm"
+              id="shared-secret-password"
               name="password"
               type="password"
               autoComplete="off"
               minLength={12}
               maxLength={128}
               required
-              aria-invalid={Boolean(error)}
             />
-          </label>
-          <Button type="submit" size="xl" loading={busy}>
+          </div>
+          <FormError variant="inline" message={error} />
+          <Button type="submit" size="lg" loading={busy}>
             {busy ? t("checking") : t("reveal_secrets")}
           </Button>
         </form>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        {entries.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="-ml-3 self-start max-lg:h-10"
-              onClick={clear}
-            >
+      </div>
+      {entries.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={clear}>
               <EyeOffIcon />
               {t("hide_all")}
             </Button>
-            <ul className="overflow-hidden rounded-lg divide-y divide-border border border-border">
-              {entries.map(([name, value]) => (
-                <li key={name} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-mono text-sm font-medium break-all">{name}</h2>
-                    <p className="mt-1 max-h-48 overflow-auto font-mono text-sm break-all whitespace-pre-wrap text-muted-foreground">
-                      {value || t("empty_value")}
-                    </p>
-                  </div>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="shrink-0 max-lg:h-[38px]"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(value)
-                        toast.success(t("value_copied", { name }))
-                      } catch {
-                        setError(t("copy_error"))
-                      }
-                    }}
-                  >
-                    <CopyIcon />
-                    {t("copy")}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-      </div>
+          </div>
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {entries.map(([name, value]) => (
+              <li
+                key={name}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 px-4 py-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto]"
+              >
+                <h2 className="truncate py-1 font-mono text-[13px] font-medium" title={name}>
+                  {name}
+                </h2>
+                <p className="col-span-2 row-start-2 max-h-48 overflow-auto py-1 font-mono text-[13px] break-all whitespace-pre-wrap sm:col-span-1 sm:col-start-2 sm:row-start-1">
+                  {value || <span className="text-muted-foreground">{t("empty_value")}</span>}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("copy_name", { name })}
+                  className="col-start-2 row-start-1 text-muted-foreground hover:text-foreground sm:col-start-3"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(value)
+                      toast.success(t("copied", { name }))
+                    } catch {
+                      toast.error(t("copy_error"))
+                    }
+                  }}
+                >
+                  <CopyIcon />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   )
 }
