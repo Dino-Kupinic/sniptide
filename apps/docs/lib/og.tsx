@@ -39,10 +39,7 @@ export async function renderOgImage({
   title: string
   description?: string
 }) {
-  const [heading, body] = await Promise.all([
-    font("Archivo-700.woff"),
-    font("Inter-400.woff"),
-  ])
+  const [heading, body] = await Promise.all([font("Archivo-700.woff"), font("Inter-400.woff")])
 
   return new ImageResponse(
     <div
@@ -65,9 +62,7 @@ export async function renderOgImage({
             ))}
           </g>
         </svg>
-        <div style={{ fontFamily: "Archivo", fontSize: 36, letterSpacing: -0.7 }}>
-          {siteName}
-        </div>
+        <div style={{ fontFamily: "Archivo", fontSize: 36, letterSpacing: -0.7 }}>{siteName}</div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
