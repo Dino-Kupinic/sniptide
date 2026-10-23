@@ -3,7 +3,7 @@ import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { toRows } from "@/lib/pastes/rows"
-import { listOwnPastes, listStarred, navCounts, setStarred } from "@/lib/pastes/store"
+import { listOwnPastes, listStarred, navCounts, setStarred, sharePaste } from "@/lib/pastes/store"
 import {
   hasDatabase,
   resetDatabase,
@@ -56,6 +56,35 @@ describeDb("starring", () => {
 
     expect((await titles()).sort()).toEqual(["title-of-pub", "title-of-unl"])
     expect((await navCounts()).starred).toBe(2)
+  })
+
+  test("sealed burn pastes cannot be starred by link readers or invitees", async () => {
+    for (const visibility of ["public", "unlisted", "private"] as const) {
+      await seedPaste({ slug: `burn-${visibility}`, owner: "owner", visibility, burnAfterRead: true })
+      signInAs("owner")
+      await sharePaste(`burn-${visibility}`, "other", "view")
+      signInAs("other")
+      await setStarred(`burn-${visibility}`, true)
+    }
+    expect(await starCount()).toBe(0)
+    expect(await titles()).toEqual([])
+    expect((await navCounts()).starred).toBe(0)
+  })
+
+  test("existing public and unlisted stars hide while burn is enabled and remain removable", async () => {
+    signInAs("other")
+    await setStarred("pub", true)
+    await setStarred("unl", true)
+    await getDb().update(paste).set({ burnAfterRead: true }).where(eq(paste.ownerId, "owner"))
+    expect(await titles()).toEqual([])
+    expect((await navCounts()).starred).toBe(0)
+    await setStarred("pub", false)
+    await setStarred("unl", false)
+    expect(await starCount()).toBe(0)
+
+    signInAs("owner")
+    await setStarred("pub", true)
+    expect(await titles()).toEqual(["title-of-pub"])
   })
 
   test("a password paste can be starred once it is unlocked, and drops out of the list if not", async () => {
