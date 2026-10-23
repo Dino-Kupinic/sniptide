@@ -69,7 +69,7 @@ export function StarButton({
         })
       }
     >
-      <StarIcon className={cn(optimistic && "fill-current")} />
+      <StarIcon className={cn(optimistic && "fill-highlight text-highlight")} />
     </Button>
   )
 }

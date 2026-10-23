@@ -69,7 +69,7 @@ export function Meter({
       <div
         className={cn(
           "h-full rounded-full",
-          tone === "link" ? "bg-link" : "bg-muted-foreground/40",
+          tone === "link" ? "bg-chart-1" : "bg-muted-foreground/40",
         )}
         style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }}
       />
