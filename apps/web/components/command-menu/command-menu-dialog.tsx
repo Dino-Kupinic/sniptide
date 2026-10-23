@@ -382,7 +382,7 @@ function Option({
 function Highlight({ value, text }: { value: string; text: string }) {
   return highlight(value, text).map((segment, index) =>
     segment.match ? (
-      <mark key={index} className="bg-link/15 text-inherit dark:bg-link/20">
+      <mark key={index} className="bg-pink text-pink-foreground">
         {segment.text}
       </mark>
     ) : (

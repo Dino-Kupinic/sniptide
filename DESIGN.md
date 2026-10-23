@@ -23,10 +23,13 @@ When code and Paper differ, the shipped code wins for the app. A change to a tok
 | `border` | `--border`, `--input` |
 | `foreground`, `foreground-muted` | `--foreground`, `--muted-foreground` |
 | `dark-accent`, `dark-accent-text` | `--primary`, `--link` under `.dark` |
+| `brand-pink`, `brand-pink-ink` | `--pink`, `--pink-foreground` |
 
 ## Tokens: Colors
 
 Components use the Tailwind classes generated from these variables, such as `bg-primary` and `text-muted-foreground`. Hex values stay in `globals.css`.
+
+Sniptide has two brand colors. Tide Blue is the color of every action: buttons, links, focus, selection and chart bars. Pink is the second color and marks what stands out without being an action: search matches, stars, the peak of a chart and the pink collection icon. Pink never fills a button in the app, never marks an error and never sets running text in light mode.
 
 ### Light
 
@@ -38,7 +41,10 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Hairline | `#E8E8E8` | `--border`, `--input` | Borders and dividers |
 | Ink | `#1B1919` | `--foreground` | Text, inverted buttons |
 | Graphite | `#6B6B6B` | `--muted-foreground` | Secondary text and icons |
-| Tide Blue | `#2A26EC` | `--primary`, `--ring`, `--link` | Primary actions, focus, links, active data |
+| Tide Blue | `#2A26EC` | `--primary`, `--ring`, `--link`, `--chart-1` | Primary actions, focus, links, chart bars |
+| Pink | `#F6A9D3` | `--pink` | Search match highlight and pink panels, with `--pink-foreground` text |
+| Pink ink | `#2B0A1F` | `--pink-foreground` | Text on pink (9.9:1) |
+| Hot pink | `#E353AC` | `--highlight` | Stars, the chart peak and pink collection icons (3.4:1 on white) |
 | Red | `oklch(0.577 0.245 27.325)` | `--destructive` | Destructive actions and invalid fields |
 
 ### Dark
@@ -52,8 +58,10 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Hairline | `#2F2C2C` | `--border`, `--input` | Borders and dividers |
 | Snow | `#F4F4F4` | `--foreground` | Text |
 | Ash | `#A3A3A3` | `--muted-foreground` | Secondary text and icons |
-| Tide Blue | `#3A36FF` | `--primary`, `--ring` | Button fills (white on it is 6.7:1) |
-| Sky Blue | `#6AA3FF` | `--link` | Links, code keywords, stars, collection icons, chart bars (7.5:1 on the surfaces) |
+| Tide Blue | `#2A26EC` | `--primary`, `--chart-1` | Button fills and chart bars (white on it is 8.1:1) |
+| Tide Light | `#8F8CFF` | `--link`, `--ring` | Links, focus rings, code keywords and blue collection icons (6.6:1 on the canvas). The landing uses the same tint |
+| Pink | `#F6A9D3` | `--pink`, `--highlight` | Search match highlight, stars, the chart peak and pink collection icons |
+| Pink ink | `#2B0A1F` | `--pink-foreground` | Text on pink |
 
 ### Brand
 
@@ -61,14 +69,14 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | --- | --- | --- | --- |
 | Brand blue | `#2A26EC` | `--logo-primary` (light), Paper `brand-blue` | Logo mark and marketing blue |
 | Inverse blue | `#1B17C6` | `--logo-primary` (dark) | Logo mark on dark surfaces |
-| Pink | `#F6A9D3` | Paper `brand-pink` | The one highlighted section on the landing page |
-| Pink ink | `#2B0A1F` | Paper `brand-pink-ink` | Text and panels on the pink section |
+| Pink | `#F6A9D3` | `--pink`, Paper `brand-pink` | The second brand color and the one pink section on the landing page |
+| Pink ink | `#2B0A1F` | `--pink-foreground`, Paper `brand-pink-ink` | Text and panels on the pink section |
 
 ### Syntax
 
 | Token | Light | Dark |
 | --- | --- | --- |
-| `--syntax-keyword`, `--syntax-link` | `#2A26EC` | `#6AA3FF` |
+| `--syntax-keyword`, `--syntax-link` | `#2A26EC` | `#8F8CFF` |
 | `--syntax-string` | `#047857` | `#5FD3A8` |
 | `--syntax-constant` | `#B45309` | `#F5B971` |
 | `--syntax-function` | `#6D28D9` | `#C4B5FD` |
@@ -283,7 +291,7 @@ Backdrops use `bg-foreground/20` in light mode and `bg-black/60` in dark mode. T
 
 ## Imagery
 
-The product shows real screens with realistic data. The landing page has a dark and a light version in Paper. The dark hero is `#0C0B0B` with a horizon of horizontal pixel stripes in blue, followed by product bands, one pink section, one full-bleed blue call to action and a footer with a large wordmark. Stat tiles use a blue fill for the single highlighted figure. Icons are 16px line glyphs in the text color.
+The product shows real screens with realistic data. The landing page has a dark and a light version in Paper. The dark hero is `#0C0B0B` with a horizon of horizontal pixel stripes in blue, followed by product bands, one pink section, one full-bleed blue call to action and a footer with a large wordmark. Stat tiles use a blue fill for the single highlighted figure, and charts draw Tide Blue bars with the peak in pink. Icons are 16px line glyphs in the text color.
 
 ## Page structure
 
@@ -373,6 +381,8 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 - Build the mobile layout in the same change as the desktop layout.
 - Use `--float-shadow` and `--dialog-shadow` on floating layers only.
 - Use `--link` for blue text and `--primary` for blue fills, so dark mode keeps its contrast.
+- Use `--chart-1` for chart bars and `--highlight` for the one emphasized data point.
+- Use `--pink` with `--pink-foreground` for pink surfaces and `--highlight` for pink icons and marks.
 - Add a variant to an existing component when two screens need different looks.
 - Remove an element before adding one, and keep information on the surface and avoid nesting cards.
 
@@ -382,7 +392,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 - Don't write hex values in components. Use the variables.
 - Don't add shadows to cards, rows or inputs.
 - Don't use red for anything other than destructive actions and invalid fields.
-- Don't use the pink section outside the landing page.
+- Don't use the pink section outside the landing page, and don't give pink to buttons, links or errors in the app.
 - Don't add eyebrow labels, taglines or decorative copy, as the copy rules describe.
 
 ## Agent prompt guide
@@ -396,8 +406,10 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 | Sidebar | `#FAFAFA` | `#0C0B0B` |
 | Secondary text | `#6B6B6B` | `#A3A3A3` |
 | Border | `#E8E8E8` | `#2F2C2C` |
-| Primary fill | `#2A26EC` | `#3A36FF` |
-| Link | `#2A26EC` | `#6AA3FF` |
+| Primary fill, chart bars | `#2A26EC` | `#2A26EC` |
+| Link, focus | `#2A26EC` | `#8F8CFF` |
+| Pink surface | `#F6A9D3` | `#F6A9D3` |
+| Pink marks | `#E353AC` | `#F6A9D3` |
 
 ### Example component prompts
 
