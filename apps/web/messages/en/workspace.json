@@ -373,8 +373,6 @@
     "unlock_description": "Enter the link password to reveal the current values. Values hide after one minute or when you leave this window.",
     "checking": "Checking…",
     "reveal_secrets": "Reveal secrets",
-    "credentials_prompt": "Storing credentials?",
-    "credentials_link": "Create an encrypted secret group",
     "syntax_error": "Check the .env syntax and size limits.",
     "save_error": "Could not save.",
     "reveal_error": "Could not reveal or copy the secret.",

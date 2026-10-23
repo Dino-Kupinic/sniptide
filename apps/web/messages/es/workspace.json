@@ -373,8 +373,6 @@
     "unlock_description": "Introduce la contraseña del enlace para revelar los valores actuales. Los valores se ocultan después de un minuto o al salir de esta ventana.",
     "checking": "Comprobando…",
     "reveal_secrets": "Revelar secretos",
-    "credentials_prompt": "¿Vas a guardar credenciales?",
-    "credentials_link": "Crea un grupo de secretos cifrado",
     "syntax_error": "Revisa la sintaxis de .env y los límites de tamaño.",
     "save_error": "No se pudo guardar.",
     "reveal_error": "No se pudo revelar o copiar el secreto.",
