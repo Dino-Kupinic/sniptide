@@ -47,7 +47,7 @@ export function RowMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t("actions_for", { name: row.title })}
-        className="relative z-10 flex size-7 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+        className="rounded-md relative z-10 flex size-7 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
       >
         <MoreHorizontalIcon className="size-4" />
       </DropdownMenuTrigger>

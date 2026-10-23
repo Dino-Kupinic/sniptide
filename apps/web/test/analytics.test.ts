@@ -143,3 +143,35 @@ describe("auth marker", () => {
     ).toBeNull()
   })
 })
+
+describe("secret analytics containment", () => {
+  test("drops every event on secret pages and queued events with secret URLs", async () => {
+    const { shouldDropSecretEvent } = await import("@/lib/analytics")
+    expect(shouldDropSecretEvent({ properties: {} }, "/secrets")).toBe(true)
+    expect(shouldDropSecretEvent({ properties: {} }, "/secret-share/fake-token")).toBe(true)
+    expect(
+      shouldDropSecretEvent(
+        { properties: { $current_url: "https://app.test/secrets/fake-id" } },
+        "/dashboard",
+      ),
+    ).toBe(true)
+    expect(
+      shouldDropSecretEvent(
+        { $set_once: { $initial_referrer: "https://app.test/secret-share/fake-token" } },
+        "/dashboard",
+      ),
+    ).toBe(true)
+    expect(
+      shouldDropSecretEvent(
+        { properties: { $current_url: "https://app.test/dashboard" } },
+        "/dashboard",
+      ),
+    ).toBe(false)
+  })
+  test("scrubs secret paths and tokens in URLs and referrers", () => {
+    expect(scrubPath("/secrets/fake-group-id")).toBe("/secrets/[id]")
+    expect(scrubUrl("https://shares.test/secret-share/fake-token/reveal?password=fake#value")).toBe(
+      "https://shares.test/secret-share/[token]",
+    )
+  })
+})

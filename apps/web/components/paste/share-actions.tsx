@@ -31,14 +31,14 @@ export function ShareActions({
         {rawHref ? (
           <Button
             variant="outline"
-            className="h-12 px-4 text-base"
+            className="h-[46px] px-4 text-base"
             render={<a href={rawHref} />}
             nativeButton={false}
           >
             {t("raw")}
           </Button>
         ) : null}
-        <Button className="h-12 flex-1 gap-2 text-base font-semibold" onClick={copyCode}>
+        <Button className="h-[46px] flex-1 gap-2 text-base font-semibold" onClick={copyCode}>
           {copied ? <SuccessCheck /> : <CopyIcon />}
           <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
         </Button>

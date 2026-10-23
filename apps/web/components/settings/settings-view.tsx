@@ -9,18 +9,26 @@ import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
+import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
+import {
+  ConnectedAccountsSection,
+  DeleteAccountSection,
+  EmailSection,
+  PasswordSection,
+  SessionsSection,
+} from "./account-sections"
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
-import { DeleteAccountSection } from "./delete-account"
 import { NotificationSection } from "./notification-section"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-export type SettingsTab = "general" | "defaults" | "notifications" | "api" | "billing"
+export type SettingsTab = "general" | "account" | "defaults" | "notifications" | "api" | "billing"
 
 export interface WorkspaceCounts {
   shared: number
@@ -29,10 +37,12 @@ export interface WorkspaceCounts {
   pastes: number
 }
 
-function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number }) {
+// No limit (a self-hosted server that turned it off) leaves nothing to measure against.
+function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number | null }) {
   const t = useTranslations("Settings")
+  if (limitMb === null) return null
   return (
-    <div className="flex flex-col gap-3 border border-border p-4">
+    <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
       <div className="flex items-center justify-between text-[15px] lg:text-sm">
         <span className="font-medium">{t("storage")}</span>
         <span className="text-muted-foreground tabular-nums">
@@ -52,19 +62,27 @@ export function SettingsView({
   counts,
   storage,
   api,
+  security,
 }: {
   initialTab: SettingsTab
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
+  security: AccountSecurity & {
+    providers: SocialProvider[]
+    linkError: string | null
+    demo: boolean
+  }
   counts: WorkspaceCounts
-  storage: { usedMb: number; limitMb: number }
+  storage: { usedMb: number; limitMb: number | null }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
+  const secretsT = useTranslations("Secrets")
   const workspace = useTranslations("Workspace")
   const tabs: { value: SettingsTab; label: string }[] = [
     { value: "general", label: t("general") },
+    { value: "account", label: t("account") },
     { value: "defaults", label: t("pasteDefaults") },
     { value: "notifications", label: workspace("notifications") },
     { value: "api", label: t("apiTokens") },
@@ -99,8 +117,15 @@ export function SettingsView({
         <h2 className="px-1 text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase">
           {t("workspace")}
         </h2>
-        <nav className="flex flex-col divide-y divide-border border border-border text-[15px]">
+        <nav className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
+          <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-3 text-muted-foreground">
+            {workspace("workflows")}
+            <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] leading-none">
+              {workspace("coming_soon")}
+            </span>
+          </div>
           {[
+            { href: "/secrets", label: secretsT("title"), count: null },
             { href: "/shared", label: t("sharedWithMe"), count: counts.shared },
             { href: "/collections", label: t("collections"), count: counts.collections },
             { href: "/trash", label: t("trash"), count: counts.trash },
@@ -157,7 +182,24 @@ export function SettingsView({
               <LanguageSwitcher />
             </SettingsSection>
             <EditorSection initial={preferences} />
-            <DeleteAccountSection pasteCount={counts.pastes} />
+          </>
+        ) : null}
+        {tab === "account" ? (
+          <>
+            <EmailSection
+              email={profile.email}
+              emailVerified={profile.emailVerified}
+              hasPassword={security.hasPassword}
+              emailAvailable={emailAvailable}
+            />
+            <PasswordSection hasPassword={security.hasPassword} />
+            <ConnectedAccountsSection
+              linked={security.linked}
+              available={security.providers}
+              linkError={security.linkError}
+            />
+            <SessionsSection sessions={security.sessions} demo={security.demo} />
+            <DeleteAccountSection pasteCount={counts.pastes} hasPassword={security.hasPassword} />
           </>
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
@@ -176,12 +218,14 @@ export function SettingsView({
         ) : null}
         {tab === "billing" ? (
           <SettingsSection title={t("plan")} description={t("sniptideIsFreeWhileItS")}>
-            <div className="flex items-center justify-between border border-border p-4">
+            <div className="rounded-lg flex items-center justify-between border border-border p-4">
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{t("free")}</span>
-                <span className="text-[13px] text-muted-foreground">
-                  {t("planStorage", { limit: storage.limitMb })}
-                </span>
+                {storage.limitMb === null ? null : (
+                  <span className="text-[13px] text-muted-foreground">
+                    {t("planStorage", { limit: storage.limitMb })}
+                  </span>
+                )}
               </div>
               <span className="text-xs text-muted-foreground">{t("noPaymentMethodNeeded")}</span>
             </div>

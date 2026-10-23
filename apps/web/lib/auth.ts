@@ -9,7 +9,7 @@ import { cache } from "react"
 import { RESOLVED_IP_HEADER } from "@/lib/client-ip"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
-import { sendEmailVerification } from "@/lib/mail"
+import { sendEmailChangeConfirmation, sendEmailVerification, sendPasswordReset } from "@/lib/mail"
 import { readPreferences } from "@/lib/preference-store"
 import { defaultPreferences } from "@/lib/preferences"
 
@@ -39,6 +39,10 @@ export async function getAuth() {
     google: config.google,
     plugins: [nextCookies()],
     emailVerification: smtp ? { sendVerificationEmail: sendEmailVerification } : undefined,
+    sendResetPassword: smtp ? sendPasswordReset : undefined,
+    sendChangeEmailConfirmation: smtp ? sendEmailChangeConfirmation : undefined,
+    // GitHub and Google failures show on the sign-in page instead of Better Auth's error page.
+    errorURL: "/sign-in",
   })
   return auth
 }
@@ -47,6 +51,11 @@ export async function getSocialProviders(): Promise<SocialProvider[]> {
   const configured = getConfig()
 
   return (["github", "google"] as const).filter((provider) => configured[provider])
+}
+
+// True when SMTP is configured, which password reset and verified email changes depend on.
+export function isEmailAvailable() {
+  return Boolean(getConfig().smtp)
 }
 
 // True while ALLOW_SIGN_UP=false: nobody can create an account; existing accounts sign in as usual.

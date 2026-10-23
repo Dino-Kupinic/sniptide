@@ -84,6 +84,10 @@ export function recordMaintenance(values: Record<string, number | boolean>) {
 }
 function route(path = "/") {
   const pathname = path.split("?")[0] ?? "/"
+  if (/^\/secret-share(?:\/|$)/.test(pathname))
+    return pathname.endsWith("/reveal") ? "/secret-share/[token]/reveal" : "/secret-share/[token]"
+  if (/^\/secrets(?:\/|$)/.test(pathname))
+    return pathname === "/secrets" ? "/secrets" : "/secrets/[id]"
   if (/^\/pastes\/[^/]+/.test(pathname))
     return pathname.endsWith("/edit") ? "/pastes/[slug]/edit" : "/pastes/[slug]"
   if (/^\/collections\/[^/]+/.test(pathname)) return "/collections/[slug]"

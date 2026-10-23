@@ -33,7 +33,7 @@ export function Overview({
       <div
         role="radiogroup"
         aria-label={t("chart_metric")}
-        className="grid grid-cols-2 border border-border lg:grid-cols-4"
+        className="grid grid-cols-2 overflow-hidden rounded-lg border border-border lg:grid-cols-4"
       >
         {kpis.map((kpi, index) => {
           const active = kpi.id === selected
@@ -47,12 +47,14 @@ export function Overview({
               aria-checked={active}
               onClick={() => setSelected(kpi.id)}
               className={cn(
-                "flex flex-col items-start gap-1.5 border-t-2 px-4 pt-3.5 pb-4 text-left outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset lg:px-5",
+                "relative flex flex-col items-start gap-1.5 px-4 pt-4 pb-4 text-left outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset lg:px-5",
                 // Two columns on phones, four from lg: hairlines between tiles, none on the outside.
                 index % 2 === 0 && "border-r",
                 index < 2 && "border-b lg:border-b-0",
                 index === 1 && "lg:border-r",
-                active ? "border-t-link bg-sidebar" : "border-t-transparent",
+                // The selected tile gets a blue bar inset from its edges, so it never meets a rounded corner.
+                active &&
+                  "bg-sidebar before:absolute before:inset-x-4 before:top-0 before:h-0.5 before:rounded-b-sm before:bg-link lg:before:inset-x-5",
               )}
             >
               <span
