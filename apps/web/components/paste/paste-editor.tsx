@@ -1,18 +1,12 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Sheet, SheetContent, SheetTitle } from "@sniptide/ui/components/sheet"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
+import { ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
@@ -33,7 +27,8 @@ import {
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
+import { LanguagePicker } from "@/components/paste/language-picker"
 import {
   type PanelSection,
   SidePanel,
@@ -61,7 +56,7 @@ import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
-import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
+import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
@@ -957,34 +952,20 @@ export function PasteEditor({
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label={t("languageName", { name: language.name })}
-                  className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
-                >
-                  <LanguageMarker language={language.id} />
-                  <span className="font-medium text-foreground">{language.name}</span>
-                  <ChevronDownIcon className="size-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="top"
-                  align="start"
-                  className="max-h-80 min-w-44 overflow-y-auto"
-                >
-                  {languages.map((option) => (
-                    <DropdownMenuItem
-                      key={option.id}
-                      onClick={() => {
-                        if (active) updateActive({ name: renameForLanguage(active.name, option) })
-                      }}
-                    >
-                      <LanguageMarker language={option.id} />
-                      {option.name}
-                      {option.id === language.id ? <CheckIcon className="ml-auto" /> : null}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <LanguagePicker
+                value={language.id}
+                onValueChange={(id) => {
+                  if (active)
+                    updateActive({ name: renameForLanguage(active.name, getLanguage(id)) })
+                }}
+                side="top"
+                aria-label={t("languageName", { name: language.name })}
+                className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+              >
+                <LanguageIcon language={language.id} />
+                <span className="font-medium text-foreground">{language.name}</span>
+                <ChevronDownIcon className="size-3" />
+              </LanguagePicker>
               <span className="tabular-nums">
                 <span className="hidden sm:inline">
                   {t("cursorPosition", { line: cursor.line, column: cursor.column })} ·{" "}

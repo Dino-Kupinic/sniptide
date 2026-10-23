@@ -1,67 +1,66 @@
-// Languages Sniptide recognises, with the square marker the Paper designs use for each one.
-// Filled/outlined and primary/ink combinations keep lists scannable without syntax colours.
+import { languageData } from "./language-data"
 
-export type Marker =
-  | "filled-primary"
-  | "filled-foreground"
-  | "outline-primary"
-  | "outline-foreground"
-  | "muted"
+// Every language Shiki can highlight, plus plain text. The table is generated (see
+// scripts/generate-languages.ts); this module looks languages up by id and by file name.
 
-export interface Language {
+export interface LanguageData {
   id: string
   name: string
-  marker: Marker
+  // Shiki's id, where Sniptide stores a different one ("shell" for Shiki's "shellscript").
+  grammar?: string
   extensions: string[]
   filenames?: string[]
+  // A logo in public/languages, from Material Icon Theme. `iconLight` means it has a variant
+  // drawn for light backgrounds at `<icon>-light.svg`.
+  icon: string
+  iconLight?: boolean
 }
 
-export const languages: Language[] = [
-  {
-    id: "typescript",
-    name: "TypeScript",
-    marker: "filled-primary",
-    extensions: ["ts", "tsx", "mts", "cts"],
-  },
-  {
-    id: "javascript",
-    name: "JavaScript",
-    marker: "filled-primary",
-    extensions: ["js", "jsx", "mjs", "cjs"],
-  },
-  { id: "sql", name: "SQL", marker: "filled-primary", extensions: ["sql"] },
-  {
-    id: "shell",
-    name: "Shell",
-    marker: "outline-foreground",
-    extensions: ["sh", "bash", "zsh"],
-    filenames: [".zshrc", ".bashrc", ".profile", "crontab"],
-  },
-  { id: "python", name: "Python", marker: "outline-foreground", extensions: ["py"] },
-  {
-    id: "nginx",
-    name: "Nginx",
-    marker: "filled-foreground",
-    extensions: ["nginx"],
-    filenames: ["nginx.conf"],
-  },
-  {
-    id: "docker",
-    name: "Docker",
-    marker: "filled-foreground",
-    extensions: ["dockerfile"],
-    filenames: ["Dockerfile", "docker-compose.yml", "compose.yaml", "compose.yml"],
-  },
-  { id: "yaml", name: "YAML", marker: "outline-primary", extensions: ["yaml", "yml"] },
-  { id: "go", name: "Go", marker: "outline-primary", extensions: ["go"] },
-  { id: "hcl", name: "HCL", marker: "outline-primary", extensions: ["tf", "hcl"] },
-  { id: "json", name: "JSON", marker: "outline-primary", extensions: ["json"] },
-  { id: "markdown", name: "Markdown", marker: "muted", extensions: ["md", "mdx"] },
-  { id: "text", name: "Plain text", marker: "muted", extensions: ["txt", "log"] },
+export type Language = LanguageData
+
+// Sorted by name.
+export const languages: Language[] = languageData
+
+// The languages people paste most, after GitHub's Octoverse and the Stack Overflow survey, with
+// JSON and YAML in for the configuration that makes up much of what gets pasted. The picker lists
+// them first.
+export const popularLanguageIds = [
+  "typescript",
+  "javascript",
+  "python",
+  "shell",
+  "sql",
+  "json",
+  "yaml",
+  "go",
+  "rust",
+  "java",
 ]
 
 const byId = new Map(languages.map((language) => [language.id, language]))
 const plainText = byId.get("text") as Language
+const byFilename = new Map(
+  languages.flatMap((language) =>
+    (language.filenames ?? []).map((name) => [name.toLowerCase(), language] as const),
+  ),
+)
+const byExtension = new Map(
+  languages.flatMap((language) => language.extensions.map((ext) => [ext, language] as const)),
+)
+
+// Popular first, then the rest by name, with plain text closing the popular group.
+export const pickerGroups: { id: "popular" | "all"; items: Language[] }[] = [
+  {
+    id: "popular",
+    items: [...popularLanguageIds.map((id) => byId.get(id) as Language), plainText],
+  },
+  {
+    id: "all",
+    items: languages.filter(
+      (language) => language !== plainText && !popularLanguageIds.includes(language.id),
+    ),
+  },
+]
 
 export function getLanguage(id: string): Language {
   return byId.get(id) ?? plainText
@@ -70,14 +69,15 @@ export function getLanguage(id: string): Language {
 // Picks a language from a file name: exact names first (crontab, Dockerfile), then the extension.
 export function detectLanguage(filename: string): Language {
   const name = filename.trim()
-  const exact = languages.find((language) => language.filenames?.includes(name))
+  const exact = byFilename.get(name.toLowerCase())
   if (exact) return exact
 
   const extension = name.includes(".") ? name.split(".").pop()?.toLowerCase() : name.toLowerCase()
-  return (
-    languages.find((language) => extension && language.extensions.includes(extension)) ?? plainText
-  )
+  return (extension && byExtension.get(extension)) || plainText
 }
+
+// Languages a file is better named for as a whole than by an extension.
+const wholeNames = new Set(["docker", "nginx", "make"])
 
 // The file name for `filename` written in `language`, used when the language is picked by hand
 // (the language comes from the name, so picking one renames the file). Keeps the base name and
@@ -85,19 +85,22 @@ export function detectLanguage(filename: string): Language {
 export function renameForLanguage(filename: string, language: Language): string {
   const name = filename.trim()
   if (detectLanguage(name).id === language.id) return name
-  if (language.id === "docker") return "Dockerfile"
-  if (language.id === "nginx") return "nginx.conf"
+  const [wholeName] = language.filenames ?? []
+  if (wholeName && (wholeNames.has(language.id) || !language.extensions.length)) return wholeName
 
-  const known = languages.some((candidate) => candidate.filenames?.includes(name))
+  const known = byFilename.has(name.toLowerCase())
   const dot = name.lastIndexOf(".")
   const base = known ? "untitled" : dot > 0 ? name.slice(0, dot) : name || "untitled"
   return `${base}.${language.extensions[0]}`
 }
 
-export const markerClass: Record<Marker, string> = {
-  "filled-primary": "bg-primary",
-  "filled-foreground": "bg-foreground",
-  "outline-primary": "border-[1.5px] border-primary",
-  "outline-foreground": "border-[1.5px] border-foreground",
-  muted: "bg-muted-foreground/40",
+// Search in the picker matches the name, the id and the extensions, so "rs" finds Rust.
+export function matchesLanguage(language: Language, query: string): boolean {
+  const q = query.trim().toLowerCase().replace(/^\./, "")
+  if (!q) return true
+  return (
+    language.name.toLowerCase().includes(q) ||
+    language.id.includes(q) ||
+    language.extensions.includes(q)
+  )
 }

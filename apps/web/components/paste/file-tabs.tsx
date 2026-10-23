@@ -4,7 +4,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
 import { detectLanguage } from "@/lib/pastes/languages"
 
 export interface EditorFile {
@@ -52,7 +52,7 @@ export function FileTabs({
               selected && "bg-background shadow-[inset_0_-2px_0_var(--primary)]",
             )}
           >
-            <LanguageMarker language={detectLanguage(file.name).id} />
+            <LanguageIcon language={detectLanguage(file.name).id} />
             {renamingId === file.id ? (
               <input
                 // biome-ignore lint/a11y/noAutofocus: renaming starts right after the user asks for it
