@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sniptide/ui/components/select"
+import { StepSlider } from "@sniptide/ui/components/step-slider"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, EyeIcon, EyeOffIcon, XIcon } from "lucide-react"
@@ -38,6 +39,7 @@ export const expiryOptions: { value: Expiry; label: string }[] = [
   { value: "1d", label: "1d" },
   { value: "1w", label: "1w" },
   { value: "1m", label: "1m" },
+  { value: "1y", label: "1y" },
   { value: "never", label: "Never" },
 ]
 
@@ -103,35 +105,22 @@ export function ExpiryChips({
 }: {
   value: Expiry | "keep"
   onChange: (value: Expiry | "keep") => void
-  options: { value: Expiry; label: string }[]
+  options: { value: Expiry; label: string; valueLabel?: string }[]
   currentExpiry?: string
 }) {
   const t = useTranslations("Paste")
-  const all: { value: Expiry | "keep"; label: string }[] = currentExpiry
+  const all: { value: Expiry | "keep"; label: string; valueLabel?: string }[] = currentExpiry
     ? [{ value: "keep", label: t("keep") }, ...options]
     : options
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div role="radiogroup" aria-label={t("expiresAfter")} className="flex flex-wrap gap-1.5">
-        {all.map((option) => (
-          // biome-ignore lint/a11y/useSemanticElements: styled chips acting as a radio group
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "border border-border px-2.5 py-[5px] text-[13px] leading-[18px] text-foreground/80 outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40",
-              value === option.value &&
-                "border-foreground bg-foreground font-medium text-background hover:border-foreground",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <StepSlider
+        aria-label={t("expiresAfter")}
+        value={value}
+        onValueChange={onChange}
+        options={all}
+      />
       {currentExpiry && value === "keep" ? (
         <p className="text-xs text-muted-foreground">
           {t("currentExpiry", { expiry: currentExpiry })}
@@ -159,7 +148,7 @@ export function SlugInput({
     <div className="flex flex-col gap-1">
       <div
         className={cn(
-          "flex h-[34px] items-center border border-input focus-within:border-primary",
+          "flex h-[34px] items-center overflow-hidden rounded-lg border border-input focus-within:border-primary",
           status === "taken" && "border-destructive",
         )}
       >

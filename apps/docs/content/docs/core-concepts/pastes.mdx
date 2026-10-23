@@ -1,0 +1,65 @@
+---
+title: Pastes
+description: What a paste holds, how its link works and what happens when you delete it.
+---
+
+A paste is the thing you share: a title, a description and one to ten files.
+
+## What a paste holds
+
+| Part | Rule |
+| --- | --- |
+| Title | Required, up to 120 characters. |
+| Description | Optional, up to 280 characters. |
+| Files | 1 to 10 per paste. Names are required, unique within the paste and up to 120 characters. |
+| Size | 1 MB for all files together by default. An administrator can change it with `MAX_PASTE_SIZE`. |
+| Language | Detected from each file's name, which drives syntax highlighting. |
+
+A paste needs some code in at least one file before it can be saved. Each account can hold up to
+10,000 pastes and 1 GiB of storage by default (trash counts until it is emptied); an administrator
+can change both limits.
+
+## The link
+
+Every paste has a link, `<domain>/<link>`, which is how you share it. By default the link is six
+random characters. Pick your own with **Custom link**: 3 to 40 letters, digits, hyphens or
+underscores. Names the app already uses (`api`, `docs`, `settings`, `sign-in` and the like) and
+links someone else has taken are refused.
+
+You can change a paste's link later; the old one stops working. Everything else in Sniptide
+refers to the paste itself, so renaming the link doesn't lose its history or its place in a
+collection.
+
+Each file is also available as plain text at `<domain>/<link>/raw?file=<file name>`. See
+[Sharing](/core-concepts/sharing#raw-access).
+
+## Creating and editing
+
+- **New paste** (or `N`) opens the editor. `Ctrl+Enter` (`⌘ Enter` on a Mac) creates the paste.
+- A new paste can't be saved to the server until you create it, so what you type is kept as a
+  **draft on your device**. `Ctrl+S` / `⌘S` saves one explicitly, and opening the editor again offers
+  to restore it.
+- An existing paste **saves as you type**. **Done** closes the editing session, and the next edit
+  starts a new [revision](/core-concepts/revisions).
+- Pasting something that looks like a secret (an API key, say) shows a warning, because anyone with
+  the link can read the paste.
+
+New pastes start with the visibility, expiry and burn setting you chose under Settings (unlisted,
+one week and off until you change them), and you can still change them per paste.
+
+## Starring and finding pastes
+
+**Star** a paste to keep it handy under **Starred**. `⌘K` / `Ctrl+K` searches your pastes by title
+or link and your collections by name.
+
+## Trash
+
+**Move to trash** takes the paste out of every list and stops its link working immediately. For
+30 days you can **Restore** it from **Trash**; after that it is deleted for good. **Empty trash**
+and **Delete forever** remove pastes right away. Pastes that [burned](/core-concepts/burn-after-read)
+land in the trash as well.
+
+## Limits per hour
+
+To keep one account from flooding an instance, each account can create 30 pastes and make 240
+manual edits an hour. Auto-save has its own, larger allowance of 1,800 saves an hour.

@@ -20,3 +20,62 @@ html {
   --color-fd-primary: var(--link);
   --color-fd-primary-foreground: var(--background);
 }
+
+/* Backdrops behind the search dialog and the mobile menu, as in the app: a plain tint with no
+   blur, foreground at 20% in light mode and black at 60% in dark mode. */
+:root {
+  --color-fd-overlay: color-mix(in oklab, var(--foreground) 20%, transparent);
+}
+
+.dark {
+  --color-fd-overlay: rgb(0 0 0 / 0.6);
+}
+
+/* Nothing rounds past rounded-lg (DESIGN.md), and Fumadocs uses xl and 2xl for its cards, code
+   blocks, popovers and the search dialog. */
+@theme inline {
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+}
+
+/* Surfaces separate with a border, not a shadow. Floating layers use the app's two shadows:
+   menus and popovers --float-shadow, the search dialog --dialog-shadow. */
+@theme {
+  --blur-xs: 0;
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: var(--float-shadow);
+  --shadow-lg: var(--float-shadow);
+  --shadow-xl: var(--float-shadow);
+  --shadow-2xl: var(--dialog-shadow);
+}
+
+/* Large type uses tighter tracking, as the app's page titles do. */
+#nd-page h1 {
+  letter-spacing: -0.02em;
+}
+
+#nd-page .prose :is(h2, h3) {
+  letter-spacing: -0.01em;
+}
+
+/* Sidebar rows match the app's: 32px tall, rounded-md, and the current page on --sidebar-accent
+   in the text colour rather than a blue tint and bar. The mobile menu is a separate element. */
+#nd-sidebar a[data-active],
+#nd-sidebar-mobile a[data-active] {
+  min-height: --spacing(8);
+  padding-block: --spacing(1.5);
+  border-radius: var(--radius-md);
+}
+
+#nd-sidebar a[data-active="true"],
+#nd-sidebar-mobile a[data-active="true"] {
+  background-color: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  font-weight: 500;
+}
+
+#nd-sidebar a[data-active="true"]::before,
+#nd-sidebar-mobile a[data-active="true"]::before {
+  content: none;
+}

@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6df8b441-f928-44ec-a4be-77aecedc02f9",
+  "id": "1c139f0b-7918-40c3-8092-3ffc41caa26a",
   "prevIds": [
     "ad9d3782-2a42-408d-b398-3e47fe6bbd8e"
   ],
@@ -130,13 +130,13 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "folder",
+      "name": "env_group",
       "entityType": "tables",
       "schema": "public"
     },
     {
       "isRlsEnabled": false,
-      "name": "env_group",
+      "name": "env_share",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1088,84 +1088,6 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "owner_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "parent_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
       "table": "env_group"
     },
     {
@@ -1195,6 +1117,45 @@
       "table": "env_group"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "project",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_group"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "environment",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_group"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "revision",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_group"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -1219,6 +1180,97 @@
       "entityType": "columns",
       "schema": "public",
       "table": "env_group"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "password_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "revoked_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "env_share"
     },
     {
       "type": "uuid",
@@ -1606,19 +1658,6 @@
       "generated": null,
       "identity": null,
       "name": "collection",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "folder_id",
       "entityType": "columns",
       "schema": "public",
       "table": "paste"
@@ -2542,90 +2581,6 @@
           "opclass": null
         },
         {
-          "value": "lower(\"name\")",
-          "isExpression": true,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"parent_id\" is null",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "folder_root_name_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "parent_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "lower(\"name\")",
-          "isExpression": true,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": "\"parent_id\" is not null",
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "folder_child_name_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "folder_owner_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
           "value": "slug",
           "isExpression": false,
           "asc": true,
@@ -2670,6 +2625,27 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "env_group"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "env_share_group_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "env_share"
     },
     {
       "nameExplicit": true,
@@ -2891,48 +2867,6 @@
       "method": "btree",
       "concurrently": false,
       "name": "paste_collection_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "folder_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "updated_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_folder_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "paste"
@@ -3386,44 +3320,27 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
-      "name": "folder_owner_id_user_id_fkey",
+      "name": "env_group_owner_id_user_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "folder"
+      "table": "env_group"
     },
     {
       "nameExplicit": false,
       "columns": [
-        "parent_id"
+        "group_id"
       ],
       "schemaTo": "public",
-      "tableTo": "folder",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "folder_parent_id_folder_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "folder"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "owner_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
+      "tableTo": "env_group",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
-      "name": "env_group_owner_id_user_id_fkey",
+      "name": "env_share_group_id_env_group_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "env_group"
+      "table": "env_share"
     },
     {
       "nameExplicit": false,
@@ -3506,23 +3423,6 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "paste_owner_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "folder_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "folder",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "paste_folder_id_folder_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "paste"
@@ -3816,9 +3716,9 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "folder_pkey",
+      "name": "env_group_pkey",
       "schema": "public",
-      "table": "folder",
+      "table": "env_group",
       "entityType": "pks"
     },
     {
@@ -3826,9 +3726,9 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "env_group_pkey",
+      "name": "env_share_pkey",
       "schema": "public",
-      "table": "env_group",
+      "table": "env_share",
       "entityType": "pks"
     },
     {
@@ -3921,6 +3821,17 @@
       "name": "user_email_key",
       "schema": "public",
       "table": "user",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "token_hash"
+      ],
+      "nullsNotDistinct": false,
+      "name": "env_share_token_hash_key",
+      "schema": "public",
+      "table": "env_share",
       "entityType": "uniques"
     },
     {

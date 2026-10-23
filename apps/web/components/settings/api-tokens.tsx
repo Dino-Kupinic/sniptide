@@ -33,7 +33,7 @@ function NewToken({ token, origin }: { token: string; origin: string }) {
       <p className="text-sm font-medium">{t("copyYourNewTokenNow")}</p>
       <p className="text-[13px] text-muted-foreground">{t("itWonTBeShownAgain")}</p>
       <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate border border-border bg-background px-3 py-2 font-mono text-[13px]">
+        <code className="rounded-lg min-w-0 flex-1 truncate border border-border bg-background px-3 py-2 font-mono text-[13px]">
           {token}
         </code>
         <CopyButton text={token} variant="outline" size="lg" />
@@ -61,7 +61,7 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
   return (
     <SettingsSection title={t("apiTokens")} description={t("forTheSniptideCLICodingAgents")}>
       <form
-        className="flex flex-col gap-4 border border-border p-4"
+        className="rounded-lg flex flex-col gap-4 border border-border p-4"
         onSubmit={(event) => {
           event.preventDefault()
           const form = event.currentTarget
@@ -122,7 +122,7 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
       {tokens.length ? (
         <ul
           aria-label={t("yourAPITokens")}
-          className="flex flex-col divide-y divide-border border border-border"
+          className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
         >
           {tokens.map((token) => (
             <li key={token.id} className="flex items-center justify-between gap-4 p-4">
@@ -187,7 +187,7 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
       {groups.length ? (
         <ul
           aria-label={t("yourEnvGroups")}
-          className="flex flex-col divide-y divide-border border border-border"
+          className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
         >
           {groups.map((group) => (
             <li key={group.slug} className="flex items-center justify-between gap-4 p-4">
@@ -220,7 +220,7 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
           ))}
         </ul>
       ) : (
-        <div className="flex flex-col items-start gap-2 border border-dashed border-input p-5">
+        <div className="rounded-lg flex flex-col items-start gap-2 border border-dashed border-input p-5">
           <TerminalIcon className="size-5 text-muted-foreground" />
           <p className="text-sm font-medium">{t("noEnvGroupsYet")}</p>
           <p className="text-[13px] text-muted-foreground">

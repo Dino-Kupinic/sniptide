@@ -2,6 +2,8 @@
 // renders it the way it was left and nothing jumps on load. Shared by the server layout and the
 // client shell, so it stays free of server-only imports.
 
+import { SIDEBAR_RECENT, SIDEBAR_STARRED } from "@/lib/pastes/types"
+
 export const SIDEBAR_COOKIE = "sidebar"
 
 export const SIDEBAR_DEFAULT_WIDTH = 256
@@ -14,6 +16,67 @@ export const sidebarMaxWidth = (windowWidth: number) =>
 export const SECTIONS = ["starred", "pastes", "folders", "collections"] as const
 export type SectionId = (typeof SECTIONS)[number]
 
+// What the Starred and Pastes sections list, picked in their filter and ⋯ menus. The sorts match
+// the paste list's, so "View all" opens the same view.
+export const SIDEBAR_VISIBILITIES = ["all", "public", "unlisted", "private"] as const
+export const SIDEBAR_SORTS = ["updated", "views", "title"] as const
+export const SIDEBAR_LIMITS = [3, 5, 8, 15] as const
+export type SidebarVisibility = (typeof SIDEBAR_VISIBILITIES)[number]
+export type SidebarSort = (typeof SIDEBAR_SORTS)[number]
+
+export interface PasteSectionView {
+  visibility: SidebarVisibility
+  sort: SidebarSort
+  limit: number
+}
+
+// Collections keep the order you drag them into, or sort by name.
+export const COLLECTION_SORTS = ["custom", "name"] as const
+export type CollectionSort = (typeof COLLECTION_SORTS)[number]
+
+export interface SidebarViews {
+  pastes: PasteSectionView
+  starred: PasteSectionView
+  collections: { sort: CollectionSort }
+}
+
+export const defaultSidebarViews: SidebarViews = {
+  pastes: { visibility: "all", sort: "updated", limit: SIDEBAR_RECENT },
+  starred: { visibility: "all", sort: "updated", limit: SIDEBAR_STARRED },
+  collections: { sort: "custom" },
+}
+
+function parsePasteView(raw: unknown, fallback: PasteSectionView): PasteSectionView {
+  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  return {
+    visibility:
+      SIDEBAR_VISIBILITIES.find((item) => item === value.visibility) ?? fallback.visibility,
+    sort: SIDEBAR_SORTS.find((item) => item === value.sort) ?? fallback.sort,
+    limit: SIDEBAR_LIMITS.find((item) => item === value.limit) ?? fallback.limit,
+  }
+}
+
+export function parseSidebarViews(raw: unknown): SidebarViews {
+  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const collections =
+    value.collections && typeof value.collections === "object"
+      ? (value.collections as Record<string, unknown>)
+      : {}
+  return {
+    pastes: parsePasteView(value.pastes, defaultSidebarViews.pastes),
+    starred: parsePasteView(value.starred, defaultSidebarViews.starred),
+    collections: {
+      sort: COLLECTION_SORTS.find((item) => item === collections.sort) ?? "custom",
+    },
+  }
+}
+
+// Whether a section shows something other than its default list, so its filter button stays
+// visible as a reminder.
+export function isFiltered(view: PasteSectionView) {
+  return view.visibility !== "all" || view.sort !== "updated"
+}
+
 export interface SidebarState {
   width: number
   collapsed: boolean
@@ -21,6 +84,7 @@ export interface SidebarState {
   closed: SectionId[]
   sectionOrder: SectionId[]
   collectionOrder: string[]
+  views: SidebarViews
 }
 
 export const defaultSidebarState: SidebarState = {
@@ -29,6 +93,7 @@ export const defaultSidebarState: SidebarState = {
   closed: [],
   sectionOrder: [...SECTIONS],
   collectionOrder: [],
+  views: defaultSidebarViews,
 }
 
 // Keep the saved order for surviving items and append newly available ones. This also makes
@@ -69,6 +134,7 @@ export function parseSidebarState(value: string | undefined): SidebarState {
             ),
           ].slice(0, 50)
         : [],
+      views: parseSidebarViews(raw.views),
     }
   } catch {
     return defaultSidebarState

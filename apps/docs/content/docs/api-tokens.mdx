@@ -1,0 +1,97 @@
+---
+title: API tokens
+description: Personal tokens let the CLI, coding agents and scripts act for your account.
+---
+
+An API token lets a program act as you without a browser session. The [CLI](/cli), the
+[MCP server](/mcp) and your own scripts all authenticate with one.
+
+## Create a token
+
+<Steps>
+<Step>
+
+Open **Settings → API tokens**.
+
+</Step>
+<Step>
+
+Give the token a name you'll recognize, like "laptop CLI" (up to 60 characters).
+
+</Step>
+<Step>
+
+Choose its access. **Write access** off means read-only. Write always includes read.
+
+</Step>
+<Step>
+
+Choose when it expires: 30 days, 90 days (the default), 1 year or never.
+
+</Step>
+<Step>
+
+Select **Create token** and copy it right away. It is shown once.
+
+</Step>
+</Steps>
+
+Tokens start with `snpt_`. Sniptide stores only a hash, so a lost token can't be shown again:
+delete it and make a new one. An account can have up to 25 tokens, and the list shows when each was
+last used.
+
+<Callout type="warn">
+A token acts as you, within its access. Keep it out of source control, shell history and logs, and
+prefer a read-only token unless the tool needs to save things. To stop a token working immediately,
+delete it in Settings.
+</Callout>
+
+## Access
+
+| Access | What the token can do |
+| --- | --- |
+| **Read** (every token) | List and search your pastes, read a paste, pull a collection, list and read env groups. |
+| **Write** | Everything above, plus create and update pastes, and push or delete env groups. |
+
+A token only ever reaches **your own** live pastes: not other people's, not pastes shared with
+you, not trash, and not expired pastes.
+
+## Use it
+
+Send the token as a bearer token. The API lives under `/api/v1` on your instance:
+
+```bash
+curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" https://app.sniptide.com/api/v1/me
+```
+
+```json
+{ "user": { "id": "…", "name": "Ada", "username": "ada" }, "scopes": ["read", "write"] }
+```
+
+On a self-hosted instance use its address (and any path prefix it is served under). Session cookies
+are not accepted on these endpoints.
+
+| Operation | Request | Needs |
+| --- | --- | --- |
+| Check a token | `GET /me` | read |
+| Create a paste | `POST /pastes` | write |
+| Update a paste | `PUT /pastes/{id or slug}` | write |
+| Read a paste | `GET /pastes/{id or slug}` | read |
+| List and search | `GET /pastes?q&tag&language&collection&limit&cursor` | read |
+| A collection's pastes | `GET /collections/{slug}/pastes` | read |
+| Env groups | `GET /env`, `GET /env/{group}` | read |
+| Replace or delete an env group | `PUT /env/{group}`, `DELETE /env/{group}` | write |
+
+New pastes made through the API are **private** and never expire unless you say otherwise. A
+collection must already exist; the API never creates one for you. The full request and response
+schemas are in the API reference, served by every instance at `/docs/api` (for the hosted app,
+`app.sniptide.com/docs/api`; the link is in this site's top navigation).
+
+## Limits and errors
+
+- A token can make **3,600 requests an hour**. Creating pastes is also limited by the same
+  per-account limits and storage budget the editor applies.
+- Responses are never cached (`Cache-Control: private, no-store`).
+- Errors are `{ "ok": false, "error": "…" }` with a status: `400` invalid input, `401` missing,
+  invalid, expired or revoked token, `403` missing access, `404` not found (or not yours), `409` too
+  many env groups, `413` too large or out of storage, `429` rate limited (with `Retry-After`).

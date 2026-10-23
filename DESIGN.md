@@ -2,7 +2,7 @@
 
 **Theme:** light and dark, switched with the `.dark` class
 
-Sniptide uses white or near-black surfaces, one saturated blue, square corners and thin borders. Menus and dialogs carry a hard offset shadow, which is the interface's single flourish. The values below mirror `packages/ui/src/styles/globals.css`.
+Sniptide uses white or near-black surfaces, one saturated blue, slightly rounded corners and thin borders. Buttons sit on a raised edge that presses down, and menus and dialogs float on a hairline border with a soft shadow. The values below mirror `packages/ui/src/styles/globals.css`.
 
 ## Sources of truth
 
@@ -36,7 +36,7 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Gallery | `#FAFAFA` | `--sidebar` | Sidebar background |
 | Fill | `#F4F4F4` | `--muted`, `--secondary`, `--accent` | Hover rows, tracks, secondary buttons, code chips |
 | Hairline | `#E8E8E8` | `--border`, `--input` | Borders and dividers |
-| Ink | `#1B1919` | `--foreground`, `--offset-shadow` | Text, inverted buttons, offset shadows |
+| Ink | `#1B1919` | `--foreground` | Text, inverted buttons |
 | Graphite | `#6B6B6B` | `--muted-foreground` | Secondary text and icons |
 | Tide Blue | `#2A26EC` | `--primary`, `--ring`, `--link` | Primary actions, focus, links, active data |
 | Red | `oklch(0.577 0.245 27.325)` | `--destructive` | Destructive actions and invalid fields |
@@ -54,7 +54,6 @@ Components use the Tailwind classes generated from these variables, such as `bg-
 | Ash | `#A3A3A3` | `--muted-foreground` | Secondary text and icons |
 | Tide Blue | `#3A36FF` | `--primary`, `--ring` | Button fills (white on it is 6.7:1) |
 | Sky Blue | `#6AA3FF` | `--link` | Links, code keywords, stars, collection icons, chart bars (7.5:1 on the surfaces) |
-| Offset grey | `#4A4646` | `--offset-shadow` | Offset shadows, because white shadows glare on dark surfaces |
 
 ### Brand
 
@@ -85,10 +84,10 @@ Keywords share the brand blue and the other hues stay muted, so blue leads. Ever
 
 | Family | Token | Used for |
 | --- | --- | --- |
-| Stack Sans Headline, weight 700 | `--font-heading` | Page titles, dialog titles, stat numbers, landing headlines |
+| Archivo, weight 700 | `--font-heading` | Page titles, dialog titles, stat numbers, landing headlines |
 | Inter | `--font-sans` | Body text, controls, menus |
 | JetBrains Mono | `--font-mono` | Paste slugs, code, shortcuts, tooltips, stat labels |
-| Stack Sans Notch | Paper `--font-display` | Landing hero display type |
+| Archivo, weight 700 | Paper `--font-display` | Landing hero display type |
 
 ### Type scale
 
@@ -130,11 +129,15 @@ Paper tokens `--spacing-3xs` to `--spacing-7xl` use these values. Components in 
 
 ### Border radius
 
-| Element | Value |
-| --- | --- |
-| Buttons, inputs, badges, cards, dialogs, menus, tags | 0 |
+| Class | Value | Element |
+| --- | --- | --- |
+| `rounded-lg` | 6px (`--radius`) | Buttons, icon buttons from 32px up, inputs, selects, segmented control, panels, cards, tables, banners, menus, popovers, dialogs, toasts, the app content area |
+| `rounded-md` | 4.8px | Badges, tabs, chips, pills, icon buttons under 32px, sidebar rows, avatars, tooltips, skeletons |
+| `rounded-sm` | 3.6px | Kbd, checkboxes, counters, the switch, progress tracks, chart labels |
 
-Every corner is square. `--radius` is `0`, so the `rounded-*` utilities resolve to square corners and new components skip them.
+Only surfaces attached to a screen edge stay square: the mobile top bar, the tab bar and sheets.
+
+`--radius` in `globals.css` is the one value to tune. `rounded-md` and `rounded-sm` derive from it at 0.8 and 0.6 times. A panel whose header or body has its own fill also sets `overflow-hidden` so the fill follows the corner.
 
 ### Layout
 
@@ -155,7 +158,7 @@ All components live in `packages/ui/src/components`. Use them before writing new
 ### Button
 **Role:** Every action.
 
-Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. A pressed button moves down 1px. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
+Variants: `default` (blue fill), `inverted` (foreground fill), `outline`, `secondary`, `ghost`, `destructive` (10% red tint) and `link`. Sizes: `xs` 24px, `sm` 28px, `default` 32px, `lg` 36px, plus `icon`, `icon-xs`, `icon-sm` and `icon-lg`. Text is 14px weight 500 and padding is 12px. Every variant except `ghost` and `link` is raised: it sits on a 2px edge in a darker shade of its fill (`--depth`) and its face is 2px shorter than the size, so face and edge together are 32px on a `default` button. Hover lifts it 1px, and a press pushes it down onto the edge. `ghost` and `link` stay flat and move down 1px when pressed. Popup triggers skip the press so their menu does not jump. The `loading` prop swaps the icon for a spinner, keeps focus and sets `aria-busy`.
 
 ### Input and Textarea
 **Role:** Text entry.
@@ -172,6 +175,11 @@ The input is 40px tall with a 1px `--input` border and 12px padding. Focus chang
 
 A radio group on a `--muted` track with 3px padding. The checked option sits on `--background` with weight 500.
 
+### Step slider
+**Role:** Choosing one of a few ordered stops, such as Expires after.
+
+A 24px `--muted` track with `rounded-md` corners and a dot at every stop. The track fills with `--primary` up to a 32px by 24px `--background` thumb that stays inside the track. The chosen stop's full name sits above the track in `--link` at 14px weight 500. Arrow keys move one stop at a time. Thumb and fill spring to the next stop over 300ms with a slight overshoot, the thumb grows to 110% while held, and the name pops in when the stop changes. Under reduced motion it snaps.
+
 ### Tabs
 **Role:** Switching views.
 
@@ -180,12 +188,12 @@ A radio group on a `--muted` track with 3px padding. The checked option sits on 
 ### Dropdown menu
 **Role:** Actions and the account menu.
 
-Minimum width 192px with 4px vertical padding. Rows are 32px tall with 12px padding and a 16px icon in `--muted-foreground`. The highlighted row uses `bg-muted`. Checkable items use a 16px square box that fills with the foreground color. Labels are 12px in `--muted-foreground`.
+Minimum width 192px with 4px padding on every side. Rows are 32px tall with 12px padding and a 16px icon in `--muted-foreground`. The highlighted row uses `bg-muted`. Checkable items use a 16px square box that fills with the foreground color. Labels are 12px in `--muted-foreground`.
 
 ### Dialog and alert dialog
 **Role:** Focused tasks and confirmations.
 
-Centered, at most 448px wide, with 24px padding, a 16px gap, the 8px offset shadow and a 20px heading-font title. Content scales in from 0.98.
+Centered, at most 448px wide, with 24px padding, a 16px gap, `--dialog-shadow` and a 20px heading-font title. Content scales in from 0.98.
 
 ### Sheet
 **Role:** The mobile sidebar.
@@ -239,9 +247,10 @@ The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-i
 | Menu open | 100ms, scale from 0.98 |
 | Popover and dialog open | 150ms, scale from 0.98 |
 | Sheet and toast | 200ms |
-| Button press | `translate-y-px` |
+| Button press | Raised variants drop 2px onto the edge in 60ms, then spring back over 200ms with a slight overshoot. Flat variants `translate-y-px` |
+| Button hover, raised variants | Lift 1px, edge grows to 3px |
 | Hover, neutral controls | `bg-muted` |
-| Hover, filled blue controls | `bg-primary/85` |
+| Hover, filled blue controls | `bg-primary/85`, or 8% lighter on raised buttons |
 | Focus on buttons | `ring-3 ring-ring/30` |
 | Focus on tabs, switches, toast buttons | `ring-2 ring-ring/40` |
 | Disabled | 50% opacity, no pointer events |
@@ -259,13 +268,14 @@ Floating layers animate from `--transform-origin`. Toast animations switch off u
 
 ## Elevation
 
-Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `border-offset-shadow` and a hard offset shadow.
+Surfaces separate with a 1px `--border` or a background step and carry no shadow. Floating layers use a 1px `--border` hairline and a soft shadow from `--float-shadow` or `--dialog-shadow`, and clip their content to the rounded corners. Menu rows sit inside 4px of padding with `rounded-md` highlights. Raised buttons carry a solid edge below them, which is a pressable part of the control rather than an elevation.
 
 | Layer | Shadow |
 | --- | --- |
-| Dropdown menu, popover | `4px 4px 0 0 var(--offset-shadow)` |
-| Dialog, alert dialog | `8px 8px 0 0 var(--offset-shadow)` |
+| Dropdown menu, popover, select | `--float-shadow`: `0 1px 2px` at 6% plus `0 8px 24px -6px` at 14% (40% and 60% black in dark) |
+| Dialog, alert dialog, sign-in and unlock cards | `--dialog-shadow`: `0 2px 4px` at 6% plus `0 24px 48px -12px` at 22% (40% and 70% black in dark) |
 | Toast | `shadow-md` with a plain border |
+| Raised button edge | `0 2px 0 0 var(--depth)`, a darker shade of the button fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
 | Tooltip | None, inverted `bg-foreground` fill |
 
@@ -361,14 +371,14 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 - Use tokens through Tailwind classes, and add a new color, size or spacing value to `globals.css` first.
 - Build light and dark together, and check contrast for any new text color on both backgrounds.
 - Build the mobile layout in the same change as the desktop layout.
-- Use the offset shadow on floating layers only.
+- Use `--float-shadow` and `--dialog-shadow` on floating layers only.
 - Use `--link` for blue text and `--primary` for blue fills, so dark mode keeps its contrast.
 - Add a variant to an existing component when two screens need different looks.
 - Remove an element before adding one, and keep information on the surface and avoid nesting cards.
 
 ### Don't
 
-- Don't use `rounded-*` classes or set a radius above `0`.
+- Don't round anything past `rounded-lg`, and don't write pixel radii. Tune `--radius` instead.
 - Don't write hex values in components. Use the variables.
 - Don't add shadows to cards, rows or inputs.
 - Don't use red for anything other than destructive actions and invalid fields.
@@ -391,7 +401,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 
 ### Example component prompts
 
-1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding, square corners and no shadow. It moves down 1px when pressed.
-2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--offset-shadow` border with a 4px offset shadow.
+1. **Primary button:** Use `<Button>` with the default variant at 32px. It has a blue fill, white 14px weight 500 text, 12px horizontal padding and 6px corners. It sits on a 2px darker-blue edge, lifts 1px on hover and presses down onto the edge.
+2. **Menu:** Use `DropdownMenu`. Rows are 32px tall with a 16px icon in `--muted-foreground`, the highlighted row uses `bg-muted`, and the panel has a 1px `--border` hairline, 4px padding and `--float-shadow`. Highlighted rows are `rounded-md`.
 3. **Page title:** Set the title in `font-heading` at 30px with 36px line height, weight 700 and `-0.02em` tracking.
 4. **Settings row in the side panel:** Use a single line with a 16px icon, a 14px label and a chevron at the far end. The content appears under the label only when the row opens.

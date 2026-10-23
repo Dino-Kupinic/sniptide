@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -43,7 +44,7 @@ export function SearchField({
   return (
     <label
       className={cn(
-        "flex h-[46px] items-center gap-2.5 border border-border px-3 focus-within:border-primary lg:h-8 lg:w-65 lg:gap-2 lg:px-2.5",
+        "rounded-lg flex h-[46px] items-center gap-2.5 border border-border px-3 focus-within:border-primary lg:h-8 lg:w-65 lg:gap-2 lg:px-2.5",
         className,
       )}
     >
@@ -97,7 +98,7 @@ export function FilterMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex h-8 items-center gap-1.5 border border-dashed border-input px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground",
+          "rounded-md flex h-8 items-center gap-1.5 border border-dashed border-input px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40",
           active && "border-solid border-foreground",
         )}
       >
@@ -107,7 +108,7 @@ export function FilterMenu({
         />
         {label}
         {active ? (
-          <span className="bg-foreground px-1.5 text-xs font-medium text-background tabular-nums">
+          <span className="rounded-sm bg-foreground px-1.5 text-xs font-medium text-background tabular-nums">
             {selected.length}
           </span>
         ) : null}
@@ -158,7 +159,7 @@ export function SortMenu<Value extends string>({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex h-8 items-center gap-1.5 border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground">
+      <DropdownMenuTrigger className="rounded-md flex h-8 items-center gap-1.5 border border-border px-2.5 text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40">
         <ListFilterIcon aria-hidden="true" className="size-3.5 text-foreground/75" />
         {current?.label}
         <ChevronDownIcon aria-hidden="true" className="size-3 text-muted-foreground" />
@@ -203,7 +204,7 @@ export function QuickChips<Value extends string>({
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "h-[34px] shrink-0 border border-border px-3 text-sm whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+            "rounded-md h-[34px] shrink-0 border border-border px-3 text-sm whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
             value === option.value && "border-foreground bg-foreground font-medium text-background",
           )}
         >
@@ -223,7 +224,11 @@ export function ViewToggle({
 }) {
   const t = useTranslations("Workspace")
   return (
-    <div role="radiogroup" aria-label={t("layout")} className="flex gap-0.5 bg-muted p-[3px]">
+    <div
+      role="radiogroup"
+      aria-label={t("layout")}
+      className="flex gap-0.5 rounded-lg bg-muted p-[3px]"
+    >
       {(
         [
           { value: "list", label: t("list"), icon: ListIcon },
@@ -239,7 +244,7 @@ export function ViewToggle({
           aria-label={option.label}
           onClick={() => onChange(option.value)}
           className={cn(
-            "flex size-7 items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+            "flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
             value === option.value &&
               "bg-background text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.08)]",
           )}
@@ -271,17 +276,17 @@ export function Pagination({
   return (
     <nav
       aria-label={t("pagination")}
-      className="flex shrink-0 flex-wrap items-center gap-1 text-[13px]"
+      className="flex shrink-0 flex-wrap items-center gap-1.5 text-[13px]"
     >
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="icon"
         aria-label={t("previous_page")}
         disabled={page === 1}
         onClick={() => onChange(page - 1)}
-        className="flex size-8 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
       >
         <ChevronLeftIcon className="size-3.5" />
-      </button>
+      </Button>
       {pages.map((candidate, index) => (
         <span
           key={candidate}
@@ -295,28 +300,26 @@ export function Pagination({
               …
             </span>
           ) : null}
-          <button
-            type="button"
+          <Button
+            variant={candidate === page ? "inverted" : "outline"}
+            size="icon"
             aria-current={candidate === page ? "page" : undefined}
             onClick={() => onChange(candidate)}
-            className={cn(
-              "flex size-8 items-center justify-center outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-              candidate === page && "bg-foreground font-medium text-background hover:bg-foreground",
-            )}
+            className="text-[13px] tabular-nums"
           >
             {candidate}
-          </button>
+          </Button>
         </span>
       ))}
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="icon"
         aria-label={t("next_page")}
         disabled={page === pageCount}
         onClick={() => onChange(page + 1)}
-        className="flex size-8 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 disabled:text-muted-foreground/50 disabled:hover:bg-transparent"
       >
         <ChevronRightIcon className="size-3.5" />
-      </button>
+      </Button>
     </nav>
   )
 }
@@ -342,7 +345,7 @@ export function ListHeader({
           {title}
         </span>
         {count !== undefined ? (
-          <span className="shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
+          <span className="rounded-sm shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
             {formatNumber(count, locale)}
           </span>
         ) : null}

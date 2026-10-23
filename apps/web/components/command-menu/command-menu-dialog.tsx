@@ -251,7 +251,7 @@ export function CommandMenuDialog({
                 setActive(0)
               }}
               className={cn(
-                "h-8 shrink-0 border px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                "rounded-md h-8 shrink-0 border px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                 chip === id
                   ? "border-foreground bg-foreground text-background"
                   : "border-border text-foreground",

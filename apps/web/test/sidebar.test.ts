@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { defaultSidebarViews } from "@/components/shell/sidebar-state"
 import { getDb } from "@/lib/db"
 import { renamePaste, setStarred } from "@/lib/pastes/actions"
 import { sidebarData } from "@/lib/pastes/store"
@@ -54,6 +55,33 @@ describeDb("sidebar", () => {
     expect(data.starred).toHaveLength(SIDEBAR_STARRED)
     expect(data.recent.find((row) => row.slug === "ada-4")?.starred).toBe(true)
     expect(data.recent.find((row) => row.slug === "ada-9")?.starred).toBe(false)
+  })
+
+  test("a section's filter, sort and length pick what it lists, and counts stay whole", async () => {
+    await seedMany("ada", 6)
+    await getDb()
+      .update(paste)
+      .set({ visibility: "private", views: 7 })
+      .where(eq(paste.slug, "ada-1"))
+    await getDb()
+      .update(paste)
+      .set({ visibility: "private", views: 3, title: "Alpha" })
+      .where(eq(paste.slug, "ada-4"))
+    await getDb().update(paste).set({ title: "Beta" }).where(eq(paste.slug, "ada-2"))
+
+    const privateOnly = await sidebarData({
+      ...defaultSidebarViews,
+      pastes: { visibility: "private", sort: "views", limit: 8 },
+    })
+    expect(privateOnly.recent.map((row) => row.slug)).toEqual(["ada-1", "ada-4"])
+    expect(privateOnly.counts.pastes).toBe(6)
+
+    const byTitle = await sidebarData({
+      ...defaultSidebarViews,
+      pastes: { visibility: "all", sort: "title", limit: 3 },
+    })
+    expect(byTitle.recent).toHaveLength(3)
+    expect(byTitle.recent[0]?.slug).toBe("ada-4")
   })
 
   test("a star on someone else's paste is listed but not theirs to file", async () => {

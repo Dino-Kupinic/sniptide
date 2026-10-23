@@ -24,6 +24,9 @@ export const envGroup = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     // What the CLI names it by (`sniptide env pull my-app`). Unique per owner.
     slug: text("slug").notNull(),
+    project: text("project"),
+    environment: text("environment", { enum: ["dev", "staging", "prod"] }),
+    revision: integer("revision").notNull().default(0),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
   },
@@ -46,4 +49,20 @@ export const envVariable = pgTable(
     value: text("value").notNull(),
   },
   (table) => [primaryKey({ columns: [table.groupId, table.name] })],
+)
+
+export const envShare = pgTable(
+  "env_share",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => envGroup.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    expiresAt: time("expires_at").notNull(),
+    revokedAt: time("revoked_at"),
+    createdAt: time("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("env_share_group_idx").on(table.groupId)],
 )

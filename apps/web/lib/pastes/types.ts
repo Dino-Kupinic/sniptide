@@ -3,7 +3,7 @@
 // The values themselves, for the schemas that check input. The database's visibility enum
 // (packages/db/src/schema/pastes.ts) holds the same three.
 export const VISIBILITIES = ["public", "unlisted", "private"] as const
-export const EXPIRIES = ["1h", "1d", "1w", "1m", "never"] as const
+export const EXPIRIES = ["1h", "1d", "1w", "1m", "1y", "never"] as const
 
 export type Visibility = (typeof VISIBILITIES)[number]
 export type Expiry = (typeof EXPIRIES)[number]

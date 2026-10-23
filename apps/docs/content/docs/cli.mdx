@@ -1,6 +1,151 @@
 ---
 title: CLI
-description: Create and fetch pastes from the terminal.
+description: Capture code into Sniptide from a terminal or a coding agent, restore it elsewhere, and sync .env files.
 ---
 
-This section is coming soon.
+The `sniptide` CLI captures files into pastes, keeps their folder structure, and restores them in
+another project. It also syncs a project's `.env` with your instance. It talks to the
+[token API](/api-tokens), so you need a token for anything that touches your account. It prints
+JSON on request, never prompts, and works for people and for coding agents.
+
+## Install
+
+The CLI isn't published to npm yet. Build it from a checkout of the repository; it runs on
+Node.js 24 or newer.
+
+```bash
+git clone https://github.com/Dino-Kupinic/sniptide.git && cd sniptide
+bun install
+bun --filter @sniptide/cli build
+alias sniptide='node /absolute/path/to/sniptide/packages/cli/dist/sniptide.js'
+```
+
+Without building, `bun run cli <command>` from the checkout runs the source.
+
+## Connect to an instance
+
+Create a token in **Settings → API tokens** (see [API tokens](/api-tokens)), then either export it:
+
+```bash
+export SNIPTIDE_TOKEN='snpt_…'
+export SNIPTIDE_BASE_URL='https://paste.example.com'   # self-hosted; the default is https://app.sniptide.com
+```
+
+or save it once, without putting it in a process list:
+
+```bash
+printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin --base-url https://paste.example.com
+```
+
+`login` checks the token with the instance before saving it, to `~/.config/sniptide/config.json`
+(`$XDG_CONFIG_HOME/sniptide/config.json`, readable only by you; `SNIPTIDE_CONFIG` picks another
+file). Environment variables beat saved values, and `--base-url` beats the environment. A saved
+token is only used for the exact instance URL it was saved for. `sniptide logout` removes it.
+
+HTTPS is required except on localhost, and redirects are refused so a token never leaves the
+instance you chose.
+
+## Capture code
+
+```bash
+sniptide push src/components/button --title 'Button'
+sniptide push 'src/components/**/*.tsx' --title 'Buttons' --collection ui --tag react
+sniptide push src/components/Button.tsx --lines 10:35
+```
+
+`push` takes files, directories and quoted globs, and combines them. Every pattern must match
+something.
+
+- A paste holds up to **10 text files** and **1 MiB**, the app's default limits. Narrow larger
+  selections instead of having files silently dropped.
+- Every file keeps its path relative to where you ran `push`, in sorted order.
+- Binary files, symlinks, `.env` files, Git internals and build or dependency directories are left
+  out, and so are Git-ignored files. Naming an unsafe path explicitly is an error. `.env` files go
+  through `sniptide env` instead.
+- `--lines START:END` captures part of **one** file (1-based, inclusive); the path and range are
+  remembered.
+- Inside a Git repository, the paste records the origin repository, the HEAD commit and whether the
+  files differ from it. Credentials in repository URLs are removed.
+- `--visibility private|unlisted|public` sets who can open it. **The default is private.**
+  `--collection` names a collection that already exists; it isn't created. `--tag` can be repeated.
+  `--description` adds text.
+- `--dry-run` shows the capture without authenticating or touching the network.
+
+## Restore code
+
+```bash
+sniptide pull PASTE_ID --dir src/imported
+sniptide pull collection:ui --dry-run
+```
+
+`pull` takes a paste id or slug, or `collection:<slug>` for a whole collection. It checks every
+path before writing anything, creates nested directories, and refuses path traversal, symbolic
+links and duplicate paths across a collection. It never replaces an existing file unless you pass
+`--force`. `--dry-run` lists what it would write.
+
+A collection is pulled as the ordered set it is: oldest capture first, every page fetched before
+anything is written, up to 1,000 pastes and 20 MiB. Restore into a fresh directory if you want to
+review the result in isolation.
+
+## Find pastes
+
+```bash
+sniptide search 'button' --language typescript --tag react --limit 20
+sniptide list --collection ui --cursor CURSOR
+```
+
+Both return one page; pass `--cursor` to continue (`--limit` is 1 to 100). Only your own live
+pastes are listed.
+
+## Sync `.env` files
+
+Env groups hold a project's environment variables on your instance, encrypted at rest.
+
+```bash
+sniptide env push my-app              # upload ./.env, replacing the group's variables
+sniptide env pull my-app              # write ./.env (mode 0600); won't overwrite without --force
+sniptide env pull my-app --stdout     # print it instead
+sniptide env run my-app -- bun dev    # run a command with the variables set
+sniptide env list
+sniptide env delete my-app
+```
+
+Group names are 1 to 64 lowercase letters, digits, `.`, `-` and `_`. A group holds up to 500
+variables (32 KB per value, 256 KB in all) and an account up to 100 groups. A push **replaces** the
+whole group, so a variable you removed from the file is removed from the group. Values are never
+printed, even in `--json` output, except by `env pull --stdout`. `--file PATH` uses a file other
+than `.env`.
+
+The encryption key comes from `ENV_SECRETS_KEY` or, without it, `BETTER_AUTH_SECRET`; see
+[Configuration](/self-hosting/configuration).
+
+## Use it from scripts and agents
+
+Add `--json` (`-j`) and each command writes one JSON object: a success to stdout, or a failure to
+stderr with stdout empty.
+
+```json
+{"ok":true,"data":{"directory":"/project","files":["src/Button.tsx"],"dryRun":false}}
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | Configuration, network, server, response or filesystem failure |
+| `2` | Invalid input or a path conflict |
+| `3` | Token missing, invalid or without the needed access |
+
+Requests time out after 30 seconds and responses are capped at 25 MiB. Pushes are never retried
+automatically, so a flaky connection can't create duplicates.
+
+## Move code between projects offline
+
+No account is needed to hand a capture to another machine:
+
+```bash
+sniptide push src/components/button --title 'Button' --output /tmp/button.json
+sniptide pull --input /tmp/button.json
+```
+
+The bundle is versioned JSON with the code and its source metadata, written with owner-only
+permissions, and never replaces an existing file.

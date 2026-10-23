@@ -16,7 +16,7 @@ export const mobileTabs: (NavItem & { match: string[] })[] = [
     href: "/settings",
     label: "more",
     icon: MenuIcon,
-    match: ["/settings", "/shared", "/trash", "/collections", "/folders"],
+    match: ["/settings", "/shared", "/trash", "/collections", "/folders", "/secrets"],
   },
 ]
 
@@ -49,6 +49,7 @@ export const pageTitles: Record<string, string> = {
   settings: "settings",
   collections: "collections",
   folders: "folders",
+  secrets: "secrets",
 }
 
 // The top bar's title for a route. Deeper routes (a paste, a collection) name themselves with

@@ -49,7 +49,7 @@ export function FileTabs({
             key={file.id}
             className={cn(
               "flex shrink-0 items-center gap-2 border-r border-border px-3.5",
-              selected && "bg-background shadow-[inset_0_2px_0_var(--primary)]",
+              selected && "bg-background shadow-[inset_0_-2px_0_var(--primary)]",
             )}
           >
             <LanguageMarker language={detectLanguage(file.name).id} />

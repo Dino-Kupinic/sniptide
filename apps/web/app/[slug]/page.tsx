@@ -99,7 +99,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
               <span
                 aria-hidden="true"
                 className={cn(
-                  "flex size-7 items-center justify-center font-heading text-[10px] font-bold",
+                  "flex size-7 items-center justify-center rounded-md font-heading text-[10px] font-bold",
                   avatarTone[owner.tone],
                 )}
               >
