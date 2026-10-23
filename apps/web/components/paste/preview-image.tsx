@@ -89,7 +89,10 @@ export async function pastePreviewImage(preview: PastePreview) {
         </div>
         {previewLines(preview.content).map((line, index) => (
           // The numbered lines keep their identity even when their text is duplicated.
-          <div key={`${index}-${line}`} style={{ display: "flex", flexShrink: 0, whiteSpace: "pre" }}>
+          <div
+            key={`${index}-${line}`}
+            style={{ display: "flex", flexShrink: 0, whiteSpace: "pre" }}
+          >
             <span style={{ display: "flex", width: 48, flexShrink: 0, color: lineNumber }}>
               {index + 1}
             </span>
