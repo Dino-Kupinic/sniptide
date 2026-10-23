@@ -373,8 +373,6 @@
     "unlock_description": "Gib das Link-Passwort ein, um die aktuellen Werte anzuzeigen. Werte werden nach einer Minute oder beim Verlassen dieses Fensters verborgen.",
     "checking": "Wird geprüft…",
     "reveal_secrets": "Geheimnisse anzeigen",
-    "credentials_prompt": "Zugangsdaten speichern?",
-    "credentials_link": "Verschlüsselte Geheimnisgruppe erstellen",
     "syntax_error": "Prüfe die .env-Syntax und die Größenlimits.",
     "save_error": "Speichern fehlgeschlagen.",
     "reveal_error": "Geheimnis konnte nicht angezeigt oder kopiert werden.",

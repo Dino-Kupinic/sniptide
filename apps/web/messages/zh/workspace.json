@@ -373,8 +373,6 @@
     "unlock_description": "输入链接密码以显示当前值。值会在一分钟后或离开此窗口时隐藏。",
     "checking": "正在检查…",
     "reveal_secrets": "显示密钥",
-    "credentials_prompt": "要存储凭据？",
-    "credentials_link": "创建加密密钥组",
     "syntax_error": "请检查 .env 语法和大小限制。",
     "save_error": "无法保存。",
     "reveal_error": "无法显示或复制密钥。",

@@ -373,8 +373,6 @@
     "unlock_description": "リンクのパスワードを入力すると現在の値が表示されます。値は1分後、またはこのウィンドウを離れると隠されます。",
     "checking": "確認中…",
     "reveal_secrets": "シークレットを表示",
-    "credentials_prompt": "認証情報を保存しますか？",
-    "credentials_link": "暗号化されたシークレットグループを作成",
     "syntax_error": ".env の構文とサイズ制限を確認してください。",
     "save_error": "保存できませんでした。",
     "reveal_error": "シークレットを表示またはコピーできませんでした。",
