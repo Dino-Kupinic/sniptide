@@ -1,0 +1,14 @@
+{
+  "title": "Self-hosting",
+  "pages": [
+    "index",
+    "docker-compose",
+    "docker",
+    "coolify",
+    "configuration",
+    "reverse-proxy",
+    "memory",
+    "upgrading",
+    "backups"
+  ]
+}

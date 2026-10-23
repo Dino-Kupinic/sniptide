@@ -44,7 +44,7 @@ export function ViewsChart({
   return (
     <section
       aria-labelledby="views-chart-title"
-      className="flex flex-col gap-4 border border-border px-4 pt-4 pb-3.5 lg:px-5 lg:pt-5"
+      className="rounded-lg flex flex-col gap-4 border border-border px-4 pt-4 pb-3.5 lg:px-5 lg:pt-5"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-0.5">
@@ -124,7 +124,7 @@ export function ViewsChart({
                     style={{ height }}
                   >
                     {isPeak ? (
-                      <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] whitespace-nowrap text-background">
+                      <span className="rounded-sm absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] whitespace-nowrap text-background">
                         {formatNumber(value, locale)}
                       </span>
                     ) : null}

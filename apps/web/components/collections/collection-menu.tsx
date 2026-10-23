@@ -51,7 +51,7 @@ export function CollectionMenu({
           aria-label={t("actions_for", { name: collection.name })}
           className={
             className ??
-            "flex size-8 items-center justify-center border border-border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+            "rounded-lg flex size-8 items-center justify-center border border-border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
           }
         >
           <MoreHorizontalIcon className="size-4" />

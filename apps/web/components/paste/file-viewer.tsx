@@ -64,7 +64,12 @@ export function FileViewer({
   const collapsed = collapseAt !== undefined && !expanded && lines > collapseAt
 
   return (
-    <div className={cn("flex min-w-0 flex-col border border-border", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg flex min-w-0 flex-col border border-border",
+        className,
+      )}
+    >
       <div
         className={cn(
           "flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border pr-1.5",
@@ -84,7 +89,7 @@ export function FileViewer({
                 className={cn(
                   "flex shrink-0 items-center gap-2 px-4 font-mono text-[13px] outline-none focus-visible:underline",
                   files.length > 1 && "border-r border-border",
-                  files.length > 1 && selected && "shadow-[inset_0_2px_0_var(--primary)]",
+                  files.length > 1 && selected && "shadow-[inset_0_-2px_0_var(--primary)]",
                   selected ? "text-foreground" : "text-muted-foreground",
                 )}
               >

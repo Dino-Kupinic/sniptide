@@ -34,7 +34,7 @@ export function PublicHeader({ signedIn, className }: { signedIn: boolean; class
         </a>
         <Button
           variant="inverted"
-          className="h-9 px-3.5 text-sm"
+          className="h-[34px] px-3.5 text-sm"
           render={<a href={`${appOrigin}${signedIn ? "/dashboard" : "/sign-in"}`} />}
           nativeButton={false}
         >

@@ -1,0 +1,41 @@
+---
+title: Docker
+description: Run the Sniptide image against a Postgres database you already have.
+---
+
+If you already run Postgres, you only need the app container.
+
+## Create the settings file
+
+Create `sniptide.env` and keep it out of source control:
+
+```dotenv
+DATABASE_URL=postgres://user:password@your-postgres-host:5432/sniptide
+BETTER_AUTH_SECRET=replace-with-a-long-random-secret
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+- Generate the secret with `openssl rand -hex 32` and keep it across restarts.
+- `BETTER_AUTH_URL` is the exact address people open in the browser. Use the public `https://` URL
+  when you serve it through a reverse proxy.
+- The database host must be reachable from inside the container. `localhost` there is the
+  container itself, not your server.
+
+## Run it
+
+```bash
+docker run -d --name sniptide --restart unless-stopped --memory 768m --memory-swap 768m \
+  -p 3000:3000 --env-file sniptide.env ghcr.io/dino-kupinic/sniptide:latest
+```
+
+The image applies its migrations on startup, then serves on port 3000. Check it with
+`curl http://localhost:3000/api/health`.
+
+## About the database
+
+- Postgres 17 is what Sniptide is built and tested against.
+- The first migration installs the `pg_trgm` extension (for title and link search). The database
+  user that runs migrations must be allowed to do that. If your provider restricts it, ask your
+  database operator to run `CREATE EXTENSION pg_trgm;` first.
+- Back up before upgrading: see [Upgrading](/self-hosting/upgrading) and [Backups](/self-hosting/backups).
+- Size the connection pool for your server: [Configuration](/self-hosting/configuration#database-and-capacity).

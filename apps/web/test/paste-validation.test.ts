@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { savePaste } from "@/lib/pastes/actions"
 import { maxPasteBytes, parsePasteInput, pasteSchema } from "@/lib/pastes/schema"
-import { createPaste, getPaste, updatePaste } from "@/lib/pastes/store"
+import { createPaste, getPaste, isSlugAvailable, updatePaste } from "@/lib/pastes/store"
 import type { PasteInput } from "@/lib/pastes/types"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
@@ -46,6 +47,12 @@ describeDb("persistence validation", () => {
     await resetDatabase()
     await seedUser("owner")
     signInAs("owner")
+  })
+  test("custom paste links cannot claim secret routes", async () => {
+    for (const slug of ["secrets", "secret-share", "Secrets"]) {
+      expect(await isSlugAvailable(slug)).toBe(false)
+      expect((await savePaste({ ...input("route collision fixture"), slug })).ok).toBe(false)
+    }
   })
   test("direct creation and editing cannot bypass size and filename rules", async () => {
     await expect(createPaste(input("é".repeat(maxPasteBytes())))).rejects.toThrow("1 MB")

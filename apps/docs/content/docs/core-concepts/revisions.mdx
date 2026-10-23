@@ -1,0 +1,32 @@
+---
+title: Revisions
+description: Every paste keeps a history of its edits, and you can roll back.
+---
+
+When you edit a paste, Sniptide keeps a **revision**: a saved copy of its title, description and
+files. Open **Revisions** on a paste to see the history.
+
+## How revisions are recorded
+
+Auto-save would fill a history with one entry per pause in typing, so edits are batched. While you
+keep editing, changes fold into the newest revision, as long as it is less than 10 minutes old and
+you haven't closed the editor with **Done**. After **Done**, or after 10 minutes, the next edit
+starts a new revision. An edit that rewrites most of a paste always gets a revision of its own.
+
+Creating a paste and importing a gist also record a first revision.
+
+## Rolling back
+
+**Restore** on a revision puts the paste's title, description and files back the way that
+revision left them. It does not touch the sharing settings, the link or the collection. The
+rollback is a revision itself ("Restored revision N"), so the version you replaced is still in the
+history and you can restore it in turn. Nothing is lost by restoring.
+
+People you gave **Edit** access to can restore revisions too. The history is shown 20 entries at
+a time.
+
+## What is kept
+
+Sniptide keeps the full copy for the **20 newest** revisions of a paste. Older ones stay in the
+history as a log entry but can no longer be restored. History from before copies were kept has
+no copy either; those entries are marked as not restorable.

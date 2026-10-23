@@ -1,0 +1,66 @@
+---
+title: Sharing
+description: Who can open a paste, how to protect it, and when it goes away.
+---
+
+Every paste has its own sharing settings. Change them in the editor under **Visibility & expiry**,
+or later with **Share** on the paste.
+
+## Visibility
+
+| Visibility | Who can open it |
+| --- | --- |
+| **Private** | You and the accounts you invited. Everyone else gets a 404, as if the link didn't exist. |
+| **Unlisted** | Anyone with the link. Search engines are told not to index it. |
+| **Public** | Anyone with the link, and search engines may index it. Public pastes without a password or burn setting also get a link preview (see below). |
+
+Unlisted is the default for new pastes. "Unlisted" means the link is the secret: don't treat it as
+access control for anything sensitive.
+
+## Password
+
+Set a **Paste password** on a public or unlisted paste and visitors must enter it before they can
+see the code. The password is stored only as a salted hash. Change or remove it from **Share**.
+You and the people you invited never see the prompt. Too many wrong guesses from one address are
+rate-limited.
+
+## Invite people
+
+For a private paste (or any paste), **Invite people** with a Sniptide account, by email or
+username, and choose their access:
+
+- **View** lets them read it.
+- **Edit** also lets them change the title, description and files. The link, visibility, expiry,
+  password, collection and burn setting stay yours.
+
+They find it under **Shared with me** as soon as you invite them, and you can remove access any
+time. They can also remove it from their own list, and you can invite them again. You can invite
+people when you create a paste, too.
+
+## Raw access
+
+Each file is available as plain text at `<domain>/<link>/raw?file=<file name>`, for `curl` and
+scripts. **Allow raw access** turns that off for everyone but you. It follows the other settings:
+a private paste, a locked one and an expired one aren't readable through raw either, and a
+[burn-after-read](/core-concepts/burn-after-read) paste has no raw access for anyone but you.
+
+## Expiry
+
+Choose **Expires after**: 1 hour, 1 day, 1 week, 1 month or never. When it passes, the link stops
+working for everyone, and the paste is removed after another 30 days. Sniptide notifies
+you about pastes that are about to expire.
+
+## Link previews and channels
+
+Public pastes without a password or one-time protection give link previews (Open Graph and X
+cards) with the title, language and the first ten lines of the first file. Previews and other
+automated fetches never count as a view and never use up a burn-after-read paste.
+
+If the administrator configured Slack or Discord webhooks, **Share → Share to Slack / Discord**
+posts the link to the channel. It is only offered for public or unlisted pastes with no password
+or one-time protection, and everyone in the channel receives the link.
+
+## Views
+
+A paste's page shows how many times it was opened. Only people opening the share page count:
+you don't, and neither do crawlers, link previews or scripts.

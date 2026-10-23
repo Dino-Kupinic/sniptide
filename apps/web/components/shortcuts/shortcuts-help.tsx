@@ -101,7 +101,7 @@ function ShortcutsSheet({
           </div>
           <DialogClose
             aria-label={t("close")}
-            className="-mr-1.5 flex size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="rounded-lg -mr-1.5 flex size-8 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
           >
             <XIcon className="size-4" />
           </DialogClose>
