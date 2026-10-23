@@ -40,7 +40,7 @@ export async function renderOgImage({
   description?: string
 }) {
   const [heading, body] = await Promise.all([
-    font("StackSansHeadline-700.woff"),
+    font("Archivo-700.woff"),
     font("Inter-400.woff"),
   ])
 
@@ -65,7 +65,7 @@ export async function renderOgImage({
             ))}
           </g>
         </svg>
-        <div style={{ fontFamily: "Stack Sans Headline", fontSize: 36, letterSpacing: -0.7 }}>
+        <div style={{ fontFamily: "Archivo", fontSize: 36, letterSpacing: -0.7 }}>
           {siteName}
         </div>
       </div>
@@ -73,7 +73,7 @@ export async function renderOgImage({
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
         <div
           style={{
-            fontFamily: "Stack Sans Headline",
+            fontFamily: "Archivo",
             fontSize: title.length > 28 ? 84 : 104,
             lineHeight: 1.04,
             letterSpacing: -3,
@@ -102,7 +102,7 @@ export async function renderOgImage({
     {
       ...ogSize,
       fonts: [
-        { name: "Stack Sans Headline", data: heading, style: "normal", weight: 700 },
+        { name: "Archivo", data: heading, style: "normal", weight: 700 },
         { name: "Inter", data: body, style: "normal", weight: 400 },
       ],
     },
