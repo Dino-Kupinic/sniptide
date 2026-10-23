@@ -19,12 +19,14 @@ export function parseAllowlist(value?: string): Set<string> | undefined {
 export const SIGN_UP_CLOSED_MESSAGE = "Sign-up is closed on this instance."
 
 // ALLOW_SIGN_UP=false: nobody can create an account, listed or not. Covers email and OAuth.
+// The codes reach the sign-in page as ?error=<code> when a GitHub or Google sign-up is refused.
 export function assertSignUpOpen(allowSignUp: boolean) {
-  if (!allowSignUp) throw new APIError("FORBIDDEN", { message: SIGN_UP_CLOSED_MESSAGE })
+  if (!allowSignUp)
+    throw new APIError("FORBIDDEN", { message: SIGN_UP_CLOSED_MESSAGE, code: "sign_up_closed" })
 }
 
 export function assertAllowed(allowlist: Set<string> | undefined, email: unknown) {
   if (!allowlist) return
   if (typeof email === "string" && allowlist.has(email.trim().toLowerCase())) return
-  throw new APIError("FORBIDDEN", { message: INVITE_ONLY_MESSAGE })
+  throw new APIError("FORBIDDEN", { message: INVITE_ONLY_MESSAGE, code: "invite_only" })
 }

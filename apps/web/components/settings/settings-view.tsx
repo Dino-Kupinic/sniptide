@@ -9,18 +9,26 @@ import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
+import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
+import {
+  ConnectedAccountsSection,
+  DeleteAccountSection,
+  EmailSection,
+  PasswordSection,
+  SessionsSection,
+} from "./account-sections"
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
-import { DeleteAccountSection } from "./delete-account"
 import { NotificationSection } from "./notification-section"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-export type SettingsTab = "general" | "defaults" | "notifications" | "api" | "billing"
+export type SettingsTab = "general" | "account" | "defaults" | "notifications" | "api" | "billing"
 
 export interface WorkspaceCounts {
   shared: number
@@ -54,11 +62,17 @@ export function SettingsView({
   counts,
   storage,
   api,
+  security,
 }: {
   initialTab: SettingsTab
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
+  security: AccountSecurity & {
+    providers: SocialProvider[]
+    linkError: string | null
+    demo: boolean
+  }
   counts: WorkspaceCounts
   storage: { usedMb: number; limitMb: number | null }
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
@@ -68,6 +82,7 @@ export function SettingsView({
   const workspace = useTranslations("Workspace")
   const tabs: { value: SettingsTab; label: string }[] = [
     { value: "general", label: t("general") },
+    { value: "account", label: t("account") },
     { value: "defaults", label: t("pasteDefaults") },
     { value: "notifications", label: workspace("notifications") },
     { value: "api", label: t("apiTokens") },
@@ -167,7 +182,24 @@ export function SettingsView({
               <LanguageSwitcher />
             </SettingsSection>
             <EditorSection initial={preferences} />
-            <DeleteAccountSection pasteCount={counts.pastes} />
+          </>
+        ) : null}
+        {tab === "account" ? (
+          <>
+            <EmailSection
+              email={profile.email}
+              emailVerified={profile.emailVerified}
+              hasPassword={security.hasPassword}
+              emailAvailable={emailAvailable}
+            />
+            <PasswordSection hasPassword={security.hasPassword} />
+            <ConnectedAccountsSection
+              linked={security.linked}
+              available={security.providers}
+              linkError={security.linkError}
+            />
+            <SessionsSection sessions={security.sessions} demo={security.demo} />
+            <DeleteAccountSection pasteCount={counts.pastes} hasPassword={security.hasPassword} />
           </>
         ) : null}
         {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}

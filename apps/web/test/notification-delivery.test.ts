@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm"
 import { GET, POST } from "@/app/api/notifications/unsubscribe/route"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
-import { sendEmailVerification } from "@/lib/mail"
+import { sendEmailVerification, sendPasswordReset } from "@/lib/mail"
 import { deliverNotificationEmails } from "@/lib/notifications/email"
 import { notifyExpiringPastes } from "@/lib/notifications/expiring"
 import { recordNotifications } from "@/lib/notifications/record"
@@ -529,6 +529,59 @@ describeDb("notification channel delivery", () => {
     expect(account?.emailVerified).toBe(true)
     signInAs(account?.id ?? null)
     await enable()
+  })
+  test("a forgotten password resets through real auth and local SMTP", async () => {
+    const config = getConfig()
+    const auth = createAuth({
+      db: getDb(),
+      secret: config.authSecret ?? "",
+      baseURL: config.appUrl,
+      rateLimitEnabled: false,
+      sendResetPassword: sendPasswordReset,
+    })
+    await auth.api.signUpEmail({
+      body: {
+        name: "Forgetful",
+        email: "forgetful@example.com",
+        password: "the-old-password-1",
+        username: "forgetful",
+      },
+    })
+    const reset = (email: string) =>
+      auth.api.requestPasswordReset({ body: { email, redirectTo: "/reset-password" } })
+    // The same answer for an address without an account, and no email for it.
+    expect(await reset("nobody@example.com")).toEqual(await reset("forgetful@example.com"))
+    for (let wait = 0; wait < 50 && sink.messages.length < 1; wait++) await Bun.sleep(20)
+    await Bun.sleep(50)
+    expect(sink.messages).toHaveLength(1)
+    const message = (sink.messages[0] ?? "").replace(/=\r\n/g, "").replace(/=3D/g, "=")
+    expect(message).toContain("To: forgetful@example.com")
+    const link = message.match(/http:\/\/localhost:3000\/api\/auth\/reset-password\/[^\s]+/)?.[0]
+    if (!link) throw new Error("missing reset URL")
+    const landing = await auth.handler(new Request(link))
+    expect(landing.status).toBe(302)
+    const token = new URL(
+      landing.headers.get("location") ?? "",
+      "http://localhost:3000",
+    ).searchParams.get("token")
+    if (!token) throw new Error("missing reset token")
+    await auth.api.resetPassword({ body: { newPassword: "the-new-password-2", token } })
+    await expect(
+      auth.api.resetPassword({ body: { newPassword: "a-third-password-3", token } }),
+    ).rejects.toThrow()
+    await expect(
+      auth.api.signInEmail({
+        body: { email: "forgetful@example.com", password: "the-old-password-1" },
+      }),
+    ).rejects.toThrow()
+    const signedIn = await auth.api.signInEmail({
+      body: { email: "forgetful@example.com", password: "the-new-password-2" },
+    })
+    expect(signedIn.user.email).toBe("forgetful@example.com")
+    // Three links an hour per account; more requests answer the same and send nothing.
+    for (let attempt = 0; attempt < 4; attempt++) await reset("forgetful@example.com")
+    await Bun.sleep(300)
+    expect(sink.messages).toHaveLength(3)
   })
   test("absolute SMTP deadline destroys the socket before lease expiry", async () => {
     await enable()
