@@ -1,7 +1,9 @@
 "use client"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
-import { PanelLeftIcon, SearchIcon } from "lucide-react"
+import { cn } from "@sniptide/ui/lib/utils"
+import { ChevronRightIcon, PanelLeftIcon, SearchIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
@@ -11,7 +13,7 @@ import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs } from "./page-header"
 
 const iconButtonClass =
-  "inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
+  "rounded-lg inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
 
 // Desktop top bar (lg and up): the page title on the left, the page's own actions on the right,
 // then the bell. There is no breadcrumb; the sidebar already marks where you are. The sidebar
@@ -29,7 +31,7 @@ export function TopBar({
   const { setTitle, setActions } = useHeaderSlotRefs()
 
   return (
-    <header className="sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
+    <header className="group/header sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
       {sidebarOpen ? null : (
         <>
           <SidebarToggle onToggle={onToggleSidebar} open={false} className="-ml-2" />
@@ -37,9 +39,21 @@ export function TopBar({
         </>
       )}
 
+      {/* Every page sits under "Workspace >", with the page's own title (or the one it sets)
+          after the chevron. */}
+      <nav aria-label={t("breadcrumb")} className="flex shrink-0 items-center gap-1.5 text-sm">
+        <Link
+          href="/dashboard"
+          className="rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+        >
+          {t("workspace")}
+        </Link>
+        <ChevronRightIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+      </nav>
       <div
         ref={setTitle}
-        className="group/title flex min-w-0 flex-1 items-center text-[15px] font-semibold"
+        aria-current="page"
+        className="group/title -ml-1.5 flex min-w-0 flex-1 items-center text-sm font-medium"
       >
         <span className="truncate group-has-data-header-title/title:hidden">
           {pageTitle(pathname) ? t(pageTitle(pathname)) : ""}
@@ -48,10 +62,19 @@ export function TopBar({
 
       <div
         ref={setActions}
+        data-header-actions=""
         className="flex max-w-full shrink-0 flex-wrap items-center gap-2 empty:hidden"
       />
       {sidebarOpen ? null : <SearchField />}
-      <span aria-hidden="true" className="h-5 w-px bg-border" />
+      {/* Separates the page's own actions (or the search field) from the bell, so it only shows
+          when something sits before it. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "h-5 w-px bg-border",
+          sidebarOpen && "hidden group-has-[[data-header-actions]:not(:empty)]/header:block",
+        )}
+      />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>
   )
@@ -65,7 +88,7 @@ function SearchField() {
     <button
       type="button"
       onClick={open}
-      className="flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
+      className="rounded-lg flex h-9 w-72 shrink-0 items-center gap-2 border border-border bg-background pr-2 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
     >
       <SearchIcon className="size-3.5" />
       {t("search_pastes_collections")}

@@ -74,7 +74,22 @@
     "webhookPaste": "Only the owner can share a live public or unlisted paste without a password or one-time protection.",
     "webhookInvalid": "That webhook isn't configured correctly.",
     "webhookDelivery": "The webhook didn't confirm delivery. Check the channel before trying again.",
-    "validationTooLong": "Too big: expected string to have <={max} characters"
+    "validationTooLong": "Too big: expected string to have <={max} characters",
+    "signInAccount": "Sign in again to change your account.",
+    "emailInvalid": "Enter a valid email address.",
+    "emailSame": "That's already your email.",
+    "emailUnavailable": "That email can't be used. Try another one.",
+    "emailDeliveryOff": "Changing a verified email needs email delivery, which isn't set up on this instance.",
+    "emailChangeFailed": "Couldn't change your email. Try again.",
+    "wrongPassword": "That password isn't right.",
+    "passwordTooShort": "Use at least 8 characters.",
+    "passwordTooLong": "Use at most 128 characters.",
+    "passwordSetFailed": "Couldn't add a password. Try again.",
+    "sessionRevokeFailed": "Couldn't sign out that device. Try again.",
+    "unlinkLast": "Keep at least one way to sign in. Add a password or connect another account first.",
+    "unlinkFailed": "Couldn't disconnect that account. Try again.",
+    "demoLocked": "This isn't available in the demo.",
+    "signInFresh": "For your safety, sign out and back in, then try again."
   },
   "ServerError": {
     "title": "Something went wrong",

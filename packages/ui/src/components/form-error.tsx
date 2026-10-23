@@ -19,7 +19,7 @@ function FormError({
       role="alert"
       className={cn(
         variant === "banner"
-          ? "border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive"
+          ? "rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-[13px] text-destructive"
           : "text-[13px] text-destructive",
         className,
       )}

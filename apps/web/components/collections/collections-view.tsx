@@ -35,7 +35,7 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
       <div className="lg:hidden">{create}</div>
 
       {collections.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 border border-border px-4 py-14 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg flex flex-col items-center gap-3 border border-border px-4 py-14 text-center text-sm text-muted-foreground">
           {t("no_collections_yet")}
           <button
             type="button"
@@ -46,7 +46,7 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
           </button>
         </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-border border border-border">
+        <ul className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border">
           {collections.map((collection) => (
             <li
               key={collection.slug}
@@ -67,7 +67,7 @@ export function CollectionsView({ collections }: { collections: Collection[] }) 
               </span>
               <CollectionMenu
                 collection={collection}
-                className="relative z-10 col-start-3 row-start-1 flex size-8 shrink-0 sm:col-start-4 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+                className="rounded-lg relative z-10 col-start-3 row-start-1 flex size-8 shrink-0 sm:col-start-4 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
               />
             </li>
           ))}

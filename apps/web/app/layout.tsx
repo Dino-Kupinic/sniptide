@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { Inter, JetBrains_Mono, Stack_Sans_Headline } from "next/font/google"
+import { Archivo, Inter, JetBrains_Mono } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getTranslations } from "next-intl/server"
 
@@ -9,7 +9,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { Analytics } from "@/components/analytics"
 import { ThemeProvider } from "@/components/theme-provider"
 
-const fontHeading = Stack_Sans_Headline({
+const fontHeading = Archivo({
   subsets: ["latin"],
   weight: "700",
   variable: "--font-heading",

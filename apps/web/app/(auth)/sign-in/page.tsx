@@ -4,6 +4,7 @@ import { AuthScreen } from "@/components/auth/auth-screen"
 import { authSubmitClass } from "@/components/auth/fields"
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { getInviteOnly, getSocialProviders, isDemoMode, isSignUpClosed } from "@/lib/auth"
+import { oauthErrorKey } from "@/lib/oauth-errors"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata() {
@@ -11,8 +12,13 @@ export async function generateMetadata() {
   return { title: t("signInTitle"), description: t("signInDescription") }
 }
 
-export default async function Page() {
-  const [{ host }, t] = await Promise.all([getSiteOrigin(), getTranslations("Auth")])
+export default async function Page({ searchParams }: PageProps<"/sign-in">) {
+  const [{ host }, t, { error, reset }] = await Promise.all([
+    getSiteOrigin(),
+    getTranslations("Auth"),
+    searchParams,
+  ])
+  const errorKey = oauthErrorKey(error)
   return (
     <AuthScreen
       title={t("welcomeBack")}
@@ -38,6 +44,8 @@ export default async function Page() {
       <SignInForm
         socialProviders={getInviteOnly() ? null : await getSocialProviders()}
         signUpClosed={isSignUpClosed()}
+        initialError={errorKey ? t(`oauthErrors.${errorKey}`) : null}
+        notice={reset === "1" ? t("passwordResetDone") : null}
       />
     </AuthScreen>
   )

@@ -2,7 +2,6 @@ import "server-only"
 
 import { envGroup, envVariable, user } from "@workspace/db/schema"
 import { and, asc, desc, eq, sql } from "drizzle-orm"
-import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { decryptValue, encryptValue } from "./crypto"
 
@@ -10,48 +9,18 @@ import { decryptValue, encryptValue } from "./crypto"
 // `sniptide env push` uploads from a .env file and `env pull` / `env run` bring back. Each group
 // belongs to one account and is only reached through that account's session or API tokens.
 
-export const MAX_GROUPS = 100
-export const MAX_VARIABLES = 500
-export const MAX_VALUE_BYTES = 32 * 1024
-export const MAX_GROUP_BYTES = 256 * 1024
+export {
+  GROUP_SLUG,
+  groupSlugSchema,
+  MAX_GROUP_BYTES,
+  MAX_GROUPS,
+  MAX_VALUE_BYTES,
+  MAX_VARIABLES,
+  type Variable,
+  variablesSchema,
+} from "./inputs"
 
-export const GROUP_SLUG = /^[a-z0-9][a-z0-9._-]{0,63}$/
-const NAME = /^[A-Za-z_][A-Za-z0-9_]{0,255}$/
-
-export const groupSlugSchema = z
-  .string()
-  .regex(GROUP_SLUG, "Env group names are 1–64 lowercase letters, digits, dots, - and _.")
-
-export const variablesSchema = z
-  .array(
-    z.object({
-      name: z
-        .string()
-        .regex(NAME, "Variable names are letters, digits and _, not starting with a digit."),
-      value: z
-        .string()
-        .refine(
-          (value) => Buffer.byteLength(value) <= MAX_VALUE_BYTES,
-          "A value is limited to 32 KB.",
-        ),
-    }),
-  )
-  .max(MAX_VARIABLES, `An env group holds up to ${MAX_VARIABLES} variables.`)
-  .refine(
-    (variables) => new Set(variables.map((variable) => variable.name)).size === variables.length,
-    "Each variable can only appear once.",
-  )
-  .refine(
-    (variables) =>
-      variables.reduce(
-        (sum, variable) =>
-          sum + Buffer.byteLength(variable.name) + Buffer.byteLength(variable.value),
-        0,
-      ) <= MAX_GROUP_BYTES,
-    "An env group is limited to 256 KB.",
-  )
-
-export type Variable = z.infer<typeof variablesSchema>[number]
+import { groupSlugSchema, MAX_GROUPS, type Variable, variablesSchema } from "./inputs"
 
 export interface EnvGroupSummary {
   slug: string
@@ -129,6 +98,7 @@ export async function writeGroup(
       .select()
       .from(envGroup)
       .where(and(eq(envGroup.ownerId, owner), eq(envGroup.slug, name)))
+      .for("update")
     if (!group) {
       const [count] = await tx
         .select({ count: sql<number>`count(*)::int` })
@@ -140,7 +110,10 @@ export async function writeGroup(
         .values({ ownerId: owner, slug: name, createdAt: now, updatedAt: now })
         .returning()
     } else {
-      await tx.update(envGroup).set({ updatedAt: now }).where(eq(envGroup.id, group.id))
+      await tx
+        .update(envGroup)
+        .set({ updatedAt: now, revision: sql`${envGroup.revision} + 1` })
+        .where(eq(envGroup.id, group.id))
     }
     if (!group) throw new Error("Couldn't create the env group.")
     const id = group.id
