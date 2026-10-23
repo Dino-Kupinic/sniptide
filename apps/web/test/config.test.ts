@@ -24,6 +24,32 @@ describe("parseSize", () => {
 })
 
 describe("getConfig", () => {
+  test("points the account menu's resource links at the project by default", () => {
+    expect(getConfig({}).resourceLinks).toEqual({
+      homepage: "https://sniptide.com",
+      documentation: "https://docs.sniptide.com",
+      help: "https://github.com/Dino-Kupinic/sniptide/issues",
+    })
+  })
+
+  test("lets a self-hosted instance point the resource links elsewhere", () => {
+    expect(
+      getConfig({
+        HOMEPAGE_URL: "https://paste.example.com",
+        DOCS_URL: "https://wiki.example.com/paste",
+        HELP_URL: "",
+      }).resourceLinks,
+    ).toEqual({
+      homepage: "https://paste.example.com",
+      documentation: "https://wiki.example.com/paste",
+      help: "https://github.com/Dino-Kupinic/sniptide/issues",
+    })
+  })
+
+  test("names the variable when a resource link is not a URL", () => {
+    expect(() => getConfig({ DOCS_URL: "docs.example.com" })).toThrow(/DOCS_URL/)
+  })
+
   test("has defaults for everything optional", () => {
     const config = getConfig({})
     expect(config.maxPasteBytes).toBe(1024 * 1024)
