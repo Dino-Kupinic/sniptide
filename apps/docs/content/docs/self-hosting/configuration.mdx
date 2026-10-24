@@ -50,6 +50,21 @@ their email is verified, even if the invite list or SMTP is later disabled. See 
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks for Share → Share to Slack/Discord. One channel per provider; every signed-in paste owner can post to it (20 shares an hour per account). Keep the URLs secret. |
 | `ENV_SECRETS_KEY` | derived from `BETTER_AUTH_SECRET` | Key (at least 32 characters) that encrypts env group values. Set it before rotating the auth secret; changing whichever key is in use makes stored env values unreadable until they're pushed again. |
 
+### Link preview videos
+
+Discord, Telegram and Facebook play an og:video in a public paste's link preview: the preview
+card with the Game of Life moving at its sides. Other apps show the still card. The server
+renders a paste's video with ffmpeg the first time its page opens, which takes about four
+seconds of one core, and keeps it on disk until the paste changes. The Docker image includes
+ffmpeg; without it pages leave out og:video and nothing else changes.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `PREVIEW_VIDEO` | on | `off` leaves og:video out even when ffmpeg is installed. |
+| `FFMPEG_PATH` | `ffmpeg` | The ffmpeg binary, when it isn't on the `PATH`. |
+| `PREVIEW_VIDEO_DIR` | the system temp folder | Where rendered videos are cached. Mount a volume here to keep them across restarts. |
+| `PREVIEW_VIDEO_CACHE_FILES` | `500` | The most videos kept (1 to 100000, about 1.6 MB each); the oldest go first. |
+
 ## Email
 
 Notification emails are off until you configure SMTP. In-app notifications and password sign-in
