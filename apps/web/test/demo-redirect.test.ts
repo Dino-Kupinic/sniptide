@@ -45,8 +45,6 @@ test("demo redirects stay on the app origin after browser URL parsing", async ()
       "https://public-app.test",
     )
   }
-  expect(results.slice(0, 5).map((result) => result.location)).toEqual(
-    Array(5).fill("/dashboard"),
-  )
+  expect(results.slice(0, 5).map((result) => result.location)).toEqual(Array(5).fill("/dashboard"))
   expect(results[7]?.location).toBe("/pastes/example?tab=code#L2")
 })

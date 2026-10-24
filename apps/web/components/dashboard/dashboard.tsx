@@ -111,7 +111,9 @@ export function Dashboard({
   origin,
   host,
   defaults,
+  draftScope,
 }: {
+  draftScope: string
   defaults: React.ComponentProps<typeof QuickPaste>["defaults"]
   data: DashboardData
   firstName: string
@@ -220,7 +222,7 @@ export function Dashboard({
 
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="hidden min-w-0 flex-[1.8] lg:flex">
-          <QuickPaste defaults={defaults} />
+          <QuickPaste key={draftScope} draftScope={draftScope} defaults={defaults} />
         </div>
         <section
           aria-labelledby="views-heading"

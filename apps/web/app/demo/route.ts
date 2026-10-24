@@ -8,7 +8,15 @@ export async function GET(request: NextRequest) {
   if (!isDemoMode()) return new NextResponse(null, { status: 404 })
 
   const next = request.nextUrl.searchParams.get("next")
-  const target = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"
+  const target =
+    next?.startsWith("/") &&
+    !next.startsWith("//") &&
+    !next.includes("\\") &&
+    Array.from(next).every(
+      (character) => character.charCodeAt(0) > 32 && character.charCodeAt(0) !== 127,
+    )
+      ? next
+      : "/dashboard"
 
   if (!(await getSession()) && !(await enterDemo())) {
     return new NextResponse("Too many requests. Try again in a minute.", {

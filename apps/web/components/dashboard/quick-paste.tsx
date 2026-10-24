@@ -15,16 +15,17 @@ import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { z } from "zod"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { LanguageMarker } from "@/components/paste/language-marker"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, languages } from "@/lib/pastes/languages"
-import type { Expiry, Visibility } from "@/lib/pastes/types"
+import { EXPIRIES, type Expiry, VISIBILITIES, type Visibility } from "@/lib/pastes/types"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
-const DRAFT_KEY = "sniptide:quick-paste"
+const LEGACY_DRAFT_KEY = "sniptide:quick-paste"
 
 interface Draft {
   name: string
@@ -42,20 +43,31 @@ const emptyDraft: Draft = {
   burnAfterRead: false,
 }
 
+const draftSchema = z.object({
+  name: z.string(),
+  content: z.string(),
+  expiry: z.enum(EXPIRIES),
+  visibility: z.enum(VISIBILITIES),
+  burnAfterRead: z.boolean(),
+})
+
 // Browser storage is only a convenience here: a lost draft costs a re-paste, nothing more.
-function readDraft(fallback: Draft): Draft {
+function readDraft(key: string, fallback: Draft): Draft {
   try {
-    const stored = window.localStorage.getItem(DRAFT_KEY)
-    return stored ? { ...fallback, ...JSON.parse(stored) } : fallback
+    // The old shared key has no account owner, so it cannot be adopted safely.
+    window.localStorage.removeItem(LEGACY_DRAFT_KEY)
+    const stored = window.localStorage.getItem(key)
+    const parsed = stored ? draftSchema.safeParse(JSON.parse(stored)) : null
+    return parsed?.success ? parsed.data : fallback
   } catch {
     return fallback
   }
 }
 
-function writeDraft(draft: Draft | null) {
+function writeDraft(key: string, draft: Draft | null) {
   try {
-    if (draft) window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-    else window.localStorage.removeItem(DRAFT_KEY)
+    if (draft) window.localStorage.setItem(key, JSON.stringify(draft))
+    else window.localStorage.removeItem(key)
   } catch {
     // Private mode or blocked storage: the draft just isn't kept.
   }
@@ -76,7 +88,9 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
 // "Quick paste" composer on the dashboard: one file, the common options, Cmd+Enter to create.
 export function QuickPaste({
   defaults,
+  draftScope,
 }: {
+  draftScope: string
   // Paste defaults from Settings, used for a fresh draft.
   defaults?: Pick<Draft, "expiry" | "visibility" | "burnAfterRead">
 }) {
@@ -96,29 +110,34 @@ export function QuickPaste({
   }
 
   const router = useRouter()
+  const draftKey = `sniptide:quick-paste:${encodeURIComponent(draftScope)}`
   const fresh = React.useMemo(() => ({ ...emptyDraft, ...defaults }), [defaults])
   const [draft, setDraft] = React.useState<Draft>(fresh)
   const [saved, setSaved] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
   const loaded = React.useRef(false)
+  const completed = React.useRef(false)
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const language = detectLanguage(draft.name)
   const highlighted = useHighlight(draft.content, draft.name)
 
   React.useEffect(() => {
-    setDraft(readDraft(fresh))
+    setDraft(readDraft(draftKey, fresh))
     loaded.current = true
-  }, [fresh])
+  }, [draftKey, fresh])
 
   React.useEffect(() => {
-    if (!loaded.current) return
+    if (!loaded.current || completed.current) return
     setSaved(false)
-    const timer = setTimeout(() => {
-      writeDraft(draft)
+    timer.current = setTimeout(() => {
+      writeDraft(draftKey, draft)
       setSaved(Boolean(draft.content))
     }, 500)
-    return () => clearTimeout(timer)
-  }, [draft])
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [draft, draftKey])
 
   function update(patch: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...patch }))
@@ -134,7 +153,9 @@ export function QuickPaste({
 
   // ⌘S: write the draft now instead of waiting out the half-second delay.
   function saveDraft() {
-    writeDraft(draft)
+    if (completed.current) return
+    if (timer.current) clearTimeout(timer.current)
+    writeDraft(draftKey, draft)
     setSaved(Boolean(draft.content))
   }
 
@@ -155,7 +176,9 @@ export function QuickPaste({
       }).catch(() => null)
       if (!result) return setError(t("couldnt_create_the_paste_try_again"))
       if (!result.ok) return setError(result.error)
-      writeDraft(null)
+      completed.current = true
+      if (timer.current) clearTimeout(timer.current)
+      writeDraft(draftKey, null)
       toast.success(t("paste_created"))
       router.push(`/pastes/${result.slug}`)
     })
