@@ -1,5 +1,6 @@
 import "server-only"
 
+import { parseAllowlist } from "@workspace/auth/allowlist"
 import {
   notification,
   pasteFile,
@@ -36,6 +37,7 @@ import {
   type SidebarViews,
 } from "@/components/shell/sidebar-state"
 import { getSession } from "@/lib/auth"
+import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { viewMilestone } from "@/lib/notifications/describe"
@@ -504,6 +506,8 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
   const viewer = await requireViewerId()
   const text = identifier.trim().replace(/^@/, "").toLowerCase()
   if (!text) return { status: "missing" }
+  const config = getConfig()
+  const requireVerifiedEmail = Boolean(config.smtp || parseAllowlist(config.allowedEmails))
   const [row] = await getDb()
     .select({
       id: user.id,
@@ -513,7 +517,15 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
       displayUsername: user.displayUsername,
     })
     .from(user)
-    .where(or(sql`lower(${user.email}) = ${text}`, sql`lower(${user.username}) = ${text}`))
+    .where(
+      or(
+        and(
+          sql`lower(${user.email}) = ${text}`,
+          requireVerifiedEmail ? eq(user.emailVerified, true) : undefined,
+        ),
+        sql`lower(${user.username}) = ${text}`,
+      ),
+    )
     .limit(1)
   if (!row) return { status: "missing" }
   if (row.id === viewer) return { status: "self" }
@@ -644,6 +656,7 @@ export async function restoreShare(slug: string) {
 async function viewerMayRead(record: PasteRecord, viewer: string | null) {
   if (record.deletedAt) return false
   if (record.ownerId === viewer) return true
+  if (record.burnAfterRead) return false
   return !recordExpired(record) && (await canOpenLink(record, viewer)) === "ok"
 }
 
@@ -707,6 +720,7 @@ export async function readableStarsWhere(viewer: string) {
         ),
       ),
       and(
+        eq(pasteTable.burnAfterRead, false),
         ne(pasteTable.visibility, "private"),
         or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
         or(
@@ -1235,6 +1249,35 @@ async function findEditable(slug: string) {
   return share?.access === "edit" ? { record, owned: false } : null
 }
 
+type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0]
+
+async function lockEditable(
+  tx: Transaction,
+  identity: Pick<PasteRecord, "id" | "ownerId">,
+  viewer: string,
+) {
+  await lockAccount(tx, identity.ownerId)
+  const [record] = await tx
+    .select()
+    .from(pasteTable)
+    .where(eq(pasteTable.id, identity.id))
+    .for("update")
+  if (!record || record.deletedAt) return null
+  if (record.ownerId === viewer) return { record, owned: true }
+  if (recordExpired(record) || record.burnAfterRead) return null
+  const [share] = await tx
+    .select({ access: pasteShare.access })
+    .from(pasteShare)
+    .where(
+      and(
+        eq(pasteShare.pasteId, record.id),
+        eq(pasteShare.userId, viewer),
+        isNull(pasteShare.leftAt),
+      ),
+    )
+  return share?.access === "edit" ? { record, owned: false } : null
+}
+
 // Revisions made by editing are batched: while the newest revision has the same message, is
 // less than this old and wasn't closed with Done, another edit folds into it instead of adding a
 // row. A save that rewrites most of the paste (see isLargeEdit) still gets a row of its own.
@@ -1269,47 +1312,41 @@ export async function updatePaste(
   options: UpdateOptions = {},
 ): Promise<UpdateResult | null> {
   const parsed = parsePasteInput(input)
-  const editable = await findEditable(slug)
-  if (!editable) return null
-  const { record, owned } = editable
-  const data: PasteInput = owned
-    ? parsed
-    : {
-        ...parsed,
-        slug,
-        visibility: record.visibility,
-        expiry: "keep",
-        collection: record.collection,
-        password: "",
-        burnAfterRead: record.burnAfterRead,
-      }
-
-  const now = new Date()
-  // An empty password on edit keeps the existing one; the client never sees it.
-  const passwordHash =
-    data.password === ""
-      ? record.passwordHash
-      : data.password
-        ? await hashPassword(data.password)
-        : null
-  const expiresAt = resolveExpiry(data.expiry, record.expiresAt, now.getTime())
-  const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
-
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-  return getDb().transaction(async (tx): Promise<UpdateResult> => {
+  const viewer = await requireViewerId()
+  const identity = await findRecord(slug)
+  if (!identity) return null
+  const replacementHash =
+    identity.ownerId === viewer && parsed.password ? await hashPassword(parsed.password) : null
+  return getDb().transaction(async (tx): Promise<UpdateResult | null> => {
+    const editable = await lockEditable(tx, identity, viewer)
+    if (!editable) return null
+    const { record, owned } = editable
+    const data = parsed
+    const now = new Date()
+    const passwordHash = owned && data.password !== "" ? replacementHash : record.passwordHash
+    const expiresAt = owned
+      ? resolveExpiry(data.expiry, record.expiresAt, now.getTime())
+      : record.expiresAt
+    const nextSlug = owned ? data.slug || record.slug : record.slug
+    const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
+    const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
     await enforceBudget(tx, record.ownerId, bytes, record.id)
     const changed = await tx
       .update(pasteTable)
       .set({
         bytes,
-        slug: data.slug || slug,
         title: data.title,
         description: data.description,
-        visibility: data.visibility,
-        passwordHash,
-        burnAfterRead: data.burnAfterRead,
-        collection: data.collection,
-        expiresAt,
+        ...(owned
+          ? {
+              slug: nextSlug,
+              visibility: data.visibility,
+              passwordHash,
+              burnAfterRead: data.burnAfterRead,
+              collection: data.collection,
+              expiresAt,
+            }
+          : {}),
         updatedAt: stamp,
         version: sql`${pasteTable.version} + 1`,
       })
@@ -1369,7 +1406,7 @@ export async function updatePaste(
     }
 
     return {
-      slug: data.slug || slug,
+      slug: nextSlug,
       version: changed[0].version,
       expiresAt: ms(expiresAt),
       hasPassword: passwordHash !== null,
@@ -1403,18 +1440,14 @@ export type RestoreResult =
 // the link and the collection stay as they are. The rollback is a revision of its own, so the
 // version it replaced is still in the history and can be restored in turn.
 export async function restoreRevision(slug: string, revisionId: number): Promise<RestoreResult> {
-  const editable = await findEditable(slug)
-  if (!editable) return { ok: false, error: "That paste no longer exists." }
-  const { record } = editable
+  const viewer = await requireViewerId()
+  const identity = await findRecord(slug)
+  if (!identity) return { ok: false, error: "That paste no longer exists." }
 
   return getDb().transaction(async (tx): Promise<RestoreResult> => {
-    await lockAccount(tx, record.ownerId)
-    const [locked] = await tx
-      .select()
-      .from(pasteTable)
-      .where(eq(pasteTable.id, record.id))
-      .for("update")
-    if (!locked || locked.deletedAt) return { ok: false, error: "That paste no longer exists." }
+    const editable = await lockEditable(tx, identity, viewer)
+    if (!editable) return { ok: false, error: "That paste no longer exists." }
+    const { record } = editable
 
     const [target] = await tx
       .select()
@@ -1457,8 +1490,8 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       throw error
     }
 
-    const version = locked.version + 1
-    const stamp = new Date(Math.max(Date.now(), locked.updatedAt.getTime() + 1))
+    const version = record.version + 1
+    const stamp = new Date(Math.max(Date.now(), record.updatedAt.getTime() + 1))
     await tx
       .update(pasteTable)
       .set({
@@ -1488,7 +1521,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       createdAt: stamp,
     })
     await pruneSnapshots(tx, record.id)
-    return { ok: true, slug: locked.slug, version }
+    return { ok: true, slug: record.slug, version }
   })
 }
 

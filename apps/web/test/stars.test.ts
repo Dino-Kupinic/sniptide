@@ -60,7 +60,12 @@ describeDb("starring", () => {
 
   test("sealed burn pastes cannot be starred by link readers or invitees", async () => {
     for (const visibility of ["public", "unlisted", "private"] as const) {
-      await seedPaste({ slug: `burn-${visibility}`, owner: "owner", visibility, burnAfterRead: true })
+      await seedPaste({
+        slug: `burn-${visibility}`,
+        owner: "owner",
+        visibility,
+        burnAfterRead: true,
+      })
       signInAs("owner")
       await sharePaste(`burn-${visibility}`, "other", "view")
       signInAs("other")

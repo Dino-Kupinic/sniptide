@@ -34,7 +34,10 @@ async function whileEditWaits<T>(edit: () => Promise<T>, change: () => Promise<u
   try {
     await db.transaction(async (gate) => {
       await gate.select({ id: user.id }).from(user).where(eq(user.id, "owner")).for("no key update")
-      const [backend] = await gate.select({ pid: sql<number>`pg_backend_pid()` }).from(user).limit(1)
+      const [backend] = await gate
+        .select({ pid: sql<number>`pg_backend_pid()` })
+        .from(user)
+        .limit(1)
       if (!backend) throw new Error("missing barrier connection")
       pending = edit()
       const deadline = Date.now() + 3000
@@ -80,9 +83,10 @@ describeDb("edit authorization under concurrent owner changes", () => {
         if (!revision) throw new Error("missing revision")
         signInAs("friend")
         const result = await whileEditWaits(
-          async () => operation === "save"
-            ? (await updatePaste("race", input({ title: "Unauthorized" }), "Edited")) !== null
-            : (await restoreRevision("race", revision.id)).ok,
+          async () =>
+            operation === "save"
+              ? (await updatePaste("race", input({ title: "Unauthorized" }), "Edited")) !== null
+              : (await restoreRevision("race", revision.id)).ok,
           async () => {
             signInAs("owner")
             if (change === "revoke") await unsharePaste("race", "friend")
@@ -90,7 +94,10 @@ describeDb("edit authorization under concurrent owner changes", () => {
             else if (change === "burn") await updateSharing("race", { burnAfterRead: true })
             else if (change === "trash") await trashPaste("race")
             else if (change === "expire") {
-              await getDb().update(paste).set({ expiresAt: new Date(0) }).where(eq(paste.slug, "race"))
+              await getDb()
+                .update(paste)
+                .set({ expiresAt: new Date(0) })
+                .where(eq(paste.slug, "race"))
             } else {
               signInAs("friend")
               await leaveShare("race")
@@ -128,4 +135,39 @@ describeDb("edit authorization under concurrent owner changes", () => {
       expect(await verifyPassword("replacement-password", row?.passwordHash ?? "")).toBe(true)
     })
   }
+
+  test("an invite ahead of a save finishes without an account foreign-key deadlock", async () => {
+    await seedUser("new-friend")
+    const row = await pasteRow("race")
+    if (!row) throw new Error("missing paste")
+    const db = getDb()
+    const operations: Promise<unknown>[] = []
+    try {
+      await db.transaction(async (gate) => {
+        await gate.select({ id: paste.id }).from(paste).where(eq(paste.id, row.id)).for("update")
+        const waitForBlocked = async (count: number) => {
+          const deadline = Date.now() + 3000
+          while (true) {
+            const blocked = await db
+              .select({ pid: sql<number>`pid` })
+              .from(sql`pg_stat_activity`)
+              .where(
+                sql`datname = current_database() AND application_name = 'sniptide'
+                  AND wait_event_type = 'Lock' AND cardinality(pg_blocking_pids(pid)) > 0`,
+              )
+            if (blocked.length >= count) return
+            if (Date.now() > deadline) throw new Error("operation did not reach the paste lock")
+          }
+        }
+        operations.push(sharePaste("race", "new-friend", "edit"))
+        await waitForBlocked(1)
+        operations.push(updatePaste("race", input({ title: "After invite" }), "Edited"))
+        await waitForBlocked(2)
+      })
+    } finally {
+      await Promise.allSettled(operations)
+    }
+    expect(await Promise.all(operations)).toMatchObject([true, { slug: "race" }])
+    expect((await pasteRow("race"))?.title).toBe("After invite")
+  })
 })

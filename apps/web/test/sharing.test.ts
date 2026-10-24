@@ -332,25 +332,39 @@ describeDb("sharing", () => {
 
   test("email invites require verified ownership when SMTP or an allowlist is configured", async () => {
     signInAs("owner")
-    const keys = ["ALLOWED_EMAILS", "SMTP_HOST", "SMTP_PORT", "SMTP_FROM", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"] as const
+    const keys = [
+      "ALLOWED_EMAILS",
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_FROM",
+      "BETTER_AUTH_URL",
+      "BETTER_AUTH_SECRET",
+    ] as const
     const previous = keys.map((key) => [key, process.env[key]] as const)
     try {
       for (const key of keys) delete process.env[key]
       for (const mode of ["allowlist", "smtp"] as const) {
         delete process.env.ALLOWED_EMAILS
         if (mode === "allowlist") process.env.ALLOWED_EMAILS = "friend@example.com"
-        else Object.assign(process.env, {
-          SMTP_HOST: "smtp.example.com",
-          SMTP_PORT: "587",
-          SMTP_FROM: "sniptide@example.com",
-          BETTER_AUTH_URL: "http://localhost:3000",
-          BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-for-better-auth",
-        })
+        else
+          Object.assign(process.env, {
+            SMTP_HOST: "smtp.example.com",
+            SMTP_PORT: "587",
+            SMTP_FROM: "sniptide@example.com",
+            BETTER_AUTH_URL: "http://localhost:3000",
+            BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-for-better-auth",
+          })
         await getDb().update(user).set({ emailVerified: false }).where(eq(user.id, "friend"))
         expect(await findPerson("friend@example.com")).toEqual({ status: "missing" })
-        expect(await findPerson("@friend")).toMatchObject({ status: "ok", person: { id: "friend" } })
+        expect(await findPerson("@friend")).toMatchObject({
+          status: "ok",
+          person: { id: "friend" },
+        })
         await getDb().update(user).set({ emailVerified: true }).where(eq(user.id, "friend"))
-        expect(await findPerson("friend@example.com")).toMatchObject({ status: "ok", person: { id: "friend" } })
+        expect(await findPerson("friend@example.com")).toMatchObject({
+          status: "ok",
+          person: { id: "friend" },
+        })
       }
     } finally {
       for (const [key, value] of previous) {
