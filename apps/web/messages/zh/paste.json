@@ -188,6 +188,13 @@
     "unlockRateLimit": "尝试次数过多，请稍后再试。",
     "unlockRequestSize": "请求内容过大。",
     "unlockPasswordLength": "密码过长。",
-    "unlockFirst": "请先解锁代码片段。"
+    "unlockFirst": "请先解锁代码片段。",
+    "embed": "嵌入",
+    "embedHint": "将此代码粘贴到网页中，即可在那里显示该 Paste。",
+    "embedCode": "嵌入代码",
+    "embedUnavailable": "此 Paste 无法嵌入。",
+    "openOnSniptide": "在 Sniptide 中打开",
+    "print": "打印",
+    "backToPaste": "返回 Paste"
   }
 }

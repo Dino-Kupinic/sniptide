@@ -16,6 +16,7 @@ import {
   LinkIcon,
   LogOutIcon,
   MoreHorizontalIcon,
+  PrinterIcon,
   StarIcon,
   Trash2Icon,
 } from "lucide-react"
@@ -209,6 +210,10 @@ export function PasteOverflowMenu({
             {t("viewRaw")}
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuItem render={<a href={`/${slug}/print`} target="_blank" rel="noopener" />}>
+          <PrinterIcon />
+          {t("print")}
+        </DropdownMenuItem>
         {canLeave ? (
           <>
             <DropdownMenuSeparator />

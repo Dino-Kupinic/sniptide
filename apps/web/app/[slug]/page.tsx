@@ -142,6 +142,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           files={files}
           rawAllowed={rawAllowed}
           collapseAt={6}
+          printable
           headerClassName={single ? "lg:hidden" : undefined}
           bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
         />

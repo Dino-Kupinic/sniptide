@@ -29,8 +29,9 @@ import { TruncatedText } from "@/components/truncated-text"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
-import { formatDateTime, formatNumber, timeAgo } from "@/lib/format"
+import { formatDateTime, formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
+import { embedCode } from "@/lib/pastes/embed"
 import {
   getPaste,
   getPasteMeta,
@@ -83,6 +84,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     : { label: t("shared"), href: "/shared" }
   const revision = paste.revisionCount
   const viewer = session?.user
+  // A link that works for anyone who has it, which is what a channel post or an embed needs.
+  const linkShareable =
+    paste.visibility !== "private" &&
+    !paste.password &&
+    !paste.burnAfterRead &&
+    (!paste.expiresAt || paste.expiresAt > Date.now())
   const shareDialog = (trigger: "button" | "icon") =>
     people ? (
       <ShareDialog
@@ -100,11 +107,11 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         people={people}
         trigger={trigger}
         webhookTargets={WEBHOOK_TARGETS.filter((target) => Boolean(getConfig().webhooks[target]))}
-        webhookAllowed={
-          paste.visibility !== "private" &&
-          !paste.password &&
-          !paste.burnAfterRead &&
-          (!paste.expiresAt || paste.expiresAt > Date.now())
+        webhookAllowed={linkShareable}
+        embedCode={
+          linkShareable && first
+            ? embedCode(url, paste.title, lineCount(first.content), files.length)
+            : undefined
         }
       />
     ) : null
@@ -234,6 +241,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             lineNumbers={preferences.lineNumbers}
             collapseAt={6}
             panelToggle
+            printable
             className="mx-4 lg:mx-0 lg:min-h-[612px] lg:flex-1"
             bodyClassName="max-lg:bg-sidebar"
             footerClassName="hidden lg:flex"

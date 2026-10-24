@@ -7,28 +7,34 @@ const isDev = process.env.NODE_ENV === "development"
 // Without nonces, so pages stay as they render today; Next's inline bootstrap scripts need
 // 'unsafe-inline', and React needs 'unsafe-eval' in development only. img-src allows https for
 // the avatars GitHub and Google hand over at sign-up.
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' blob: data: https:",
-  "font-src 'self'",
-  "connect-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join("; ")
+const contentSecurityPolicy = (frameAncestors: string) =>
+  [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' blob: data: https:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    `frame-ancestors ${frameAncestors}`,
+  ].join("; ")
 
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
   // Browsers ignore it over plain http, so local and self-hosted http setups are unaffected.
   { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ]
+
+// A paste's embed view, /<slug>/embed, is the one page other sites may frame. The app's own routes
+// with a dynamic second segment are left out, so /pastes/embed (a paste named "embed") stays
+// unframeable. `framedPath` matches every other path, exactly the complement.
+const appSegments = "(?:pastes|collections|secrets|secret-share)"
+const embedPath = `/:slug((?!${appSegments}/)[A-Za-z0-9_-]+)/embed`
+const framedPath = `/:path((?!(?!${appSegments}/)[A-Za-z0-9_-]+/embed$).*)`
 
 const nextConfig: NextConfig = {
   // Self-contained server for the Docker image (apps/web/.next/standalone). Tracing from the
@@ -43,6 +49,18 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
+      {
+        source: framedPath,
+        headers: [
+          { key: "Content-Security-Policy", value: contentSecurityPolicy("'none'") },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+      {
+        // readEmbedPaste only serves pastes that are safe to show inside another site.
+        source: embedPath,
+        headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy("*") }],
+      },
       ...["/secrets/:path*", "/secret-share/:path*"].map((source) => ({
         source,
         headers: [
