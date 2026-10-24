@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db"
 import {
   leaveShare,
   restoreRevision,
+  sealRevision,
   sharePaste,
   trashPaste,
   unsharePaste,
@@ -71,7 +72,7 @@ describeDb("edit authorization under concurrent owner changes", () => {
     await sharePaste("race", "friend", "edit")
   })
 
-  for (const operation of ["save", "restore"] as const) {
+  for (const operation of ["save", "restore", "seal"] as const) {
     for (const change of ["revoke", "downgrade", "leave", "burn", "expire", "trash"] as const) {
       test(`${operation} refuses an editor after ${change} while waiting for the account lock`, async () => {
         const row = await pasteRow("race")
@@ -86,7 +87,9 @@ describeDb("edit authorization under concurrent owner changes", () => {
           async () =>
             operation === "save"
               ? (await updatePaste("race", input({ title: "Unauthorized" }), "Edited")) !== null
-              : (await restoreRevision("race", revision.id)).ok,
+              : operation === "restore"
+                ? (await restoreRevision("race", revision.id)).ok
+                : await sealRevision("race", "Edited"),
           async () => {
             signInAs("owner")
             if (change === "revoke") await unsharePaste("race", "friend")
@@ -107,6 +110,9 @@ describeDb("edit authorization under concurrent owner changes", () => {
         expect(result).toBe(false)
         expect((await pasteRow("race"))?.title).toBe("Current")
         expect(await getDb().select().from(pasteRevision)).toHaveLength(2)
+        if (operation === "seal") {
+          expect((await getDb().select().from(pasteRevision)).every((row) => !row.sealed)).toBe(true)
+        }
       })
     }
   }
