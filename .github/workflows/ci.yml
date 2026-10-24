@@ -41,6 +41,7 @@ jobs:
 
       - run: bun run test:cli
       - run: bun run test:mcp
+      - run: bun run --filter docs test
 
       - run: bun run build
 
