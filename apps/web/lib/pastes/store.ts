@@ -1228,27 +1228,6 @@ export async function createPaste(input: PasteInput, invites: ShareInvite[] = []
   return { slug }
 }
 
-// A paste the viewer may edit: their own, or one shared with them with edit access. `owned`
-// tells the two apart, since only the owner changes how the paste is shared.
-async function findEditable(slug: string) {
-  const viewer = await requireViewerId()
-  const record = await findRecord(slug)
-  if (!record || record.deletedAt) return null
-  if (record.ownerId === viewer) return { record, owned: true }
-  if (recordExpired(record) || record.burnAfterRead) return null
-  const [share] = await getDb()
-    .select({ access: pasteShare.access })
-    .from(pasteShare)
-    .where(
-      and(
-        eq(pasteShare.pasteId, record.id),
-        eq(pasteShare.userId, viewer),
-        isNull(pasteShare.leftAt),
-      ),
-    )
-  return share?.access === "edit" ? { record, owned: false } : null
-}
-
 type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0]
 
 async function lockEditable(
@@ -1417,19 +1396,23 @@ export async function updatePaste(
 // Closes the editing session: the next edit starts a new revision. Only the revision made by
 // auto-save is closed; one made another way (created, imported, restored) is left alone.
 export async function sealRevision(slug: string, message: string): Promise<boolean> {
-  const editable = await findEditable(slug)
-  if (!editable) return false
-  const db = getDb()
-  const [latest] = await db
-    .select({ id: pasteRevision.id, message: pasteRevision.message })
-    .from(pasteRevision)
-    .where(eq(pasteRevision.pasteId, editable.record.id))
-    .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-    .limit(1)
-  if (latest?.message === message) {
-    await db.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
-  }
-  return true
+  const viewer = await requireViewerId()
+  const identity = await findRecord(slug)
+  if (!identity) return false
+  return getDb().transaction(async (tx) => {
+    const editable = await lockEditable(tx, identity, viewer)
+    if (!editable) return false
+    const [latest] = await tx
+      .select({ id: pasteRevision.id, message: pasteRevision.message })
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, editable.record.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+      .limit(1)
+    if (latest?.message === message) {
+      await tx.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
+    }
+    return true
+  })
 }
 
 export type RestoreResult =

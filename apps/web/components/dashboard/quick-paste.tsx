@@ -55,7 +55,6 @@ const draftSchema = z.object({
 // Browser storage is only a convenience here: a lost draft costs a re-paste, nothing more.
 function readDraft(key: string, fallback: Draft): Draft {
   try {
-    // The old shared key has no account owner, so it cannot be adopted safely.
     window.localStorage.removeItem(LEGACY_DRAFT_KEY)
     const stored = window.localStorage.getItem(key)
     const parsed = stored ? draftSchema.safeParse(JSON.parse(stored)) : null

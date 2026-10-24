@@ -130,11 +130,10 @@ describeDb("invited email ownership", () => {
 
   test("verified provider identities can join without an email sender", async () => {
     const context = await makeAuth().$context
-    const account = await context.internalAdapter.createUser({
-      email: EMAIL,
-      name: "Invited",
-      emailVerified: true,
-    })
+    const account = await context.internalAdapter.createUser(
+      { email: EMAIL, name: "Invited", emailVerified: true },
+      { method: "oauth", oauth: { providerId: "github", profile: {} } },
+    )
     expect(await context.internalAdapter.createSession(account.id)).toHaveProperty("token")
   })
 

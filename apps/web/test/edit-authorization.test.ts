@@ -111,7 +111,9 @@ describeDb("edit authorization under concurrent owner changes", () => {
         expect((await pasteRow("race"))?.title).toBe("Current")
         expect(await getDb().select().from(pasteRevision)).toHaveLength(2)
         if (operation === "seal") {
-          expect((await getDb().select().from(pasteRevision)).every((row) => !row.sealed)).toBe(true)
+          expect((await getDb().select().from(pasteRevision)).every((row) => !row.sealed)).toBe(
+            true,
+          )
         }
       })
     }
