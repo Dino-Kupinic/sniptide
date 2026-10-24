@@ -78,7 +78,10 @@ const chipClass =
 
 function Chip({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <DropdownMenuTrigger aria-label={label} className={chipClass}>
+    <DropdownMenuTrigger className={chipClass}>
+      {/* The field's name, for screen readers, ahead of the visible value. An aria-label would
+          hide the value from voice control, which matches on the words a button shows. */}
+      <span className="sr-only">{label}</span>
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
     </DropdownMenuTrigger>
