@@ -42,6 +42,7 @@ import {
 } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
+import { announceChange } from "@/lib/live/changes"
 import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
 import { insertPaste } from "@/lib/pastes/insert"
 import { limited, limits } from "@/lib/pastes/limits"
@@ -193,6 +194,7 @@ export async function createCapture(owner: string, input: unknown): Promise<ApiP
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
     throw error
   }
+  await announceChange(owner)
   const created = await getCapture(owner, id)
   if (!created) throw new Error("A paste that was just created can't be read back.")
   return created
@@ -297,6 +299,7 @@ export async function updateCapture(
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
     throw error
   }
+  await announceChange(owner)
   const updated = await getCapture(owner, existing.id)
   if (!updated) throw new ApiError(404, "No paste with that id.")
   return updated
