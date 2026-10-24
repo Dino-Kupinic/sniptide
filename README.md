@@ -178,6 +178,17 @@ The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM6
 It contains the standalone Next.js server, static assets and database migrations. Settings come
 from environment variables at runtime; no database or auth credentials are needed to build it.
 
+Use an HTTPS domain at its root, such as `https://paste.example.com`. Hosting the web app under a
+path such as `/sniptide` is not supported. HTTP on a server IP is enough to check startup, but
+copy buttons and password-protected paste unlocks need HTTPS. The CLI and local MCP process also
+require HTTPS except on loopback addresses such as `localhost`.
+
+Set `BETTER_AUTH_URL` to that public origin. On one domain, leave `SHARE_URL` and `COOKIE_DOMAIN`
+unset. Configure your reverse proxy to forward the public host and scheme. For the CLI and local
+MCP process, set `SNIPTIDE_BASE_URL` to your instance and use a token created there; the default
+client URL points at Sniptide Cloud. Remote MCP clients connect to
+`https://paste.example.com/api/mcp` with a token from that instance.
+
 With an existing Postgres database, create a `sniptide.env` file (keep it out of source control):
 
 ```dotenv
@@ -352,8 +363,9 @@ the CDN's header (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Co
 no country data without one in front. `GET /api/stats?range=7d|30d|90d|24h` returns the same
 figures as JSON for the signed-in account.
 
-Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
-separate domain, for example a short one:
+Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). Instances with
+separate domains and databases can use the same slug without conflict. Duplicate slugs within
+one database are rejected. To give share links a separate domain, for example a short one:
 
 1. Point that domain at the same container too (a second domain on the Coolify resource, or another
    `server_name`/host rule in your reverse proxy).

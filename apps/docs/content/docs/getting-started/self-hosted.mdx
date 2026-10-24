@@ -7,6 +7,11 @@ Sniptide runs as one container plus Postgres. You need a server with Docker (and
 plugin) installed. This page gets you from nothing to a running instance; the
 [self-hosting guide](/self-hosting) covers the rest.
 
+The initial HTTP address lets you check startup. Before sharing pastes, complete
+[HTTPS and a domain](#https-and-a-domain) below. Copy buttons, password-protected paste unlocks,
+and CLI and local MCP clients need HTTPS outside localhost. Serve the app at the domain's root,
+not under a path such as `/sniptide`.
+
 <Steps>
 <Step>
 
@@ -62,7 +67,9 @@ Open the address you set as `BETTER_AUTH_URL` and create your account, the same 
 
 Once your account exists, add `ALLOW_SIGN_UP=false` to `.env` and run `docker compose up -d`
 again. Existing accounts keep signing in; nobody else can create one. To allow only certain people,
-set `ALLOWED_EMAILS=ada@example.com,linus@example.com` instead.
+set `ALLOWED_EMAILS=ada@example.com,linus@example.com` instead. New password accounts on an
+invite-only instance also need [SMTP email verification](/self-hosting/configuration#email);
+without SMTP, only verified OAuth identities can join.
 
 </Step>
 </Steps>

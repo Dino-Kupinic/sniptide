@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from "bun:test"
-import { Glob } from "bun"
 import path from "node:path"
+import { Glob } from "bun"
 import { isSlugAvailable, randomSlug } from "@/lib/pastes/store"
 
 const appRoutes = new Set(
@@ -21,11 +21,19 @@ test("custom paste links cannot claim app routes, even when editing an existing 
 })
 
 test("generated paste links skip app routes regardless of case", () => {
-  const random = spyOn(crypto, "getRandomValues")
-    .mockReturnValueOnce(Uint8Array.from([41, 31, 24, 40, 28, 27]))
-    .mockReturnValueOnce(Uint8Array.from([38, 24, 41, 42, 28, 41]))
-    .mockReturnValueOnce(Uint8Array.from([16, 7, 0, 15, 4, 3]))
-    .mockReturnValueOnce(Uint8Array.from([34, 54, 14, 28, 49, 46]))
+  const candidates = [
+    [41, 31, 24, 40, 28, 27],
+    [38, 24, 41, 42, 28, 41],
+    [16, 7, 0, 15, 4, 3],
+    [34, 54, 14, 28, 49, 46],
+  ]
+  const random = spyOn(crypto, "getRandomValues").mockImplementation((array: unknown) => {
+    if (!(array instanceof Uint8Array)) throw new TypeError("Expected a Uint8Array")
+    const bytes = candidates.shift()
+    if (!bytes) throw new Error("Generated no usable paste link")
+    array.set(bytes)
+    return array
+  })
 
   try {
     expect(randomSlug()).toBe("k7Qe2x")

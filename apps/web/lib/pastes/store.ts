@@ -100,12 +100,17 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
 
 // Paths the app already uses, so a custom link can't shadow a page.
 const RESERVED = new Set([
+  "analytics",
   "api",
   "collections",
   "dashboard",
+  "demo",
+  "dev",
   "docs",
+  "forgot-password",
   "new",
   "pastes",
+  "reset-password",
   "secrets",
   "secret-share",
   "settings",
@@ -1213,8 +1218,12 @@ export async function isSlugAvailable(slug: string, except?: string) {
 
 export function randomSlug() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-  const bytes = crypto.getRandomValues(new Uint8Array(6))
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
+  let slug: string
+  do {
+    const bytes = crypto.getRandomValues(new Uint8Array(6))
+    slug = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
+  } while (RESERVED.has(slug.toLowerCase()))
+  return slug
 }
 
 function fileRows(pasteId: string, files: PasteInput["files"]) {

@@ -6,6 +6,8 @@
 # Keep the secret (sessions depend on it); BETTER_AUTH_URL is the exact address you open in the
 # browser. Then open it and create your account. Every option is in .env.example. For
 # HTTPS on your own domain, add the bundled Caddy proxy (see the "proxy" service below).
+# The HTTP server-IP address is for checking startup. Use HTTPS at the domain's root for copy
+# buttons, password-protected paste unlocks, and CLI/MCP clients.
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db
 #
