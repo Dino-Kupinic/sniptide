@@ -1260,6 +1260,7 @@ export const internalRoutes = [
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",
+  "/api/live",
   "/api/locale",
   "/api/search",
   "/api/stats",
