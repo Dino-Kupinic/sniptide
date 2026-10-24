@@ -116,6 +116,7 @@ export function PasteEditor({
   collections,
   draftScope,
   indentation = "2",
+  lineNumbers = true,
   secretDetection = true,
   notice,
   sharedEdit,
@@ -129,8 +130,10 @@ export function PasteEditor({
   // Whose drafts these are (the signed-in account, plus what the page started from), so accounts
   // sharing a browser and different starting points don't mix.
   draftScope: string
-  // From the viewer's Settings: what Tab inserts, and whether to warn about pasted secrets.
+  // From the viewer's Settings: what Tab inserts, whether lines are numbered, and whether to warn
+  // about pasted secrets.
   indentation?: Preferences["indentation"]
+  lineNumbers?: boolean
   secretDetection?: boolean
   // Shown like a save error when the page couldn't prefill the editor (a gist that can't be read).
   notice?: string
@@ -811,7 +814,7 @@ export function PasteEditor({
           placeholder={t("untitledPaste")}
           maxLength={120}
           required
-          className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-primary outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
+          className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-highlight outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
         />
         <input
           aria-label={t("description")}
@@ -897,21 +900,33 @@ export function PasteEditor({
                 content={active?.content || " "}
                 highlighted={previewLines}
                 wrap
-                className="flex-1"
+                lineNumbers={lineNumbers}
+                className="flex-1 bg-muted dark:bg-sidebar"
               />
             ) : (
-              <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
-                <div
-                  aria-hidden="true"
-                  className="hidden shrink-0 text-right text-muted-foreground/60 select-none lg:block"
-                >
-                  {Array.from({ length: lineCount }, (_, index) => (
-                    <div key={index}>{index + 1}</div>
-                  ))}
-                </div>
+              <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
+                {lineNumbers ? (
+                  <div
+                    aria-hidden="true"
+                    style={{ minWidth: `${String(lineCount).length}ch` }}
+                    className="hidden shrink-0 text-right text-muted-foreground/60 tabular-nums select-none lg:block"
+                  >
+                    {Array.from({ length: lineCount }, (_, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          index + 1 === cursor.line && "group-focus-within/code:text-foreground",
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <HighlightedTextarea
                   aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
                   lines={lines}
+                  activeLine={cursor.line}
                   value={active?.content ?? ""}
                   ref={bindTextarea}
                   onChange={(event) => {
