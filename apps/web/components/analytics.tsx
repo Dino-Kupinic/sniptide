@@ -13,7 +13,9 @@ import {
 export function Analytics() {
   React.useEffect(() => {
     fetch(ANALYTICS_PATH)
-      .then((response) => (response.ok ? (response.json() as Promise<AnalyticsConfig>) : null))
+      .then((response) =>
+        response.status === 200 ? (response.json() as Promise<AnalyticsConfig>) : null,
+      )
       .then((config) => {
         if (config) startAnalytics(config)
         // Also without a key, so the marker never lingers in the address bar.
