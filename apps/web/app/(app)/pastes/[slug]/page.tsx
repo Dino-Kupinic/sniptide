@@ -25,6 +25,7 @@ import { SidePanelProvider } from "@/components/paste/side-panel"
 import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
+import { TruncatedText } from "@/components/truncated-text"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
@@ -119,9 +120,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 
   return (
     <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-6 lg:p-7 lg:pb-7">
+      {/* The page's own heading carries the visibility badge, so the bar keeps only the title. */}
       <HeaderTitle>
-        <span className="truncate">{paste.title}</span>
-        <VisibilityBadge paste={paste} />
+        <TruncatedText className="max-w-80">{paste.title}</TruncatedText>
       </HeaderTitle>
       <HeaderActions>
         <StarButton slug={slug} starred={starred} />
@@ -173,8 +174,8 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
       </div>
 
       <div className="flex min-w-0 flex-col gap-2 px-4 lg:px-0">
-        <div className="flex flex-wrap items-center gap-3 lg:hidden">
-          <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
             {paste.title}
           </h1>
           <VisibilityBadge paste={paste} />

@@ -11,26 +11,37 @@ type TextareaProps = Omit<React.ComponentProps<"textarea">, "value"> & { value: 
 // whose own text is transparent but still carries the caret, selection and input. Both must
 // share font, size, line height and wrapping, so those go in `metricsClassName`; scrolling is
 // copied across. `lines` come from useHighlight and match `value` line for line; without them
-// (loading, plain text, a very large file) the copy is plain.
+// (loading, plain text, a very large file) the copy is plain. `activeLine` (1-based) gets a
+// quiet row behind it while the textarea has focus.
 export function HighlightedTextarea({
   value,
   lines,
+  activeLine,
   metricsClassName,
   className,
   onScroll,
   ...props
 }: TextareaProps & {
   lines?: HighlightedLines
+  activeLine?: number
   metricsClassName?: string
 }) {
   const layer = React.useRef<HTMLDivElement>(null)
 
   return (
-    <div className="relative min-w-0 flex-1">
+    <div className="group/textarea relative min-w-0 flex-1">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div ref={layer} className={cn("w-max min-w-full whitespace-pre", metricsClassName)}>
           {(lines ?? value.split("\n").map((line) => (line ? [line] : []))).map((line, index) => (
-            <div key={index}>{line.length ? line.map(renderToken) : " "}</div>
+            <div
+              key={index}
+              className={cn(
+                index + 1 === activeLine &&
+                  "rounded-sm group-focus-within/textarea:bg-border/60 dark:group-focus-within/textarea:bg-muted",
+              )}
+            >
+              {line.length ? line.map(renderToken) : " "}
+            </div>
           ))}
         </div>
       </div>
@@ -44,7 +55,7 @@ export function HighlightedTextarea({
           onScroll?.(event)
         }}
         className={cn(
-          "relative block w-full resize-none bg-transparent whitespace-pre text-transparent caret-primary outline-none selection:bg-primary/25 placeholder:text-muted-foreground",
+          "relative block w-full resize-none bg-transparent whitespace-pre text-transparent caret-highlight outline-none selection:bg-primary/25 placeholder:text-muted-foreground",
           metricsClassName,
           className,
         )}
