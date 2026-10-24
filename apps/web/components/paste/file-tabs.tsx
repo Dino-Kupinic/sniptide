@@ -53,126 +53,134 @@ export function FileTabs({
   const pointer = React.useRef("mouse")
 
   return (
-    <div
-      role="tablist"
-      aria-label={t("files")}
-      className="flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar"
-    >
-      {files.map((file) => {
-        const selected = file.id === activeId
-        return (
-          <div
-            key={file.id}
-            className={cn(
-              "flex shrink-0 items-center gap-2 border-r border-border px-3.5",
-              selected && "bg-background shadow-[inset_0_-2px_0_var(--primary)]",
-            )}
-          >
-            <LanguageIcon language={detectLanguage(file.name).id} />
-            {renamingId === file.id ? (
-              <input
-                // biome-ignore lint/a11y/noAutofocus: renaming starts right after the user asks for it
-                autoFocus
-                aria-label={t("fileName")}
-                defaultValue={file.name}
-                onFocus={(event) => {
-                  // Select the name without its extension, like a file manager would.
-                  const dot = file.name.lastIndexOf(".")
-                  event.currentTarget.setSelectionRange(0, dot > 0 ? dot : file.name.length)
-                }}
-                onBlur={(event) => {
-                  const name = event.target.value.trim()
-                  if (name) onRename(file.id, name)
-                  setRenamingId(null)
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault()
-                    event.currentTarget.blur()
-                  }
-                  if (event.key === "Escape") setRenamingId(null)
-                }}
-                className="w-36 bg-transparent font-mono text-[13px] outline-none"
-              />
-            ) : (
-              <DropdownMenu
-                open={menuId === file.id}
-                onOpenChange={(open) => {
-                  if (!open) setMenuId(null)
-                }}
-              >
-                <DropdownMenuTrigger
-                  render={<button type="button" />}
-                  role="tab"
-                  aria-selected={selected}
-                  aria-describedby="rename-hint"
-                  onPointerDown={(event) => {
-                    pointer.current = event.pointerType
+    <div className="flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar">
+      {/* Only the tabs live in the tablist; the add button and the trailing controls sit beside it. */}
+      <div role="tablist" aria-label={t("files")} className="flex shrink-0">
+        {files.map((file) => {
+          const selected = file.id === activeId
+          return (
+            <div
+              key={file.id}
+              className={cn(
+                "flex shrink-0 items-center gap-2 border-r border-border px-3.5",
+                selected && "bg-background shadow-[inset_0_-2px_0_var(--primary)]",
+              )}
+            >
+              <LanguageIcon language={detectLanguage(file.name).id} />
+              {renamingId === file.id ? (
+                <input
+                  // biome-ignore lint/a11y/noAutofocus: renaming starts right after the user asks for it
+                  autoFocus
+                  aria-label={t("fileName")}
+                  defaultValue={file.name}
+                  onFocus={(event) => {
+                    // Select the name without its extension, like a file manager would.
+                    const dot = file.name.lastIndexOf(".")
+                    event.currentTarget.setSelectionRange(0, dot > 0 ? dot : file.name.length)
                   }}
-                  onClick={() => {
-                    if (selected && pointer.current !== "mouse") setMenuId(file.id)
-                    else onSelect(file.id)
+                  onBlur={(event) => {
+                    const name = event.target.value.trim()
+                    if (name) onRename(file.id, name)
+                    setRenamingId(null)
                   }}
-                  onDoubleClick={() => setRenamingId(file.id)}
-                  className={cn(
-                    "self-stretch font-mono text-[13px] outline-none focus-visible:underline",
-                    selected ? "text-foreground" : "text-muted-foreground",
-                  )}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      event.currentTarget.blur()
+                    }
+                    if (event.key === "Escape") setRenamingId(null)
+                  }}
+                  className="w-36 bg-transparent font-mono text-[13px] outline-none"
+                />
+              ) : (
+                <DropdownMenu
+                  open={menuId === file.id}
+                  onOpenChange={(open) => {
+                    if (!open) setMenuId(null)
+                  }}
                 >
-                  {file.name}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem
-                    className="h-10"
-                    onClick={() => {
-                      setMenuId(null)
-                      setRenamingId(file.id)
+                  <DropdownMenuTrigger
+                    render={<button type="button" />}
+                    role="tab"
+                    aria-selected={selected}
+                    aria-describedby="rename-hint"
+                    aria-keyshortcuts={files.length > 1 ? "Delete" : undefined}
+                    onPointerDown={(event) => {
+                      pointer.current = event.pointerType
                     }}
+                    onClick={() => {
+                      if (selected && pointer.current !== "mouse") setMenuId(file.id)
+                      else onSelect(file.id)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Delete" && files.length > 1) onRemove(file.id)
+                    }}
+                    onDoubleClick={() => setRenamingId(file.id)}
+                    className={cn(
+                      "self-stretch font-mono text-[13px] outline-none focus-visible:underline",
+                      selected ? "text-foreground" : "text-muted-foreground",
+                    )}
                   >
-                    <PencilIcon />
-                    {t("rename")}
-                  </DropdownMenuItem>
-                  {onChangeLanguage ? (
-                    <DropdownMenuItem className="h-10" onClick={onChangeLanguage}>
-                      <CodeIcon />
-                      {t("changeLanguage")}
+                    {file.name}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      className="h-10"
+                      onClick={() => {
+                        setMenuId(null)
+                        setRenamingId(file.id)
+                      }}
+                    >
+                      <PencilIcon />
+                      {t("rename")}
                     </DropdownMenuItem>
-                  ) : null}
-                  {files.length > 1 ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        className="h-10"
-                        onClick={() => onRemove(file.id)}
-                      >
-                        <Trash2Icon />
-                        {t("removeFileAction")}
+                    {onChangeLanguage ? (
+                      <DropdownMenuItem className="h-10" onClick={onChangeLanguage}>
+                        <CodeIcon />
+                        {t("changeLanguage")}
                       </DropdownMenuItem>
-                    </>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {selected && files.length > 1 ? (
-              <button
-                type="button"
-                aria-label={t("removeFile", { name: file.name })}
-                onClick={() => onRemove(file.id)}
-                className="inline-flex items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 max-lg:-mr-2 max-lg:size-8"
-              >
-                <XIcon className="size-3" strokeWidth={2.5} />
-              </button>
-            ) : null}
-          </div>
-        )
-      })}
+                    ) : null}
+                    {files.length > 1 ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          className="h-10"
+                          onClick={() => onRemove(file.id)}
+                        >
+                          <Trash2Icon />
+                          {t("removeFileAction")}
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {selected && files.length > 1 ? (
+                // Pointer only: a button inside a tablist isn't a tab, so keyboard and screen reader
+                // users remove the file with Delete on its tab instead.
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  title={t("removeFile", { name: file.name })}
+                  onClick={() => onRemove(file.id)}
+                  className="inline-flex items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 max-lg:-mr-2 max-lg:size-8"
+                >
+                  <XIcon className="size-3" strokeWidth={2.5} />
+                </button>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
       <span id="rename-hint" className="sr-only">
         {t("renameHint")}
       </span>
       {files.length < 10 ? (
         <button
           type="button"
+          aria-label={t("addFile")}
           onClick={() => setRenamingId(onAdd())}
           className="flex shrink-0 items-center gap-1.5 px-3 text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
         >
