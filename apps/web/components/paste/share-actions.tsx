@@ -2,12 +2,14 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
-import { CopyIcon, DownloadIcon } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
+import { CopyIcon, DownloadIcon, PrinterIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { reportCopy, useCopy } from "./copy-button"
 import { useActiveFile } from "./file-viewer"
 
-// Raw / Download / Copy code on the public page, for the paste's first file. The compact row for
+// Raw / Download / Print / Copy code on the public page, for the paste's first file. Print needs
+// the slug, so a burn-after-read paste that is already gone doesn't offer it. The compact row for
 // phones follows the file open in the code card when an ActiveFileProvider wraps the page.
 export function ShareActions({
   slug,
@@ -75,6 +77,24 @@ export function ShareActions({
             {t("download")}
           </Button>
         </>
+      ) : null}
+      {slug ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-lg"
+                aria-label={t("print")}
+                render={<a href={`/${slug}/print`} target="_blank" rel="noopener" />}
+                nativeButton={false}
+              />
+            }
+          >
+            <PrinterIcon />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("print")}</TooltipContent>
+        </Tooltip>
       ) : null}
       <Button size="lg" onClick={copyCode}>
         {copied ? <SuccessCheck /> : <CopyIcon />}

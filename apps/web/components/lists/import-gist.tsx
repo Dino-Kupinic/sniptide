@@ -47,9 +47,10 @@ function defaultSelection(gist: GistPreview) {
 
 const shortLink = (link: string) => link.trim().replace(/^https?:\/\//i, "")
 
-// Disabled looks the same for both footer buttons, as in the design: a flat grey button.
+// Disabled looks the same for both footer buttons, as in the design: a flat grey button that stays
+// level with Cancel instead of dropping onto its edge.
 const footerButton =
-  "h-8 px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+  "px-3.5 disabled:translate-y-0 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
 
 // The import sheet. The caller owns `open`, so the Import gist buttons and the sidebar's More menu
 // can open the same one; `children` is where a trigger goes when the sheet has its own.
@@ -240,9 +241,10 @@ export function ImportGistSheet({
           )}
         </div>
 
+        {/* The actions wrap under Cancel when a narrow screen or a long translation can't fit them. */}
         <div
           className={cn(
-            "flex h-16 shrink-0 items-center justify-between border-t",
+            "flex min-h-16 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-3 border-t py-4",
             side === "bottom" ? "px-4" : "px-6",
           )}
         >
@@ -251,13 +253,13 @@ export function ImportGistSheet({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-[34px] px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                className="mr-auto px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
               />
             }
           >
             {t("cancel")}
           </SheetClose>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
               variant="outline"

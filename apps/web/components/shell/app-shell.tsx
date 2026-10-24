@@ -8,6 +8,7 @@ import * as React from "react"
 import { CommandMenuProvider } from "@/components/command-menu/command-menu"
 import { ShortcutsProvider } from "@/components/shortcuts/shortcuts-help"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
+import { LiveUpdates } from "./live-updates"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
 import { NotificationsProvider } from "./notifications-menu"
@@ -220,6 +221,8 @@ export function AppShell({
                     />
                   ) : null}
                 </div>
+                {/* The demo's visitors share one guest account, so they don't follow its changes. */}
+                {demo ? null : <LiveUpdates />}
               </CommandMenuProvider>
             </ShortcutsProvider>
           </NotificationsProvider>

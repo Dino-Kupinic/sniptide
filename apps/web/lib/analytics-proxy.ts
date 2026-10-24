@@ -2,6 +2,7 @@ import "server-only"
 
 import { clientAddress } from "@/lib/client-ip"
 import { getConfig } from "@/lib/config"
+import { BodyTooLargeError, readBody } from "@/lib/request-body"
 
 // The browser talks to PostHog through this app (/api/analytics/*), so ad blockers don't drop
 // events and the Content-Security-Policy stays 'self'.
@@ -14,6 +15,7 @@ const REQUEST_HEADERS = [
   "user-agent",
 ]
 const RESPONSE_HEADERS = ["cache-control", "content-type"]
+const MAX_BODY_BYTES = 1024 * 1024
 
 // us.i.posthog.com serves its scripts from us-assets.i.posthog.com.
 export function assetsHost(host: string) {
@@ -45,10 +47,16 @@ export async function forwardToPostHog(request: Request, path: string[]) {
   if (address !== "unknown") headers.set("x-forwarded-for", address)
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD"
+  let body: ArrayBuffer | undefined
+  try {
+    if (hasBody) body = await readBody(request, MAX_BODY_BYTES)
+  } catch (error) {
+    return new Response(null, { status: error instanceof BodyTooLargeError ? 413 : 400 })
+  }
   const upstream = await fetch(upstreamUrl(analytics.host, path, new URL(request.url).search), {
     method: request.method,
     headers,
-    body: hasBody ? await request.arrayBuffer() : undefined,
+    body,
     redirect: "manual",
   }).catch(() => null)
   if (!upstream) return new Response(null, { status: 502 })

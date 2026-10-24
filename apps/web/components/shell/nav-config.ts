@@ -25,12 +25,17 @@ export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+// A paste's own screens: its detail page and its editor (/pastes/<slug>…).
+export function isPasteScreen(pathname: string) {
+  return /^\/pastes\/[^/]+/.test(pathname)
+}
+
 // Mobile screens that draw their own header (New paste, Paste detail) and take over the bottom of
 // the screen with their own actions, per the Paper mobile artboards. Every screen with the tab bar
 // keeps the top bar, so search and notifications are always one tap away.
 export function mobileChrome(pathname: string) {
-  // Paste detail and edit (/pastes/<slug>…) have their own back header and bottom actions.
-  const pasteScreen = /^\/pastes\/[^/]+/.test(pathname)
+  // Paste detail and edit have their own back header and bottom actions.
+  const pasteScreen = isPasteScreen(pathname)
   const editor = isActivePath(pathname, "/new") || pasteScreen
   // New secret group keeps the top bar but puts its Save bar where the tab bar goes.
   const secretEditor = isActivePath(pathname, "/secrets/new")

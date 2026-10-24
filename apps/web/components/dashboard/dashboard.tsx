@@ -17,7 +17,7 @@ import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
-import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { formatNumber } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow } from "@/lib/pastes/rows"
@@ -111,7 +111,9 @@ export function Dashboard({
   origin,
   host,
   defaults,
+  draftScope,
 }: {
+  draftScope: string
   defaults: React.ComponentProps<typeof QuickPaste>["defaults"]
   data: DashboardData
   firstName: string
@@ -223,7 +225,7 @@ export function Dashboard({
 
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="hidden min-w-0 flex-[1.8] lg:flex">
-          <QuickPaste defaults={defaults} />
+          <QuickPaste key={draftScope} draftScope={draftScope} defaults={defaults} />
         </div>
         <section
           aria-labelledby="views-heading"
@@ -325,7 +327,7 @@ export function Dashboard({
                   key={row.slug}
                   className="relative flex items-center gap-3 border-b border-border py-3 last:border-b-0"
                 >
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <Link
                       href={`/pastes/${row.slug}`}

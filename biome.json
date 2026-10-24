@@ -13,6 +13,7 @@
       "!.idea",
       "!apps/web/app/icon0.svg",
       "!apps/docs/app/icon0.svg",
+      "!apps/web/public/languages",
       "!packages/ui/src/styles/shadcn.css"
     ]
   },

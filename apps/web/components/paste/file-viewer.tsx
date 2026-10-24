@@ -3,13 +3,13 @@
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CopyIcon, DownloadIcon, FileCodeIcon, WrapTextIcon } from "lucide-react"
+import { CopyIcon, DownloadIcon, FileCodeIcon, PrinterIcon, WrapTextIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
 import { reportCopy, useCopy } from "./copy-button"
-import { LanguageMarker } from "./language-marker"
+import { LanguageIcon } from "./language-icon"
 import { panelToolClass, SidePanelToggle } from "./side-panel"
 
 interface ViewerFile {
@@ -68,6 +68,7 @@ export function FileViewer({
   rawAllowed = true,
   lineNumbers = true,
   panelToggle = false,
+  printable = false,
   className,
   headerClassName,
   bodyClassName,
@@ -81,6 +82,8 @@ export function FileViewer({
   lineNumbers?: boolean
   // Shows the side panel toggle; needs a SidePanelProvider around the card and its panel.
   panelToggle?: boolean
+  // Links the print view (/<slug>/print), which opens in a new tab with every file in full.
+  printable?: boolean
   className?: string
   headerClassName?: string
   bodyClassName?: string
@@ -135,7 +138,7 @@ export function FileViewer({
                   selected ? "text-foreground" : "text-muted-foreground",
                 )}
               >
-                <LanguageMarker language={file.language} className="hidden lg:block" />
+                <LanguageIcon language={file.language} className="hidden lg:inline-flex" />
                 {file.name}
               </button>
             )
@@ -168,6 +171,19 @@ export function FileViewer({
                 className={cn(panelToolClass, "hidden lg:inline-flex")}
               >
                 <DownloadIcon />
+              </a>
+            </Tool>
+          ) : null}
+          {printable ? (
+            <Tool label={t("print")}>
+              <a
+                href={`/${slug}/print`}
+                target="_blank"
+                rel="noopener"
+                aria-label={t("print")}
+                className={cn(panelToolClass, "hidden lg:inline-flex")}
+              >
+                <PrinterIcon />
               </a>
             </Tool>
           ) : null}

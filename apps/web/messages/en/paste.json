@@ -26,7 +26,6 @@
     "removeFileAction": "Remove file",
     "renameHint": "Double-click a tab to rename it. On a touch screen, tap the active tab for its actions.",
     "language": "Language",
-    "backToPaste": "Back to paste",
     "shareVia": "Share via…",
     "addFile": "Add file",
     "donTWrapLines": "Don't wrap lines",
@@ -193,6 +192,13 @@
     "unlockRateLimit": "Too many attempts. Try again in a few minutes.",
     "unlockRequestSize": "That request is too large.",
     "unlockPasswordLength": "That password is too long.",
-    "unlockFirst": "Unlock the paste first."
+    "unlockFirst": "Unlock the paste first.",
+    "embed": "Embed",
+    "embedHint": "Paste this code into a web page to show the paste there.",
+    "embedCode": "Embed code",
+    "embedUnavailable": "This paste can't be embedded.",
+    "openOnSniptide": "Open on Sniptide",
+    "print": "Print",
+    "backToPaste": "Back to paste"
   }
 }

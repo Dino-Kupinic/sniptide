@@ -16,6 +16,7 @@ import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
 import { NewPasswordField } from "./password-field"
 import { EmailDivider, SocialButtons } from "./social-buttons"
+import { VerificationNotice } from "./verification-notice"
 
 type Availability = "idle" | "invalid" | "checking" | "available" | "taken"
 
@@ -50,6 +51,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
   const [password, setPassword] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
+  const [verificationEmail, setVerificationEmail] = React.useState<string | null>(null)
   const availability = useUsernameAvailability(username)
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -63,18 +65,26 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signUp
+    const email = String(form.get("email"))
+    const result = await authClient.signUp
       .email({
         name: username,
         username,
-        email: String(form.get("email")),
+        email,
         password,
+        callbackURL: "/dashboard",
       })
       .catch(() => ({ error: { status: 0 } }))
 
-    if (error) {
+    if (result.error) {
       setPending(false)
-      setError(t(error.status === 0 ? "errors.network" : "errors.signUp"))
+      setError(t(result.error.status === 0 ? "errors.network" : "errors.signUp"))
+      return
+    }
+
+    if (result.data?.token === null) {
+      setPending(false)
+      setVerificationEmail(email)
       return
     }
 
@@ -82,6 +92,8 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
     router.replace("/dashboard")
     router.refresh()
   }
+
+  if (verificationEmail) return <VerificationNotice email={verificationEmail} />
 
   return (
     <>

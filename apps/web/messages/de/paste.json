@@ -26,7 +26,6 @@
     "removeFileAction": "Datei entfernen",
     "renameHint": "Doppelklicke auf einen Tab, um ihn umzubenennen. Auf einem Touchscreen tippst du auf den aktiven Tab, um seine Aktionen zu öffnen.",
     "language": "Sprache",
-    "backToPaste": "Zurück zum Paste",
     "shareVia": "Teilen über…",
     "addFile": "Datei hinzufügen",
     "donTWrapLines": "Zeilenumbruch deaktivieren",
@@ -193,6 +192,13 @@
     "unlockRateLimit": "Zu viele Versuche. Versuche es in ein paar Minuten erneut.",
     "unlockRequestSize": "Diese Anfrage ist zu groß.",
     "unlockPasswordLength": "Dieses Passwort ist zu lang.",
-    "unlockFirst": "Entsperre zuerst das Snippet."
+    "unlockFirst": "Entsperre zuerst das Snippet.",
+    "embed": "Einbetten",
+    "embedHint": "Füge diesen Code in eine Webseite ein, um den Paste dort anzuzeigen.",
+    "embedCode": "Einbettungscode",
+    "embedUnavailable": "Dieser Paste kann nicht eingebettet werden.",
+    "openOnSniptide": "Auf Sniptide öffnen",
+    "print": "Drucken",
+    "backToPaste": "Zurück zum Paste"
   }
 }

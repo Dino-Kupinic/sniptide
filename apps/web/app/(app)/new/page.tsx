@@ -75,6 +75,7 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
         typeof gist === "string" ? `gist:${gist}` : "",
       ].join(":")}
       indentation={preferences.indentation}
+      lineNumbers={preferences.lineNumbers}
       secretDetection={preferences.secretDetection}
       notice={imported && "error" in imported ? imported.error : undefined}
       initial={{

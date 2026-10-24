@@ -27,6 +27,7 @@ import {
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
 import { useCopy } from "./copy-button"
+import { EmbedShare } from "./embed-share"
 import { useNativeShare } from "./paste-actions"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
 import { WebhookShare } from "./webhook-share"
@@ -51,6 +52,7 @@ export function ShareDialog({
   trigger,
   webhookTargets = [],
   webhookAllowed = false,
+  embedCode,
 }: {
   slug: string
   title: string
@@ -61,6 +63,8 @@ export function ShareDialog({
   trigger: "button" | "icon"
   webhookTargets?: WebhookTarget[]
   webhookAllowed?: boolean
+  // The iframe code for /<slug>/embed; without it the section says why the paste can't embed.
+  embedCode?: string
 }) {
   const t = useTranslations("Paste")
   const feedbackT = useTranslations("Core")
@@ -151,7 +155,7 @@ export function ShareDialog({
       )}
       <DialogContent
         className={cn(
-          "gap-0 p-0 lg:max-w-[540px]",
+          "max-h-[calc(100svh-2rem)] gap-0 overflow-y-auto p-0 lg:max-w-[540px]",
           // A bottom sheet on phones.
           "max-lg:top-auto max-lg:bottom-0 max-lg:left-0 max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:rounded-b-none max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-none max-lg:pb-[env(safe-area-inset-bottom)] max-lg:max-h-[90dvh] max-lg:overflow-y-auto",
         )}
@@ -214,6 +218,7 @@ export function ShareDialog({
         ) : null}
 
         <WebhookShare slug={slug} targets={webhookTargets} allowed={webhookAllowed} />
+        <EmbedShare code={embedCode} />
         <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 max-lg:flex-col max-lg:items-stretch lg:px-6">
           <span className="flex items-center gap-2 text-[13px]">
             <note.icon className="size-3.5 shrink-0" />

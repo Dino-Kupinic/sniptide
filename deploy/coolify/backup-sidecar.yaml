@@ -1,0 +1,43 @@
+# Optional scheduled backups for the Coolify template (sniptide.yaml): paste this service under
+# `services:` in the same file and redeploy. It runs pg_dump on an interval into a named volume and
+# keeps the newest files.
+#
+# The backups are on the same server as the database, so copy them off it, and keep the auth secret
+# (and ENV_SECRETS_KEY, if you set it) with them. To restore, see the Backups page of the docs.
+#
+# Settings (environment variables on the resource, all optional):
+#   BACKUP_INTERVAL_HOURS=24   time between backups; the first one runs at start
+#   BACKUP_KEEP_DAYS=14        backups older than this are deleted
+services:
+  backup:
+    image: postgres:17-alpine
+    environment:
+      - PGHOST=postgres
+      - PGUSER=${SERVICE_USER_POSTGRES}
+      - PGPASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - PGDATABASE=${POSTGRES_DB:-sniptide}
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
+      - BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - sniptide-backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        umask 077
+        while true; do
+          file="/backups/sniptide-$$(date -u +%Y%m%dT%H%M%SZ).dump"
+          if pg_dump --format=custom --no-owner --no-privileges --file="$$file.partial" \
+              && pg_restore --list "$$file.partial" >/dev/null; then
+            mv "$$file.partial" "$$file"
+            echo "Backed up to $$file"
+          else
+            rm -f "$$file.partial"
+            echo "Backup failed" >&2
+          fi
+          find /backups -maxdepth 1 -name 'sniptide-*.dump' -mtime "+$$BACKUP_KEEP_DAYS" -delete
+          sleep "$$((BACKUP_INTERVAL_HOURS * 3600))"
+        done

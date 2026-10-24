@@ -1,6 +1,9 @@
 import { getAuth } from "@/lib/auth"
 import { withResolvedIp } from "@/lib/client-ip"
 import { forwardRequest } from "@/lib/forward-request"
+import { BodyTooLargeError, readBody } from "@/lib/request-body"
+
+export const dynamic = "force-dynamic"
 
 // Room for the largest legitimate body, an avatar data URL (64 KB) in JSON.
 const MAX_BODY_BYTES = 128 * 1024
@@ -14,9 +17,13 @@ async function handler(request: Request) {
   const headers = withResolvedIp(request.headers)
   if (request.method !== "POST") return auth.handler(forwardRequest(request, headers))
 
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return tooLarge()
-  const body = await request.arrayBuffer()
-  if (body.byteLength > MAX_BODY_BYTES) return tooLarge()
+  let body: ArrayBuffer
+  try {
+    body = await readBody(request, MAX_BODY_BYTES)
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return tooLarge()
+    return Response.json({ message: "That request couldn't be read." }, { status: 400 })
+  }
 
   return auth.handler(forwardRequest(request, headers, body))
 }

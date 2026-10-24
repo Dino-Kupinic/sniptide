@@ -10,7 +10,19 @@ export async function migrateOnStartup() {
   // Reading the config here makes a bad setting stop the server at startup.
   const folder =
     getConfig().migrationsDir ?? path.join(process.cwd(), "../../packages/db/migrations")
-  await migrateDb(getDb(), folder)
+  const report = await migrateDb(getDb(), folder)
+  console.info(JSON.stringify({ event: "migrations", applied: report.applied }))
+  // An older image started against a database a newer one migrated (a rollback, or a replica from
+  // the previous release restarting mid-deploy). It runs, but its code predates the schema.
+  if (report.ahead.length)
+    console.warn(
+      JSON.stringify({
+        event: "migrations_ahead",
+        ahead: report.ahead,
+        message:
+          "The database is newer than this version of Sniptide. Upgrade the image, or restore a backup taken before the newer version ran.",
+      }),
+    )
 }
 
 // Checks the client-IP settings, so a bad CLIENT_IP_SOURCE stops the server here, and starts

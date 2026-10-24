@@ -188,6 +188,16 @@ A radio group on a `--muted` track with 3px padding. The checked option sits on 
 
 A 24px `--muted` track with `rounded-md` corners and a dot at every stop. The track fills with `--primary` up to a 32px by 24px `--background` thumb that stays inside the track. The chosen stop's full name sits above the track in `--link` at 14px weight 500. Arrow keys move one stop at a time. Thumb and fill spring to the next stop over 300ms with a slight overshoot, the thumb grows to 110% while held, and the name pops in when the stop changes. Under reduced motion it snaps.
 
+### Combobox
+**Role:** Picking one of many options, such as the paste language.
+
+A trigger opens a menu-styled popup with a 40px search row on a hairline above the list. Rows match the dropdown menu, the chosen row carries a check, and a group after the first sits below a hairline that shows only while both groups have matches.
+
+### Language icon
+**Role:** Naming a paste's language at a glance.
+
+The language's logo at 16px, from Material Icon Theme (MIT), served as static SVGs from `apps/web/public/languages` so a list downloads only the logos it shows. Logos drawn for dark surfaces switch to their light variant in light mode. Languages without a logo use the generic document icon. `apps/web/scripts/generate-languages.ts` regenerates the logos and the language table.
+
 ### Tabs
 **Role:** Switching views.
 

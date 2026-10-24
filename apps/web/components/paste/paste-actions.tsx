@@ -18,6 +18,7 @@ import {
   LinkIcon,
   LogOutIcon,
   MoreHorizontalIcon,
+  PrinterIcon,
   ShareIcon,
   StarIcon,
   Trash2Icon,
@@ -267,6 +268,10 @@ export function PasteOverflowMenu({
             </DropdownMenuItem>
           </>
         ) : null}
+        <DropdownMenuItem render={<a href={`/${slug}/print`} target="_blank" rel="noopener" />}>
+          <PrinterIcon />
+          {t("print")}
+        </DropdownMenuItem>
         {canLeave ? (
           <>
             <DropdownMenuSeparator />

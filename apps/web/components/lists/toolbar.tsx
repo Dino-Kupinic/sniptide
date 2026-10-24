@@ -36,6 +36,7 @@ import {
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
+import { TruncatedText } from "@/components/truncated-text"
 import { formatNumber } from "@/lib/format"
 
 export function SearchField({
@@ -533,9 +534,7 @@ export function ListHeader({
   return (
     <div className="flex flex-col gap-1">
       <HeaderTitle>
-        <span className="truncate" title={title}>
-          {title}
-        </span>
+        <TruncatedText className="max-w-80">{title}</TruncatedText>
         {count !== undefined ? (
           <span className="rounded-sm shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
             {formatNumber(count, locale)}

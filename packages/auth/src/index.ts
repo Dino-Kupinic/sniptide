@@ -94,9 +94,14 @@ export function createAuth({
     },
     // In Postgres rather than memory, so limits hold across restarts and deploys.
     rateLimit: { enabled: rateLimitEnabled, storage: "database", modelName: "authRateLimit" },
-    emailVerification,
+    emailVerification: emailVerification && {
+      ...emailVerification,
+      sendOnSignUp: Boolean(allowlist),
+      autoSignInAfterVerification: true,
+    },
     emailAndPassword: {
       enabled: true,
+      autoSignIn: !allowlist,
       sendResetPassword,
       // Whoever reset the password gets the only session; a stolen session ends with it.
       revokeSessionsOnPasswordReset: true,
@@ -114,10 +119,17 @@ export function createAuth({
       additionalFields: {
         // Settings page preferences as JSON; parsed and validated in the web app.
         preferences: { type: "string", required: false, input: true },
+        pendingInvitation: {
+          type: "boolean",
+          required: false,
+          defaultValue: false,
+          input: false,
+          returned: false,
+        },
       },
       changeEmail: {
         enabled: true,
-        updateEmailWithoutVerification: true,
+        updateEmailWithoutVerification: !emailVerification?.sendVerificationEmail && !allowlist,
         sendChangeEmailConfirmation,
       },
       deleteUser: { enabled: true },
@@ -126,6 +138,15 @@ export function createAuth({
       before: createAuthMiddleware(async (ctx) => {
         if (demo && DEMO_LOCKED_PATHS.has(ctx.path))
           throw new APIError("FORBIDDEN", { message: DEMO_LOCKED_MESSAGE })
+        if (ctx.path === "/sign-up/email") {
+          assertSignUpOpen(allowSignUp)
+          assertAllowed(allowlist, ctx.body?.email)
+          if (allowlist && !emailVerification?.sendVerificationEmail)
+            throw new APIError("FORBIDDEN", {
+              code: "EMAIL_VERIFICATION_UNAVAILABLE",
+              message: "Invited accounts need email verification. Contact the administrator.",
+            })
+        }
       }),
     },
     databaseHooks: {
@@ -135,10 +156,41 @@ export function createAuth({
           before: async (user) => {
             assertSignUpOpen(allowSignUp)
             assertAllowed(allowlist, user.email)
-            return { data: boundUserFields(user, "create") }
+            const pendingInvitation = Boolean(allowlist && user.emailVerified !== true)
+            if (pendingInvitation && !emailVerification?.sendVerificationEmail)
+              throw new APIError("FORBIDDEN", {
+                code: "EMAIL_VERIFICATION_UNAVAILABLE",
+                message: "Invited accounts need email verification. Contact the administrator.",
+              })
+            return { data: { ...boundUserFields(user, "create"), pendingInvitation } }
           },
         },
-        update: { before: async (user) => ({ data: boundUserFields(user, "update") }) },
+        update: {
+          before: async (user) => ({
+            data: {
+              ...boundUserFields(user, "update"),
+              ...(user.emailVerified === true ? { pendingInvitation: false } : {}),
+            },
+          }),
+        },
+      },
+      session: {
+        create: {
+          before: async (session) => {
+            const user = await db.query.user.findFirst({
+              columns: {
+                pendingInvitation: true,
+                emailVerified: true,
+              },
+              where: { id: session.userId },
+            })
+            if (user?.pendingInvitation && user.emailVerified !== true)
+              throw new APIError("FORBIDDEN", {
+                code: "EMAIL_NOT_VERIFIED",
+                message: "Verify your email before signing in.",
+              })
+          },
+        },
       },
     },
     socialProviders: {

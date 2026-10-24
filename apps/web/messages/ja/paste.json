@@ -26,7 +26,6 @@
     "removeFileAction": "ファイルを削除",
     "renameHint": "タブをダブルクリックすると名前を変更できます。タッチ画面では、アクティブなタブをタップすると操作を選べます。",
     "language": "言語",
-    "backToPaste": "ペーストに戻る",
     "shareVia": "共有方法を選ぶ…",
     "addFile": "ファイルを追加",
     "donTWrapLines": "折り返しを解除",
@@ -193,6 +192,13 @@
     "unlockRateLimit": "試行回数が多すぎます。数分後にもう一度お試しください。",
     "unlockRequestSize": "リクエストが大きすぎます。",
     "unlockPasswordLength": "パスワードが長すぎます。",
-    "unlockFirst": "先にスニペットのロックを解除してください。"
+    "unlockFirst": "先にスニペットのロックを解除してください。",
+    "embed": "埋め込み",
+    "embedHint": "このコードを Web ページに貼り付けると、そこに Paste が表示されます。",
+    "embedCode": "埋め込みコード",
+    "embedUnavailable": "この Paste は埋め込めません。",
+    "openOnSniptide": "Sniptide で開く",
+    "print": "印刷",
+    "backToPaste": "Paste に戻る"
   }
 }
