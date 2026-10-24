@@ -926,14 +926,7 @@ export async function readSharedPaste(
     slug: record.slug,
     title: record.title,
     files,
-    author: author
-      ? {
-          name: author.name,
-          username: author.displayUsername ?? author.username ?? author.name,
-          initials: initials(author.name),
-          tone: "foreground",
-        }
-      : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" },
+    author: pasteAuthor(author),
     updatedAt: ms(record.updatedAt),
     expiresAt: ms(record.expiresAt),
     views: record.views,
@@ -941,6 +934,19 @@ export async function readSharedPaste(
     allowRaw: record.allowRaw,
   }
   return { status: "ok", paste, owned, signedIn: viewer !== null }
+}
+
+function pasteAuthor(
+  author: { name: string; username: string | null; displayUsername: string | null } | undefined,
+): SharedPaste["author"] {
+  return author
+    ? {
+        name: author.name,
+        username: author.displayUsername ?? author.username ?? author.name,
+        initials: initials(author.name),
+        tone: "foreground",
+      }
+    : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" }
 }
 
 // Shared by metadata, the share page and raw reads. React memoizes this only within a render;
@@ -1012,6 +1018,38 @@ export async function readPublicPreview(slug: string): Promise<PastePreview | nu
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)
   return file ? { slug: record.slug, title: record.title, ...file } : null
+}
+
+// The embed view runs inside other sites' pages, so like the preview card it ignores sessions and
+// unlock cookies: a private, protected or one-time paste never opens there, even for its owner.
+// Unlisted pastes do, since whoever has the link may already read them. No views or burn claims.
+export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> {
+  const record = await findSharedRecord(slug)
+  if (!record || record.visibility === "private" || record.passwordHash || record.burnAfterRead)
+    return null
+  const db = getDb()
+  const [files, [author]] = await Promise.all([
+    db
+      .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
+      .from(pasteFile)
+      .where(eq(pasteFile.pasteId, record.id))
+      .orderBy(pasteFile.position, pasteFile.id),
+    db
+      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
+      .from(user)
+      .where(eq(user.id, record.ownerId)),
+  ])
+  return {
+    slug: record.slug,
+    title: record.title,
+    files,
+    author: pasteAuthor(author),
+    updatedAt: ms(record.updatedAt),
+    expiresAt: ms(record.expiresAt),
+    views: record.views,
+    burnAfterRead: false,
+    allowRaw: record.allowRaw,
+  }
 }
 
 // Only the owner may send a link to the instance's configured channel. Protected links aren't
