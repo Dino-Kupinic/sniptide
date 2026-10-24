@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { user } from "./auth"
+import { folder } from "./folders"
 
 export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
 
@@ -61,6 +62,9 @@ export const paste = pgTable(
     burnAfterRead: boolean("burn_after_read").notNull().default(false),
     allowRaw: boolean("allow_raw").notNull().default(true),
     collection: text("collection"),
+    // The folder the paste is filed in, if any. No cascade: a folder is never deleted while
+    // pastes still point at it, so deleting one can't silently take pastes with it.
+    folderId: uuid("folder_id").references(() => folder.id),
     // Free-form labels for finding a paste again (`sniptide list --tag react`).
     tags: text("tags").array().notNull().default([]),
     source: jsonb("source").$type<PasteSource>(),
@@ -79,6 +83,7 @@ export const paste = pgTable(
     uniqueIndex("paste_slug_unique").on(table.slug),
     index("paste_owner_idx").on(table.ownerId, table.updatedAt),
     index("paste_collection_idx").on(table.ownerId, table.collection, table.updatedAt, table.id),
+    index("paste_folder_idx").on(table.ownerId, table.folderId, table.updatedAt, table.id),
     index("paste_deleted_idx").on(table.deletedAt),
     index("paste_expired_idx").on(table.expiresAt),
     index("paste_title_search_idx").using("gin", table.title.op("gin_trgm_ops")),

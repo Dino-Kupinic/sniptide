@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { createTranslator } from "next-intl"
 import { createApiToken } from "@/lib/api/token-actions"
 import { createCollection } from "@/lib/collections/actions"
+import { createFolder, moveFolder } from "@/lib/folders/actions"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { localeCookie, locales } from "@/lib/i18n/config"
 import { findPerson, previewGist, savePaste } from "@/lib/pastes/actions"
@@ -139,6 +140,36 @@ describe("localized action errors", () => {
       ok: false,
       error: "Melde dich an, um einen Paste zu teilen.",
     })
+  })
+
+  test("folder actions answer in the viewer's language", async () => {
+    request.cookies.set(localeCookie, "de")
+    request.viewer = "owner"
+    expect(await createFolder("")).toEqual({ ok: false, error: "Gib dem Ordner einen Namen." })
+    expect(await createFolder("x".repeat(61))).toEqual({
+      ok: false,
+      error: "Namen sind auf 60 Zeichen begrenzt.",
+    })
+    expect(await moveFolder("not-an-id", null)).toEqual({
+      ok: false,
+      error: "Dieser Ordner existiert nicht mehr.",
+    })
+    request.viewer = null
+    await expect(createFolder("Work")).rejects.toThrow("Melde dich an, um Ordner zu ändern.")
+    request.cookies.set(localeCookie, "ja")
+    expect(await translateActionError("You can have up to 500 folders.")).toBe(
+      "作成できるフォルダは 500 個までです。",
+    )
+    expect(await translateActionError("Folders can be nested 8 levels deep.")).toBe(
+      "フォルダは最大 8 階層まで入れ子にできます。",
+    )
+    request.cookies.set(localeCookie, "es")
+    expect(await translateActionError("Move up to 100 pastes at once.")).toBe(
+      "Mueve hasta 100 fragmentos a la vez.",
+    )
+    expect(await translateActionError("A folder can't go inside itself.")).toBe(
+      "Una carpeta no puede ir dentro de sí misma.",
+    )
   })
 
   test("every locale has every error and formats every ICU message", () => {

@@ -92,6 +92,8 @@
     "notificationExpiring": "«{title}» caduca {time}",
     "notificationExpiringDetail": "Amplía el plazo en el panel para compartir del fragmento",
     "notificationViews": "«{title}» ha alcanzado {count, number} visitas",
-    "notificationViewsDetail": "Consulta su origen en Estadísticas"
+    "notificationViewsDetail": "Consulta su origen en Estadísticas",
+    "folders": "Carpetas",
+    "folder": "Carpeta"
   }
 }

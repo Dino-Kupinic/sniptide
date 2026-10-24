@@ -16,7 +16,7 @@ export const mobileTabs: (NavItem & { match: string[] })[] = [
     href: "/settings",
     label: "more",
     icon: MenuIcon,
-    match: ["/settings", "/shared", "/trash", "/collections", "/secrets"],
+    match: ["/settings", "/shared", "/trash", "/collections", "/folders", "/secrets"],
   },
 ]
 
@@ -48,6 +48,7 @@ export const pageTitles: Record<string, string> = {
   new: "new_paste",
   settings: "settings",
   collections: "collections",
+  folders: "folders",
   secrets: "secrets",
 }
 

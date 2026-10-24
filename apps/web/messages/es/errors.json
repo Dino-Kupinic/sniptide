@@ -89,6 +89,17 @@
     "unlinkLast": "Conserva al menos una forma de iniciar sesión. Añade antes una contraseña o conecta otra cuenta.",
     "unlinkFailed": "No se pudo desconectar esa cuenta. Vuelve a intentarlo.",
     "demoLocked": "Esto no está disponible en la demo.",
-    "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo."
+    "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo.",
+    "signInFolders": "Inicia sesión para modificar carpetas.",
+    "folderName": "Ponle un nombre a la carpeta.",
+    "folderDuplicate": "Ya hay una carpeta con ese nombre.",
+    "folderLimit": "Puedes tener hasta {max} carpetas.",
+    "folderDepth": "Las carpetas se pueden anidar hasta {max} niveles.",
+    "folderMissing": "Esa carpeta ya no existe.",
+    "folderCycle": "Una carpeta no puede ir dentro de sí misma.",
+    "checkFolder": "Revisa la carpeta e inténtalo de nuevo.",
+    "folderContents": "Elige qué ocurre con los fragmentos que contiene.",
+    "movePastesLimit": "Mueve hasta {max} fragmentos a la vez.",
+    "checkPastes": "Revisa los fragmentos."
   }
 }

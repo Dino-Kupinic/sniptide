@@ -89,6 +89,17 @@
     "unlinkLast": "Keep at least one way to sign in. Add a password or connect another account first.",
     "unlinkFailed": "Couldn't disconnect that account. Try again.",
     "demoLocked": "This isn't available in the demo.",
-    "signInFresh": "For your safety, sign out and back in, then try again."
+    "signInFresh": "For your safety, sign out and back in, then try again.",
+    "signInFolders": "Sign in to change folders.",
+    "folderName": "Give the folder a name.",
+    "folderDuplicate": "A folder with that name is already there.",
+    "folderLimit": "You can have up to {max} folders.",
+    "folderDepth": "Folders can be nested {max} levels deep.",
+    "folderMissing": "That folder no longer exists.",
+    "folderCycle": "A folder can't go inside itself.",
+    "checkFolder": "Check the folder and try again.",
+    "folderContents": "Choose what happens to the pastes inside.",
+    "movePastesLimit": "Move up to {max} pastes at once.",
+    "checkPastes": "Check the pastes."
   }
 }

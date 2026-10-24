@@ -19,6 +19,7 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm"
+import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
@@ -31,8 +32,10 @@ import { purgeTrash, readableStarsWhere, sharedWithWhere, summarizePastes } from
 import type { Person } from "./types"
 
 export interface PasteListScope {
-  mode: "mine" | "starred" | "collection" | "trash"
+  mode: "mine" | "starred" | "collection" | "folder" | "trash"
   collection?: string
+  // The folder's id, for mode "folder": the pastes filed directly in it.
+  folder?: string
 }
 
 // Database pagination, counts and facet values all use the same access scope. File contents and
@@ -65,6 +68,12 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
             : isNull(pasteTable.deletedAt),
           scope.mode === "collection"
             ? eq(pasteTable.collection, scope.collection ?? "")
+            : undefined,
+          // An id that isn't a uuid matches nothing, rather than failing the query.
+          scope.mode === "folder"
+            ? scope.folder && z.uuid().safeParse(scope.folder).success
+              ? eq(pasteTable.folderId, scope.folder)
+              : sql`false`
             : undefined,
         )
   const visibility = query.visibility.map((value) =>

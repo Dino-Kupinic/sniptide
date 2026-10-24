@@ -12,11 +12,11 @@ import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import type { CollectionActionResult } from "@/lib/collections/actions"
 import { MAX_NAME_LENGTH } from "@/lib/collections/types"
 
-// Asks for a collection's name, for both creating one and renaming one. `onSubmit` returns the
-// action's result; the dialog closes on success and shows the error otherwise.
+// Asks for a name, for both creating and renaming a collection (and a folder, with its own limits
+// and field label). `onSubmit` returns the action's result; the dialog closes on success and shows
+// the error otherwise.
 export function CollectionNameDialog({
   open,
   onOpenChange,
@@ -26,6 +26,8 @@ export function CollectionNameDialog({
   pendingLabel,
   initialName = "",
   label,
+  fieldLabel,
+  maxLength = MAX_NAME_LENGTH,
   placeholder = "api-snippets",
   leading,
   onSubmit,
@@ -39,10 +41,13 @@ export function CollectionNameDialog({
   initialName?: string
   // A visible label above the name field; without one the field is labelled for screen readers.
   label?: string
+  // What a screen reader calls the field when there's no visible label.
+  fieldLabel?: string
+  maxLength?: number
   placeholder?: string
   // Shown before the name field, like New collection's icon button.
   leading?: React.ReactNode
-  onSubmit: (name: string) => Promise<CollectionActionResult>
+  onSubmit: (name: string) => Promise<{ ok: true } | { ok: false; error: string }>
 }) {
   const t = useTranslations("Workspace")
   const nameId = React.useId()
@@ -87,10 +92,10 @@ export function CollectionNameDialog({
               key={initialName}
               id={nameId}
               name="name"
-              aria-label={label ? undefined : t("collection_name")}
+              aria-label={label ? undefined : (fieldLabel ?? t("collection_name"))}
               placeholder={placeholder}
               defaultValue={initialName}
-              maxLength={MAX_NAME_LENGTH}
+              maxLength={maxLength}
               autoComplete="off"
               required
               autoFocus

@@ -50,6 +50,18 @@ const templates: [RegExp, (match: RegExpMatchArray) => Promise<string>][] = [
     (match) => actionError("collectionLimit", { max: Number(match[1]) }),
   ],
   [
+    /^You can have up to (\d+) folders\.$/,
+    (match) => actionError("folderLimit", { max: Number(match[1]) }),
+  ],
+  [
+    /^Folders can be nested (\d+) levels deep\.$/,
+    (match) => actionError("folderDepth", { max: Number(match[1]) }),
+  ],
+  [
+    /^Move up to (\d+) pastes at once\.$/,
+    (match) => actionError("movePastesLimit", { max: Number(match[1]) }),
+  ],
+  [
     /^You can have up to (\d+) tokens\. Revoke one you no longer use\.$/,
     (match) => actionError("tokenLimit", { max: Number(match[1]) }),
   ],

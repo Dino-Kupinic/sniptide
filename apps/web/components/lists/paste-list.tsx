@@ -96,6 +96,7 @@ export function PasteList({
   mode,
   collections,
   actions,
+  intro,
   query: serverQuery,
   pagination,
   languageOptions,
@@ -104,9 +105,11 @@ export function PasteList({
   rows: PasteRow[]
   origin: string
   host: string
-  mode: "mine" | "starred" | "collection"
+  mode: "mine" | "starred" | "collection" | "folder"
   collections: Collection[]
   actions?: React.ReactNode
+  // Shown between the heading and the filters, like a folder's path and subfolders.
+  intro?: React.ReactNode
   query: PasteListQuery
   pagination: PageInfo
   languageOptions: string[]
@@ -169,6 +172,8 @@ export function PasteList({
           </>
         }
       />
+
+      {intro}
 
       <div className="flex flex-col gap-3 lg:hidden">
         <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
@@ -469,7 +474,7 @@ function EmptyState({
   mode,
 }: {
   filtering: boolean
-  mode: "mine" | "starred" | "collection"
+  mode: "mine" | "starred" | "collection" | "folder"
 }) {
   const t = useTranslations("Workspace")
   const text = filtering
@@ -478,7 +483,9 @@ function EmptyState({
       ? t("star_a_paste_to_keep_it_here")
       : mode === "collection"
         ? t("no_pastes_in_this_collection_yet")
-        : t("no_pastes_yet")
+        : mode === "folder"
+          ? t("no_pastes_in_this_folder_yet")
+          : t("no_pastes_yet")
 
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-14 text-center text-sm text-muted-foreground">

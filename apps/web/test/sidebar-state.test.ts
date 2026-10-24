@@ -23,7 +23,7 @@ describe("sidebar preferences", () => {
   test("custom section and collection ordering survives serialization", () => {
     const state: SidebarState = {
       ...defaultSidebarState,
-      sectionOrder: ["collections", "pastes", "starred"],
+      sectionOrder: ["collections", "folders", "pastes", "starred"],
       collectionOrder: ["pastes", "api-snippets", "general"],
       closed: ["pastes"],
     }
@@ -34,7 +34,7 @@ describe("sidebar preferences", () => {
     expect(
       parseSidebarState(cookie({ sectionOrder: ["collections", "unknown", "collections", null] }))
         .sectionOrder,
-    ).toEqual(["collections", "starred", "pastes"])
+    ).toEqual(["collections", "starred", "pastes", "folders"])
     for (const value of [undefined, "%", "null", "[]", "1", cookie({ sectionOrder: "pastes" })]) {
       expect(parseSidebarState(value).sectionOrder).toEqual([...SECTIONS])
     }
@@ -48,7 +48,17 @@ describe("sidebar preferences", () => {
           sectionOrder: ["collections", "general", "starred", "pastes"],
         }),
       ),
-    ).toMatchObject({ closed: ["pastes"], sectionOrder: ["collections", "starred", "pastes"] })
+    ).toMatchObject({
+      closed: ["pastes"],
+      sectionOrder: ["collections", "starred", "pastes", "folders"],
+    })
+  })
+
+  test("a layout saved before folders existed gets the Folders section appended", () => {
+    expect(
+      parseSidebarState(cookie({ sectionOrder: ["collections", "pastes", "starred"] }))
+        .sectionOrder,
+    ).toEqual(["collections", "pastes", "starred", "folders"])
   })
 
   test("new collections append and deleted collections disappear without resetting the order", () => {

@@ -73,6 +73,7 @@ interface SeedPaste {
   burnAfterRead?: boolean
   allowRaw?: boolean
   collection?: string
+  folderId?: string
   language?: string
   expiresAt?: Date
   deletedAt?: Date
@@ -93,6 +94,7 @@ export async function seedPaste(input: SeedPaste) {
     burnAfterRead: input.burnAfterRead ?? false,
     allowRaw: input.allowRaw ?? true,
     collection: input.collection ?? null,
+    folderId: input.folderId ?? null,
     expiresAt: input.expiresAt ?? null,
     deletedAt: input.deletedAt ?? null,
   })
