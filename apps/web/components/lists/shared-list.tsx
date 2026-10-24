@@ -15,7 +15,7 @@ import { UsersIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import type { PageInfo } from "@/lib/pastes/list-query"
 import type { SharedRow } from "@/lib/pastes/rows"
 import { type SharedListQuery, sharedListSearch } from "@/lib/pastes/shared-list-query"
@@ -319,7 +319,7 @@ export function SharedList({
                   key={row.slug}
                   className="relative flex items-center gap-3 border-b border-border py-3"
                 >
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-center gap-2">
                       <Link

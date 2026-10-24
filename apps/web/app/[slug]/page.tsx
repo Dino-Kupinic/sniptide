@@ -5,7 +5,7 @@ import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { FileViewer } from "@/components/paste/file-viewer"
-import { LanguageLabel } from "@/components/paste/language-marker"
+import { LanguageLabel } from "@/components/paste/language-icon"
 import { RevealPaste } from "@/components/paste/reveal-paste"
 import { ShareActions } from "@/components/paste/share-actions"
 import { UnlockForm } from "@/components/paste/unlock-form"
@@ -142,6 +142,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           files={files}
           rawAllowed={rawAllowed}
           collapseAt={6}
+          printable
           headerClassName={single ? "lg:hidden" : undefined}
           bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
         />

@@ -24,11 +24,16 @@ export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+// A paste's own screens: its detail page and its editor (/pastes/<slug>…).
+export function isPasteScreen(pathname: string) {
+  return /^\/pastes\/[^/]+/.test(pathname)
+}
+
 // Mobile screens that draw their own header (Settings, New paste, Paste detail) or take over the
 // bottom of the screen with their own actions, per the Paper mobile artboards.
 export function mobileChrome(pathname: string) {
-  // Paste detail and edit (/pastes/<slug>…) have their own back header and bottom actions.
-  const pasteScreen = /^\/pastes\/[^/]+/.test(pathname)
+  // Paste detail and edit have their own back header and bottom actions.
+  const pasteScreen = isPasteScreen(pathname)
   const editor = isActivePath(pathname, "/new") || pasteScreen
 
   return {

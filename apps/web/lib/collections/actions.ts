@@ -1,14 +1,16 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
+import { revalidateWorkspace } from "@/lib/live/changes"
 import * as store from "./store"
 import { HUES, ICONS, MAX_COLLECTIONS, MAX_NAME_LENGTH } from "./types"
 
 async function assertSignedIn() {
-  if (!(await getSession())) throw new Error(await actionError("signInCollections"))
+  const session = await getSession()
+  if (!session) throw new Error(await actionError("signInCollections"))
+  return session.user.id
 }
 
 const nameSchema = z
@@ -29,7 +31,7 @@ async function save(
   name: string,
   write: (name: string) => Promise<store.CollectionResult>,
 ): Promise<CollectionActionResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = nameSchema.safeParse(name)
   if (!parsed.success) {
     return {
@@ -42,7 +44,7 @@ async function save(
   if (result.status !== "ok")
     return { ok: false, error: await translateActionError(failures[result.status]) }
 
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true, slug: result.collection.slug }
 }
 
@@ -64,17 +66,17 @@ export async function renameCollection(
 }
 
 export async function setCollectionIcon(slug: string, icon: string, hue: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = lookSchema.parse({ icon, hue })
   await store.setCollectionIcon(slug, parsed.icon, parsed.hue)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 // Returns what was removed, for `restoreCollection` to take back; null when it was already gone.
 export async function deleteCollection(slug: string): Promise<store.CollectionSnapshot | null> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const snapshot = await store.deleteCollection(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return snapshot
 }
 
@@ -97,7 +99,7 @@ const restoreFailures = {
 export async function restoreCollection(
   snapshot: store.CollectionSnapshot,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = snapshotSchema.safeParse(snapshot)
   if (!parsed.success) return { ok: false, error: await actionError("collectionRestore") }
   // The date only places it in the list; it can't be from the future.
@@ -105,6 +107,6 @@ export async function restoreCollection(
   const result = await store.restoreCollection({ ...parsed.data, createdAt })
   if (result.status !== "ok")
     return { ok: false, error: await translateActionError(restoreFailures[result.status]) }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true }
 }

@@ -1,12 +1,12 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { collectionExists } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { formatLimit } from "@/lib/format"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
+import { revalidateWorkspace } from "@/lib/live/changes"
 import { getSiteOrigin } from "@/lib/site"
 import {
   fetchGist,
@@ -109,7 +109,7 @@ export async function savePaste(
     if (!paste) return { ok: false, error: await actionError("pasteMissing") }
     if ("conflict" in paste) return { ok: false, error: await actionError("pasteConflict") }
 
-    revalidatePath("/", "layout")
+    await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
     if (error instanceof store.PasteBudgetError)
@@ -169,7 +169,7 @@ export async function autosavePaste(
 
     // If the custom link changed, the page the editor is on no longer exists. Refreshing it now
     // would 404 under the editor, so the editor moves to the new link first and refreshes there.
-    if (result.slug === editing) revalidatePath("/", "layout")
+    if (result.slug === editing) await revalidateWorkspace(user)
     return { ok: true, ...result }
   } catch (error) {
     if (error instanceof store.PasteBudgetError)
@@ -195,7 +195,7 @@ export async function restoreRevision(slug: string, revisionId: number) {
   if (tooOften) return { ok: false as const, error: await translateActionError(tooOften) }
 
   const result = await store.restoreRevision(slug, revisionId)
-  if (result.ok) revalidatePath("/", "layout")
+  if (result.ok) await revalidateWorkspace(user)
   return result.ok ? result : { ...result, error: await translateActionError(result.error) }
 }
 
@@ -215,9 +215,9 @@ const sharingSchema = z.object({
 })
 
 export async function updateSharing(slug: string, input: z.input<typeof sharingSchema>) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.updateSharing(slug, sharingSchema.parse(input))
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export type FindPersonResult =
@@ -270,20 +270,20 @@ export async function setShareAccess(
   userId: string,
   access: Access,
 ): Promise<ShareResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = z.enum(ACCESSES).safeParse(access)
   if (!parsed.success) return { ok: false, error: await actionError("pickAccess") }
   if (!(await store.sharePaste(slug, userId, parsed.data))) {
     return { ok: false, error: await actionError("shareMissing") }
   }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
 
 export async function removeShare(slug: string, userId: string): Promise<ShareResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.unsharePaste(slug, userId)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
 
@@ -295,7 +295,7 @@ export async function restoreRemovedShare(
   access: Access,
   sharedAt: number,
 ): Promise<ShareResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = z
     .object({ access: z.enum(ACCESSES), sharedAt: z.number().int().positive() })
     .safeParse({ access, sharedAt })
@@ -304,35 +304,35 @@ export async function restoreRemovedShare(
   if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
     return { ok: false, error: await actionError("shareMissing") }
   }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
 
 // Drops a paste someone shared with the viewer from their Shared with me.
 export async function leaveShare(slug: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.leaveShare(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 // Undoes leaveShare, unless the owner has revoked the share since.
 export async function restoreShare(slug: string): Promise<ActionOutcome> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   if (!(await store.restoreShare(slug))) {
     return { ok: false, error: await actionError("shareRevoked") }
   }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true }
 }
 
 export async function setStarred(slug: string, starred: boolean) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.setStarred(slug, starred)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export async function renamePaste(slug: string, title: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = pasteSchema.shape.title.safeParse(title)
   if (!parsed.success) {
     return {
@@ -341,43 +341,43 @@ export async function renamePaste(slug: string, title: string) {
     }
   }
   await store.renamePaste(slug, parsed.data)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true as const }
 }
 
 export async function setPasteCollection(slug: string, collection: string | null) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   if (collection !== null && !(await collectionExists(collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
   await store.setPasteCollection(slug, collection)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true as const }
 }
 
 export async function trashPaste(slug: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.trashPaste(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export async function restorePaste(slug: string): Promise<ActionOutcome> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const restored = await store.restorePaste(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return restored ? { ok: true } : { ok: false, error: await actionError("pasteGone") }
 }
 
 export async function deleteForever(slug: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.deleteForever(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export async function emptyTrash() {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.emptyTrash()
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export type GistPreview = {
@@ -489,7 +489,7 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
       })),
     })
 
-    revalidatePath("/", "layout")
+    await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
     if (error instanceof store.PasteBudgetError)

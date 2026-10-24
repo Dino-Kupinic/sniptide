@@ -18,7 +18,7 @@ import {
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import "flag-icons/css/flag-icons.min.css"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
 import { formatNumber } from "@/lib/format"
 import type { CountryRow, DeviceRow, LanguageRow, Referrer, TopPaste } from "@/lib/pastes/analytics"
 import { getLanguage } from "@/lib/pastes/languages"
@@ -108,8 +108,8 @@ export function TopPastes({
                 <TableRow key={row.slug} className="relative">
                   <TableCell className="h-14 min-w-0 truncate px-4">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex w-3.5 shrink-0 justify-center">
-                        <LanguageMarker language={row.language} />
+                      <span className="flex w-4 shrink-0 justify-center">
+                        <LanguageIcon language={row.language} />
                       </span>
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <Link
@@ -240,11 +240,11 @@ export function Countries({ rows, total }: { rows: CountryRow[]; total: number }
 }
 
 const deviceIcons = {
-  desktop: { icon: MonitorIcon, tone: "text-link", fill: "bg-link" },
+  desktop: { icon: MonitorIcon, tone: "text-link", fill: "bg-chart-1" },
   mobile: {
     icon: SmartphoneIcon,
-    tone: "text-[color-mix(in_oklab,var(--link)_45%,var(--background))]",
-    fill: "bg-[color-mix(in_oklab,var(--link)_45%,var(--background))]",
+    tone: "text-highlight",
+    fill: "bg-highlight",
   },
   cli: {
     icon: TerminalIcon,
@@ -321,7 +321,7 @@ export function Languages({ rows, total }: { rows: LanguageRow[]; total: number 
             <div key={row.language} className={rowClass}>
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2.5">
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <span className="truncate text-[13px] leading-[18px]">
                     {getLanguage(row.language).name}
                   </span>

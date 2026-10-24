@@ -22,7 +22,7 @@ import {
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
-import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
@@ -334,7 +334,7 @@ export function PasteList({
                               undo: () => setStarred(row.slug, true),
                             })
                           }}
-                          className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                          className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-highlight outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
                         >
                           <StarIcon className="size-4 fill-current" />
                         </button>
@@ -356,7 +356,7 @@ export function PasteList({
                   key={row.slug}
                   className="relative flex items-center gap-3 border-b border-border py-3"
                 >
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <Link
                       href={`/pastes/${row.slug}`}

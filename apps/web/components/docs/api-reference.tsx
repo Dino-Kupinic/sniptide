@@ -33,11 +33,11 @@ const customCss = `
   --scalar-background-1: #121111;
   --scalar-background-2: #1a1919;
   --scalar-background-3: #242222;
-  --scalar-background-accent: #3a36ff29;
+  --scalar-background-accent: #2a26ec29;
   --scalar-color-1: #f4f4f4;
   --scalar-color-2: #a3a3a3;
   --scalar-color-3: #7a7a7a;
-  --scalar-color-accent: #8c89ff;
+  --scalar-color-accent: #8f8cff;
   --scalar-border-color: #2f2c2c;
   --scalar-button-1: #f4f4f4;
   --scalar-button-1-color: #121111;

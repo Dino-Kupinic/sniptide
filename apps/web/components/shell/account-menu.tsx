@@ -30,18 +30,12 @@ import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
+import { useResourceLinks } from "@/components/shell/resource-links"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import { authClient } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeNames, locales } from "@/lib/i18n/config"
-
-// Where the resource links go: the marketing site, the docs site (apps/docs) and GitHub issues.
-const links = {
-  homepage: "https://sniptide.com",
-  documentation: "https://docs.sniptide.com",
-  help: "https://github.com/Dino-Kupinic/sniptide/issues",
-}
 
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
 // as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
@@ -51,6 +45,7 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
   const locale = useLocale()
   const [changingLocale, startLocaleTransition] = React.useTransition()
   const shortcuts = useShortcutsHelp()
+  const links = useResourceLinks()
 
   async function signOut() {
     await authClient.signOut()

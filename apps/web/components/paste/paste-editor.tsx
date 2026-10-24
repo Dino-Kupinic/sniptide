@@ -1,18 +1,12 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Sheet, SheetContent, SheetTitle } from "@sniptide/ui/components/sheet"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
+import { ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
@@ -33,7 +27,8 @@ import {
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
+import { LanguagePicker } from "@/components/paste/language-picker"
 import {
   type PanelSection,
   SidePanel,
@@ -61,7 +56,7 @@ import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
-import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
+import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
@@ -121,6 +116,7 @@ export function PasteEditor({
   collections,
   draftScope,
   indentation = "2",
+  lineNumbers = true,
   secretDetection = true,
   notice,
   sharedEdit,
@@ -134,8 +130,10 @@ export function PasteEditor({
   // Whose drafts these are (the signed-in account, plus what the page started from), so accounts
   // sharing a browser and different starting points don't mix.
   draftScope: string
-  // From the viewer's Settings: what Tab inserts, and whether to warn about pasted secrets.
+  // From the viewer's Settings: what Tab inserts, whether lines are numbered, and whether to warn
+  // about pasted secrets.
   indentation?: Preferences["indentation"]
+  lineNumbers?: boolean
   secretDetection?: boolean
   // Shown like a save error when the page couldn't prefill the editor (a gist that can't be read).
   notice?: string
@@ -816,7 +814,7 @@ export function PasteEditor({
           placeholder={t("untitledPaste")}
           maxLength={120}
           required
-          className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-primary outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
+          className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-highlight outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
         />
         <input
           aria-label={t("description")}
@@ -902,21 +900,33 @@ export function PasteEditor({
                 content={active?.content || " "}
                 highlighted={previewLines}
                 wrap
-                className="flex-1"
+                lineNumbers={lineNumbers}
+                className="flex-1 bg-muted dark:bg-sidebar"
               />
             ) : (
-              <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
-                <div
-                  aria-hidden="true"
-                  className="hidden shrink-0 text-right text-muted-foreground select-none lg:block"
-                >
-                  {Array.from({ length: lineCount }, (_, index) => (
-                    <div key={index}>{index + 1}</div>
-                  ))}
-                </div>
+              <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
+                {lineNumbers ? (
+                  <div
+                    aria-hidden="true"
+                    style={{ minWidth: `${String(lineCount).length}ch` }}
+                    className="hidden shrink-0 text-right text-muted-foreground tabular-nums select-none lg:block"
+                  >
+                    {Array.from({ length: lineCount }, (_, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          index + 1 === cursor.line && "group-focus-within/code:text-foreground",
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <HighlightedTextarea
                   aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
                   lines={lines}
+                  activeLine={cursor.line}
                   value={active?.content ?? ""}
                   ref={bindTextarea}
                   onChange={(event) => {
@@ -957,34 +967,20 @@ export function PasteEditor({
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label={t("languageName", { name: language.name })}
-                  className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
-                >
-                  <LanguageMarker language={language.id} />
-                  <span className="font-medium text-foreground">{language.name}</span>
-                  <ChevronDownIcon className="size-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="top"
-                  align="start"
-                  className="max-h-80 min-w-44 overflow-y-auto"
-                >
-                  {languages.map((option) => (
-                    <DropdownMenuItem
-                      key={option.id}
-                      onClick={() => {
-                        if (active) updateActive({ name: renameForLanguage(active.name, option) })
-                      }}
-                    >
-                      <LanguageMarker language={option.id} />
-                      {option.name}
-                      {option.id === language.id ? <CheckIcon className="ml-auto" /> : null}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <LanguagePicker
+                value={language.id}
+                onValueChange={(id) => {
+                  if (active)
+                    updateActive({ name: renameForLanguage(active.name, getLanguage(id)) })
+                }}
+                side="top"
+                aria-label={t("languageName", { name: language.name })}
+                className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+              >
+                <LanguageIcon language={language.id} />
+                <span className="font-medium text-foreground">{language.name}</span>
+                <ChevronDownIcon className="size-3" />
+              </LanguagePicker>
               <span className="tabular-nums">
                 <span className="hidden sm:inline">
                   {t("cursorPosition", { line: cursor.line, column: cursor.column })} ·{" "}
