@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
-import { boundedJson, secretJson } from "@/lib/env/http"
+import { boundedJson, isSameOrigin, secretJson } from "@/lib/env/http"
 import { secretSaveSchema, secretShareSchema } from "@/lib/env/inputs"
 import {
   createSecretShare,
@@ -29,8 +29,7 @@ const commandSchema = z.discriminatedUnion("operation", [
 export async function POST(request: Request) {
   const t = await getTranslations("Secrets")
   try {
-    if (request.headers.get("origin") !== new URL(request.url).origin)
-      return secretJson({ error: t("refused_error") }, 403)
+    if (!isSameOrigin(request)) return secretJson({ error: t("refused_error") }, 403)
     const session = await getSession()
     if (!session) return secretJson({ error: t("sign_in_error") }, 401)
     const parsed = commandSchema.safeParse(await boundedJson(request, 2 * 1024 * 1024))
