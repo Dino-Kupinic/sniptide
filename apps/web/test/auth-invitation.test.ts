@@ -111,7 +111,7 @@ describeDb("invited email ownership", () => {
     expect(update.status).toBeLessThan(500)
     const [account] = await getDb().select().from(user).where(eq(user.email, EMAIL))
     expect(account?.emailVerified).toBe(true)
-    expect(account).toMatchObject({ pendingInvitation: true })
+    expect(account).toMatchObject({ pendingInvitation: false })
   })
 
   test("invite-only password sign-up fails closed without an email sender", async () => {
@@ -139,14 +139,19 @@ describeDb("invited email ownership", () => {
   })
 
   test("a failed first delivery can be recovered through the public resend endpoint", async () => {
+    let attempted = false
     const failed = makeAuth({
       emailVerification: {
         sendVerificationEmail: async () => {
+          attempted = true
           throw new Error("SMTP unavailable")
         },
       },
     })
-    expect((await signUp(failed)).status).toBe(500)
+    const created = await signUp(failed)
+    expect(created.status).toBe(200)
+    expect((await created.json()).token).toBeNull()
+    expect(attempted).toBe(true)
     expect(await getDb().select().from(session)).toHaveLength(0)
     const sender = mail()
     const auth = makeAuth(sender)

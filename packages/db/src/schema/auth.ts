@@ -10,6 +10,8 @@ export const user = pgTable(
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").default(false).notNull(),
+    // Existing unverified accounts keep signing in. New invitations must prove email ownership.
+    pendingInvitation: boolean("pending_invitation").default(false).notNull(),
     image: text("image"),
     // From better-auth's username plugin: the normalized handle behind sniptide.com/@username.
     username: text("username"),
