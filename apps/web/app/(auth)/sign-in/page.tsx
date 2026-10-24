@@ -9,7 +9,7 @@ import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata() {
   const t = await getTranslations("Auth")
-  return { title: t("signInTitle") }
+  return { title: t("signInTitle"), description: t("signInDescription") }
 }
 
 export default async function Page({ searchParams }: PageProps<"/sign-in">) {

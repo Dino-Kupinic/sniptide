@@ -909,7 +909,7 @@ export function PasteEditor({
                   <div
                     aria-hidden="true"
                     style={{ minWidth: `${String(lineCount).length}ch` }}
-                    className="hidden shrink-0 text-right text-muted-foreground/60 tabular-nums select-none lg:block"
+                    className="hidden shrink-0 text-right text-muted-foreground tabular-nums select-none lg:block"
                   >
                     {Array.from({ length: lineCount }, (_, index) => (
                       <div
