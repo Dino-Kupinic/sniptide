@@ -9,7 +9,7 @@ import * as React from "react"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
 import { reportCopy, useCopy } from "./copy-button"
-import { LanguageMarker } from "./language-marker"
+import { LanguageIcon } from "./language-icon"
 import { panelToolClass, SidePanelToggle } from "./side-panel"
 
 interface ViewerFile {
@@ -93,7 +93,7 @@ export function FileViewer({
                   selected ? "text-foreground" : "text-muted-foreground",
                 )}
               >
-                <LanguageMarker language={file.language} className="hidden lg:block" />
+                <LanguageIcon language={file.language} className="hidden lg:inline-flex" />
                 {file.name}
               </button>
             )

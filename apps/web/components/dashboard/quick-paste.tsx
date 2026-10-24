@@ -17,11 +17,12 @@ import { useTranslations } from "next-intl"
 import * as React from "react"
 import { z } from "zod"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
+import { LanguagePicker } from "@/components/paste/language-picker"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
-import { detectLanguage, languages } from "@/lib/pastes/languages"
+import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
 import { EXPIRIES, type Expiry, VISIBILITIES, type Visibility } from "@/lib/pastes/types"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
@@ -73,12 +74,12 @@ function writeDraft(key: string, draft: Draft | null) {
   }
 }
 
+const chipClass =
+  "flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
+
 function Chip({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <DropdownMenuTrigger
-      aria-label={label}
-      className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
-    >
+    <DropdownMenuTrigger aria-label={label} className={chipClass}>
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
     </DropdownMenuTrigger>
@@ -144,11 +145,7 @@ export function QuickPaste({
   }
 
   function setLanguage(id: string) {
-    const extension = languages.find((candidate) => candidate.id === id)?.extensions[0] ?? "txt"
-    const base = draft.name.includes(".")
-      ? draft.name.slice(0, draft.name.lastIndexOf("."))
-      : draft.name
-    update({ name: `${base || "snippet"}.${extension}` })
+    update({ name: renameForLanguage(draft.name || "snippet", getLanguage(id)) })
   }
 
   // ⌘S: write the draft now instead of waiting out the half-second delay.
@@ -232,24 +229,16 @@ export function QuickPaste({
 
       <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <DropdownMenu>
-            <Chip label={t("language")}>
-              <LanguageMarker language={language.id} />
-              {language.name}
-            </Chip>
-            <DropdownMenuContent className="max-h-72 overflow-y-auto">
-              <DropdownMenuRadioGroup
-                value={language.id}
-                onValueChange={(id) => setLanguage(id as string)}
-              >
-                {languages.map((candidate) => (
-                  <DropdownMenuRadioItem key={candidate.id} value={candidate.id}>
-                    {candidate.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LanguagePicker
+            value={language.id}
+            onValueChange={setLanguage}
+            aria-label={t("language")}
+            className={chipClass}
+          >
+            <LanguageIcon language={language.id} className="size-3.5" />
+            {language.name}
+            <ChevronDownIcon className="text-muted-foreground" />
+          </LanguagePicker>
           <DropdownMenu>
             <Chip label={t("expires_after")}>
               <ClockIcon />
