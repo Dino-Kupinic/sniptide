@@ -1002,11 +1002,14 @@ export async function readSharedMeta(slug: string) {
   return { title: access.record.title, visibility: access.record.visibility }
 }
 
-// Public card data ignores sessions and unlock cookies. Even the owner cannot expose a
-// protected paste through the unauthenticated image URL. No views, events or burn claims.
+// Card data for link previews of public and unlisted pastes: whoever has an unlisted link can read
+// the paste already, and the unfurler only has the link. It ignores sessions and unlock cookies, so
+// even the owner cannot expose a private or protected paste through the unauthenticated image URL.
+// No views, events or burn claims.
 export async function readPublicPreview(slug: string): Promise<PastePreview | null> {
   const record = await findSharedRecord(slug)
-  if (record?.visibility !== "public" || record.passwordHash || record.burnAfterRead) return null
+  if (!record || record.visibility === "private" || record.passwordHash || record.burnAfterRead)
+    return null
   const [file] = await getDb()
     .select({
       name: pasteFile.name,
@@ -1017,7 +1020,13 @@ export async function readPublicPreview(slug: string): Promise<PastePreview | nu
     .where(eq(pasteFile.pasteId, record.id))
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)
-  return file ? { slug: record.slug, title: record.title, ...file } : null
+  if (!file) return null
+  return {
+    slug: record.slug,
+    title: record.title,
+    unlisted: record.visibility === "unlisted",
+    ...file,
+  }
 }
 
 // The embed view runs inside other sites' pages, so like the preview card it ignores sessions and

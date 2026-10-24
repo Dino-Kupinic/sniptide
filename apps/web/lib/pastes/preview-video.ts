@@ -117,7 +117,8 @@ const inFlight = new Map<string, Promise<string>>()
 let queue: Promise<unknown> = Promise.resolve()
 
 // The path of the paste's video, rendering it first when it isn't cached. The caller must have
-// read the preview through readPublicPreview, which only returns public, unprotected pastes.
+// read the preview through readPublicPreview, which only returns public and unlisted pastes
+// without protection.
 export async function previewVideoFile(preview: PastePreview): Promise<string> {
   const key = cacheKey(preview)
   const file = path.join(cacheDir, `${key}.mp4`)

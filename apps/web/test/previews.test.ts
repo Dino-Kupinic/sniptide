@@ -121,9 +121,24 @@ describeDb("public preview access", () => {
     })
   })
 
+  test("previews unlisted pastes but keeps them out of search engines", async () => {
+    await seedPaste({ slug: "unlisted", owner: "owner", content: "let hidden = true" })
+    expect(await readPublicPreview("unlisted")).toMatchObject({ unlisted: true })
+    const response = await image(
+      new Request("http://localhost/unlisted/preview"),
+      params("unlisted"),
+    )
+    expect(response.status).toBe(200)
+    expect(await generateMetadata(params("unlisted"))).toMatchObject({
+      robots: { index: false, follow: false },
+      openGraph: { images: [{ url: expect.stringContaining("/unlisted/preview") }] },
+    })
+    await seedPaste({ slug: "listed", owner: "owner", visibility: "public" })
+    expect(await generateMetadata(params("listed"))).not.toHaveProperty("robots")
+  })
+
   test("never exposes restricted content, even to its owner or an unlocked visitor", async () => {
     await seedPaste({ slug: "private", owner: "owner", visibility: "private" })
-    await seedPaste({ slug: "unlisted", owner: "owner" })
     await seedPaste({ slug: "password", owner: "owner", visibility: "public", password: "secret" })
     await seedPaste({ slug: "burn", owner: "owner", visibility: "public", burnAfterRead: true })
     await seedPaste({
@@ -141,15 +156,7 @@ describeDb("public preview access", () => {
     for (const viewer of [null, "owner"]) {
       signInAs(viewer)
       await unlock("password")
-      for (const slug of [
-        "private",
-        "unlisted",
-        "password",
-        "burn",
-        "expired",
-        "trashed",
-        "missing",
-      ]) {
+      for (const slug of ["private", "password", "burn", "expired", "trashed", "missing"]) {
         expect(await readPublicPreview(slug)).toBeNull()
         const response = await image(new Request(`http://localhost/${slug}/preview`), params(slug))
         expect(response.status).toBe(404)

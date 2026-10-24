@@ -7,6 +7,8 @@ export interface PastePreview {
   name: string
   language: string
   content: string
+  // Unlisted pastes unfurl like public ones but stay out of search engines.
+  unlisted?: boolean
 }
 
 // Bound work before splitting: even a huge single line produces a small card.
@@ -38,6 +40,7 @@ export function previewMetadata(
   return {
     title,
     description,
+    ...(preview.unlisted && { robots: { index: false, follow: false } }),
     openGraph: {
       type: "website",
       siteName: "Sniptide",
