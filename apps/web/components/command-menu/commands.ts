@@ -1,16 +1,19 @@
 import {
+  ChartColumnIcon,
   ContrastIcon,
   DownloadIcon,
   FolderIcon,
   FolderPlusIcon,
   KeyboardIcon,
+  KeyRoundIcon,
   LayoutGridIcon,
   type LucideIcon,
   PlusIcon,
   StarIcon,
   Trash2Icon,
+  UsersIcon,
 } from "lucide-react"
-import { type ShortcutId, shortcut } from "@/lib/shortcuts"
+import type { ShortcutId } from "@/lib/shortcuts"
 
 // A row the menu can run: it either goes to `href` or calls `run`. `shortcut` is only shown, the
 // bindings themselves live next to what they control: command-menu.tsx (⌘K, /, the two-key sequences),
@@ -25,15 +28,34 @@ export interface Command {
   run?: () => void
 }
 
-// The "Go to" rows. `chord` is the key that follows G.
-const GO_TO_ROWS = [
-  { id: "go-dashboard", label: "dashboard", icon: LayoutGridIcon, href: "/dashboard" },
-  { id: "go-starred", label: "starred", icon: StarIcon, href: "/starred" },
-  { id: "go-collections", label: "collections", icon: FolderIcon, href: "/collections" },
-  { id: "go-trash", label: "trash", icon: Trash2Icon, href: "/trash" },
-] as const
-
-export const GO_TO = GO_TO_ROWS.map((item) => ({ ...item, chord: shortcut(item.id).keys[1] }))
+// The "Go to" rows. `shortcut` names the G-then-key sequence, for the pages that have one.
+const GO_TO: {
+  id: string
+  label: string
+  icon: LucideIcon
+  href: string
+  shortcut?: ShortcutId
+}[] = [
+  {
+    id: "go-dashboard",
+    label: "dashboard",
+    icon: LayoutGridIcon,
+    href: "/dashboard",
+    shortcut: "go-dashboard",
+  },
+  { id: "go-analytics", label: "analytics", icon: ChartColumnIcon, href: "/analytics" },
+  { id: "go-starred", label: "starred", icon: StarIcon, href: "/starred", shortcut: "go-starred" },
+  {
+    id: "go-collections",
+    label: "collections",
+    icon: FolderIcon,
+    href: "/collections",
+    shortcut: "go-collections",
+  },
+  { id: "go-secrets", label: "secrets", icon: KeyRoundIcon, href: "/secrets" },
+  { id: "go-shared", label: "shared_with_me", icon: UsersIcon, href: "/shared" },
+  { id: "go-trash", label: "trash", icon: Trash2Icon, href: "/trash", shortcut: "go-trash" },
+]
 
 export function createCommands(actions: {
   newCollection: () => void
@@ -42,16 +64,7 @@ export function createCommands(actions: {
   showShortcuts: () => void
 }): Command[] {
   return [
-    ...GO_TO.map(
-      ({ id, label, icon, href }): Command => ({
-        id,
-        group: "go",
-        label,
-        icon,
-        href,
-        shortcut: id,
-      }),
-    ),
+    ...GO_TO.map((row): Command => ({ ...row, group: "go" })),
     {
       id: "new-paste",
       group: "actions",

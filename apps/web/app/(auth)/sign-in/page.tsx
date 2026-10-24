@@ -34,6 +34,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-in">) {
       {isDemoMode() ? (
         <Button
           variant="outline"
+          size="xl"
           className={authSubmitClass}
           render={<a href="/demo" />}
           nativeButton={false}

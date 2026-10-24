@@ -1,7 +1,14 @@
 "use client"
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@sniptide/ui/components/dropdown-menu"
 import { cn } from "@sniptide/ui/lib/utils"
-import { PlusIcon, XIcon } from "lucide-react"
+import { CodeIcon, PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageIcon } from "@/components/paste/language-icon"
@@ -14,6 +21,8 @@ export interface EditorFile {
 }
 
 // The paste editor's file tabs: pick, rename (double-click, or right after adding), remove and add.
+// Touch has no reliable double-click, so tapping the tab that is already open shows a menu with
+// Rename, Change language and Remove.
 export function FileTabs({
   files,
   activeId,
@@ -21,6 +30,7 @@ export function FileTabs({
   onRename,
   onRemove,
   onAdd,
+  onChangeLanguage,
   trailing,
 }: {
   files: EditorFile[]
@@ -30,11 +40,17 @@ export function FileTabs({
   onRemove: (id: string) => void
   // Adds a file and returns its id, which then opens for renaming.
   onAdd: () => string
+  // Opens the language picker for the active file (from the touch menu).
+  onChangeLanguage?: () => void
   // Pinned to the right end of the bar (the side panel toggle).
   trailing?: React.ReactNode
 }) {
   const t = useTranslations("Paste")
   const [renamingId, setRenamingId] = React.useState<string | null>(null)
+  const [menuId, setMenuId] = React.useState<string | null>(null)
+  // The pointer behind the last press, so a tap on the open tab can show its menu while a mouse
+  // click keeps desktop behaviour.
+  const pointer = React.useRef("mouse")
 
   return (
     <div className="flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar">
@@ -77,24 +93,68 @@ export function FileTabs({
                   className="w-36 bg-transparent font-mono text-[13px] outline-none"
                 />
               ) : (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-describedby="rename-hint"
-                  aria-keyshortcuts={files.length > 1 ? "Delete" : undefined}
-                  onClick={() => onSelect(file.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Delete" && files.length > 1) onRemove(file.id)
+                <DropdownMenu
+                  open={menuId === file.id}
+                  onOpenChange={(open) => {
+                    if (!open) setMenuId(null)
                   }}
-                  onDoubleClick={() => setRenamingId(file.id)}
-                  className={cn(
-                    "font-mono text-[13px] outline-none focus-visible:underline",
-                    selected ? "text-foreground" : "text-muted-foreground",
-                  )}
                 >
-                  {file.name}
-                </button>
+                  <DropdownMenuTrigger
+                    render={<button type="button" />}
+                    role="tab"
+                    aria-selected={selected}
+                    aria-describedby="rename-hint"
+                    aria-keyshortcuts={files.length > 1 ? "Delete" : undefined}
+                    onPointerDown={(event) => {
+                      pointer.current = event.pointerType
+                    }}
+                    onClick={() => {
+                      if (selected && pointer.current !== "mouse") setMenuId(file.id)
+                      else onSelect(file.id)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Delete" && files.length > 1) onRemove(file.id)
+                    }}
+                    onDoubleClick={() => setRenamingId(file.id)}
+                    className={cn(
+                      "self-stretch font-mono text-[13px] outline-none focus-visible:underline",
+                      selected ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {file.name}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      className="h-10"
+                      onClick={() => {
+                        setMenuId(null)
+                        setRenamingId(file.id)
+                      }}
+                    >
+                      <PencilIcon />
+                      {t("rename")}
+                    </DropdownMenuItem>
+                    {onChangeLanguage ? (
+                      <DropdownMenuItem className="h-10" onClick={onChangeLanguage}>
+                        <CodeIcon />
+                        {t("changeLanguage")}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {files.length > 1 ? (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          className="h-10"
+                          onClick={() => onRemove(file.id)}
+                        >
+                          <Trash2Icon />
+                          {t("removeFileAction")}
+                        </DropdownMenuItem>
+                      </>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               {selected && files.length > 1 ? (
                 // Pointer only: a button inside a tablist isn't a tab, so keyboard and screen reader
@@ -105,7 +165,7 @@ export function FileTabs({
                   aria-hidden="true"
                   title={t("removeFile", { name: file.name })}
                   onClick={() => onRemove(file.id)}
-                  className="text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+                  className="inline-flex items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 max-lg:-mr-2 max-lg:size-8"
                 >
                   <XIcon className="size-3" strokeWidth={2.5} />
                 </button>
@@ -115,7 +175,7 @@ export function FileTabs({
         })}
       </div>
       <span id="rename-hint" className="sr-only">
-        {t("doubleClickToRename")}
+        {t("renameHint")}
       </span>
       {files.length < 10 ? (
         <button

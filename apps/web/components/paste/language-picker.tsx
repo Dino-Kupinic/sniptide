@@ -24,6 +24,8 @@ export function LanguagePicker({
   className,
   children,
   side,
+  open,
+  onOpenChange,
   "aria-label": ariaLabel,
 }: {
   value: string
@@ -32,6 +34,9 @@ export function LanguagePicker({
   className?: string
   children: React.ReactNode
   side?: "top" | "bottom"
+  // Lets another control open the list, like Change language on a phone's file tab.
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   "aria-label": string
 }) {
   const t = useTranslations("Core")
@@ -45,6 +50,8 @@ export function LanguagePicker({
       itemToStringLabel={(language: Language) => language.name}
       filter={(language: Language, query) => matchesLanguage(language, query)}
       autoHighlight
+      open={open}
+      onOpenChange={onOpenChange ? (next) => onOpenChange(next) : undefined}
     >
       <ComboboxTrigger aria-label={ariaLabel} className={className}>
         {children}

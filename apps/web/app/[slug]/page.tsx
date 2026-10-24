@@ -4,7 +4,7 @@ import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
-import { FileViewer } from "@/components/paste/file-viewer"
+import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import { RevealPaste } from "@/components/paste/reveal-paste"
 import { ShareActions } from "@/components/paste/share-actions"
@@ -122,9 +122,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
               {first ? (
                 <LanguageLabel language={first.language} className="text-foreground/80" />
               ) : null}
-              <span className="hidden lg:inline">
-                {t("lineSize", { count: lines, size: formatBytes(bytes, locale) })}
-              </span>
+              <span>{t("lineSize", { count: lines, size: formatBytes(bytes, locale) })}</span>
               {expires ? (
                 <span className="inline-flex items-center gap-1.5">
                   <ClockIcon className="hidden size-3.5 lg:block" />
@@ -144,24 +142,24 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           ) : null}
         </div>
 
-        <FileViewer
-          slug={slug}
-          files={files}
-          rawAllowed={rawAllowed}
-          collapseAt={6}
-          printable
-          headerClassName={single ? "lg:hidden" : undefined}
-          bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
-        />
-
-        <div className="mt-auto flex flex-col gap-3 lg:mt-0 lg:flex-row lg:items-center lg:justify-between">
+        <ActiveFileProvider>
+          <FileViewer
+            slug={slug}
+            files={files}
+            rawAllowed={rawAllowed}
+            collapseAt={6}
+            printable
+            headerClassName={single ? "lg:hidden" : undefined}
+            bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
+          />
+          {signedIn ? null : <SignUpPrompt />}
+          {/* Phones keep the actions in reach in a bar at the bottom of the screen. */}
           {first ? (
-            <div className="lg:hidden">
+            <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-6 box-content flex h-14 flex-col justify-center border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
               <ShareActions slug={slug} rawHref={rawHref} content={first.content} compact />
             </div>
           ) : null}
-          {signedIn ? null : <SignUpPrompt />}
-        </div>
+        </ActiveFileProvider>
       </main>
 
       <StripeBand />

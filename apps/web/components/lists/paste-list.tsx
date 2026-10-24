@@ -40,6 +40,7 @@ import { RowMenu } from "./row-menu"
 import {
   FilterMenu,
   ListHeader,
+  MobileFilterSheet,
   Pagination,
   QuickChips,
   SearchField,
@@ -81,6 +82,30 @@ export function RowBadge({
   )
 }
 
+// Visibility folded into a mobile row's meta line: a 12px icon before the slug, named for screen
+// readers. Burn after read keeps its blue flame.
+export function VisibilityIcon({ row }: { row: Pick<PasteRow, "visibility" | "burnAfterRead"> }) {
+  const t = useTranslations("Workspace")
+  const Icon = row.burnAfterRead
+    ? FlameIcon
+    : row.visibility === "public"
+      ? GlobeIcon
+      : row.visibility === "private"
+        ? LockIcon
+        : LinkIcon
+  return (
+    <>
+      <Icon
+        aria-hidden="true"
+        className={cn("size-3 shrink-0", row.burnAfterRead ? "text-link" : "text-muted-foreground")}
+      />
+      <span className="sr-only">
+        {row.burnAfterRead ? t("burn_after_read") : t(row.visibility)}
+      </span>
+    </>
+  )
+}
+
 // Expiring soon reads in blue; already expired reads muted, since nothing is left to do about it.
 export function expiryClass(row: Pick<PasteRow, "expiresSoon" | "expiresAt">) {
   if (row.expiresAt !== null && row.expiresAt <= Date.now()) return "text-muted-foreground"
@@ -96,6 +121,7 @@ export function PasteList({
   mode,
   collections,
   actions,
+  mobileActions,
   query: serverQuery,
   pagination,
   languageOptions,
@@ -107,6 +133,8 @@ export function PasteList({
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
   actions?: React.ReactNode
+  // A compact version of `actions` for the phone's title row.
+  mobileActions?: React.ReactNode
   query: PasteListQuery
   pagination: PageInfo
   languageOptions: string[]
@@ -136,6 +164,47 @@ export function PasteList({
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
   const range = `${formatNumber(start + 1, locale)}–${formatNumber(start + rows.length, locale)}`
 
+  const filterSheet = (
+    <MobileFilterSheet
+      sort={{
+        value: sort,
+        defaultValue: "updated" as Sort,
+        options: sortOptions,
+        onChange: (sort) => update({ sort }),
+      }}
+      filters={[
+        {
+          id: "language",
+          label: t("language"),
+          options: languageOptions.map((id) => ({
+            value: id,
+            label: <LanguageLabel language={id} />,
+          })),
+          selected: languages,
+          onChange: (languages) => update({ languages }),
+        },
+        {
+          id: "visibility",
+          label: t("visibility"),
+          options: visibilityOptions,
+          selected: visibility,
+          onChange: (visibility) => update({ visibility: visibility as VisibilityFilter[] }),
+        },
+        {
+          id: "collection",
+          label: t("collection"),
+          options:
+            mode === "collection" ? [] : collections.map((c) => ({ value: c.slug, label: c.name })),
+          selected: inCollections,
+          onChange: (collections) => update({ collections }),
+        },
+      ]}
+      total={pagination.total}
+      pending={pending}
+      onClear={() => update({ sort: "updated", languages: [], visibility: [], collections: [] })}
+    />
+  )
+
   const quick =
     mode === "starred" ? (
       <QuickChips
@@ -147,13 +216,17 @@ export function PasteList({
           { value: "mine", label: t("mine") },
           { value: "shared", label: t("shared_with_me") },
         ]}
+        trailing={filterSheet}
       />
     ) : (
       <QuickChips
         label={t("visibility")}
-        value={(visibility.length === 1 ? visibility[0] : "all") as "all" | VisibilityFilter}
+        value={
+          visibility.length === 0 ? "all" : visibility.length === 1 ? (visibility[0] ?? null) : null
+        }
         onChange={(next) => update({ visibility: next === "all" ? [] : [next] })}
-        options={[{ value: "all", label: t("all") }, ...visibilityOptions]}
+        options={[{ value: "all" as const, label: t("all") }, ...visibilityOptions]}
+        trailing={filterSheet}
       />
     )
 
@@ -168,6 +241,7 @@ export function PasteList({
             {actions}
           </>
         }
+        mobileActions={mobileActions ?? actions}
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
@@ -367,20 +441,25 @@ export function PasteList({
                     </Link>
                     <span
                       className={cn(
-                        "truncate font-mono text-xs text-muted-foreground",
+                        "flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
                         expiryClass(row),
                       )}
                     >
-                      {row.owner ? `@${row.owner.username}` : `${host}/${row.slug}`}
-                      {" · "}
-                      {row.burnAfterRead
-                        ? row.expiresLabel
-                        : row.expiresSoon
-                          ? t("expires_label", { time: row.expiresLabel })
-                          : t("views_count", { count: row.views })}
+                      <VisibilityIcon row={row} />
+                      <span className="truncate">
+                        <span className="font-mono">
+                          {row.owner ? `@${row.owner.username}` : row.slug}
+                        </span>
+                        {" · "}
+                        {row.burnAfterRead
+                          ? row.expiresLabel
+                          : row.expiresSoon
+                            ? t("expires_label", { time: row.expiresLabel })
+                            : t("views_count", { count: row.views })}
+                      </span>
                     </span>
                   </div>
-                  <RowBadge row={row} short className="shrink-0" />
+                  <RowMenu row={row} origin={origin} variant="sheet" />
                 </li>
               ))}
             </ul>

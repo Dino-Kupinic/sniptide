@@ -37,7 +37,7 @@ export function RestoreRevision({
       <Button
         variant="ghost"
         size="xs"
-        className="-my-0.5 shrink-0 text-muted-foreground"
+        className="-my-0.5 shrink-0 text-muted-foreground max-lg:-my-2 max-lg:h-10 max-lg:px-3 max-lg:text-sm"
         aria-label={t("restoreRevision", { number })}
         onClick={() => setOpen(true)}
       >

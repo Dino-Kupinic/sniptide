@@ -78,7 +78,7 @@ export function SignInForm({
           {notice}
         </p>
       ) : null}
-      {socialProviders ? (
+      {socialProviders?.length ? (
         <>
           <SocialButtons
             enabled={socialProviders}
@@ -93,9 +93,7 @@ export function SignInForm({
       <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              {t("email")}
-            </Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               name="email"
@@ -132,7 +130,7 @@ export function SignInForm({
         <FormError message={error} />
         {verificationEmail ? <VerificationNotice email={verificationEmail} /> : null}
 
-        <Button type="submit" loading={pending} className={authSubmitClass}>
+        <Button type="submit" size="xl" loading={pending} className={authSubmitClass}>
           {t(pending ? "signingIn" : "signIn")}
         </Button>
 

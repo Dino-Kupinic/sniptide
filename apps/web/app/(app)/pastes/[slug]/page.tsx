@@ -4,8 +4,9 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
-import { FileViewer } from "@/components/paste/file-viewer"
+import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
+  CopyCodeButton,
   CopyLinkButton,
   LeaveShareButton,
   PasteOverflowMenu,
@@ -15,12 +16,7 @@ import {
 import { RestoreRevision } from "@/components/paste/restore-revision"
 import { ShareDialog } from "@/components/paste/share-dialog"
 import { ShareAvatar } from "@/components/paste/share-people"
-import {
-  PasteDetailPanel,
-  SettingRow,
-  ShareLinkField,
-  SharingPanel,
-} from "@/components/paste/sharing-panel"
+import { PasteDetailPanel, SharingPanel, SheetRow } from "@/components/paste/sharing-panel"
 import { SidePanelProvider } from "@/components/paste/side-panel"
 import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
@@ -95,6 +91,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
       <ShareDialog
         slug={slug}
         title={paste.title}
+        url={url}
         visibility={paste.visibility}
         owner={{
           id: paste.author.username,
@@ -120,299 +117,304 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     url,
     visibility: paste.visibility,
     expiresLabel: expiresLabel(paste),
+    neverExpires: !paste.expiresAt,
     hasPassword: Boolean(paste.password),
     burnAfterRead: paste.burnAfterRead,
     allowRaw: paste.allowRaw,
   }
 
+  // Rendered once and shown in the desktop side panel and in the mobile sheets.
+  const views = (
+    <>
+      <p className="flex items-baseline gap-1.5">
+        <span className="font-heading text-3xl font-bold tracking-[-0.02em] tabular-nums">
+          {formatNumber(paste.views, locale)}
+        </span>
+        <span className="text-xs text-muted-foreground">{t("views")}</span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {t("unique", { count: paste.uniqueViews })}
+        </span>
+      </p>
+      <ViewsSparkline values={paste.viewsByDay.slice(-14)} />
+      <p className="flex justify-between text-xs text-muted-foreground">
+        <span>{t("fourteenDays")}</span>
+        <span>{t("today")}</span>
+      </p>
+    </>
+  )
+  const revisions = (
+    <div>
+      <ol className="flex flex-col divide-y divide-border">
+        {paste.revisions.map((entry, index) => {
+          // Counted from the oldest, the way "Restored revision 3" names them.
+          const number = paste.revisionCount - (paste.revisionPage - 1) * 20 - index
+          const current = index === 0 && paste.revisionPage === 1
+          return (
+            <li key={entry.id} className="flex items-start gap-2.5 py-2.5 first:pt-1 last:pb-0">
+              <span
+                aria-hidden="true"
+                className={
+                  current
+                    ? "mt-1.5 size-2 shrink-0 bg-link"
+                    : "mt-1.5 size-2 shrink-0 border-[1.5px] border-muted-foreground"
+                }
+              />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="flex items-center gap-2">
+                  <span className={current ? "font-medium" : undefined}>{entry.message}</span>
+                  {current ? (
+                    <span className="rounded-sm border border-border px-1 text-[11px] text-muted-foreground">
+                      {t("current")}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  #{number} · {timeAgo(entry.createdAt, Date.now(), locale)}
+                </span>
+              </span>
+              {canEdit && !current && entry.restorable ? (
+                <RestoreRevision slug={slug} revisionId={entry.id} number={number} />
+              ) : null}
+            </li>
+          )
+        })}
+      </ol>
+      {paste.revisionPageCount > 1 ? (
+        <div className="mt-3 flex items-center justify-between gap-2">
+          {paste.revisionPage > 1 ? (
+            <Link
+              className="text-link"
+              href={`?revisions=${paste.revisionPage - 1}`}
+              scroll={false}
+            >
+              {t("newer")}
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-muted-foreground">
+            {paste.revisionPage} / {paste.revisionPageCount}
+          </span>
+          {paste.revisionPage < paste.revisionPageCount ? (
+            <Link
+              className="text-link"
+              href={`?revisions=${paste.revisionPage + 1}`}
+              scroll={false}
+            >
+              {t("older")}
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
+      ) : null}
+    </div>
+  )
+  const sharedNote =
+    paste.owner && share ? (
+      <SharedWithYou slug={slug} title={paste.title} owner={paste.owner} share={share} />
+    ) : undefined
+  const viewsValue = `${formatNumber(paste.views, locale)} · ${t("unique", { count: paste.uniqueViews })}`
+
   return (
-    <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-6 lg:p-7 lg:pb-7">
-      {/* The page's own heading carries the visibility badge, so the bar keeps only the title. */}
-      <HeaderTitle>
-        <TruncatedText className="max-w-80">{paste.title}</TruncatedText>
-      </HeaderTitle>
-      <HeaderActions>
-        <StarButton slug={slug} starred={starred} />
-        {canEdit ? (
+    <ActiveFileProvider>
+      <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-6 lg:p-7 lg:pb-7">
+        {/* The page's own heading carries the visibility badge, so the bar keeps only the title. */}
+        <HeaderTitle>
+          <TruncatedText className="max-w-80">{paste.title}</TruncatedText>
+        </HeaderTitle>
+        <HeaderActions>
+          <StarButton slug={slug} starred={starred} />
+          {canEdit ? (
+            <Button
+              variant="outline"
+              size="lg"
+              render={<Link href={`/pastes/${slug}/edit`} />}
+              nativeButton={false}
+            >
+              <PencilIcon />
+              {t("edit")}
+            </Button>
+          ) : null}
+          {shareDialog("button")}
           <Button
             variant="outline"
             size="lg"
-            render={<Link href={`/pastes/${slug}/edit`} />}
+            render={<Link href={`/new?from=${slug}`} />}
             nativeButton={false}
           >
-            <PencilIcon />
-            {t("edit")}
+            <CopyIcon />
+            {t("duplicate")}
           </Button>
-        ) : null}
-        {shareDialog("button")}
-        <Button
-          variant="outline"
-          size="lg"
-          render={<Link href={`/new?from=${slug}`} />}
-          nativeButton={false}
-        >
-          <CopyIcon />
-          {t("duplicate")}
-        </Button>
-        <CopyLinkButton url={url} />
-      </HeaderActions>
+          <CopyLinkButton url={url} />
+        </HeaderActions>
 
-      {/* Mobile header */}
-      <div className="sticky top-0 z-20 flex h-[52px] items-center justify-between bg-background px-2 pt-[env(safe-area-inset-top)] box-content lg:hidden">
-        <Link href={parent.href} className="flex items-center gap-1 px-2 text-[15px]">
-          <ChevronLeftIcon className="size-5" />
-          {parent.label}
-        </Link>
-        <div className="flex items-center">
-          {shareDialog("icon")}
-          <StarButton slug={slug} starred={starred} variant="ghost" />
-          <PasteOverflowMenu
-            slug={slug}
-            title={paste.title}
-            canTrash={owned}
-            canLeave={Boolean(share)}
-            rawHref={
-              paste.allowRaw && first
-                ? `/${slug}/raw?file=${encodeURIComponent(first.name)}`
-                : undefined
-            }
-          />
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-2 px-4 lg:px-0">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
-            {paste.title}
-          </h1>
-          <VisibilityBadge paste={paste} />
-        </div>
-        {paste.description ? (
-          <p className="text-sm text-muted-foreground">{paste.description}</p>
-        ) : null}
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-          <a
-            href={`/${paste.slug}`}
-            className="hidden font-mono text-link hover:underline lg:inline"
+        {/* Mobile header */}
+        <div className="sticky top-0 z-20 box-content flex h-[52px] items-center justify-between gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
+          <Button
+            variant="ghost"
+            size="xl"
+            render={<Link href={parent.href} />}
+            nativeButton={false}
+            className="min-w-0 gap-1 px-2"
           >
-            {host}/{paste.slug}
-          </a>
-          {collection ? (
-            <>
-              <MetaDivider />
-              <Link
-                href={`/collections/${collection.slug}`}
-                className="flex items-center gap-1.5 hover:text-foreground"
-              >
-                <CollectionIcon icon={collection.icon} hue={collection.hue} className="size-3" />
-                {collection.name}
-              </Link>
-            </>
-          ) : null}
-          <MetaDivider />
-          <span className="flex items-center gap-1.5 font-medium text-foreground">
-            <ClockIcon className="size-3.5" />
-            {t("edited", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
-          </span>
-          {paste.owner ? (
-            <>
-              <MetaDivider />
-              <span>
-                {share
-                  ? t("byOwnerAccess", {
-                      name: paste.owner.name,
-                      access: t(share.access === "edit" ? "canEdit" : "canView"),
-                    })
-                  : t("byOwner", { name: paste.owner.name })}
-              </span>
-            </>
-          ) : null}
-        </p>
-      </div>
-
-      <ShareLinkField url={url} className="mx-4 mt-4 h-11 lg:hidden" />
-
-      <SidePanelProvider>
-        <div className="flex flex-col gap-5 pt-4 lg:flex-row lg:items-start lg:pt-0">
-          <FileViewer
-            slug={slug}
-            files={files}
-            rawAllowed={paste.allowRaw}
-            lineNumbers={preferences.lineNumbers}
-            collapseAt={6}
-            panelToggle
-            printable
-            className="mx-4 lg:mx-0 lg:min-h-[612px] lg:flex-1"
-            bodyClassName="max-lg:bg-sidebar"
-            footerClassName="hidden lg:flex"
-            footer={
-              <>
-                <span>
-                  UTF-8 · LF ·{" "}
-                  {preferences.indentation === "tab"
-                    ? t("indentTabs")
-                    : t("indentSpaces", { count: Number(preferences.indentation) })}
-                </span>
-                <span>{t("revision", { number: revision, total: revision })}</span>
-              </>
-            }
-          />
-
-          <PasteDetailPanel
-            state={owned ? sharingState : undefined}
-            sharedNote={
-              paste.owner && share ? (
-                <SharedWithYou slug={slug} title={paste.title} owner={paste.owner} share={share} />
-              ) : undefined
-            }
-            views={
-              <>
-                <p className="flex items-baseline gap-1.5">
-                  <span className="font-heading text-3xl font-bold tracking-[-0.02em] tabular-nums">
-                    {formatNumber(paste.views, locale)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{t("views")}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {t("unique", { count: paste.uniqueViews })}
-                  </span>
-                </p>
-                <ViewsSparkline values={paste.viewsByDay.slice(-14)} />
-                <p className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t("fourteenDays")}</span>
-                  <span>{t("today")}</span>
-                </p>
-              </>
-            }
-            revisions={
-              <div>
-                <ol className="flex flex-col divide-y divide-border">
-                  {paste.revisions.map((entry, index) => {
-                    // Counted from the oldest, the way "Restored revision 3" names them.
-                    const number = paste.revisionCount - (paste.revisionPage - 1) * 20 - index
-                    const current = index === 0 && paste.revisionPage === 1
-                    return (
-                      <li
-                        key={entry.id}
-                        className="flex items-start gap-2.5 py-2.5 first:pt-1 last:pb-0"
-                      >
-                        <span
-                          aria-hidden="true"
-                          className={
-                            current
-                              ? "mt-1.5 size-2 shrink-0 bg-link"
-                              : "mt-1.5 size-2 shrink-0 border-[1.5px] border-muted-foreground"
-                          }
-                        />
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="flex items-center gap-2">
-                            <span className={current ? "font-medium" : undefined}>
-                              {entry.message}
-                            </span>
-                            {current ? (
-                              <span className="rounded-sm border border-border px-1 text-[11px] text-muted-foreground">
-                                {t("current")}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            #{number} · {timeAgo(entry.createdAt, Date.now(), locale)}
-                          </span>
-                        </span>
-                        {canEdit && !current && entry.restorable ? (
-                          <RestoreRevision slug={slug} revisionId={entry.id} number={number} />
-                        ) : null}
-                      </li>
-                    )
-                  })}
-                </ol>
-                {paste.revisionPageCount > 1 ? (
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    {paste.revisionPage > 1 ? (
-                      <Link
-                        className="text-link"
-                        href={`?revisions=${paste.revisionPage - 1}`}
-                        scroll={false}
-                      >
-                        {t("newer")}
-                      </Link>
-                    ) : (
-                      <span />
-                    )}
-                    <span className="text-muted-foreground">
-                      {paste.revisionPage} / {paste.revisionPageCount}
-                    </span>
-                    {paste.revisionPage < paste.revisionPageCount ? (
-                      <Link
-                        className="text-link"
-                        href={`?revisions=${paste.revisionPage + 1}`}
-                        scroll={false}
-                      >
-                        {t("older")}
-                      </Link>
-                    ) : (
-                      <span />
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            }
-          />
+            <ChevronLeftIcon />
+            <span className="truncate">{parent.label}</span>
+          </Button>
+          <div className="flex shrink-0 items-center">
+            {shareDialog("icon") ?? (
+              <ShareButton url={url} title={paste.title} className="size-10" />
+            )}
+            <StarButton slug={slug} starred={starred} variant="ghost" className="size-10" />
+            <PasteOverflowMenu
+              slug={slug}
+              title={paste.title}
+              canTrash={owned}
+              canLeave={Boolean(share)}
+              rawAllowed={paste.allowRaw}
+              url={url}
+            />
+          </div>
         </div>
-      </SidePanelProvider>
 
-      <div className="flex w-full flex-col gap-4 pt-4 lg:hidden">
+        <div className="flex min-w-0 flex-col gap-2 px-4 lg:px-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
+              {paste.title}
+            </h1>
+            {/* The owner's Sharing row below already shows the visibility. */}
+            {owned ? null : <VisibilityBadge paste={paste} />}
+          </div>
+          {paste.description ? (
+            <p className="text-sm text-muted-foreground">{paste.description}</p>
+          ) : null}
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+            <a
+              href={`/${paste.slug}`}
+              className="hidden font-mono text-link hover:underline lg:inline"
+            >
+              {host}/{paste.slug}
+            </a>
+            {collection ? (
+              <>
+                <MetaDivider />
+                <Link
+                  href={`/collections/${collection.slug}`}
+                  className="flex items-center gap-1.5 hover:text-foreground"
+                >
+                  <CollectionIcon icon={collection.icon} hue={collection.hue} className="size-3" />
+                  {collection.name}
+                </Link>
+              </>
+            ) : null}
+            <MetaDivider />
+            <span className="flex items-center gap-1.5 font-medium text-foreground">
+              <ClockIcon className="size-3.5" />
+              {t("edited", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
+            </span>
+            {paste.owner ? (
+              <>
+                <MetaDivider />
+                <span>
+                  {share
+                    ? t("byOwnerAccess", {
+                        name: paste.owner.name,
+                        access: t(share.access === "edit" ? "canEdit" : "canView"),
+                      })
+                    : t("byOwner", { name: paste.owner.name })}
+                </span>
+              </>
+            ) : null}
+          </p>
+        </div>
+
+        <SidePanelProvider>
+          <div className="flex flex-col gap-5 pt-4 lg:flex-row lg:items-start lg:pt-0">
+            <FileViewer
+              slug={slug}
+              files={files}
+              rawAllowed={paste.allowRaw}
+              lineNumbers={preferences.lineNumbers}
+              collapseAt={6}
+              panelToggle
+              printable
+              className="mx-4 lg:mx-0 lg:min-h-[612px] lg:flex-1"
+              bodyClassName="max-lg:bg-sidebar"
+              footerClassName="hidden lg:flex"
+              footer={
+                <>
+                  <span>
+                    UTF-8 · LF ·{" "}
+                    {preferences.indentation === "tab"
+                      ? t("indentTabs")
+                      : t("indentSpaces", { count: Number(preferences.indentation) })}
+                  </span>
+                  <span>{t("revision", { number: revision, total: revision })}</span>
+                </>
+              }
+            />
+
+            <PasteDetailPanel
+              state={owned ? sharingState : undefined}
+              sharedNote={sharedNote}
+              views={views}
+              revisions={revisions}
+            />
+          </div>
+        </SidePanelProvider>
+
         {/* Mobile settings list */}
-        <div className="mx-4">
+        <div className="mx-4 pt-4 lg:hidden">
           {owned ? (
             <SharingPanel state={sharingState}>
-              <SettingRow label={t("viewsLabel")} list>
-                <span className="text-muted-foreground">
-                  {formatNumber(paste.views, locale)} · {t("unique", { count: paste.uniqueViews })}
-                </span>
-              </SettingRow>
+              <SheetRow label={t("viewsLabel")} value={viewsValue}>
+                {views}
+              </SheetRow>
+              <SheetRow label={t("revisions")} value={String(revision)}>
+                {revisions}
+              </SheetRow>
             </SharingPanel>
           ) : (
-            <dl className="overflow-hidden rounded-lg divide-y divide-border border border-border text-[15px]">
-              {share ? (
-                <MobileRow
+            <div className="overflow-hidden rounded-lg divide-y divide-border border border-border text-sm">
+              {share && sharedNote ? (
+                <SheetRow
                   label={t("yourAccess")}
-                  value={t("accessFrom", {
-                    access: t(share.access === "edit" ? "canEdit" : "canView"),
-                    name: paste.owner?.name ?? "",
-                  })}
-                />
+                  value={t(share.access === "edit" ? "canEdit" : "canView")}
+                >
+                  {sharedNote}
+                </SheetRow>
               ) : null}
-              <MobileRow label={t("expiresLabel")} value={expiresLabel(paste)} />
-              <MobileRow
-                label={t("viewsLabel")}
-                value={`${formatNumber(paste.views, locale)} · ${t("unique", { count: paste.uniqueViews })}`}
-              />
-              <MobileRow label={t("revisions")} value={String(revision)} />
-            </dl>
+              <dl>
+                <MobileRow label={t("expiresLabel")} value={expiresLabel(paste)} />
+              </dl>
+              <SheetRow label={t("viewsLabel")} value={viewsValue}>
+                {views}
+              </SheetRow>
+              <SheetRow label={t("revisions")} value={String(revision)}>
+                {revisions}
+              </SheetRow>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Mobile bottom actions */}
-      <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-border bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
-        {canEdit ? (
-          <Button
-            variant="outline"
-            className="h-[46px] flex-1 text-base"
-            render={<Link href={`/pastes/${slug}/edit`} />}
-            nativeButton={false}
-          >
-            <PencilIcon />
-            {t("edit")}
-          </Button>
-        ) : null}
-        <ShareButton
-          url={url}
-          title={paste.title}
-          className="h-12 flex-[2] text-base font-semibold"
-        />
+        {/* Mobile bottom actions */}
+        <div className="fixed inset-x-0 bottom-0 z-20 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
+          {canEdit ? (
+            <Button
+              variant="outline"
+              size="xl"
+              className="flex-1"
+              render={<Link href={`/pastes/${slug}/edit`} />}
+              nativeButton={false}
+            >
+              <PencilIcon />
+              {t("edit")}
+            </Button>
+          ) : null}
+          <CopyCodeButton slug={slug} className="flex-[2]" />
+        </div>
       </div>
-    </div>
+    </ActiveFileProvider>
   )
 }
 

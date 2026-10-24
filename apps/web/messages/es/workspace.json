@@ -328,7 +328,21 @@
     "view_all_count": "Ver los {count, number}",
     "secrets": "Secretos",
     "workflows": "Flujos",
-    "coming_soon": "Próximamente"
+    "coming_soon": "Próximamente",
+    "chart_point": "{day}: {value}",
+    "week_of": "Semana del {day}",
+    "chart_date": "Fecha",
+    "chart_empty": "No se registró nada en este periodo.",
+    "analytics_empty": "Nadie abrió tus pastes en este periodo. Las vistas, referencias y países aparecen aquí en cuanto alguien abre un enlace.",
+    "sort_and_filter": "Ordenar y filtrar",
+    "sort_and_filter_active": "Ordenar y filtrar, {count, plural, one {# activo} other {# activos}}",
+    "clear_all": "Borrar todo",
+    "show_results": "{count, plural, one {Mostrar # paste} other {Mostrar # pastes}}",
+    "change_icon": "Cambiar icono",
+    "move_up": "Subir",
+    "move_down": "Bajar",
+    "done": "Listo",
+    "searching": "Buscando…"
   },
   "Secrets": {
     "title": "Secretos",
@@ -434,6 +448,9 @@
     "create_first_group": "Crea tu primer grupo de secretos",
     "all_environments": "Todos",
     "filter_groups": "Filtrar por nombre o proyecto…",
-    "no_matches": "Ningún grupo de secretos coincide con estos filtros."
+    "no_matches": "Ningún grupo de secretos coincide con estos filtros.",
+    "empty_sentence": "Aún no hay grupos de secretos.",
+    "saved": "Grupo de secretos guardado",
+    "value_copied": "{name} copiado"
   }
 }

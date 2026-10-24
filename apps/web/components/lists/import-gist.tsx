@@ -11,13 +11,14 @@ import {
   SheetClose,
   SheetContent,
   SheetDescription,
-  SheetTitle,
+  SheetHeader,
   SheetTrigger,
 } from "@sniptide/ui/components/sheet"
 import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
-import { ArrowUpRightIcon, DownloadIcon, XIcon } from "lucide-react"
+import { cn } from "@sniptide/ui/lib/utils"
+import { ArrowUpRightIcon, DownloadIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
@@ -56,10 +57,13 @@ const footerButton =
 export function ImportGistSheet({
   open,
   onOpenChange,
+  side = "right",
   children,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Phones open it from the bottom, like the other mobile sheets.
+  side?: "right" | "bottom"
   children?: React.ReactNode
 }) {
   const t = useTranslations("Workspace")
@@ -155,20 +159,26 @@ export function ImportGistSheet({
       }}
     >
       {children}
-      <SheetContent side="right" className="w-[400px] max-w-full" initialFocus={inputRef}>
-        <div className="flex h-14 shrink-0 items-center justify-between border-b pr-4 pl-6">
-          <SheetTitle className="text-[15px] leading-5 font-semibold">
-            {t("import_a_gist")}
-          </SheetTitle>
-          <SheetClose render={<Button variant="ghost" size="icon-sm" aria-label={t("close")} />}>
-            <XIcon />
-          </SheetClose>
-        </div>
+      <SheetContent
+        side={side}
+        className={side === "right" ? "w-[400px] max-w-full" : undefined}
+        initialFocus={inputRef}
+      >
+        <SheetHeader
+          title={t("import_a_gist")}
+          closeLabel={t("close")}
+          className={cn("border-b border-border pb-3", side === "right" && "pt-3 pl-6")}
+        />
         <SheetDescription className="sr-only">
           {t("copy_files_from_a_public_github_gist_into")}
         </SheetDescription>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto",
+            side === "bottom" ? "px-4 py-4" : "p-6",
+          )}
+        >
           {step === "files" && gist ? (
             <FilesStep
               link={link}
@@ -232,7 +242,12 @@ export function ImportGistSheet({
         </div>
 
         {/* The actions wrap under Cancel when a narrow screen or a long translation can't fit them. */}
-        <div className="flex min-h-16 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-3 border-t px-6 py-4">
+        <div
+          className={cn(
+            "flex min-h-16 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-3 border-t py-4",
+            side === "bottom" ? "px-4" : "px-6",
+          )}
+        >
           <SheetClose
             render={
               <Button
@@ -271,16 +286,33 @@ export function ImportGistSheet({
 }
 
 // The "Import gist" button of the list pages and the dashboard.
-export function ImportGistButton() {
+// `compact` is the phone's version next to a page title: a 40px icon button whose sheet opens
+// from the bottom.
+export function ImportGistButton({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("Workspace")
   const [open, setOpen] = React.useState(false)
 
   return (
-    <ImportGistSheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button variant="outline" size="lg" />}>
-        <DownloadIcon />
-        {t("import_gist")}
-      </SheetTrigger>
+    <ImportGistSheet open={open} onOpenChange={setOpen} side={compact ? "bottom" : "right"}>
+      {compact ? (
+        <SheetTrigger
+          render={
+            <Button
+              variant="outline"
+              size="xl"
+              aria-label={t("import_gist")}
+              className="w-10 px-0"
+            />
+          }
+        >
+          <DownloadIcon />
+        </SheetTrigger>
+      ) : (
+        <SheetTrigger render={<Button variant="outline" size="lg" />}>
+          <DownloadIcon />
+          {t("import_gist")}
+        </SheetTrigger>
+      )}
     </ImportGistSheet>
   )
 }

@@ -135,7 +135,7 @@ export function InviteField({
           className={cn(
             "rounded-lg flex min-w-0 flex-1 items-center gap-2 border border-input bg-background px-3 focus-within:border-foreground",
             submitLabel && "max-lg:basis-full",
-            compact ? "h-9" : "h-11 lg:h-9",
+            compact ? "h-9" : "h-10 lg:h-9",
             error && "border-destructive focus-within:border-destructive",
           )}
         >
@@ -165,12 +165,13 @@ export function InviteField({
           value={access}
           onChange={setAccess}
           label={t("accessForThePersonYouInvite")}
-          className={cn("rounded-lg border border-input px-3", compact ? "h-9" : "h-11 lg:h-9")}
+          className={cn("rounded-lg border border-input px-3", compact ? "h-9" : "h-10 lg:h-9")}
         />
         {submitLabel ? (
           <Button
             type="button"
-            className={cn("shrink-0 max-lg:flex-1", compact ? "h-9" : "h-11 lg:h-9")}
+            size="lg"
+            className={cn("shrink-0 max-lg:flex-1", !compact && "max-lg:h-[38px]")}
             disabled={!identifier.trim()}
             loading={pending}
             onClick={() => void submit()}

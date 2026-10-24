@@ -62,6 +62,11 @@ export function TopPastes({
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const peak = Math.max(0.001, ...rows.map((row) => share(row.views, total)))
+  const percent = new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
 
   return (
     <Card
@@ -85,73 +90,114 @@ export function TopPastes({
           {t("analytics_empty_top_pastes")}
         </CardEmpty>
       ) : (
-        <Table className="table-fixed">
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-9 px-4 text-xs font-medium">{t("paste")}</TableHead>
-              <TableHead className="h-9 w-20 px-0 text-right text-xs font-medium">
-                {t("views")}
-              </TableHead>
-              <TableHead className="hidden h-9 w-20 px-0 text-right text-xs font-medium md:table-cell">
-                {t("unique")}
-              </TableHead>
-              <TableHead className="h-9 w-24 pr-4 pl-4 text-xs font-medium sm:w-[150px] sm:pl-7">
-                {t("share")}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => {
-              const rowShare = share(row.views, total)
+        <>
+          {/* Phones: one stacked row per paste, so Unique and the share stay visible. */}
+          <ul className="flex flex-col divide-y divide-border md:hidden">
+            {rows.map((row) => (
+              <li key={row.slug} className="relative flex flex-col gap-1.5 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex w-4 shrink-0 justify-center">
+                    <LanguageIcon language={row.language} />
+                  </span>
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <Link
+                      href={`/pastes/${row.slug}`}
+                      className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                    >
+                      {row.title}
+                    </Link>
+                    <span className="truncate font-mono text-xs text-muted-foreground">
+                      {host}/{row.slug}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 pl-6 text-[13px] leading-[18px] text-muted-foreground">
+                  <span>
+                    {t("views")}{" "}
+                    <span className="font-mono text-foreground tabular-nums">
+                      {formatNumber(row.views, locale)}
+                    </span>
+                  </span>
+                  <span>
+                    {t("unique")}{" "}
+                    <span className="font-mono text-foreground tabular-nums">
+                      {formatNumber(row.unique, locale)}
+                    </span>
+                  </span>
+                  <span className="ml-auto flex items-center gap-2">
+                    <Meter value={share(row.views, total) / peak} className="w-12" />
+                    <span className="font-mono text-xs text-foreground/80 tabular-nums">
+                      {percent.format(share(row.views, total))}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Table className="table-fixed max-md:hidden">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-9 px-4 text-xs font-medium">{t("paste")}</TableHead>
+                <TableHead className="h-9 w-20 px-0 text-right text-xs font-medium">
+                  {t("views")}
+                </TableHead>
+                <TableHead className="hidden h-9 w-20 px-0 text-right text-xs font-medium md:table-cell">
+                  {t("unique")}
+                </TableHead>
+                <TableHead className="h-9 w-24 pr-4 pl-4 text-xs font-medium sm:w-[150px] sm:pl-7">
+                  {t("share")}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => {
+                const rowShare = share(row.views, total)
 
-              return (
-                <TableRow key={row.slug} className="relative">
-                  <TableCell className="h-14 min-w-0 truncate px-4">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex w-4 shrink-0 justify-center">
-                        <LanguageIcon language={row.language} />
-                      </span>
-                      <div className="flex min-w-0 flex-col gap-0.5">
-                        <Link
-                          href={`/pastes/${row.slug}`}
-                          className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-                        >
-                          {row.title}
-                        </Link>
-                        <span className="truncate font-mono text-xs text-muted-foreground">
-                          {host}/{row.slug}
+                return (
+                  <TableRow key={row.slug} className="relative">
+                    <TableCell className="h-14 min-w-0 truncate px-4">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex w-4 shrink-0 justify-center">
+                          <LanguageIcon language={row.language} />
+                        </span>
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <Link
+                            href={`/pastes/${row.slug}`}
+                            className="truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                          >
+                            {row.title}
+                          </Link>
+                          <span className="truncate font-mono text-xs text-muted-foreground">
+                            {host}/{row.slug}
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className={cn(countClass, "px-0 text-right")}>
+                      {formatNumber(row.views, locale)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        countClass,
+                        "hidden px-0 text-right text-foreground/80 md:table-cell",
+                      )}
+                    >
+                      {formatNumber(row.unique, locale)}
+                    </TableCell>
+                    <TableCell className={"pr-4 pl-4 sm:pl-7"}>
+                      <div className="flex items-center gap-2">
+                        <Meter value={rowShare / peak} className="hidden w-14 sm:flex" />
+                        <span className="font-mono text-xs text-foreground/80 tabular-nums">
+                          {percent.format(rowShare)}
                         </span>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className={cn(countClass, "px-0 text-right")}>
-                    {formatNumber(row.views, locale)}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      countClass,
-                      "hidden px-0 text-right text-foreground/80 md:table-cell",
-                    )}
-                  >
-                    {formatNumber(row.unique, locale)}
-                  </TableCell>
-                  <TableCell className={"pr-4 pl-4 sm:pl-7"}>
-                    <div className="flex items-center gap-2">
-                      <Meter value={rowShare / peak} className="hidden w-14 sm:flex" />
-                      <span className="font-mono text-xs text-foreground/80 tabular-nums">
-                        {new Intl.NumberFormat(locale, {
-                          style: "percent",
-                          minimumFractionDigits: 1,
-                          maximumFractionDigits: 1,
-                        }).format(rowShare)}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </>
       )}
     </Card>
   )
