@@ -24,7 +24,7 @@ reads a variable that file doesn't list. Compose and the Coolify template pass t
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone; existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. |
-| `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). Existing accounts keep signing in. |
+| `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). New password accounts need SMTP email verification before signing in; without SMTP, only verified OAuth identities can join. Existing accounts keep signing in. |
 | `WAITLIST_URL` | unset | With `ALLOWED_EMAILS`, the sign-up page links here so visitors can apply for an invite. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in. Until both are set the button shows as disabled. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
@@ -34,7 +34,9 @@ reads a variable that file doesn't list. Compose and the Coolify template pass t
 | `DEMO_MODE` | `false` | A public demo: every visitor is signed in to one shared guest account with example data, reset on a schedule. Pastes made in the demo are visible to every visitor and deleted at the next reset. Use it with `ALLOW_SIGN_UP=false` so the guest is the only account. |
 | `DEMO_RESET_MINUTES` | `60` | With `DEMO_MODE`, minutes between resets (5 to 1440). The guest is also reset at server start. |
 
-Email and password sign-in always works. See also [closing sign-up](/getting-started/self-hosted).
+Existing email and password accounts keep signing in. Pending invitations remain blocked until
+their email is verified, even if the invite list or SMTP is later disabled. See also
+[closing sign-up](/getting-started/self-hosted).
 
 ## Pastes and sharing
 
