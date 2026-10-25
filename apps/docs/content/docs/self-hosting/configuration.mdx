@@ -42,6 +42,11 @@ their email is verified, even if the invite list or SMTP is later disabled. See 
 GitHub and Google sign-in require your own OAuth app credentials and the callback URLs listed
 above.
 
+## Account menu links
+
+`HOMEPAGE_URL`, `DOCS_URL`, and `HELP_URL` override the account menu links.
+By default they point to the Sniptide project.
+
 ## Pastes and sharing
 
 | Variable | Default | What it does |
@@ -52,6 +57,13 @@ above.
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks for Share → Share to Slack/Discord. One channel per provider; every signed-in paste owner can post to it (20 shares an hour per account). Keep the URLs secret. |
 | `ENV_SECRETS_KEY` | derived from `BETTER_AUTH_SECRET` | Key (at least 32 characters) that encrypts env group values. Set it before rotating the auth secret; changing whichever key is in use makes stored env values unreadable until they're pushed again. |
+
+### Separate share domain
+
+Point the share domain at the same container as the app, then set `SHARE_URL` to its HTTPS URL.
+Copied links use that domain. Share pages and raw files stay on it, while app pages redirect to `BETTER_AUTH_URL`.
+If another site proxies the share domain, route `/secret-share/*` to the app as well as paste links.
+Separate instances can use the same slug. Duplicate slugs within one database are rejected.
 
 ### Link preview videos
 
@@ -84,6 +96,16 @@ people to contact the administrator.
 | `SMTP_USER`, `SMTP_PASSWORD` | unset | Credentials; supply both or neither. |
 | `SMTP_SECURE` | `false` | `true` for implicit TLS (port 465). |
 | `SMTP_REQUIRE_TLS` | `true` | Require STARTTLS otherwise. Only set `false` for a trusted local test server. |
+
+### Email delivery
+
+Email runs independently once a minute and uses a durable queue with bounded retries. Events older
+than 24 hours are skipped, including events queued while SMTP was unavailable. Delivery rechecks
+consent and access, and messages contain generic activity text with links to the signed-in app.
+Each email includes a confirmation link that stops only that event's emails. Opening it does not
+change preferences. Email is delivered at least once when retries succeed; a crash after SMTP
+acceptance and before recording success can cause a duplicate. A concurrent access change can
+still allow an already sending generic email to arrive.
 
 ## Client IP
 

@@ -1,4 +1,13 @@
 {
   "title": "Sniptide docs",
-  "pages": ["index", "getting-started", "core-concepts", "api-tokens", "cli", "mcp", "self-hosting"]
+  "pages": [
+    "index",
+    "getting-started",
+    "core-concepts",
+    "settings",
+    "api-tokens",
+    "cli",
+    "mcp",
+    "self-hosting"
+  ]
 }
