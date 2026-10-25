@@ -9,7 +9,6 @@ const reserved = [
   "docs",
   "analytics",
   "demo",
-  "folders",
   "dev",
   "forgot-password",
   "reset-password",
