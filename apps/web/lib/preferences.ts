@@ -38,7 +38,3 @@ export const defaultPreferences: Preferences = {
 export function indentUnit(indentation: Preferences["indentation"]) {
   return indentation === "tab" ? "\t" : " ".repeat(Number(indentation))
 }
-
-export function indentLabel(indentation: Preferences["indentation"]) {
-  return indentation === "tab" ? "Tabs" : `${indentation} spaces`
-}

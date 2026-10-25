@@ -10,7 +10,6 @@ import { recordMaintenance, recordMetric } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 
 export const TRASH_DAYS = 30
-export const EXPIRED_DAYS = 30
 const PURGE_LOCK = 0x5e1d_7a1d
 const globalJobs = globalThis as typeof globalThis & {
   __sniptidePurgeTimer?: ReturnType<typeof setInterval>

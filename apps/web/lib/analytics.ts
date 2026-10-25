@@ -1,4 +1,4 @@
-import posthog from "posthog-js"
+import type { PostHog } from "posthog-js"
 import { isAnalyticsExcluded } from "@/lib/analytics-preference"
 
 // Product analytics with PostHog. Off unless the server has POSTHOG_KEY (lib/config.ts), so a
@@ -13,42 +13,55 @@ export const ANALYTICS_PATH = "/api/analytics"
 
 export type AnalyticsConfig = { key: string; uiHost: string }
 
-let started = false
+let client: PostHog | undefined
+let starting: Promise<void> | undefined
 
-export function startAnalytics({ key, uiHost }: AnalyticsConfig) {
-  if (started || isAnalyticsExcluded()) return
-  started = true
-  posthog.init(key, {
-    api_host: ANALYTICS_PATH,
-    ui_host: uiHost,
-    defaults: "2026-08-30",
-    // No cookies or browser storage, so no consent banner. Needs cookieless mode on in the
-    // PostHog project.
-    cookieless_mode: "always",
-    // Explicit events only: autocapture and replay would record what's on screen, pastes included.
-    autocapture: false,
-    disable_session_recording: true,
-    disable_surveys: true,
-    mask_all_text: true,
-    mask_all_element_attributes: true,
-    before_send: (event) => {
-      if (
-        !event ||
-        isAnalyticsExcluded() ||
-        shouldDropSecretEvent(event, typeof window === "undefined" ? "" : window.location.pathname)
-      )
-        return null
-      scrubProperties(event.properties)
-      scrubProperties(event.$set)
-      scrubProperties(event.$set_once)
-      return event
-    },
+export async function startAnalytics({ key, uiHost }: AnalyticsConfig) {
+  if (client || isAnalyticsExcluded()) return
+  if (starting) return starting
+  starting = import("posthog-js").then(({ default: posthog }) => {
+    if (isAnalyticsExcluded()) return
+    posthog.init(key, {
+      api_host: ANALYTICS_PATH,
+      ui_host: uiHost,
+      defaults: "2026-08-30",
+      // No cookies or browser storage, so no consent banner. Needs cookieless mode on in the
+      // PostHog project.
+      cookieless_mode: "always",
+      // Explicit events only: autocapture and replay would record what's on screen, pastes included.
+      autocapture: false,
+      disable_session_recording: true,
+      disable_surveys: true,
+      mask_all_text: true,
+      mask_all_element_attributes: true,
+      before_send: (event) => {
+        if (
+          !event ||
+          isAnalyticsExcluded() ||
+          shouldDropSecretEvent(
+            event,
+            typeof window === "undefined" ? "" : window.location.pathname,
+          )
+        )
+          return null
+        scrubProperties(event.properties)
+        scrubProperties(event.$set)
+        scrubProperties(event.$set_once)
+        return event
+      },
+    })
+    posthog.register({ surface: "app" })
+    client = posthog
   })
-  posthog.register({ surface: "app" })
+  try {
+    await starting
+  } finally {
+    starting = undefined
+  }
 }
 
 export function track(event: string, properties?: Record<string, string | number | boolean>) {
-  if (started) posthog.capture(event, properties)
+  if (!isAnalyticsExcluded()) client?.capture(event, properties)
 }
 
 // Social sign-in leaves the page, so the return URL says what just happened: the provider

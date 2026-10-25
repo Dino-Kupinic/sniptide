@@ -79,25 +79,6 @@ export function useSlugStatus(slug: string, except?: string) {
   return status
 }
 
-export function OptionGroup({
-  label,
-  id,
-  children,
-}: {
-  label: string
-  id: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <span id={id} className="text-[13px] leading-[18px] font-medium">
-        {label}
-      </span>
-      {children}
-    </div>
-  )
-}
-
 export function ExpiryChips({
   value,
   onChange,
