@@ -15,9 +15,11 @@ import { GET as rawRoute } from "@/app/[slug]/raw/route"
 import { POST as revealRoute } from "@/app/[slug]/reveal/route"
 import { GET as statsRoute } from "@/app/api/stats/route"
 import { getDb } from "@/lib/db"
-import { getAnalyticsReport } from "@/lib/pastes/analytics-report"
+import { analyticsCsv } from "@/lib/pastes/analytics-csv"
+import { getAnalyticsReport, getAnalyticsSeries } from "@/lib/pastes/analytics-report"
 import { type EventKind, recordPasteEvent } from "@/lib/pastes/events"
 import { rollUpAnalytics } from "@/lib/pastes/rollup"
+import { telemetrySnapshot } from "@/lib/telemetry"
 import { DAY, HOUR } from "@/lib/time"
 import {
   hasDatabase,
@@ -259,6 +261,30 @@ describeDb("paste analytics", () => {
   }
 
   describe("the report", () => {
+    test("series-only exports match the complete report for every range and scope", async () => {
+      await seedTraffic()
+      await getDb().insert(collection).values({ ownerId: "owner", slug: "kit", name: "Kit" })
+      await getDb().update(paste).set({ collection: "kit" }).where(eq(paste.slug, "pub"))
+      for (const range of ["24h", "7d", "30d", "90d"] as const) {
+        for (const scope of [{}, { paste: "pub" }, { collection: "kit" }, { paste: "theirs" }]) {
+          const query = { range, ...scope }
+          const report = await getAnalyticsReport(query, NOW)
+          const series = await getAnalyticsSeries(query, NOW)
+          expect(series).toEqual({ range, scope: report.scope, points: report.points })
+          expect(analyticsCsv(series)).toBe(analyticsCsv(report))
+        }
+      }
+    })
+
+    test("an hourly export reads its series without loading report panels or comparison totals", async () => {
+      await seedTraffic()
+      const before = telemetrySnapshot().metrics["db:execute"]?.count ?? 0
+      const series = await getAnalyticsSeries({ range: "24h" }, NOW)
+      expect(series.points).toHaveLength(24)
+      expect((telemetrySnapshot().metrics["db:execute"]?.count ?? 0) - before).toBe(1)
+      expect(series.points.reduce((sum, point) => sum + point.values.views, 0)).toBeGreaterThan(0)
+    })
+
     test("totals and series for a week, from hits that haven't been rolled up", async () => {
       await seedTraffic()
       const report = await getAnalyticsReport({ range: "7d" }, NOW)
