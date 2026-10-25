@@ -3,6 +3,7 @@ import {
   type CollectionPage,
   type Data,
   type Search,
+  type Settings,
   type SniptideBackend,
   ToolError,
 } from "./server"
@@ -39,7 +40,7 @@ export class TokenApiBackend implements SniptideBackend {
   }
   private async request(
     endpoint: string,
-    body?: Capture,
+    body?: Capture | Settings | { name: string },
     method = body ? "POST" : "GET",
   ): Promise<Data> {
     let response: Response
@@ -65,6 +66,8 @@ export class TokenApiBackend implements SniptideBackend {
         401: "The API token is invalid, expired or revoked.",
         403: "The API token lacks the required scope.",
         404: "The snippet or collection doesn't exist or isn't yours.",
+        409: "You already have a collection with that name.",
+        422: "The account already has the most collections it can hold.",
         413: "The request or account storage exceeds the instance's limit.",
         429: "Too many requests. Wait before trying again.",
       }
@@ -126,5 +129,17 @@ export class TokenApiBackend implements SniptideBackend {
   }
   update(id: string, input: Capture) {
     return this.request(`pastes/${encodeURIComponent(id)}`, input, "PUT")
+  }
+  collections() {
+    return this.request("collections")
+  }
+  createCollection(name: string) {
+    return this.request("collections", { name })
+  }
+  updateSettings(id: string, input: Settings) {
+    return this.request(`pastes/${encodeURIComponent(id)}`, input, "PATCH")
+  }
+  trash(id: string) {
+    return this.request(`pastes/${encodeURIComponent(id)}`, undefined, "DELETE")
   }
 }
