@@ -70,6 +70,7 @@ import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
+import { suggestedFilename, suggestedTitle, suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
@@ -91,9 +92,14 @@ export interface EditorInitial {
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
 
+type EditorDraft = SavePasteInput & {
+  automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
+}
+
 // What the draft on this device keeps: everything except the password, which never leaves memory.
-function forDraft(value: SavePasteInput): SavePasteInput {
-  return { ...value, password: value.password === null ? null : "" }
+function forDraft(value: EditorDraft): SavePasteInput {
+  const { automatic: _automatic, ...paste } = value
+  return { ...paste, password: value.password === null ? null : "" }
 }
 
 // Why an edit can't be saved yet, or null. Mirrors the first checks the server makes, so the
@@ -222,6 +228,24 @@ export function PasteEditor({
   const [files, setFiles] = React.useState<EditorFile[]>(() =>
     initial.files.map((file) => newFile(file.name, file.content)),
   )
+  const latestFiles = React.useRef(files)
+  latestFiles.current = files
+  const automatic = React.useRef({
+    title: !editing && !initial.title,
+    visibility: !editing,
+    filenames: new Set(
+      !editing
+        ? files
+            .filter((file) => !file.content && /^untitled(?:-\d+)?\.txt$/.test(file.name))
+            .map((file) => file.id)
+        : [],
+    ),
+  })
+  const [initialAutomatic] = React.useState(() => ({
+    title: automatic.current.title,
+    visibility: automatic.current.visibility,
+    filenames: files.map((file) => automatic.current.filenames.has(file.id)),
+  }))
   const [activeId, setActiveId] = React.useState(() => files[0]?.id ?? "")
   const [preview, setPreview] = React.useState(false)
   const [visibility, setVisibility] = React.useState(initial.visibility)
@@ -389,7 +413,17 @@ export function PasteEditor({
 
   // A backup of unsaved edits on this device, put back if the tab closed or the network dropped
   // before they reached the server.
-  const draftValue = React.useMemo(() => forDraft(value), [value])
+  const draftValue = React.useMemo<EditorDraft>(
+    () => ({
+      ...forDraft(value),
+      automatic: {
+        title: automatic.current.title,
+        visibility: automatic.current.visibility,
+        filenames: files.map((file) => automatic.current.filenames.has(file.id)),
+      },
+    }),
+    [value, files],
+  )
   const [draftReady, setDraftReady] = React.useState(false)
   const [draftNotice, setDraftNotice] = React.useState<
     { kind: "restored" } | { kind: "choose"; savedAt: number } | null
@@ -409,8 +443,15 @@ export function PasteEditor({
   latestValue.current = value
   const draftChecked = React.useRef(false)
 
-  function applyValue(next: SavePasteInput) {
+  function applyValue(next: EditorDraft) {
     const nextFiles = next.files.map((file) => newFile(file.name, file.content))
+    automatic.current = {
+      title: next.automatic?.title ?? false,
+      visibility: next.automatic?.visibility ?? false,
+      filenames: new Set(
+        nextFiles.filter((_, index) => next.automatic?.filenames[index]).map((file) => file.id),
+      ),
+    }
     setTitle(next.title)
     setDescription(next.description)
     setFiles(nextFiles)
@@ -432,7 +473,7 @@ export function PasteEditor({
     if (!draft) return setDraftReady(true)
 
     const started = JSON.stringify(forDraft(initialValue))
-    if (JSON.stringify(draft.value) === started) {
+    if (JSON.stringify(forDraft(draft.value)) === started) {
       void discardDraft()
       return setDraftReady(true)
     }
@@ -489,13 +530,30 @@ export function PasteEditor({
   }
 
   function updateActive(patch: Partial<EditorFile>) {
-    setFiles((current) =>
-      current.map((file) => (file.id === active?.id ? { ...file, ...patch } : file)),
+    if (!active) return
+    if (patch.name !== undefined) automatic.current.filenames.delete(active.id)
+    updateFiles(
+      files.map((file) => {
+        if (file.id !== active.id) return file
+        const next = { ...file, ...patch }
+        return automatic.current.filenames.has(file.id)
+          ? { ...next, name: suggestedFilename(next) }
+          : next
+      }),
     )
+  }
+
+  function updateFiles(next: EditorFile[]) {
+    setFiles(next)
+    if (automatic.current.title) setTitle(suggestedTitle(next))
+    if (automatic.current.visibility) {
+      setVisibility((current) => suggestedVisibility(next, current))
+    }
   }
 
   function addFile() {
     const file = newFile(`untitled-${files.length + 1}.txt`)
+    if (!editing) automatic.current.filenames.add(file.id)
     setFiles((current) => [...current, file])
     setActiveId(file.id)
     setPreview(false)
@@ -507,7 +565,7 @@ export function PasteEditor({
     const index = files.findIndex((file) => file.id === id)
     const removed = files[index]
     const next = files.filter((file) => file.id !== id)
-    setFiles(next)
+    updateFiles(next)
     if (id === activeId) setActiveId(next[Math.max(0, index - 1)]?.id ?? "")
     if (!removed) return
 
@@ -516,11 +574,9 @@ export function PasteEditor({
       labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
       message: t("removedFile", { name: removed.name }),
       undo: async () => {
-        setFiles((current) =>
-          current.some((file) => file.id === removed.id)
-            ? current
-            : [...current.slice(0, index), removed, ...current.slice(index)],
-        )
+        const current = latestFiles.current
+        if (current.some((file) => file.id === removed.id)) return
+        updateFiles([...current.slice(0, index), removed, ...current.slice(index)])
         setActiveId(removed.id)
         setPreview(false)
       },
@@ -742,7 +798,10 @@ export function PasteEditor({
             <SegmentedControl
               aria-label={t("visibility")}
               value={visibility}
-              onValueChange={setVisibility}
+              onValueChange={(next) => {
+                automatic.current.visibility = false
+                setVisibility(next)
+              }}
               options={visibilityOptions.map((option) => ({
                 ...option,
                 label: t("visibilityValue", { value: option.value }),
@@ -923,7 +982,10 @@ export function PasteEditor({
           rows={1}
           value={title}
           // A title is one line: Enter moves on to the description and pasted breaks become spaces.
-          onChange={(event) => setTitle(event.target.value.replace(/\r?\n/g, " "))}
+          onChange={(event) => {
+            automatic.current.title = false
+            setTitle(event.target.value.replace(/\r?\n/g, " "))
+          }}
           onKeyDown={(event) => {
             if (event.key !== "Enter" || event.nativeEvent.isComposing) return
             event.preventDefault()
@@ -963,7 +1025,7 @@ export function PasteEditor({
             {
               label: t("undo"),
               onClick: () => {
-                applyValue(initialValue)
+                applyValue({ ...initialValue, automatic: initialAutomatic })
                 setDraftNotice(null)
               },
             },
@@ -1006,9 +1068,11 @@ export function PasteEditor({
               files={files}
               activeId={active?.id}
               onSelect={setActiveId}
-              onRename={(id, name) =>
-                setFiles((current) => current.map((f) => (f.id === id ? { ...f, name } : f)))
-              }
+              onRename={(id, name) => {
+                if (files.find((file) => file.id === id)?.name === name) return
+                automatic.current.filenames.delete(id)
+                updateFiles(files.map((file) => (file.id === id ? { ...file, name } : file)))
+              }}
               onRemove={removeFile}
               onAdd={addFile}
               onChangeLanguage={() => setLanguageOpen(true)}

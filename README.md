@@ -32,6 +32,8 @@ disabled. The callback URLs are `<BETTER_AUTH_URL>/api/auth/callback/github` and
 
 Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
 `fix:`, `docs:`, …), enforced by a git hook and a CI check. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The [development guide](docs/development.md) maps code ownership, verification commands, and
+the workflow for coding agents.
 
 ## API reference
 
@@ -170,6 +172,8 @@ up next to the app:
 - **Build variable:** `APP_URL`: `https://app.sniptide.com`, where the app runs. The nav's "API
   reference" and "Open Sniptide" links point there. The pages are prerendered, so it is read when
   the image is built; changing it means a redeploy.
+- **Build variable:** `SITE_URL`: `https://docs.sniptide.com`, the address the docs are served at.
+  Canonical links, the sitemap and link previews use it, so set it before the first deploy.
 - **Domain:** `https://docs.sniptide.com`.
 
 ## Self-hosting
@@ -177,6 +181,17 @@ up next to the app:
 The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM64 support.
 It contains the standalone Next.js server, static assets and database migrations. Settings come
 from environment variables at runtime; no database or auth credentials are needed to build it.
+
+Use an HTTPS domain at its root, such as `https://paste.example.com`. Hosting the web app under a
+path such as `/sniptide` is not supported. HTTP on a server IP is enough to check startup, but
+copy buttons and password-protected paste unlocks need HTTPS. The CLI and local MCP process also
+require HTTPS except on loopback addresses such as `localhost`.
+
+Set `BETTER_AUTH_URL` to that public origin. On one domain, leave `SHARE_URL` and `COOKIE_DOMAIN`
+unset. Configure your reverse proxy to forward the public host and scheme. For the CLI and local
+MCP process, set `SNIPTIDE_BASE_URL` to your instance and use a token created there; the default
+client URL points at Sniptide Cloud. Remote MCP clients connect to
+`https://paste.example.com/api/mcp` with a token from that instance.
 
 With an existing Postgres database, create a `sniptide.env` file (keep it out of source control):
 
@@ -343,6 +358,13 @@ if clients can't reach the app without passing through whatever sets that header
 Self-hosted instances send no analytics. PostHog only loads when `POSTHOG_KEY` is set (see
 `apps/web/.env.example`), and the key is read at runtime, so the same image never phones home.
 
+To exclude your own browser from PostHog, open `/_site/analytics` on your instance and select
+**Exclude this browser**. Repeat on the marketing site and app, in each browser you use. The
+choice survives network changes and reloads. **Include this browser** removes the exclusion.
+Only this explicit choice writes an exclusion flag to local storage. Clear site data to remove
+it, and reload other open tabs after a change. This does not remove past events or change paste
+view counts.
+
 The Analytics page counts views, unique visitors, code copies, raw reads, referrers, devices and
 countries in your own database, with no cookies and nothing sent anywhere else. A visitor is a
 daily hash of the address and browser under a random salt that is deleted after a day, so nobody
@@ -352,8 +374,9 @@ the CDN's header (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Co
 no country data without one in front. `GET /api/stats?range=7d|30d|90d|24h` returns the same
 figures as JSON for the signed-in account.
 
-Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
-separate domain, for example a short one:
+Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). Instances with
+separate domains and databases can use the same slug without conflict. Duplicate slugs within
+one database are rejected. To give share links a separate domain, for example a short one:
 
 1. Point that domain at the same container too (a second domain on the Coolify resource, or another
    `server_name`/host rule in your reverse proxy).
@@ -406,17 +429,18 @@ Chromium browser tests against an isolated PostgreSQL database and production bu
 
 ### Container releases
 
-Push a semantic version tag, such as `v1.2.3` (or `1.2.3`), to publish a release. The
-`Publish Docker image` workflow builds and tests both architectures against fresh Postgres
-databases, then publishes one multi-platform image to GHCR using GitHub's built-in token.
+Merging a PR into `main` publishes a version tag and GitHub release after CI passes. See
+[the release policy](CONTRIBUTING.md#releases) for version selection and retry behavior.
+The release workflow calls `Publish Docker image`, which builds and tests both architectures
+against fresh Postgres databases, then publishes one multi-platform image to GHCR.
 Stable releases get `1.2.3`, `1.2`, `1` (except major zero) and `latest` tags. Prereleases such as
 `v1.3.0-beta.1` get only `1.3.0-beta.1`, so they do not replace stable tags. Publish stable tags in
 version order, letting each workflow finish before the next; the last completed stable release
-updates `latest`.
+updates `latest`. To retry an image publication, run `Publish Docker image` manually with the
+existing release tag.
 
 After the first publish, a repository owner must set the `sniptide` package's visibility to
-**Public** in [GitHub's package settings](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images) so self-hosters can pull it without signing in. Release
-tags do not create a GitHub Release automatically.
+**Public** in [GitHub's package settings](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images) so self-hosters can pull it without signing in.
 
 The same container test runs on PRs. To run it locally after building:
 
@@ -435,11 +459,26 @@ Browser regression tests use TesterArmy e2e with Chromium. See
 and CI reports. Run `bun run test:e2e` after setting `E2E_DATABASE_URL`.
 
 ```bash
+bun run check
+bun run test
 bun run build
-bun run lint
-bun run typecheck
-bun run format
 ```
+
+`check` checks formatting, lint rules, import order, and TypeScript without rewriting source
+files. Use `bun run format` separately when you intend to rewrite formatting.
+
+`test` runs the CLI, MCP, docs, and web suites. Web database tests skip unless `TEST_DATABASE_URL`
+is set. A passing run without that variable does not verify database behavior. To include those
+tests, use a dedicated, disposable database whose name ends in `_test`:
+
+```bash
+TEST_DATABASE_URL=postgres://sniptide:sniptide@localhost:5432/sniptide_test bun run test
+```
+
+The suite deletes test accounts and related data. Set `TEST_DATABASE_URL` explicitly to the test
+database, even if the app already has a `DATABASE_URL`. See the
+[development guide](docs/development.md#choose-the-verification-command) for focused commands and
+the separate browser and container checks.
 
 ## Workspace
 

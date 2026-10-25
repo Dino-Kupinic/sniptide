@@ -233,7 +233,8 @@ describeDb("token API", () => {
         (await body(await listPastes(call(`pastes?${query}`, token)))).pastes.map(
           (item: { title: string }) => item.title,
         )
-      expect(await titles("q=button")).toEqual(["Alpha button"])
+      expect(await titles("q=alpha")).toEqual(["Alpha button"])
+      expect(await titles("q=nothing-matches")).toEqual([])
       expect((await titles("tag=react")).sort()).toEqual(["Alpha button", "Gamma"])
       expect(await titles("tag=react&tag=hooks")).toEqual(["Gamma"])
       expect(await titles("language=sql")).toEqual(["Beta query"])
@@ -254,6 +255,36 @@ describeDb("token API", () => {
       expect((await listPastes(call("pastes?limit=500", token))).status).toBe(400)
     })
 
+    test("search matches every word across description, tags, file paths and code", async () => {
+      const token = await tokenFor("ada")
+      const post = (data: object) =>
+        createPaste(
+          call("pastes", token, { method: "POST", body: JSON.stringify({ ...capture, ...data }) }),
+        )
+      await post({
+        title: "Fetch helper",
+        description: "Retries failed requests",
+        files: [{ name: "lib/http/fetch.ts", content: "export const backoff = (n) => 2 ** n" }],
+      })
+      await post({
+        title: "Queue worker",
+        tags: ["redis"],
+        files: [{ name: "w.ts", content: "1" }],
+      })
+      await post({ title: "100% safe_name", files: [{ name: "x.ts", content: "1" }] })
+
+      const titles = async (q: string) =>
+        (await body(await listPastes(call(`pastes?q=${encodeURIComponent(q)}`, token)))).pastes.map(
+          (item: { title: string }) => item.title,
+        )
+      expect(await titles("retries BACKOFF")).toEqual(["Fetch helper"])
+      expect(await titles("lib/http")).toEqual(["Fetch helper"])
+      expect(await titles("redis worker")).toEqual(["Queue worker"])
+      expect(await titles("retries redis")).toEqual([])
+      // LIKE wildcards in a query are literal characters.
+      expect(await titles("100%")).toEqual(["100% safe_name"])
+      expect(await titles("e_n")).toEqual(["100% safe_name"])
+    })
     test("a collection comes back in full, oldest first, across pages", async () => {
       const token = await tokenFor("ada")
       await getDb().insert(collection).values({ ownerId: "ada", slug: "kit", name: "Kit" })

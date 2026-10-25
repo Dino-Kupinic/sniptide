@@ -25,6 +25,19 @@ const backend: SniptideBackend = {
     calls.push({ id, input })
     return { paste: { id, ...input } }
   },
+  collections: async () => ({ collections: [{ slug: "ui", name: "UI", pasteCount: 2 }] }),
+  createCollection: async (name) => {
+    calls.push({ name })
+    return { collection: { slug: "new", name, pasteCount: 0 } }
+  },
+  updateSettings: async (id, input) => {
+    calls.push({ id, input })
+    return { settings: input }
+  },
+  trash: async (id) => {
+    calls.push({ trash: id })
+    return { trashed: { id, slug: id } }
+  },
 }
 const cleanup: (() => Promise<unknown> | unknown)[] = []
 afterEach(async () => {
@@ -45,7 +58,7 @@ async function connected(service = backend) {
 }
 
 describe("Sniptide MCP tools", () => {
-  test("discover all five tools, schemas and write annotations", async () => {
+  test("discover all nine tools, schemas and write annotations", async () => {
     const client = await connected()
     const { tools } = await client.listTools()
     expect(tools.map(({ name }) => name)).toEqual([
@@ -54,7 +67,16 @@ describe("Sniptide MCP tools", () => {
       "fetch_collection",
       "create_snippet",
       "update_snippet",
+      "list_collections",
+      "create_collection",
+      "update_snippet_settings",
+      "trash_snippet",
     ])
+    for (const name of ["update_snippet_settings", "trash_snippet"])
+      expect(tools.find((tool) => tool.name === name)?.annotations?.destructiveHint).toBe(true)
+    expect(tools.find(({ name }) => name === "list_collections")?.annotations?.readOnlyHint).toBe(
+      true,
+    )
     expect(tools.find(({ name }) => name === "read_snippet")?.annotations?.readOnlyHint).toBe(true)
     expect(tools.find(({ name }) => name === "update_snippet")?.annotations?.destructiveHint).toBe(
       true,
@@ -110,6 +132,30 @@ describe("Sniptide MCP tools", () => {
     expect(calls[0]).toEqual(input)
     await client.callTool({ name: "update_snippet", arguments: { id: "paste1", ...input } })
     expect(calls[1]).toEqual({ id: "paste1", input })
+  })
+  test("management tools forward only declared fields and refuse empty settings", async () => {
+    const client = await connected()
+    await client.callTool({ name: "create_collection", arguments: { name: " Recipes " } })
+    await client.callTool({
+      name: "update_snippet_settings",
+      arguments: { id: "p1", visibility: "unlisted", allowRaw: false, ownerId: "other" },
+    })
+    await client.callTool({ name: "trash_snippet", arguments: { id: "p1" } })
+    const empty = await client.callTool({
+      name: "update_snippet_settings",
+      arguments: { id: "p1" },
+    })
+    expect(empty.isError).toBe(true)
+    const bad = await client.callTool({
+      name: "update_snippet_settings",
+      arguments: { id: "p1", expiry: "forever" },
+    })
+    expect(bad.isError).toBe(true)
+    expect(calls).toEqual([
+      { name: "Recipes" },
+      { id: "p1", input: { visibility: "unlisted" } },
+      { trash: "p1" },
+    ])
   })
   test("normalizes agent requests while leaving omitted metadata for the API", async () => {
     const client = await connected()
@@ -177,7 +223,7 @@ describe("Sniptide MCP tools", () => {
     const client = new Client({ name: "http-test", version: "1" })
     cleanup.push(() => client.close())
     await client.connect(new StreamableHTTPClientTransport(new URL("/api/mcp", listener.url)))
-    expect((await client.listTools()).tools).toHaveLength(5)
+    expect((await client.listTools()).tools).toHaveLength(9)
     expect(
       (await client.callTool({ name: "read_snippet", arguments: { id: "x" } })).isError,
     ).toBeUndefined()
@@ -225,6 +271,17 @@ describe("local token API adapter", () => {
     expect(requests[0]?.authorization).toBe("Bearer snpt_test-token-1234567890")
     expect(requests[1]?.method).toBe("PUT")
     expect(JSON.parse(requests[1]?.body ?? "{}")).toEqual(input)
+    await api.collections()
+    await api.createCollection("Recipes")
+    await api.updateSettings("a b", { visibility: "private" })
+    await api.trash("x")
+    expect(requests.slice(2).map(({ method, path }) => `${method} ${path}`)).toEqual([
+      "GET /prefix/api/v1/collections",
+      "POST /prefix/api/v1/collections",
+      "PATCH /prefix/api/v1/pastes/a%20b",
+      "DELETE /prefix/api/v1/pastes/x",
+    ])
+    expect(JSON.parse(requests[3]?.body ?? "{}")).toEqual({ name: "Recipes" })
   })
   test("refuses redirects, errors and invalid JSON without printing response bodies", async () => {
     let status = 302

@@ -40,7 +40,7 @@ export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.
         connected = true
         callback(null, { connection, secured: smtp.secure })
       })
-      connection.once("error", (error) => {
+      connection.once("error", (error: Error) => {
         if (!connected) callback(error, {})
       })
     },

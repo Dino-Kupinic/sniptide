@@ -1,5 +1,7 @@
 import "server-only"
 
+import { allowedPaste } from "@workspace/db/moderation"
+
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { cache } from "react"
@@ -57,7 +59,11 @@ function toCollection(row: {
 // The viewer's collections, oldest first, with how many live pastes each holds.
 export const listCollections = cache(async (): Promise<Collection[]> => {
   const viewer = await viewerId()
-  if (!viewer) return []
+  return viewer ? collectionsOf(viewer) : []
+})
+
+// An account's collections, for callers that act for an owner without a session (API tokens).
+export async function collectionsOf(owner: string): Promise<Collection[]> {
   const rows = await getDb()
     .select({
       slug: collectionTable.slug,
@@ -70,16 +76,17 @@ export const listCollections = cache(async (): Promise<Collection[]> => {
     .leftJoin(
       pasteTable,
       and(
+        allowedPaste(),
         eq(pasteTable.ownerId, collectionTable.ownerId),
         eq(pasteTable.collection, collectionTable.slug),
         isNull(pasteTable.deletedAt),
       ),
     )
-    .where(eq(collectionTable.ownerId, viewer))
+    .where(eq(collectionTable.ownerId, owner))
     .groupBy(collectionTable.id)
     .orderBy(collectionTable.createdAt, collectionTable.id)
   return rows.map(toCollection)
-})
+}
 
 export async function getCollection(slug: string) {
   return (await listCollections()).find((candidate) => candidate.slug === slug) ?? null
@@ -112,7 +119,14 @@ export async function createCollection(
   name: string,
   look?: { icon: CollectionIcon; hue: Hue },
 ): Promise<CollectionResult> {
-  const owner = await requireViewerId()
+  return createCollectionFor(await requireViewerId(), name, look)
+}
+
+export async function createCollectionFor(
+  owner: string,
+  name: string,
+  look?: { icon: CollectionIcon; hue: Hue },
+): Promise<CollectionResult> {
   return getDb().transaction(async (tx) => {
     await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
     const existing = await tx
@@ -166,6 +180,7 @@ export async function renameCollection(
       .from(pasteTable)
       .where(
         and(
+          allowedPaste(),
           eq(pasteTable.ownerId, owner),
           eq(pasteTable.collection, slug),
           isNull(pasteTable.deletedAt),
@@ -210,7 +225,7 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
       .update(pasteTable)
       .set({ collection: null, version: sql`${pasteTable.version} + 1` })
       .where(and(eq(pasteTable.ownerId, owner), eq(pasteTable.collection, slug)))
-      .returning({ slug: pasteTable.slug })
+      .returning({ slug: pasteTable.slug, moderationState: pasteTable.moderationState })
     await tx
       .delete(collectionTable)
       .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
@@ -221,7 +236,9 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
       icon,
       hue,
       createdAt: row.createdAt.getTime(),
-      pastes: pastes.map((paste) => paste.slug),
+      pastes: pastes
+        .filter((paste) => paste.moderationState === "allowed")
+        .map((paste) => paste.slug),
     }
   })
 }
@@ -257,6 +274,7 @@ export async function restoreCollection(snapshot: CollectionSnapshot): Promise<R
         .set({ collection: snapshot.slug, version: sql`${pasteTable.version} + 1` })
         .where(
           and(
+            allowedPaste(),
             eq(pasteTable.ownerId, owner),
             isNull(pasteTable.collection),
             inArray(pasteTable.slug, snapshot.pastes),

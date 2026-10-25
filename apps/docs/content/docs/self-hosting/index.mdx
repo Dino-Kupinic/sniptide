@@ -15,9 +15,27 @@ analytics, no OAuth, no outgoing mail until you configure them.
 - About 768 MB of memory for the app (see [Memory](/self-hosting/memory)) and a few hundred
   megabytes for Postgres. One server sits around 100 MB idle and 250 to 300 MB under load.
 - Two settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (see [Configuration](/self-hosting/configuration)).
+- An HTTPS domain at its root, such as `https://paste.example.com`. Hosting the web app under a
+  path such as `/sniptide` is not supported.
 
 Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`. Add `BETTER_AUTH_URL` so browsers
 can sign in.
+
+## URLs and HTTPS
+
+Set `BETTER_AUTH_URL` to your public origin and configure your reverse proxy to forward the public
+host and scheme. On one domain, leave `SHARE_URL` and `COOKIE_DOMAIN` unset.
+
+HTTP on a server IP is enough to check startup. Copy buttons and password-protected paste unlocks
+need HTTPS. The CLI and local MCP process reject HTTP except on loopback addresses such as
+`localhost`. Use the [bundled HTTPS proxy](/self-hosting/docker-compose#https-with-the-bundled-proxy)
+or your own reverse proxy before sharing pastes.
+
+Paste links use your instance's domain. Instances with separate domains and databases can use the
+same slug without conflict. Within one database, each slug belongs to one paste. Set
+`SNIPTIDE_BASE_URL` to your instance for the CLI and local MCP process, and create their API tokens
+there. The default client URL points at Sniptide Cloud. Remote MCP clients connect to
+`https://paste.example.com/api/mcp` with a token from that instance.
 
 ## Pick an install
 

@@ -119,6 +119,9 @@ export function ImportGistSheet({
   }
 
   const chosen = gist ? gist.files.filter((file) => selected.has(file.name)) : []
+  const importVisibility = chosen.some((file) => file.sensitive)
+    ? "private"
+    : gist?.defaults.visibility
   const chosenBytes = chosen.reduce((sum, file) => sum + file.size, 0)
   const overLimit = gist ? chosenBytes > gist.limitBytes : false
   const canImport = step === "files" && chosen.length > 0 && !overLimit && busy === null
@@ -128,9 +131,12 @@ export function ImportGistSheet({
     if (!gist || !canImport) return
     setBusy("import")
     setImportError(null)
-    const result = await importGist({ id: gist.id, files: chosen.map((file) => file.name) }).catch(
-      () => null,
-    )
+    const result = await importGist({
+      id: gist.id,
+      files: chosen.map((file) => file.name),
+      visibility: importVisibility,
+      expiry: gist.defaults.expiry,
+    }).catch(() => null)
     if (!result?.ok) {
       setImportError(result?.error ?? t("something_went_wrong_try_again"))
       setBusy(null)
@@ -195,6 +201,7 @@ export function ImportGistSheet({
               chosenBytes={chosenBytes}
               overLimit={overLimit}
               error={importError}
+              visibility={importVisibility ?? "private"}
             />
           ) : step === "reading" ? (
             <ReadingStep link={link} />
@@ -362,6 +369,7 @@ function FilesStep({
   chosenBytes,
   overLimit,
   error,
+  visibility,
 }: {
   link: string
   gist: GistPreview
@@ -370,10 +378,19 @@ function FilesStep({
   chosenBytes: number
   overLimit: boolean
   error: string | null
+  visibility: "private" | "unlisted" | "public"
 }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const { owner } = gist
+  const expiryLabels = {
+    "1h": t("1_hour"),
+    "1d": t("1_day"),
+    "1w": t("1_week"),
+    "1m": t("1_month"),
+    "1y": t("1_year"),
+    never: t("never"),
+  }
 
   return (
     <>
@@ -459,6 +476,10 @@ function FilesStep({
       </div>
 
       <FormError variant="inline" message={error} className="text-xs leading-4" />
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        {t("visibility")} · {t(visibility)}. {t("expires_after")} ·{" "}
+        {expiryLabels[gist.defaults.expiry]}.
+      </p>
     </>
   )
 }

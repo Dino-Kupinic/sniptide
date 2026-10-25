@@ -1,6 +1,7 @@
 import "server-only"
 import { type SniptideBackend, ToolError } from "@sniptide/mcp"
 import { ZodError } from "zod"
+import { createApiCollection, listApiCollections } from "./collections"
 import { ApiError } from "./http"
 import {
   collectionCaptures,
@@ -8,7 +9,9 @@ import {
   getCapture,
   listCaptures,
   listQuerySchema,
+  trashCapture,
   updateCapture,
+  updateSettings,
 } from "./pastes"
 import type { TokenOwner } from "./tokens"
 
@@ -52,6 +55,22 @@ export function mcpBackend(owner: TokenOwner): SniptideBackend {
       safe(async () => {
         write()
         return { paste: await updateCapture(owner.userId, id, input) }
+      }),
+    collections: () => safe(() => listApiCollections(owner.userId)),
+    createCollection: (name) =>
+      safe(async () => {
+        write()
+        return createApiCollection(owner.userId, { name })
+      }),
+    updateSettings: (id, input) =>
+      safe(async () => {
+        write()
+        return updateSettings(owner.userId, id, input)
+      }),
+    trash: (id) =>
+      safe(async () => {
+        write()
+        return trashCapture(owner.userId, id)
       }),
   }
 }

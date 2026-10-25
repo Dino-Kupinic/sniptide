@@ -1,5 +1,7 @@
 import "server-only"
 
+import { allowedParent, allowedPaste } from "@workspace/db/moderation"
+
 import { paste as pasteTable, pasteViewDay } from "@workspace/db/schema"
 import { and, desc, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
@@ -49,7 +51,7 @@ export async function getDashboardData(locale: Locale = "en"): Promise<Dashboard
   }
   if (!viewer) return empty
   const db = getDb()
-  const own = and(eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))
+  const own = and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))
   const live = and(
     ne(pasteTable.visibility, "private"),
     or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date(now))),
@@ -70,7 +72,10 @@ export async function getDashboardData(locale: Locale = "en"): Promise<Dashboard
     db
       .select({ day: pasteViewDay.day, views: sql<number>`sum(${pasteViewDay.views})::int` })
       .from(pasteViewDay)
-      .innerJoin(pasteTable, eq(pasteViewDay.pasteId, pasteTable.id))
+      .innerJoin(
+        pasteTable,
+        and(allowedParent(pasteViewDay.pasteId), eq(pasteViewDay.pasteId, pasteTable.id)),
+      )
       .where(and(own, gte(pasteViewDay.day, firstDay), lt(pasteViewDay.day, today + 1)))
       .groupBy(pasteViewDay.day),
     Promise.all(

@@ -39,6 +39,9 @@ Existing email and password accounts keep signing in. Pending invitations remain
 their email is verified, even if the invite list or SMTP is later disabled. See also
 [closing sign-up](/getting-started/self-hosted).
 
+GitHub and Google sign-in require your own OAuth app credentials and the callback URLs listed
+above.
+
 ## Pastes and sharing
 
 | Variable | Default | What it does |
@@ -71,6 +74,9 @@ Notification emails are off until you configure SMTP. In-app notifications and p
 work without it. Set the host, port and sender together, plus `BETTER_AUTH_URL` and a
 `BETTER_AUTH_SECRET` of at least 32 characters. Users verify their address and opt in per event in
 **Settings → Notifications**.
+
+The same SMTP settings enable password reset emails. Without SMTP, the forgot-password page asks
+people to contact the administrator.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
