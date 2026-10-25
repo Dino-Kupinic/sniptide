@@ -31,6 +31,10 @@ shared with you, trash and expired pastes are not. The server doesn't run code, 
 to your machine, doesn't expose env secrets, and doesn't accept browser sessions. Renaming and
 deleting collections, restoring from the trash and sharing with people stay in the app.
 
+Each `read_snippet` call and each snippet in a `fetch_collection` page counts as a read. The
+snippet's page shows its owner how many times it was read through MCP or the CLI, apart from its
+views. Searches and the read-back after a write don't count.
+
 ## Connect over HTTP (recommended)
 
 The endpoint is `https://app.sniptide.com/api/mcp`, or `<your-instance-url>/api/mcp` on a

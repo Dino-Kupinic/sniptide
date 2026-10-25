@@ -140,6 +140,11 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         <span>{t("fourteenDays")}</span>
         <span>{t("today")}</span>
       </p>
+      {owned && paste.agentReads > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {t("agentReads", { count: paste.agentReads })}
+        </p>
+      ) : null}
     </>
   )
   const revisions = (

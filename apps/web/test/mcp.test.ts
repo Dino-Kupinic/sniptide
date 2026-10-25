@@ -348,6 +348,29 @@ describeDb("MCP with real token API and Postgres", () => {
       ).toBe(true)
     })
   }
+  test("reads and collection fetches count as token reads; search and writes don't", async () => {
+    const client = await remote(token)
+    const created = (await data(client, "create_snippet", input)).paste
+    const reads = async () =>
+      (await getDb().select().from(paste).where(eq(paste.id, created.id)))[0]?.agentReads
+    expect(await reads()).toBe(0)
+    await data(client, "search_snippets", { query: "button" })
+    await data(client, "update_snippet", { id: created.id, ...input, title: "Renamed" })
+    expect(await reads()).toBe(0)
+    await data(client, "read_snippet", { id: created.slug })
+    await data(client, "fetch_collection", { slug: "ui" })
+    expect(await reads()).toBe(2)
+    const response = await getPaste(
+      new Request(`http://localhost/api/v1/pastes/${created.id}`, {
+        headers: { authorization: `Bearer ${readonlyToken}` },
+      }),
+      ctx({ id: created.id }),
+    )
+    expect(response.status).toBe(200)
+    expect(await reads()).toBe(3)
+    const [stored] = await getDb().select().from(paste).where(eq(paste.id, created.id))
+    expect(stored?.views).toBe(0)
+  })
   test("management tools need the write scope and only reach the token owner's pastes", async () => {
     await seedPaste({ slug: "adas", owner: "ada" })
     await seedPaste({ slug: "bobs", owner: "bob" })

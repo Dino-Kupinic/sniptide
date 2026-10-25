@@ -257,6 +257,7 @@ async function summarize(
         author,
         views: record.views,
         uniqueViews: record.uniqueViews,
+        agentReads: record.agentReads,
         viewsByDay,
         createdAt: ms(record.createdAt),
         updatedAt: ms(record.updatedAt),

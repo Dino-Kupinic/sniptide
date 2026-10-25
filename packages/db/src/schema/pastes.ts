@@ -75,6 +75,9 @@ export const paste = pgTable(
     source: jsonb("source").$type<PasteSource>(),
     views: integer("views").notNull().default(0),
     uniqueViews: integer("unique_views").notNull().default(0),
+    // Reads with a personal API token (MCP read_snippet and fetch_collection, `sniptide pull`),
+    // so the owner can see which snippets their agents actually use. Views don't include these.
+    agentReads: integer("agent_reads").notNull().default(0),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
     version: bigint("version", { mode: "number" })
