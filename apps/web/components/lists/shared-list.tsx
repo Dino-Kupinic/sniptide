@@ -403,23 +403,23 @@ export function SharedList({
               ))}
             </ul>
           ) : null}
-
-          {pagination.total > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-5">
-              <span className="text-[13px] text-muted-foreground">
-                {t("shared_summary", {
-                  count: pagination.total,
-                  people: peopleCount,
-                })}
-              </span>
-              <Pagination
-                page={pagination.page}
-                pageCount={pagination.pageCount}
-                onChange={(page) => update({ page })}
-              />
-            </div>
-          ) : null}
         </div>
+
+        {pagination.total > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:py-0">
+            <span className="text-[13px] text-muted-foreground">
+              {t("shared_summary", {
+                count: pagination.total,
+                people: peopleCount,
+              })}
+            </span>
+            <Pagination
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              onChange={(page) => update({ page })}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   )

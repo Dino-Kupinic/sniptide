@@ -459,33 +459,33 @@ export function PasteList({
               ))}
             </ul>
           ) : null}
-
-          {pagination.total > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-5">
-              <span className="text-[13px] text-muted-foreground">
-                {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
-                {filtering
-                  ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
-                  : ""}
-              </span>
-              <Pagination
-                page={pagination.page}
-                pageCount={pagination.pageCount}
-                onChange={(page) =>
-                  update({
-                    page,
-                    cursor:
-                      page === pagination.page + 1
-                        ? pagination.nextCursor
-                        : page === pagination.page - 1
-                          ? pagination.previousCursor
-                          : undefined,
-                  })
-                }
-              />
-            </div>
-          ) : null}
         </div>
+
+        {pagination.total > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:py-0">
+            <span className="text-[13px] text-muted-foreground">
+              {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
+              {filtering
+                ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
+                : ""}
+            </span>
+            <Pagination
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              onChange={(page) =>
+                update({
+                  page,
+                  cursor:
+                    page === pagination.page + 1
+                      ? pagination.nextCursor
+                      : page === pagination.page - 1
+                        ? pagination.previousCursor
+                        : undefined,
+                })
+              }
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   )
