@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
+import { Input } from "@sniptide/ui/components/input"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
@@ -23,12 +24,15 @@ import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
+import { suggestedFilename, suggestedTitle, suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import { EXPIRIES, type Expiry, VISIBILITIES, type Visibility } from "@/lib/pastes/types"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
 const LEGACY_DRAFT_KEY = "sniptide:quick-paste"
 
 interface Draft {
+  automatic: Record<"title" | "filename" | "visibility", boolean>
+  title: string
   name: string
   content: string
   expiry: Expiry
@@ -37,7 +41,9 @@ interface Draft {
 }
 
 const emptyDraft: Draft = {
-  name: "snippet.ts",
+  automatic: { title: true, filename: true, visibility: true },
+  title: "",
+  name: "untitled.txt",
   content: "",
   expiry: "1w",
   visibility: "unlisted",
@@ -45,6 +51,10 @@ const emptyDraft: Draft = {
 }
 
 const draftSchema = z.object({
+  automatic: z
+    .object({ title: z.boolean(), filename: z.boolean(), visibility: z.boolean() })
+    .catch({ title: false, filename: false, visibility: false }),
+  title: z.string().catch(""),
   name: z.string(),
   content: z.string(),
   expiry: z.enum(EXPIRIES),
@@ -58,7 +68,9 @@ function readDraft(key: string, fallback: Draft): Draft {
     window.localStorage.removeItem(LEGACY_DRAFT_KEY)
     const stored = window.localStorage.getItem(key)
     const parsed = stored ? draftSchema.safeParse(JSON.parse(stored)) : null
-    return parsed?.success ? parsed.data : fallback
+    return parsed?.success && (parsed.data.content.trim() || parsed.data.title.trim())
+      ? parsed.data
+      : fallback
   } catch {
     return fallback
   }
@@ -66,8 +78,9 @@ function readDraft(key: string, fallback: Draft): Draft {
 
 function writeDraft(key: string, draft: Draft | null) {
   try {
-    if (draft) window.localStorage.setItem(key, JSON.stringify(draft))
-    else window.localStorage.removeItem(key)
+    if (draft && (draft.content.trim() || draft.title.trim())) {
+      window.localStorage.setItem(key, JSON.stringify(draft))
+    } else window.localStorage.removeItem(key)
   } catch {
     // Private mode or blocked storage: the draft just isn't kept.
   }
@@ -98,6 +111,7 @@ export function QuickPaste({
   defaults?: Pick<Draft, "expiry" | "visibility" | "burnAfterRead">
 }) {
   const t = useTranslations("Workspace")
+  const pasteT = useTranslations("Paste")
   const expiryLabels: Record<Expiry, string> = {
     "1h": t("1_hour"),
     "1d": t("1_day"),
@@ -126,7 +140,8 @@ export function QuickPaste({
   const highlighted = useHighlight(draft.content, draft.name)
 
   React.useEffect(() => {
-    setDraft(readDraft(draftKey, fresh))
+    const restored = readDraft(draftKey, fresh)
+    setDraft(restored === fresh ? fresh : { ...restored, title: restored.title || restored.name })
     loaded.current = true
   }, [draftKey, fresh])
 
@@ -142,8 +157,23 @@ export function QuickPaste({
     }
   }, [draft, draftKey])
 
-  function update(patch: Partial<Draft>) {
-    setDraft((current) => ({ ...current, ...patch }))
+  function update(patch: Partial<Omit<Draft, "automatic">>) {
+    setDraft((current) => {
+      const next = {
+        ...current,
+        ...patch,
+        automatic: {
+          title: current.automatic.title && patch.title === undefined,
+          filename: current.automatic.filename && patch.name === undefined,
+          visibility: current.automatic.visibility && patch.visibility === undefined,
+        },
+      }
+      if (next.automatic.filename) next.name = suggestedFilename(next)
+      if (next.automatic.title) next.title = suggestedTitle([next])
+      if (next.automatic.visibility)
+        next.visibility = suggestedVisibility([next], current.visibility)
+      return next
+    })
   }
 
   function setLanguage(id: string) {
@@ -163,7 +193,7 @@ export function QuickPaste({
     setError(null)
     startTransition(async () => {
       const result = await savePaste({
-        title: draft.name,
+        title: draft.title,
         description: "",
         files: [{ name: draft.name, content: draft.content }],
         visibility: draft.visibility,
@@ -213,6 +243,15 @@ export function QuickPaste({
           <span className="size-1.5 bg-primary" />
         </span>
       </div>
+
+      <Input
+        aria-label={pasteT("title")}
+        placeholder={pasteT("untitledPaste")}
+        value={draft.title}
+        onChange={(event) => update({ title: event.target.value })}
+        maxLength={120}
+        className="h-10 rounded-none border-x-0 border-t-0 shadow-none"
+      />
 
       {/* A fixed height that scrolls inside, so a long or wide paste never stretches the card. */}
       <div className="flex min-h-0 flex-1 bg-sidebar/60 px-4 py-3.5 font-mono text-[13px] leading-[21px]">

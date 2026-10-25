@@ -1,8 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server"
 import { Dashboard } from "@/components/dashboard/dashboard"
-import { requireSession } from "@/lib/auth"
+import { getPreferences, requireSession } from "@/lib/auth"
 import { getDashboardData } from "@/lib/pastes/dashboard"
-import { parsePreferences } from "@/lib/preferences-schema"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
@@ -13,14 +12,13 @@ export async function generateMetadata() {
 
 export default async function Page() {
   const locale = await getLocale()
-  const [session, data, { origin, host }] = await Promise.all([
+  const [session, data, { origin, host }, preferences] = await Promise.all([
     requireSession(),
     getDashboardData(locale),
     getSiteOrigin(),
+    getPreferences(),
   ])
   const firstName = viewerFromUser(session.user).name.split(/[\s._-]/)[0] || "there"
-
-  const preferences = parsePreferences(session.user.preferences)
 
   return (
     <Dashboard
