@@ -59,7 +59,11 @@ function toCollection(row: {
 // The viewer's collections, oldest first, with how many live pastes each holds.
 export const listCollections = cache(async (): Promise<Collection[]> => {
   const viewer = await viewerId()
-  if (!viewer) return []
+  return viewer ? collectionsOf(viewer) : []
+})
+
+// An account's collections, for callers that act for an owner without a session (API tokens).
+export async function collectionsOf(owner: string): Promise<Collection[]> {
   const rows = await getDb()
     .select({
       slug: collectionTable.slug,
@@ -78,11 +82,11 @@ export const listCollections = cache(async (): Promise<Collection[]> => {
         isNull(pasteTable.deletedAt),
       ),
     )
-    .where(eq(collectionTable.ownerId, viewer))
+    .where(eq(collectionTable.ownerId, owner))
     .groupBy(collectionTable.id)
     .orderBy(collectionTable.createdAt, collectionTable.id)
   return rows.map(toCollection)
-})
+}
 
 export async function getCollection(slug: string) {
   return (await listCollections()).find((candidate) => candidate.slug === slug) ?? null
@@ -115,7 +119,14 @@ export async function createCollection(
   name: string,
   look?: { icon: CollectionIcon; hue: Hue },
 ): Promise<CollectionResult> {
-  const owner = await requireViewerId()
+  return createCollectionFor(await requireViewerId(), name, look)
+}
+
+export async function createCollectionFor(
+  owner: string,
+  name: string,
+  look?: { icon: CollectionIcon; hue: Hue },
+): Promise<CollectionResult> {
   return getDb().transaction(async (tx) => {
     await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
     const existing = await tx

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
-import { mcpCaptureSchema, mcpTagSchema } from "@sniptide/contracts"
+import { mcpCaptureSchema, mcpTagSchema, visibilitySchema } from "@sniptide/contracts"
 import { z } from "zod"
 
 const identifier = z
@@ -17,7 +17,14 @@ const searchSchema = z.object({
   limit: z.int().min(1).max(100).optional(),
   cursor,
 })
+const settingsSchema = z.object({
+  visibility: visibilitySchema.optional(),
+  expiry: z.enum(["1h", "1d", "1w", "1m", "1y", "never"]).optional(),
+  password: z.string().min(1).max(200).nullable().optional(),
+  burnAfterRead: z.boolean().optional(),
+})
 export type Capture = z.infer<typeof mcpCaptureSchema>
+export type Settings = z.infer<typeof settingsSchema>
 export type Search = z.infer<typeof searchSchema>
 export type Data = Record<string, unknown>
 export interface CollectionPage {
@@ -31,6 +38,10 @@ export interface SniptideBackend {
   collection(slug: string, cursor: string | null): Promise<CollectionPage>
   create(input: Capture): Promise<Data>
   update(id: string, input: Capture): Promise<Data>
+  collections(): Promise<Data>
+  createCollection(name: string): Promise<Data>
+  updateSettings(id: string, input: Settings): Promise<Data>
+  trash(id: string): Promise<Data>
 }
 
 // Only deliberately safe messages reach the model. Never echo upstream bodies, tokens or SQL.
@@ -151,6 +162,70 @@ export function createSniptideServer(backend: SniptideBackend) {
       },
     },
     ({ id, ...input }) => result(() => backend.update(id, input)),
+  )
+  server.registerTool(
+    "list_collections",
+    {
+      title: "List collections",
+      description:
+        "List your collections, oldest first, with each slug, name and live snippet count. Use a slug as the collection of create_snippet, update_snippet or fetch_collection.",
+      inputSchema: {},
+      annotations: readOnly,
+    },
+    () => result(() => backend.collections()),
+  )
+  server.registerTool(
+    "create_collection",
+    {
+      title: "Create collection",
+      description:
+        "Create an empty collection by name (write scope required) and return its slug. Names are unique per account and accounts hold up to 50 collections. Renaming and deleting collections stay in the app.",
+      inputSchema: { name: z.string().trim().min(1).max(40) },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    ({ name }) => result(() => backend.createCollection(name)),
+  )
+  server.registerTool(
+    "update_snippet_settings",
+    {
+      title: "Update snippet sharing settings",
+      description:
+        "Change who can open your live snippet (write scope required): visibility, expiry counted from now, a password (null removes it) and burn after read. Omitted fields stay as they are. Confirm with the user before making a snippet public or setting a password, which is then visible in this conversation. Returns the current settings; the password itself is never returned.",
+      inputSchema: { id: identifier, ...settingsSchema.shape },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    ({ id, ...input }) =>
+      result(async () => {
+        if (Object.values(input).every((value) => value === undefined))
+          throw new ToolError("Pass at least one of visibility, expiry, password or burnAfterRead.")
+        return backend.updateSettings(id, input)
+      }),
+  )
+  server.registerTool(
+    "trash_snippet",
+    {
+      title: "Move snippet to trash",
+      description:
+        "Move your live snippet to the trash (write scope required). Its link stops working; the owner can restore it from the app until the trash is emptied. This tool never deletes permanently. Confirm with the user first.",
+      inputSchema: { id: identifier },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    ({ id }) => result(() => backend.trash(id)),
   )
   return server
 }
