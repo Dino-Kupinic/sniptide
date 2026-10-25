@@ -530,7 +530,8 @@ export const openApiDocument = {
             name: "q",
             in: "query",
             required: false,
-            description: "Text in the title or slug.",
+            description:
+              "Words to find. Every word must appear in the title, slug, description, a tag, a file path or the code.",
             schema: { type: "string", maxLength: 120, examples: ["button"] },
           },
           {
