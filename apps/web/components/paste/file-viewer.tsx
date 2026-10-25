@@ -4,9 +4,11 @@ import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
 import { cn } from "@sniptide/ui/lib/utils"
 import { CopyIcon, DownloadIcon, FileCodeIcon, PrinterIcon, WrapTextIcon } from "lucide-react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { byteLength, formatBytes } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
+import { getLanguage } from "@/lib/pastes/languages"
 import { CodeBlock } from "./code-block"
 import { reportCopy, useCopy } from "./copy-button"
 import { LanguageIcon } from "./language-icon"
@@ -54,9 +56,10 @@ function useDesktop() {
   )
 }
 
-// Code card on the paste pages: file tabs (or the single file name), icon buttons for Wrap /
-// Raw / Download / Copy (named in tooltips), the side panel toggle, the code, and an optional
-// footer. `collapseAt` shows only the first lines below the lg
+// Code card on the paste pages, styled like the editor's (FileTabs and its status bar): file
+// tabs, icon buttons for Wrap / Raw / Download / Copy (named in tooltips), the side panel toggle,
+// the code, and an optional footer. A footer leads with the open file's language and ends with
+// the given text, the file count and the size, in the editor's order. `collapseAt` shows only the first lines below the lg
 // breakpoint, wrapped, with a "Show full file" button, as on the mobile artboards. The collapse
 // is CSS-only so the same render serves desktop and mobile. Download sits in the page's menus on
 // phones, so the bar there holds Wrap, Raw and Copy.
@@ -90,6 +93,7 @@ export function FileViewer({
   footerClassName?: string
 }) {
   const t = useTranslations("Paste")
+  const locale = useLocale()
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
   // null until the toggle is used: a card that collapses on phones wraps there and not on desktop.
   const [wrapChoice, setWrapChoice] = React.useState<boolean | null>(null)
@@ -117,7 +121,7 @@ export function FileViewer({
     >
       <div
         className={cn(
-          "flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border pr-1.5",
+          "flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-sidebar pr-1.5",
           headerClassName,
         )}
       >
@@ -132,13 +136,13 @@ export function FileViewer({
                 aria-selected={selected}
                 onClick={() => setActiveName(file.name)}
                 className={cn(
-                  "flex shrink-0 items-center gap-2 px-4 font-mono text-[13px] outline-none focus-visible:underline",
-                  files.length > 1 && "border-r border-border",
-                  files.length > 1 && selected && "shadow-[inset_0_-2px_0_var(--primary)]",
-                  selected ? "text-foreground" : "text-muted-foreground",
+                  "flex shrink-0 items-center gap-2 border-r border-border px-3.5 font-mono text-[13px] outline-none focus-visible:underline",
+                  selected
+                    ? "bg-background text-foreground shadow-[inset_0_-2px_0_var(--primary)]"
+                    : "text-muted-foreground",
                 )}
               >
-                <LanguageIcon language={file.language} className="hidden lg:inline-flex" />
+                <LanguageIcon language={file.language} />
                 {file.name}
               </button>
             )
@@ -228,11 +232,21 @@ export function FileViewer({
       {footer ? (
         <div
           className={cn(
-            "flex items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground",
+            "flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground",
             footerClassName,
           )}
         >
-          {footer}
+          <span className="flex items-center gap-2">
+            <LanguageIcon language={active.language} />
+            <span className="font-medium text-foreground">{getLanguage(active.language).name}</span>
+          </span>
+          <span className="tabular-nums">
+            {footer} · {t("fileCount", { count: files.length })} ·{" "}
+            {formatBytes(
+              files.reduce((total, file) => total + byteLength(file.content), 0),
+              locale,
+            )}
+          </span>
         </div>
       ) : null}
     </div>
