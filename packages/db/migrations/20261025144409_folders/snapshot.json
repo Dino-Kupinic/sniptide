@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9e7c97ad-db44-414c-8e13-b48d9f2d0916",
+  "id": "eed5877b-a5ec-4fa3-a29b-8c1d6e57212b",
   "prevIds": [
-    "d4bdc10c-2ba3-42e1-9acb-378fb34c611e"
+    "e62b7359-7652-4d3b-ba6a-4aac35195182"
   ],
   "ddl": [
     {
@@ -46,6 +46,17 @@
         "views"
       ],
       "name": "notification_kind",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "pending",
+        "allowed",
+        "quarantined",
+        "removed"
+      ],
+      "name": "moderation_state",
       "entityType": "enums",
       "schema": "public"
     },
@@ -155,6 +166,12 @@
     {
       "isRlsEnabled": false,
       "name": "notification",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "moderation_event",
       "entityType": "tables",
       "schema": "public"
     },
@@ -1621,10 +1638,179 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "command_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fingerprint",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "paste_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "actor",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "moderation_state",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "from_state",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "moderation_state",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "to_state",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reason_code",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "case_reference",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content_version",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "moderation_version",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
       "default": "gen_random_uuid()",
       "generated": null,
       "identity": null,
       "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste"
+    },
+    {
+      "type": "moderation_state",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'allowed'",
+      "generated": null,
+      "identity": null,
+      "name": "moderation_state",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "paste"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "moderation_version",
       "entityType": "columns",
       "schema": "public",
       "table": "paste"
@@ -2978,6 +3164,34 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "paste_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "moderation_event_paste_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "moderation_event"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "slug",
           "isExpression": false,
           "asc": true,
@@ -4036,6 +4250,16 @@
       "name": "notification_pkey",
       "schema": "public",
       "table": "notification",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "command_id"
+      ],
+      "nameExplicit": false,
+      "name": "moderation_event_pkey",
+      "schema": "public",
+      "table": "moderation_event",
       "entityType": "pks"
     },
     {

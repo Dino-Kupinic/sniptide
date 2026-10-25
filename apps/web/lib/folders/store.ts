@@ -1,5 +1,6 @@
 import "server-only"
 
+import { allowedPaste } from "@workspace/db/moderation"
 import { folder as folderTable, paste as pasteTable, user } from "@workspace/db/schema"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { cache } from "react"
@@ -62,6 +63,7 @@ export const listFolders = cache(async (): Promise<Folder[]> => {
     .leftJoin(
       pasteTable,
       and(
+        allowedPaste(),
         eq(pasteTable.ownerId, folderTable.ownerId),
         eq(pasteTable.folderId, folderTable.id),
         isNull(pasteTable.deletedAt),
@@ -187,7 +189,7 @@ export async function deleteFolder(
     const current = all.find((other) => other.id === id)
     if (!current) return { status: "missing" }
 
-    const owned = and(eq(pasteTable.ownerId, owner), isNull(pasteTable.deletedAt))
+    const owned = and(allowedPaste(), eq(pasteTable.ownerId, owner), isNull(pasteTable.deletedAt))
     if (contents === "move") {
       const parentId = current.parentId
       // Subfolders keep their names where they can. One that would clash with a folder already in
@@ -257,6 +259,7 @@ export async function movePastes(
       .set({ folderId })
       .where(
         and(
+          allowedPaste(),
           eq(pasteTable.ownerId, owner),
           isNull(pasteTable.deletedAt),
           inArray(pasteTable.slug, slugs),

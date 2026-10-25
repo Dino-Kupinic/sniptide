@@ -24,7 +24,9 @@ function limitsFor(slug: string, client: string): Limit[] {
 }
 
 function fail(status: number, error: string, headers?: HeadersInit) {
-  return Response.json({ ok: false, error }, { status, headers })
+  const responseHeaders = new Headers(headers)
+  responseHeaders.set("cache-control", "private, no-store")
+  return Response.json({ ok: false, error }, { status, headers: responseHeaders })
 }
 
 // Password gate on the public page. The cookie holds a hash of the slug and the stored password
@@ -73,5 +75,5 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/u
     path: "/",
     maxAge: 60 * 60 * 24,
   })
-  return Response.json({ ok: true })
+  return Response.json({ ok: true }, { headers: { "cache-control": "private, no-store" } })
 }
