@@ -19,6 +19,7 @@ import {
   screens,
   type stressData,
 } from "@/lib/dev/ui-stress-data"
+import { timeAgo } from "@/lib/format"
 import type { PageInfo, PasteListQuery } from "@/lib/pastes/list-query"
 
 export function UiStress({
@@ -84,7 +85,16 @@ export function UiStress({
               pagination={pagination}
             />
           ) : null}
-          {screen === "collections" ? <CollectionsView collections={data.collections} /> : null}
+          {screen === "collections" ? (
+            <CollectionsView
+              collections={data.collections}
+              updatedLabels={Object.fromEntries(
+                data.collections.flatMap((item) =>
+                  item.updatedAt === null ? [] : [[item.slug, timeAgo(item.updatedAt)]],
+                ),
+              )}
+            />
+          ) : null}
           {screen === "editor" ? (
             <PasteEditor
               initial={data.editor}
