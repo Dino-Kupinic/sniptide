@@ -37,7 +37,6 @@
     "tw-animate-css": "catalog:ui"
   },
   "devDependencies": {
-    "@turbo/gen": "catalog:tooling",
     "@types/node": "catalog:tooling",
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",
