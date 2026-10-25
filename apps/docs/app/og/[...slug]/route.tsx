@@ -16,5 +16,5 @@ export async function GET(_request: Request, { params }: RouteContext<"/og/[...s
   const page = source.getPage(slug.slice(0, -1))
   if (!page) notFound()
 
-  return renderOgImage({ title: page.data.title, description: page.data.description })
+  return renderOgImage({ title: page.data.title })
 }
