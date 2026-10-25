@@ -128,7 +128,7 @@ describeDb("bounded paste reads", () => {
           offset.push(...(await slugs(page)).pastes.map((p) => p.slug))
           const result = await slugs(page, next)
           walked.push(...result.pastes.map((p) => p.slug))
-          next = result.pagination.nextCursor
+          next = "nextCursor" in result.pagination ? result.pagination.nextCursor : undefined
         }
         expect(walked, `${sort} ${dir}`).toEqual(offset)
         expect(new Set(offset).size, `${sort} ${dir}`).toBe(25)
