@@ -145,7 +145,6 @@
     "empty_trash_title": "ゴミ箱を空にしますか？",
     "empty_trash": "ゴミ箱を空にする",
     "trash_emptied": "ゴミ箱を空にしました",
-    "deleted_pastes_stay_here_for_30_days_their": "削除したペーストは30日間ここに保管されます。リンクはすぐに無効になります。",
     "search_deleted_pastes": "削除済みペーストを検索",
     "deleted_pastes_are_kept_for_30_days_their": "削除したペーストは30日間保管されます。リンクは無効になります。",
     "no_deleted_pastes_match": "一致する削除済みペーストはありません。",
