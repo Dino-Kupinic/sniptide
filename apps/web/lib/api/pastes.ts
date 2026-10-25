@@ -360,18 +360,47 @@ export function parseListQuery(params: URLSearchParams) {
   })
 }
 
-// The owner's pastes, latest edit first, filtered by text in the title or slug, tags (all of
-// them), a language any of its files is in, and a collection. One page per call.
+// At most this many words of a query are matched, so a long query can't build a huge filter.
+const MAX_QUERY_WORDS = 8
+
+// A paste matches a query when every word of it appears somewhere in the paste: the title, slug,
+// description, a tag, or the path or code of one of its files. Agents search with phrases such
+// as "retry with backoff", which rarely sit in a title as written.
+function matchesQuery(q: string): SQL | undefined {
+  const words = [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, MAX_QUERY_WORDS)
+  return and(
+    ...words.map((word) => {
+      const pattern = `%${word.replace(/[\\%_]/g, "\\$&")}%`
+      return or(
+        ilike(pasteTable.title, pattern),
+        ilike(pasteTable.slug, pattern),
+        ilike(pasteTable.description, pattern),
+        sql`array_to_string(${pasteTable.tags}, ' ') ilike ${pattern}`,
+        exists(
+          getDb()
+            .select({ id: pasteFile.id })
+            .from(pasteFile)
+            .where(
+              and(
+                eq(pasteFile.pasteId, pasteTable.id),
+                or(ilike(pasteFile.name, pattern), ilike(pasteFile.content, pattern)),
+              ),
+            ),
+        ),
+      )
+    }),
+  )
+}
+
+// The owner's pastes, latest edit first, filtered by words anywhere in the paste (matchesQuery),
+// tags (all of them), a language any of its files is in, and a collection. One page per call.
 export async function listCaptures(
   owner: string,
   query: z.infer<typeof listQuerySchema>,
 ): Promise<{ pastes: ApiPasteSummary[]; nextCursor: string | null }> {
   const cursor = decodeCursor(query.cursor)
   const conditions: (SQL | undefined)[] = [liveOwned(owner)]
-  if (query.q) {
-    const pattern = `%${query.q.replace(/[\\%_]/g, "\\$&")}%`
-    conditions.push(or(ilike(pasteTable.title, pattern), ilike(pasteTable.slug, pattern)))
-  }
+  if (query.q) conditions.push(matchesQuery(query.q))
   if (query.tags.length) conditions.push(arrayContains(pasteTable.tags, query.tags))
   if (query.collection) conditions.push(eq(pasteTable.collection, query.collection))
   if (query.language) {

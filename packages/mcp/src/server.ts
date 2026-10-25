@@ -79,7 +79,7 @@ export function createSniptideServer(backend: SniptideBackend) {
     {
       title: "Search snippets",
       description:
-        "Find your live snippets by title or slug, tags, language and collection. Returns summaries and nextCursor; call again with that cursor for the next page. Use read_snippet to fetch code.",
+        "Find your live snippets by words in the title, description, tags, file paths or code (every word must match), plus tag, language and collection filters. Returns summaries and nextCursor; call again with that cursor for the next page. Use read_snippet to fetch code.",
       inputSchema: searchSchema,
       annotations: readOnly,
     },
