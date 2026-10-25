@@ -46,6 +46,8 @@ export interface Collection {
   hue: Hue
   // Pastes in it, not counting the trash.
   pasteCount: number
+  // When a paste in it last changed, in milliseconds, or null while it is empty.
+  updatedAt: number | null
 }
 
 export const MAX_COLLECTIONS = 50
