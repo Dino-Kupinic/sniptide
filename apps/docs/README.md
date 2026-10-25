@@ -46,7 +46,7 @@ The root README describes the Coolify service.
 Every page gets its title and description from the MDX frontmatter, a canonical link, Open Graph and
 Twitter tags, and `TechArticle` and `BreadcrumbList` markup (`app/[[...slug]]/page.tsx`,
 `lib/structured-data.ts`). The preview image of a page is generated at build time by
-`app/og/[...slug]/route.tsx` and `lib/og.tsx`: the marketing site's blue card with the pink pixel
-sun (`lib/og-sun.ts`) and the page title, with the font in `assets/fonts`. `app/sitemap.ts` lists the pages from the same source as the sidebar, and
+`app/og/[...slug]/route.tsx` and `lib/og.tsx`: the pink brand card with the page title and a blue
+pixel tide (`lib/og-tide.ts`), with the font in `assets/fonts`. `app/sitemap.ts` lists the pages from the same source as the sidebar, and
 `app/robots.ts` allows crawling and links the sitemap, so a new page needs nothing beyond its MDX
 file and a good `description` in its frontmatter (about 120 to 160 characters).
