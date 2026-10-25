@@ -354,6 +354,13 @@ if clients can't reach the app without passing through whatever sets that header
 Self-hosted instances send no analytics. PostHog only loads when `POSTHOG_KEY` is set (see
 `apps/web/.env.example`), and the key is read at runtime, so the same image never phones home.
 
+To exclude your own browser from PostHog, open `/_site/analytics` on your instance and select
+**Exclude this browser**. Repeat on the marketing site and app, in each browser you use. The
+choice survives network changes and reloads. **Include this browser** removes the exclusion.
+Only this explicit choice writes an exclusion flag to local storage. Clear site data to remove
+it, and reload other open tabs after a change. This does not remove past events or change paste
+view counts.
+
 The Analytics page counts views, unique visitors, code copies, raw reads, referrers, devices and
 countries in your own database, with no cookies and nothing sent anywhere else. A visitor is a
 daily hash of the address and browser under a random salt that is deleted after a day, so nobody
