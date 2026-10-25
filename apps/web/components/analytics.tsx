@@ -21,12 +21,12 @@ export function Analytics() {
       .then((response) =>
         response.status === 200 ? (response.json() as Promise<AnalyticsConfig>) : null,
       )
-      .then((config) => {
-        if (config) startAnalytics(config)
+      .then(async (config) => {
+        if (config) await startAnalytics(config)
         // Also without a key, so the marker never lingers in the address bar.
         consumeAuthMarker()
       })
-      .catch(() => {})
+      .catch(() => consumeAuthMarker())
   }, [])
 
   return null

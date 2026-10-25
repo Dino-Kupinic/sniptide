@@ -145,7 +145,6 @@
     "empty_trash_title": "清空回收站？",
     "empty_trash": "清空回收站",
     "trash_emptied": "回收站已清空",
-    "deleted_pastes_stay_here_for_30_days_their": "已删除的粘贴在此保留 30 天，其链接会立即失效。",
     "search_deleted_pastes": "搜索已删除的粘贴",
     "deleted_pastes_are_kept_for_30_days_their": "已删除的粘贴保留 30 天，链接已失效。",
     "no_deleted_pastes_match": "没有匹配的已删除粘贴。",

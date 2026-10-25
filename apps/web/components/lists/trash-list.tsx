@@ -84,8 +84,8 @@ function ConfirmDelete({
             {t("cancel")}
           </AlertDialogClose>
           <Button
+            variant="destructive"
             size="lg"
-            className="bg-destructive text-white hover:bg-destructive/85"
             loading={pending}
             onClick={() =>
               startTransition(async () => {
@@ -202,12 +202,7 @@ export function TrashList({
       onConfirm={emptyTrash}
       trigger={
         variant === "desktop" ? (
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={empty}
-            className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
-          >
+          <Button variant="destructive" size="lg" disabled={empty}>
             <Trash2Icon />
             {t("empty_trash")}
           </Button>
@@ -226,7 +221,6 @@ export function TrashList({
       <ListHeader
         title={t("trash")}
         count={pagination.totalAll}
-        description={t("deleted_pastes_stay_here_for_30_days_their")}
         actions={emptyButton("desktop")}
         mobileActions={empty ? null : emptyButton("mobile")}
       />
@@ -303,13 +297,13 @@ export function TrashList({
                           successMessage={t("paste_deleted")}
                           onConfirm={() => deleteForever(row.slug)}
                           trigger={
-                            <button
-                              type="button"
+                            <Button
+                              variant="destructive"
+                              size="icon-sm"
                               aria-label={t("delete_named_forever", { name: row.title })}
-                              className="rounded-md flex size-[30px] items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/40"
                             >
-                              <Trash2Icon className="size-4" />
-                            </button>
+                              <Trash2Icon />
+                            </Button>
                           }
                         />
                       </div>

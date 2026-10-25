@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "workspaces": {
+    "apps/docs": {
+      // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
+      "ignoreDependencies": ["@tailwindcss/postcss"]
+    },
+    "apps/web": {
+      "entry": ["scripts/**/*.ts", "test/**/*.test.ts", "tests/**/*.e2e.ts"],
+      // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
+      "ignoreDependencies": ["@tailwindcss/postcss"],
+      // The optional preview-video renderer uses a system FFmpeg installation.
+      "ignoreBinaries": ["ffmpeg"]
+    },
+    "packages/ui": {
+      // shadcn generates components on demand; postcss-load-config appears only in a JSDoc type.
+      "ignoreDependencies": ["shadcn", "postcss-load-config"]
+    },
+    "packages/auth": {
+      // Better Auth's inferred exported types need a direct Zod reference for portable declarations.
+      "ignoreDependencies": ["zod"]
+    }
+  }
+}
