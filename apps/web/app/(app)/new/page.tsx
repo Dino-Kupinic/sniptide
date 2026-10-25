@@ -11,6 +11,7 @@ import {
   readGistFiles,
 } from "@/lib/pastes/gist"
 import { limited, limits } from "@/lib/pastes/limits"
+import { suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import { getPaste } from "@/lib/pastes/store"
 
 export async function generateMetadata() {
@@ -64,6 +65,11 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
     getSession(),
   ])
   const draft = imported && "draft" in imported ? imported.draft : null
+  const files =
+    draft?.files ??
+    (source
+      ? source.files.map(({ name, content }) => ({ name, content }))
+      : [{ name: "untitled.txt", content: "" }])
 
   return (
     <PasteEditor
@@ -81,12 +87,8 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
       initial={{
         title: draft?.title ?? (source ? t("copyOf", { title: source.title }) : ""),
         description: draft?.description ?? source?.description ?? "",
-        files:
-          draft?.files ??
-          (source
-            ? source.files.map(({ name, content }) => ({ name, content }))
-            : [{ name: "untitled.txt", content: "" }]),
-        visibility: source?.visibility ?? preferences.defaultVisibility,
+        files,
+        visibility: suggestedVisibility(files, source?.visibility ?? preferences.defaultVisibility),
         expiry: preferences.defaultExpiry,
         slug: "",
         // A copy of a paste shared with the viewer can't go in its owner's collection.

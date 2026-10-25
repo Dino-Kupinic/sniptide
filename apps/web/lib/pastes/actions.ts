@@ -7,6 +7,7 @@ import { getConfig } from "@/lib/config"
 import { formatLimit } from "@/lib/format"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { revalidateWorkspace } from "@/lib/live/changes"
+import { changePreferences, readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
 import {
   fetchGist,
@@ -19,15 +20,31 @@ import {
 import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
 import { pasteSchema } from "./schema"
+import { hasSensitiveContent, suggestedVisibility } from "./smart-defaults"
 import * as store from "./store"
 import {
   ACCESSES,
   type Access,
   EXPIRIES,
+  type Expiry,
   type ShareInvite,
   type SharePerson,
   VISIBILITIES,
+  type Visibility,
 } from "./types"
+
+async function rememberDefaultsBestEffort(
+  userId: string,
+  visibility: Visibility,
+  expiry: Expiry | "keep",
+) {
+  if (expiry === "keep") return
+  await changePreferences(userId, (current) => ({
+    ...current,
+    defaultVisibility: visibility,
+    defaultExpiry: expiry,
+  })).catch(() => false)
+}
 
 async function assertSignedIn() {
   const session = await getSession()
@@ -109,6 +126,7 @@ export async function savePaste(
     if (!paste) return { ok: false, error: await actionError("pasteMissing") }
     if ("conflict" in paste) return { ok: false, error: await actionError("pasteConflict") }
 
+    if (!editing) await rememberDefaultsBestEffort(user, parsed.data.visibility, parsed.data.expiry)
     await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
@@ -387,7 +405,8 @@ export type GistPreview = {
   // The paste size limit, in bytes and as the label the UI shows ("1 MB").
   limitBytes: number
   limitLabel: string
-  files: { name: string; size: number; skipped: string | null }[]
+  defaults: { visibility: Visibility; expiry: Expiry }
+  files: { name: string; size: number; skipped: string | null; sensitive: boolean }[]
 }
 export type GistPreviewResult = { ok: true; gist: GistPreview } | { ok: false; error: string }
 
@@ -406,6 +425,7 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
 
   const { maxPasteBytes } = getConfig()
   const { gist } = result
+  const preferences = await readPreferences(user)
   return {
     ok: true,
     gist: {
@@ -414,11 +434,13 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
       title: gist.description ?? gist.files[0]?.name ?? "Imported gist",
       limitBytes: maxPasteBytes,
       limitLabel: formatLimit(maxPasteBytes),
+      defaults: { visibility: preferences.defaultVisibility, expiry: preferences.defaultExpiry },
       files: await Promise.all(
-        gist.files.map(async ({ name, size, skipped }) => ({
+        gist.files.map(async ({ name, size, skipped, content }) => ({
           name,
           size,
           skipped: skipped ? await translateActionError(skipped) : null,
+          sensitive: content === null || hasSensitiveContent([{ name, content }]),
         })),
       ),
     },
@@ -427,13 +449,15 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
 
 const importSchema = z.object({
   id: z.string().regex(/^[0-9a-f]{20,40}$/i),
+  visibility: z.enum(VISIBILITIES).optional(),
+  expiry: z.enum(EXPIRIES).optional(),
   files: z
     .array(z.string())
     .min(1, "Pick at least one file.")
     .max(10, "A paste can hold up to 10 files."),
 })
 
-// Copies the chosen files of a public GitHub gist into a new unlisted paste. The gist is read again, so
+// Copies the chosen files of a public GitHub gist into a new paste. The gist is read again, so
 // what's saved is what GitHub has now, and it goes through the same checks as a paste saved in
 // the editor.
 export async function importGist(input: z.input<typeof importSchema>): Promise<SavePasteResult> {
@@ -459,13 +483,17 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
 
   const read = await readGistFiles(gist, names)
   if (!read.ok) return { ok: false, error: await translateActionError(read.error) }
+  const preferences = await readPreferences(user)
+  const visibility = gist.files.some((file) => names.includes(file.name) && file.content === null)
+    ? "private"
+    : suggestedVisibility(read.files, choice.data.visibility ?? preferences.defaultVisibility)
 
   const parsed = pasteSchema.safeParse({
     title: gistTitle(gist, read.files[0]?.name),
     description: gistDescription(gist),
     files: read.files,
-    visibility: "unlisted",
-    expiry: "never",
+    visibility,
+    expiry: choice.data.expiry ?? preferences.defaultExpiry,
     slug: "",
     collection: null,
     password: null,
@@ -489,6 +517,7 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
       })),
     })
 
+    await rememberDefaultsBestEffort(user, parsed.data.visibility, parsed.data.expiry)
     await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
