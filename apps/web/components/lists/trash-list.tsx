@@ -15,9 +15,11 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
+  TablePinnedCell,
+  TablePinnedHead,
   TableRow,
+  TableSortHead,
 } from "@sniptide/ui/components/table"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
@@ -29,10 +31,14 @@ import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
 import {
+  DEFAULT_SORT_DIRECTION,
   PASTE_PAGE_SIZE,
   type PageInfo,
   type PasteListQuery,
+  type PasteSort,
   pasteListSearch,
+  type SortDirection,
+  sortDirection,
 } from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
 import { ActionSheet } from "./row-menu"
@@ -191,6 +197,17 @@ export function TrashList({
   const t = useTranslations("Workspace")
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
+  // The trash sorts by title, language and deletion time. "Deleted" and "Gone for good" are the
+  // same order, so both headers share the one sort and show the same arrow.
+  const sort: PasteSort =
+    query.sort === "title" || query.sort === "language" ? query.sort : "updated"
+  const direction = sortDirection({ sort, dir: query.dir })
+  const headProps = (value: PasteSort, firstDirection = DEFAULT_SORT_DIRECTION[value]) => ({
+    direction: sort === value ? direction : null,
+    firstDirection,
+    onSort: (next: SortDirection) =>
+      update({ sort: value, dir: next === DEFAULT_SORT_DIRECTION[value] ? undefined : next }),
+  })
 
   const empty = pagination.totalAll === 0
   const emptyButton = (variant: "desktop" | "mobile") => (
@@ -249,13 +266,19 @@ export function TrashList({
             <Table className="hidden min-w-[960px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>{t("paste")}</TableHead>
-                  <TableHead className="w-[130px]">{t("language")}</TableHead>
-                  <TableHead className="w-[130px]">{t("deleted")}</TableHead>
-                  <TableHead className="w-[206px]">{t("gone_for_good")}</TableHead>
-                  <TableHead className="w-[136px]">
+                  <TableSortHead {...headProps("title")}>{t("paste")}</TableSortHead>
+                  <TableSortHead {...headProps("language")} className="w-[140px]">
+                    {t("language")}
+                  </TableSortHead>
+                  <TableSortHead {...headProps("updated")} className="w-[140px]">
+                    {t("deleted")}
+                  </TableSortHead>
+                  <TableSortHead {...headProps("updated", "asc")} className="w-[200px]">
+                    {t("gone_for_good")}
+                  </TableSortHead>
+                  <TablePinnedHead className="w-[148px]">
                     <span className="sr-only">{t("actions")}</span>
-                  </TableHead>
+                  </TablePinnedHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -287,7 +310,7 @@ export function TrashList({
                         />
                       </span>
                     </TableCell>
-                    <TableCell className="pr-3">
+                    <TablePinnedCell>
                       <div className="flex items-center justify-end gap-1">
                         <RestoreButton slug={row.slug} />
                         <ConfirmDelete
@@ -307,7 +330,7 @@ export function TrashList({
                           }
                         />
                       </div>
-                    </TableCell>
+                    </TablePinnedCell>
                   </TableRow>
                 ))}
               </TableBody>

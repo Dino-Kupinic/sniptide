@@ -5,20 +5,14 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
+  TablePinnedCell,
+  TablePinnedHead,
   TableRow,
+  TableSortHead,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  FlameIcon,
-  GlobeIcon,
-  LinkIcon,
-  LockIcon,
-  StarIcon,
-} from "lucide-react"
+import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
@@ -28,11 +22,14 @@ import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
 import {
+  DEFAULT_SORT_DIRECTION,
   PASTE_PAGE_SIZE,
   type PageInfo,
   type PasteListQuery,
   type PasteSort,
   pasteListSearch,
+  type SortDirection,
+  sortDirection,
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
@@ -161,6 +158,14 @@ export function PasteList({
   const filtering = Boolean(
     query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
+  const direction = sortDirection(query)
+  // Each header starts in its sort's natural direction, and a flipped one is kept in the URL.
+  const headProps = (value: Sort) => ({
+    direction: sort === value ? direction : null,
+    firstDirection: DEFAULT_SORT_DIRECTION[value],
+    onSort: (next: SortDirection) =>
+      update({ sort: value, dir: next === DEFAULT_SORT_DIRECTION[value] ? undefined : next }),
+  })
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
   const range = `${formatNumber(start + 1, locale)}–${formatNumber(start + rows.length, locale)}`
 
@@ -170,7 +175,7 @@ export function PasteList({
         value: sort,
         defaultValue: "updated" as Sort,
         options: sortOptions,
-        onChange: (sort) => update({ sort }),
+        onChange: (sort) => update({ sort, dir: undefined }),
       }}
       filters={[
         {
@@ -201,7 +206,9 @@ export function PasteList({
       ]}
       total={pagination.total}
       pending={pending}
-      onClear={() => update({ sort: "updated", languages: [], visibility: [], collections: [] })}
+      onClear={() =>
+        update({ sort: "updated", dir: undefined, languages: [], visibility: [], collections: [] })
+      }
     />
   )
 
@@ -281,7 +288,11 @@ export function PasteList({
               />
             )}
           </div>
-          <SortMenu value={sort} options={sortOptions} onChange={(sort) => update({ sort })} />
+          <SortMenu
+            value={sort}
+            options={sortOptions}
+            onChange={(sort) => update({ sort, dir: undefined })}
+          />
         </div>
 
         <div
@@ -324,42 +335,28 @@ export function PasteList({
               ))}
             </ul>
           ) : (
-            <Table className="hidden min-w-[960px] table-fixed lg:table">
+            <Table className="hidden min-w-[1040px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <SortHead value="title" sort={sort} onSort={(sort) => update({ sort })}>
-                    {t("paste")}
-                  </SortHead>
-                  <TableHead className="w-[130px]">{t("language")}</TableHead>
-                  <TableHead className="w-[156px]">{t("visibility")}</TableHead>
-                  <SortHead
-                    value="views"
-                    sort={sort}
-                    onSort={(sort) => update({ sort })}
-                    className="w-20 text-right"
-                    alignEnd
-                  >
+                  <TableSortHead {...headProps("title")}>{t("paste")}</TableSortHead>
+                  <TableSortHead {...headProps("language")} className="w-[140px]">
+                    {t("language")}
+                  </TableSortHead>
+                  <TableSortHead {...headProps("visibility")} className="w-[160px]">
+                    {t("visibility")}
+                  </TableSortHead>
+                  <TableSortHead {...headProps("views")} className="w-24" alignEnd>
                     {t("views")}
-                  </SortHead>
-                  <SortHead
-                    value="expires"
-                    sort={sort}
-                    onSort={(sort) => update({ sort })}
-                    className="w-[130px] pl-7"
-                  >
+                  </TableSortHead>
+                  <TableSortHead {...headProps("expires")} className="w-[140px]">
                     {t("expires")}
-                  </SortHead>
-                  <SortHead
-                    value="updated"
-                    sort={sort}
-                    onSort={(sort) => update({ sort })}
-                    className="w-[116px]"
-                  >
+                  </TableSortHead>
+                  <TableSortHead {...headProps("updated")} className="w-[140px]">
                     {t("updated")}
-                  </SortHead>
-                  <TableHead className="w-12">
+                  </TableSortHead>
+                  <TablePinnedHead className="w-16">
                     <span className="sr-only">{t("actions")}</span>
-                  </TableHead>
+                  </TablePinnedHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -387,15 +384,13 @@ export function PasteList({
                     <TableCell className="text-right font-mono text-[13px] tabular-nums">
                       {formatNumber(row.views, locale)}
                     </TableCell>
-                    <TableCell
-                      className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}
-                    >
+                    <TableCell className={cn("text-[13px] text-foreground/80", expiryClass(row))}>
                       {row.expiresLabel}
                     </TableCell>
                     <TableCell className="text-[13px] text-muted-foreground">
                       {row.updatedLabel}
                     </TableCell>
-                    <TableCell className="pr-3 text-right">
+                    <TablePinnedCell className="text-center">
                       {mode === "starred" ? (
                         <button
                           type="button"
@@ -415,7 +410,7 @@ export function PasteList({
                       ) : (
                         <RowMenu row={row} origin={origin} />
                       )}
-                    </TableCell>
+                    </TablePinnedCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -493,53 +488,6 @@ export function PasteList({
         </div>
       </div>
     </div>
-  )
-}
-
-// A column header that sorts the list by that column. Title and expiry sort ascending (A to Z,
-// soonest first), views and updated descending (most, newest first); the arrow says which.
-function SortHead({
-  value,
-  sort,
-  onSort,
-  className,
-  alignEnd = false,
-  children,
-}: {
-  value: Sort
-  sort: Sort
-  onSort: (sort: Sort) => void
-  className?: string
-  alignEnd?: boolean
-  children: React.ReactNode
-}) {
-  const active = sort === value
-  const ascending = value === "title" || value === "expires"
-  const Arrow = ascending ? ArrowUpIcon : ArrowDownIcon
-  return (
-    <TableHead
-      aria-sort={active ? (ascending ? "ascending" : "descending") : "none"}
-      className={className}
-    >
-      <button
-        type="button"
-        onClick={() => onSort(value)}
-        className={cn(
-          "group/sort -mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
-          active && "text-foreground",
-          alignEnd && "flex-row-reverse",
-        )}
-      >
-        {children}
-        <Arrow
-          aria-hidden="true"
-          className={cn(
-            "size-3 transition-opacity",
-            active ? "opacity-100" : "opacity-0 group-hover/sort:opacity-60",
-          )}
-        />
-      </button>
-    </TableHead>
   )
 }
 
