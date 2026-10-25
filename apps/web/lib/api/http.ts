@@ -1,6 +1,7 @@
 import "server-only"
 
 import { ZodError } from "zod"
+import { recordApiRequest } from "@/lib/account/usage"
 import { hit, type Limit } from "@/lib/rate-limit"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS } from "@/lib/time"
@@ -67,6 +68,7 @@ export async function withToken(
   try {
     const owner = await authenticate(request)
     if (!owner) return failure(401, "The API token is missing, invalid, expired or revoked.")
+    await recordApiRequest(owner)
     if (!owner.scopes.includes(scope))
       return failure(403, `This token doesn't have the ${scope} scope.`)
     const limit = await hit([apiLimits.request(owner.tokenId)])
