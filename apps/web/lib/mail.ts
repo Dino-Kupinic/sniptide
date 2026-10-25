@@ -4,15 +4,18 @@ import net from "node:net"
 import tls from "node:tls"
 import nodemailer from "nodemailer"
 import type Mail from "nodemailer/lib/mailer"
-import type { SMTPTransportOptions } from "nodemailer/lib/smtp-transport"
+import type { SMTPPoolOptions } from "nodemailer/lib/smtp-pool"
 import { type Config, getConfig } from "@/lib/config"
 import { hit } from "@/lib/rate-limit"
 import { HOUR_SECONDS } from "@/lib/time"
 
-export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.Options) {
+function mailTransport(smtp: NonNullable<Config["smtp"]>) {
   let socket: net.Socket | undefined
-  let timedOut = false
+  let closed = false
   const transport = nodemailer.createTransport({
+    pool: true,
+    maxConnections: 1,
+    maxRequeues: 0,
     host: smtp.host,
     port: smtp.port,
     secure: smtp.secure,
@@ -26,7 +29,7 @@ export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.
     logger: false,
     debug: false,
     getSocket(_options, callback) {
-      if (timedOut) {
+      if (closed) {
         callback(new Error("Delivery deadline exceeded"), {})
         return
       }
@@ -44,23 +47,56 @@ export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.
         if (!connected) callback(error, {})
       })
     },
-  } satisfies SMTPTransportOptions)
-  let timer: ReturnType<typeof setTimeout> | undefined
+  } satisfies SMTPPoolOptions)
+  return {
+    transport,
+    close() {
+      closed = true
+      socket?.destroy()
+      transport.close()
+    },
+  }
+}
+
+// One owner sends sequentially, so a delivery deadline can only close its own connection.
+export function createMailSender(smtp: NonNullable<Config["smtp"]>) {
+  let current: ReturnType<typeof mailTransport> | undefined
+  return {
+    async send(message: Mail.Options) {
+      current ??= mailTransport(smtp)
+      const connection = current
+      let timer: ReturnType<typeof setTimeout> | undefined
+      try {
+        await Promise.race([
+          connection.transport.sendMail(message),
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => {
+              connection.close()
+              reject(new Error("Delivery deadline exceeded"))
+            }, 30_000)
+          }),
+        ])
+      } catch (error) {
+        connection.close()
+        if (current === connection) current = undefined
+        throw error
+      } finally {
+        clearTimeout(timer)
+      }
+    },
+    close() {
+      current?.close()
+      current = undefined
+    },
+  }
+}
+
+export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.Options) {
+  const sender = createMailSender(smtp)
   try {
-    await Promise.race([
-      transport.sendMail(message),
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => {
-          timedOut = true
-          socket?.destroy(new Error("Delivery deadline exceeded"))
-          reject(new Error("Delivery deadline exceeded"))
-        }, 30_000)
-      }),
-    ])
+    await sender.send(message)
   } finally {
-    clearTimeout(timer)
-    socket?.destroy()
-    transport.close()
+    sender.close()
   }
 }
 
