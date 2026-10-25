@@ -90,19 +90,19 @@ where the overlap ends.
 | Claim | Where |
 | --- | --- |
 | AGPL-3.0 | `LICENSE` |
-| Docker, Compose, Coolify, sign-up and invite settings | `README.md` (Self-hosting, Settings) |
+| Docker, Compose, Coolify, sign-up and invite settings | `apps/docs/content/docs/self-hosting/` |
 | Visibility, password hash, burn after read, tags, collection, expiry | `packages/db/src/schema/pastes.ts` |
 | Expiry choices `1h`, `1d`, `1w`, `1m`, `never` | `apps/web/lib/pastes/types.ts` |
 | View/edit access when sharing with a person | `apps/web/lib/pastes/types.ts` (`ACCESSES`) |
 | Revisions with snapshots | `packages/db/src/schema/pastes.ts` (`pasteRevision`) |
 | Collections | `packages/db/src/schema/collections.ts` |
 | Env values encrypted with AES-256-GCM | `packages/db/src/schema/env.ts`, `apps/web/lib/env/crypto.ts` |
-| Token API and OpenAPI | `README.md` (API reference), `apps/web/lib/openapi.ts` |
+| Token API and OpenAPI | `docs/development.md` (Document the API), `apps/web/lib/openapi.ts` |
 | MCP tools, bearer-token auth, not on npm | `packages/mcp/README.md` |
 | CLI features, not on npm | `packages/cli/README.md` |
 | Limits (1 MiB, 10 files, 1 GiB, 10,000 pastes) | `packages/cli/README.md`, `docs/scaling.md` |
 | Free during early access | `apps/web/components/settings/settings-view.tsx` (Billing tab) |
-| Analytics | `README.md` (Settings) |
+| Analytics | `apps/docs/content/docs/core-concepts/analytics.mdx` |
 
 ## Sources
 

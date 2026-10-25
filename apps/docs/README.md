@@ -39,7 +39,10 @@ docker build -f apps/docs/Dockerfile --build-arg APP_URL=https://app.example.com
 docker run -p 3000:3000 sniptide-docs
 ```
 
-The root README describes the Coolify service.
+For Coolify, use this repository on branch `main` with the Dockerfile build pack. Set the base
+directory to `/` and Dockerfile location to `/apps/docs/Dockerfile`. Expose port `3000` and use
+`GET /` for the health check. Set `APP_URL` and `SITE_URL` as build variables for your domains.
+The service needs no database.
 
 ## Search engines and link previews
 
