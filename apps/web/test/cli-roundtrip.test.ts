@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { inspectModeration, transitionModeration } from "@workspace/db/moderation"
 import { collection } from "@workspace/db/schema"
 import { GET as collectionPastes } from "@/app/api/v1/collections/[slug]/pastes/route"
 import { DELETE as deleteEnv, GET as getEnv, PUT as putEnv } from "@/app/api/v1/env/[group]/route"
@@ -12,7 +13,7 @@ import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/rout
 import { createToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { run } from "../../../packages/cli/src/cli"
-import { hasDatabase, resetDatabase, seedUser } from "./harness"
+import { hasDatabase, resetDatabase, seedPaste, seedUser } from "./harness"
 
 // WRK-115's acceptance check: the real `sniptide` CLI, talking HTTP to the real /api/v1 route
 // handlers on the test database, pushes a component with its folder structure from one project
@@ -170,5 +171,44 @@ describeDb("sniptide CLI against the app", () => {
     expect((await cli(["env", "list"], two)).data.groups).toEqual([
       expect.objectContaining({ slug: "shop", variables: 2 }),
     ])
+  })
+
+  test("restricted pastes cannot be pulled, searched or exported by the CLI", async () => {
+    const target = path.join(root, "destination")
+    await mkdir(target)
+    await getDb().insert(collection).values({ ownerId: "ada", slug: "ui", name: "UI" })
+    for (const state of ["pending", "quarantined", "removed"] as const) {
+      const created = await seedPaste({
+        slug: `restricted-${state}`,
+        owner: "ada",
+        title: "synthetic-cli-marker",
+        content: "synthetic-cli-marker",
+        collection: "ui",
+      })
+      const current = await inspectModeration(getDb(), created.id)
+      if (!current) throw new Error("Missing synthetic paste")
+      await transitionModeration(
+        getDb(),
+        {
+          commandId: crypto.randomUUID(),
+          pasteId: created.id,
+          expectedContentVersion: current.contentVersion,
+          expectedModerationVersion: current.moderationVersion,
+          state,
+          reasonCode: "review",
+          caseReference: crypto.randomUUID(),
+        },
+        "cli-test-operator",
+      )
+      const pulled = await cli(["pull", created.id], target)
+      expect(pulled.code).not.toBe(0)
+      expect(pulled.stdout + pulled.stderr).not.toContain("synthetic-cli-marker")
+      expect((await cli(["search", "synthetic-cli-marker"], root)).data.pastes).toEqual([])
+      const collectionResult = await cli(["pull", "collection:ui", "--dir", target], root)
+      expect(collectionResult.stdout + collectionResult.stderr).not.toContain(
+        "synthetic-cli-marker",
+      )
+      expect(await readdir(target)).toEqual([])
+    }
   })
 })

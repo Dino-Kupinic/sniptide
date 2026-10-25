@@ -8,6 +8,7 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
+    "moderation": "bun src/moderation-cli.ts",
     "db:migrate": "bun src/migrate-cli.ts"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts",
     "./migrate": "./src/migrate.ts",
+    "./moderation": "./src/moderation.ts",
     "./config": "./src/config.ts"
   }
 }
