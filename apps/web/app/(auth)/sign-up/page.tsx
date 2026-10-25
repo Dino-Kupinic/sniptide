@@ -4,11 +4,12 @@ import { RequestAccess } from "@/components/auth/request-access"
 import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata() {
   const t = await getTranslations("Auth")
-  return { title: t("signUpTitle") }
+  return { title: t("signUpTitle"), description: t("signUpDescription") }
 }
 
 export default async function Page({ searchParams }: PageProps<"/sign-up">) {
@@ -54,10 +55,16 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
     )
   }
 
+  // A self-hosted server can turn the storage limit off, which leaves no figure to quote.
+  const limitBytes = accountBudget().bytes
   return (
     <AuthScreen
       title={t("createAccount")}
-      subtitle={t("signUpSubtitle")}
+      subtitle={
+        limitBytes === null
+          ? t("signUpSubtitleNoLimit")
+          : t("signUpSubtitle", { limit: limitBytes / 1024 / 1024 })
+      }
       legal={legal}
       pitch={{
         title: [t("signUpPitchTitle1"), t("signUpPitchTitle2")],

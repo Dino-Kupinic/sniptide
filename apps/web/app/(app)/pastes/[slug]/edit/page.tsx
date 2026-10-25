@@ -34,6 +34,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
       collections={collections}
       draftScope={session?.user.id ?? ""}
       indentation={preferences.indentation}
+      lineNumbers={preferences.lineNumbers}
       secretDetection={preferences.secretDetection}
       currentExpiresAt={paste.expiresAt}
       initial={{

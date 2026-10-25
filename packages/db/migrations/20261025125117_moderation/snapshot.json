@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6d585f36-efb5-4eb2-b7e9-ee17c6b26be2",
+  "id": "e62b7359-7652-4d3b-ba6a-4aac35195182",
   "prevIds": [
-    "1c139f0b-7918-40c3-8092-3ffc41caa26a"
+    "d4bdc10c-2ba3-42e1-9acb-378fb34c611e"
   ],
   "ddl": [
     {
@@ -544,6 +544,19 @@
       "generated": null,
       "identity": null,
       "name": "email_verified",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "user"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "pending_invitation",
       "entityType": "columns",
       "schema": "public",
       "table": "user"

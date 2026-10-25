@@ -34,7 +34,7 @@
     "homepage": "Homepage",
     "documentation": "Documentation",
     "help": "Help",
-    "log_out": "Log out",
+    "log_out": "Sign out",
     "system": "System",
     "light": "Light",
     "dark": "Dark",
@@ -328,7 +328,21 @@
     "view_all_count": "View all {count, number}",
     "secrets": "Secrets",
     "workflows": "Workflows",
-    "coming_soon": "Coming soon"
+    "coming_soon": "Coming soon",
+    "chart_point": "{day}: {value}",
+    "week_of": "Week of {day}",
+    "chart_date": "Date",
+    "chart_empty": "Nothing was recorded in this period.",
+    "analytics_empty": "None of your pastes were opened in this period. Views, referrers and countries show up here once someone opens a link.",
+    "sort_and_filter": "Sort and filter",
+    "sort_and_filter_active": "Sort and filter, {count, plural, one {# active} other {# active}}",
+    "clear_all": "Clear all",
+    "show_results": "{count, plural, one {Show # paste} other {Show # pastes}}",
+    "change_icon": "Change icon",
+    "move_up": "Move up",
+    "move_down": "Move down",
+    "done": "Done",
+    "searching": "Searching…"
   },
   "Secrets": {
     "title": "Secrets",
@@ -434,6 +448,9 @@
     "create_first_group": "Create your first secret group",
     "all_environments": "All",
     "filter_groups": "Filter by name or project…",
-    "no_matches": "No secret groups match these filters."
+    "no_matches": "No secret groups match these filters.",
+    "empty_sentence": "No secret groups yet.",
+    "saved": "Secret group saved",
+    "value_copied": "Copied {name}"
   }
 }

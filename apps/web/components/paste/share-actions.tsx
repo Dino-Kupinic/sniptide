@@ -2,11 +2,15 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
-import { CopyIcon, DownloadIcon } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@sniptide/ui/components/tooltip"
+import { CopyIcon, DownloadIcon, PrinterIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { reportCopy, useCopy } from "./copy-button"
+import { useActiveFile } from "./file-viewer"
 
-// Raw / Download / Copy code on the public page, for the paste's first file.
+// Raw / Download / Print / Copy code on the public page, for the paste's first file. Print needs
+// the slug, so a burn-after-read paste that is already gone doesn't offer it. The compact row for
+// phones follows the file open in the code card when an ActiveFileProvider wraps the page.
 export function ShareActions({
   slug,
   rawHref,
@@ -21,24 +25,34 @@ export function ShareActions({
 }) {
   const t = useTranslations("Paste")
   const { copied, copy } = useCopy()
+  const active = useActiveFile()
   const copyCode = async () => {
-    if ((await copy(content)) && slug) reportCopy(slug)
+    if ((await copy(compact && active ? active.content : content)) && slug) reportCopy(slug)
   }
 
   if (compact) {
+    const href =
+      rawHref && active && slug ? `/${slug}/raw?file=${encodeURIComponent(active.name)}` : rawHref
     return (
       <div className="flex gap-2">
-        {rawHref ? (
-          <Button
-            variant="outline"
-            className="h-[46px] px-4 text-base"
-            render={<a href={rawHref} />}
-            nativeButton={false}
-          >
-            {t("raw")}
-          </Button>
+        {href ? (
+          <>
+            <Button variant="outline" size="xl" render={<a href={href} />} nativeButton={false}>
+              {t("raw")}
+            </Button>
+            <Button
+              variant="outline"
+              size="xl"
+              aria-label={t("downloadFile", { name: active?.name ?? "" })}
+              className="px-3"
+              render={<a href={`${href}&download=1`} />}
+              nativeButton={false}
+            >
+              <DownloadIcon />
+            </Button>
+          </>
         ) : null}
-        <Button className="h-[46px] flex-1 gap-2 text-base font-semibold" onClick={copyCode}>
+        <Button size="xl" className="min-w-0 flex-1" onClick={copyCode}>
           {copied ? <SuccessCheck /> : <CopyIcon />}
           <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
         </Button>
@@ -63,6 +77,24 @@ export function ShareActions({
             {t("download")}
           </Button>
         </>
+      ) : null}
+      {slug ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-lg"
+                aria-label={t("print")}
+                render={<a href={`/${slug}/print`} target="_blank" rel="noopener" />}
+                nativeButton={false}
+              />
+            }
+          >
+            <PrinterIcon />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t("print")}</TooltipContent>
+        </Tooltip>
       ) : null}
       <Button size="lg" onClick={copyCode}>
         {copied ? <SuccessCheck /> : <CopyIcon />}

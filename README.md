@@ -100,6 +100,8 @@ adding better-auth plugins.
 
 Keep migrations additive (new tables and columns) where possible: the old container keeps
 serving until the new one is healthy, and it runs against the migrated database.
+Migration rules (transactional statements only, never editing a released migration) are in
+[CONTRIBUTING.md](CONTRIBUTING.md#database-migrations).
 
 ## Deploy
 
@@ -114,6 +116,7 @@ Coolify builds the `Dockerfile` from `main` and runs it. One-time setup of the C
   - `BETTER_AUTH_SECRET`: a long random string (`openssl rand -hex 32`)
   - `BETTER_AUTH_URL`: `https://app.sniptide.com`
   - `SHARE_URL`: `https://sniptide.com` (share links' domain, see below)
+  - `HOME_URL`: `https://sniptide.com/home`, where the logo on the sign-in screens leads
   - `COOKIE_DOMAIN`: `sniptide.com`, so the landing page can see the session and send signed-in
     visitors to the app. Leave unset on a single domain.
   - optional: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID`,
@@ -167,6 +170,8 @@ up next to the app:
 - **Build variable:** `APP_URL`: `https://app.sniptide.com`, where the app runs. The nav's "API
   reference" and "Open Sniptide" links point there. The pages are prerendered, so it is read when
   the image is built; changing it means a redeploy.
+- **Build variable:** `SITE_URL`: `https://docs.sniptide.com`, the address the docs are served at.
+  Canonical links, the sitemap and link previews use it, so set it before the first deploy.
 - **Domain:** `https://docs.sniptide.com`.
 
 ## Self-hosting
@@ -174,6 +179,17 @@ up next to the app:
 The official image is `ghcr.io/dino-kupinic/sniptide`, with Linux AMD64 and ARM64 support.
 It contains the standalone Next.js server, static assets and database migrations. Settings come
 from environment variables at runtime; no database or auth credentials are needed to build it.
+
+Use an HTTPS domain at its root, such as `https://paste.example.com`. Hosting the web app under a
+path such as `/sniptide` is not supported. HTTP on a server IP is enough to check startup, but
+copy buttons and password-protected paste unlocks need HTTPS. The CLI and local MCP process also
+require HTTPS except on loopback addresses such as `localhost`.
+
+Set `BETTER_AUTH_URL` to that public origin. On one domain, leave `SHARE_URL` and `COOKIE_DOMAIN`
+unset. Configure your reverse proxy to forward the public host and scheme. For the CLI and local
+MCP process, set `SNIPTIDE_BASE_URL` to your instance and use a token created there; the default
+client URL points at Sniptide Cloud. Remote MCP clients connect to
+`https://paste.example.com/api/mcp` with a token from that instance.
 
 With an existing Postgres database, create a `sniptide.env` file (keep it out of source control):
 
@@ -258,6 +274,25 @@ domain, so there is nothing to fill in before the first deploy. In a Coolify pro
 contributed to Coolify's one-click service list. The optional settings (sign-up, OAuth, webhooks,
 `MAX_PASTE_SIZE`) show up as environment variables on the resource.
 
+### Backups, restore and upgrades
+
+Everything lives in Postgres. With the Compose setup, from the folder with `docker-compose.yml`:
+
+```bash
+bash scripts/backup.sh                            # ./backups/sniptide-<UTC time>.dump
+bash scripts/restore.sh backups/sniptide-….dump   # replaces the database; works on a new server too
+docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d   # scheduled backups
+```
+
+Keep `BETTER_AUTH_SECRET` (and `ENV_SECRETS_KEY`, if set) with the backups: without them sessions
+are lost and env groups can't be decrypted. Back up before every upgrade. Migrations apply on
+startup in one transaction, so a failed upgrade leaves the database as it was; there is no
+downgrade, so you go back by restoring the backup. For Coolify, add the container from
+`deploy/coolify/backup-sidecar.yaml`. The full procedure is in the docs
+(`apps/docs/content/docs/self-hosting/backups.mdx`), and CI proves it on every pull request with
+`scripts/test-upgrade.sh`: seed the latest release, back up, upgrade, and restore into the running
+stack and into a new one.
+
 ### Settings
 
 Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`; add `BETTER_AUTH_URL` so browsers
@@ -270,8 +305,9 @@ unless you turn them on:
 | Email and password sign-in | On, always | n/a |
 | GitHub and Google sign-in | Off; buttons render disabled | `GITHUB_CLIENT_ID`/`_SECRET`, `GOOGLE_CLIENT_ID`/`_SECRET` |
 | Open sign-up | On: anyone can create an account | `ALLOW_SIGN_UP=false` closes it for everyone; existing accounts keep signing in |
-| Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails (`WAITLIST_URL` adds an "apply" link) |
+| Invite list | Off | `ALLOWED_EMAILS=a@example.com,b@example.com` limits sign-up to those emails. New password accounts require SMTP email verification; existing accounts keep signing in (`WAITLIST_URL` adds an "apply" link). |
 | Public demo | Off | `DEMO_MODE=true` signs every visitor in to a shared guest account with example pastes and resets it every `DEMO_RESET_MINUTES` (60); use with `ALLOW_SIGN_UP=false` |
+| Account menu links | Homepage, Documentation and Help point at the Sniptide project | `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` |
 | PostHog analytics | Off; nothing is sent | `POSTHOG_KEY` |
 | Slack and Discord sharing | Off | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` |
 | Notification emails | Off; users opt in per event | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`; optional paired `SMTP_USER`/`SMTP_PASSWORD` |
@@ -320,6 +356,13 @@ if clients can't reach the app without passing through whatever sets that header
 Self-hosted instances send no analytics. PostHog only loads when `POSTHOG_KEY` is set (see
 `apps/web/.env.example`), and the key is read at runtime, so the same image never phones home.
 
+To exclude your own browser from PostHog, open `/_site/analytics` on your instance and select
+**Exclude this browser**. Repeat on the marketing site and app, in each browser you use. The
+choice survives network changes and reloads. **Include this browser** removes the exclusion.
+Only this explicit choice writes an exclusion flag to local storage. Clear site data to remove
+it, and reload other open tabs after a change. This does not remove past events or change paste
+view counts.
+
 The Analytics page counts views, unique visitors, code copies, raw reads, referrers, devices and
 countries in your own database, with no cookies and nothing sent anywhere else. A visitor is a
 daily hash of the address and browser under a random salt that is deleted after a day, so nobody
@@ -329,8 +372,9 @@ the CDN's header (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Co
 no country data without one in front. `GET /api/stats?range=7d|30d|90d|24h` returns the same
 figures as JSON for the signed-in account.
 
-Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). To give them a
-separate domain, for example a short one:
+Share links live on the app's own domain by default (`paste.example.com/k7Qe2x`). Instances with
+separate domains and databases can use the same slug without conflict. Duplicate slugs within
+one database are rejected. To give share links a separate domain, for example a short one:
 
 1. Point that domain at the same container too (a second domain on the Coolify resource, or another
    `server_name`/host rule in your reverse proxy).
@@ -377,7 +421,8 @@ database and a production build.
 
 `.github/workflows/ci.yml` runs on every pull request and push to `main`: `biome ci`, lint,
 typecheck, `next build` (the app and the docs), production Docker builds and startup tests for the
-app and the docs site, Bun integration tests, and
+app and the docs site, an upgrade, backup and restore check against the latest release, Bun
+integration tests, and
 Chromium browser tests against an isolated PostgreSQL database and production build.
 
 ### Container releases

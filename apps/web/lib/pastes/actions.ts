@@ -1,12 +1,13 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { collectionExists } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { formatLimit } from "@/lib/format"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
+import { revalidateWorkspace } from "@/lib/live/changes"
+import { changePreferences, readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
 import {
   fetchGist,
@@ -19,15 +20,31 @@ import {
 import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
 import { pasteSchema } from "./schema"
+import { hasSensitiveContent, suggestedVisibility } from "./smart-defaults"
 import * as store from "./store"
 import {
   ACCESSES,
   type Access,
   EXPIRIES,
+  type Expiry,
   type ShareInvite,
   type SharePerson,
   VISIBILITIES,
+  type Visibility,
 } from "./types"
+
+async function rememberDefaultsBestEffort(
+  userId: string,
+  visibility: Visibility,
+  expiry: Expiry | "keep",
+) {
+  if (expiry === "keep") return
+  await changePreferences(userId, (current) => ({
+    ...current,
+    defaultVisibility: visibility,
+    defaultExpiry: expiry,
+  })).catch(() => false)
+}
 
 async function assertSignedIn() {
   const session = await getSession()
@@ -109,7 +126,8 @@ export async function savePaste(
     if (!paste) return { ok: false, error: await actionError("pasteMissing") }
     if ("conflict" in paste) return { ok: false, error: await actionError("pasteConflict") }
 
-    revalidatePath("/", "layout")
+    if (!editing) await rememberDefaultsBestEffort(user, parsed.data.visibility, parsed.data.expiry)
+    await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
     if (error instanceof store.PasteBudgetError)
@@ -169,7 +187,7 @@ export async function autosavePaste(
 
     // If the custom link changed, the page the editor is on no longer exists. Refreshing it now
     // would 404 under the editor, so the editor moves to the new link first and refreshes there.
-    if (result.slug === editing) revalidatePath("/", "layout")
+    if (result.slug === editing) await revalidateWorkspace(user)
     return { ok: true, ...result }
   } catch (error) {
     if (error instanceof store.PasteBudgetError)
@@ -195,7 +213,7 @@ export async function restoreRevision(slug: string, revisionId: number) {
   if (tooOften) return { ok: false as const, error: await translateActionError(tooOften) }
 
   const result = await store.restoreRevision(slug, revisionId)
-  if (result.ok) revalidatePath("/", "layout")
+  if (result.ok) await revalidateWorkspace(user)
   return result.ok ? result : { ...result, error: await translateActionError(result.error) }
 }
 
@@ -215,9 +233,9 @@ const sharingSchema = z.object({
 })
 
 export async function updateSharing(slug: string, input: z.input<typeof sharingSchema>) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.updateSharing(slug, sharingSchema.parse(input))
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export type FindPersonResult =
@@ -270,20 +288,20 @@ export async function setShareAccess(
   userId: string,
   access: Access,
 ): Promise<ShareResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = z.enum(ACCESSES).safeParse(access)
   if (!parsed.success) return { ok: false, error: await actionError("pickAccess") }
   if (!(await store.sharePaste(slug, userId, parsed.data))) {
     return { ok: false, error: await actionError("shareMissing") }
   }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
 
 export async function removeShare(slug: string, userId: string): Promise<ShareResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.unsharePaste(slug, userId)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
 
@@ -295,7 +313,7 @@ export async function restoreRemovedShare(
   access: Access,
   sharedAt: number,
 ): Promise<ShareResult> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = z
     .object({ access: z.enum(ACCESSES), sharedAt: z.number().int().positive() })
     .safeParse({ access, sharedAt })
@@ -304,35 +322,35 @@ export async function restoreRemovedShare(
   if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
     return { ok: false, error: await actionError("shareMissing") }
   }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
 
 // Drops a paste someone shared with the viewer from their Shared with me.
 export async function leaveShare(slug: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.leaveShare(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 // Undoes leaveShare, unless the owner has revoked the share since.
 export async function restoreShare(slug: string): Promise<ActionOutcome> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   if (!(await store.restoreShare(slug))) {
     return { ok: false, error: await actionError("shareRevoked") }
   }
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true }
 }
 
 export async function setStarred(slug: string, starred: boolean) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.setStarred(slug, starred)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export async function renamePaste(slug: string, title: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const parsed = pasteSchema.shape.title.safeParse(title)
   if (!parsed.success) {
     return {
@@ -341,43 +359,43 @@ export async function renamePaste(slug: string, title: string) {
     }
   }
   await store.renamePaste(slug, parsed.data)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true as const }
 }
 
 export async function setPasteCollection(slug: string, collection: string | null) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   if (collection !== null && !(await collectionExists(collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
   await store.setPasteCollection(slug, collection)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return { ok: true as const }
 }
 
 export async function trashPaste(slug: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.trashPaste(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export async function restorePaste(slug: string): Promise<ActionOutcome> {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   const restored = await store.restorePaste(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
   return restored ? { ok: true } : { ok: false, error: await actionError("pasteGone") }
 }
 
 export async function deleteForever(slug: string) {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.deleteForever(slug)
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export async function emptyTrash() {
-  await assertSignedIn()
+  const user = await assertSignedIn()
   await store.emptyTrash()
-  revalidatePath("/", "layout")
+  await revalidateWorkspace(user)
 }
 
 export type GistPreview = {
@@ -387,7 +405,8 @@ export type GistPreview = {
   // The paste size limit, in bytes and as the label the UI shows ("1 MB").
   limitBytes: number
   limitLabel: string
-  files: { name: string; size: number; skipped: string | null }[]
+  defaults: { visibility: Visibility; expiry: Expiry }
+  files: { name: string; size: number; skipped: string | null; sensitive: boolean }[]
 }
 export type GistPreviewResult = { ok: true; gist: GistPreview } | { ok: false; error: string }
 
@@ -406,6 +425,7 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
 
   const { maxPasteBytes } = getConfig()
   const { gist } = result
+  const preferences = await readPreferences(user)
   return {
     ok: true,
     gist: {
@@ -414,11 +434,13 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
       title: gist.description ?? gist.files[0]?.name ?? "Imported gist",
       limitBytes: maxPasteBytes,
       limitLabel: formatLimit(maxPasteBytes),
+      defaults: { visibility: preferences.defaultVisibility, expiry: preferences.defaultExpiry },
       files: await Promise.all(
-        gist.files.map(async ({ name, size, skipped }) => ({
+        gist.files.map(async ({ name, size, skipped, content }) => ({
           name,
           size,
           skipped: skipped ? await translateActionError(skipped) : null,
+          sensitive: content === null || hasSensitiveContent([{ name, content }]),
         })),
       ),
     },
@@ -427,13 +449,15 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
 
 const importSchema = z.object({
   id: z.string().regex(/^[0-9a-f]{20,40}$/i),
+  visibility: z.enum(VISIBILITIES).optional(),
+  expiry: z.enum(EXPIRIES).optional(),
   files: z
     .array(z.string())
     .min(1, "Pick at least one file.")
     .max(10, "A paste can hold up to 10 files."),
 })
 
-// Copies the chosen files of a public GitHub gist into a new unlisted paste. The gist is read again, so
+// Copies the chosen files of a public GitHub gist into a new paste. The gist is read again, so
 // what's saved is what GitHub has now, and it goes through the same checks as a paste saved in
 // the editor.
 export async function importGist(input: z.input<typeof importSchema>): Promise<SavePasteResult> {
@@ -459,13 +483,17 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
 
   const read = await readGistFiles(gist, names)
   if (!read.ok) return { ok: false, error: await translateActionError(read.error) }
+  const preferences = await readPreferences(user)
+  const visibility = gist.files.some((file) => names.includes(file.name) && file.content === null)
+    ? "private"
+    : suggestedVisibility(read.files, choice.data.visibility ?? preferences.defaultVisibility)
 
   const parsed = pasteSchema.safeParse({
     title: gistTitle(gist, read.files[0]?.name),
     description: gistDescription(gist),
     files: read.files,
-    visibility: "unlisted",
-    expiry: "never",
+    visibility,
+    expiry: choice.data.expiry ?? preferences.defaultExpiry,
     slug: "",
     collection: null,
     password: null,
@@ -489,7 +517,8 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
       })),
     })
 
-    revalidatePath("/", "layout")
+    await rememberDefaultsBestEffort(user, parsed.data.visibility, parsed.data.expiry)
+    await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
     if (error instanceof store.PasteBudgetError)

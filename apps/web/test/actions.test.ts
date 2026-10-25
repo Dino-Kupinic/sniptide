@@ -13,6 +13,7 @@ import {
   setPasteCollection,
   trashPaste,
 } from "@/lib/pastes/actions"
+import { changePreferences, readPreferences } from "@/lib/preference-store"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // The server actions behind the editor and the gist import: the same limits for both, and a
@@ -111,9 +112,10 @@ describeDb("paste actions", () => {
           title: "A gist",
           limitBytes: 1024 * KB,
           limitLabel: "1 MB",
+          defaults: { visibility: "unlisted", expiry: "1w" },
           files: [
-            { name: "a.ts", size: 9, skipped: null },
-            { name: "b.md", size: 4, skipped: null },
+            { name: "a.ts", size: 9, skipped: null, sensitive: false },
+            { name: "b.md", size: 4, skipped: null, sensitive: false },
           ],
         },
       })
@@ -146,8 +148,8 @@ describeDb("paste actions", () => {
       )
       const result = await previewGist(GIST)
       expect(result.ok && result.gist.files).toEqual([
-        { name: "small.txt", size: 2, skipped: null },
-        { name: "huge.json", size: 2048 * KB, skipped: "Over the 1 MB limit." },
+        { name: "small.txt", size: 2, skipped: null, sensitive: false },
+        { name: "huge.json", size: 2048 * KB, skipped: "Over the 1 MB limit.", sensitive: true },
       ])
       // Nothing is downloaded just to say it's too big.
       expect(fetched).toEqual([`https://api.github.com/gists/${GIST}`])
@@ -192,6 +194,65 @@ describeDb("paste actions", () => {
   })
 
   describe("importGist", () => {
+    test("uses the account defaults and shows them before importing", async () => {
+      await changePreferences("owner", (current) => ({
+        ...current,
+        defaultVisibility: "public",
+        defaultExpiry: "1d",
+      }))
+      serveGist(gist({ "hello.py": file("hello.py", "print('hello')") }))
+      const preview = await previewGist(GIST)
+      expect(preview.ok && preview.gist.defaults).toEqual({ visibility: "public", expiry: "1d" })
+      const result = await importGist(choose("hello.py"))
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const row = await pasteRow(result.slug)
+      expect(row?.visibility).toBe("public")
+      expect(row?.expiresAt?.getTime()).toBeGreaterThan(Date.now() + 23 * 60 * 60 * 1000)
+      expect(row?.expiresAt?.getTime()).toBeLessThan(Date.now() + 25 * 60 * 60 * 1000)
+    })
+
+    test("keeps the preview snapshot when account defaults change", async () => {
+      serveGist(gist({ "hello.py": file("hello.py", "print('hello')") }))
+      const result = await importGist({
+        ...choose("hello.py"),
+        visibility: "private",
+        expiry: "never",
+      })
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      const row = await pasteRow(result.slug)
+      expect(row?.visibility).toBe("private")
+      expect(row?.expiresAt).toBeNull()
+    })
+
+    test("makes env files and files with secrets private even with public defaults", async () => {
+      await changePreferences("owner", (current) => ({ ...current, defaultVisibility: "public" }))
+      serveGist(gist({ ".env.production": file(".env.production", "DEBUG=true") }))
+      const preview = await previewGist(GIST)
+      expect(preview.ok && preview.gist.files[0]?.sensitive).toBe(true)
+      const result = await importGist({ ...choose(".env.production"), visibility: "public" })
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect((await pasteRow(result.slug))?.visibility).toBe("private")
+      serveGist(gist({ "key.txt": file("key.txt", "-----BEGIN PRIVATE KEY-----\nexample") }))
+      const secret = await importGist(choose("key.txt"))
+      expect(secret.ok).toBe(true)
+      if (secret.ok) expect((await pasteRow(secret.slug))?.visibility).toBe("private")
+    })
+
+    test("keeps a truncated import private as its preview indicates", async () => {
+      await changePreferences("owner", (current) => ({ ...current, defaultVisibility: "public" }))
+      serveGist(gist({ "log.txt": truncated("log.txt", 20) }), {
+        [`${RAW}/log.txt`]: "ordinary log",
+      })
+      const preview = await previewGist(GIST)
+      expect(preview.ok && preview.gist.files[0]?.sensitive).toBe(true)
+      const result = await importGist(choose("log.txt"))
+      expect(result.ok).toBe(true)
+      if (result.ok) expect((await pasteRow(result.slug))?.visibility).toBe("private")
+    })
+
     test("saves only the chosen files, as an unlisted paste", async () => {
       serveGist(
         gist({
@@ -340,6 +401,46 @@ describeDb("paste actions", () => {
   })
 
   describe("savePaste", () => {
+    test("remembers successful creation choices only for the signed-in account", async () => {
+      await seedUser("other")
+      const chosen = {
+        ...input("remember me"),
+        visibility: "private" as const,
+        expiry: "1d" as const,
+      }
+      expect((await savePaste(chosen)).ok).toBe(true)
+      expect(await readPreferences("owner")).toMatchObject({
+        defaultVisibility: "private",
+        defaultExpiry: "1d",
+        indentation: "2",
+      })
+      expect(await readPreferences("other")).toMatchObject({
+        defaultVisibility: "unlisted",
+        defaultExpiry: "1w",
+      })
+    })
+
+    test("does not remember failed creations or later edits", async () => {
+      const created = await savePaste({ ...input("original"), visibility: "private", expiry: "1d" })
+      expect(created.ok).toBe(true)
+      if (!created.ok) return
+      expect((await savePaste({ ...input(""), visibility: "public", expiry: "never" })).ok).toBe(
+        false,
+      )
+      expect(
+        (
+          await savePaste(
+            { ...input("edited"), visibility: "public", expiry: "never" },
+            created.slug,
+          )
+        ).ok,
+      ).toBe(true)
+      expect(await readPreferences("owner")).toMatchObject({
+        defaultVisibility: "private",
+        defaultExpiry: "1d",
+      })
+    })
+
     test("creates at most 30 pastes an hour per account", async () => {
       for (let index = 0; index < 30; index++) {
         expect((await savePaste(input(`paste ${index}`))).ok).toBe(true)

@@ -11,6 +11,7 @@ export function RequestAccess({ applyUrl }: { applyUrl?: string }) {
     <div className="flex flex-col gap-5 lg:gap-6">
       {applyUrl ? (
         <Button
+          size="xl"
           className={authSubmitClass}
           render={<a href={applyUrl} target="_blank" rel="noreferrer" />}
           nativeButton={false}

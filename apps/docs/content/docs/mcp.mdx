@@ -16,7 +16,7 @@ up, and turn on **write access** only if it should save and edit snippets.
 
 | Tool | What it does |
 | --- | --- |
-| `search_snippets` | Returns a page of summaries, filtered by title or link (`query`), tags, language and collection. `nextCursor` continues the search. |
+| `search_snippets` | Returns a page of summaries, filtered by words in the title, description, tags, file paths or code (`query`, every word must match), tags, language and collection. `nextCursor` continues the search. |
 | `read_snippet` | One snippet by id or link, with its file paths, code and source metadata. |
 | `fetch_collection` | A page of a collection as numbered recipe steps with the full snippets, oldest capture first. |
 | `create_snippet` | Saves a new snippet. Private unless visibility is set explicitly. Needs write access. |

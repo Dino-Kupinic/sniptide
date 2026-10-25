@@ -11,13 +11,14 @@ import {
   SheetClose,
   SheetContent,
   SheetDescription,
-  SheetTitle,
+  SheetHeader,
   SheetTrigger,
 } from "@sniptide/ui/components/sheet"
 import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
-import { ArrowUpRightIcon, DownloadIcon, XIcon } from "lucide-react"
+import { cn } from "@sniptide/ui/lib/utils"
+import { ArrowUpRightIcon, DownloadIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
@@ -46,19 +47,23 @@ function defaultSelection(gist: GistPreview) {
 
 const shortLink = (link: string) => link.trim().replace(/^https?:\/\//i, "")
 
-// Disabled looks the same for both footer buttons, as in the design: a flat grey button.
+// Disabled looks the same for both footer buttons, as in the design: a flat grey button that stays
+// level with Cancel instead of dropping onto its edge.
 const footerButton =
-  "h-8 px-3.5 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+  "px-3.5 disabled:translate-y-0 disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
 
 // The import sheet. The caller owns `open`, so the Import gist buttons and the sidebar's More menu
 // can open the same one; `children` is where a trigger goes when the sheet has its own.
 export function ImportGistSheet({
   open,
   onOpenChange,
+  side = "right",
   children,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Phones open it from the bottom, like the other mobile sheets.
+  side?: "right" | "bottom"
   children?: React.ReactNode
 }) {
   const t = useTranslations("Workspace")
@@ -114,6 +119,9 @@ export function ImportGistSheet({
   }
 
   const chosen = gist ? gist.files.filter((file) => selected.has(file.name)) : []
+  const importVisibility = chosen.some((file) => file.sensitive)
+    ? "private"
+    : gist?.defaults.visibility
   const chosenBytes = chosen.reduce((sum, file) => sum + file.size, 0)
   const overLimit = gist ? chosenBytes > gist.limitBytes : false
   const canImport = step === "files" && chosen.length > 0 && !overLimit && busy === null
@@ -123,9 +131,12 @@ export function ImportGistSheet({
     if (!gist || !canImport) return
     setBusy("import")
     setImportError(null)
-    const result = await importGist({ id: gist.id, files: chosen.map((file) => file.name) }).catch(
-      () => null,
-    )
+    const result = await importGist({
+      id: gist.id,
+      files: chosen.map((file) => file.name),
+      visibility: importVisibility,
+      expiry: gist.defaults.expiry,
+    }).catch(() => null)
     if (!result?.ok) {
       setImportError(result?.error ?? t("something_went_wrong_try_again"))
       setBusy(null)
@@ -154,20 +165,26 @@ export function ImportGistSheet({
       }}
     >
       {children}
-      <SheetContent side="right" className="w-[400px] max-w-full" initialFocus={inputRef}>
-        <div className="flex h-14 shrink-0 items-center justify-between border-b pr-4 pl-6">
-          <SheetTitle className="text-[15px] leading-5 font-semibold">
-            {t("import_a_gist")}
-          </SheetTitle>
-          <SheetClose render={<Button variant="ghost" size="icon-sm" aria-label={t("close")} />}>
-            <XIcon />
-          </SheetClose>
-        </div>
+      <SheetContent
+        side={side}
+        className={side === "right" ? "w-[400px] max-w-full" : undefined}
+        initialFocus={inputRef}
+      >
+        <SheetHeader
+          title={t("import_a_gist")}
+          closeLabel={t("close")}
+          className={cn("border-b border-border pb-3", side === "right" && "pt-3 pl-6")}
+        />
         <SheetDescription className="sr-only">
           {t("copy_files_from_a_public_github_gist_into")}
         </SheetDescription>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-6">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto",
+            side === "bottom" ? "px-4 py-4" : "p-6",
+          )}
+        >
           {step === "files" && gist ? (
             <FilesStep
               link={link}
@@ -184,6 +201,7 @@ export function ImportGistSheet({
               chosenBytes={chosenBytes}
               overLimit={overLimit}
               error={importError}
+              visibility={importVisibility ?? "private"}
             />
           ) : step === "reading" ? (
             <ReadingStep link={link} />
@@ -230,19 +248,25 @@ export function ImportGistSheet({
           )}
         </div>
 
-        <div className="flex h-16 shrink-0 items-center justify-between border-t px-6">
+        {/* The actions wrap under Cancel when a narrow screen or a long translation can't fit them. */}
+        <div
+          className={cn(
+            "flex min-h-16 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-3 border-t py-4",
+            side === "bottom" ? "px-4" : "px-6",
+          )}
+        >
           <SheetClose
             render={
               <Button
                 type="button"
                 variant="ghost"
-                className="h-[34px] px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                className="mr-auto px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
               />
             }
           >
             {t("cancel")}
           </SheetClose>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -269,16 +293,33 @@ export function ImportGistSheet({
 }
 
 // The "Import gist" button of the list pages and the dashboard.
-export function ImportGistButton() {
+// `compact` is the phone's version next to a page title: a 40px icon button whose sheet opens
+// from the bottom.
+export function ImportGistButton({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("Workspace")
   const [open, setOpen] = React.useState(false)
 
   return (
-    <ImportGistSheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button variant="outline" size="lg" />}>
-        <DownloadIcon />
-        {t("import_gist")}
-      </SheetTrigger>
+    <ImportGistSheet open={open} onOpenChange={setOpen} side={compact ? "bottom" : "right"}>
+      {compact ? (
+        <SheetTrigger
+          render={
+            <Button
+              variant="outline"
+              size="xl"
+              aria-label={t("import_gist")}
+              className="w-10 px-0"
+            />
+          }
+        >
+          <DownloadIcon />
+        </SheetTrigger>
+      ) : (
+        <SheetTrigger render={<Button variant="outline" size="lg" />}>
+          <DownloadIcon />
+          {t("import_gist")}
+        </SheetTrigger>
+      )}
     </ImportGistSheet>
   )
 }
@@ -328,6 +369,7 @@ function FilesStep({
   chosenBytes,
   overLimit,
   error,
+  visibility,
 }: {
   link: string
   gist: GistPreview
@@ -336,10 +378,19 @@ function FilesStep({
   chosenBytes: number
   overLimit: boolean
   error: string | null
+  visibility: "private" | "unlisted" | "public"
 }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const { owner } = gist
+  const expiryLabels = {
+    "1h": t("1_hour"),
+    "1d": t("1_day"),
+    "1w": t("1_week"),
+    "1m": t("1_month"),
+    "1y": t("1_year"),
+    never: t("never"),
+  }
 
   return (
     <>
@@ -425,6 +476,10 @@ function FilesStep({
       </div>
 
       <FormError variant="inline" message={error} className="text-xs leading-4" />
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        {t("visibility")} · {t(visibility)}. {t("expires_after")} ·{" "}
+        {expiryLabels[gist.defaults.expiry]}.
+      </p>
     </>
   )
 }

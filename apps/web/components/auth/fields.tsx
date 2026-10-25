@@ -1,10 +1,9 @@
 import { cn } from "@sniptide/ui/lib/utils"
 
-// Phone sizes come from the Paper mobile artboards (46px fields, 16px text so iOS doesn't zoom
-// on focus); lg and up uses the 40px desktop fields.
-export const authInputClass = "h-[46px] text-base lg:h-10 lg:text-sm"
-export const authSubmitClass =
-  "h-[50px] w-full text-base font-semibold lg:h-10 lg:text-sm lg:font-medium"
+// Fields and buttons are 40px everywhere (buttons use size="xl"). Phones get 16px text so iOS
+// doesn't zoom on focus.
+export const authInputClass = "h-10 text-base lg:text-sm"
+export const authSubmitClass = "w-full"
 
 export { FormError } from "@sniptide/ui/components/form-error"
 
@@ -15,11 +14,7 @@ export function SwitchPrompt({
   children: React.ReactNode
   className?: string
 }) {
-  return (
-    <p className={cn("text-center text-sm text-muted-foreground lg:text-[13px]", className)}>
-      {children}
-    </p>
-  )
+  return <p className={cn("text-center text-sm text-muted-foreground", className)}>{children}</p>
 }
 
 export const inlineLinkClass =

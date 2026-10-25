@@ -40,11 +40,15 @@ async function share(id: string) {
   if (!token) throw new Error("Fixture failed.")
   return token
 }
-function call(command: unknown, origin = "http://localhost:3000") {
+function call(
+  command: unknown,
+  origin = "http://localhost:3000",
+  proxied?: Record<string, string>,
+) {
   return manage(
     new Request("http://localhost:3000/secrets/manage", {
       method: "POST",
-      headers: { origin, "content-type": "application/json" },
+      headers: { origin, "content-type": "application/json", ...proxied },
       body: JSON.stringify(command),
     }),
   )
@@ -245,6 +249,10 @@ describeDb("encrypted web secrets", () => {
     expect((await call(command)).status).toBe(404)
     signInAs("ada")
     expect((await call(command, "https://attacker.example")).status).toBe(403)
+    // Behind a reverse proxy request.url is the server's own address, and the forwarded host counts.
+    const proxied = { host: "sniptide.example", "x-forwarded-proto": "https" }
+    expect((await call(command, "https://sniptide.example", proxied)).status).toBe(200)
+    expect((await call(command, "https://attacker.example", proxied)).status).toBe(403)
     const response = await call(command)
     expect(response.status).toBe(200)
     expect(response.headers.get("cache-control")).toContain("no-store")

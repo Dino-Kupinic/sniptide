@@ -48,8 +48,17 @@ describeDb("persistence validation", () => {
     await seedUser("owner")
     signInAs("owner")
   })
-  test("custom paste links cannot claim secret routes", async () => {
-    for (const slug of ["secrets", "secret-share", "Secrets"]) {
+  test("custom paste links cannot claim app routes", async () => {
+    for (const slug of [
+      "analytics",
+      "demo",
+      "dev",
+      "forgot-password",
+      "reset-password",
+      "secrets",
+      "secret-share",
+      "Analytics",
+    ]) {
       expect(await isSlugAvailable(slug)).toBe(false)
       expect((await savePaste({ ...input("route collision fixture"), slug })).ok).toBe(false)
     }

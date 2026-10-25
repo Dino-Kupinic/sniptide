@@ -27,9 +27,10 @@ export const storageUsage = cache(async () => {
     .where(and(allowedPaste(), eq(paste.ownerId, owner)))
   return { bytes: row?.bytes ?? 0, pastes: row?.pastes ?? 0, limit }
 })
-// Acquire the account lock before any paste-row lock to keep saves and restores in one order.
+// Serialize account budgets before paste rows. Key-share locks from invite notification foreign
+// keys must remain compatible, because invites already hold the paste row.
 export async function lockAccount(tx: Transaction, owner: string) {
-  await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
+  await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("no key update")
 }
 
 // Trash still occupies storage. Deletion can only reduce usage, and an over-budget account

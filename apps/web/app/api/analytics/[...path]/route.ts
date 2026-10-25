@@ -1,5 +1,7 @@
 import { forwardToPostHog } from "@/lib/analytics-proxy"
 
+export const dynamic = "force-dynamic"
+
 type Context = { params: Promise<{ path: string[] }> }
 
 async function handle(request: Request, { params }: Context) {

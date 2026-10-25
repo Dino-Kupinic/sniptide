@@ -68,7 +68,7 @@ describe("highlightFiles", () => {
     expect(grammarFor({ name: "App.jsx", language: "javascript" })).toBe("jsx")
     expect(grammarFor({ name: "main.tf", language: "hcl" })).toBe("terraform")
     expect(grammarFor({ name: "docker-compose.yml", language: "docker" })).toBe("yaml")
-    expect(grammarFor({ name: "Dockerfile", language: "docker" })).toBe("dockerfile")
+    expect(grammarFor({ name: "Dockerfile", language: "docker" })).toBe("docker")
     expect(grammarFor({ name: "notes.txt", language: "text" })).toBeUndefined()
   })
 })

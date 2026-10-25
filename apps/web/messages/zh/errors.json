@@ -90,5 +90,14 @@
     "unlinkFailed": "无法取消关联该账户，请重试。",
     "demoLocked": "演示中不提供此功能。",
     "signInFresh": "为了安全，请先退出并重新登录，然后重试。"
+  },
+  "ServerError": {
+    "title": "出了点问题",
+    "heading": "出了点问题。",
+    "description": "无法加载此页面。请重试；如果问题持续出现，请几分钟后再来。",
+    "retry": "重试",
+    "dashboard": "前往控制台",
+    "home": "返回首页",
+    "reference": "错误参考编号 {digest}"
   }
 }

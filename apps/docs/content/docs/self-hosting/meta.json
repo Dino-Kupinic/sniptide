@@ -9,6 +9,7 @@
     "reverse-proxy",
     "memory",
     "upgrading",
-    "backups"
+    "backups",
+    "versions"
   ]
 }
