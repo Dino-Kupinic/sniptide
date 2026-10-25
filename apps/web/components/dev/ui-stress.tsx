@@ -20,6 +20,7 @@ import {
   type stressData,
 } from "@/lib/dev/ui-stress-data"
 import { timeAgo } from "@/lib/format"
+import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, PasteListQuery } from "@/lib/pastes/list-query"
 
 export function UiStress({
@@ -29,7 +30,9 @@ export function UiStress({
   pagination,
   data,
   shared,
+  previews,
 }: {
+  previews: Record<string, HighlightedLines>
   dataset: Dataset
   screen: StressScreen
   query: PasteListQuery
@@ -73,6 +76,7 @@ export function UiStress({
               query={query}
               pagination={pagination}
               languageOptions={["typescript", "objective-c", "text", "python"]}
+              previews={previews}
             />
           ) : null}
           {screen === "shared" ? <SharedList {...shared} origin={origin} host={host} /> : null}

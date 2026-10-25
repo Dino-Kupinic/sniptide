@@ -20,6 +20,7 @@ import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
+import type { HighlightedLines } from "@/lib/highlight/types"
 import { setStarred } from "@/lib/pastes/actions"
 import {
   DEFAULT_SORT_DIRECTION,
@@ -33,6 +34,7 @@ import {
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
+import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
 import {
   FilterMenu,
@@ -122,9 +124,12 @@ export function PasteList({
   query: serverQuery,
   pagination,
   languageOptions,
+  previews,
 }: {
   title: string
   rows: PasteRow[]
+  // The first highlighted lines of each paste, by slug, for the grid view's cards.
+  previews?: Record<string, HighlightedLines>
   origin: string
   host: string
   mode: "mine" | "starred" | "collection"
@@ -304,34 +309,9 @@ export function PasteList({
           {pagination.total === 0 ? (
             <EmptyState filtering={filtering} mode={mode} />
           ) : view === "grid" ? (
-            <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 lg:grid">
+            <ul className="hidden grid-cols-2 gap-4 xl:grid-cols-3 lg:grid">
               {rows.map((row) => (
-                <li
-                  key={row.slug}
-                  className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/pastes/${row.slug}`}
-                      title={row.title}
-                      className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
-                    >
-                      {row.title}
-                    </Link>
-                    <RowMenu row={row} origin={origin} />
-                  </div>
-                  <span className="[overflow-wrap:anywhere] font-mono text-xs text-muted-foreground">
-                    {host}/{row.slug}
-                  </span>
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[13px] text-foreground/80">
-                    <LanguageLabel language={row.language} />
-                    <RowBadge row={row} />
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="font-mono">{t("views_count", { count: row.views })}</span>
-                    <span>{row.updatedLabel}</span>
-                  </div>
-                </li>
+                <PasteCard key={row.slug} row={row} lines={previews?.[row.slug]} origin={origin} />
               ))}
             </ul>
           ) : (
