@@ -16,14 +16,8 @@ import * as React from "react"
 import { PersonAvatar } from "@/components/lists/shared-list"
 import type { Access, Person, SharePerson } from "@/lib/pastes/types"
 
-// The pieces the share dialog and the New paste invite menu have in common: who someone is, what
-// they can do, and the field that looks them up.
-
-export const accessLabel: Record<Access, string> = { view: "Can view", edit: "Can edit" }
-
 const tones: Person["tone"][] = ["primary", "foreground", "muted"]
 
-// A steady avatar fill per person, so they keep their colour between visits.
 function toneFor(id: string) {
   let hash = 0
   for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) | 0

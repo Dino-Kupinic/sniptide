@@ -24,14 +24,3 @@ export function PageHeader({
     </div>
   )
 }
-
-export function PagePlaceholder({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex flex-col gap-6 p-4 lg:p-7">
-      <PageHeader title={title} />
-      <div className="rounded-lg flex min-h-64 items-center justify-center border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        {description}
-      </div>
-    </div>
-  )
-}
