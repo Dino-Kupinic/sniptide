@@ -131,10 +131,11 @@ async function fetchRaw(url: string, limit: number, budget: DownloadBudget) {
   const response = await fetch(url, {
     signal: AbortSignal.any([AbortSignal.timeout(10_000), budget.controller.signal]),
   }).catch(() => null)
-  if (!response?.ok || !response.body) {
+  if (!response?.ok) {
     if (response?.body) void response.body.cancel().catch(() => {})
     return null
   }
+  if (!response.body) return ""
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   const chunks: string[] = []
@@ -143,6 +144,7 @@ async function fetchRaw(url: string, limit: number, budget: DownloadBudget) {
   let complete = false
   const append = (text: string) => {
     const size = byteLength(text)
+    if (!size) return true
     if (bytes + size > limit) return false
     if (size > budget.remaining) {
       budget.exceeded = true
