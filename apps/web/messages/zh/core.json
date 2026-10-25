@@ -2,6 +2,8 @@
   "Core": {
     "language": "语言",
     "languageError": "无法更改语言，请重试。",
+    "searchLanguages": "搜索语言",
+    "noLanguagesFound": "没有匹配的语言。",
     "dashboard": "概览",
     "analytics": "统计分析",
     "pastes": "我的代码片段",
@@ -42,6 +44,7 @@
     "newer": "较新",
     "older": "较旧",
     "fourteenDays": "14 天前",
+    "agentReads": "通过 MCP 或 CLI 读取了 {count, number} 次",
     "today": "今天",
     "tomorrow": "明天",
     "yourAccess": "你的权限",

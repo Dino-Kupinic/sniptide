@@ -17,6 +17,13 @@ import {
 } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
+export const moderationState = pgEnum("moderation_state", [
+  "pending",
+  "allowed",
+  "quarantined",
+  "removed",
+])
+
 export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
 
 const time = (name: string) => timestamp(name, { withTimezone: true })
@@ -47,6 +54,8 @@ export const paste = pgTable(
   "paste",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    moderationState: moderationState("moderation_state").notNull().default("allowed"),
+    moderationVersion: bigint("moderation_version", { mode: "number" }).notNull().default(0),
     // The public link (sniptide.com/<slug>). Can change on edit; everything else points at id.
     slug: text("slug").notNull(),
     ownerId: text("owner_id")
@@ -66,6 +75,9 @@ export const paste = pgTable(
     source: jsonb("source").$type<PasteSource>(),
     views: integer("views").notNull().default(0),
     uniqueViews: integer("unique_views").notNull().default(0),
+    // Reads with a personal API token (MCP read_snippet and fetch_collection, `sniptide pull`),
+    // so the owner can see which snippets their agents actually use. Views don't include these.
+    agentReads: integer("agent_reads").notNull().default(0),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
     version: bigint("version", { mode: "number" })
@@ -181,4 +193,22 @@ export const pasteShare = pgTable(
     primaryKey({ columns: [table.pasteId, table.userId] }),
     index("paste_share_user_idx").on(table.userId, table.createdAt),
   ],
+)
+
+export const moderationEvent = pgTable(
+  "moderation_event",
+  {
+    commandId: uuid("command_id").primaryKey(),
+    fingerprint: text("fingerprint").notNull(),
+    pasteId: uuid("paste_id").notNull(),
+    actor: text("actor").notNull(),
+    fromState: moderationState("from_state").notNull(),
+    toState: moderationState("to_state").notNull(),
+    reasonCode: text("reason_code").notNull(),
+    caseReference: uuid("case_reference").notNull(),
+    contentVersion: bigint("content_version", { mode: "number" }).notNull(),
+    moderationVersion: bigint("moderation_version", { mode: "number" }).notNull(),
+    createdAt: time("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("moderation_event_paste_idx").on(table.pasteId, table.createdAt)],
 )

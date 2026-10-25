@@ -145,7 +145,6 @@
     "empty_trash_title": "清空回收站？",
     "empty_trash": "清空回收站",
     "trash_emptied": "回收站已清空",
-    "deleted_pastes_stay_here_for_30_days_their": "已删除的粘贴在此保留 30 天，其链接会立即失效。",
     "search_deleted_pastes": "搜索已删除的粘贴",
     "deleted_pastes_are_kept_for_30_days_their": "已删除的粘贴保留 30 天，链接已失效。",
     "no_deleted_pastes_match": "没有匹配的已删除粘贴。",
@@ -328,7 +327,21 @@
     "view_all_count": "查看全部 {count, number} 个",
     "secrets": "密钥",
     "workflows": "工作流",
-    "coming_soon": "即将推出"
+    "coming_soon": "即将推出",
+    "chart_point": "{day}：{value}",
+    "week_of": "{day} 当周",
+    "chart_date": "日期",
+    "chart_empty": "此期间没有任何记录。",
+    "analytics_empty": "此期间你的粘贴都没有被打开。有人打开链接后，浏览量、来源和国家会显示在这里。",
+    "sort_and_filter": "排序和筛选",
+    "sort_and_filter_active": "排序和筛选，{count, plural, other {已启用 # 项}}",
+    "clear_all": "全部清除",
+    "show_results": "{count, plural, other {显示 # 个粘贴}}",
+    "change_icon": "更改图标",
+    "move_up": "上移",
+    "move_down": "下移",
+    "done": "完成",
+    "searching": "正在搜索…"
   },
   "Secrets": {
     "title": "密钥",
@@ -434,6 +447,9 @@
     "create_first_group": "创建你的第一个密钥组",
     "all_environments": "全部",
     "filter_groups": "按名称或项目筛选…",
-    "no_matches": "没有与这些筛选条件匹配的密钥组。"
+    "no_matches": "没有与这些筛选条件匹配的密钥组。",
+    "empty_sentence": "还没有密钥组。",
+    "saved": "密钥组已保存",
+    "value_copied": "已复制 {name}"
   }
 }

@@ -4,7 +4,10 @@ import { verifyPassword } from "@/lib/pastes/passwords"
 import { getUnlockHash } from "@/lib/pastes/store"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
 import { hit, type Limit, refund } from "@/lib/rate-limit"
+import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS, seconds } from "@/lib/time"
+
+export const dynamic = "force-dynamic"
 
 // The longest password a paste can have (see the save schema) and the most this route will read.
 const MAX_PASSWORD_LENGTH = 200
@@ -21,7 +24,9 @@ function limitsFor(slug: string, client: string): Limit[] {
 }
 
 function fail(status: number, error: string, headers?: HeadersInit) {
-  return Response.json({ ok: false, error }, { status, headers })
+  const responseHeaders = new Headers(headers)
+  responseHeaders.set("cache-control", "private, no-store")
+  return Response.json({ ok: false, error }, { status, headers: responseHeaders })
 }
 
 // Password gate on the public page. The cookie holds a hash of the slug and the stored password
@@ -32,10 +37,13 @@ function fail(status: number, error: string, headers?: HeadersInit) {
 export async function POST(request: Request, { params }: RouteContext<"/[slug]/unlock">) {
   const { slug } = await params
 
-  const declared = Number(request.headers.get("content-length") ?? 0)
-  if (declared > MAX_BODY_BYTES) return fail(413, "That request is too large.")
-  const text = await request.text()
-  if (text.length > MAX_BODY_BYTES) return fail(413, "That request is too large.")
+  let text: string
+  try {
+    text = new TextDecoder().decode(await readBody(request, MAX_BODY_BYTES))
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return fail(413, "That request is too large.")
+    return fail(400, "That request couldn't be read.")
+  }
 
   let body: { password?: unknown } | null = null
   try {
@@ -67,5 +75,5 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/u
     path: "/",
     maxAge: 60 * 60 * 24,
   })
-  return Response.json({ ok: true })
+  return Response.json({ ok: true }, { headers: { "cache-control": "private, no-store" } })
 }

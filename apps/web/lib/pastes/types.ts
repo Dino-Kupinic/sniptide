@@ -52,6 +52,8 @@ export interface PasteSummary {
   author: Person
   views: number
   uniqueViews: number
+  // Reads with an API token (MCP or the CLI), counted apart from views.
+  agentReads: number
   // Oldest first, today last.
   viewsByDay: number[]
   createdAt: number

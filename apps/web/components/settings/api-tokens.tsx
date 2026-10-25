@@ -1,5 +1,14 @@
 "use client"
 
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
 import { Input } from "@sniptide/ui/components/input"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
@@ -17,6 +26,10 @@ import { formatDate, timeAgo } from "@/lib/format"
 import type { Locale } from "@/lib/i18n/config"
 import { SaveStatus, SettingRow, SettingsSection } from "./section"
 
+// Below sm the action moves under the name and meta line, so the meta line keeps the width.
+const rowClass =
+  "flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+
 const expiryOptions: { value: TokenExpiry; label: string }[] = [
   { value: "30d", label: "30Days" },
   { value: "90d", label: "90Days" },
@@ -24,12 +37,63 @@ const expiryOptions: { value: TokenExpiry; label: string }[] = [
   { value: "never", label: "never" },
 ]
 
+// A destructive row action that asks first, since revoking a token or deleting an env group
+// can't be undone.
+function ConfirmButton({
+  label,
+  title,
+  description,
+  disabled,
+  onConfirm,
+}: {
+  label: string
+  title: string
+  description: string
+  disabled: boolean
+  onConfirm: () => void
+}) {
+  const t = useTranslations("Settings")
+  const [open, setOpen] = React.useState(false)
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger
+        render={<Button variant="destructive" size="lg" className="shrink-0" />}
+        disabled={disabled}
+      >
+        {label}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogTitle>{title}</AlertDialogTitle>
+        <AlertDialogDescription>{description}</AlertDialogDescription>
+        <AlertDialogFooter>
+          <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>
+            {t("cancel")}
+          </AlertDialogClose>
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={() => {
+              setOpen(false)
+              onConfirm()
+            }}
+          >
+            {label}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 function NewToken({ token, origin }: { token: string; origin: string }) {
   const t = useTranslations("Settings")
   // The token goes in through stdin, so it stays out of shell history and process lists.
   const login = `sniptide login --token-stdin --base-url ${origin}`
   return (
-    <div role="status" className="flex flex-col gap-3 border border-primary/40 bg-primary/5 p-4">
+    <div
+      role="status"
+      className="rounded-lg flex flex-col gap-3 border border-primary/40 bg-primary/5 p-4"
+    >
       <p className="text-sm font-medium">{t("copyYourNewTokenNow")}</p>
       <p className="text-[13px] text-muted-foreground">{t("itWonTBeShownAgain")}</p>
       <div className="flex items-center gap-2">
@@ -59,7 +123,11 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
   const [pending, startTransition] = React.useTransition()
 
   return (
-    <SettingsSection title={t("apiTokens")} description={t("forTheSniptideCLICodingAgents")}>
+    <SettingsSection
+      title={t("apiTokens")}
+      description={t("forTheSniptideCLICodingAgents")}
+      repeatsHeading
+    >
       <form
         className="rounded-lg flex flex-col gap-4 border border-border p-4"
         onSubmit={(event) => {
@@ -100,14 +168,14 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
             onCheckedChange={(checked) => setWrite(checked)}
           />
         </SettingRow>
-        <SettingRow id="token-expiry-label" label={t("expires")}>
+        <SettingRow id="token-expiry-label" wide label={t("expires")}>
           <SegmentedControl
             aria-labelledby="token-expiry-label"
             value={expiry}
             onValueChange={setExpiry}
             options={expiryOptions.map((option) => ({ ...option, label: t(option.label) }))}
             className="shrink-0"
-            itemClassName="px-2 whitespace-nowrap"
+            itemClassName="px-2 whitespace-nowrap max-sm:py-[9px]"
           />
         </SettingRow>
         <Button type="submit" size="lg" loading={pending} className="self-start">
@@ -125,8 +193,8 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
           className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
         >
           {tokens.map((token) => (
-            <li key={token.id} className="flex items-center justify-between gap-4 p-4">
-              <div className="flex min-w-0 flex-col gap-0.5">
+            <li key={token.id} className={rowClass}>
+              <div className="flex min-w-0 max-w-full flex-col gap-0.5">
                 <span className="truncate text-sm font-medium">{token.name}</span>
                 <span className="font-mono text-[12px] text-muted-foreground">
                   {token.prefix}… · {token.scopes.join(" + ")}
@@ -141,11 +209,12 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
                     : ""}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
+              <ConfirmButton
+                label={t("revoke")}
+                title={t("revokeTokenTitle", { name: token.name })}
+                description={t("revokeTokenDescription")}
                 disabled={pending}
-                onClick={() =>
+                onConfirm={() =>
                   startTransition(async () => {
                     const result = await runAction(() => revokeApiToken(token.id), {
                       success: t("tokenRevoked"),
@@ -154,9 +223,7 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
                     if (result.ok) router.refresh()
                   })
                 }
-              >
-                {t("revoke")}
-              </Button>
+              />
             </li>
           ))}
         </ul>
@@ -190,8 +257,8 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
           className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
         >
           {groups.map((group) => (
-            <li key={group.slug} className="flex items-center justify-between gap-4 p-4">
-              <div className="flex min-w-0 flex-col gap-0.5">
+            <li key={group.slug} className={rowClass}>
+              <div className="flex min-w-0 max-w-full flex-col gap-0.5">
                 <span className="truncate font-mono text-sm">{group.slug}</span>
                 <span className="text-[12px] text-muted-foreground">
                   {t("groupUpdated", {
@@ -200,11 +267,12 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
                   })}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
+              <ConfirmButton
+                label={t("delete")}
+                title={t("deleteEnvGroupTitle", { slug: group.slug })}
+                description={t("deleteEnvGroupDescription")}
                 disabled={pending}
-                onClick={() =>
+                onConfirm={() =>
                   startTransition(async () => {
                     const result = await runAction(() => deleteEnvGroup(group.slug), {
                       success: t("envGroupDeleted"),
@@ -213,9 +281,7 @@ export function EnvGroupsSection({ groups }: { groups: EnvGroupSummary[] }) {
                     if (result.ok) router.refresh()
                   })
                 }
-              >
-                {t("delete")}
-              </Button>
+              />
             </li>
           ))}
         </ul>

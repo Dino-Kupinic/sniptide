@@ -2,6 +2,7 @@ import "server-only"
 
 import { z } from "zod"
 import { isWebhookUrl } from "@/lib/pastes/webhook-url"
+import { DEFAULT_RESOURCE_LINKS } from "@/lib/resource-links"
 
 // Every setting the app reads from the environment, validated in one place. Each option, its
 // default and what it does is documented in apps/web/.env.example.
@@ -118,7 +119,15 @@ const schema = z.object({
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
+  HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),
   DEMO_MODE: flag.default(false),
+  HOMEPAGE_URL: origin.default(DEFAULT_RESOURCE_LINKS.homepage),
+  DOCS_URL: z
+    .url({ message: "must be a full URL like https://docs.example.com." })
+    .default(DEFAULT_RESOURCE_LINKS.documentation),
+  HELP_URL: z
+    .url({ message: "must be a full URL like https://example.com/support." })
+    .default(DEFAULT_RESOURCE_LINKS.help),
 
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -212,7 +221,13 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
+    homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
+    resourceLinks: {
+      homepage: value.HOMEPAGE_URL,
+      documentation: value.DOCS_URL,
+      help: value.HELP_URL,
+    },
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),
     githubToken: value.GITHUB_TOKEN,

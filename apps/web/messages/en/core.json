@@ -2,6 +2,8 @@
   "Core": {
     "language": "Language",
     "languageError": "Couldn't change the language. Try again.",
+    "searchLanguages": "Search languages",
+    "noLanguagesFound": "No language matches that search.",
     "dashboard": "Dashboard",
     "analytics": "Analytics",
     "pastes": "My pastes",
@@ -42,6 +44,7 @@
     "newer": "Newer",
     "older": "Older",
     "fourteenDays": "14 days ago",
+    "agentReads": "Read {count, plural, one {# time} other {# times}} through MCP or the CLI",
     "today": "Today",
     "tomorrow": "tomorrow",
     "yourAccess": "Your access",

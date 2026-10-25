@@ -180,6 +180,8 @@ export function instrumentDatabase<T extends object>(database: T): T {
       get(object, key) {
         const value = Reflect.get(object, key, object)
         if (typeof value !== "function" || typeof key !== "string") return value
+        // The raw postgres.js client is callable but also carries listen and notify.
+        if (key === "$client") return value
         if (key === "then")
           return (resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) =>
             observe(`db:${operation}`, () => Reflect.apply(value, object, []), true).then(

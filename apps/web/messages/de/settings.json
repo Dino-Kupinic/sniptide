@@ -152,6 +152,40 @@
     "otherSessionsSignedOut": "Deine anderen Geräte sind abgemeldet.",
     "signOutOtherSessions": "{count, plural, one {Anderes Gerät abmelden} other {# andere Geräte abmelden}}",
     "confirmDeleteNoPassword": "Dein Konto, deine Sitzungen und deine Pastes werden endgültig gelöscht.",
-    "signInAgainToDelete": "Melde dich zur Sicherheit ab und wieder an und lösche dein Konto dann."
+    "signInAgainToDelete": "Melde dich zur Sicherheit ab und wieder an und lösche dein Konto dann.",
+    "backToSettings": "Zurück zu den Einstellungen",
+    "notifications": "Benachrichtigungen",
+    "notificationsDescription": "Lege fest, wie du von Aktivität auf deinen Pastes erfährst. E-Mails sind standardmäßig aus.",
+    "notificationEmailUnavailable": "Der E-Mail-Versand ist auf diesem Server nicht eingerichtet. Benachrichtigungen in der App funktionieren weiterhin.",
+    "notificationEmailUnverified": "Bestätige deine E-Mail-Adresse, bevor du Benachrichtigungen per E-Mail einschaltest.",
+    "sendVerificationEmail": "Bestätigungs-E-Mail senden",
+    "verificationEmailSent": "Bestätigungs-E-Mail gesendet. Öffne den Link in deinem Postfach und lade diese Einstellungen dann neu.",
+    "couldnTSendVerificationEmail": "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Versuch es noch einmal.",
+    "notificationActivity": "Aktivität",
+    "notificationInApp": "In der App",
+    "notificationEmail": "E-Mail",
+    "notificationSwitch": "{event}, {channel}",
+    "notificationEvents": {
+      "shared": {
+        "label": "Mit dir geteilt",
+        "description": "Jemand lädt dich zu einem Paste ein."
+      },
+      "burned": {
+        "label": "Nach dem Lesen löschen",
+        "description": "Dein Paste wurde gelesen und in den Papierkorb verschoben."
+      },
+      "expiring": {
+        "label": "Läuft bald ab",
+        "description": "Dein Paste läuft innerhalb eines Tages ab."
+      },
+      "views": {
+        "label": "Aufruf-Meilensteine",
+        "description": "Dein Paste erreicht einen Meilenstein bei den Aufrufen."
+      }
+    },
+    "revokeTokenTitle": "{name} widerrufen?",
+    "revokeTokenDescription": "Skripte und Agents, die dieses Token nutzen, funktionieren sofort nicht mehr. Das lässt sich nicht rückgängig machen.",
+    "deleteEnvGroupTitle": "{slug} löschen?",
+    "deleteEnvGroupDescription": "Die Variablen werden endgültig gelöscht, und die CLI kann sie nicht mehr abrufen. Das lässt sich nicht rückgängig machen."
   }
 }

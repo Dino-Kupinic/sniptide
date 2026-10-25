@@ -28,6 +28,7 @@ docs follow the app's theme, light and dark.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `APP_URL` | `https://app.sniptide.com` | Where the Sniptide app runs. The nav links to its `/docs/api` and to the app. Read at build time (the pages are prerendered), so it is a build argument in the Dockerfile. |
+| `SITE_URL` | `https://docs.sniptide.com` | Where the docs are served. Canonical links, the sitemap and link previews use it. Read at build time, like `APP_URL`. |
 
 ## Deploying
 
@@ -38,4 +39,17 @@ docker build -f apps/docs/Dockerfile --build-arg APP_URL=https://app.example.com
 docker run -p 3000:3000 sniptide-docs
 ```
 
-The root README describes the Coolify service.
+For Coolify, use this repository on branch `main` with the Dockerfile build pack. Set the base
+directory to `/` and Dockerfile location to `/apps/docs/Dockerfile`. Expose port `3000` and use
+`GET /` for the health check. Set `APP_URL` and `SITE_URL` as build variables for your domains.
+The service needs no database.
+
+## Search engines and link previews
+
+Every page gets its title and description from the MDX frontmatter, a canonical link, Open Graph and
+Twitter tags, and `TechArticle` and `BreadcrumbList` markup (`app/[[...slug]]/page.tsx`,
+`lib/structured-data.ts`). The preview image of a page is generated at build time by
+`app/og/[...slug]/route.tsx` and `lib/og.tsx`: the pink brand card with the page title and a blue
+pixel tide (`lib/og-tide.ts`), with the font in `assets/fonts`. `app/sitemap.ts` lists the pages from the same source as the sidebar, and
+`app/robots.ts` allows crawling and links the sitemap, so a new page needs nothing beyond its MDX
+file and a good `description` in its frontmatter (about 120 to 160 characters).

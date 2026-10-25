@@ -2,6 +2,8 @@
   "Core": {
     "language": "言語",
     "languageError": "言語を変更できませんでした。もう一度お試しください。",
+    "searchLanguages": "言語を検索",
+    "noLanguagesFound": "該当する言語がありません。",
     "dashboard": "ダッシュボード",
     "analytics": "アクセス解析",
     "pastes": "自分のスニペット",
@@ -42,6 +44,7 @@
     "newer": "新しい順",
     "older": "古い順",
     "fourteenDays": "14日前",
+    "agentReads": "MCP または CLI から {count, number} 回読み込まれました",
     "today": "今日",
     "tomorrow": "明日",
     "yourAccess": "アクセス権",

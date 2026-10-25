@@ -20,7 +20,8 @@ import { checkSlug } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 
 // The paste editor's options (visibility, expiry, custom link, collection, password, burn after
-// read). The desktop panel and the mobile sheet lay them out differently from the same pieces.
+// read). The desktop panel and the mobile settings sheet show the same pieces; `large` gives the
+// sheet's controls touch-sized heights.
 
 export const visibilityOptions: { value: Visibility; label: string }[] = [
   { value: "private", label: "Private" },
@@ -78,25 +79,6 @@ export function useSlugStatus(slug: string, except?: string) {
   return status
 }
 
-export function OptionGroup({
-  label,
-  id,
-  children,
-}: {
-  label: string
-  id: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <span id={id} className="text-[13px] leading-[18px] font-medium">
-        {label}
-      </span>
-      {children}
-    </div>
-  )
-}
-
 export function ExpiryChips({
   value,
   onChange,
@@ -135,12 +117,15 @@ export function SlugInput({
   onChange,
   onCommit,
   status,
+  large = false,
 }: {
   value: string
   onChange: (value: string) => void
   // The person finished typing (left the field or pressed Enter).
   onCommit?: () => void
   status: SlugStatus
+  // Touch size for the mobile settings sheet.
+  large?: boolean
 }) {
   const t = useTranslations("Paste")
   const host = useSiteHost()
@@ -149,6 +134,7 @@ export function SlugInput({
       <div
         className={cn(
           "flex h-[34px] items-center overflow-hidden rounded-lg border border-input focus-within:border-primary",
+          large && "h-10",
           status === "taken" && "border-destructive",
         )}
       >
@@ -193,10 +179,12 @@ export function CollectionSelect({
   value,
   onChange,
   collections,
+  large = false,
 }: {
   value: string | null
   onChange: (value: string | null) => void
   collections: Collection[]
+  large?: boolean
 }) {
   const t = useTranslations("Paste")
   if (collections.length === 0) {
@@ -229,16 +217,16 @@ export function CollectionSelect({
     >
       <SelectTrigger
         aria-label={t("collection")}
-        className="h-[34px] w-full px-2.5 font-mono text-[13px]"
+        className={cn("h-[34px] w-full px-2.5 text-[13px]", large && "h-10 px-3 text-base")}
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={NO_COLLECTION} className="font-sans text-muted-foreground">
+        <SelectItem value={NO_COLLECTION} className={cn("text-muted-foreground", large && "h-10")}>
           {t("noCollection")}
         </SelectItem>
         {collections.map((c) => (
-          <SelectItem key={c.slug} value={c.slug} className="font-mono text-[13px]">
+          <SelectItem key={c.slug} value={c.slug} className={large ? "h-10" : "text-[13px]"}>
             {c.name}
           </SelectItem>
         ))}
@@ -268,10 +256,7 @@ export function ToggleRow({
       <div className="flex flex-col">
         <span
           id={id}
-          className={cn(
-            "text-[13px] leading-[18px] font-medium",
-            large && "text-[15px] leading-5 font-normal",
-          )}
+          className={cn("text-[13px] leading-[18px] font-medium", large && "text-sm leading-5")}
         >
           {label}
         </span>
@@ -292,12 +277,14 @@ export function PasswordInput({
   onChange,
   onCommit,
   placeholder,
+  large = false,
 }: {
   value: string
   onChange: (value: string) => void
   // The person finished typing (left the field or pressed Enter).
   onCommit?: () => void
   placeholder: string
+  large?: boolean
 }) {
   const t = useTranslations("Paste")
   const [visible, setVisible] = React.useState(false)
@@ -312,7 +299,7 @@ export function PasswordInput({
         onBlur={onCommit}
         onKeyDown={commitOnEnter(onCommit)}
         placeholder={placeholder}
-        className="h-[34px] pr-9 text-base lg:text-sm"
+        className={cn("h-[34px] pr-9 text-base lg:text-sm", large && "h-10")}
       />
       <button
         type="button"

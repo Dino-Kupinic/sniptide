@@ -20,7 +20,7 @@
     "test": "bun test ./test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/sdk": "catalog:runtime",
     "@sniptide/contracts": "workspace:*",
     "zod": "catalog:runtime"
   },

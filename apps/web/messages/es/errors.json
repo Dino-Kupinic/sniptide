@@ -90,5 +90,14 @@
     "unlinkFailed": "No se pudo desconectar esa cuenta. Vuelve a intentarlo.",
     "demoLocked": "Esto no está disponible en la demo.",
     "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo."
+  },
+  "ServerError": {
+    "title": "Algo salió mal",
+    "heading": "Algo salió mal.",
+    "description": "No pudimos cargar esta página. Inténtalo de nuevo y, si el problema continúa, vuelve en unos minutos.",
+    "retry": "Reintentar",
+    "dashboard": "Ir al panel",
+    "home": "Volver al inicio",
+    "reference": "Referencia del error {digest}"
   }
 }

@@ -72,5 +72,5 @@ Use: *paste, snippet, pattern, link, self-host, agent*. Write "Sniptide" in sent
 - `docker compose up -d` gets a running instance.
 - AGPL-3.0 licensed.
 - Official image at `ghcr.io/dino-kupinic/sniptide` for AMD64 and ARM64.
-- Five MCP tools: search, read, fetch collection, create, update.
+- Nine MCP tools: search, read, fetch collection, create, update, list and create collections, change sharing settings and move a snippet to the trash.
 - CLI works offline for bundle export and import.

@@ -1,11 +1,13 @@
 "use client"
 
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { Sheet, SheetBody, SheetContent, SheetHeader } from "@sniptide/ui/components/sheet"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
@@ -37,14 +39,30 @@ const icons: Record<NotificationKind, LucideIcon> = {
 
 type Feed = NotificationFeed | "error" | null
 
-// The bell in the top bar: the account's notifications from /api/notifications. It asks again
-// every 30 seconds while the page is in view, when the tab comes back into view and whenever the
-// menu opens, so new ones appear without a reload. Opening one goes to its page and marks it read.
-export function NotificationsMenu({ className }: { className?: string }) {
+interface Notifications {
+  feed: Feed
+  unread: number
+  load: () => Promise<void>
+  markOne: (id: string) => void
+  remove: (id: string) => void
+  markAll: () => void
+}
+
+const NotificationsContext = React.createContext<Notifications | null>(null)
+
+function useNotifications() {
+  const value = React.useContext(NotificationsContext)
+  if (!value) throw new Error("useNotifications needs a NotificationsProvider")
+  return value
+}
+
+// The account's notifications from /api/notifications, shared by the desktop bell and the mobile
+// one so only one copy polls. It asks again every 30 seconds while the page is in view, when the
+// tab comes back into view and whenever a bell opens, so new ones appear without a reload.
+export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const [feed, setFeed] = React.useState<Feed>(null)
-  const [open, setOpen] = React.useState(false)
   // Only the newest answer counts, so a slow earlier request can't undo a mark-as-read.
   const latest = React.useRef(0)
 
@@ -133,6 +151,33 @@ export function NotificationsMenu({ className }: { className?: string }) {
     )
 
   return (
+    <NotificationsContext value={{ feed, unread, load, markOne, remove, markAll }}>
+      {children}
+    </NotificationsContext>
+  )
+}
+
+function UnreadBadge({ unread }: { unread: number }) {
+  if (unread === 0) return null
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute top-0.5 right-0.5 flex h-4 min-w-4 rounded-sm items-center justify-center bg-primary px-1 text-[10px] leading-none font-medium text-primary-foreground tabular-nums"
+    >
+      {unread > 9 ? "9+" : unread}
+    </span>
+  )
+}
+
+// The bell in the desktop top bar. Opening one goes to its page and marks it read.
+export function NotificationsMenu({ className }: { className?: string }) {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
+  const { feed, unread, load, markOne, remove, markAll } = useNotifications()
+  const [open, setOpen] = React.useState(false)
+  const loaded = typeof feed === "object" && feed !== null ? feed : null
+
+  return (
     <DropdownMenu
       open={open}
       onOpenChange={(next) => {
@@ -145,14 +190,7 @@ export function NotificationsMenu({ className }: { className?: string }) {
         className={cn("relative data-popup-open:bg-muted", className)}
       >
         <BellIcon />
-        {unread > 0 ? (
-          <span
-            aria-hidden="true"
-            className="absolute top-0.5 right-0.5 flex h-4 min-w-4 rounded-sm items-center justify-center bg-primary px-1 text-[10px] leading-none font-medium text-primary-foreground tabular-nums"
-          >
-            {unread > 9 ? "9+" : unread}
-          </span>
-        ) : null}
+        <UnreadBadge unread={unread} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex h-10 items-center justify-between border-b border-border px-3">
@@ -213,6 +251,94 @@ export function NotificationsMenu({ className }: { className?: string }) {
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+// The bell in the mobile top bar. The feed opens as a bottom sheet, with rows big enough to tap
+// and the remove button always showing.
+export function NotificationsSheet() {
+  const locale = useLocale()
+  const t = useTranslations("Workspace")
+  const { feed, unread, load, markOne, remove, markAll } = useNotifications()
+  const [open, setOpen] = React.useState(false)
+  const loaded = typeof feed === "object" && feed !== null ? feed : null
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="icon-lg"
+        aria-label={unread > 0 ? t("notifications_unread", { count: unread }) : t("notifications")}
+        onClick={() => {
+          setOpen(true)
+          void load()
+        }}
+        className="relative"
+      >
+        <BellIcon />
+        <UnreadBadge unread={unread} />
+      </Button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom">
+          <SheetHeader title={t("notifications")} closeLabel={t("close")}>
+            <Button variant="ghost" size="lg" disabled={unread === 0} onClick={markAll}>
+              {t("mark_all_as_read")}
+            </Button>
+          </SheetHeader>
+          <SheetBody className="px-0">
+            {loaded && loaded.items.length > 0 ? (
+              <ul className="flex flex-col">
+                {loaded.items.map((item) => {
+                  const Icon = icons[item.kind]
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex items-start border-b border-border px-2 last:border-b-0"
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={() => {
+                          markOne(item.id)
+                          setOpen(false)
+                        }}
+                        className="flex min-w-0 flex-1 items-start gap-3 rounded-md px-2 py-3 outline-none active:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                      >
+                        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className={cn("text-sm break-words", !item.read && "font-medium")}>
+                            {item.title}
+                          </span>
+                          <span className="text-[13px] text-muted-foreground">{item.detail}</span>
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                            {timeAgo(item.createdAt, undefined, locale)}
+                            {item.read ? null : (
+                              <>
+                                <span aria-hidden="true" className="size-1.5 bg-primary" />
+                                <span className="sr-only">{t("unread")}</span>
+                              </>
+                            )}
+                          </span>
+                        </span>
+                      </Link>
+                      <button
+                        type="button"
+                        aria-label={t("remove_notification", { title: item.title })}
+                        onClick={() => remove(item.id)}
+                        className="mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+                      >
+                        <XIcon className="size-4" />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <Placeholder feed={feed} retry={() => void load()} />
+            )}
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
 

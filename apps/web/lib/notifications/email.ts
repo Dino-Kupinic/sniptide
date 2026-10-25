@@ -1,6 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
+import { allowedParent } from "@workspace/db/moderation"
 import { notification, paste, pasteShare, user } from "@workspace/db/schema"
 import { and, eq, isNull, sql } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
@@ -102,7 +103,7 @@ async function eligible(row: Claimed, now: Date) {
     )
     .where(
       and(
-        eq(notification.id, row.id),
+        and(allowedParent(notification.pasteId), eq(notification.id, row.id)),
         eq(notification.emailClaimToken, row.emailClaimToken ?? ""),
         eq(notification.emailStatus, "pending"),
       ),

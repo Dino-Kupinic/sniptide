@@ -2,6 +2,8 @@
   "Core": {
     "language": "Sprache",
     "languageError": "Die Sprache konnte nicht geändert werden. Versuche es erneut.",
+    "searchLanguages": "Sprachen durchsuchen",
+    "noLanguagesFound": "Keine Sprache passt zu dieser Suche.",
     "dashboard": "Übersicht",
     "analytics": "Statistiken",
     "pastes": "Meine Snippets",
@@ -42,6 +44,7 @@
     "newer": "Neuere",
     "older": "Ältere",
     "fourteenDays": "Vor 14 Tagen",
+    "agentReads": "{count, plural, one {# Mal} other {# Mal}} über MCP oder die CLI gelesen",
     "today": "Heute",
     "tomorrow": "morgen",
     "yourAccess": "Dein Zugriff",

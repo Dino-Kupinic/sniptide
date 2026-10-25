@@ -32,7 +32,7 @@
     "next": "catalog:runtime",
     "next-intl": "^4.14.9",
     "next-themes": "catalog:runtime",
-    "nodemailer": "^10.1.2",
+    "nodemailer": "^10.1.4",
     "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
@@ -43,7 +43,8 @@
   "devDependencies": {
     "@e2e-dev/web": "0.13.0",
     "@formatjs/icu-messageformat-parser": "^3.5.21",
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@iconify-json/material-icon-theme": "^1.2.73",
+    "@modelcontextprotocol/sdk": "catalog:runtime",
     "@tailwindcss/postcss": "catalog:ui",
     "@types/bun": "catalog:tooling",
     "@types/node": "catalog:tooling",
@@ -51,6 +52,7 @@
     "@types/react-dom": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
     "e2e": "0.18.0",
+    "linguist-languages": "9.5.0",
     "typescript": "catalog:tooling"
   }
 }

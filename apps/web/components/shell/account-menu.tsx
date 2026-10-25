@@ -4,6 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -30,27 +31,58 @@ import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
+import { useResourceLinks } from "@/components/shell/resource-links"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import { authClient } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeNames, locales } from "@/lib/i18n/config"
 
-// Where the resource links go: the marketing site, the docs site (apps/docs) and GitHub issues.
-const links = {
-  homepage: "https://sniptide.com",
-  documentation: "https://docs.sniptide.com",
-  help: "https://github.com/Dino-Kupinic/sniptide/issues",
-}
-
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
 // as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
-export function AccountMenuItems({ name, email }: { name: string; email: string }) {
+// A phone has no room for a submenu beside the menu, so `inlineLanguage` lists the languages
+// in the menu itself.
+export function AccountMenuItems({
+  name,
+  email,
+  inlineLanguage = false,
+}: {
+  name: string
+  email: string
+  inlineLanguage?: boolean
+}) {
   const t = useTranslations("Workspace")
   const router = useRouter()
   const locale = useLocale()
   const [changingLocale, startLocaleTransition] = React.useTransition()
   const shortcuts = useShortcutsHelp()
+  const links = useResourceLinks()
+
+  const languageChoices = (
+    <DropdownMenuRadioGroup
+      aria-label={t("language")}
+      value={locale}
+      onValueChange={(value) => {
+        const next = locales.find((candidate) => candidate === value)
+        if (next)
+          startLocaleTransition(async () => {
+            await setLocale(next)
+            router.refresh()
+          })
+      }}
+    >
+      {locales.map((language) => (
+        <DropdownMenuRadioItem
+          key={language}
+          value={language}
+          disabled={changingLocale}
+          className={inlineLanguage ? "pl-9" : undefined}
+        >
+          {localeNames[language]}
+        </DropdownMenuRadioItem>
+      ))}
+    </DropdownMenuRadioGroup>
+  )
 
   async function signOut() {
     await authClient.signOut()
@@ -85,33 +117,28 @@ export function AccountMenuItems({ name, email }: { name: string; email: string 
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <ThemeRow />
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <GlobeIcon />
-          {t("language")}
-        </DropdownMenuSubTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={4}>
-          <DropdownMenuGroup>
-            <DropdownMenuRadioGroup
-              value={locale}
-              onValueChange={(value) => {
-                const next = locales.find((candidate) => candidate === value)
-                if (next)
-                  startLocaleTransition(async () => {
-                    await setLocale(next)
-                    router.refresh()
-                  })
-              }}
-            >
-              {locales.map((language) => (
-                <DropdownMenuRadioItem key={language} value={language} disabled={changingLocale}>
-                  {localeNames[language]}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenuSub>
+      {inlineLanguage ? (
+        <DropdownMenuGroup>
+          <DropdownMenuLabel
+            aria-hidden="true"
+            className="flex items-center gap-2 px-3 pt-2 text-sm text-foreground"
+          >
+            <GlobeIcon className="size-4 text-muted-foreground" />
+            {t("language")}
+          </DropdownMenuLabel>
+          {languageChoices}
+        </DropdownMenuGroup>
+      ) : (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <GlobeIcon />
+            {t("language")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuContent side="right" align="start" sideOffset={4}>
+            <DropdownMenuGroup>{languageChoices}</DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenuSub>
+      )}
       <DropdownMenuSeparator />
       <ExternalItem href={links.homepage} icon={<HouseIcon />}>
         {t("homepage")}

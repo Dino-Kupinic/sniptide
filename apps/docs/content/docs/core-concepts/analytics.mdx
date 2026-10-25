@@ -1,0 +1,25 @@
+---
+title: Analytics
+description: Understand paste analytics, visitor privacy, and optional PostHog exclusion.
+---
+
+The Analytics page counts views, unique visitors, code copies, raw reads, referrers, devices and
+countries in your own database, with no cookies and nothing sent anywhere else. A visitor is a
+daily hash of the address and browser under a random salt that is deleted after a day, so nobody
+can link it back to a person or follow one across days. Only the referrer's host is kept, never the
+path. Crawlers, link previews, prefetches and scripts aren't counted as views. Countries come from
+the CDN's header (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), so there is
+no country data without one in front. `GET /api/stats?range=7d|30d|90d|24h` returns the same
+figures as JSON for the signed-in account.
+
+## Exclude your browser from PostHog
+
+PostHog is optional and only loads when the administrator sets `POSTHOG_KEY`.
+See [Configuration](/self-hosting/configuration#monitoring).
+
+To exclude your own browser from PostHog, open `/_site/analytics` on your instance and select
+**Exclude this browser**. Repeat on each instance and in each browser you use. The
+choice survives network changes and reloads. **Include this browser** removes the exclusion.
+Only this explicit choice writes an exclusion flag to local storage. Clear site data to remove
+it, and reload other open tabs after a change. This does not remove past events or change paste
+view counts.

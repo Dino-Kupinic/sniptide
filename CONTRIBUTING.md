@@ -1,7 +1,7 @@
 # Contributing
 
-Setup and the checks live in the [README](README.md). This page covers how we write commits and
-pull requests.
+Use the [development guide](docs/development.md) for setup, code ownership, and checks.
+This page covers commits, pull requests, releases, and database migration rules.
 
 ## Conventional Commits
 
@@ -45,7 +45,7 @@ and open PRs.
 ## Pull requests
 
 - Keep a PR to one change, and say in the description what it does and why.
-- Run the checks from the README before pushing; CI runs the same ones.
+- Run the checks from the development guide before pushing; CI runs the same ones.
 
 ## Releases
 
@@ -61,6 +61,39 @@ If another PR merges before a release starts, the older run is skipped; the next
 at the tip of `main` releases the accumulated changes together. Direct pushes do not start
 a release. Re-running a successful release does not create another version.
 
+The release notes of each GitHub release are the changelog: they are generated from the commit
+titles, so a clear title is the changelog entry. There is no `CHANGELOG.md`. A change that needs
+something from people who run Sniptide (a new required setting, a manual step, a schema change the
+previous version can't run against) is marked breaking, and its `BREAKING CHANGE:` paragraph says
+what to do. Operators read the resulting policy in the docs, under Self-hosting, Versions and
+releases (`apps/docs/content/docs/self-hosting/versions.mdx`).
+
 If image publishing fails after the GitHub release was created, re-run the failed jobs or run
 **Publish Docker image** manually with that existing release tag. Coolify continues deploying
 `main` independently; publishing a release does not report a production deployment to GitHub.
+
+## Database migrations
+
+See the [development guide](docs/development.md#change-the-database-schema) for the schema and migration commands.
+Every pending migration runs in one transaction at startup. Follow these rules so operators can
+upgrade and restore databases safely:
+
+- **Only statements Postgres can roll back.** A failed upgrade must leave the database as it was.
+  `CREATE INDEX CONCURRENTLY`, `ALTER TYPE … ADD VALUE`, `VACUUM` and the like can't run in a
+  transaction. `apps/web/test/migrations.test.ts` fails if a migration file uses one.
+- **Additive where possible.** The previous version keeps serving while the new one starts. To
+  remove something, stop using it in one release and drop it in a later one.
+- **Never edit a migration that has been released.** Databases record migrations by name; add a
+  new one instead.
+- **Say so when it locks.** Adding an index or backfilling a large table blocks writes while it
+  runs. Mention it in the PR so the release notes can warn operators.
+
+Backups, restore and upgrades are covered by `scripts/test-upgrade.sh`, which CI runs against the
+latest release on every pull request. It seeds a stack on that release, backs it up, upgrades it to
+the new build, and restores the backup into the running stack and into a new one, comparing the
+data each time. Run it locally with two images when you change migrations, the backup scripts or
+startup:
+
+```bash
+bash scripts/test-upgrade.sh ghcr.io/dino-kupinic/sniptide:0.12.4 sniptide:local
+```

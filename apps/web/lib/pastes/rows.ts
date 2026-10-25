@@ -1,6 +1,6 @@
 import "server-only"
 
-import { formatBytes, formatDate, timeAgo, timeUntil } from "@/lib/format"
+import { formatDate, timeAgo, timeUntil } from "@/lib/format"
 import type { Locale } from "@/lib/i18n/config"
 import { coreTranslator } from "@/lib/i18n/core"
 import { DAY, HOUR } from "@/lib/time"
@@ -124,8 +124,4 @@ export function toTrashRow(paste: PasteSummary, locale: Locale = "en"): TrashRow
     goneSoon: daysLeft <= 1,
     bytes: paste.bytes,
   }
-}
-
-export function trashSizeLabel(rows: TrashRow[]) {
-  return formatBytes(rows.reduce((size, row) => size + row.bytes, 0))
 }

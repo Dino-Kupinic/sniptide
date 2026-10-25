@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@sniptide/ui/components/select"
 import { Switch } from "@sniptide/ui/components/switch"
+import { cn } from "@sniptide/ui/lib/utils"
 import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
@@ -42,6 +43,10 @@ function usePreferences(initial: Preferences) {
   return { preferences, change, status }
 }
 
+// Segmented options grow to a 40px touch target on phones.
+const segmentItemClass = "px-3 max-sm:py-[9px]"
+const selectTriggerClass = "h-10 w-full sm:h-9"
+
 const themeOptions = [
   { value: "light", label: "light" },
   { value: "dark", label: "dark" },
@@ -61,8 +66,8 @@ export function ThemeControl({ className }: { className?: string }) {
       value={(mounted ? theme : "system") as "light" | "dark" | "system"}
       onValueChange={setTheme}
       options={themeOptions.map((option) => ({ ...option, label: t(option.label) }))}
-      className={className ?? "w-[188px]"}
-      itemClassName="px-3"
+      className={className ?? "w-full sm:w-[188px]"}
+      itemClassName={segmentItemClass}
     />
   )
 }
@@ -75,6 +80,7 @@ export function EditorSection({ initial }: { initial: Preferences }) {
     <SettingsSection title={t("editor")} description={t("howCodeLooksWhileYouWrite")}>
       <SettingRow
         id="theme-label"
+        wide
         label={t("theme")}
         description={t("followsYourSystemByDefaultSaved")}
       >
@@ -82,6 +88,7 @@ export function EditorSection({ initial }: { initial: Preferences }) {
       </SettingRow>
       <SettingRow
         id="indent-label"
+        wide
         label={t("indentation")}
         description={t("whatTheTabKeyInsertsIn")}
       >
@@ -95,12 +102,15 @@ export function EditorSection({ initial }: { initial: Preferences }) {
             label: t("indentationValue", { value }),
           }))}
         >
-          <SelectTrigger aria-labelledby="indent-label" className="h-[34px] w-[150px] text-[13px]">
+          <SelectTrigger
+            aria-labelledby="indent-label"
+            className={cn(selectTriggerClass, "sm:w-[150px]")}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {(["2", "4", "tab"] as const).map((value) => (
-              <SelectItem key={value} value={value} className="text-[13px]">
+              <SelectItem key={value} value={value}>
                 {t("indentationValue", { value })}
               </SelectItem>
             ))}
@@ -149,7 +159,7 @@ export function DefaultsSection({ initial }: { initial: Preferences }) {
 
   return (
     <SettingsSection title={t("newPastes")} description={t("whereNewPasteAndQuickPaste")}>
-      <SettingRow id="default-visibility-label" label={t("visibility")}>
+      <SettingRow id="default-visibility-label" wide label={t("visibility")}>
         <SegmentedControl
           aria-labelledby="default-visibility-label"
           value={preferences.defaultVisibility}
@@ -159,10 +169,11 @@ export function DefaultsSection({ initial }: { initial: Preferences }) {
             { value: "unlisted", label: t("unlisted") },
             { value: "public", label: t("public") },
           ]}
-          className="w-[240px]"
+          className="w-full sm:w-[240px]"
+          itemClassName={segmentItemClass}
         />
       </SettingRow>
-      <SettingRow id="default-expiry-label" label={t("expiresAfter")}>
+      <SettingRow id="default-expiry-label" wide label={t("expiresAfter")}>
         <Select
           value={preferences.defaultExpiry}
           onValueChange={(defaultExpiry) =>
@@ -172,13 +183,13 @@ export function DefaultsSection({ initial }: { initial: Preferences }) {
         >
           <SelectTrigger
             aria-labelledby="default-expiry-label"
-            className="h-[34px] w-[120px] text-[13px]"
+            className={cn(selectTriggerClass, "sm:w-[120px]")}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {expiryOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-[13px]">
+              <SelectItem key={option.value} value={option.value}>
                 {t(option.label)}
               </SelectItem>
             ))}

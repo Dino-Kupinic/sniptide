@@ -16,15 +16,24 @@ up, and turn on **write access** only if it should save and edit snippets.
 
 | Tool | What it does |
 | --- | --- |
-| `search_snippets` | Returns a page of summaries, filtered by title or link (`query`), tags, language and collection. `nextCursor` continues the search. |
+| `search_snippets` | Returns a page of summaries, filtered by words in the title, description, tags, file paths or code (`query`, every word must match), tags, language and collection. `nextCursor` continues the search. |
 | `read_snippet` | One snippet by id or link, with its file paths, code and source metadata. |
 | `fetch_collection` | A page of a collection as numbered recipe steps with the full snippets, oldest capture first. |
 | `create_snippet` | Saves a new snippet. Private unless visibility is set explicitly. Needs write access. |
 | `update_snippet` | Replaces a snippet's title and **all** its files. Needs write access and is marked destructive. |
+| `list_collections` | Your collections with their slugs, names and how many live snippets each holds. |
+| `create_collection` | Creates an empty collection by name and returns its slug. Needs write access. |
+| `update_snippet_settings` | Changes visibility, expiry, password or burn after read. Needs write access and is marked destructive. The password is never returned. |
+| `trash_snippet` | Moves a snippet to the trash, where you can restore it in the app. Needs write access and is marked destructive. Nothing is deleted for good. |
 
 Only the token owner's **own** snippets are available, private ones included. Other people's, ones
 shared with you, trash and expired pastes are not. The server doesn't run code, doesn't write files
-to your machine, doesn't expose env secrets, and doesn't accept browser sessions.
+to your machine, doesn't expose env secrets, and doesn't accept browser sessions. Renaming and
+deleting collections, restoring from the trash and sharing with people stay in the app.
+
+Each `read_snippet` call and each snippet in a `fetch_collection` page counts as a read. The
+snippet's page shows its owner how many times it was read through MCP or the CLI, apart from its
+views. Searches and the read-back after a write don't count.
 
 ## Connect over HTTP (recommended)
 

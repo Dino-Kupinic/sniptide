@@ -1,17 +1,15 @@
 import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getTranslations } from "next-intl/server"
-import { type SettingsTab, SettingsView } from "@/components/settings/settings-view"
+import { SettingsView } from "@/components/settings/settings-view"
 import { readAccountSecurity } from "@/lib/account/store"
 import { listTokens } from "@/lib/api/tokens"
 import { getSocialProviders, isDemoMode, requireSession } from "@/lib/auth"
-import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { listGroups } from "@/lib/env/store"
 import { oauthErrorKey } from "@/lib/oauth-errors"
 import { storageUsage } from "@/lib/pastes/budget"
-import { trashTotals } from "@/lib/pastes/lists"
 import { navCounts } from "@/lib/pastes/store"
 import { readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
@@ -22,14 +20,10 @@ export async function generateMetadata() {
   return { title: `${t("settings")} · Sniptide` }
 }
 
-const tabs: SettingsTab[] = ["general", "account", "defaults", "notifications", "api", "billing"]
-
 export default async function Page({ searchParams }: PageProps<"/settings">) {
-  const [session, counts, trash, collections, storage, { tab, error }] = await Promise.all([
+  const [session, counts, storage, { error }] = await Promise.all([
     requireSession(),
     navCounts(),
-    trashTotals(),
-    listCollections(),
     storageUsage(),
     searchParams,
   ])
@@ -52,7 +46,6 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
 
   return (
     <SettingsView
-      initialTab={tabs.find((candidate) => candidate === tab) ?? "general"}
       profile={{
         name: session.user.name,
         username: session.user.username ?? "",
@@ -69,12 +62,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
         linkError: linkError ? authT(`oauthErrors.${linkError}`) : null,
         demo: isDemoMode(),
       }}
-      counts={{
-        shared: counts.shared,
-        collections: collections.length,
-        trash: trash.count,
-        pastes: counts.pastes,
-      }}
+      pasteCount={counts.pastes}
       api={{ tokens, envGroups, origin: getConfig().appUrl ?? site.origin }}
       storage={{
         usedMb: Math.round((storage.bytes / 1024 / 1024) * 10) / 10,

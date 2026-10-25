@@ -530,7 +530,8 @@ export const openApiDocument = {
             name: "q",
             in: "query",
             required: false,
-            description: "Text in the title or slug.",
+            description:
+              "Words to find. Every word must appear in the title, slug, description, a tag, a file path or the code.",
             schema: { type: "string", maxLength: 120, examples: ["button"] },
           },
           {
@@ -713,6 +714,183 @@ export const openApiDocument = {
             "No paste with that id.",
           ),
           "413": jsonError("Request or storage limit exceeded.", "The request body is too large."),
+          ...tokenErrors,
+        },
+      },
+      patch: {
+        operationId: "updateOwnPasteSettings",
+        tags: ["Token API"],
+        summary: "Change how one of your pastes is shared",
+        description:
+          "Changes only the fields sent: visibility, expiry counted from now, a password (null removes it) and burn after read. Title, files and the link stay unchanged. The response says whether a password is set and never returns it. Requires write scope.",
+        security: [{ apiToken: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                minProperties: 1,
+                properties: {
+                  visibility: { type: "string", enum: ["private", "unlisted", "public"] },
+                  expiry: { type: "string", enum: ["1h", "1d", "1w", "1m", "1y", "never"] },
+                  password: { type: ["string", "null"], minLength: 1, maxLength: 200 },
+                  burnAfterRead: { type: "boolean" },
+                },
+              },
+              example: { visibility: "unlisted", expiry: "1w" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "The paste without its files, and its sharing settings.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["paste", "settings"],
+                  properties: {
+                    paste: { type: "object" },
+                    settings: {
+                      type: "object",
+                      required: ["visibility", "expiresAt", "passwordProtected", "burnAfterRead"],
+                      properties: {
+                        visibility: { type: "string", enum: ["private", "unlisted", "public"] },
+                        expiresAt: { type: ["string", "null"], format: "date-time" },
+                        passwordProtected: { type: "boolean" },
+                        burnAfterRead: { type: "boolean" },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  paste: pasteFields,
+                  settings: {
+                    visibility: "unlisted",
+                    expiresAt: "2026-11-01T12:00:00.000Z",
+                    passwordProtected: false,
+                    burnAfterRead: false,
+                  },
+                },
+              },
+            },
+          },
+          "400": jsonError("Invalid or empty settings.", "Check the settings."),
+          "404": jsonError("No live paste of yours has that id.", "No paste with that id."),
+          ...tokenErrors,
+        },
+      },
+      delete: {
+        operationId: "trashOwnPaste",
+        tags: ["Token API"],
+        summary: "Move one of your pastes to the trash",
+        description:
+          "The link stops working and the paste can be restored from the app until the trash is emptied. The token API never deletes a paste for good. Requires write scope.",
+        security: [{ apiToken: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": {
+            description: "The trashed paste's id and slug.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["trashed"],
+                  properties: {
+                    trashed: {
+                      type: "object",
+                      required: ["id", "slug"],
+                      properties: { id: { type: "string" }, slug: { type: "string" } },
+                    },
+                  },
+                },
+                example: { trashed: { id: pasteExample.paste.id, slug: pasteExample.paste.slug } },
+              },
+            },
+          },
+          "404": jsonError("No live paste of yours has that id.", "No paste with that id."),
+          ...tokenErrors,
+        },
+      },
+    },
+    "/api/v1/collections": {
+      get: {
+        operationId: "listOwnCollections",
+        tags: ["Token API"],
+        summary: "List your collections",
+        description: "Your collections, oldest first, with how many live pastes each holds.",
+        security: [{ apiToken: [] }],
+        responses: {
+          "200": {
+            description: "Every collection.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["collections"],
+                  properties: {
+                    collections: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Collection" },
+                    },
+                  },
+                },
+                example: { collections: [{ slug: "ui", name: "UI", pasteCount: 4 }] },
+              },
+            },
+          },
+          ...tokenErrors,
+        },
+      },
+      post: {
+        operationId: "createOwnCollection",
+        tags: ["Token API"],
+        summary: "Create a collection",
+        description:
+          "Creates an empty collection and returns its slug. Names are unique per account, and an account holds up to 50 collections. Requires write scope.",
+        security: [{ apiToken: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["name"],
+                properties: { name: { type: "string", minLength: 1, maxLength: 40 } },
+              },
+              example: { name: "Auth recipes" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "The new collection.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["collection"],
+                  properties: { collection: { $ref: "#/components/schemas/Collection" } },
+                },
+                example: {
+                  collection: { slug: "auth-recipes", name: "Auth recipes", pasteCount: 0 },
+                },
+              },
+            },
+          },
+          "400": jsonError("Invalid name.", "Check the name."),
+          "409": jsonError(
+            "A collection with that name exists.",
+            "You already have a collection with that name.",
+          ),
+          "422": jsonError(
+            "The account has the most collections it can hold.",
+            "You can have up to 50 collections.",
+          ),
           ...tokenErrors,
         },
       },
@@ -1089,6 +1267,15 @@ export const openApiDocument = {
           ...pasteProperties,
         },
       },
+      Collection: {
+        type: "object",
+        required: ["slug", "name", "pasteCount"],
+        properties: {
+          slug: { type: "string", description: "Used as a paste's collection and in links." },
+          name: { type: "string" },
+          pasteCount: { type: "integer", description: "Live pastes in the collection." },
+        },
+      },
       Paste: {
         ...pasteInput,
         properties: {
@@ -1253,6 +1440,7 @@ export const openApiDocument = {
 export const internalRoutes = [
   "/[slug]/copy",
   "/[slug]/preview",
+  "/[slug]/preview.mp4",
   "/analytics/export",
   "/api/analytics",
   "/api/analytics/[...path]",
@@ -1260,6 +1448,7 @@ export const internalRoutes = [
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",
+  "/api/live",
   "/api/locale",
   "/api/search",
   "/api/stats",

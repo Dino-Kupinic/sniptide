@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ShortcutKeys, useShortcutLabel } from "@/components/shortcuts/shortcut-keys"
-import { pageTitle } from "./nav-config"
+import { isPasteScreen, pageTitle } from "./nav-config"
 import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs } from "./page-header"
 
@@ -29,6 +29,7 @@ export function TopBar({
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const { setTitle, setActions } = useHeaderSlotRefs()
+  const pasteScreen = isPasteScreen(pathname)
 
   return (
     <header className="group/header sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
@@ -40,20 +41,25 @@ export function TopBar({
       )}
 
       {/* Every page sits under "Workspace >", with the page's own title (or the one it sets)
-          after the chevron. */}
-      <nav aria-label={t("breadcrumb")} className="flex shrink-0 items-center gap-1.5 text-sm">
-        <Link
-          href="/dashboard"
-          className="rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-        >
-          {t("workspace")}
-        </Link>
-        <ChevronRightIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
-      </nav>
+          after the chevron. A paste names itself and leads with its own title. */}
+      {pasteScreen ? null : (
+        <nav aria-label={t("breadcrumb")} className="flex shrink-0 items-center gap-1.5 text-sm">
+          <Link
+            href="/dashboard"
+            className="rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            {t("workspace")}
+          </Link>
+          <ChevronRightIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+        </nav>
+      )}
       <div
         ref={setTitle}
         aria-current="page"
-        className="group/title -ml-1.5 flex min-w-0 flex-1 items-center text-sm font-medium"
+        className={cn(
+          "group/title flex min-w-0 flex-1 items-center text-sm font-medium",
+          !pasteScreen && "-ml-1.5",
+        )}
       >
         <span className="truncate group-has-data-header-title/title:hidden">
           {pageTitle(pathname) ? t(pageTitle(pathname)) : ""}

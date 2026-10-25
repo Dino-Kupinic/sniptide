@@ -21,10 +21,10 @@ import {
 } from "@sniptide/ui/components/table"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
-import { Trash2Icon } from "lucide-react"
+import { ArchiveRestoreIcon, Trash2Icon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
-import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
@@ -35,6 +35,7 @@ import {
   pasteListSearch,
 } from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
+import { ActionSheet } from "./row-menu"
 import { ListHeader, Pagination, SearchField } from "./toolbar"
 import { useListQuery } from "./use-list-query"
 
@@ -45,17 +46,24 @@ function ConfirmDelete({
   successMessage,
   onConfirm,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   title: string
   description: string
   confirmLabel: string
   successMessage: string
   onConfirm: () => Promise<void>
-  trigger: React.ReactElement
+  // Without a trigger the caller opens it, as the mobile row sheet does.
+  trigger?: React.ReactElement
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const t = useTranslations("Workspace")
   const [pending, startTransition] = React.useTransition()
-  const [open, setOpen] = React.useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
+  const open = controlledOpen ?? uncontrolledOpen
+  const setOpen = onOpenChange ?? setUncontrolledOpen
   const [error, setError] = React.useState<string | null>(null)
 
   return (
@@ -66,7 +74,7 @@ function ConfirmDelete({
         setError(null)
       }}
     >
-      <AlertDialogTrigger render={trigger} />
+      {trigger ? <AlertDialogTrigger render={trigger} /> : null}
       <AlertDialogContent>
         <AlertDialogTitle>{title}</AlertDialogTitle>
         <AlertDialogDescription>{description}</AlertDialogDescription>
@@ -76,8 +84,8 @@ function ConfirmDelete({
             {t("cancel")}
           </AlertDialogClose>
           <Button
+            variant="destructive"
             size="lg"
-            className="bg-destructive text-white hover:bg-destructive/85"
             loading={pending}
             onClick={() =>
               startTransition(async () => {
@@ -122,6 +130,50 @@ function RestoreButton({ slug, className }: { slug: string; className?: string }
   )
 }
 
+// A mobile trash row's ⋯ sheet: Restore, and Delete forever behind the same confirmation as the
+// desktop table's button.
+function TrashRowMenu({ row }: { row: TrashRow }) {
+  const t = useTranslations("Workspace")
+  const [confirming, setConfirming] = React.useState(false)
+  return (
+    <>
+      <ActionSheet
+        title={row.title}
+        label={t("actions_for", { name: row.title })}
+        actions={[
+          {
+            id: "restore",
+            icon: ArchiveRestoreIcon,
+            label: t("restore"),
+            onSelect: () =>
+              runAction(() => restorePaste(row.slug), {
+                success: t("paste_restored"),
+                error: t("couldnt_restore_the_paste_try_again"),
+              }),
+          },
+          {
+            id: "delete",
+            icon: Trash2Icon,
+            label: t("delete_forever"),
+            destructive: true,
+            group: true,
+            onSelect: () => setConfirming(true),
+          },
+        ]}
+      />
+      <ConfirmDelete
+        title={t("delete_forever_title")}
+        description={t("delete_paste_description", { name: row.title })}
+        confirmLabel={t("delete_forever")}
+        successMessage={t("paste_deleted")}
+        onConfirm={() => deleteForever(row.slug)}
+        open={confirming}
+        onOpenChange={setConfirming}
+      />
+    </>
+  )
+}
+
 export function TrashList({
   rows,
   sizeLabel,
@@ -140,6 +192,7 @@ export function TrashList({
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
 
+  const empty = pagination.totalAll === 0
   const emptyButton = (variant: "desktop" | "mobile") => (
     <ConfirmDelete
       title={t("empty_trash_title")}
@@ -149,23 +202,15 @@ export function TrashList({
       onConfirm={emptyTrash}
       trigger={
         variant === "desktop" ? (
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={pagination.totalAll === 0}
-            className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
-          >
+          <Button variant="destructive" size="lg" disabled={empty}>
             <Trash2Icon />
             {t("empty_trash")}
           </Button>
         ) : (
-          <button
-            type="button"
-            disabled={pagination.totalAll === 0}
-            className="shrink-0 text-sm text-destructive disabled:opacity-50"
-          >
+          <Button variant="destructive" size="xl">
+            <Trash2Icon />
             {t("empty_trash")}
-          </button>
+          </Button>
         )
       }
     />
@@ -176,21 +221,23 @@ export function TrashList({
       <ListHeader
         title={t("trash")}
         count={pagination.totalAll}
-        description={t("deleted_pastes_stay_here_for_30_days_their")}
         actions={emptyButton("desktop")}
+        mobileActions={empty ? null : emptyButton("mobile")}
       />
 
-      <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField
-          value={query.q}
-          onChange={(q) => update({ q }, true)}
-          placeholder={t("search_deleted_pastes")}
-        />
-        <div className="rounded-lg flex items-center justify-between gap-4 border border-border bg-sidebar px-4 py-3 text-[13px] text-foreground/80">
-          <p>{t("deleted_pastes_are_kept_for_30_days_their")}</p>
-          {emptyButton("mobile")}
+      {/* An empty trash shows its one sentence and nothing to search. */}
+      {empty ? null : (
+        <div className="flex flex-col gap-3 lg:hidden">
+          <SearchField
+            value={query.q}
+            onChange={(q) => update({ q }, true)}
+            placeholder={t("search_deleted_pastes")}
+          />
+          <p className="text-[13px] text-muted-foreground">
+            {t("deleted_pastes_are_kept_for_30_days_their")}
+          </p>
         </div>
-      </div>
+      )}
 
       <div className="lg:overflow-hidden lg:rounded-lg flex flex-col lg:border lg:border-border">
         {pagination.total === 0 ? (
@@ -250,13 +297,13 @@ export function TrashList({
                           successMessage={t("paste_deleted")}
                           onConfirm={() => deleteForever(row.slug)}
                           trigger={
-                            <button
-                              type="button"
+                            <Button
+                              variant="destructive"
+                              size="icon-sm"
                               aria-label={t("delete_named_forever", { name: row.title })}
-                              className="rounded-md flex size-[30px] items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring/40"
                             >
-                              <Trash2Icon className="size-4" />
-                            </button>
+                              <Trash2Icon />
+                            </Button>
                           }
                         />
                       </div>
@@ -269,7 +316,7 @@ export function TrashList({
             <ul className="flex flex-col lg:hidden">
               {rows.map((row) => (
                 <li key={row.slug} className="flex items-center gap-3 border-b border-border py-3">
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span title={row.title} className="truncate text-[15px] text-foreground/70">
                       {row.title}
@@ -283,7 +330,7 @@ export function TrashList({
                       {t("trash_metadata", { deleted: row.deletedLabel, gone: row.goneLabel })}
                     </span>
                   </div>
-                  <RestoreButton slug={row.slug} className="h-8" />
+                  <TrashRowMenu row={row} />
                 </li>
               ))}
             </ul>

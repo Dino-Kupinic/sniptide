@@ -28,6 +28,10 @@ COPY . .
 # start.
 ARG APP_URL
 ENV APP_URL=$APP_URL
+# Where the docs are served (https://docs.sniptide.com by default): canonical links, the sitemap and
+# link previews use it.
+ARG SITE_URL
+ENV SITE_URL=$SITE_URL
 RUN bun run --filter docs build
 
 FROM node:24-slim AS run
