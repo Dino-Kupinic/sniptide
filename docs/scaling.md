@@ -72,6 +72,8 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | ANALYTICS_RETENTION_DAYS | 180 | Retained daily analytics rollups (at least 180) |
 | PURGE_BATCH_SIZE | 500 | Maximum deletions per table in each transaction |
 | PURGE_TIME_BUDGET_MS | 2000 | Time between batches before ending a cleanup run |
+| ANALYTICS_ROLLUP_TIME_BUDGET_MS | 2000 | Time between committed analytics days or pruning batches before ending a run |
+| NOTIFICATION_EMAIL_CONCURRENCY | 2 | Concurrent notification deliveries per process, from 1 to 10 |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
 | SLOW_QUERY_MS | 500 | Threshold for slow-query log events |
 | METRICS_TOKEN | unset | Bearer token enabling the metrics endpoint |
