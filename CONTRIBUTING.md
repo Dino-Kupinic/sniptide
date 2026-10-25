@@ -3,6 +3,9 @@
 Setup and the checks live in the [README](README.md). This page covers how we write commits and
 pull requests.
 
+Use the [development guide](docs/development.md) for code ownership, focused checks, and coding
+agent workflows.
+
 ## Conventional Commits
 
 Sniptide uses [Conventional Commits](https://www.conventionalcommits.org/). Every commit message
