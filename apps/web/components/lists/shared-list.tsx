@@ -17,6 +17,7 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, SortDirection } from "@/lib/pastes/list-query"
 import type { SharedRow } from "@/lib/pastes/rows"
 import {
@@ -27,6 +28,7 @@ import {
   sharedListSearch,
 } from "@/lib/pastes/shared-list-query"
 import type { Person } from "@/lib/pastes/types"
+import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
 import {
   FilterMenu,
@@ -83,8 +85,11 @@ export function SharedList({
   peopleCount,
   origin,
   host,
+  previews,
 }: {
   rows: SharedRow[]
+  // The first highlighted lines of each paste, by slug, for the grid view's cards.
+  previews?: Record<string, HighlightedLines>
   query: SharedListQuery
   pagination: PageInfo
   languageOptions: string[]
@@ -253,43 +258,26 @@ export function SharedList({
               </div>
             )
           ) : view === "grid" ? (
-            <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 lg:grid">
+            <ul className="hidden grid-cols-2 gap-4 xl:grid-cols-3 lg:grid">
               {rows.map((row) => (
-                <li
+                <PasteCard
                   key={row.slug}
-                  className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/pastes/${row.slug}`}
-                      title={row.title}
-                      className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
-                    >
-                      {row.title}
-                    </Link>
-                    <RowMenu row={row} origin={origin} shared />
-                  </div>
-                  <LanguageLabel
-                    language={row.language}
-                    className="text-[13px] text-foreground/80"
-                  />
-                  {row.owner ? (
-                    <span className="mt-auto flex min-w-0 items-start gap-2 text-[13px]">
-                      <PersonAvatar person={row.owner} />
-                      <span
-                        dir="auto"
-                        title={row.owner.name || row.owner.username}
-                        className="min-w-0 [overflow-wrap:anywhere] whitespace-normal"
-                      >
-                        {row.owner.name || row.owner.username}
+                  row={row}
+                  lines={previews?.[row.slug]}
+                  origin={origin}
+                  shared
+                  label={
+                    row.owner ? (
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <PersonAvatar person={row.owner} className="size-4 text-[8px]" />
+                        <span dir="auto" className="truncate">
+                          {row.owner.name || row.owner.username}
+                        </span>
                       </span>
-                    </span>
-                  ) : null}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <AccessBadge access={row.access} />
-                    {row.sharedLabel}
-                  </div>
-                </li>
+                    ) : undefined
+                  }
+                  detail={`${row.access === "edit" ? t("can_edit") : t("can_view")} · ${row.sharedLabel}`}
+                />
               ))}
             </ul>
           ) : (

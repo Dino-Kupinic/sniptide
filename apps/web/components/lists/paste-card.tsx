@@ -3,6 +3,7 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
+import type * as React from "react"
 import { renderToken } from "@/components/paste/code-block"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import type { HighlightedLines } from "@/lib/highlight/types"
@@ -11,15 +12,22 @@ import { VisibilityIcon } from "./paste-list"
 import { RowMenu } from "./row-menu"
 
 // A paste in the grid view, drawn like its link preview image: the title large, and a panel with
-// the first lines of code that runs off the bottom edge of the card.
+// the first lines of code that runs off the bottom edge of the card. Lists that show other facts
+// pass their own `label` after the language and `detail` in the panel header.
 export function PasteCard({
   row,
   lines,
   origin,
+  shared = false,
+  label,
+  detail,
 }: {
   row: PasteRow
   lines: HighlightedLines | undefined
   origin: string
+  shared?: boolean
+  label?: React.ReactNode
+  detail?: React.ReactNode
 }) {
   const t = useTranslations("Workspace")
   return (
@@ -27,19 +35,21 @@ export function PasteCard({
       <div className="flex h-7 min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
         <LanguageLabel language={row.language} className="min-w-0 shrink-0 text-foreground/80" />
         <span aria-hidden="true">·</span>
-        <span
-          className={cn(
-            "flex min-w-0 items-center gap-1.5 truncate",
-            row.burnAfterRead && "text-link",
-          )}
-        >
-          <VisibilityIcon row={row} />
-          <span aria-hidden="true" className="truncate">
-            {row.burnAfterRead ? t("burn_after_read") : t(row.visibility)}
+        {label ?? (
+          <span
+            className={cn(
+              "flex min-w-0 items-center gap-1.5 truncate",
+              row.burnAfterRead && "text-link",
+            )}
+          >
+            <VisibilityIcon row={row} />
+            <span aria-hidden="true" className="truncate">
+              {row.burnAfterRead ? t("burn_after_read") : t(row.visibility)}
+            </span>
           </span>
-        </span>
+        )}
         <span className="-mr-1.5 ml-auto">
-          <RowMenu row={row} origin={origin} />
+          <RowMenu row={row} origin={origin} shared={shared} />
         </span>
       </div>
       <Link
@@ -53,7 +63,7 @@ export function PasteCard({
         <div className="flex items-center justify-between gap-3 border-b border-border px-3.5 py-2 text-xs text-muted-foreground">
           <span className="truncate font-mono">/{row.slug}</span>
           <span className="shrink-0 tabular-nums">
-            {t("views_count", { count: row.views })} · {row.updatedLabel}
+            {detail ?? `${t("views_count", { count: row.views })} · ${row.updatedLabel}`}
           </span>
         </div>
         {lines ? (

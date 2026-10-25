@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server"
 import { SharedList } from "@/components/lists/shared-list"
+import { cardPreviews } from "@/lib/pastes/card-preview"
 import type { SearchParams } from "@/lib/pastes/list-query"
 import { listSharedPage } from "@/lib/pastes/lists"
 import { toSharedRows } from "@/lib/pastes/rows"
@@ -17,11 +18,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
     listSharedPage(parseSharedListQuery(await searchParams)),
     getSiteOrigin(),
   ])
-  const rows = await toSharedRows(result.entries, locale)
+  const [rows, previews] = await Promise.all([
+    toSharedRows(result.entries, locale),
+    cardPreviews(result.entries.map((entry) => entry.paste)),
+  ])
 
   return (
     <SharedList
       rows={rows}
+      previews={previews}
       query={result.query}
       pagination={result.pagination}
       languageOptions={result.languageOptions}

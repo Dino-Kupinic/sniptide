@@ -99,6 +99,7 @@ export default async function Page({
         languageOptions: [...new Set(data.rows.map((row) => row.language))].sort(),
         ownerOptions: owners,
         peopleCount: new Set(sharedRows.map((row) => row.owner?.username)).size,
+        previews,
       }}
       data={{
         ...data,
