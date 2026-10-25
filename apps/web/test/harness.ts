@@ -4,6 +4,7 @@ import {
   analyticsRollup,
   analyticsSalt,
   authRateLimit,
+  moderationEvent,
   paste,
   pasteFile,
   pasteStar,
@@ -45,6 +46,7 @@ export async function migrate() {
 
 export async function resetDatabase() {
   // Everything else cascades from the accounts.
+  await getDb().delete(moderationEvent)
   await getDb().delete(user)
   await getDb().delete(rateLimit)
   await getDb().delete(authRateLimit)

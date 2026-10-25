@@ -1,7 +1,8 @@
 import "server-only"
 import type { Database } from "@workspace/db"
+import { allowedPaste } from "@workspace/db/moderation"
 import { paste, user } from "@workspace/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
@@ -23,7 +24,7 @@ export const storageUsage = cache(async () => {
       pastes: sql<number>`count(*)::int`,
     })
     .from(paste)
-    .where(eq(paste.ownerId, owner))
+    .where(and(allowedPaste(), eq(paste.ownerId, owner)))
   return { bytes: row?.bytes ?? 0, pastes: row?.pastes ?? 0, limit }
 })
 // Serialize account budgets before paste rows. Key-share locks from invite notification foreign

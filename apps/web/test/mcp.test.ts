@@ -3,6 +3,7 @@ import path from "node:path"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
+import { inspectModeration, transitionModeration } from "@workspace/db/moderation"
 import {
   apiToken,
   collection,
@@ -207,6 +208,39 @@ describeDb("MCP with real token API and Postgres", () => {
       expect(
         await getDb().select().from(pasteRevision).where(eq(pasteRevision.pasteId, created.id)),
       ).toHaveLength(2)
+    }, 15_000)
+
+    test(`${transport}: moderation restrictions cover read, search, collection and update tools`, async () => {
+      const client = transport === "remote HTTP" ? await remote(token) : await local()
+      for (const state of ["pending", "quarantined", "removed"] as const) {
+        const created = (await data(client, "create_snippet", input)).paste
+        const current = await inspectModeration(getDb(), created.id)
+        if (!current) throw new Error("Missing synthetic paste")
+        await transitionModeration(
+          getDb(),
+          {
+            commandId: crypto.randomUUID(),
+            pasteId: created.id,
+            expectedContentVersion: current.contentVersion,
+            expectedModerationVersion: current.moderationVersion,
+            state,
+            reasonCode: "review",
+            caseReference: crypto.randomUUID(),
+          },
+          "mcp-test-operator",
+        )
+        for (const name of ["read_snippet", "update_snippet"]) {
+          const result = await client.callTool({
+            name,
+            arguments: name === "read_snippet" ? { id: created.id } : { ...input, id: created.id },
+          })
+          expect(result.isError).toBe(true)
+          expect(JSON.stringify(result)).not.toContain(input.title)
+          expect(JSON.stringify(result)).not.toContain(input.files[0]?.content ?? "")
+        }
+        expect((await data(client, "search_snippets", {})).pastes).toEqual([])
+        expect((await data(client, "fetch_collection", { slug: "ui" })).steps).toEqual([])
+      }
     }, 15_000)
   }
   test("HTTP requires a token on initialization and every subsequent request, never a cookie", async () => {

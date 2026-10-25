@@ -14,11 +14,21 @@ export async function GET(request: Request, { params }: RouteContext<"/[slug]/ra
   const { slug } = await params
   const url = new URL(request.url)
   const read = await readRawFile(slug, url.searchParams.get("file"))
-  if (read.status === "missing") return new Response("Not found", { status: 404 })
+  if (read.status === "missing")
+    return new Response("Not found", {
+      status: 404,
+      headers: { "cache-control": "private, no-store" },
+    })
   if (read.status === "locked")
-    return new Response("This paste is password protected", { status: 401 })
+    return new Response("This paste is password protected", {
+      status: 401,
+      headers: { "cache-control": "private, no-store" },
+    })
   if (read.status === "forbidden")
-    return new Response("Raw access is off for this paste", { status: 403 })
+    return new Response("Raw access is off for this paste", {
+      status: 403,
+      headers: { "cache-control": "private, no-store" },
+    })
   const { file } = read
 
   const headers = new Headers({

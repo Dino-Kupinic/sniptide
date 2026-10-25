@@ -1,4 +1,5 @@
 import posthog from "posthog-js"
+import { isAnalyticsExcluded } from "@/lib/analytics-preference"
 
 // Product analytics with PostHog. Off unless the server has POSTHOG_KEY (lib/config.ts), so a
 // self-hosted instance sends nothing. sniptide.com reports to the same project as its website;
@@ -15,7 +16,7 @@ export type AnalyticsConfig = { key: string; uiHost: string }
 let started = false
 
 export function startAnalytics({ key, uiHost }: AnalyticsConfig) {
-  if (started) return
+  if (started || isAnalyticsExcluded()) return
   started = true
   posthog.init(key, {
     api_host: ANALYTICS_PATH,
@@ -33,6 +34,7 @@ export function startAnalytics({ key, uiHost }: AnalyticsConfig) {
     before_send: (event) => {
       if (
         !event ||
+        isAnalyticsExcluded() ||
         shouldDropSecretEvent(event, typeof window === "undefined" ? "" : window.location.pathname)
       )
         return null
