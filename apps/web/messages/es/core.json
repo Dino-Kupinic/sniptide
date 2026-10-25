@@ -2,6 +2,8 @@
   "Core": {
     "language": "Idioma",
     "languageError": "No se pudo cambiar el idioma. Inténtalo de nuevo.",
+    "searchLanguages": "Buscar lenguajes",
+    "noLanguagesFound": "Ningún lenguaje coincide con esa búsqueda.",
     "dashboard": "Panel",
     "analytics": "Estadísticas",
     "pastes": "Mis fragmentos",

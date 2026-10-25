@@ -1,18 +1,26 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
-import { Sheet, SheetContent, SheetTitle } from "@sniptide/ui/components/sheet"
+import {
+  Sheet,
+  SheetBody,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+} from "@sniptide/ui/components/sheet"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, ChevronDownIcon, EyeIcon, FolderIcon, LinkIcon, LockIcon } from "lucide-react"
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronUpIcon,
+  EyeIcon,
+  FolderIcon,
+  LinkIcon,
+  LockIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
@@ -23,7 +31,6 @@ import {
   CollectionSelect,
   ExpiryChips,
   expiryOptions,
-  OptionGroup,
   PasswordInput,
   SlugInput,
   ToggleRow,
@@ -33,7 +40,8 @@ import {
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
+import { LanguagePicker } from "@/components/paste/language-picker"
 import {
   type PanelSection,
   SidePanel,
@@ -61,7 +69,7 @@ import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
-import { detectLanguage, languages, renameForLanguage } from "@/lib/pastes/languages"
+import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
 import { findSecrets } from "@/lib/secrets"
@@ -108,6 +116,64 @@ function snapshotOf(textarea: HTMLTextAreaElement): Snapshot {
   }
 }
 
+// Whether the on-screen keyboard is up while a field has focus. The keyboard shrinks the visual
+// viewport (and on some browsers the layout viewport too), so this compares the visible height
+// with the tallest one seen at this width.
+function useSoftKeyboard() {
+  const [open, setOpen] = React.useState(false)
+  React.useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    let width = window.innerWidth
+    let tallest = Math.max(window.innerHeight, viewport.height)
+    function check() {
+      if (!viewport) return
+      if (window.innerWidth !== width) {
+        width = window.innerWidth
+        tallest = 0
+      }
+      tallest = Math.max(tallest, window.innerHeight, viewport.height)
+      const field = document.activeElement
+      const typing =
+        field instanceof HTMLTextAreaElement ||
+        (field instanceof HTMLInputElement && !["checkbox", "radio"].includes(field.type)) ||
+        (field instanceof HTMLElement && field.isContentEditable)
+      setOpen(typing && viewport.height < tallest - 120)
+    }
+    viewport.addEventListener("resize", check)
+    document.addEventListener("focusin", check)
+    document.addEventListener("focusout", check)
+    return () => {
+      viewport.removeEventListener("resize", check)
+      document.removeEventListener("focusin", check)
+      document.removeEventListener("focusout", check)
+    }
+  }, [])
+  return open
+}
+
+// Grows a one-row textarea with its text, so a long title wraps instead of being cut off.
+function useAutoHeight(value: string) {
+  const ref = React.useRef<HTMLTextAreaElement>(null)
+  React.useLayoutEffect(() => {
+    const field = ref.current
+    if (!field) return
+    field.style.height = "auto"
+    field.style.height = `${field.scrollHeight}px`
+  }, [value])
+  React.useEffect(() => {
+    const field = ref.current
+    if (!field) return
+    const observer = new ResizeObserver(() => {
+      field.style.height = "auto"
+      field.style.height = `${field.scrollHeight}px`
+    })
+    observer.observe(field.parentElement ?? field)
+    return () => observer.disconnect()
+  }, [])
+  return ref
+}
+
 let fileCounter = 0
 function newFile(name: string, content = ""): EditorFile {
   fileCounter += 1
@@ -121,6 +187,7 @@ export function PasteEditor({
   collections,
   draftScope,
   indentation = "2",
+  lineNumbers = true,
   secretDetection = true,
   notice,
   sharedEdit,
@@ -134,8 +201,10 @@ export function PasteEditor({
   // Whose drafts these are (the signed-in account, plus what the page started from), so accounts
   // sharing a browser and different starting points don't mix.
   draftScope: string
-  // From the viewer's Settings: what Tab inserts, and whether to warn about pasted secrets.
+  // From the viewer's Settings: what Tab inserts, whether lines are numbered, and whether to warn
+  // about pasted secrets.
   indentation?: Preferences["indentation"]
+  lineNumbers?: boolean
   secretDetection?: boolean
   // Shown like a save error when the page couldn't prefill the editor (a gist that can't be read).
   notice?: string
@@ -166,7 +235,10 @@ export function PasteEditor({
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
-  const [mobileMore, setMobileMore] = React.useState(false)
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [languageOpen, setLanguageOpen] = React.useState(false)
+  const keyboardUp = useSoftKeyboard()
+  const titleRef = useAutoHeight(title)
   const formRef = React.useRef<HTMLFormElement>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
   // Where the caret goes once the next render has put new text in the textarea (Undo, Redo, Tab).
@@ -637,107 +709,131 @@ export function PasteEditor({
 
   const cancelHref = editing ? `/pastes/${savedSlug}` : "/pastes"
 
-  const passwordField = passwordOn ? (
-    <>
-      <PasswordInput
-        value={password}
-        onChange={setPassword}
-        onCommit={editing ? () => setCommittedPassword(password) : undefined}
-        placeholder={hasPassword ? t("leaveEmptyToKeepTheCurrent") : t("password")}
-      />
-      {editing && !hasPassword && !committedPassword ? (
-        <p className="text-xs text-muted-foreground">{t("anyoneWithTheLinkCanOpenMessage")}</p>
-      ) : null}
-    </>
-  ) : null
-
-  const inviteMenu =
-    !editing && visibility === "private" ? (
-      <InvitePeople invites={invites} onChange={setInvites} />
+  // The options, laid out for the desktop side panel or (large) for the mobile settings sheet, in
+  // the same order.
+  function optionSections(large: boolean): PanelSection[] {
+    const passwordField = passwordOn ? (
+      <>
+        <PasswordInput
+          value={password}
+          onChange={setPassword}
+          onCommit={editing ? () => setCommittedPassword(password) : undefined}
+          placeholder={hasPassword ? t("leaveEmptyToKeepTheCurrent") : t("password")}
+          large={large}
+        />
+        {editing && !hasPassword && !committedPassword ? (
+          <p className="text-xs text-muted-foreground">{t("anyoneWithTheLinkCanOpenMessage")}</p>
+        ) : null}
+      </>
     ) : null
 
-  const panelSections: PanelSection[] = [
-    {
-      id: "access",
-      label: t("visibilityExpiry"),
-      icon: EyeIcon,
-      content: (
-        <>
-          <SegmentedControl
-            aria-label={t("visibility")}
-            value={visibility}
-            onValueChange={setVisibility}
-            options={visibilityOptions.map((option) => ({
-              ...option,
-              label: t("visibilityValue", { value: option.value }),
-            }))}
-          />
-          <p className="text-xs text-muted-foreground">
-            {t("visibilityHelp", { value: visibility })}
-          </p>
-          {inviteMenu ? <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div> : null}
-          <div className="mt-1 flex flex-col gap-2">
-            <span className="text-muted-foreground">{t("expiresAfter")}</span>
-            <ExpiryChips
-              value={expiry}
-              onChange={setExpiry}
-              options={expiryOptions.map((option) => ({
+    const inviteMenu =
+      !editing && visibility === "private" ? (
+        <InvitePeople invites={invites} onChange={setInvites} large={large} />
+      ) : null
+
+    return [
+      {
+        id: "access",
+        label: t("visibilityExpiry"),
+        icon: EyeIcon,
+        content: (
+          <>
+            <SegmentedControl
+              aria-label={t("visibility")}
+              value={visibility}
+              onValueChange={setVisibility}
+              options={visibilityOptions.map((option) => ({
                 ...option,
-                label: t("expiryValue", { value: option.value }),
-                valueLabel: t("expiryLong", { value: option.value }),
+                label: t("visibilityValue", { value: option.value }),
               }))}
-              currentExpiry={expiryLabel}
+              itemClassName={large ? "py-2 text-sm" : undefined}
             />
-          </div>
-        </>
-      ),
-    },
-    {
-      id: "slug",
-      label: t("customLink"),
-      icon: LinkIcon,
-      content: (
-        <SlugInput
-          value={slug}
-          onChange={setSlug}
-          onCommit={editing ? () => setCommittedSlug(slug) : undefined}
-          status={slugStatus}
-        />
-      ),
-    },
-    {
-      id: "collection",
-      label: t("collection"),
-      icon: FolderIcon,
-      marked: collection !== null,
-      content: (
-        <CollectionSelect value={collection} onChange={setCollection} collections={collections} />
-      ),
-    },
-    {
-      id: "protection",
-      label: t("protection"),
-      icon: LockIcon,
-      marked: passwordOn || burnAfterRead,
-      content: (
-        <>
-          <ToggleRow
-            label={t("password")}
-            description={t("visitorsMustEnterItToView")}
-            checked={passwordOn}
-            onCheckedChange={setPasswordOn}
+            <p className="text-xs text-muted-foreground">
+              {t("visibilityHelp", { value: visibility })}
+            </p>
+            {inviteMenu ? (
+              <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div>
+            ) : null}
+            <div className="mt-1 flex flex-col gap-2">
+              <span className="text-muted-foreground">{t("expiresAfter")}</span>
+              <ExpiryChips
+                value={expiry}
+                onChange={setExpiry}
+                options={expiryOptions.map((option) => ({
+                  ...option,
+                  label: t("expiryValue", { value: option.value }),
+                  valueLabel: t("expiryLong", { value: option.value }),
+                }))}
+                currentExpiry={expiryLabel}
+              />
+            </div>
+          </>
+        ),
+      },
+      {
+        id: "slug",
+        label: t("customLink"),
+        icon: LinkIcon,
+        content: (
+          <SlugInput
+            value={slug}
+            onChange={setSlug}
+            onCommit={editing ? () => setCommittedSlug(slug) : undefined}
+            status={slugStatus}
+            large={large}
           />
-          {passwordField}
-          <ToggleRow
-            label={t("burnAfterReading")}
-            description={t("deletedAfterTheFirstView")}
-            checked={burnAfterRead}
-            onCheckedChange={setBurnAfterRead}
+        ),
+      },
+      {
+        id: "collection",
+        label: t("collection"),
+        icon: FolderIcon,
+        marked: collection !== null,
+        content: (
+          <CollectionSelect
+            value={collection}
+            onChange={setCollection}
+            collections={collections}
+            large={large}
           />
-        </>
-      ),
-    },
-  ]
+        ),
+      },
+      {
+        id: "protection",
+        label: t("protection"),
+        icon: LockIcon,
+        marked: passwordOn || burnAfterRead,
+        content: (
+          <>
+            <ToggleRow
+              label={t("password")}
+              description={t("visitorsMustEnterItToView")}
+              checked={passwordOn}
+              onCheckedChange={setPasswordOn}
+              large={large}
+            />
+            {passwordField}
+            <ToggleRow
+              label={t("burnAfterReading")}
+              description={t("deletedAfterTheFirstView")}
+              checked={burnAfterRead}
+              onCheckedChange={setBurnAfterRead}
+              large={large}
+            />
+          </>
+        ),
+      },
+    ]
+  }
+
+  const panelSections = optionSections(false)
+  const heading = editing ? t("editPaste") : t("newPaste")
+  // The mobile settings chip names the state: "Unlisted · 1 week".
+  const settingsSummary = t("settingsSummary", {
+    visibility: t("visibilityValue", { value: visibility }),
+    expiry: expiry === "keep" ? (expiryLabel ?? t("keep")) : t("expiryLong", { value: expiry }),
+  })
 
   return (
     <form
@@ -750,35 +846,47 @@ export function PasteEditor({
       className="flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7"
     >
       {/* Mobile header from the Paper "New paste" artboard */}
-      <div className="sticky top-0 z-20 flex h-[52px] items-center justify-between bg-background px-4 pt-[env(safe-area-inset-top)] box-content lg:hidden">
+      <div className="sticky top-0 z-20 box-content flex h-[52px] items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
         {editing ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xl"
+            aria-label={t("backToPaste")}
             onClick={() => void finish()}
-            className="text-[15px] font-medium text-link"
+            className="w-10 px-0"
           >
-            {t("done")}
-          </button>
+            <ChevronLeftIcon className="size-5" />
+          </Button>
         ) : (
-          <Link href={cancelHref} className="text-[15px] text-foreground/80">
+          <Button
+            variant="ghost"
+            size="xl"
+            render={<Link href={cancelHref} />}
+            nativeButton={false}
+            className="px-2"
+          >
             {t("cancel")}
-          </Link>
+          </Button>
         )}
-        <span className="text-[15px] font-semibold">
-          {editing ? t("editPaste") : t("newPaste")}
-        </span>
-        <button
+        <h1 className="min-w-0 flex-1 truncate text-center font-heading text-xl leading-7 font-bold tracking-[-0.02em]">
+          {heading}
+        </h1>
+        <Button
           type="button"
+          variant="ghost"
+          size="xl"
           onClick={() => setPreview((value) => !value)}
           aria-pressed={preview}
-          className={cn("text-[15px] text-muted-foreground", preview && "text-link")}
+          className={cn("px-2 text-muted-foreground", preview && "text-link")}
         >
           {preview ? t("edit") : t("preview")}
-        </button>
+        </Button>
       </div>
+      <h1 className="sr-only max-lg:hidden">{heading}</h1>
 
       <HeaderTitle>
-        {editing ? t("editPaste") : t("newPaste")}
+        {heading}
         {editing ? <AutosaveStatus state={state} className="hidden lg:inline" /> : null}
       </HeaderTitle>
       <HeaderActions>
@@ -809,22 +917,31 @@ export function PasteEditor({
       </HeaderActions>
 
       <div className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
-        <input
+        <textarea
+          ref={titleRef}
           aria-label={t("title")}
+          rows={1}
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          // A title is one line: Enter moves on to the description and pasted breaks become spaces.
+          onChange={(event) => setTitle(event.target.value.replace(/\r?\n/g, " "))}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.nativeEvent.isComposing) return
+            event.preventDefault()
+            event.currentTarget.form?.querySelector<HTMLInputElement>("[data-description]")?.focus()
+          }}
           placeholder={t("untitledPaste")}
           maxLength={120}
           required
-          className="w-full bg-transparent font-heading text-[28px] leading-9 font-bold tracking-[-0.02em] caret-primary outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
+          className="block w-full resize-none overflow-hidden bg-transparent font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] caret-highlight outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
         />
         <input
+          data-description=""
           aria-label={t("description")}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder={t("addADescriptionOptional")}
           maxLength={280}
-          className="w-full bg-transparent text-[15px] leading-5 outline-none placeholder:text-muted-foreground lg:text-sm lg:leading-5"
+          className="w-full bg-transparent text-base leading-6 outline-none placeholder:text-muted-foreground lg:text-sm lg:leading-5"
         />
       </div>
 
@@ -894,6 +1011,7 @@ export function PasteEditor({
               }
               onRemove={removeFile}
               onAdd={addFile}
+              onChangeLanguage={() => setLanguageOpen(true)}
               trailing={sharedEdit ? undefined : <SidePanelToggle />}
             />
 
@@ -902,21 +1020,33 @@ export function PasteEditor({
                 content={active?.content || " "}
                 highlighted={previewLines}
                 wrap
-                className="flex-1"
+                lineNumbers={lineNumbers}
+                className="flex-1 bg-muted dark:bg-sidebar"
               />
             ) : (
-              <div className="flex flex-1 gap-[18px] overflow-auto p-4 font-mono text-[13px] leading-[22px]">
-                <div
-                  aria-hidden="true"
-                  className="hidden shrink-0 text-right text-muted-foreground/60 select-none lg:block"
-                >
-                  {Array.from({ length: lineCount }, (_, index) => (
-                    <div key={index}>{index + 1}</div>
-                  ))}
-                </div>
+              <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
+                {lineNumbers ? (
+                  <div
+                    aria-hidden="true"
+                    style={{ minWidth: `${String(lineCount).length}ch` }}
+                    className="shrink-0 text-right text-muted-foreground tabular-nums select-none"
+                  >
+                    {Array.from({ length: lineCount }, (_, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          index + 1 === cursor.line && "group-focus-within/code:text-foreground",
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <HighlightedTextarea
                   aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
                   lines={lines}
+                  activeLine={cursor.line}
                   value={active?.content ?? ""}
                   ref={bindTextarea}
                   onChange={(event) => {
@@ -957,38 +1087,24 @@ export function PasteEditor({
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  aria-label={t("languageName", { name: language.name })}
-                  className="rounded-md -ml-1.5 flex items-center gap-2 px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
-                >
-                  <LanguageMarker language={language.id} />
-                  <span className="font-medium text-foreground">{language.name}</span>
-                  <ChevronDownIcon className="size-3" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="top"
-                  align="start"
-                  className="max-h-80 min-w-44 overflow-y-auto"
-                >
-                  {languages.map((option) => (
-                    <DropdownMenuItem
-                      key={option.id}
-                      onClick={() => {
-                        if (active) updateActive({ name: renameForLanguage(active.name, option) })
-                      }}
-                    >
-                      <LanguageMarker language={option.id} />
-                      {option.name}
-                      {option.id === language.id ? <CheckIcon className="ml-auto" /> : null}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <LanguagePicker
+                value={language.id}
+                onValueChange={(id) => {
+                  if (active)
+                    updateActive({ name: renameForLanguage(active.name, getLanguage(id)) })
+                }}
+                side="top"
+                open={languageOpen}
+                onOpenChange={setLanguageOpen}
+                aria-label={t("languageName", { name: language.name })}
+                className="rounded-md -my-1.5 -ml-1.5 flex h-10 items-center gap-2 px-1.5 outline-none lg:my-0 lg:h-auto lg:py-0.5 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
+              >
+                <LanguageIcon language={language.id} />
+                <span className="font-medium text-foreground">{language.name}</span>
+                <ChevronDownIcon className="size-3" />
+              </LanguagePicker>
               <span className="tabular-nums">
-                <span className="hidden sm:inline">
-                  {t("cursorPosition", { line: cursor.line, column: cursor.column })} ·{" "}
-                </span>
+                {t("cursorPosition", { line: cursor.line, column: cursor.column })} ·{" "}
                 {t("fileCount", { count: files.length })} · {formatBytes(totalBytes, locale)}
               </span>
             </div>
@@ -1000,100 +1116,60 @@ export function PasteEditor({
         </div>
       </SidePanelProvider>
 
-      {/* Mobile bottom panel */}
-      <div className="sticky bottom-0 z-20 mt-6 flex flex-col gap-4 border-t border-border bg-background px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgb(0_0_0/0.04)] lg:hidden">
-        <span aria-hidden="true" className="mx-auto h-1 w-9 bg-border" />
+      {/* Mobile bottom bar: the settings chip opens every option in one sheet. It steps aside
+          while the on-screen keyboard is up, so the code being typed stays in view. */}
+      <div
+        hidden={keyboardUp}
+        className="sticky bottom-0 z-20 mt-6 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
+      >
         {sharedEdit ? null : (
-          <>
-            <SegmentedControl
-              aria-label={t("visibility")}
-              value={visibility}
-              onValueChange={setVisibility}
-              options={visibilityOptions.map((option) => ({
-                ...option,
-                label: t("visibilityValue", { value: option.value }),
-              }))}
-              itemClassName="py-2.5 text-[15px]"
-              className="border border-border bg-muted"
-            />
-            {!editing && visibility === "private" ? (
-              <InvitePeople invites={invites} onChange={setInvites} large />
-            ) : null}
-            <div className="flex flex-col gap-2">
-              <span className="text-[15px]">{t("expiresAfter")}</span>
-              <ExpiryChips
-                value={expiry}
-                onChange={setExpiry}
-                options={expiryOptions.map((option) => ({
-                  ...option,
-                  label: t("expiryValue", { value: option.value }),
-                  valueLabel: t("expiryLong", { value: option.value }),
-                }))}
-                currentExpiry={expiryLabel}
-              />
-            </div>
-            <ToggleRow
-              label={t("password")}
-              description={t("visitorsMustEnterItToView")}
-              checked={passwordOn}
-              onCheckedChange={setPasswordOn}
-              large
-            />
-            {passwordField}
-            {/* The rarer options wait in a sheet, so the panel stays short. */}
-            <button
-              type="button"
-              onClick={() => setMobileMore(true)}
-              className="self-start text-sm text-muted-foreground underline underline-offset-2"
-            >
-              {t("moreOptions")}
-            </button>
-            <Sheet open={mobileMore} onOpenChange={setMobileMore}>
-              <SheetContent side="bottom">
-                <span aria-hidden="true" className="mx-auto mt-2 h-1 w-9 rounded-full bg-border" />
-                <SheetTitle className="px-4 pt-3 text-[15px] font-semibold">
-                  {t("moreOptions")}
-                </SheetTitle>
-                <div className="flex flex-col gap-4 overflow-y-auto px-4 pt-4 pb-4">
-                  <OptionGroup label={t("customLink")} id="slug-label-mobile">
-                    <SlugInput
-                      value={slug}
-                      onChange={setSlug}
-                      onCommit={editing ? () => setCommittedSlug(slug) : undefined}
-                      status={slugStatus}
-                    />
-                  </OptionGroup>
-                  <OptionGroup label={t("collection")} id="collection-label-mobile">
-                    <CollectionSelect
-                      value={collection}
-                      onChange={setCollection}
-                      collections={collections}
-                    />
-                  </OptionGroup>
-                  <ToggleRow
-                    label={t("burnAfterRead")}
-                    description={t("deleteAfterTheFirstView")}
-                    checked={burnAfterRead}
-                    onCheckedChange={setBurnAfterRead}
-                    large
-                  />
-                  <Button
-                    type="button"
-                    variant="inverted"
-                    onClick={() => setMobileMore(false)}
-                    className="h-[46px] text-base"
-                  >
-                    {t("done")}
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </>
+          <Button
+            type="button"
+            variant="outline"
+            size="xl"
+            aria-haspopup="dialog"
+            aria-label={`${t("pasteSettings")}: ${settingsSummary}`}
+            onClick={() => setSettingsOpen(true)}
+            className="min-w-0 flex-1 justify-start px-3"
+          >
+            {passwordOn || burnAfterRead ? <LockIcon /> : <EyeIcon />}
+            <span className="truncate">{settingsSummary}</span>
+            <ChevronUpIcon className="ml-auto text-muted-foreground" />
+          </Button>
         )}
-        <Button type="submit" loading={pending} className="h-12 text-base font-semibold">
+        <Button
+          type="submit"
+          size="xl"
+          loading={pending}
+          className={cn("shrink-0", sharedEdit && "flex-1")}
+        >
           {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>
       </div>
+
+      {sharedEdit ? null : (
+        <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <SheetContent side="bottom" className="lg:hidden">
+            <SheetHeader title={t("pasteSettings")} closeLabel={t("close")} />
+            <SheetBody className="flex flex-col divide-y divide-border pb-0 text-sm">
+              {optionSections(true).map((section) => (
+                <section key={section.id} className="flex flex-col gap-3 py-4 first:pt-2">
+                  <h2 className="flex items-center gap-2 font-medium">
+                    <section.icon className="size-4 text-muted-foreground" />
+                    {section.label}
+                  </h2>
+                  {section.content}
+                </section>
+              ))}
+            </SheetBody>
+            <div className="shrink-0 border-t border-border px-4 py-3">
+              <SheetClose render={<Button variant="inverted" size="xl" className="w-full" />}>
+                {t("done")}
+              </SheetClose>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </form>
   )
 }

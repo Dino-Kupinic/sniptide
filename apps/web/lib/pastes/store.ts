@@ -1,5 +1,6 @@
 import "server-only"
 
+import { parseAllowlist } from "@workspace/auth/allowlist"
 import {
   notification,
   pasteFile,
@@ -36,6 +37,7 @@ import {
   type SidebarViews,
 } from "@/components/shell/sidebar-state"
 import { getSession } from "@/lib/auth"
+import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { viewMilestone } from "@/lib/notifications/describe"
@@ -98,12 +100,17 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
 
 // Paths the app already uses, so a custom link can't shadow a page.
 const RESERVED = new Set([
+  "analytics",
   "api",
   "collections",
   "dashboard",
+  "demo",
+  "dev",
   "docs",
+  "forgot-password",
   "new",
   "pastes",
+  "reset-password",
   "secrets",
   "secret-share",
   "settings",
@@ -504,6 +511,8 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
   const viewer = await requireViewerId()
   const text = identifier.trim().replace(/^@/, "").toLowerCase()
   if (!text) return { status: "missing" }
+  const config = getConfig()
+  const requireVerifiedEmail = Boolean(config.smtp || parseAllowlist(config.allowedEmails))
   const [row] = await getDb()
     .select({
       id: user.id,
@@ -513,7 +522,15 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
       displayUsername: user.displayUsername,
     })
     .from(user)
-    .where(or(sql`lower(${user.email}) = ${text}`, sql`lower(${user.username}) = ${text}`))
+    .where(
+      or(
+        and(
+          sql`lower(${user.email}) = ${text}`,
+          requireVerifiedEmail ? eq(user.emailVerified, true) : undefined,
+        ),
+        sql`lower(${user.username}) = ${text}`,
+      ),
+    )
     .limit(1)
   if (!row) return { status: "missing" }
   if (row.id === viewer) return { status: "self" }
@@ -644,6 +661,7 @@ export async function restoreShare(slug: string) {
 async function viewerMayRead(record: PasteRecord, viewer: string | null) {
   if (record.deletedAt) return false
   if (record.ownerId === viewer) return true
+  if (record.burnAfterRead) return false
   return !recordExpired(record) && (await canOpenLink(record, viewer)) === "ok"
 }
 
@@ -707,6 +725,7 @@ export async function readableStarsWhere(viewer: string) {
         ),
       ),
       and(
+        eq(pasteTable.burnAfterRead, false),
         ne(pasteTable.visibility, "private"),
         or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
         or(
@@ -912,14 +931,7 @@ export async function readSharedPaste(
     slug: record.slug,
     title: record.title,
     files,
-    author: author
-      ? {
-          name: author.name,
-          username: author.displayUsername ?? author.username ?? author.name,
-          initials: initials(author.name),
-          tone: "foreground",
-        }
-      : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" },
+    author: pasteAuthor(author),
     updatedAt: ms(record.updatedAt),
     expiresAt: ms(record.expiresAt),
     views: record.views,
@@ -927,6 +939,19 @@ export async function readSharedPaste(
     allowRaw: record.allowRaw,
   }
   return { status: "ok", paste, owned, signedIn: viewer !== null }
+}
+
+function pasteAuthor(
+  author: { name: string; username: string | null; displayUsername: string | null } | undefined,
+): SharedPaste["author"] {
+  return author
+    ? {
+        name: author.name,
+        username: author.displayUsername ?? author.username ?? author.name,
+        initials: initials(author.name),
+        tone: "foreground",
+      }
+    : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" }
 }
 
 // Shared by metadata, the share page and raw reads. React memoizes this only within a render;
@@ -982,11 +1007,14 @@ export async function readSharedMeta(slug: string) {
   return { title: access.record.title, visibility: access.record.visibility }
 }
 
-// Public card data ignores sessions and unlock cookies. Even the owner cannot expose a
-// protected paste through the unauthenticated image URL. No views, events or burn claims.
+// Card data for link previews of public and unlisted pastes: whoever has an unlisted link can read
+// the paste already, and the unfurler only has the link. It ignores sessions and unlock cookies, so
+// even the owner cannot expose a private or protected paste through the unauthenticated image URL.
+// No views, events or burn claims.
 export async function readPublicPreview(slug: string): Promise<PastePreview | null> {
   const record = await findSharedRecord(slug)
-  if (record?.visibility !== "public" || record.passwordHash || record.burnAfterRead) return null
+  if (!record || record.visibility === "private" || record.passwordHash || record.burnAfterRead)
+    return null
   const [file] = await getDb()
     .select({
       name: pasteFile.name,
@@ -997,7 +1025,45 @@ export async function readPublicPreview(slug: string): Promise<PastePreview | nu
     .where(eq(pasteFile.pasteId, record.id))
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)
-  return file ? { slug: record.slug, title: record.title, ...file } : null
+  if (!file) return null
+  return {
+    slug: record.slug,
+    title: record.title,
+    unlisted: record.visibility === "unlisted",
+    ...file,
+  }
+}
+
+// The embed view runs inside other sites' pages, so like the preview card it ignores sessions and
+// unlock cookies: a private, protected or one-time paste never opens there, even for its owner.
+// Unlisted pastes do, since whoever has the link may already read them. No views or burn claims.
+export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> {
+  const record = await findSharedRecord(slug)
+  if (!record || record.visibility === "private" || record.passwordHash || record.burnAfterRead)
+    return null
+  const db = getDb()
+  const [files, [author]] = await Promise.all([
+    db
+      .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
+      .from(pasteFile)
+      .where(eq(pasteFile.pasteId, record.id))
+      .orderBy(pasteFile.position, pasteFile.id),
+    db
+      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
+      .from(user)
+      .where(eq(user.id, record.ownerId)),
+  ])
+  return {
+    slug: record.slug,
+    title: record.title,
+    files,
+    author: pasteAuthor(author),
+    updatedAt: ms(record.updatedAt),
+    expiresAt: ms(record.expiresAt),
+    views: record.views,
+    burnAfterRead: false,
+    allowRaw: record.allowRaw,
+  }
 }
 
 // Only the owner may send a link to the instance's configured channel. Protected links aren't
@@ -1152,8 +1218,12 @@ export async function isSlugAvailable(slug: string, except?: string) {
 
 export function randomSlug() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-  const bytes = crypto.getRandomValues(new Uint8Array(6))
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
+  let slug: string
+  do {
+    const bytes = crypto.getRandomValues(new Uint8Array(6))
+    slug = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
+  } while (RESERVED.has(slug.toLowerCase()))
+  return slug
 }
 
 function fileRows(pasteId: string, files: PasteInput["files"]) {
@@ -1214,15 +1284,23 @@ export async function createPaste(input: PasteInput, invites: ShareInvite[] = []
   return { slug }
 }
 
-// A paste the viewer may edit: their own, or one shared with them with edit access. `owned`
-// tells the two apart, since only the owner changes how the paste is shared.
-async function findEditable(slug: string) {
-  const viewer = await requireViewerId()
-  const record = await findRecord(slug)
+type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0]
+
+async function lockEditable(
+  tx: Transaction,
+  identity: Pick<PasteRecord, "id" | "ownerId">,
+  viewer: string,
+) {
+  await lockAccount(tx, identity.ownerId)
+  const [record] = await tx
+    .select()
+    .from(pasteTable)
+    .where(eq(pasteTable.id, identity.id))
+    .for("update")
   if (!record || record.deletedAt) return null
   if (record.ownerId === viewer) return { record, owned: true }
   if (recordExpired(record) || record.burnAfterRead) return null
-  const [share] = await getDb()
+  const [share] = await tx
     .select({ access: pasteShare.access })
     .from(pasteShare)
     .where(
@@ -1269,47 +1347,41 @@ export async function updatePaste(
   options: UpdateOptions = {},
 ): Promise<UpdateResult | null> {
   const parsed = parsePasteInput(input)
-  const editable = await findEditable(slug)
-  if (!editable) return null
-  const { record, owned } = editable
-  const data: PasteInput = owned
-    ? parsed
-    : {
-        ...parsed,
-        slug,
-        visibility: record.visibility,
-        expiry: "keep",
-        collection: record.collection,
-        password: "",
-        burnAfterRead: record.burnAfterRead,
-      }
-
-  const now = new Date()
-  // An empty password on edit keeps the existing one; the client never sees it.
-  const passwordHash =
-    data.password === ""
-      ? record.passwordHash
-      : data.password
-        ? await hashPassword(data.password)
-        : null
-  const expiresAt = resolveExpiry(data.expiry, record.expiresAt, now.getTime())
-  const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
-
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-  return getDb().transaction(async (tx): Promise<UpdateResult> => {
+  const viewer = await requireViewerId()
+  const identity = await findRecord(slug)
+  if (!identity) return null
+  const replacementHash =
+    identity.ownerId === viewer && parsed.password ? await hashPassword(parsed.password) : null
+  return getDb().transaction(async (tx): Promise<UpdateResult | null> => {
+    const editable = await lockEditable(tx, identity, viewer)
+    if (!editable) return null
+    const { record, owned } = editable
+    const data = parsed
+    const now = new Date()
+    const passwordHash = owned && data.password !== "" ? replacementHash : record.passwordHash
+    const expiresAt = owned
+      ? resolveExpiry(data.expiry, record.expiresAt, now.getTime())
+      : record.expiresAt
+    const nextSlug = owned ? data.slug || record.slug : record.slug
+    const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
+    const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
     await enforceBudget(tx, record.ownerId, bytes, record.id)
     const changed = await tx
       .update(pasteTable)
       .set({
         bytes,
-        slug: data.slug || slug,
         title: data.title,
         description: data.description,
-        visibility: data.visibility,
-        passwordHash,
-        burnAfterRead: data.burnAfterRead,
-        collection: data.collection,
-        expiresAt,
+        ...(owned
+          ? {
+              slug: nextSlug,
+              visibility: data.visibility,
+              passwordHash,
+              burnAfterRead: data.burnAfterRead,
+              collection: data.collection,
+              expiresAt,
+            }
+          : {}),
         updatedAt: stamp,
         version: sql`${pasteTable.version} + 1`,
       })
@@ -1369,7 +1441,7 @@ export async function updatePaste(
     }
 
     return {
-      slug: data.slug || slug,
+      slug: nextSlug,
       version: changed[0].version,
       expiresAt: ms(expiresAt),
       hasPassword: passwordHash !== null,
@@ -1380,19 +1452,23 @@ export async function updatePaste(
 // Closes the editing session: the next edit starts a new revision. Only the revision made by
 // auto-save is closed; one made another way (created, imported, restored) is left alone.
 export async function sealRevision(slug: string, message: string): Promise<boolean> {
-  const editable = await findEditable(slug)
-  if (!editable) return false
-  const db = getDb()
-  const [latest] = await db
-    .select({ id: pasteRevision.id, message: pasteRevision.message })
-    .from(pasteRevision)
-    .where(eq(pasteRevision.pasteId, editable.record.id))
-    .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-    .limit(1)
-  if (latest?.message === message) {
-    await db.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
-  }
-  return true
+  const viewer = await requireViewerId()
+  const identity = await findRecord(slug)
+  if (!identity) return false
+  return getDb().transaction(async (tx) => {
+    const editable = await lockEditable(tx, identity, viewer)
+    if (!editable) return false
+    const [latest] = await tx
+      .select({ id: pasteRevision.id, message: pasteRevision.message })
+      .from(pasteRevision)
+      .where(eq(pasteRevision.pasteId, editable.record.id))
+      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+      .limit(1)
+    if (latest?.message === message) {
+      await tx.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
+    }
+    return true
+  })
 }
 
 export type RestoreResult =
@@ -1403,18 +1479,14 @@ export type RestoreResult =
 // the link and the collection stay as they are. The rollback is a revision of its own, so the
 // version it replaced is still in the history and can be restored in turn.
 export async function restoreRevision(slug: string, revisionId: number): Promise<RestoreResult> {
-  const editable = await findEditable(slug)
-  if (!editable) return { ok: false, error: "That paste no longer exists." }
-  const { record } = editable
+  const viewer = await requireViewerId()
+  const identity = await findRecord(slug)
+  if (!identity) return { ok: false, error: "That paste no longer exists." }
 
   return getDb().transaction(async (tx): Promise<RestoreResult> => {
-    await lockAccount(tx, record.ownerId)
-    const [locked] = await tx
-      .select()
-      .from(pasteTable)
-      .where(eq(pasteTable.id, record.id))
-      .for("update")
-    if (!locked || locked.deletedAt) return { ok: false, error: "That paste no longer exists." }
+    const editable = await lockEditable(tx, identity, viewer)
+    if (!editable) return { ok: false, error: "That paste no longer exists." }
+    const { record } = editable
 
     const [target] = await tx
       .select()
@@ -1457,8 +1529,8 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       throw error
     }
 
-    const version = locked.version + 1
-    const stamp = new Date(Math.max(Date.now(), locked.updatedAt.getTime() + 1))
+    const version = record.version + 1
+    const stamp = new Date(Math.max(Date.now(), record.updatedAt.getTime() + 1))
     await tx
       .update(pasteTable)
       .set({
@@ -1488,7 +1560,7 @@ export async function restoreRevision(slug: string, revisionId: number): Promise
       createdAt: stamp,
     })
     await pruneSnapshots(tx, record.id)
-    return { ok: true, slug: locked.slug, version }
+    return { ok: true, slug: record.slug, version }
   })
 }
 

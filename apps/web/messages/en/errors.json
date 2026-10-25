@@ -90,5 +90,14 @@
     "unlinkFailed": "Couldn't disconnect that account. Try again.",
     "demoLocked": "This isn't available in the demo.",
     "signInFresh": "For your safety, sign out and back in, then try again."
+  },
+  "ServerError": {
+    "title": "Something went wrong",
+    "heading": "Something went wrong.",
+    "description": "We couldn't load this page. Try again, and if it keeps happening, come back in a few minutes.",
+    "retry": "Try again",
+    "dashboard": "Go to dashboard",
+    "home": "Back to home",
+    "reference": "Error reference {digest}"
   }
 }

@@ -328,7 +328,21 @@
     "view_all_count": "全 {count, number} 件を表示",
     "secrets": "シークレット",
     "workflows": "ワークフロー",
-    "coming_soon": "近日公開"
+    "coming_soon": "近日公開",
+    "chart_point": "{day}: {value}",
+    "week_of": "{day}の週",
+    "chart_date": "日付",
+    "chart_empty": "この期間の記録はありません。",
+    "analytics_empty": "この期間に開かれたペーストはありません。誰かがリンクを開くと、閲覧数、参照元、国がここに表示されます。",
+    "sort_and_filter": "並べ替えと絞り込み",
+    "sort_and_filter_active": "並べ替えと絞り込み、{count, plural, other {# 件を適用中}}",
+    "clear_all": "すべてクリア",
+    "show_results": "{count, plural, other {# 件のペーストを表示}}",
+    "change_icon": "アイコンを変更",
+    "move_up": "上へ移動",
+    "move_down": "下へ移動",
+    "done": "完了",
+    "searching": "検索中…"
   },
   "Secrets": {
     "title": "シークレット",
@@ -434,6 +448,9 @@
     "create_first_group": "最初のシークレットグループを作成",
     "all_environments": "すべて",
     "filter_groups": "名前またはプロジェクトで絞り込む…",
-    "no_matches": "これらのフィルターに一致するシークレットグループはありません。"
+    "no_matches": "これらのフィルターに一致するシークレットグループはありません。",
+    "empty_sentence": "シークレットグループはまだありません。",
+    "saved": "シークレットグループを保存しました",
+    "value_copied": "{name} をコピーしました"
   }
 }

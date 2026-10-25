@@ -33,6 +33,11 @@ RUN --mount=type=secret,id=server_actions_key \
 
 FROM node:24-slim AS run
 WORKDIR /app
+# ffmpeg renders the og:video of public pastes (apps/web/lib/pastes/preview-video.ts). Without it
+# link previews fall back to the still card.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 # Without a heap limit V8 sizes the heap from the host's RAM, not the app's needs, and a server
 # that is never short of memory keeps growing until the host is (about 440 MB resident under load,
 # against about 260 MB with this cap). Set NODE_OPTIONS to change it; it replaces the whole value.

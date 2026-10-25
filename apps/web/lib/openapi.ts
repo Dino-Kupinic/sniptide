@@ -1253,6 +1253,7 @@ export const openApiDocument = {
 export const internalRoutes = [
   "/[slug]/copy",
   "/[slug]/preview",
+  "/[slug]/preview.mp4",
   "/analytics/export",
   "/api/analytics",
   "/api/analytics/[...path]",
@@ -1260,6 +1261,7 @@ export const internalRoutes = [
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",
+  "/api/live",
   "/api/locale",
   "/api/search",
   "/api/stats",

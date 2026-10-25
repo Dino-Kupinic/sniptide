@@ -152,6 +152,40 @@
     "otherSessionsSignedOut": "你的其他设备已退出登录。",
     "signOutOtherSessions": "{count, plural, other {退出其他 # 台设备}}",
     "confirmDeleteNoPassword": "你的账户、会话和粘贴将被永久删除。",
-    "signInAgainToDelete": "为了安全，请先退出并重新登录，然后再删除账户。"
+    "signInAgainToDelete": "为了安全，请先退出并重新登录，然后再删除账户。",
+    "backToSettings": "返回设置",
+    "notifications": "通知",
+    "notificationsDescription": "选择如何获知你的粘贴上的动态。邮件默认关闭。",
+    "notificationEmailUnavailable": "此服务器未配置邮件发送。应用内通知仍然可用。",
+    "notificationEmailUnverified": "开启邮件通知前，请先验证你的邮箱地址。",
+    "sendVerificationEmail": "发送验证邮件",
+    "verificationEmailSent": "验证邮件已发送。打开收件箱中的链接，然后重新加载此设置页。",
+    "couldnTSendVerificationEmail": "无法发送验证邮件。请重试。",
+    "notificationActivity": "动态",
+    "notificationInApp": "应用内",
+    "notificationEmail": "邮件",
+    "notificationSwitch": "{event}，{channel}",
+    "notificationEvents": {
+      "shared": {
+        "label": "与你共享",
+        "description": "有人邀请你查看一个粘贴。"
+      },
+      "burned": {
+        "label": "阅后即焚",
+        "description": "你的粘贴已被阅读并移入回收站。"
+      },
+      "expiring": {
+        "label": "即将过期",
+        "description": "你的粘贴将在一天内过期。"
+      },
+      "views": {
+        "label": "浏览里程碑",
+        "description": "你的粘贴达到了一个浏览里程碑。"
+      }
+    },
+    "revokeTokenTitle": "撤销 {name}？",
+    "revokeTokenDescription": "使用此令牌的脚本和代理会立即停止工作。此操作无法撤销。",
+    "deleteEnvGroupTitle": "删除 {slug}？",
+    "deleteEnvGroupDescription": "其中的变量将被永久删除，CLI 也无法再拉取它们。此操作无法撤销。"
   }
 }

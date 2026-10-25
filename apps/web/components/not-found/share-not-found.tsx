@@ -25,7 +25,7 @@ export function ShareNotFound() {
         </h1>
         <p className="mt-3 max-w-[460px] text-center text-[15px] leading-[22px] text-muted-foreground sm:mt-3.5 sm:text-base sm:leading-6">
           {t("shareDescription")}
-          <span className="hidden sm:inline"> {t("shareAdvice")}</span>
+          {t("shareAdvice")}
         </p>
         <div className="mt-7 flex w-full max-w-[440px] flex-col gap-2.5 sm:mt-8 sm:w-auto sm:max-w-none sm:flex-row sm:gap-3">
           <NotFoundButton href="/" external>

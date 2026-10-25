@@ -1,24 +1,31 @@
 "use client"
 
-import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { isActivePath, mobileTabs } from "./nav-config"
+import * as React from "react"
+import type { ViewerSummary } from "@/lib/viewer"
+import { type MoreCounts, MoreSheet } from "./more-sheet"
+import { isActivePath, mobileTabs, moreTab } from "./nav-config"
 
-// Bottom tab bar below lg. "More" stands in for everything the sidebar holds beyond the
-// three main tabs, so it lights up on Settings, Shared with me, Trash and collections.
-export function TabBar() {
+const tabClass =
+  "flex w-15 flex-col items-center justify-center gap-[3px] self-stretch text-[11px] leading-[14px] font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
+
+// Bottom tab bar below lg. "More" opens the More sheet with everything the sidebar holds beyond
+// the three main tabs, and lights up on the pages it leads to.
+export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: MoreCounts }) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = React.useState(false)
+  const moreActive = moreTab.match.some((href) => isActivePath(pathname, href))
 
   return (
     <nav
       aria-label={t("main")}
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <div className="flex h-14 items-center justify-around px-2">
+      <div className="flex h-14 items-center justify-around pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
         {mobileTabs.slice(0, 2).map((tab) => (
           <Tab
             key={tab.href}
@@ -42,7 +49,20 @@ export function TabBar() {
             active={tab.match.some((href) => isActivePath(pathname, href))}
           />
         ))}
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={moreOpen}
+          // Marks the button like the current tab while on one of the pages the sheet leads to.
+          aria-current={moreActive ? "page" : undefined}
+          onClick={() => setMoreOpen(true)}
+          className={tabClass}
+        >
+          <moreTab.icon className="size-[22px]" />
+          {t(moreTab.label)}
+        </button>
       </div>
+      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} viewer={viewer} counts={counts} />
     </nav>
   )
 }
@@ -50,14 +70,7 @@ export function TabBar() {
 function Tab({ tab, active }: { tab: (typeof mobileTabs)[number]; active: boolean }) {
   const t = useTranslations("Workspace")
   return (
-    <Link
-      href={tab.href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex w-15 flex-col items-center gap-[3px] text-[11px] leading-[14px] font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-        active && "font-semibold text-foreground",
-      )}
-    >
+    <Link href={tab.href} aria-current={active ? "page" : undefined} className={tabClass}>
       <tab.icon className="size-[22px]" />
       {t(tab.label)}
     </Link>

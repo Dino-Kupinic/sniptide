@@ -1,6 +1,8 @@
 import { json, readJson, withToken } from "@/lib/api/http"
 import { createCapture, listCaptures, parseListQuery } from "@/lib/api/pastes"
 
+export const dynamic = "force-dynamic"
+
 // The token owner's pastes: GET lists and searches them, POST captures new code.
 export async function GET(request: Request) {
   return withToken(request, "read", async ({ userId }) => {

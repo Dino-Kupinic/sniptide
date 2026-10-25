@@ -24,6 +24,7 @@ export default async function Page() {
 
   return (
     <Dashboard
+      draftScope={session.user.id}
       data={data}
       firstName={firstName}
       origin={origin}

@@ -1,24 +1,147 @@
 ---
-title: Backups
-description: What to back up, and where the restore guide will live.
+title: Backups and restore
+description: Back up Sniptide's database, schedule it, and restore it into the same or a brand-new server.
 ---
 
-<Callout type="info">
-A tested backup and restore procedure is still being written (tracked as WRK-98). Until it is
-published here, treat what's below as the minimum, not a complete procedure.
+Everything Sniptide stores (accounts, pastes and revisions, collections, API tokens, analytics)
+lives in one Postgres database. A backup is a dump of that database, and a restore loads it back,
+into the same server or a new one. The scripts below are in the repository's `scripts/` folder and
+are tested in CI: every pull request backs up a seeded instance, upgrades it, and restores the
+backup into the running stack and into a brand-new one, checking that nothing was lost.
+
+<Callout type="warn">
+**Keep your secrets with the backups.** A backup is useless without `BETTER_AUTH_SECRET` (and
+`ENV_SECRETS_KEY`, if you set it). Lose them and everyone is signed out and every env group pushed
+with the CLI becomes unreadable (the API answers with an error). Pastes, accounts and API tokens
+are unaffected. Store the secrets somewhere separate from the backup files: the backups contain
+password hashes.
 </Callout>
 
-## What to protect
+## Take a backup
 
-- **The Postgres database.** Everything Sniptide stores (accounts, pastes, collections, revisions,
-  API tokens and analytics) lives there. With compose it is the `postgres` volume; back it up
-  regularly, for example with `pg_dump`, and always before an [upgrade](/self-hosting/upgrading).
-- **Your secrets.** Keep `BETTER_AUTH_SECRET` (and `ENV_SECRETS_KEY` if you set it) with the
-  backup. Env groups pushed with the CLI are encrypted with a key derived from them, so a restored
-  database is missing those values without the same key.
+On a Docker Compose install, from the folder with `docker-compose.yml` and `.env`:
 
-## What is coming
+```bash
+bash scripts/backup.sh            # writes ./backups/sniptide-<UTC time>.dump
+bash scripts/backup.sh /srv/backups
+```
 
-WRK-98 will define and test: dumping and restoring Postgres into a fresh instance, the safe
-upgrade path between tagged versions, and a versioning and changelog policy. This page will be
-updated when it lands.
+The script dumps the database in `pg_dump`'s compressed custom format, checks that the file can be
+read back, and prints its path. The file is readable by you alone. Set `BACKUP_KEEP_DAYS=14` to
+delete older `sniptide-*.dump` files in that folder at the same time. It is safe to run while
+Sniptide is serving traffic: `pg_dump` takes a consistent snapshot.
+
+### Without the script, or with your own Postgres
+
+The script is a thin wrapper over:
+
+```bash
+docker compose exec -T db pg_dump -U sniptide -d sniptide \
+  --format=custom --no-owner --no-privileges > sniptide.dump
+```
+
+Against a Postgres you run yourself, point `pg_dump` at it (use Postgres 17 tools, the version
+Sniptide runs on):
+
+```bash
+pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" > sniptide.dump
+```
+
+## Back up on a schedule
+
+For Docker Compose, add the backup container from `docker-compose.backup.yml` when you start the
+stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+```
+
+It runs `pg_dump` at start and then every `BACKUP_INTERVAL_HOURS` (default 24), writes the files
+to `./backups` (`BACKUP_DIR`), and deletes the ones older than `BACKUP_KEEP_DAYS` (default 14).
+Set the three in `.env`, or `COMPOSE_FILE=docker-compose.yml:docker-compose.backup.yml` so a plain
+`docker compose up -d` includes it. Check it with `docker compose logs backup`.
+
+For Coolify, paste the service from `deploy/coolify/backup-sidecar.yaml` under `services:` in the
+Sniptide template and redeploy. It does the same, into a `sniptide-backups` volume, with the
+same two settings.
+
+**These files are on the same server as the database.** If the server's disk is lost, so are they.
+Copy them somewhere else on a schedule (`rsync`, `rclone`, your provider's snapshots or object
+storage). Sniptide doesn't do that for you.
+
+## Restore
+
+A restore **replaces the whole database** with the backup. It works on a running instance and on a
+new one.
+
+On Docker Compose:
+
+```bash
+bash scripts/restore.sh backups/sniptide-20261020T120000Z.dump
+```
+
+The script asks you to confirm (`--yes` skips the prompt), then it:
+
+1. makes sure the database is up and checks the file is a readable backup, before changing anything;
+2. stops the app, so nothing writes while the database is replaced;
+3. drops and recreates the database, and loads the backup into it;
+4. starts the app, which applies any migrations the backup is missing.
+
+### Into a brand-new server
+
+<Steps>
+<Step>
+
+Install Docker, and get `docker-compose.yml`, `scripts/restore.sh` and `.env.example`
+(clone the repository, or download them).
+
+</Step>
+<Step>
+
+Create `.env` with **the same `BETTER_AUTH_SECRET`** as the old instance (and `ENV_SECRETS_KEY` if
+you set one), and `BETTER_AUTH_URL` set to the address the new server will be opened at.
+
+</Step>
+<Step>
+
+Copy the backup file over and run `bash scripts/restore.sh sniptide-….dump`.
+
+</Step>
+<Step>
+
+Open the instance and sign in. Check a few pastes, and an env group if you use them.
+
+</Step>
+</Steps>
+
+A backup from an older Sniptide restores into a newer one: the app migrates it forward when it
+starts. Restoring a backup from a **newer** version into an older one isn't supported (see
+[Upgrading](/self-hosting/upgrading)).
+
+### Restoring without the script
+
+Stop the app first, so nothing writes while you restore. Then, against an empty database:
+
+```bash
+pg_restore --no-owner --no-privileges --exit-on-error --dbname "$DATABASE_URL" sniptide.dump
+```
+
+The dump contains `CREATE EXTENSION pg_trgm`, which needs a role allowed to create extensions. If
+yours isn't, ask your database operator to create the extension in the empty database first. Start
+the app afterwards. On Coolify, run the same commands inside the Postgres container with
+`docker exec -i`, as the user Coolify generated for the service.
+
+For a second look before you rely on a backup, restore it into a throwaway copy of the stack
+(a different project name and ports), and delete that copy afterwards:
+
+```bash
+COMPOSE_PROJECT_NAME=sniptide-check SNIPTIDE_PORT=3999 POSTGRES_PORT=55999 \
+  bash scripts/restore.sh backups/sniptide-….dump --yes
+COMPOSE_PROJECT_NAME=sniptide-check docker compose down -v
+```
+
+## What a backup doesn't cover
+
+- **Your secrets and settings.** Keep `.env` (or the Coolify variables) with them.
+- **The Postgres and app versions.** Restore into Postgres 17, the version Sniptide runs on.
+- **Caddy's certificates**, if you use the bundled proxy. They are re-issued automatically.

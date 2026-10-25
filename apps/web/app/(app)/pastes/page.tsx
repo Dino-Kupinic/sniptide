@@ -30,6 +30,7 @@ export default async function Page({ searchParams }: PageProps<"/pastes">) {
       host={host}
       collections={collections}
       actions={<ImportGistButton />}
+      mobileActions={<ImportGistButton compact />}
       query={data.query}
       pagination={data.pagination}
       languageOptions={data.languageOptions}

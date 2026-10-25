@@ -15,16 +15,18 @@ import { ChevronDownIcon, ClockIcon, LinkIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { z } from "zod"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
-import { LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon } from "@/components/paste/language-icon"
+import { LanguagePicker } from "@/components/paste/language-picker"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import { savePaste } from "@/lib/pastes/actions"
-import { detectLanguage, languages } from "@/lib/pastes/languages"
-import type { Expiry, Visibility } from "@/lib/pastes/types"
+import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
+import { EXPIRIES, type Expiry, VISIBILITIES, type Visibility } from "@/lib/pastes/types"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
 
-const DRAFT_KEY = "sniptide:quick-paste"
+const LEGACY_DRAFT_KEY = "sniptide:quick-paste"
 
 interface Draft {
   name: string
@@ -42,31 +44,44 @@ const emptyDraft: Draft = {
   burnAfterRead: false,
 }
 
+const draftSchema = z.object({
+  name: z.string(),
+  content: z.string(),
+  expiry: z.enum(EXPIRIES),
+  visibility: z.enum(VISIBILITIES),
+  burnAfterRead: z.boolean(),
+})
+
 // Browser storage is only a convenience here: a lost draft costs a re-paste, nothing more.
-function readDraft(fallback: Draft): Draft {
+function readDraft(key: string, fallback: Draft): Draft {
   try {
-    const stored = window.localStorage.getItem(DRAFT_KEY)
-    return stored ? { ...fallback, ...JSON.parse(stored) } : fallback
+    window.localStorage.removeItem(LEGACY_DRAFT_KEY)
+    const stored = window.localStorage.getItem(key)
+    const parsed = stored ? draftSchema.safeParse(JSON.parse(stored)) : null
+    return parsed?.success ? parsed.data : fallback
   } catch {
     return fallback
   }
 }
 
-function writeDraft(draft: Draft | null) {
+function writeDraft(key: string, draft: Draft | null) {
   try {
-    if (draft) window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-    else window.localStorage.removeItem(DRAFT_KEY)
+    if (draft) window.localStorage.setItem(key, JSON.stringify(draft))
+    else window.localStorage.removeItem(key)
   } catch {
     // Private mode or blocked storage: the draft just isn't kept.
   }
 }
 
+const chipClass =
+  "flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
+
 function Chip({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <DropdownMenuTrigger
-      aria-label={label}
-      className="flex h-[30px] shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 shadow-[0_2px_0_0_var(--border)] dark:bg-card dark:shadow-[0_2px_0_0_color-mix(in_oklch,var(--border),var(--foreground)_22%)] text-[13px] outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:border-foreground/40 [&_svg]:size-3.5"
-    >
+    <DropdownMenuTrigger className={chipClass}>
+      {/* The field's name, for screen readers, ahead of the visible value. An aria-label would
+          hide the value from voice control, which matches on the words a button shows. */}
+      <span className="sr-only">{label}</span>
       {children}
       <ChevronDownIcon className="text-muted-foreground" />
     </DropdownMenuTrigger>
@@ -76,7 +91,9 @@ function Chip({ children, label }: { children: React.ReactNode; label: string })
 // "Quick paste" composer on the dashboard: one file, the common options, Cmd+Enter to create.
 export function QuickPaste({
   defaults,
+  draftScope,
 }: {
+  draftScope: string
   // Paste defaults from Settings, used for a fresh draft.
   defaults?: Pick<Draft, "expiry" | "visibility" | "burnAfterRead">
 }) {
@@ -96,45 +113,48 @@ export function QuickPaste({
   }
 
   const router = useRouter()
+  const draftKey = `sniptide:quick-paste:${encodeURIComponent(draftScope)}`
   const fresh = React.useMemo(() => ({ ...emptyDraft, ...defaults }), [defaults])
   const [draft, setDraft] = React.useState<Draft>(fresh)
   const [saved, setSaved] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
   const loaded = React.useRef(false)
+  const completed = React.useRef(false)
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const language = detectLanguage(draft.name)
   const highlighted = useHighlight(draft.content, draft.name)
 
   React.useEffect(() => {
-    setDraft(readDraft(fresh))
+    setDraft(readDraft(draftKey, fresh))
     loaded.current = true
-  }, [fresh])
+  }, [draftKey, fresh])
 
   React.useEffect(() => {
-    if (!loaded.current) return
+    if (!loaded.current || completed.current) return
     setSaved(false)
-    const timer = setTimeout(() => {
-      writeDraft(draft)
+    timer.current = setTimeout(() => {
+      writeDraft(draftKey, draft)
       setSaved(Boolean(draft.content))
     }, 500)
-    return () => clearTimeout(timer)
-  }, [draft])
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [draft, draftKey])
 
   function update(patch: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...patch }))
   }
 
   function setLanguage(id: string) {
-    const extension = languages.find((candidate) => candidate.id === id)?.extensions[0] ?? "txt"
-    const base = draft.name.includes(".")
-      ? draft.name.slice(0, draft.name.lastIndexOf("."))
-      : draft.name
-    update({ name: `${base || "snippet"}.${extension}` })
+    update({ name: renameForLanguage(draft.name || "snippet", getLanguage(id)) })
   }
 
   // ⌘S: write the draft now instead of waiting out the half-second delay.
   function saveDraft() {
-    writeDraft(draft)
+    if (completed.current) return
+    if (timer.current) clearTimeout(timer.current)
+    writeDraft(draftKey, draft)
     setSaved(Boolean(draft.content))
   }
 
@@ -155,7 +175,9 @@ export function QuickPaste({
       }).catch(() => null)
       if (!result) return setError(t("couldnt_create_the_paste_try_again"))
       if (!result.ok) return setError(result.error)
-      writeDraft(null)
+      completed.current = true
+      if (timer.current) clearTimeout(timer.current)
+      writeDraft(draftKey, null)
       toast.success(t("paste_created"))
       router.push(`/pastes/${result.slug}`)
     })
@@ -209,24 +231,16 @@ export function QuickPaste({
 
       <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <DropdownMenu>
-            <Chip label={t("language")}>
-              <LanguageMarker language={language.id} />
-              {language.name}
-            </Chip>
-            <DropdownMenuContent className="max-h-72 overflow-y-auto">
-              <DropdownMenuRadioGroup
-                value={language.id}
-                onValueChange={(id) => setLanguage(id as string)}
-              >
-                {languages.map((candidate) => (
-                  <DropdownMenuRadioItem key={candidate.id} value={candidate.id}>
-                    {candidate.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LanguagePicker
+            value={language.id}
+            onValueChange={setLanguage}
+            aria-label={t("language")}
+            className={chipClass}
+          >
+            <LanguageIcon language={language.id} className="size-3.5" />
+            {language.name}
+            <ChevronDownIcon className="text-muted-foreground" />
+          </LanguagePicker>
           <DropdownMenu>
             <Chip label={t("expires_after")}>
               <ClockIcon />

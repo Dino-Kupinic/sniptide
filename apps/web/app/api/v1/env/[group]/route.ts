@@ -1,6 +1,8 @@
 import { failure, json, readJson, withToken } from "@/lib/api/http"
 import { deleteGroup, GROUP_SLUG, MAX_GROUPS, readGroup, writeGroup } from "@/lib/env/store"
 
+export const dynamic = "force-dynamic"
+
 // One env group. GET returns its variables (`sniptide env pull` and `env run`), PUT replaces them
 // with a .env file's (`env push`), DELETE removes the group.
 

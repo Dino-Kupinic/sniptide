@@ -2,6 +2,7 @@ import "server-only"
 
 import { ZodError } from "zod"
 import { hit, type Limit } from "@/lib/rate-limit"
+import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS } from "@/lib/time"
 import { authenticate, type Scope, type TokenOwner } from "./tokens"
 
@@ -49,13 +50,10 @@ export function failure(status: number, message: string, retryAfterSeconds?: num
 
 // Reads a JSON body of at most `maxBytes`, or throws a 400/413.
 export async function readJson(request: Request, maxBytes: number): Promise<unknown> {
-  const length = Number(request.headers.get("content-length") ?? "0")
-  if (length > maxBytes) throw new ApiError(413, "The request body is too large.")
-  const text = await request.text()
-  if (Buffer.byteLength(text) > maxBytes) throw new ApiError(413, "The request body is too large.")
   try {
-    return JSON.parse(text)
-  } catch {
+    return JSON.parse(new TextDecoder().decode(await readBody(request, maxBytes)))
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) throw new ApiError(413, error.message)
     throw new ApiError(400, "The request body isn't valid JSON.")
   }
 }

@@ -11,8 +11,8 @@ or later with **Share** on the paste.
 | Visibility | Who can open it |
 | --- | --- |
 | **Private** | You and the accounts you invited. Everyone else gets a 404, as if the link didn't exist. |
-| **Unlisted** | Anyone with the link. Search engines are told not to index it. |
-| **Public** | Anyone with the link, and search engines may index it. Public pastes without a password or burn setting also get a link preview (see below). |
+| **Unlisted** | Anyone with the link. Search engines are told not to index it. Without a password or burn setting it gets a link preview (see below). |
+| **Public** | Anyone with the link, and search engines may index it. Without a password or burn setting it gets a link preview (see below). |
 
 Unlisted is the default for new pastes. "Unlisted" means the link is the secret: don't treat it as
 access control for anything sensitive.
@@ -52,9 +52,11 @@ you about pastes that are about to expire.
 
 ## Link previews and channels
 
-Public pastes without a password or one-time protection give link previews (Open Graph and X
-cards) with the title, language and the first ten lines of the first file. Previews and other
-automated fetches never count as a view and never use up a burn-after-read paste.
+Public and unlisted pastes without a password or one-time protection give link previews (Open
+Graph and X cards) with the title, language and the first twelve lines of the first file. The app
+that shows the preview, such as Slack or Discord, fetches and keeps a copy of that card, so make a
+paste private before sharing its link if the first lines shouldn't appear in the chat. Previews
+and other automated fetches never count as a view and never use up a burn-after-read paste.
 
 If the administrator configured Slack or Discord webhooks, **Share → Share to Slack / Discord**
 posts the link to the channel. It is only offered for public or unlisted pastes with no password
