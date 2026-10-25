@@ -170,6 +170,8 @@ up next to the app:
 - **Build variable:** `APP_URL`: `https://app.sniptide.com`, where the app runs. The nav's "API
   reference" and "Open Sniptide" links point there. The pages are prerendered, so it is read when
   the image is built; changing it means a redeploy.
+- **Build variable:** `SITE_URL`: `https://docs.sniptide.com`, the address the docs are served at.
+  Canonical links, the sitemap and link previews use it, so set it before the first deploy.
 - **Domain:** `https://docs.sniptide.com`.
 
 ## Self-hosting
