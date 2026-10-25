@@ -101,5 +101,14 @@
     "folderContents": "Elige qué ocurre con los fragmentos que contiene.",
     "movePastesLimit": "Mueve hasta {max} fragmentos a la vez.",
     "checkPastes": "Revisa los fragmentos."
+  },
+  "ServerError": {
+    "title": "Algo salió mal",
+    "heading": "Algo salió mal.",
+    "description": "No pudimos cargar esta página. Inténtalo de nuevo y, si el problema continúa, vuelve en unos minutos.",
+    "retry": "Reintentar",
+    "dashboard": "Ir al panel",
+    "home": "Volver al inicio",
+    "reference": "Referencia del error {digest}"
   }
 }

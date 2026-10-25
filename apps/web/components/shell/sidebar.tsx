@@ -995,7 +995,7 @@ function PasteRow({
         }}
         className={cn(iconButtonClass, !(alwaysShowStar && starred) && revealClass)}
       >
-        <StarIcon className={cn(starred && "fill-link text-link")} />
+        <StarIcon className={cn(starred && "fill-highlight text-highlight")} />
       </button>
     </div>
   )

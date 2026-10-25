@@ -94,8 +94,9 @@ sniptide search 'button' --language typescript --tag react --limit 20
 sniptide list --collection ui --cursor CURSOR
 ```
 
-Both return one page; pass `--cursor` to continue (`--limit` is 1 to 100). Only your own live
-pastes are listed.
+`search` finds pastes where every word appears in the title, description, tags, a file path or
+the code. Both return one page; pass `--cursor` to continue (`--limit` is 1 to 100). Only your
+own live pastes are listed.
 
 ## Sync `.env` files
 

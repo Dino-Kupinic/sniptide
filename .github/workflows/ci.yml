@@ -18,7 +18,7 @@ jobs:
   checks:
     name: Lint, typecheck and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -41,6 +41,7 @@ jobs:
 
       - run: bun run test:cli
       - run: bun run test:mcp
+      - run: bun run --filter docs test
 
       - run: bun run build
 
@@ -50,6 +51,33 @@ jobs:
 
       - name: Verify the Docker image against a fresh database
         run: bash scripts/test-docker.sh sniptide:ci
+
+      # What a self-hoster does when they upgrade: seed a stack on the latest published release, back
+      # it up, upgrade it to this image, then restore the backup into the running stack and into a
+      # brand-new one, checking after each step that the data is intact.
+      - name: Find the latest release image
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="$(gh release view --json tagName --jq .tagName 2>/dev/null || true)"
+          image=""
+          if [ -n "$tag" ]; then
+            image="ghcr.io/${GITHUB_REPOSITORY,,}:${tag#v}"
+            if ! docker manifest inspect "$image" >/dev/null 2>&1; then
+              echo "::warning::$image isn't published yet, so the upgrade check is skipped."
+              image=""
+            fi
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Verify upgrading, backup and restore
+        if: steps.previous.outputs.image != ''
+        env:
+          EXPECT_MIGRATION_LOG: "1"
+          PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
+        run: bash scripts/test-upgrade.sh "$PREVIOUS_IMAGE" sniptide:ci
 
       # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
       - name: Build the docs Docker image

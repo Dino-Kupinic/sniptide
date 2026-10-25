@@ -101,5 +101,14 @@
     "folderContents": "请选择如何处理其中的粘贴。",
     "movePastesLimit": "一次最多可移动 {max} 个粘贴。",
     "checkPastes": "请检查粘贴。"
+  },
+  "ServerError": {
+    "title": "出了点问题",
+    "heading": "出了点问题。",
+    "description": "无法加载此页面。请重试；如果问题持续出现，请几分钟后再来。",
+    "retry": "重试",
+    "dashboard": "前往控制台",
+    "home": "返回首页",
+    "reference": "错误参考编号 {digest}"
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
+import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +14,15 @@ import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
+import { NotificationsSheet } from "./notifications-menu"
 
-// Top bar below lg, from the Paper mobile artboards: wordmark, search, account avatar.
+// Top bar below lg, from the Paper mobile artboards: wordmark, search, notifications, account
+// avatar.
 export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   const t = useTranslations("Workspace")
   const { open: openCommandMenu } = useCommandMenu()
   return (
-    <header className="sticky top-0 z-30 flex min-h-[52px] shrink-0 items-center justify-between gap-3 bg-background px-4 pt-[env(safe-area-inset-top)] box-content lg:hidden">
+    <header className="sticky top-0 z-30 flex min-h-[52px] shrink-0 items-center justify-between gap-3 bg-background pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] box-content lg:hidden">
       <Link
         href="/dashboard"
         aria-label={t("sniptide_dashboard")}
@@ -28,14 +31,10 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
         <Logo className="min-w-0 [&>span]:truncate" />
       </Link>
       <div className="flex shrink-0 items-center gap-2">
-        <button
-          type="button"
-          aria-label={t("search")}
-          onClick={openCommandMenu}
-          className="rounded-lg inline-flex size-9 items-center justify-center border border-border outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-[17px]"
-        >
+        <Button variant="outline" size="icon-lg" aria-label={t("search")} onClick={openCommandMenu}>
           <SearchIcon />
-        </button>
+        </Button>
+        <NotificationsSheet />
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={t("account")}
@@ -47,7 +46,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
-            <AccountMenuItems name={viewer.name} email={viewer.email} />
+            <AccountMenuItems name={viewer.name} email={viewer.email} inlineLanguage />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

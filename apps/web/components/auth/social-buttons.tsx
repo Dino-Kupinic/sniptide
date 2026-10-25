@@ -40,8 +40,8 @@ const providers = [
   { id: "google", name: "Google", icon: GoogleIcon },
 ] as const
 
-// Social sign-in buttons. Providers without OAuth credentials on the server stay visible but
-// disabled, so the layout matches the design while making it clear they aren't set up.
+// Social sign-in buttons for the providers that have OAuth credentials on the server. The
+// forms leave out the buttons and the divider when none do.
 export function SocialButtons({
   enabled,
   verb,
@@ -76,22 +76,21 @@ export function SocialButtons({
 
   return (
     <div className="flex gap-2 lg:flex-col">
-      {providers.map(({ id, name, icon: Icon }) => {
-        const available = enabled.includes(id)
-
-        return (
+      {providers
+        .filter(({ id }) => enabled.includes(id))
+        .map(({ id, name, icon: Icon }) => (
           <Button
             key={id}
             type="button"
             variant="outline"
-            disabled={!available || (pending !== null && pending !== id)}
+            size="xl"
+            disabled={pending !== null && pending !== id}
             loading={pending === id}
             aria-label={t(verb === "Sign up" ? "socialSignUp" : "socialContinue", {
               provider: name,
             })}
-            title={available ? undefined : t("providerUnavailable", { provider: name })}
             onClick={() => signIn(id)}
-            className="h-[46px] flex-1 gap-2 text-[15px] lg:h-10 lg:flex-none lg:gap-2.5 lg:text-sm"
+            className="flex-1 gap-2 lg:flex-none lg:gap-2.5"
           >
             <Icon />
             <span className="lg:hidden">{name}</span>
@@ -99,8 +98,7 @@ export function SocialButtons({
               {t(verb === "Sign up" ? "socialSignUp" : "socialContinue", { provider: name })}
             </span>
           </Button>
-        )
-      })}
+        ))}
     </div>
   )
 }

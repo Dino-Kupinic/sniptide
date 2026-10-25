@@ -101,5 +101,14 @@
     "folderContents": "Choose what happens to the pastes inside.",
     "movePastesLimit": "Move up to {max} pastes at once.",
     "checkPastes": "Check the pastes."
+  },
+  "ServerError": {
+    "title": "Something went wrong",
+    "heading": "Something went wrong.",
+    "description": "We couldn't load this page. Try again, and if it keeps happening, come back in a few minutes.",
+    "retry": "Try again",
+    "dashboard": "Go to dashboard",
+    "home": "Back to home",
+    "reference": "Error reference {digest}"
   }
 }

@@ -4,7 +4,10 @@ import { verifyPassword } from "@/lib/pastes/passwords"
 import { getUnlockHash } from "@/lib/pastes/store"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
 import { hit, type Limit, refund } from "@/lib/rate-limit"
+import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS, seconds } from "@/lib/time"
+
+export const dynamic = "force-dynamic"
 
 // The longest password a paste can have (see the save schema) and the most this route will read.
 const MAX_PASSWORD_LENGTH = 200
@@ -32,10 +35,13 @@ function fail(status: number, error: string, headers?: HeadersInit) {
 export async function POST(request: Request, { params }: RouteContext<"/[slug]/unlock">) {
   const { slug } = await params
 
-  const declared = Number(request.headers.get("content-length") ?? 0)
-  if (declared > MAX_BODY_BYTES) return fail(413, "That request is too large.")
-  const text = await request.text()
-  if (text.length > MAX_BODY_BYTES) return fail(413, "That request is too large.")
+  let text: string
+  try {
+    text = new TextDecoder().decode(await readBody(request, MAX_BODY_BYTES))
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) return fail(413, "That request is too large.")
+    return fail(400, "That request couldn't be read.")
+  }
 
   let body: { password?: unknown } | null = null
   try {

@@ -101,5 +101,14 @@
     "folderContents": "Wähle, was mit den enthaltenen Pastes geschieht.",
     "movePastesLimit": "Verschiebe höchstens {max} Pastes auf einmal.",
     "checkPastes": "Prüfe die Pastes."
+  },
+  "ServerError": {
+    "title": "Etwas ist schiefgelaufen",
+    "heading": "Etwas ist schiefgelaufen.",
+    "description": "Diese Seite konnte nicht geladen werden. Versuche es erneut. Falls das Problem bleibt, schau in ein paar Minuten noch einmal vorbei.",
+    "retry": "Erneut versuchen",
+    "dashboard": "Zur Übersicht",
+    "home": "Zur Startseite",
+    "reference": "Fehlerreferenz {digest}"
   }
 }

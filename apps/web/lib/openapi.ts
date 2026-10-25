@@ -530,7 +530,8 @@ export const openApiDocument = {
             name: "q",
             in: "query",
             required: false,
-            description: "Text in the title or slug.",
+            description:
+              "Words to find. Every word must appear in the title, slug, description, a tag, a file path or the code.",
             schema: { type: "string", maxLength: 120, examples: ["button"] },
           },
           {
@@ -1253,6 +1254,7 @@ export const openApiDocument = {
 export const internalRoutes = [
   "/[slug]/copy",
   "/[slug]/preview",
+  "/[slug]/preview.mp4",
   "/analytics/export",
   "/api/analytics",
   "/api/analytics/[...path]",
@@ -1260,6 +1262,7 @@ export const internalRoutes = [
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",
+  "/api/live",
   "/api/locale",
   "/api/search",
   "/api/stats",

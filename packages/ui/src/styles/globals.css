@@ -48,6 +48,12 @@
   --logo-ink: #1b1919;
   --logo-hatch: #000000;
   --link: #2a26ec;
+  /* Pink is the second brand colour. It marks what stands out without being an action: search
+     matches, stars, the peak of a chart. --pink is the surface with --pink-foreground on it;
+     --highlight is pink for icons and chart marks, deep enough in light mode to clear 3:1. */
+  --pink: #f6a9d3;
+  --pink-foreground: #2b0a1f;
+  --highlight: #e353ac;
   /* Code colours. Keywords are the brand blue; the rest stay muted enough that blue still leads.
      All clear 4.5:1 on the code backgrounds (white, --sidebar). */
   --syntax-foreground: #1b1919;
@@ -70,7 +76,7 @@
   --card-foreground: #f4f4f4;
   --popover: #1a1919;
   --popover-foreground: #f4f4f4;
-  --primary: #3a36ff;
+  --primary: #2a26ec;
   --primary-foreground: #ffffff;
   --secondary: #242222;
   --secondary-foreground: #f4f4f4;
@@ -81,20 +87,20 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: #2f2c2c;
   --input: #2f2c2c;
-  --ring: #3a36ff;
-  --chart-1: #6aa3ff;
+  --ring: #8f8cff;
+  --chart-1: #2a26ec;
   --chart-2: #f4f4f4;
   --chart-3: #a3a3a3;
   --chart-4: #6b6b6b;
   --chart-5: #2f2c2c;
   --sidebar: #0c0b0b;
   --sidebar-foreground: #f4f4f4;
-  --sidebar-primary: #3a36ff;
+  --sidebar-primary: #2a26ec;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #242222;
   --sidebar-accent-foreground: #f4f4f4;
   --sidebar-border: #2f2c2c;
-  --sidebar-ring: #3a36ff;
+  --sidebar-ring: #8f8cff;
   /* Darker and denser in dark mode, where a light shadow would not read. */
   --float-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -6px rgb(0 0 0 / 0.6);
   --dialog-shadow: 0 2px 4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.7);
@@ -103,14 +109,16 @@
   --logo-primary: #1b17c6;
   --logo-ink: #dfdfdf;
   --logo-hatch: #535151;
-  /* Two blues in dark mode. The deep #3a36ff fills buttons (white on it is 6.7:1) but is too
-     dark to read as text on these surfaces (2.8:1), so links, code keywords, stars, blue
-     collection icons and chart bars use a lighter blue (7.5:1). */
-  --link: #6aa3ff;
+  /* One blue, two weights. Tide Blue fills buttons and chart bars in both themes (white on it is
+     8.1:1) but is too dark to read as text on these surfaces (2.3:1), so links, focus rings,
+     code keywords and blue collection icons use its light tint, the same one the landing uses
+     (6.6:1). */
+  --link: #8f8cff;
+  --highlight: #f6a9d3;
   /* Keywords share the link blue; the rest are the light palette lifted to read on the dark
      surfaces. */
   --syntax-foreground: #f4f4f4;
-  --syntax-keyword: #6aa3ff;
+  --syntax-keyword: #8f8cff;
   --syntax-string: #5fd3a8;
   --syntax-constant: #f5b971;
   --syntax-function: #c4b5fd;
@@ -118,7 +126,7 @@
   --syntax-property: #fb9fb1;
   --syntax-comment: #8a8a8a;
   --syntax-punctuation: #b0b0b0;
-  --syntax-link: #6aa3ff;
+  --syntax-link: #8f8cff;
   --syntax-invalid: oklch(0.704 0.191 22.216);
 }
 
@@ -165,6 +173,9 @@
   --color-logo-ink: var(--logo-ink);
   --color-logo-hatch: var(--logo-hatch);
   --color-link: var(--link);
+  --color-pink: var(--pink);
+  --color-pink-foreground: var(--pink-foreground);
+  --color-highlight: var(--highlight);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
   --font-mono: var(--font-mono);

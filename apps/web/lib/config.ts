@@ -119,6 +119,7 @@ const schema = z.object({
   ALLOWED_EMAILS: z.string().optional(),
   WAITLIST_URL: z.url({ message: "must be a full URL like https://example.com/apply." }).optional(),
   SHARE_URL: origin.optional(),
+  HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),
   DEMO_MODE: flag.default(false),
   HOMEPAGE_URL: origin.default(DEFAULT_RESOURCE_LINKS.homepage),
   DOCS_URL: z
@@ -220,6 +221,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     allowedEmails: value.ALLOWED_EMAILS,
     waitlistUrl: value.WAITLIST_URL,
     shareUrl: value.SHARE_URL,
+    homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
     resourceLinks: {
       homepage: value.HOMEPAGE_URL,

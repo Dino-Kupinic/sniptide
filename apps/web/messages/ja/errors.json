@@ -101,5 +101,14 @@
     "folderContents": "中にあるペーストをどうするか選んでください。",
     "movePastesLimit": "一度に移動できるペーストは {max} 件までです。",
     "checkPastes": "ペーストを確認してください。"
+  },
+  "ServerError": {
+    "title": "問題が発生しました",
+    "heading": "問題が発生しました。",
+    "description": "このページを読み込めませんでした。もう一度お試しください。解決しない場合は、数分後にもう一度アクセスしてください。",
+    "retry": "もう一度試す",
+    "dashboard": "ダッシュボードへ",
+    "home": "ホームに戻る",
+    "reference": "エラー参照番号 {digest}"
   }
 }

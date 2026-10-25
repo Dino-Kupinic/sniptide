@@ -3,6 +3,7 @@ import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { getConfig } from "@/lib/config"
 
 export interface Pitch {
   title: [string, string]
@@ -12,7 +13,8 @@ export interface Pitch {
 }
 
 // Split auth layout from the Paper Sign in / Sign up artboards: form on the left, barcode
-// stripes with a pitch card on the right. Below lg the stripes become a strip above the form.
+// stripes with a pitch card on the right. Below lg the stripes become a strip above the form and
+// the pitch body moves under the subtitle.
 // `centered` is for short screens (request access): on phones the content sits mid-screen, centered.
 export function AuthScreen({
   title,
@@ -37,10 +39,10 @@ export function AuthScreen({
         </div>
 
         <div className="hidden px-2 py-1.5 lg:block">
-          <Logo />
+          <HomeLogo />
         </div>
 
-        {centered ? <Logo className="px-5 pt-6 lg:hidden" /> : null}
+        {centered ? <HomeLogo className="mx-5 mt-6 lg:hidden" /> : null}
 
         <main
           className={cn(
@@ -49,10 +51,10 @@ export function AuthScreen({
           )}
         >
           <div className="flex w-full flex-col gap-5 lg:max-w-[360px] lg:gap-6">
-            {centered ? null : <Logo className="lg:hidden" />}
+            {centered ? null : <HomeLogo className="lg:hidden" />}
             <div className="flex flex-col gap-1.5 lg:gap-2">
               {title ? (
-                <h1 className="font-heading text-[32px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
+                <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
                   {title}
                 </h1>
               ) : null}
@@ -64,6 +66,9 @@ export function AuthScreen({
               >
                 {subtitle}
               </p>
+              {centered ? null : (
+                <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
+              )}
             </div>
             {children}
           </div>
@@ -91,5 +96,26 @@ export function AuthScreen({
         </div>
       </aside>
     </div>
+  )
+}
+
+// HOME_URL points the logo at a landing page (sniptide.com/home, which skips the landing page's
+// redirect for visitors with a session cookie). A plain <a>, since the landing page is another app.
+// Without HOME_URL there is nowhere to go, so the logo stays a logo, confetti included.
+function HomeLogo({ className }: { className?: string }) {
+  const { homeUrl } = getConfig()
+  if (!homeUrl) return <Logo className={className} />
+
+  return (
+    <a
+      href={homeUrl}
+      aria-label="Sniptide"
+      className={cn(
+        "flex w-fit outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+        className,
+      )}
+    >
+      <Logo />
+    </a>
   )
 }

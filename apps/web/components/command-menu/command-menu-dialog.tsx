@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
+import { useCanHover, useIsDesktop } from "@/components/shell/use-media-query"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
@@ -48,18 +49,6 @@ function hrefOf(entry: Entry) {
   }
 }
 
-function useIsDesktop() {
-  return React.useSyncExternalStore(
-    (notify) => {
-      const query = window.matchMedia("(min-width: 1024px)")
-      query.addEventListener("change", notify)
-      return () => query.removeEventListener("change", notify)
-    },
-    () => window.matchMedia("(min-width: 1024px)").matches,
-    () => true,
-  )
-}
-
 // The ⌘K menu. Desktop is a dialog under the header; below lg it is a full-screen sheet with
 // scope chips in place of the `>` prefix. The field keeps focus the whole time and the list is
 // driven by aria-activedescendant, so typing never leaves the input.
@@ -80,6 +69,7 @@ export function CommandMenuDialog({
   const router = useRouter()
   const host = useSiteHost()
   const desktop = useIsDesktop()
+  const canHover = useCanHover()
   const listId = React.useId()
   const [value, setValue] = React.useState("")
   const [chip, setChip] = React.useState<Scope>("all")
@@ -114,6 +104,8 @@ export function CommandMenuDialog({
         .filter((command) => command.group === group && matches(command.label, text))
         // Toggle theme is a keyboard habit; the phone menu leaves it out, like the design.
         .filter((command) => desktop || command.id !== "toggle-theme")
+        // The shortcuts list is no use without a keyboard.
+        .filter((command) => canHover || command.id !== "show-shortcuts")
         .map((command) => ({ id: command.id, kind: "command", command }))
 
     if (scope === "commands") {
@@ -153,7 +145,7 @@ export function CommandMenuDialog({
       }
     }
     return result
-  }, [scope, text, recent, collections, commands, desktop, search.hits, t])
+  }, [scope, text, recent, collections, commands, desktop, canHover, search.hits, t])
 
   const entries = React.useMemo(() => groups.flatMap((group) => group.entries), [groups])
   const activeIndex = Math.min(active, entries.length - 1)
@@ -190,6 +182,8 @@ export function CommandMenuDialog({
   }
 
   const empty = entries.length === 0 && !search.pending
+  // Earlier results stay on screen while a new search runs, so this only shows when there are none.
+  const searching = entries.length === 0 && search.pending
   const seeAll = text !== "" && scope !== "collections" && scope !== "commands" && search.total > 0
 
   return (
@@ -296,6 +290,11 @@ export function CommandMenuDialog({
               ))}
             </div>
           ))}
+          {searching ? (
+            <p role="status" className="px-6 py-12 text-center text-sm text-muted-foreground">
+              {t("searching")}
+            </p>
+          ) : null}
           {empty ? (
             <div className="flex flex-col items-center gap-1 px-6 py-12 text-center">
               <p className="text-sm text-foreground">
@@ -382,7 +381,7 @@ function Option({
 function Highlight({ value, text }: { value: string; text: string }) {
   return highlight(value, text).map((segment, index) =>
     segment.match ? (
-      <mark key={index} className="bg-link/15 text-inherit dark:bg-link/20">
+      <mark key={index} className="bg-pink text-pink-foreground">
         {segment.text}
       </mark>
     ) : (
@@ -415,7 +414,9 @@ function EntryRow({
             <Highlight value={entry.title} text={text} />
           </span>
           <span className="truncate font-mono text-xs text-muted-foreground">
-            <Highlight value={`${host}/${entry.slug}`} text={text} />
+            {/* The host is the same on every row, so phones keep the room for the slug and age. */}
+            <span className="max-lg:hidden">{host}/</span>
+            <Highlight value={entry.slug} text={text} />
             <span className="lg:hidden"> · {ago}</span>
           </span>
         </div>
@@ -442,7 +443,7 @@ function EntryRow({
         <span className="flex size-4 shrink-0 items-center justify-center">
           <CollectionIcon icon={collection.icon} hue={collection.hue} className="size-2.5" />
         </span>
-        <span className="min-w-0 flex-1 truncate font-mono text-[13px] max-lg:py-3.5">
+        <span className="min-w-0 flex-1 truncate max-lg:py-3.5">
           <Highlight value={collection.name} text={text} />
         </span>
         <span className="shrink-0 text-[13px] text-muted-foreground">

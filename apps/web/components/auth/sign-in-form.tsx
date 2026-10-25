@@ -12,6 +12,7 @@ import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
 import { EmailDivider, SocialButtons } from "./social-buttons"
+import { VerificationNotice } from "./verification-notice"
 
 // `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
 // newcomers to the request-access page.
@@ -32,11 +33,13 @@ export function SignInForm({
   const router = useRouter()
   const [error, setError] = React.useState<string | null>(initialError)
   const [pending, setPending] = React.useState(false)
+  const [verificationEmail, setVerificationEmail] = React.useState<string | null>(null)
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     setError(null)
+    setVerificationEmail(null)
     setPending(true)
 
     const { error } = await authClient.signIn
@@ -44,10 +47,14 @@ export function SignInForm({
         email: String(form.get("email")),
         password: String(form.get("password")),
       })
-      .catch(() => ({ error: { status: 0 } }))
+      .catch(() => ({ error: { status: 0, code: "NETWORK_ERROR" } }))
 
     if (error) {
       setPending(false)
+      if (error.code === "EMAIL_NOT_VERIFIED") {
+        setVerificationEmail(String(form.get("email")))
+        return
+      }
       setError(
         error.status === 401
           ? t("errors.credentials")
@@ -71,7 +78,7 @@ export function SignInForm({
           {notice}
         </p>
       ) : null}
-      {socialProviders ? (
+      {socialProviders?.length ? (
         <>
           <SocialButtons
             enabled={socialProviders}
@@ -86,9 +93,7 @@ export function SignInForm({
       <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email" className="text-sm lg:text-[13px]">
-              {t("email")}
-            </Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               name="email"
@@ -123,8 +128,9 @@ export function SignInForm({
         </div>
 
         <FormError message={error} />
+        {verificationEmail ? <VerificationNotice email={verificationEmail} /> : null}
 
-        <Button type="submit" loading={pending} className={authSubmitClass}>
+        <Button type="submit" size="xl" loading={pending} className={authSubmitClass}>
           {t(pending ? "signingIn" : "signIn")}
         </Button>
 

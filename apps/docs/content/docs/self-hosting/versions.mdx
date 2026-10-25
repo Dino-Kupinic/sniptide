@@ -1,0 +1,63 @@
+---
+title: Versions and releases
+description: How Sniptide is versioned, where the changelog is, and what an upgrade promises.
+---
+
+## Versions
+
+Sniptide uses [semantic versioning](https://semver.org), and releases itself. When a pull request is
+merged into `main` and its checks pass, the version is worked out from the pull request's
+[Conventional Commit](https://www.conventionalcommits.org/) title and a release is published, with
+no manual tagging:
+
+| The change is… | Example title | Version bump |
+| --- | --- | --- |
+| Breaking: `!` after the type, or a `BREAKING CHANGE:` note | `refactor(db)!: rename the pastes table` | major (`1.0.0` → `2.0.0`) |
+| A feature | `feat(web): add paste collections` | minor (`1.2.0` → `1.3.0`) |
+| Anything else: a fix, docs, performance, a refactor | `fix(web): …` | patch (`1.2.3` → `1.2.4`) |
+
+Tags look like `v1.2.3`. Several merged pull requests can end up in one release.
+
+## Changelog
+
+The changelog is the **release notes of each GitHub release**, generated from the same commit
+titles and grouped under Features, Bug fixes, Performance, Documentation and so on. Anything
+breaking is listed separately under **BREAKING CHANGES**, with the instructions the author wrote.
+There is no `CHANGELOG.md` file to keep in step. Read the notes for every release between yours
+and the one you are moving to before you upgrade.
+
+## Docker images
+
+Every release publishes a multi-architecture (AMD64 and ARM64) image to
+`ghcr.io/dino-kupinic/sniptide`, after it has passed a startup check against a fresh database.
+
+| Tag | Moves? | Use it for |
+| --- | --- | --- |
+| `1.2.3` | Never | Production. You choose when to upgrade. |
+| `1.2` | With each patch release | Staying on a minor version and taking fixes. |
+| `1` | With each minor release | Only once Sniptide is at 1.0 or later; there is no such tag for 0.x. |
+| `latest` | With every stable release | Trying it out. Not recommended for production. |
+
+Pre-releases (such as `1.3.0-beta.1`) get only their exact tag, so they never replace a stable one.
+Pin an exact version in production (`SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:1.2.3`), so an
+upgrade is something you do on purpose.
+
+## What an upgrade promises
+
+- **Upgrading works without data loss.** Every pull request upgrades a seeded database from the
+  latest published release to the new build, then restores a backup into the running stack and into
+  a brand-new one, and compares the data. The check fails the pull request if anything is lost.
+- **Migrations apply on startup**, in a single transaction. A failed migration leaves the database
+  as it was before the upgrade. See [Upgrading](/self-hosting/upgrading).
+- **There is no downgrade.** To go back, restore the backup you took first.
+  See [Backups and restore](/self-hosting/backups).
+- **Migrations are additive where possible**, so the previous version can keep running while the
+  new one starts. A release that can't work that way, or needs something from you, is marked
+  breaking and says what to do in its notes.
+
+## What isn't promised yet
+
+While Sniptide is at 0.x it is in early development, and the interfaces (settings, the API, the
+CLI) can change in any release, which the notes call out. Upgrading from a release more than one
+step behind is expected to work (all missing migrations are applied in order) but isn't what CI
+checks.

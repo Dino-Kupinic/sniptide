@@ -9,11 +9,14 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { Input } from "@sniptide/ui/components/input"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { Sheet, SheetBody, SheetContent, SheetHeader } from "@sniptide/ui/components/sheet"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
+  CheckIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   EyeIcon,
   HistoryIcon,
   LinkIcon,
@@ -34,6 +37,8 @@ export interface SharingState {
   url: string
   visibility: Visibility
   expiresLabel: string
+  // No expiry set, so "Never" carries the check in the Expires menu.
+  neverExpires: boolean
   hasPassword: boolean
   burnAfterRead: boolean
   allowRaw: boolean
@@ -124,6 +129,7 @@ function useSharingControls(state: SharingState, list: boolean) {
         className={cn(
           "flex items-center gap-1.5 outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
           !list && "h-9 w-full justify-between border border-border px-2.5 hover:text-foreground",
+          list && "-mr-2 h-10 rounded-lg px-2",
         )}
       >
         <span className={cn(list && "text-muted-foreground")}>{state.expiresLabel}</span>
@@ -131,8 +137,15 @@ function useSharingControls(state: SharingState, list: boolean) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {expiryChoices.map((choice) => (
-          <DropdownMenuItem key={choice.value} onClick={() => save({ expiry: choice.value })}>
+          <DropdownMenuItem
+            key={choice.value}
+            className={cn(list && "h-10")}
+            onClick={() => save({ expiry: choice.value })}
+          >
             {t(choice.label)}
+            {choice.value === "never" && state.neverExpires ? (
+              <CheckIcon className="ml-auto text-foreground!" />
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -318,7 +331,10 @@ export function SharingPanel({
   return (
     <section aria-label={t("sharing")} className="flex flex-col gap-3">
       {controls.visibilityControl}
-      <div className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-[15px]">
+      <p className="-mt-1 text-xs text-muted-foreground">
+        {t("visibilityHelp", { value: controls.visibility })}
+      </p>
+      <div className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-sm">
         <SettingRow label={t("expires")} list>
           {controls.expiry}
         </SettingRow>
@@ -344,5 +360,43 @@ export function SettingRow({
       <span>{label}</span>
       {children}
     </div>
+  )
+}
+
+// A row in the mobile settings list that opens a bottom sheet, for the side panel sections that
+// don't fit in a row (Views, Revisions, Shared with you). The sheet shows the same content the
+// desktop panel does, so its actions (Restore revision, Remove from my list) work on phones too.
+export function SheetRow({
+  label,
+  value,
+  children,
+}: {
+  label: string
+  value?: React.ReactNode
+  children: React.ReactNode
+}) {
+  const t = useTranslations("Paste")
+  const [open, setOpen] = React.useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+        className="flex h-12 w-full items-center gap-3 px-4 text-left outline-none hover:bg-muted focus-visible:bg-muted active:bg-muted"
+      >
+        <span className="flex-1">{label}</span>
+        {value ? (
+          <span className="truncate text-muted-foreground tabular-nums">{value}</span>
+        ) : null}
+        <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+      </button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom" className="lg:hidden">
+          <SheetHeader title={label} closeLabel={t("close")} />
+          <SheetBody className="flex flex-col gap-3 text-sm">{children}</SheetBody>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }

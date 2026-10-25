@@ -39,6 +39,7 @@ describeDb("invite-only sign-up", () => {
       baseURL: BASE,
       allowedEmails,
       allowSignUp,
+      emailVerification: { sendVerificationEmail: async () => {} },
     })
   }
 

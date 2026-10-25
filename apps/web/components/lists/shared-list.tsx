@@ -11,11 +11,10 @@ import {
   TableRow,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import { UsersIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { LanguageLabel, LanguageMarker } from "@/components/paste/language-marker"
+import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import type { PageInfo } from "@/lib/pastes/list-query"
 import type { SharedRow } from "@/lib/pastes/rows"
 import { type SharedListQuery, sharedListSearch } from "@/lib/pastes/shared-list-query"
@@ -24,6 +23,7 @@ import { RowMenu } from "./row-menu"
 import {
   FilterMenu,
   ListHeader,
+  MobileFilterSheet,
   Pagination,
   QuickChips,
   SearchField,
@@ -104,6 +104,8 @@ export function SharedList({
         title={t("shared_with_me")}
         count={pagination.totalAll}
         actions={<ViewToggle value={view} onChange={setView} />}
+        // The grid view is desktop only.
+        mobileActions={null}
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
@@ -117,6 +119,41 @@ export function SharedList({
             { value: "edit", label: t("can_edit") },
             { value: "view", label: t("can_view") },
           ]}
+          trailing={
+            <MobileFilterSheet
+              sort={{
+                value: query.sort,
+                defaultValue: "shared" as SharedListQuery["sort"],
+                options: sortOptions,
+                onChange: (sort) => update({ sort }),
+              }}
+              filters={[
+                {
+                  id: "language",
+                  label: t("language"),
+                  options: languageOptions.map((id) => ({
+                    value: id,
+                    label: <LanguageLabel language={id} />,
+                  })),
+                  selected: query.languages,
+                  onChange: (languages) => update({ languages }),
+                },
+                {
+                  id: "owner",
+                  label: t("shared_by"),
+                  options: ownerOptions.map((person) => ({
+                    value: person.id,
+                    label: person.name || person.username,
+                  })),
+                  selected: query.owners,
+                  onChange: (owners) => update({ owners }),
+                },
+              ]}
+              total={pagination.total}
+              pending={pending}
+              onClear={() => update({ sort: "shared", languages: [], owners: [] })}
+            />
+          }
         />
       </div>
 
@@ -184,9 +221,6 @@ export function SharedList({
               </p>
             ) : (
               <div className="flex flex-col items-start gap-3 py-10 lg:px-8 lg:py-14">
-                <span className="rounded-md flex size-10 items-center justify-center bg-muted">
-                  <UsersIcon className="size-5" />
-                </span>
                 <div className="flex flex-col gap-1">
                   <p className="text-base font-medium">{t("nothing_shared_with_you_yet")}</p>
                   <p className="max-w-md text-sm text-muted-foreground">
@@ -198,7 +232,6 @@ export function SharedList({
                   size="lg"
                   render={<Link href="/pastes" />}
                   nativeButton={false}
-                  className="hidden lg:inline-flex"
                 >
                   {t("share_one_of_your_pastes")}
                 </Button>
@@ -319,7 +352,7 @@ export function SharedList({
                   key={row.slug}
                   className="relative flex items-center gap-3 border-b border-border py-3"
                 >
-                  <LanguageMarker language={row.language} />
+                  <LanguageIcon language={row.language} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-center gap-2">
                       <Link
@@ -337,10 +370,12 @@ export function SharedList({
                     </span>
                     <span className="truncate text-[13px] text-muted-foreground">
                       {row.owner ? `${row.owner.name || row.owner.username} · ` : ""}
+                      {row.access === "edit" ? t("can_edit") : t("can_view")}
+                      {" · "}
                       {row.sharedLabel}
                     </span>
                   </div>
-                  <AccessBadge access={row.access} />
+                  <RowMenu row={row} origin={origin} shared variant="sheet" />
                 </li>
               ))}
             </ul>
@@ -348,7 +383,7 @@ export function SharedList({
 
           {pagination.total > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-5">
-              <span className="hidden text-[13px] text-muted-foreground lg:inline">
+              <span className="text-[13px] text-muted-foreground">
                 {t("shared_summary", {
                   count: pagination.total,
                   people: peopleCount,

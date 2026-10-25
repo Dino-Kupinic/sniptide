@@ -7,6 +7,7 @@ import { isDemoMode, requireSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { listFolders } from "@/lib/folders/store"
+import { trashTotals } from "@/lib/pastes/lists"
 import { sidebarData } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
@@ -14,12 +15,13 @@ import { viewerFromUser } from "@/lib/viewer"
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // The sidebar cookie also holds each section's filter, which picks what sidebarData lists.
   const sidebar = parseSidebarState((await cookies()).get(SIDEBAR_COOKIE)?.value)
-  const [session, data, { host }, collections, folders] = await Promise.all([
+  const [session, data, { host }, collections, folders, trash] = await Promise.all([
     requireSession(),
     sidebarData(sidebar.views),
     getSiteOrigin(),
     listCollections(),
     listFolders(),
+    trashTotals(),
   ])
 
   return (
@@ -32,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           collections={collections}
           folders={folders}
           initialSidebar={sidebar}
+          trashCount={trash.count}
         >
           {children}
         </AppShell>
