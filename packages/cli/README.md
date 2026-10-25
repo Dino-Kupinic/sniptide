@@ -101,6 +101,19 @@ precedence over saved values, and `--base-url` takes precedence over the environ
 are only reused for their exact instance URL. Logout deletes saved credentials; an environment token
 still applies.
 
+## Install a collection as an agent skill
+
+```sh
+sniptide skill ui                                  # .claude/skills/ui/SKILL.md and snippets/
+sniptide skill ui --agent cursor --name our-ui     # .cursor/skills/our-ui
+sniptide skill ui --agent codex --force            # .agents/skills/ui, replacing earlier files
+```
+
+`SKILL.md` gets a description that names every paste and a section per paste that links its files,
+which sit next to it under `snippets/<paste-slug>/`. `--dir` picks another skills folder and
+`--dry-run` lists the files without writing them. A forced refresh replaces the files it writes and
+keeps files from removed pastes, so delete the folder first for an exact copy.
+
 ## Restoring files and agent output
 
 Pull validates every path and conflict before writing. It creates nested directories, refuses path

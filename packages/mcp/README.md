@@ -1,17 +1,29 @@
 # Sniptide MCP server
 
-Connect a coding agent to your Sniptide account. The same five tools work through the app's remote
+Connect a coding agent to your Sniptide account. The same nine tools and three prompts work through the app's remote
 HTTP endpoint or a local process that calls the token API. Both support Sniptide Cloud and
 self-hosted instances. Create a personal API token in Settings → API tokens; use read-only access
 for retrieval, or enable write access to save and edit snippets.
 
 | Tool | What it returns or changes |
 | --- | --- |
-| `search_snippets` | Summary page filtered by title/slug (`query`), tags, language and collection; `nextCursor` continues the search |
+| `search_snippets` | Summary page filtered by words in the title, description, tags, paths or code (`query`), tags, language and collection; `nextCursor` continues the search |
 | `read_snippet` | One owned, live snippet by ID/slug, including paths, code and source metadata |
 | `fetch_collection` | A page of numbered recipe steps containing full snippets, in capture order |
 | `create_snippet` | A new private snippet unless visibility is explicitly set; requires write scope |
 | `update_snippet` | Replaces title and all files; requires write scope and is marked destructive |
+| `list_collections` | The owner's collections with slugs, names and live snippet counts |
+| `create_collection` | An empty collection by name, returning its slug; requires write scope |
+| `update_snippet_settings` | Visibility, expiry, password or burn after read; requires write scope and is marked destructive |
+| `trash_snippet` | Moves a snippet to the trash, where the app can restore it; requires write scope |
+
+| Prompt | Arguments | What it starts |
+| --- | --- | --- |
+| `use_snippet` | `task` | Search, read the best match and adapt it to the project |
+| `save_snippet` | `code`, optional `collection` | Propose metadata, leave out secrets, save privately after the user confirms |
+| `apply_collection` | `collection`, optional `goal` | Fetch every page, list the steps, wait for a go-ahead, then apply them in order |
+
+`collection` arguments complete from the owner's collection slugs.
 
 Only the token owner's snippets are available, including private snippets. Other accounts' items,
 shared-with-you items, trash and expired pastes are excluded. The server does not execute code,
