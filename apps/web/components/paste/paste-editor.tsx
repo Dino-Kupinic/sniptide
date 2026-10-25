@@ -65,6 +65,7 @@ import {
 import type { Collection } from "@/lib/collections/types"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
+import { editorLineCount, isLargeEditorContent } from "@/lib/highlight/editor-limits"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
@@ -293,8 +294,22 @@ export function PasteEditor({
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
-  const totalBytes = files.reduce((size, file) => size + byteLength(file.content), 0)
-  const lineCount = (active?.content ?? "").split("\n").length
+  const [fileSizes] = React.useState(() => new WeakMap<EditorFile, number>())
+  const totalBytes = React.useMemo(
+    () =>
+      files.reduce((size, file) => {
+        let bytes = fileSizes.get(file)
+        if (bytes === undefined) {
+          bytes = byteLength(file.content)
+          fileSizes.set(file, bytes)
+        }
+        return size + bytes
+      }, 0),
+    [files, fileSizes],
+  )
+  const content = active?.content ?? ""
+  const lineCount = React.useMemo(() => editorLineCount(content), [content])
+  const plainEditor = isLargeEditorContent(content, lineCount)
   const lines = useHighlight(active?.content ?? "", active?.name ?? "")
   // The code view drops one trailing newline; the textarea shows it as an empty last line.
   const previewLines = active?.content.endsWith("\n") ? lines?.slice(0, -1) : lines
@@ -593,9 +608,19 @@ export function PasteEditor({
   }, [])
 
   function trackCursor(textarea: HTMLTextAreaElement) {
-    const before = textarea.value.slice(0, textarea.selectionStart)
-    const lines = before.split("\n")
-    setCursor({ line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 })
+    const position = textarea.selectionStart
+    let line = 1
+    let start = 0
+    for (let index = 0; index < position; index++) {
+      if (textarea.value.charCodeAt(index) === 10) {
+        line++
+        start = index + 1
+      }
+    }
+    const column = position - start + 1
+    setCursor((current) =>
+      current.line === line && current.column === column ? current : { line, column },
+    )
   }
 
   // Undo and Redo walk this file's own history (see useEditorHistory), not the browser's, so they
@@ -1089,7 +1114,7 @@ export function PasteEditor({
               />
             ) : (
               <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
-                {lineNumbers ? (
+                {lineNumbers && !plainEditor ? (
                   <div
                     aria-hidden="true"
                     style={{ minWidth: `${String(lineCount).length}ch` }}
@@ -1110,6 +1135,7 @@ export function PasteEditor({
                 <HighlightedTextarea
                   aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
                   lines={lines}
+                  plain={plainEditor}
                   activeLine={cursor.line}
                   value={active?.content ?? ""}
                   ref={bindTextarea}
@@ -1135,7 +1161,7 @@ export function PasteEditor({
                   autoCapitalize="off"
                   autoCorrect="off"
                   placeholder={t("pasteOrTypeCode")}
-                  rows={Math.max(lineCount, 12)}
+                  rows={plainEditor ? 12 : Math.max(lineCount, 12)}
                   wrap="off"
                   metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
                 />

@@ -84,6 +84,32 @@ function setup(
 const doc = (text: string): Doc => ({ text })
 
 describe("Autosaver", () => {
+  test("dirty checks reuse the current snapshot until the next update", () => {
+    let serializations = 0
+    const snapshot = (text: string) => ({
+      text,
+      toJSON() {
+        serializations++
+        return { text: this.text }
+      },
+    })
+    const autosaver = new Autosaver({
+      initial: snapshot("saved"),
+      manual: true,
+      onState: () => {},
+      save: async () => ({ ok: true }),
+    })
+    const value = snapshot("edited")
+    autosaver.update(value)
+    expect(autosaver.hasUnsavedChanges()).toBe(true)
+    expect(autosaver.hasUnsavedChanges()).toBe(true)
+    expect(serializations).toBe(2)
+    value.text = "saved"
+    autosaver.update(value)
+    expect(autosaver.hasUnsavedChanges()).toBe(false)
+    expect(serializations).toBe(3)
+  })
+
   test("saves the latest value once typing pauses", async () => {
     const { autosaver, fake, sent } = setup()
 

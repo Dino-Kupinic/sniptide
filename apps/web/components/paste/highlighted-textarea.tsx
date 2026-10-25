@@ -2,6 +2,7 @@
 
 import { cn } from "@sniptide/ui/lib/utils"
 import * as React from "react"
+import { isLargeEditorContent } from "@/lib/highlight/editor-limits"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { renderToken } from "./code-block"
 
@@ -11,12 +12,13 @@ type TextareaProps = Omit<React.ComponentProps<"textarea">, "value"> & { value: 
 // whose own text is transparent but still carries the caret, selection and input. Both must
 // share font, size, line height and wrapping, so those go in `metricsClassName`; scrolling is
 // copied across. `lines` come from useHighlight and match `value` line for line; without them
-// (loading, plain text, a very large file) the copy is plain. `activeLine` (1-based) gets a
-// quiet row behind it while the textarea has focus.
+// (loading or plain text) the copy is plain. Oversized files use the visible textarea directly.
+// `activeLine` (1-based) gets a quiet row behind it while the textarea has focus.
 export function HighlightedTextarea({
   value,
   lines,
   activeLine,
+  plain,
   metricsClassName,
   className,
   onScroll,
@@ -24,9 +26,28 @@ export function HighlightedTextarea({
 }: TextareaProps & {
   lines?: HighlightedLines
   activeLine?: number
+  plain?: boolean
   metricsClassName?: string
 }) {
   const layer = React.useRef<HTMLDivElement>(null)
+  const oversized = React.useMemo(() => plain ?? isLargeEditorContent(value), [plain, value])
+
+  if (oversized) {
+    return (
+      <div className="relative flex min-w-0 flex-1">
+        <textarea
+          {...props}
+          value={value}
+          onScroll={onScroll}
+          className={cn(
+            "block w-full resize-none bg-transparent whitespace-pre text-foreground caret-highlight outline-none selection:bg-primary/25 placeholder:text-muted-foreground",
+            metricsClassName,
+            className,
+          )}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="group/textarea relative min-w-0 flex-1">
