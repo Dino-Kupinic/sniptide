@@ -119,7 +119,7 @@ function RestoreButton({ slug, className }: { slug: string; className?: string }
   return (
     <Button
       variant="outline"
-      size="sm"
+      size="xs"
       loading={pending}
       onClick={() =>
         startTransition(async () => {
@@ -129,7 +129,7 @@ function RestoreButton({ slug, className }: { slug: string; className?: string }
           })
         })
       }
-      className={cn("h-[30px] px-3 text-[13px]", className)}
+      className={className}
     >
       {t("restore")}
     </Button>
@@ -276,7 +276,7 @@ export function TrashList({
                   <TableSortHead {...headProps("updated", "asc")} className="w-[200px]">
                     {t("gone_for_good")}
                   </TableSortHead>
-                  <TablePinnedHead className="w-[148px]">
+                  <TablePinnedHead className="w-32">
                     <span className="sr-only">{t("actions")}</span>
                   </TablePinnedHead>
                 </TableRow>
@@ -322,7 +322,7 @@ export function TrashList({
                           trigger={
                             <Button
                               variant="destructive"
-                              size="icon-sm"
+                              size="icon-xs"
                               aria-label={t("delete_named_forever", { name: row.title })}
                             >
                               <Trash2Icon />

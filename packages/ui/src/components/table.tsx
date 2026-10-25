@@ -1,10 +1,38 @@
+"use client"
+
 import { cn } from "cn"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
-import type * as React from "react"
+import * as React from "react"
 
+// The pinned actions column fades the columns scrolling under it, and the fade goes away once the
+// table is scrolled to its right edge or fits without scrolling.
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const container = React.useRef<HTMLDivElement>(null)
+  const [atEnd, setAtEnd] = React.useState(true)
+
+  React.useEffect(() => {
+    const element = container.current
+    if (!element) return
+    const measure = () =>
+      setAtEnd(element.scrollWidth - element.clientWidth - element.scrollLeft < 1)
+    measure()
+    element.addEventListener("scroll", measure, { passive: true })
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    if (element.firstElementChild) observer.observe(element.firstElementChild)
+    return () => {
+      element.removeEventListener("scroll", measure)
+      observer.disconnect()
+    }
+  }, [])
+
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      ref={container}
+      data-slot="table-container"
+      data-at-end={atEnd}
+      className="group/scroll relative w-full overflow-x-auto"
+    >
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   )
@@ -47,13 +75,22 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
 }
 
 // The actions column stays at the right edge while the other columns scroll under it. It paints an
-// opaque fill, so the row's hover tint is mixed into it rather than layered on top. Collapsed table
-// borders do not travel with a sticky cell, so its left edge is a pseudo-element.
+// opaque fill, so the row's hover tint is mixed into it rather than layered on top. A short fade on
+// its left edge shows that more columns sit behind it.
 const pinned =
-  "sticky right-0 bg-background before:absolute before:inset-y-0 before:left-0 before:w-px before:bg-border/70 group-hover/row:bg-[color-mix(in_oklab,var(--background),var(--muted)_40%)]"
+  "sticky right-0 bg-background before:pointer-events-none before:absolute before:inset-y-0 before:right-full before:w-8 before:bg-linear-to-l before:from-background before:to-transparent before:transition-opacity group-data-[at-end=true]/scroll:before:opacity-0 group-hover/row:bg-[color-mix(in_oklab,var(--background),var(--muted)_40%)] group-hover/row:before:from-[color-mix(in_oklab,var(--background),var(--muted)_40%)]"
 
 function TablePinnedHead({ className, ...props }: React.ComponentProps<"th">) {
-  return <TableHead className={cn(pinned, "group-hover/row:bg-background", className)} {...props} />
+  return (
+    <TableHead
+      className={cn(
+        pinned,
+        "group-hover/row:bg-background group-hover/row:before:from-background",
+        className,
+      )}
+      {...props}
+    />
+  )
 }
 
 function TablePinnedCell({ className, ...props }: React.ComponentProps<"td">) {
