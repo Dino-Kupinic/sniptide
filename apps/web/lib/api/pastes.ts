@@ -8,6 +8,7 @@ import {
   apiTagSchema,
   apiCaptureSchema as captureSchema,
   MAX_TAGS,
+  visibilitySchema,
 } from "@sniptide/contracts"
 
 export {
@@ -46,9 +47,11 @@ import { announceChange } from "@/lib/live/changes"
 import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
 import { insertPaste } from "@/lib/pastes/insert"
 import { limited, limits } from "@/lib/pastes/limits"
+import { hashPassword } from "@/lib/pastes/passwords"
 import { parsePasteInput } from "@/lib/pastes/schema"
 import { pruneSnapshots, snapshotOf } from "@/lib/pastes/snapshot"
-import { randomSlug } from "@/lib/pastes/store"
+import { expiresAtFor, randomSlug } from "@/lib/pastes/store"
+import { EXPIRIES, type Expiry, type Visibility } from "@/lib/pastes/types"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
 
@@ -303,6 +306,93 @@ export async function updateCapture(
   const updated = await getCapture(owner, existing.id)
   if (!updated) throw new ApiError(404, "No paste with that id.")
   return updated
+}
+
+export const settingsSchema = z
+  .object({
+    visibility: visibilitySchema.optional(),
+    // Counted from now, like the editor's Expires after.
+    expiry: z.enum(EXPIRIES).optional(),
+    // A new password, or null to remove protection.
+    password: z.string().min(1).max(200).nullable().optional(),
+    burnAfterRead: z.boolean().optional(),
+  })
+  .strict()
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: "Change at least one of visibility, expiry, password or burnAfterRead.",
+  })
+
+export interface ApiSettings {
+  visibility: Visibility
+  expiresAt: string | null
+  passwordProtected: boolean
+  burnAfterRead: boolean
+}
+
+function settingsOf(record: PasteRecord): ApiSettings {
+  return {
+    visibility: record.visibility,
+    expiresAt: record.expiresAt?.toISOString() ?? null,
+    passwordProtected: record.passwordHash !== null,
+    burnAfterRead: record.burnAfterRead,
+  }
+}
+
+async function findLive(owner: string, idOrSlug: string) {
+  const key = UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug)
+  const [record] = await getDb()
+    .select()
+    .from(pasteTable)
+    .where(and(key, liveOwned(owner)))
+  return record ?? null
+}
+
+function expiresAtOrNull(expiry: Expiry) {
+  const at = expiresAtFor(expiry)
+  return at === null ? null : new Date(at)
+}
+
+// Changes how a live paste is shared, the same fields as the editor's sharing panel. The
+// password is hashed here and never returned; the response says only whether one is set.
+export async function updateSettings(
+  owner: string,
+  idOrSlug: string,
+  input: unknown,
+): Promise<{ paste: Omit<ApiPaste, "files">; settings: ApiSettings }> {
+  const { expiry, password, ...rest } = settingsSchema.parse(input)
+  const existing = await findLive(owner, idOrSlug)
+  if (!existing) throw new ApiError(404, "No paste with that id.")
+  const [record] = await getDb()
+    .update(pasteTable)
+    .set({
+      ...rest,
+      version: sql`${pasteTable.version} + 1`,
+      ...(password !== undefined
+        ? { passwordHash: password ? await hashPassword(password) : null }
+        : {}),
+      ...(expiry ? { expiresAt: expiresAtOrNull(expiry) } : {}),
+    })
+    .where(eq(pasteTable.id, existing.id))
+    .returning()
+  if (!record) throw new ApiError(404, "No paste with that id.")
+  await announceChange(owner)
+  return { paste: toSummaryFields(record, await shareOrigin()), settings: settingsOf(record) }
+}
+
+// Moves a live paste to the trash, where its owner can restore it until the trash is emptied.
+// Tokens never delete for good.
+export async function trashCapture(
+  owner: string,
+  idOrSlug: string,
+): Promise<{ trashed: { id: string; slug: string } }> {
+  const existing = await findLive(owner, idOrSlug)
+  if (!existing) throw new ApiError(404, "No paste with that id.")
+  await getDb()
+    .update(pasteTable)
+    .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })
+    .where(eq(pasteTable.id, existing.id))
+  await announceChange(owner)
+  return { trashed: { id: existing.id, slug: existing.slug } }
 }
 
 // Postgres keeps microseconds and JavaScript milliseconds, so cursors compare and order on
