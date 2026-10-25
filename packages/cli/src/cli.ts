@@ -99,8 +99,20 @@ function displayText(value: string): string {
     .join("")
 }
 
-async function getCollection(api: Api, slug: string): Promise<Capture[]> {
+interface Step {
+  step: number
+  id: string
+  title: string
+  instruction: string
+}
+
+// A collection's pastes in step order, with each step's instruction for the agent that pulled it.
+async function getCollection(
+  api: Api,
+  slug: string,
+): Promise<{ pastes: Capture[]; steps: Step[] }> {
   const pastes: Capture[] = []
+  const steps: Step[] = []
   const cursors = new Set<string>()
   let cursor: string | undefined
   let bytes = 0
@@ -110,6 +122,22 @@ async function getCollection(api: Api, slug: string): Promise<Capture[]> {
     if (!Array.isArray(data.pastes))
       throw new CliError("Invalid collection response.", "INVALID_RESPONSE", 1)
     const page = data.pastes.map(paste)
+    // Servers from before flows send no steps; their pastes have no instructions.
+    const instructions = new Map<string, string>()
+    if (Array.isArray(data.steps))
+      for (const item of data.steps) {
+        const entry = record(item)
+        if (typeof entry.instruction !== "string")
+          throw new CliError("Invalid collection step.", "INVALID_RESPONSE", 1)
+        instructions.set(string(entry.id, "step id"), entry.instruction)
+      }
+    for (const item of page)
+      steps.push({
+        step: steps.length + 1,
+        id: item.id,
+        title: item.title,
+        instruction: instructions.get(item.id) ?? "",
+      })
     pastes.push(...page)
     for (const item of page) {
       for (const file of item.files) bytes += Buffer.byteLength(file.content)
@@ -125,7 +153,7 @@ async function getCollection(api: Api, slug: string): Promise<Capture[]> {
       throw new CliError("Collection pagination repeated a cursor.", "INVALID_RESPONSE", 1)
     if (cursor) cursors.add(cursor)
   } while (cursor)
-  return pastes
+  return { pastes, steps }
 }
 
 // Returns an exit status rather than exiting, so tests and embedding tools share the real flow.
@@ -315,6 +343,7 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
           : "pull <id|collection:slug> [--dir DIRECTORY]",
       )
       let pastes: Capture[]
+      let steps: Step[] | null = null
       if (values.input)
         pastes = bundle(await readBundle(path.resolve(ctx.cwd, values.input))).pastes
       else {
@@ -326,7 +355,7 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
           const slug = id.slice("collection:".length)
           if (!slug || slug === "." || slug === "..")
             throw new CliError("Provide a collection slug after collection:.")
-          pastes = await getCollection(api, slug)
+          ;({ pastes, steps } = await getCollection(api, slug))
         } else pastes = [paste((await api.request(`pastes/${encodeURIComponent(id)}`)).paste)]
       }
       const directory = path.resolve(ctx.cwd, values.dir ?? ".")
@@ -336,9 +365,17 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
         values.force ?? false,
         values["dry-run"] ?? false,
       )
+      const stepText = steps?.length
+        ? `\nSteps:\n${steps
+            .map(
+              (step) =>
+                `${step.step}. ${displayText(step.title)}${step.instruction ? `: ${displayText(step.instruction)}` : ""}`,
+            )
+            .join("\n")}`
+        : ""
       emit(
-        { directory, files, dryRun: values["dry-run"] ?? false },
-        `${values["dry-run"] ? "Would write" : "Wrote"} ${files.length} files in ${directory}.\n${files.join("\n")}`,
+        { directory, files, dryRun: values["dry-run"] ?? false, ...(steps ? { steps } : {}) },
+        `${values["dry-run"] ? "Would write" : "Wrote"} ${files.length} files in ${directory}.\n${files.join("\n")}${stepText}`,
       )
       return 0
     }

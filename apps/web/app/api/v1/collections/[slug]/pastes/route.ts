@@ -1,7 +1,8 @@
 import { failure, json, withToken } from "@/lib/api/http"
 import { collectionCaptures, recordTokenReads } from "@/lib/api/pastes"
 
-// A collection's pastes in full, oldest first, a page at a time. `sniptide pull collection:<slug>`.
+// A collection's pastes in full, in step order, a page at a time, with each step's instruction.
+// `sniptide pull collection:<slug>`.
 export async function GET(
   request: Request,
   { params }: RouteContext<"/api/v1/collections/[slug]/pastes">,

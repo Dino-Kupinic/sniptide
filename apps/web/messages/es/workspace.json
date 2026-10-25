@@ -341,7 +341,20 @@
     "move_up": "Subir",
     "move_down": "Bajar",
     "done": "Listo",
-    "searching": "Buscando…"
+    "searching": "Buscando…",
+    "order_steps": "Ordenar pasos",
+    "steps_title": "Pasos de {name}",
+    "steps_description": "Los agentes que obtienen esta colección por MCP o la descargan con la CLI reciben estos snippets en este orden, cada uno con su instrucción.",
+    "step_label": "Paso {number}",
+    "step_instruction": "Instrucción del paso {number}",
+    "step_instruction_placeholder": "¿Qué debe hacer un agente con este snippet?",
+    "move_step_up": "Subir {title}",
+    "move_step_down": "Bajar {title}",
+    "save_steps": "Guardar pasos",
+    "steps_saved": "Pasos guardados.",
+    "steps_empty": "Esta colección aún no tiene snippets. Guarda un paste en ella para crear el primer paso.",
+    "back_to_collection": "Volver a {name}",
+    "steps_save_error": "No se pudieron guardar los pasos. Vuelve a intentarlo."
   },
   "Secrets": {
     "title": "Secretos",

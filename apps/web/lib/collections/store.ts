@@ -3,7 +3,7 @@ import "server-only"
 import { allowedPaste } from "@workspace/db/moderation"
 
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
-import { and, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
@@ -208,6 +208,14 @@ export interface CollectionSnapshot {
   createdAt: number
   // Slugs of the pastes that were filed in it, trashed ones included.
   pastes: string[]
+  // The pastes' places and instructions as steps, which leaving the collection clears.
+  steps: CollectionStepSnapshot[]
+}
+
+export interface CollectionStepSnapshot {
+  slug: string
+  position: number | null
+  instruction: string
 }
 
 // Deletes the collection and takes its pastes out of it; the pastes themselves stay, trashed ones
@@ -221,6 +229,21 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
       .from(collectionTable)
       .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
     if (!row) return null
+    const steps = await tx
+      .select({
+        slug: pasteTable.slug,
+        position: pasteTable.collectionPosition,
+        instruction: pasteTable.stepInstruction,
+      })
+      .from(pasteTable)
+      .where(
+        and(
+          allowedPaste(),
+          eq(pasteTable.ownerId, owner),
+          eq(pasteTable.collection, slug),
+          or(isNotNull(pasteTable.collectionPosition), ne(pasteTable.stepInstruction, "")),
+        ),
+      )
     const pastes = await tx
       .update(pasteTable)
       .set({ collection: null, version: sql`${pasteTable.version} + 1` })
@@ -239,6 +262,7 @@ export async function deleteCollection(slug: string): Promise<CollectionSnapshot
       pastes: pastes
         .filter((paste) => paste.moderationState === "allowed")
         .map((paste) => paste.slug),
+      steps,
     }
   })
 }
@@ -280,6 +304,17 @@ export async function restoreCollection(snapshot: CollectionSnapshot): Promise<R
             inArray(pasteTable.slug, snapshot.pastes),
           ),
         )
+      for (const step of snapshot.steps)
+        await tx
+          .update(pasteTable)
+          .set({ collectionPosition: step.position, stepInstruction: step.instruction })
+          .where(
+            and(
+              eq(pasteTable.ownerId, owner),
+              eq(pasteTable.collection, snapshot.slug),
+              eq(pasteTable.slug, step.slug),
+            ),
+          )
     }
     return { status: "ok" }
   })

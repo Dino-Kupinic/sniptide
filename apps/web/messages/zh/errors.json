@@ -56,6 +56,7 @@
     "checkName": "请检查名称。",
     "collectionLink": "现在已有集合使用该链接。",
     "collectionRestore": "无法恢复该集合。",
+    "collectionSteps": "集合已更改，无法保存步骤。请重新加载后再试一次。",
     "displayName": "请输入显示名称。",
     "usernameFormat": "用户名须为 3–30 个小写字母、数字、连字符或下划线。",
     "checkProfile": "请检查个人资料。",

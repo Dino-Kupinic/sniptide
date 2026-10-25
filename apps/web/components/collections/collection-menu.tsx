@@ -21,11 +21,13 @@ import { FormError } from "@sniptide/ui/components/form-error"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  ListOrderedIcon,
   MoreHorizontalIcon,
   PaletteIcon,
   PencilIcon,
   Trash2Icon,
 } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
@@ -79,6 +81,10 @@ export function CollectionMenu({
           <DropdownMenuItem onClick={() => setChangingIcon(true)}>
             <PaletteIcon />
             {t("change_icon")}
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href={`/collections/${collection.slug}/steps`} />}>
+            <ListOrderedIcon />
+            {t("order_steps")}
           </DropdownMenuItem>
           {onMove ? (
             <>

@@ -10,6 +10,7 @@ import { GET as listEnv } from "@/app/api/v1/env/route"
 import { GET as me } from "@/app/api/v1/me/route"
 import { GET as getPaste } from "@/app/api/v1/pastes/[id]/route"
 import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/route"
+import { setCollectionSteps } from "@/lib/api/pastes"
 import { createToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { run } from "../../../packages/cli/src/cli"
@@ -139,6 +140,20 @@ describeDb("sniptide CLI against the app", () => {
       expect(await readFile(path.join(fromCollection, name), "utf8")).toBe(
         files[name as keyof typeof files],
       )
+
+    // A collection pull reports its steps with the owner's instructions.
+    await setCollectionSteps("ada", "ui", {
+      steps: [{ id: pushed.data.id, instruction: "Copy the button into the app." }],
+    })
+    const stepped = await cli(["pull", "collection:ui", "--dir", path.join(root, "third")], root)
+    expect(stepped.data.steps).toEqual([
+      {
+        step: 1,
+        id: pushed.data.id,
+        title: "Button",
+        instruction: "Copy the button into the app.",
+      },
+    ])
 
     const found = await cli(["search", "butt", "--tag", "react", "--language", "typescript"], root)
     expect(found.data.pastes.map((item: { id: string }) => item.id)).toEqual([pushed.data.id])

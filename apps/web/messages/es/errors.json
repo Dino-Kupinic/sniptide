@@ -56,6 +56,7 @@
     "checkName": "Revisa el nombre.",
     "collectionLink": "Ya existe una colección con ese enlace.",
     "collectionRestore": "No se puede restaurar esa colección.",
+    "collectionSteps": "No se pudieron guardar los pasos porque la colección cambió. Recarga la página y vuelve a intentarlo.",
     "displayName": "Introduce un nombre para mostrar.",
     "usernameFormat": "Los nombres de usuario deben tener entre 3 y 30 letras minúsculas, números, guiones o guiones bajos.",
     "checkProfile": "Revisa tu perfil.",

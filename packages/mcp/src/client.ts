@@ -5,6 +5,7 @@ import {
   type Search,
   type Settings,
   type SniptideBackend,
+  type Steps,
   ToolError,
 } from "./server"
 
@@ -40,8 +41,9 @@ export class TokenApiBackend implements SniptideBackend {
   }
   private async request(
     endpoint: string,
-    body?: Capture | Settings | { name: string },
+    body?: Capture | Settings | { name: string } | { steps: Steps },
     method = body ? "POST" : "GET",
+    overrides: Record<number, string> = {},
   ): Promise<Data> {
     let response: Response
     try {
@@ -72,7 +74,8 @@ export class TokenApiBackend implements SniptideBackend {
         429: "Too many requests. Wait before trying again.",
       }
       throw new ToolError(
-        messages[response.status] ??
+        overrides[response.status] ??
+          messages[response.status] ??
           (response.status >= 300 && response.status < 400
             ? "Sniptide redirected the request. Set its final instance URL explicitly."
             : `Sniptide returned HTTP ${response.status}.`),
@@ -122,7 +125,19 @@ export class TokenApiBackend implements SniptideBackend {
       (page.nextCursor !== null && typeof page.nextCursor !== "string")
     )
       throw new ToolError("Sniptide returned an invalid collection page.")
-    return { pastes: page.pastes.map(record), nextCursor: page.nextCursor }
+    const pastes = page.pastes.map(record)
+    // Instances from before flows send no steps; their pastes have no instructions.
+    const steps = Array.isArray(page.steps) ? page.steps.map(record) : []
+    const instructions = pastes.map((paste) => {
+      const step = steps.find((item) => item.id === paste.id)
+      return typeof step?.instruction === "string" ? step.instruction : ""
+    })
+    return { pastes, instructions, nextCursor: page.nextCursor }
+  }
+  setSteps(slug: string, steps: Steps) {
+    return this.request(`collections/${encodeURIComponent(slug)}/steps`, { steps }, "PUT", {
+      422: "Every step must be a live snippet in this collection.",
+    })
   }
   create(input: Capture) {
     return this.request("pastes", input)

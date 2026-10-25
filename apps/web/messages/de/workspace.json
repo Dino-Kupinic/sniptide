@@ -341,7 +341,20 @@
     "move_up": "Nach oben",
     "move_down": "Nach unten",
     "done": "Fertig",
-    "searching": "Wird gesucht…"
+    "searching": "Wird gesucht…",
+    "order_steps": "Schritte ordnen",
+    "steps_title": "Schritte in {name}",
+    "steps_description": "Agents, die diese Sammlung über MCP abrufen oder mit der CLI holen, bekommen die Snippets in dieser Reihenfolge, jedes mit seiner Anweisung.",
+    "step_label": "Schritt {number}",
+    "step_instruction": "Anweisung für Schritt {number}",
+    "step_instruction_placeholder": "Was soll ein Agent mit diesem Snippet tun?",
+    "move_step_up": "{title} nach oben verschieben",
+    "move_step_down": "{title} nach unten verschieben",
+    "save_steps": "Schritte speichern",
+    "steps_saved": "Schritte gespeichert.",
+    "steps_empty": "Diese Sammlung enthält noch keine Snippets. Lege einen Paste darin ab, um den ersten Schritt anzulegen.",
+    "back_to_collection": "Zurück zu {name}",
+    "steps_save_error": "Die Schritte konnten nicht gespeichert werden. Versuche es noch einmal."
   },
   "Secrets": {
     "title": "Geheimnisse",

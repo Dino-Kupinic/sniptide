@@ -98,7 +98,7 @@ async function data(client: Client, name: string, args: Record<string, unknown>)
   return result.structuredContent as {
     paste: ApiPaste
     pastes: ApiPasteSummary[]
-    steps: { step: number; paste: ApiPaste }[]
+    steps: { step: number; instruction: string; paste: ApiPaste }[]
     nextCursor: string | null
     nextStep: number | null
   }
@@ -178,7 +178,7 @@ describeDb("MCP with real token API and Postgres", () => {
   for (const transport of ["remote HTTP", "local stdio"]) {
     test(`${transport}: find and apply a code pattern, then update it`, async () => {
       const client = transport === "remote HTTP" ? await remote(token) : await local()
-      expect((await client.listTools()).tools).toHaveLength(9)
+      expect((await client.listTools()).tools).toHaveLength(10)
       const created = (await data(client, "create_snippet", input)).paste
       expect(created.visibility).toBe("private")
       const search = await data(client, "search_snippets", {
@@ -191,7 +191,7 @@ describeDb("MCP with real token API and Postgres", () => {
       expect(read.files[0]?.name).toBe("src/button.ts")
       expect(read.files[0]?.content).toBe(input.files[0]?.content ?? "")
       const recipe = await data(client, "fetch_collection", { slug: "ui" })
-      expect(recipe.steps).toEqual([{ step: 1, paste: read }])
+      expect(recipe.steps).toEqual([{ step: 1, instruction: "", paste: read }])
       expect(recipe.nextCursor).toBeNull()
       expect(recipe.nextStep).toBeNull()
       const changed = (

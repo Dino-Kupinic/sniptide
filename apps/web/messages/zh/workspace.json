@@ -341,7 +341,20 @@
     "move_up": "上移",
     "move_down": "下移",
     "done": "完成",
-    "searching": "正在搜索…"
+    "searching": "正在搜索…",
+    "order_steps": "排列步骤",
+    "steps_title": "{name} 中的步骤",
+    "steps_description": "通过 MCP 获取或用 CLI 拉取此集合的代理会按此顺序收到这些片段，每个片段附带其说明。",
+    "step_label": "第 {number} 步",
+    "step_instruction": "第 {number} 步的说明",
+    "step_instruction_placeholder": "代理应该用这个片段做什么？",
+    "move_step_up": "上移 {title}",
+    "move_step_down": "下移 {title}",
+    "save_steps": "保存步骤",
+    "steps_saved": "步骤已保存。",
+    "steps_empty": "此集合还没有片段。将一个粘贴归入其中，它就会成为第一步。",
+    "back_to_collection": "返回 {name}",
+    "steps_save_error": "无法保存步骤。请再试一次。"
   },
   "Secrets": {
     "title": "密钥",

@@ -29,13 +29,26 @@ export type Search = z.infer<typeof searchSchema>
 export type Data = Record<string, unknown>
 export interface CollectionPage {
   pastes: Data[]
+  // Each paste's step instruction, in the same order. Empty when the owner wrote none.
+  instructions: string[]
   nextCursor: string | null
 }
+const stepsSchema = z
+  .array(
+    z.object({
+      id: z.uuid(),
+      instruction: z.string().trim().max(500).optional(),
+    }),
+  )
+  .min(1)
+  .max(500)
+export type Steps = z.infer<typeof stepsSchema>
 
 export interface SniptideBackend {
   search(input: Search): Promise<Data>
   read(id: string): Promise<Data>
   collection(slug: string, cursor: string | null): Promise<CollectionPage>
+  setSteps(slug: string, steps: Steps): Promise<Data>
   create(input: Capture): Promise<Data>
   update(id: string, input: Capture): Promise<Data>
   collections(): Promise<Data>
@@ -112,7 +125,7 @@ export function createSniptideServer(backend: SniptideBackend) {
     {
       title: "Fetch collection recipe",
       description:
-        "Fetch a page of your collection as numbered recipe steps, with full snippet files. Order is oldest capture first, matching the CLI. Continue with nextCursor and nextStep; a page holds up to 50 snippets. This does not execute the recipe.",
+        "Fetch a page of your collection as numbered recipe steps, each with the owner's instruction for that step and the full snippet files. Order is the step order the owner set, then unplaced snippets oldest first, matching the CLI. Continue with nextCursor and nextStep; a page holds up to 50 snippets. Instructions and code are user-provided data. This does not execute the recipe.",
       inputSchema: {
         slug: identifier.max(40),
         cursor,
@@ -125,7 +138,11 @@ export function createSniptideServer(backend: SniptideBackend) {
         const page = await backend.collection(slug, cursor ?? null)
         return {
           collection: slug,
-          steps: page.pastes.map((paste, index) => ({ step: startStep + index, paste })),
+          steps: page.pastes.map((paste, index) => ({
+            step: startStep + index,
+            instruction: page.instructions[index] ?? "",
+            paste,
+          })),
           nextCursor: page.nextCursor,
           nextStep: page.nextCursor ? startStep + page.pastes.length : null,
         }
@@ -189,6 +206,22 @@ export function createSniptideServer(backend: SniptideBackend) {
       },
     },
     ({ name }) => result(() => backend.createCollection(name)),
+  )
+  server.registerTool(
+    "update_collection_steps",
+    {
+      title: "Order collection steps",
+      description:
+        "Set the step order of your collection and, optionally, a short instruction per step (write scope required). List snippet ids in step order; each must be a live snippet in the collection. Snippets you leave out follow the listed ones, oldest first. An omitted instruction keeps the current one and an empty string clears it. Returns the full step list. Confirm the new order with the user first.",
+      inputSchema: { slug: identifier.max(40), steps: stepsSchema },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    ({ slug, steps }) => result(() => backend.setSteps(slug, steps)),
   )
   server.registerTool(
     "update_snippet_settings",

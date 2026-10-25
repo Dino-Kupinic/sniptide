@@ -341,7 +341,20 @@
     "move_up": "上へ移動",
     "move_down": "下へ移動",
     "done": "完了",
-    "searching": "検索中…"
+    "searching": "検索中…",
+    "order_steps": "ステップを並べ替え",
+    "steps_title": "{name} のステップ",
+    "steps_description": "MCP でこのコレクションを取得するエージェントや CLI で pull するエージェントは、スニペットをこの順番で、それぞれの指示と一緒に受け取ります。",
+    "step_label": "ステップ {number}",
+    "step_instruction": "ステップ {number} の指示",
+    "step_instruction_placeholder": "このスニペットでエージェントに何をさせますか?",
+    "move_step_up": "{title} を上に移動",
+    "move_step_down": "{title} を下に移動",
+    "save_steps": "ステップを保存",
+    "steps_saved": "ステップを保存しました。",
+    "steps_empty": "このコレクションにはまだスニペットがありません。ペーストをここに入れると最初のステップになります。",
+    "back_to_collection": "{name} に戻る",
+    "steps_save_error": "ステップを保存できませんでした。もう一度お試しください。"
   },
   "Secrets": {
     "title": "シークレット",

@@ -83,8 +83,10 @@ path before writing anything, creates nested directories, and refuses path trave
 links and duplicate paths across a collection. It never replaces an existing file unless you pass
 `--force`. `--dry-run` lists what it would write.
 
-A collection is pulled as the ordered set it is: oldest capture first, every page fetched before
-anything is written, up to 1,000 pastes and 20 MiB. Restore into a fresh directory if you want to
+A collection is pulled as the ordered set it is: in the step order set in the app or through MCP,
+then any pastes without a step, oldest first. Every page is fetched before anything is written, up
+to 1,000 pastes and 20 MiB. After the files, `pull` lists the steps with their instructions, and
+`--json` returns them as `steps`. Restore into a fresh directory if you want to
 review the result in isolation.
 
 ## Find pastes

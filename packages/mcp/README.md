@@ -9,7 +9,8 @@ for retrieval, or enable write access to save and edit snippets.
 | --- | --- |
 | `search_snippets` | Summary page filtered by title/slug (`query`), tags, language and collection; `nextCursor` continues the search |
 | `read_snippet` | One owned, live snippet by ID/slug, including paths, code and source metadata |
-| `fetch_collection` | A page of numbered recipe steps containing full snippets, in capture order |
+| `fetch_collection` | A page of numbered recipe steps, each with its instruction and full snippet, in the owner's step order |
+| `update_collection_steps` | Sets a collection's step order and per-step instructions; requires write scope |
 | `create_snippet` | A new private snippet unless visibility is explicitly set; requires write scope |
 | `update_snippet` | Replaces title and all files; requires write scope and is marked destructive |
 
@@ -100,9 +101,8 @@ After enabling Sniptide in the client's MCP settings, ask:
 > it to this project's conventions. Fetch my ui collection and use its steps in order.
 
 The agent should search summaries before requesting code. A collection page contains up to 50
-snippets; pass its `nextCursor` and `nextStep` as `cursor` and `startStep` to continue. Capture order
-is oldest creation first, matching the current token API and CLI; custom collection reordering is
-tracked separately in WRK-64.
+snippets; pass its `nextCursor` and `nextStep` as `cursor` and `startStep` to continue. Steps follow
+the order the owner set, then unplaced snippets oldest first, matching the token API and CLI.
 
 To save a pattern, provide a title and the complete `files` list, optionally tags, source metadata
 and an existing collection slug. Create defaults to private. Before editing, read the snippet and

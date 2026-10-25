@@ -1,6 +1,8 @@
 "use server"
 
 import { z } from "zod"
+import { ApiError } from "@/lib/api/http"
+import { MAX_INSTRUCTION_LENGTH, setCollectionSteps } from "@/lib/api/pastes"
 import { getSession } from "@/lib/auth"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { revalidateWorkspace } from "@/lib/live/changes"
@@ -87,6 +89,16 @@ const snapshotSchema = z.object({
   hue: z.enum(HUES),
   createdAt: z.number().int().positive(),
   pastes: z.array(z.string().min(1).max(40)).max(10_000),
+  steps: z
+    .array(
+      z.object({
+        slug: z.string().min(1).max(40),
+        position: z.number().int().min(0).max(10_000).nullable(),
+        instruction: z.string().max(MAX_INSTRUCTION_LENGTH),
+      }),
+    )
+    .max(10_000)
+    .default([]),
 })
 
 const restoreFailures = {
@@ -107,6 +119,23 @@ export async function restoreCollection(
   const result = await store.restoreCollection({ ...parsed.data, createdAt })
   if (result.status !== "ok")
     return { ok: false, error: await translateActionError(restoreFailures[result.status]) }
+  await revalidateWorkspace(user)
+  return { ok: true }
+}
+
+// Saves the steps editor: the collection's pastes in step order, each with its instruction.
+export async function saveCollectionSteps(
+  slug: string,
+  steps: { id: string; instruction: string }[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await assertSignedIn()
+  try {
+    await setCollectionSteps(user, slug, { steps })
+  } catch (error) {
+    if (error instanceof ApiError || error instanceof z.ZodError)
+      return { ok: false, error: await actionError("collectionSteps") }
+    throw error
+  }
   await revalidateWorkspace(user)
   return { ok: true }
 }

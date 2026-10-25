@@ -15,7 +15,15 @@ const backend: SniptideBackend = {
   read: async (id) => ({ paste: { id, files: [{ name: "a.ts", content: "export const a = 1" }] } }),
   collection: async (slug, cursor) => {
     calls.push({ slug, cursor })
-    return { pastes: [{ id: "first" }, { id: "second" }], nextCursor: "page2" }
+    return {
+      pastes: [{ id: "first" }, { id: "second" }],
+      instructions: ["Add the schema.", ""],
+      nextCursor: "page2",
+    }
+  },
+  setSteps: async (slug, steps) => {
+    calls.push({ slug, steps })
+    return { collection: slug, steps }
   },
   create: async (input) => {
     calls.push(input)
@@ -58,7 +66,7 @@ async function connected(service = backend) {
 }
 
 describe("Sniptide MCP tools", () => {
-  test("discover all nine tools, schemas and write annotations", async () => {
+  test("discover all ten tools, schemas and write annotations", async () => {
     const client = await connected()
     const { tools } = await client.listTools()
     expect(tools.map(({ name }) => name)).toEqual([
@@ -69,6 +77,7 @@ describe("Sniptide MCP tools", () => {
       "update_snippet",
       "list_collections",
       "create_collection",
+      "update_collection_steps",
       "update_snippet_settings",
       "trash_snippet",
     ])
@@ -114,13 +123,31 @@ describe("Sniptide MCP tools", () => {
     expect(result.structuredContent).toEqual({
       collection: "ui",
       steps: [
-        { step: 51, paste: { id: "first" } },
-        { step: 52, paste: { id: "second" } },
+        { step: 51, instruction: "Add the schema.", paste: { id: "first" } },
+        { step: 52, instruction: "", paste: { id: "second" } },
       ],
       nextCursor: "page2",
       nextStep: 53,
     })
     expect(calls[0]).toEqual({ slug: "ui", cursor: "page1" })
+  })
+  test("orders collection steps with ids and optional instructions", async () => {
+    const client = await connected()
+    const steps = [
+      { id: "6f1c1d5e-3b8a-4c2e-9f0a-1b2c3d4e5f60", instruction: "Wire the route." },
+      { id: "7a2d2e6f-4c9b-4d3f-8a1b-2c3d4e5f6071" },
+    ]
+    const result = await client.callTool({
+      name: "update_collection_steps",
+      arguments: { slug: "ui", steps },
+    })
+    expect(result.isError).toBeUndefined()
+    expect(calls[0]).toEqual({ slug: "ui", steps })
+    const invalid = await client.callTool({
+      name: "update_collection_steps",
+      arguments: { slug: "ui", steps: [{ id: "not-a-uuid" }] },
+    })
+    expect(invalid.isError).toBe(true)
   })
   test("creates and updates forward only declared fields", async () => {
     const client = await connected()
@@ -223,7 +250,7 @@ describe("Sniptide MCP tools", () => {
     const client = new Client({ name: "http-test", version: "1" })
     cleanup.push(() => client.close())
     await client.connect(new StreamableHTTPClientTransport(new URL("/api/mcp", listener.url)))
-    expect((await client.listTools()).tools).toHaveLength(9)
+    expect((await client.listTools()).tools).toHaveLength(10)
     expect(
       (await client.callTool({ name: "read_snippet", arguments: { id: "x" } })).isError,
     ).toBeUndefined()
@@ -275,13 +302,17 @@ describe("local token API adapter", () => {
     await api.createCollection("Recipes")
     await api.updateSettings("a b", { visibility: "private" })
     await api.trash("x")
+    const steps = [{ id: "6f1c1d5e-3b8a-4c2e-9f0a-1b2c3d4e5f60", instruction: "Add it." }]
+    await api.setSteps("ui", steps)
     expect(requests.slice(2).map(({ method, path }) => `${method} ${path}`)).toEqual([
       "GET /prefix/api/v1/collections",
       "POST /prefix/api/v1/collections",
       "PATCH /prefix/api/v1/pastes/a%20b",
       "DELETE /prefix/api/v1/pastes/x",
+      "PUT /prefix/api/v1/collections/ui/steps",
     ])
     expect(JSON.parse(requests[3]?.body ?? "{}")).toEqual({ name: "Recipes" })
+    expect(JSON.parse(requests[6]?.body ?? "{}")).toEqual({ steps })
   })
   test("refuses redirects, errors and invalid JSON without printing response bodies", async () => {
     let status = 302

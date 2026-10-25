@@ -10,6 +10,7 @@ import {
   listCaptures,
   listQuerySchema,
   recordTokenReads,
+  setCollectionSteps,
   trashCapture,
   updateCapture,
   updateSettings,
@@ -50,7 +51,16 @@ export function mcpBackend(owner: TokenOwner): SniptideBackend {
           owner.userId,
           page.pastes.map((paste) => paste.id),
         )
-        return { ...page, pastes: page.pastes.map((paste) => ({ ...paste })) }
+        return {
+          pastes: page.pastes.map((paste) => ({ ...paste })),
+          instructions: page.steps.map((step) => step.instruction),
+          nextCursor: page.nextCursor,
+        }
+      }),
+    setSteps: (slug, steps) =>
+      safe(async () => {
+        write()
+        return setCollectionSteps(owner.userId, slug, { steps })
       }),
     create: (input) =>
       safe(async () => {

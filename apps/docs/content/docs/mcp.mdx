@@ -18,11 +18,12 @@ up, and turn on **write access** only if it should save and edit snippets.
 | --- | --- |
 | `search_snippets` | Returns a page of summaries, filtered by words in the title, description, tags, file paths or code (`query`, every word must match), tags, language and collection. `nextCursor` continues the search. |
 | `read_snippet` | One snippet by id or link, with its file paths, code and source metadata. |
-| `fetch_collection` | A page of a collection as numbered recipe steps with the full snippets, oldest capture first. |
+| `fetch_collection` | A page of a collection as numbered recipe steps, each with its instruction and the full snippet, in the step order you set. |
 | `create_snippet` | Saves a new snippet. Private unless visibility is set explicitly. Needs write access. |
 | `update_snippet` | Replaces a snippet's title and **all** its files. Needs write access and is marked destructive. |
 | `list_collections` | Your collections with their slugs, names and how many live snippets each holds. |
 | `create_collection` | Creates an empty collection by name and returns its slug. Needs write access. |
+| `update_collection_steps` | Sets the step order of a collection and, optionally, an instruction per step. Needs write access. |
 | `update_snippet_settings` | Changes visibility, expiry, password or burn after read. Needs write access and is marked destructive. The password is never returned. |
 | `trash_snippet` | Moves a snippet to the trash, where you can restore it in the app. Needs write access and is marked destructive. Nothing is deleted for good. |
 
@@ -123,7 +124,16 @@ Once Sniptide is enabled in the client's MCP settings, ask in plain language:
 
 A good agent searches the summaries first and only then reads the one it needs. A collection page
 holds up to 50 snippets; to continue, pass its `nextCursor` and `nextStep` back as `cursor` and
-`startStep`. Steps come oldest capture first, the same order the [CLI](/cli) uses.
+`startStep`. Steps come in the order you set, with snippets you haven't placed after them, oldest
+first. The [CLI](/cli) pulls the same order.
+
+**Flows.** A collection works as a flow when its steps say what to do. Set the order and an
+instruction per step on the collection's Order steps page in the app, or with
+`update_collection_steps`: list snippet ids in step order, each with an optional `instruction` of
+up to 500 characters. An omitted instruction keeps the one already there, and an empty one clears
+it. Each step in `fetch_collection` then carries its `instruction`, so an agent gets "1. Add the
+schema" with the schema snippet. Moving a snippet to another collection clears its step. Sniptide
+doesn't run the steps; the agent reads them and decides how to apply each one.
 
 **Saving a snippet.** Give a title and the complete `files` list, and optionally tags, source
 metadata and the slug of an existing collection. It is created private. **Editing.** Read the

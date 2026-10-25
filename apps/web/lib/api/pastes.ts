@@ -142,8 +142,8 @@ function liveOwned(owner: string): SQL {
   ) as SQL
 }
 
-async function ownsCollection(owner: string, slug: string) {
-  const [row] = await getDb()
+async function ownsCollection(owner: string, slug: string, db: Pick<Database, "select"> = getDb()) {
+  const [row] = await db
     .select({ id: collectionTable.id })
     .from(collectionTable)
     .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
@@ -591,17 +591,47 @@ export async function listCaptures(
   )
 }
 
-// A collection's pastes in full, oldest first, so a pull restores them in the order they were
-// captured. Null when the owner has no such collection.
+// Unordered pastes come after the ordered steps, in capture order.
+const UNORDERED = 2_147_483_647
+const stepKey = sql<number>`coalesce(${pasteTable.collectionPosition}, ${UNORDERED})`
+
+interface StepCursor extends Cursor {
+  step: number
+}
+
+function encodeStepCursor(record: PasteRecord) {
+  const cursor: StepCursor = {
+    step: record.collectionPosition ?? UNORDERED,
+    at: record.createdAt.toISOString(),
+    id: record.id,
+  }
+  return Buffer.from(JSON.stringify(cursor)).toString("base64url")
+}
+
+function decodeStepCursor(value: string | null): StepCursor | null {
+  const cursor = decodeCursor(value) as StepCursor | null
+  if (cursor && (!Number.isInteger(cursor.step) || cursor.step < 0 || cursor.step > UNORDERED))
+    throw new ApiError(400, "The cursor isn't valid. Start again without it.")
+  return cursor
+}
+
+export interface CollectionStep {
+  id: string
+  instruction: string
+}
+
+// A collection's pastes in full, in step order: the order the owner set, then any pastes not
+// placed yet, oldest first. `steps` gives each one's instruction, in the same order. Null when
+// the owner has no such collection.
 export async function collectionCaptures(
   owner: string,
   slug: string,
   cursorValue: string | null,
-): Promise<{ pastes: ApiPaste[]; nextCursor: string | null } | null> {
+): Promise<{ pastes: ApiPaste[]; steps: CollectionStep[]; nextCursor: string | null } | null> {
   if (!(await ownsCollection(owner, slug))) return null
   return getDb().transaction(
     async (db) => {
-      const cursor = decodeCursor(cursorValue)
+      const cursor = decodeStepCursor(cursorValue)
       const records = await db
         .select()
         .from(pasteTable)
@@ -611,24 +641,122 @@ export async function collectionCaptures(
             eq(pasteTable.collection, slug),
             cursor
               ? or(
-                  gt(ms(pasteTable.createdAt), stamp(cursor.at)),
-                  and(eq(ms(pasteTable.createdAt), stamp(cursor.at)), gt(pasteTable.id, cursor.id)),
+                  gt(stepKey, cursor.step),
+                  and(
+                    eq(stepKey, cursor.step),
+                    or(
+                      gt(ms(pasteTable.createdAt), stamp(cursor.at)),
+                      and(
+                        eq(ms(pasteTable.createdAt), stamp(cursor.at)),
+                        gt(pasteTable.id, cursor.id),
+                      ),
+                    ),
+                  ),
                 )
               : undefined,
           ),
         )
-        .orderBy(asc(ms(pasteTable.createdAt)), asc(pasteTable.id))
+        .orderBy(asc(stepKey), asc(ms(pasteTable.createdAt)), asc(pasteTable.id))
         .limit(COLLECTION_PAGE_SIZE + 1)
       const page = records.slice(0, COLLECTION_PAGE_SIZE)
       const pastes = await withFiles(page, db)
       const visibleIds = new Set(pastes.map((paste) => paste.id))
-      const last = page.filter((record) => visibleIds.has(record.id)).at(-1)
+      const visible = page.filter((record) => visibleIds.has(record.id))
+      const last = visible.at(-1)
       return {
         pastes,
-        nextCursor:
-          records.length > COLLECTION_PAGE_SIZE && last ? encodeCursor(last, "createdAt") : null,
+        steps: visible.map((record) => ({ id: record.id, instruction: record.stepInstruction })),
+        nextCursor: records.length > COLLECTION_PAGE_SIZE && last ? encodeStepCursor(last) : null,
       }
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   )
+}
+
+function stepRows(db: Pick<Database, "select">, owner: string, slug: string) {
+  return db
+    .select({
+      id: pasteTable.id,
+      slug: pasteTable.slug,
+      title: pasteTable.title,
+      instruction: pasteTable.stepInstruction,
+    })
+    .from(pasteTable)
+    .where(and(liveOwned(owner), eq(pasteTable.collection, slug)))
+    .orderBy(asc(stepKey), asc(ms(pasteTable.createdAt)), asc(pasteTable.id))
+}
+
+async function stepList(db: Pick<Database, "select">, owner: string, slug: string) {
+  const rows = await stepRows(db, owner, slug)
+  return rows.map((row, index) => ({
+    step: index + 1,
+    id: row.id,
+    title: row.title,
+    instruction: row.instruction,
+  }))
+}
+
+// The collection's live pastes in step order, for the steps editor. Null without the collection.
+export async function listCollectionSteps(owner: string, slug: string) {
+  if (!(await ownsCollection(owner, slug))) return null
+  return stepRows(getDb(), owner, slug)
+}
+
+export const MAX_STEPS = 500
+export const MAX_INSTRUCTION_LENGTH = 500
+
+export const stepsSchema = z.object({
+  steps: z
+    .array(
+      z.object({
+        id: z.string().regex(UUID, "Use the snippet id."),
+        // Omitted keeps the step's current instruction; an empty string clears it.
+        instruction: z.string().trim().max(MAX_INSTRUCTION_LENGTH).optional(),
+      }),
+    )
+    .min(1)
+    .max(MAX_STEPS)
+    .refine((steps) => new Set(steps.map((step) => step.id)).size === steps.length, {
+      message: "Each snippet can be one step only.",
+    }),
+})
+
+export type StepsInput = z.infer<typeof stepsSchema>
+
+// Sets a collection's step order and instructions. The listed pastes become steps 1..n in that
+// order; live pastes left out keep their instructions and follow in capture order. Every listed
+// id must be a live paste in this collection.
+export async function setCollectionSteps(owner: string, slug: string, body: unknown) {
+  const input = stepsSchema.parse(body)
+  const result = await getDb().transaction(async (tx) => {
+    if (!(await ownsCollection(owner, slug, tx)))
+      throw new ApiError(404, "No collection with that name.")
+    const members = await tx
+      .select({ id: pasteTable.id })
+      .from(pasteTable)
+      .where(and(liveOwned(owner), eq(pasteTable.collection, slug)))
+      .for("update")
+    const memberIds = new Set(members.map((member) => member.id))
+    const stranger = input.steps.find((step) => !memberIds.has(step.id))
+    if (stranger)
+      throw new ApiError(422, `Snippet ${stranger.id} isn't a live snippet in this collection.`)
+    const listed = new Set(input.steps.map((step) => step.id))
+    const rest = [...memberIds].filter((id) => !listed.has(id))
+    if (rest.length > 0)
+      await tx
+        .update(pasteTable)
+        .set({ collectionPosition: null })
+        .where(and(eq(pasteTable.ownerId, owner), inArray(pasteTable.id, rest)))
+    for (const [position, step] of input.steps.entries())
+      await tx
+        .update(pasteTable)
+        .set({
+          collectionPosition: position,
+          ...(step.instruction === undefined ? {} : { stepInstruction: step.instruction }),
+        })
+        .where(and(eq(pasteTable.ownerId, owner), eq(pasteTable.id, step.id)))
+    return { collection: slug, steps: await stepList(tx, owner, slug) }
+  })
+  await announceChange(owner)
+  return result
 }

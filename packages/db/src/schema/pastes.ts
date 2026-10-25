@@ -70,6 +70,11 @@ export const paste = pgTable(
     burnAfterRead: boolean("burn_after_read").notNull().default(false),
     allowRaw: boolean("allow_raw").notNull().default(true),
     collection: text("collection"),
+    // A collection read as a flow: the step this paste is (0-based, set when the owner orders the
+    // steps; unordered pastes follow in capture order) and what an agent should do with it.
+    // Moving the paste to another collection clears both (trigger paste_collection_moved).
+    collectionPosition: integer("collection_position"),
+    stepInstruction: text("step_instruction").notNull().default(""),
     // Free-form labels for finding a paste again (`sniptide list --tag react`).
     tags: text("tags").array().notNull().default([]),
     source: jsonb("source").$type<PasteSource>(),

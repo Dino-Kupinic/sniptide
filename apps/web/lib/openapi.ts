@@ -604,7 +604,7 @@ export const openApiDocument = {
           "otherwise and never expire. A `collection` must already exist. The account's paste,",
           "storage and hourly create limits apply, as in the editor. `sniptide push` sends this.",
         ].join("\n"),
-        security: [{ apiToken: ["write"] }],
+        security: [{ apiToken: [] }],
         requestBody: {
           required: true,
           content: {
@@ -901,9 +901,11 @@ export const openApiDocument = {
         tags: ["Token API"],
         summary: "Read a collection's pastes",
         description: [
-          "Every live paste in one of your collections with its files, oldest first, 50 a page.",
-          "The order is stable across pages. `sniptide pull collection:<slug>` reads all pages",
-          "before writing anything.",
+          "Every live paste in one of your collections with its files, 50 a page, in step order:",
+          "the order set with `PUT /api/v1/collections/{slug}/steps`, then pastes without a step,",
+          "oldest first. `steps` holds each paste's instruction in the same order. The order is",
+          "stable across pages. `sniptide pull collection:<slug>` reads all pages before writing",
+          "anything.",
         ].join("\n"),
         security: [{ apiToken: [] }],
         parameters: [
@@ -929,18 +931,136 @@ export const openApiDocument = {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["pastes", "nextCursor"],
+                  required: ["pastes", "steps", "nextCursor"],
                   properties: {
                     pastes: { type: "array", items: { $ref: "#/components/schemas/Paste" } },
+                    steps: {
+                      type: "array",
+                      description: "One entry per paste, in the same order.",
+                      items: {
+                        type: "object",
+                        required: ["id", "instruction"],
+                        properties: {
+                          id: { type: "string", format: "uuid" },
+                          instruction: {
+                            type: "string",
+                            description: "What to do with this step. Empty when none was written.",
+                          },
+                        },
+                      },
+                    },
                     nextCursor: { type: ["string", "null"] },
                   },
                 },
-                example: { pastes: [pasteExample.paste], nextCursor: null },
+                example: {
+                  pastes: [pasteExample.paste],
+                  steps: [{ id: pasteExample.paste.id, instruction: "Add the button component." }],
+                  nextCursor: null,
+                },
               },
             },
           },
           "400": jsonError("The cursor isn't valid.", "The cursor isn't valid."),
           "404": jsonError("You have no collection by that slug.", "No collection with that name."),
+          ...tokenErrors,
+        },
+      },
+    },
+    "/api/v1/collections/{slug}/steps": {
+      put: {
+        operationId: "setCollectionSteps",
+        tags: ["Token API"],
+        summary: "Order a collection's steps",
+        description: [
+          "Sets the step order of one of your collections and, optionally, each step's",
+          "instruction. The listed pastes become steps 1 to n in that order. Live pastes you",
+          "leave out follow them, oldest first. An omitted instruction keeps the current one and",
+          "an empty string clears it. Moving a paste to another collection clears its step.",
+        ].join("\n"),
+        security: [{ apiToken: [] }],
+        parameters: [
+          {
+            name: "slug",
+            in: "path",
+            required: true,
+            description: "The collection's slug, as in its URL.",
+            schema: { type: "string", examples: ["ui"] },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["steps"],
+                properties: {
+                  steps: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: 500,
+                    items: {
+                      type: "object",
+                      required: ["id"],
+                      properties: {
+                        id: { type: "string", format: "uuid" },
+                        instruction: { type: "string", maxLength: 500 },
+                      },
+                    },
+                  },
+                },
+              },
+              example: {
+                steps: [{ id: pasteExample.paste.id, instruction: "Add the button component." }],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Every live paste in the collection, in its new step order.",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["collection", "steps"],
+                  properties: {
+                    collection: { type: "string" },
+                    steps: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["step", "id", "title", "instruction"],
+                        properties: {
+                          step: { type: "integer", minimum: 1 },
+                          id: { type: "string", format: "uuid" },
+                          title: { type: "string" },
+                          instruction: { type: "string" },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  collection: "ui",
+                  steps: [
+                    {
+                      step: 1,
+                      id: pasteExample.paste.id,
+                      title: pasteExample.paste.title,
+                      instruction: "Add the button component.",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "400": jsonError("The body isn't valid.", "Each snippet can be one step only."),
+          "404": jsonError("You have no collection by that slug.", "No collection with that name."),
+          "422": jsonError(
+            "A listed paste isn't a live paste in this collection.",
+            `Snippet ${pasteExample.paste.id} isn't a live snippet in this collection.`,
+          ),
           ...tokenErrors,
         },
       },
@@ -1029,7 +1149,7 @@ export const openApiDocument = {
           "variable left out is removed. Values are encrypted before they're stored. Up to 500",
           "variables, 32 KB per value and 256 KB per group. `sniptide env push` sends this.",
         ].join("\n"),
-        security: [{ apiToken: ["write"] }],
+        security: [{ apiToken: [] }],
         parameters: [envGroupParameter],
         requestBody: {
           required: true,
@@ -1076,7 +1196,7 @@ export const openApiDocument = {
         tags: ["Env"],
         summary: "Delete an env group",
         description: "Removes the group and all its variables.",
-        security: [{ apiToken: ["write"] }],
+        security: [{ apiToken: [] }],
         parameters: [envGroupParameter],
         responses: {
           "200": {

@@ -26,7 +26,8 @@ or not the token owner's, `409` env group limit, `413` size or storage limit, an
 | Update capture | `PUT /pastes/{id or slug}` | write | `{"paste": Paste}` (title/files replaced; omitted metadata preserved) |
 | Read capture | `GET /pastes/{id or slug}` | read | `{"paste": Paste}` |
 | List/search | `GET /pastes?q&tag&language&collection&limit&cursor` | read | `{"pastes": [Summary], "nextCursor": string or null}` |
-| Ordered collection | `GET /collections/{slug}/pastes?cursor` | read | `{"pastes": [Paste], "nextCursor": string or null}` |
+| Ordered collection | `GET /collections/{slug}/pastes?cursor` | read | `{"pastes": [Paste], "steps": [{"id", "instruction"}], "nextCursor": string or null}` |
+| Order collection steps | `PUT /collections/{slug}/steps` | write | `{"collection": string, "steps": [{"step", "id", "title", "instruction"}]}` |
 | List env groups | `GET /env` | read | `{"groups": [{"slug","variables","createdAt","updatedAt"}]}` |
 | Read env group | `GET /env/{group}` | read | `{"group": {"slug","updatedAt","variables":[{"name","value"}]}}` |
 | Replace env group | `PUT /env/{group}` with `{"variables": [...]}` | write | `{"group": …}` |
@@ -42,8 +43,9 @@ limits, the same ones the editor applies. A returned `Paste` adds `id`, `slug`, 
 `updatedAt` and `expiresAt`.
 
 Lists and collections only include the token owner's live pastes (not trashed, not expired). Lists
-are ordered by last edit, collections by creation, both with the id breaking ties; cursors are
-opaque and stable across pages, and the last page has `nextCursor: null`. Collection pages hold 50
+are ordered by last edit and collections by their step order and then creation, with the id
+breaking ties. Cursors are opaque and stable across pages, and the last page has
+`nextCursor: null`. Collection pages hold 50
 full pastes; the CLI reads every page before writing, and stops at 1,000 pastes or 20 MiB.
 
 Env groups are named 1–64 lowercase letters, digits, `.`, `-` and `_`, hold up to 500 variables

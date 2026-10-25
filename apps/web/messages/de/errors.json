@@ -56,6 +56,7 @@
     "checkName": "Prüfe den Namen.",
     "collectionLink": "Inzwischen gibt es eine Sammlung mit diesem Link.",
     "collectionRestore": "Diese Sammlung kann nicht wiederhergestellt werden.",
+    "collectionSteps": "Die Schritte konnten nicht gespeichert werden, weil sich die Sammlung geändert hat. Lade die Seite neu und versuche es noch einmal.",
     "displayName": "Gib einen Anzeigenamen ein.",
     "usernameFormat": "Benutzernamen bestehen aus 3–30 Kleinbuchstaben, Zahlen, Bindestrichen oder Unterstrichen.",
     "checkProfile": "Prüfe dein Profil.",

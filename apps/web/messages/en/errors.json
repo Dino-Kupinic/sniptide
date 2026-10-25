@@ -56,6 +56,7 @@
     "checkName": "Check the name.",
     "collectionLink": "A collection with that link exists now.",
     "collectionRestore": "That collection can't be restored.",
+    "collectionSteps": "The steps couldn't be saved because the collection changed. Reload and try again.",
     "displayName": "Enter a display name.",
     "usernameFormat": "Usernames are 3–30 lowercase letters, numbers, hyphens or underscores.",
     "checkProfile": "Check your profile.",
