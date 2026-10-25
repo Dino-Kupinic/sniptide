@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { PasteList } from "@/components/lists/paste-list"
 import { getCollection } from "@/lib/collections/store"
+import { cardPreviews } from "@/lib/pastes/card-preview"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage } from "@/lib/pastes/lists"
 import { toRows } from "@/lib/pastes/rows"
@@ -25,13 +26,17 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
   ])
   if (!collection) notFound()
 
-  const rows = await toRows(data.pastes, locale)
+  const [rows, previews] = await Promise.all([
+    toRows(data.pastes, locale),
+    cardPreviews(data.pastes),
+  ])
 
   return (
     <PasteList
       title={collection.name}
       mode="collection"
       rows={rows}
+      previews={previews}
       origin={origin}
       host={host}
       collections={[]}

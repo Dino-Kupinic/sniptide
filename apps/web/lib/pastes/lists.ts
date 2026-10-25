@@ -26,9 +26,9 @@ import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { DAY } from "@/lib/time"
 import { cursorKey, decodeCursor, encodeCursor } from "./cursor"
-import { PASTE_PAGE_SIZE, type PasteListQuery } from "./list-query"
+import { PASTE_PAGE_SIZE, type PasteListQuery, sortDirection } from "./list-query"
 import { TRASH_DAYS } from "./purge"
-import type { SharedListQuery } from "./shared-list-query"
+import { type SharedListQuery, sharedDirection } from "./shared-list-query"
 import { purgeTrash, readableStarsWhere, sharedWithWhere, summarizePastes } from "./store"
 import type { Person } from "./types"
 
@@ -119,40 +119,48 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
       const total = matching?.count ?? 0
       const pageCount = Math.max(1, Math.ceil(total / PASTE_PAGE_SIZE))
       const page = Math.min(query.page, pageCount)
-      const orders: Record<PasteListQuery["sort"], SQL> = {
-        updated: desc(pasteTable.updatedAt),
-        views: desc(pasteTable.views),
-        expires: asc(pasteTable.expiresAt),
-        title: asc(sql`lower(${pasteTable.title})`),
-      }
+      // The trash lists by deletion time, and only its title and language columns sort otherwise.
+      const sort =
+        scope.mode === "trash" && query.sort !== "title" && query.sort !== "language"
+          ? "updated"
+          : query.sort
+      const ascending = sortDirection({ sort, dir: query.dir }) === "asc"
       const key = cursorKey(viewer, scope, query)
-      let cursor = decodeCursor(query.cursor, key, page)
+      // Language and visibility are not unique enough to seek on, so they page by offset.
+      let cursor =
+        sort === "language" || sort === "visibility" ? null : decodeCursor(query.cursor, key, page)
       const title = sql<string>`lower(${pasteTable.title})`
+      // Public, unlisted, private, then burn after read.
+      const visibilityRank = sql`(case when ${pasteTable.burnAfterRead} then 3 when ${pasteTable.visibility} = 'public' then 0 when ${pasteTable.visibility} = 'unlisted' then 1 else 2 end)`
       const rawColumn =
-        scope.mode === "trash"
-          ? pasteTable.deletedAt
-          : query.sort === "updated"
-            ? pasteTable.updatedAt
-            : query.sort === "views"
-              ? pasteTable.views
-              : query.sort === "title"
-                ? title
-                : pasteTable.expiresAt
+        sort === "title"
+          ? title
+          : sort === "views"
+            ? pasteTable.views
+            : sort === "expires"
+              ? pasteTable.expiresAt
+              : sort === "language"
+                ? firstLanguage
+                : sort === "visibility"
+                  ? visibilityRank
+                  : scope.mode === "trash"
+                    ? pasteTable.deletedAt
+                    : pasteTable.updatedAt
       const column = sql`${rawColumn}`
+      const timestamped = sort === "updated" || sort === "expires"
       // PostgreSQL timestamps may contain microseconds that JavaScript Date would truncate.
-      const cursorTimestamp =
-        scope.mode === "trash" || query.sort === "updated" || query.sort === "expires"
-          ? sql<
-              string | null
-            >`to_char(${rawColumn} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`
-          : sql<null>`null`
+      const cursorTimestamp = timestamped
+        ? sql<
+            string | null
+          >`to_char(${rawColumn} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`
+        : sql<null>`null`
       // Validate types before binding values to timestamp/integer columns. Bad cursors fall back
       // to the numbered-page path; access filters always remain in the SQL predicate.
       if (
         cursor &&
-        (scope.mode === "trash" || query.sort === "updated" || query.sort === "expires") &&
+        timestamped &&
         !(
-          (cursor.value === null && query.sort === "expires") ||
+          (cursor.value === null && sort === "expires") ||
           (typeof cursor.value === "string" &&
             /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(cursor.value) &&
             Number.isFinite(Date.parse(cursor.value)) &&
@@ -160,45 +168,31 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
         )
       )
         cursor = null
-      if (
-        cursor &&
-        query.sort === "views" &&
-        scope.mode !== "trash" &&
-        typeof cursor.value !== "number"
-      )
-        cursor = null
-      if (
-        cursor &&
-        query.sort === "title" &&
-        scope.mode !== "trash" &&
-        typeof cursor.value !== "string"
-      )
-        cursor = null
-      const ascending =
-        scope.mode !== "trash" && (query.sort === "title" || query.sort === "expires")
+      if (cursor && sort === "views" && typeof cursor.value !== "number") cursor = null
+      if (cursor && sort === "title" && typeof cursor.value !== "string") cursor = null
       const before = cursor?.direction === "before"
+      // A missing expiry means the paste never expires, so it sorts after every date when
+      // ascending and before every date when descending, which PostgreSQL does by default.
+      const nullsLate = ascending
       let seek: SQL | undefined
       if (cursor) {
         const id = before ? lt(pasteTable.id, cursor.id) : gt(pasteTable.id, cursor.id)
-        const nullsLast = query.sort === "expires" && scope.mode !== "trash"
         if (cursor.value === null)
-          seek = before ? or(isNotNull(column), and(isNull(column), id)) : and(isNull(column), id)
+          seek =
+            before === nullsLate
+              ? or(isNotNull(column), and(isNull(column), id))
+              : and(isNull(column), id)
         else {
           const compare = ascending !== before ? gt(column, cursor.value) : lt(column, cursor.value)
           seek = or(
             compare,
             and(eq(column, cursor.value), id),
-            nullsLast && !before ? isNull(column) : undefined,
+            sort === "expires" && before !== nullsLate ? isNull(column) : undefined,
           )
         }
       }
-      const order = scope.mode === "trash" ? desc(pasteTable.deletedAt) : orders[query.sort]
-      const reversed =
-        query.sort === "expires" && scope.mode !== "trash"
-          ? sql`${column} DESC NULLS FIRST`
-          : ascending
-            ? desc(column)
-            : asc(column)
+      const order = ascending ? asc(column) : desc(column)
+      const reversed = ascending ? desc(column) : asc(column)
       let records = await db
         .select({ ...getTableColumns(pasteTable), cursorTitle: title, cursorTimestamp })
         .from(pasteTable)
@@ -220,17 +214,9 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
         direction: "before" | "after",
         targetPage: number,
       ) => {
-        if (!row) return undefined
+        if (!row || sort === "language" || sort === "visibility") return undefined
         const value =
-          scope.mode === "trash"
-            ? row.cursorTimestamp
-            : query.sort === "updated"
-              ? row.cursorTimestamp
-              : query.sort === "views"
-                ? row.views
-                : query.sort === "title"
-                  ? row.cursorTitle
-                  : row.cursorTimestamp
+          sort === "views" ? row.views : sort === "title" ? row.cursorTitle : row.cursorTimestamp
         return encodeCursor({ id: row.id, value, direction, page: targetPage, key })
       }
 
@@ -350,11 +336,15 @@ export async function listSharedPage(query: SharedListQuery) {
       const total = matching?.count ?? 0
       const pageCount = Math.max(1, Math.ceil(total / PASTE_PAGE_SIZE))
       const page = Math.min(query.page, pageCount)
-      const orders: Record<SharedListQuery["sort"], SQL> = {
-        shared: desc(pasteShare.createdAt),
-        updated: desc(pasteTable.updatedAt),
-        title: asc(sql`lower(${pasteTable.title})`),
+      const columns: Record<SharedListQuery["sort"], SQL> = {
+        shared: sql`${pasteShare.createdAt}`,
+        updated: sql`${pasteTable.updatedAt}`,
+        title: sql`lower(${pasteTable.title})`,
+        language: firstLanguage,
+        owner: sql`lower(${user.name})`,
+        access: sql`${pasteShare.access}`,
       }
+      const column = columns[query.sort]
       const records = await db
         .select({ paste: pasteTable, share: pasteShare })
         .from(pasteShare)
@@ -362,8 +352,9 @@ export async function listSharedPage(query: SharedListQuery) {
           pasteTable,
           and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
         )
+        .innerJoin(user, eq(user.id, pasteTable.ownerId))
         .where(filters)
-        .orderBy(orders[query.sort], asc(pasteTable.id))
+        .orderBy(sharedDirection(query) === "asc" ? asc(column) : desc(column), asc(pasteTable.id))
         .limit(PASTE_PAGE_SIZE)
         .offset((page - 1) * PASTE_PAGE_SIZE)
       const summaries = await summarizePastes(

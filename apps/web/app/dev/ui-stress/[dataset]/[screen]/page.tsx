@@ -58,8 +58,30 @@ export default async function Page({
     )
   const sharedPageCount = Math.max(1, Math.ceil(sharedRows.length / 10))
   const sharedPage = Math.min(sharedQuery.page, sharedPageCount)
+  // A few highlighted lines per paste, so the grid view's cards show code like the real lists.
+  const { highlightFiles } = await import("@/lib/highlight/highlight")
+  const sample = [
+    "export async function retry<T>(fn: () => Promise<T>, tries = 5) {",
+    "  for (let i = 0; i < tries; i++) {",
+    "    try {",
+    "      return await fn()",
+    "    } catch (error) {",
+    "      await sleep(2 ** i * 100)",
+  ].join("\n")
+  const highlighted = await highlightFiles(
+    data.pastes.map((row) => ({
+      slug: row.slug,
+      name: "f.ts",
+      language: "typescript",
+      content: sample,
+    })),
+  )
+  const previews = Object.fromEntries(
+    highlighted.flatMap((file) => ("lines" in file && file.lines ? [[file.slug, file.lines]] : [])),
+  )
   return (
     <UiStress
+      previews={previews}
       key={`${dataset}/${screen}`}
       dataset={selectedDataset}
       screen={selectedScreen}
@@ -77,6 +99,7 @@ export default async function Page({
         languageOptions: [...new Set(data.rows.map((row) => row.language))].sort(),
         ownerOptions: owners,
         peopleCount: new Set(sharedRows.map((row) => row.owner?.username)).size,
+        previews,
       }}
       data={{
         ...data,
