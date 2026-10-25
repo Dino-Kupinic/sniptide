@@ -108,6 +108,21 @@ async function git(cwd: string, args: string[]): Promise<string | null> {
   }
 }
 
+async function ignoredFiles(cwd: string, names: string[]) {
+  const execution = exec("git", ["check-ignore", "--stdin", "-z"], {
+    cwd,
+    timeout: 5000,
+    maxBuffer: 1024 * 1024,
+  })
+  execution.child.stdin?.end(`${names.join("\0")}\0`)
+  try {
+    const { stdout } = await execution
+    return new Set(stdout.split("\0"))
+  } catch {
+    return new Set<string>()
+  }
+}
+
 function repository(remote: string | null): string | null {
   if (!remote) return null
   try {
@@ -132,6 +147,7 @@ export async function collectFiles(
   if (!patterns.length) throw new CliError("Provide files, directories, or quoted globs to push.")
   const root = await realpath(cwd)
   const names = new Set<string>()
+  const eligible = new Map<string, boolean>()
   const exclusions = [
     "**/.git/**",
     "**/node_modules/**",
@@ -153,6 +169,21 @@ export async function collectFiles(
       )
     }
     let matched = 0
+    let pending: string[] = []
+    const flush = async () => {
+      if (!pending.length) return
+      const ignored = await ignoredFiles(root, pending)
+      for (const name of pending) {
+        const include = !ignored.has(name)
+        eligible.set(name, include)
+        if (!include) continue
+        matched++
+        names.add(name)
+        if (names.size > 10)
+          throw new CliError("A paste supports up to 10 files. Narrow the selection.")
+      }
+      pending = []
+    }
     const literal = pattern.replace(/^\.\//, "").replace(/\/$/, "")
     let directory = false
     if (!/[*?[\]{}]/.test(literal)) {
@@ -173,14 +204,20 @@ export async function collectFiles(
       } catch {
         continue
       }
+      const known = eligible.get(name)
+      if (known !== undefined) {
+        if (known) matched++
+        continue
+      }
       const info = await inspect(root, name)
-      if (!info?.isFile()) continue
-      if ((await git(root, ["check-ignore", "--", name])) !== null) continue
-      matched++
-      names.add(name)
-      if (names.size > 10)
-        throw new CliError("A paste supports up to 10 files. Narrow the selection.")
+      if (!info?.isFile()) {
+        eligible.set(name, false)
+        continue
+      }
+      pending.push(name)
+      if (pending.length === 128) await flush()
     }
+    await flush()
     if (!matched) throw new CliError(`No eligible files matched ${JSON.stringify(pattern)}.`)
   }
   if (lines && names.size !== 1) throw new CliError("--lines requires exactly one file.")

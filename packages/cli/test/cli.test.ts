@@ -247,6 +247,27 @@ describe("built Node CLI", () => {
     expect(requests).toHaveLength(0)
   })
 
+  test("batches ignore checks and reuses overlapping selections", async () => {
+    await exec("git", ["init", "-q"], { cwd: source })
+    await fixture(".gitignore", "src/ignored-*.ts\n")
+    for (let index = 0; index < 64; index++) await fixture(`src/ignored-${index}.ts`, "ignored")
+    await fixture("src/with space.ts", "export {}")
+    const trace = path.join(root, "git-trace.log")
+    const result = await cli(
+      ["push", "src/**/*.ts", "src/with space.ts", "--dry-run", "--json"],
+      source,
+      { GIT_TRACE: trace },
+    )
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout).data.files.map((file: { name: string }) => file.name)).toEqual(
+      ["src/with space.ts"],
+    )
+    const checks = (await readFile(trace, "utf8"))
+      .split("\n")
+      .filter((line) => line.includes("built-in: git check-ignore"))
+    expect(checks).toHaveLength(1)
+  })
+
   test("rejects symlink capture and paths outside the source root", async () => {
     await writeFile(path.join(root, "outside.ts"), "outside")
     await symlink(path.join(root, "outside.ts"), path.join(source, "link.ts"))
