@@ -27,6 +27,26 @@ Browser mutations enter through server actions and the session-aware paste store
 mutations enter through the token API with an explicit owner. Both paths use paste validation,
 insertion, and budget helpers. Trace both paths when a change affects saved paste data.
 
+## Account usage
+
+`GET /api/v1/usage` returns the authenticated token owner's stored usage and request counts
+for the last 30 UTC days. The request needs the `read` scope and includes itself in its count.
+Each valid-token HTTP request counts once, including API errors and MCP requests. Unknown,
+expired, and revoked credentials do not count. Historical counts survive token revocation.
+
+Storage is the sum of `paste.bytes`, the UTF-8 size of each paste's current file contents.
+Paste and file counts include trash, expired pastes awaiting purge, and moderated pastes.
+Permanent deletion releases usage. Revision snapshots, metadata, and env groups are excluded.
+Database triggers maintain the counters in the same transaction as each mutation.
+
+The usage migration backfills existing accounts and locks the source tables while it runs.
+Reconciliation visits at most 100 accounts per minute, oldest first, when their last recount
+is at least 24 hours old. Replicas skip accounts another replica has locked. To recount one
+account immediately, call `reconcileAccountUsage(ownerId)` from `apps/web/lib/account/usage.ts`
+in a server task. The function locks the usage row before a separate statement recounts the
+source rows, so concurrent changes cannot be overwritten. Request counters have no source
+log to recount and are preserved by reconciliation.
+
 ## Choose the verification command
 
 Run these commands from the repository root:
