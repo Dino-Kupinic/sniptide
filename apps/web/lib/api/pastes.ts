@@ -230,6 +230,17 @@ export async function getCapture(owner: string, idOrSlug: string): Promise<ApiPa
 
 // Replaces title/files, preserving omitted metadata and all sharing controls. Token callers
 // never use the browser session. The account lock and transaction serialize edits and budgets.
+// Counts a read with a token on each paste, for "Read N times through MCP or the CLI" on the
+// paste page. Only reads the caller asked for count: never search results or the read-back after
+// a write. It changes no version or edit time, so open editors see no conflict.
+export async function recordTokenReads(owner: string, ids: string[]) {
+  if (ids.length === 0) return
+  await getDb()
+    .update(pasteTable)
+    .set({ agentReads: sql`${pasteTable.agentReads} + 1` })
+    .where(and(eq(pasteTable.ownerId, owner), inArray(pasteTable.id, [...new Set(ids)])))
+}
+
 export async function updateCapture(
   owner: string,
   idOrSlug: string,

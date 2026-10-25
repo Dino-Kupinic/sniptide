@@ -1,5 +1,11 @@
 import { failure, json, readJson, withToken } from "@/lib/api/http"
-import { getCapture, trashCapture, updateCapture, updateSettings } from "@/lib/api/pastes"
+import {
+  getCapture,
+  recordTokenReads,
+  trashCapture,
+  updateCapture,
+  updateSettings,
+} from "@/lib/api/pastes"
 
 export const dynamic = "force-dynamic"
 
@@ -8,7 +14,9 @@ export async function GET(request: Request, { params }: RouteContext<"/api/v1/pa
   const { id } = await params
   return withToken(request, "read", async ({ userId }) => {
     const paste = id.length <= 64 ? await getCapture(userId, id) : null
-    return paste ? json({ paste }) : failure(404, "No paste with that id.")
+    if (!paste) return failure(404, "No paste with that id.")
+    await recordTokenReads(userId, [paste.id])
+    return json({ paste })
   })
 }
 

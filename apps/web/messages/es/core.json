@@ -44,6 +44,7 @@
     "newer": "Más recientes",
     "older": "Más antiguas",
     "fourteenDays": "Hace 14 días",
+    "agentReads": "Leído {count, plural, one {# vez} other {# veces}} mediante MCP o la CLI",
     "today": "Hoy",
     "tomorrow": "mañana",
     "yourAccess": "Tu acceso",

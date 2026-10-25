@@ -44,6 +44,7 @@
     "newer": "新しい順",
     "older": "古い順",
     "fourteenDays": "14日前",
+    "agentReads": "MCP または CLI から {count, number} 回読み込まれました",
     "today": "今日",
     "tomorrow": "明日",
     "yourAccess": "アクセス権",

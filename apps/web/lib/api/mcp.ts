@@ -9,6 +9,7 @@ import {
   getCapture,
   listCaptures,
   listQuerySchema,
+  recordTokenReads,
   trashCapture,
   updateCapture,
   updateSettings,
@@ -38,12 +39,17 @@ export function mcpBackend(owner: TokenOwner): SniptideBackend {
       safe(async () => {
         const paste = await getCapture(owner.userId, id)
         if (!paste) throw new ApiError(404, "No paste with that id.")
+        await recordTokenReads(owner.userId, [paste.id])
         return { paste }
       }),
     collection: (slug, cursor) =>
       safe(async () => {
         const page = await collectionCaptures(owner.userId, slug, cursor)
         if (!page) throw new ApiError(404, "No collection with that name.")
+        await recordTokenReads(
+          owner.userId,
+          page.pastes.map((paste) => paste.id),
+        )
         return { ...page, pastes: page.pastes.map((paste) => ({ ...paste })) }
       }),
     create: (input) =>

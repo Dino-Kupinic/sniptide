@@ -44,6 +44,7 @@
     "newer": "Newer",
     "older": "Older",
     "fourteenDays": "14 days ago",
+    "agentReads": "Read {count, plural, one {# time} other {# times}} through MCP or the CLI",
     "today": "Today",
     "tomorrow": "tomorrow",
     "yourAccess": "Your access",

@@ -1,0 +1,1 @@
+ALTER TABLE "paste" ADD COLUMN "agent_reads" integer DEFAULT 0 NOT NULL;
