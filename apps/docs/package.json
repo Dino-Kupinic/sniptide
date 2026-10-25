@@ -21,7 +21,7 @@
     "next": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
-    "zod": "catalog:docs"
+    "zod": "catalog:runtime"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:ui",

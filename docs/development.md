@@ -1,6 +1,6 @@
 # Develop and verify a change
 
-Start with [setup](../README.md#setup). Use Bun at the version in `package.json` and Node 24 or
+Start with [setup](../README.md#setup). Use Bun at the version in `package.json` and Node 24.8 or
 newer. CI uses Node 24. Follow [AGENTS.md](../AGENTS.md) for Linear, branch naming, and cleanup.
 
 ## Find the owner
@@ -34,6 +34,8 @@ Run these commands from the repository root:
 | Command | What it verifies | Requirements |
 | --- | --- | --- |
 | `bun run check` | Biome formatting, lint, import order, and workspace types | Installed dependencies |
+| `bun run check:deps` | Unused dependency declarations and undeclared package or binary usage | Installed dependencies |
+| `bun run audit:deps` | Known advisories in the complete dependency lockfile | Access to the npm advisory service |
 | `bun run test:cli` | CLI behavior through its built Node executable | Node and temporary loopback HTTP listeners |
 | `bun run test:mcp` | MCP tool schemas and transports | Temporary loopback HTTP listeners |
 | `bun run test:docs` | Documentation site metadata and structured data | Installed dependencies |
@@ -71,6 +73,17 @@ the image. They are separate from `bun run test`.
 `bun run format` writes files. Use `bun run check` when you only want diagnostics. CI uses
 `check`, CLI, MCP, and docs tests, database-backed web tests, production builds, and browser and
 container checks in separate jobs.
+
+Run `bun run check:deps` after changes to dependencies or entry points. Knip checks runtime and
+development declarations across the workspaces. `knip.jsonc` includes the language generator and
+browser tests, plus narrow exceptions for the shared PostCSS config and the shadcn generator.
+Add new scripts to the workspace entry points instead of ignoring their dependencies.
+
+Dependabot opens weekly dependency update PRs. Better Auth and its adapters update together, as
+do Next.js and React. Major upgrades outside those groups stay separate from routine updates.
+The dependency workflow checks declarations and advisories on PRs, pushes to `main`, and weekly.
+Keep the Zod override until the E2E runner stops pinning an affected version. Update the override
+with the runtime catalog, and verify `bun run audit:deps` after lockfile changes.
 
 ## Make an agent change reviewable
 

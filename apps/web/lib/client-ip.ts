@@ -118,7 +118,7 @@ export function recordPeerAddresses() {
       const [request] = args as [IncomingMessage]
       request.headers[PEER_ADDRESS_HEADER] = request.socket.remoteAddress ?? ""
     }
-    return emit.call(this, event, ...args)
+    return Reflect.apply(emit, this, [event, ...args])
   } as typeof Server.prototype.emit
 }
 
