@@ -119,6 +119,49 @@ async function onFreshDatabase(run: (db: ReturnType<typeof createDb>) => Promise
 }
 
 describeDb("upgrading a database", () => {
+  test("usage migration backfills existing accounts and counts later mutations", async () => {
+    const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-usage-"))
+    try {
+      for (const entry of fs.readdirSync(folder)) {
+        if (!entry.endsWith("_account_usage"))
+          fs.cpSync(path.join(folder, entry), path.join(previous, entry), { recursive: true })
+      }
+      await onFreshDatabase(async (db) => {
+        await migrateDb(db, previous)
+        await db.$client`INSERT INTO "user" (id, name, email) VALUES ('usage-owner', 'Usage', 'usage@example.com'), ('usage-empty', 'Empty', 'empty@example.com')`
+        const [saved] =
+          await db.$client`INSERT INTO paste (owner_id, slug, title, visibility, bytes, deleted_at) VALUES ('usage-owner', 'usage-old', 'Old', 'private', 6, now()) RETURNING id`
+        await db.$client`INSERT INTO paste_file (paste_id, position, name, language, content) VALUES (${saved?.id}, 0, 'a.txt', 'text', 'é🙂')`
+        await db.$client`INSERT INTO collection (owner_id, slug, name) VALUES ('usage-owner', 'old', 'Old')`
+        expect((await migrateDb(db, folder)).applied).toEqual(["20261025184435_account_usage"])
+        const rows =
+          await db.$client`SELECT owner_id, storage_bytes::int, paste_count::int, file_count::int, collection_count::int FROM account_usage ORDER BY owner_id`
+        expect([...rows]).toEqual([
+          {
+            owner_id: "usage-empty",
+            storage_bytes: 0,
+            paste_count: 0,
+            file_count: 0,
+            collection_count: 0,
+          },
+          {
+            owner_id: "usage-owner",
+            storage_bytes: 6,
+            paste_count: 1,
+            file_count: 1,
+            collection_count: 1,
+          },
+        ])
+        await db.$client`DELETE FROM paste WHERE owner_id = 'usage-owner'`
+        const [empty] =
+          await db.$client`SELECT storage_bytes::int, paste_count::int, file_count::int FROM account_usage WHERE owner_id = 'usage-owner'`
+        expect(empty).toEqual({ storage_bytes: 0, paste_count: 0, file_count: 0 })
+      })
+    } finally {
+      fs.rmSync(previous, { recursive: true, force: true })
+    }
+  })
+
   test("a fresh database gets every migration, and a second run applies none", async () => {
     await onFreshDatabase(async (db) => {
       const first = await migrateDb(db, folder)

@@ -474,6 +474,66 @@ export const openApiDocument = {
         responses: { "405": { description: "No sessions to delete; use POST." }, ...tokenErrors },
       },
     },
+    "/api/v1/usage": {
+      get: {
+        operationId: "getAccountUsage",
+        tags: ["Token API"],
+        summary: "Read your account usage",
+        description:
+          "Current retained paste storage and counts, including trash and expired pastes awaiting permanent deletion. Storage is the sum of UTF-8 current file content bytes recorded on each paste; revisions and env groups are excluded. Daily request counts cover the last 30 UTC days, including this request, valid-token errors, and revoked tokens. Each day is the number of days since the Unix epoch. Each MCP HTTP request counts once. Invalid or expired credentials do not count.",
+        security: [{ apiToken: [] }],
+        responses: {
+          "200": {
+            description: "The authenticated account's current usage. Never cached.",
+            content: {
+              "application/json": {
+                example: {
+                  storageBytes: 81,
+                  pasteCount: 1,
+                  fileCount: 2,
+                  collectionCount: 1,
+                  reconciledAt: "2026-10-25T00:00:00.000Z",
+                  apiRequests: [
+                    { tokenId: "f83070b0-c0cc-46f7-a501-391d0365eaab", day: 20751, requests: 1 },
+                  ],
+                },
+                schema: {
+                  type: "object",
+                  required: [
+                    "storageBytes",
+                    "pasteCount",
+                    "fileCount",
+                    "collectionCount",
+                    "reconciledAt",
+                    "apiRequests",
+                  ],
+                  properties: {
+                    storageBytes: { type: "integer", minimum: 0 },
+                    pasteCount: { type: "integer", minimum: 0 },
+                    fileCount: { type: "integer", minimum: 0 },
+                    collectionCount: { type: "integer", minimum: 0 },
+                    reconciledAt: { type: "string", format: "date-time" },
+                    apiRequests: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["tokenId", "day", "requests"],
+                        properties: {
+                          tokenId: { type: "string", format: "uuid" },
+                          day: { type: "integer" },
+                          requests: { type: "integer", minimum: 0 },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          ...tokenErrors,
+        },
+      },
+    },
     "/api/v1/me": {
       get: {
         operationId: "getTokenOwner",

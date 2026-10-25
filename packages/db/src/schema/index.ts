@@ -8,5 +8,6 @@ export * from "./notifications"
 export * from "./pastes"
 export * from "./rate-limit"
 export * from "./tokens"
+export * from "./usage"
 
 export const relations = { ...authRelations }
