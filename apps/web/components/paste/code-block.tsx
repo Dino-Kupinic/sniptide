@@ -1,4 +1,5 @@
 import { cn } from "@sniptide/ui/lib/utils"
+import type { ComponentProps } from "react"
 import type { HighlightedLines, HighlightedToken, HighlightRole } from "@/lib/highlight/types"
 
 // Colours come from the --syntax-* variables, which switch with the theme.
@@ -36,19 +37,22 @@ export function CodeBlock({
   mobileMaxLines,
   lineNumbers = true,
   className,
+  ...props
 }: {
   content: string
   highlighted?: HighlightedLines
   wrap?: boolean | "mobile"
   mobileMaxLines?: number
   lineNumbers?: boolean
-  className?: string
-}) {
+} & Omit<ComponentProps<"div">, "children">) {
   const lines = highlighted ?? content.replace(/\n$/, "").split("\n")
   const gutter = `${String(lines.length).length}ch`
 
   return (
-    <div className={cn("overflow-x-auto p-4 font-mono text-[13px] leading-[22px]", className)}>
+    <div
+      {...props}
+      className={cn("overflow-x-auto p-4 font-mono text-[13px] leading-[22px]", className)}
+    >
       <ol className={cn("min-w-full", !wrap && "w-max", wrap === "mobile" && "lg:w-max")}>
         {lines.map((line, index) => (
           <li

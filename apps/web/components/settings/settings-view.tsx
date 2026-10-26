@@ -18,6 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { navigateTabs } from "@/components/tab-navigation"
 import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
 import type { SocialProvider } from "@/lib/auth"
@@ -91,6 +92,7 @@ export function SettingsView({
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
+  const panelId = React.useId()
   const tabs: { value: SettingsTab; label: string; icon: LucideIcon }[] = [
     { value: "general", label: t("general"), icon: UserIcon },
     { value: "account", label: t("account"), icon: ShieldIcon },
@@ -200,9 +202,18 @@ export function SettingsView({
             key={item.value}
             type="button"
             role="tab"
-            id={`tab-${item.value}`}
+            id={`${panelId}-tab-${item.value}`}
             aria-selected={tab === item.value}
-            aria-controls="settings-panel"
+            aria-controls={panelId}
+            tabIndex={tab === item.value ? 0 : -1}
+            onKeyDown={(event) =>
+              navigateTabs(
+                event,
+                tabs.map((entry) => entry.value),
+                item.value,
+                selectTab,
+              )
+            }
             onClick={() => selectTab(item.value)}
             className={cn(
               "-mb-px shrink-0 border-b-2 border-transparent pb-2.5 text-sm whitespace-nowrap text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
@@ -215,9 +226,9 @@ export function SettingsView({
       </div>
 
       <div
-        id="settings-panel"
+        id={panelId}
         role="tabpanel"
-        aria-labelledby={`tab-${tab}`}
+        aria-labelledby={`${panelId}-tab-${tab}`}
         className={cn("flex flex-col", !opened && "max-lg:hidden")}
       >
         {tab === "general" ? (

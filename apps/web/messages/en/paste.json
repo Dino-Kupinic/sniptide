@@ -24,7 +24,7 @@
     "rename": "Rename",
     "changeLanguage": "Change language",
     "removeFileAction": "Remove file",
-    "renameHint": "Double-click a tab to rename it. On a touch screen, tap the active tab for its actions.",
+    "renameHint": "Use arrow keys to switch files, F2 to rename, Delete to remove, or Down Arrow for actions. Double-click to rename; on touch, tap the active tab for actions.",
     "language": "Language",
     "shareVia": "Share via…",
     "addFile": "Add file",
@@ -199,6 +199,7 @@
     "embedUnavailable": "This paste can't be embedded.",
     "openOnSniptide": "Open on Sniptide",
     "print": "Print",
-    "backToPaste": "Back to paste"
+    "backToPaste": "Back to paste",
+    "editorTabHint": "Tab indents. Press Escape, then Tab to move to the next control."
   }
 }

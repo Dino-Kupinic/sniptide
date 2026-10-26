@@ -24,7 +24,7 @@
     "rename": "名前を変更",
     "changeLanguage": "言語を変更",
     "removeFileAction": "ファイルを削除",
-    "renameHint": "タブをダブルクリックすると名前を変更できます。タッチ画面では、アクティブなタブをタップすると操作を選べます。",
+    "renameHint": "矢印キーでファイルを切り替え、F2で名前を変更、Deleteで削除、下矢印で操作を開きます。ダブルクリックでも名前を変更できます。タッチ画面では選択中のタブをタップして操作を開きます。",
     "language": "言語",
     "shareVia": "共有方法を選ぶ…",
     "addFile": "ファイルを追加",
@@ -199,6 +199,7 @@
     "embedUnavailable": "この Paste は埋め込めません。",
     "openOnSniptide": "Sniptide で開く",
     "print": "印刷",
-    "backToPaste": "Paste に戻る"
+    "backToPaste": "Paste に戻る",
+    "editorTabHint": "Tabでインデントします。次の操作へ移るにはEscapeの後にTabを押してください。"
   }
 }

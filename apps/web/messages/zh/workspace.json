@@ -341,7 +341,8 @@
     "move_up": "上移",
     "move_down": "下移",
     "done": "完成",
-    "searching": "正在搜索…"
+    "searching": "正在搜索…",
+    "skipToMain": "跳转到主要内容"
   },
   "Secrets": {
     "title": "密钥",

@@ -6,6 +6,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { CopyIcon, DownloadIcon, FileCodeIcon, PrinterIcon, WrapTextIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { navigateTabs } from "@/components/tab-navigation"
 import { byteLength, formatBytes } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { getLanguage } from "@/lib/pastes/languages"
@@ -94,6 +95,7 @@ export function FileViewer({
 }) {
   const t = useTranslations("Paste")
   const locale = useLocale()
+  const panelId = React.useId()
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
   // null until the toggle is used: a card that collapses on phones wraps there and not on desktop.
   const [wrapChoice, setWrapChoice] = React.useState<boolean | null>(null)
@@ -126,14 +128,25 @@ export function FileViewer({
         )}
       >
         <div role="tablist" aria-label={t("files")} className="flex h-full min-w-0 overflow-x-auto">
-          {files.map((file) => {
+          {files.map((file, index) => {
             const selected = file.name === active.name
             return (
               <button
                 key={file.name}
                 type="button"
                 role="tab"
+                id={`${panelId}-tab-${index}`}
                 aria-selected={selected}
+                aria-controls={panelId}
+                tabIndex={selected ? 0 : -1}
+                onKeyDown={(event) =>
+                  navigateTabs(
+                    event,
+                    files.map((item) => item.name),
+                    file.name,
+                    setActiveName,
+                  )
+                }
                 onClick={() => setActiveName(file.name)}
                 className={cn(
                   "flex shrink-0 items-center gap-2 border-r border-border px-3.5 font-mono text-[13px] outline-none focus-visible:underline",
@@ -211,14 +224,20 @@ export function FileViewer({
       </div>
 
       <CodeBlock
+        id={panelId}
+        role="tabpanel"
+        aria-labelledby={`${panelId}-tab-${files.findIndex((file) => file.name === active.name)}`}
+        tabIndex={0}
         content={active.content}
         highlighted={active.lines}
         wrap={wrapChoice ?? (collapseAt !== undefined && "mobile")}
         mobileMaxLines={collapsed ? collapseAt : undefined}
         lineNumbers={lineNumbers}
-        className={cn("flex-1", bodyClassName)}
+        className={cn(
+          "min-h-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          bodyClassName,
+        )}
       />
-
       {collapsed ? (
         <button
           type="button"

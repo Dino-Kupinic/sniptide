@@ -24,7 +24,7 @@
     "rename": "Cambiar nombre",
     "changeLanguage": "Cambiar lenguaje",
     "removeFileAction": "Quitar archivo",
-    "renameHint": "Haz doble clic en una pestaña para cambiarle el nombre. En una pantalla táctil, toca la pestaña activa para ver sus acciones.",
+    "renameHint": "Usa las flechas para cambiar de archivo, F2 para renombrar, Supr para eliminar o la flecha abajo para abrir acciones. Haz doble clic para renombrar; en pantallas táctiles, toca la pestaña activa para ver acciones.",
     "language": "Lenguaje",
     "shareVia": "Compartir con…",
     "addFile": "Añadir archivo",
@@ -199,6 +199,7 @@
     "embedUnavailable": "Este paste no se puede insertar.",
     "openOnSniptide": "Abrir en Sniptide",
     "print": "Imprimir",
-    "backToPaste": "Volver al paste"
+    "backToPaste": "Volver al paste",
+    "editorTabHint": "Tab aplica sangría. Pulsa Escape y luego Tab para ir al siguiente control."
   }
 }
