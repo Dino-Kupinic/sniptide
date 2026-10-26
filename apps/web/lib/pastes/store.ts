@@ -162,7 +162,7 @@ async function summarize(
   records: PasteRecord[],
   viewer: string | null,
   withHistory = false,
-  db: Pick<Database, "select"> = getDb(),
+  db: Pick<Database, "select" | "selectDistinctOn"> = getDb(),
 ): Promise<PasteSummary[]> {
   if (records.length === 0) return []
   const ids = records.map((record) => record.id)
@@ -171,14 +171,13 @@ async function summarize(
 
   const [files, days, authors] = await Promise.all([
     db
-      .select({
+      .selectDistinctOn([pasteFile.pasteId], {
         pasteId: pasteFile.pasteId,
         language: pasteFile.language,
-        bytes: sql<number>`octet_length(${pasteFile.content})::int`,
       })
       .from(pasteFile)
       .where(and(allowedParent(pasteFile.pasteId), inArray(pasteFile.pasteId, ids)))
-      .orderBy(pasteFile.position, pasteFile.id),
+      .orderBy(pasteFile.pasteId, pasteFile.position, pasteFile.id),
     withHistory
       ? db
           .select()
@@ -208,7 +207,7 @@ async function summarize(
 function summariesOf(
   records: PasteRecord[],
   viewer: string | null,
-  files: { pasteId: string; language: string; bytes: number }[],
+  files: { pasteId: string; language: string }[],
   days: (typeof pasteViewDay.$inferSelect)[],
   authors: Pick<typeof user.$inferSelect, "id" | "name" | "username" | "displayUsername">[],
   withHistory: boolean,
@@ -226,11 +225,9 @@ function summariesOf(
     ]),
   )
 
-  const fileSummaries = new Map<string, { language: string; bytes: number }>()
+  const fileSummaries = new Map<string, string>()
   for (const file of files) {
-    const summary = fileSummaries.get(file.pasteId)
-    if (summary) summary.bytes += file.bytes
-    else fileSummaries.set(file.pasteId, { language: file.language, bytes: file.bytes })
+    if (!fileSummaries.has(file.pasteId)) fileSummaries.set(file.pasteId, file.language)
   }
   const history = new Map<string, number[]>()
   for (const day of days) {
@@ -259,8 +256,8 @@ function summariesOf(
         slug: record.slug,
         title: record.title,
         description: record.description,
-        language: own?.language ?? "text",
-        bytes: own?.bytes ?? 0,
+        language: own ?? "text",
+        bytes: record.bytes,
         visibility: record.visibility,
         password: record.passwordHash,
         burnAfterRead: record.burnAfterRead,
@@ -343,7 +340,16 @@ async function hydrate(
         .from(user)
         .where(eq(user.id, record.ownerId)),
     ])
-  const [summary] = summariesOf([record], viewer, files, days, authors, true, firstDay)
+  const bytes = files.reduce((total, file) => total + file.bytes, 0)
+  const [summary] = summariesOf(
+    [{ ...record, bytes }],
+    viewer,
+    files,
+    days,
+    authors,
+    true,
+    firstDay,
+  )
   if (!summary || files.length === 0) return null
 
   return {
@@ -1332,7 +1338,7 @@ export async function searchOwnPastes(
 export async function summarizePastes(
   records: PasteRecord[],
   viewer: string,
-  db: Pick<Database, "select"> = getDb(),
+  db: Pick<Database, "select" | "selectDistinctOn"> = getDb(),
 ) {
   return summarize(records, viewer, false, db)
 }
