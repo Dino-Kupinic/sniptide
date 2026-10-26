@@ -87,6 +87,24 @@ A collection is pulled as the ordered set it is: oldest capture first, every pag
 anything is written, up to 1,000 pastes and 20 MiB. Restore into a fresh directory if you want to
 review the result in isolation.
 
+## Install a collection as an agent skill
+
+```bash
+sniptide skill ui
+sniptide skill ui --agent cursor --name our-ui --dry-run
+```
+
+`skill` turns a collection into a skill that Claude Code, Cursor or Codex loads when a task needs
+it. It writes `SKILL.md` with a description and a section for each paste, and puts the files next to
+it under `snippets/<paste-slug>/`, so the agent reads only the ones it uses. The skill goes in
+`.claude/skills/<name>` by default, in `.cursor/skills/<name>` with `--agent cursor` and in
+`.agents/skills/<name>` with `--agent codex`. `--dir` picks another skills folder.
+
+The name defaults to the collection slug. Run the command again with `--force` to refresh the skill
+after the collection changes. It replaces the files it writes and leaves files from removed pastes
+in place, so delete the skill folder first if you want an exact copy. The same path checks and size
+limits as `pull` apply.
+
 ## Find pastes
 
 ```bash

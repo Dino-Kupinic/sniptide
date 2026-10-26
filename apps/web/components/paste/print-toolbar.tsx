@@ -11,7 +11,6 @@ export function PrintToolbar({ backHref }: { backHref: string }) {
   const t = useTranslations("Paste")
 
   React.useEffect(() => {
-    // After fonts load, so the first print uses Archivo and JetBrains Mono.
     let cancelled = false
     document.fonts.ready.then(() => {
       if (!cancelled) window.print()
