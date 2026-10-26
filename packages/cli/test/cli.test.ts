@@ -306,6 +306,55 @@ describe("built Node CLI", () => {
     expect(await lstat(path.join(target, "src")).catch(() => null)).toBeNull()
   })
 
+  test("installs a collection as a skill with its snippets beside SKILL.md", async () => {
+    handler = (req) =>
+      new URL(req.url).pathname.endsWith("/collections")
+        ? Response.json({ collections: [{ slug: "ui", name: "UI <kit>", pasteCount: 1 }] })
+        : Response.json({ pastes: [saved], nextCursor: null })
+    const result = await cli(["skill", "collection:ui", "--json"], target)
+    expect(result.code).toBe(0)
+    const skill = path.join(target, ".claude/skills/ui")
+    expect(JSON.parse(result.stdout).data).toEqual({
+      name: "ui",
+      directory: skill,
+      files: ["SKILL.md", "snippets/button-1/src/components/Button.tsx"],
+      dryRun: false,
+    })
+    const text = await readFile(path.join(skill, "SKILL.md"), "utf8")
+    expect(text).toStartWith(
+      '---\nname: ui\ndescription: "Code snippets from the Sniptide collection UI kit: Button.',
+    )
+    expect(text).toContain(
+      "## Button\n\nReusable button\n\nTags: ui.\n\n- [src/components/Button.tsx]",
+    )
+    expect(
+      await readFile(path.join(skill, "snippets/button-1/src/components/Button.tsx"), "utf8"),
+    ).toBe(component.content)
+    expect((await cli(["skill", "ui"], target)).code).not.toBe(0)
+    expect((await cli(["skill", "ui", "--force"], target)).code).toBe(0)
+  })
+
+  test("skill picks the agent folder and name, and dry-run writes nothing", async () => {
+    handler = (req) =>
+      new URL(req.url).pathname.endsWith("/collections")
+        ? Response.json({ collections: [] })
+        : Response.json({ pastes: [saved], nextCursor: null })
+    const result = await cli(
+      ["skill", "ui", "--agent", "cursor", "--name", "Our UI!", "--dry-run", "--json"],
+      target,
+    )
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout).data.directory).toBe(
+      path.join(target, ".cursor/skills/our-ui"),
+    )
+    expect(await lstat(path.join(target, ".cursor")).catch(() => null)).toBeNull()
+    const wrong = await cli(["skill", "ui", "--agent", "vim", "--json"], target)
+    expect(JSON.parse(wrong.stderr).error.message).toContain("--agent")
+    handler = () => Response.json({ pastes: [], nextCursor: null })
+    const empty = await cli(["skill", "ui", "--json"], target)
+    expect(JSON.parse(empty.stderr).error.message).toContain("no pastes")
+  })
+
   test("preflights conflicts before writing and only overwrites with --force", async () => {
     await writeFile(path.join(target, "existing.ts"), "local code")
     const input = await localBundle([

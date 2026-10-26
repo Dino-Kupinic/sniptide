@@ -3,7 +3,7 @@ import path from "node:path"
 import { parseArgs } from "node:util"
 import { Api } from "./api"
 import { configPath, normalizeBaseUrl, resolveConfig, saveConfig } from "./config"
-import { bundle, type Capture, paste, record, string } from "./contract"
+import { bundle, type Capture, type Paste, paste, record, string } from "./contract"
 import {
   fetchGroup,
   groupName,
@@ -14,7 +14,8 @@ import {
   writeEnvFile,
 } from "./env"
 import { CliError } from "./errors"
-import { collectFiles, readBundle, restoreFiles } from "./files"
+import { collectFiles, readBundle, restoreFiles, writeFiles } from "./files"
+import { buildSkill, skillName, skillRoots } from "./skill"
 
 const options = {
   "base-url": { type: "string" },
@@ -38,6 +39,8 @@ const options = {
   limit: { type: "string" },
   file: { type: "string" },
   stdout: { type: "boolean" },
+  agent: { type: "string" },
+  name: { type: "string" },
 } as const
 const allowed: Record<string, string[]> = {
   login: ["token-stdin"],
@@ -46,6 +49,7 @@ const allowed: Record<string, string[]> = {
   pull: ["input", "dir", "force", "dry-run"],
   list: ["tag", "language", "collection", "cursor", "limit"],
   search: ["tag", "language", "collection", "cursor", "limit"],
+  skill: ["agent", "name", "dir", "force", "dry-run"],
   "env list": [],
   "env push": ["file", "dry-run"],
   "env pull": ["file", "force", "dry-run", "stdout"],
@@ -62,6 +66,7 @@ export const help = `Sniptide CLI (Node.js 24+)
   sniptide pull <id|collection:slug>  Restore files into the current directory
   sniptide list                      List pastes, with optional filters
   sniptide search <query>            Find pastes by title, tag, or language
+  sniptide skill <collection>        Install a collection as an agent skill
   sniptide env list                  List your env groups
   sniptide env push <group>          Upload .env to an env group, replacing its variables
   sniptide env pull <group>          Write an env group to .env
@@ -75,6 +80,8 @@ Push:   --title NAME, --description TEXT, --visibility private|unlisted|public
 Pull:   --dir DIRECTORY, --force, --dry-run, --input FILE (read an offline bundle)
 Find:   --tag TAG (repeatable), --language ID, --collection SLUG, --limit 1..100
         --cursor CURSOR
+Skill:  --agent claude|cursor|codex (default claude), --name NAME, --dir DIRECTORY
+        --force, --dry-run
 Env:    --file PATH (default .env), --force, --dry-run, --stdout (pull prints instead)
 
 Create a token in Settings → API tokens. SNIPTIDE_TOKEN / SNIPTIDE_BASE_URL override saved
@@ -99,8 +106,8 @@ function displayText(value: string): string {
     .join("")
 }
 
-async function getCollection(api: Api, slug: string): Promise<Capture[]> {
-  const pastes: Capture[] = []
+async function getCollection(api: Api, slug: string): Promise<Paste[]> {
+  const pastes: Paste[] = []
   const cursors = new Set<string>()
   let cursor: string | undefined
   let bytes = 0
@@ -339,6 +346,35 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
       emit(
         { directory, files, dryRun: values["dry-run"] ?? false },
         `${values["dry-run"] ? "Would write" : "Wrote"} ${files.length} files in ${directory}.\n${files.join("\n")}`,
+      )
+      return 0
+    }
+    if (command === "skill") {
+      countArgs(params, 1, 1, "skill <collection> [--agent claude|cursor|codex] [--dir DIRECTORY]")
+      const slug = (params[0] as string).replace(/^collection:/, "")
+      if (!slug || slug.length > 40 || /[\s/?#\\]/.test(slug) || slug === "." || slug === "..")
+        throw new CliError("Provide a collection slug.")
+      const agent = values.agent ?? "claude"
+      const skills = skillRoots[agent]
+      if (!skills) throw new CliError("--agent must be claude, cursor or codex.")
+      const name = skillName(values.name ?? slug)
+      const api = new Api(await resolveConfig(ctx.env, values["base-url"]))
+      const pastes = await getCollection(api, slug)
+      const listed = await api.request("collections")
+      const found = Array.isArray(listed.collections)
+        ? listed.collections.map(record).find((item) => item.slug === slug)
+        : undefined
+      const title = typeof found?.name === "string" ? found.name : slug
+      const directory = path.resolve(ctx.cwd, values.dir ?? skills, name)
+      const files = await writeFiles(
+        directory,
+        buildSkill(name, { slug, name: title }, pastes),
+        values.force ?? false,
+        values["dry-run"] ?? false,
+      )
+      emit(
+        { name, directory, files, dryRun: values["dry-run"] ?? false },
+        `${values["dry-run"] ? "Would write" : "Wrote"} the ${name} skill in ${directory}.\n${files.join("\n")}`,
       )
       return 0
     }
