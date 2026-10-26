@@ -142,22 +142,23 @@ export async function authenticate(request: Request): Promise<TokenOwner | null>
       ownerId: apiToken.ownerId,
       scopes: apiToken.scopes,
       expiresAt: apiToken.expiresAt,
+      lastUsedAt: apiToken.lastUsedAt,
     })
     .from(apiToken)
     .where(eq(apiToken.hash, hashToken(match[1])))
   if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
   const now = new Date()
-  await db
-    .update(apiToken)
-    .set({ lastUsedAt: now })
-    .where(
-      and(
-        eq(apiToken.id, row.id),
-        or(
-          isNull(apiToken.lastUsedAt),
-          lt(apiToken.lastUsedAt, new Date(now.getTime() - LAST_USED_GRANULARITY_MS)),
+  const threshold = new Date(now.getTime() - LAST_USED_GRANULARITY_MS)
+  if (!row.lastUsedAt || row.lastUsedAt < threshold) {
+    await db
+      .update(apiToken)
+      .set({ lastUsedAt: now })
+      .where(
+        and(
+          eq(apiToken.id, row.id),
+          or(isNull(apiToken.lastUsedAt), lt(apiToken.lastUsedAt, threshold)),
         ),
-      ),
-    )
+      )
+  }
   return { tokenId: row.id, userId: row.ownerId, scopes: scopesOf(row.scopes) }
 }

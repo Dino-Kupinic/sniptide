@@ -1,6 +1,10 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
+import { pasteFile } from "@workspace/db/schema"
+import { eq } from "drizzle-orm"
+import { getDb } from "@/lib/db"
 import { byteLength } from "@/lib/format"
 import { getDashboardData } from "@/lib/pastes/dashboard"
+import { trashTotals } from "@/lib/pastes/lists"
 import { listOwnPastes, listTrash } from "@/lib/pastes/store"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -33,6 +37,26 @@ describeDb("paste lists", () => {
     const [summary] = await listTrash()
     expect(summary?.slug).toBe("gone")
     expect(summary?.bytes).toBe(3)
+  })
+
+  test("summaries and trash totals follow file mutations and omit fileless summaries", async () => {
+    const { id } = await seedPaste({
+      slug: "gone",
+      owner: "owner",
+      content: "é",
+      deletedAt: new Date(),
+    })
+    await getDb()
+      .insert(pasteFile)
+      .values({ pasteId: id, position: 1, name: "b.sql", language: "sql", content: "😀" })
+    expect((await listTrash())[0]).toMatchObject({ bytes: 6, language: "text" })
+    expect(await trashTotals()).toEqual({ count: 1, bytes: 6 })
+    await getDb().update(pasteFile).set({ content: "abcd" }).where(eq(pasteFile.pasteId, id))
+    expect((await listTrash())[0]?.bytes).toBe(8)
+    expect(await trashTotals()).toEqual({ count: 1, bytes: 8 })
+    await getDb().delete(pasteFile).where(eq(pasteFile.pasteId, id))
+    expect(await listTrash()).toEqual([])
+    expect(await trashTotals()).toEqual({ count: 1, bytes: 0 })
   })
 
   test("the dashboard sends the newest five of each tab, not every paste", async () => {

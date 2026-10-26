@@ -91,14 +91,17 @@ export function suggestedTitle(files: File[]) {
   if (!file) return ""
   if (hasSensitiveContent(files) || !generatedName.test(file.name)) return file.name.slice(0, 120)
   if (!file.content.trim()) return ""
-  const first = file.content
-    .split(/\r?\n/)
-    .map((line) =>
-      line
-        .trim()
-        .replace(/^(?:\/{2,}|#+|\/\*+|\*\/?|--|;)\s*/, "")
-        .replace(/\s*\*\/$/, ""),
-    )
-    .find((line) => line.trim())
+  let first: string | undefined
+  for (const match of file.content.matchAll(/[^\n]*(?:\n|$)/g)) {
+    const line = match[0]
+      .replace(/\r?\n$/, "")
+      .trim()
+      .replace(/^(?:\/{2,}|#+|\/\*+|\*\/?|--|;)\s*/, "")
+      .replace(/\s*\*\/$/, "")
+    if (line.trim()) {
+      first = line
+      break
+    }
+  }
   return (first || file.name).slice(0, 120)
 }

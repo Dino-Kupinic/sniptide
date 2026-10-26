@@ -8,8 +8,9 @@ import { GET as me } from "@/app/api/v1/me/route"
 import { GET as getPaste, PUT as updatePaste } from "@/app/api/v1/pastes/[id]/route"
 import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/route"
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
-import { createToken, hashToken, listTokens } from "@/lib/api/tokens"
+import { authenticate, createToken, hashToken, listTokens } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
+import { telemetrySnapshot } from "@/lib/telemetry"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // The token API under /api/v1 against a real Postgres: who a token reaches, what each scope
@@ -84,6 +85,25 @@ describeDb("token API", () => {
       expect(data.scopes).toEqual(["read", "write"])
       const [used] = await getDb().select().from(apiToken)
       expect(used?.lastUsedAt).toBeInstanceOf(Date)
+    })
+
+    test("updates null and stale last-used times while leaving recent times untouched", async () => {
+      const token = await tokenFor("ada")
+      const request = call("me", token)
+      await authenticate(request)
+      const [first] = await getDb().select().from(apiToken)
+      expect(first?.lastUsedAt).toBeInstanceOf(Date)
+      const updates = telemetrySnapshot().metrics["db:update"]?.count ?? 0
+      await authenticate(request)
+      expect(telemetrySnapshot().metrics["db:update"]?.count ?? 0).toBe(updates)
+      const old = new Date(Date.now() - 120_000)
+      await getDb()
+        .update(apiToken)
+        .set({ lastUsedAt: old })
+        .where(eq(apiToken.hash, hashToken(token)))
+      await authenticate(request)
+      const [updated] = await getDb().select().from(apiToken)
+      expect(updated?.lastUsedAt?.getTime()).toBeGreaterThan(old.getTime())
     })
 
     test("refuse missing, unknown, revoked and expired tokens", async () => {

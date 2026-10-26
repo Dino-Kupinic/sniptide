@@ -248,14 +248,10 @@ export async function trashTotals() {
   if (!viewer) return { count: 0, bytes: 0 }
   const [row] = await getDb()
     .select({
-      count: sql<number>`count(distinct ${pasteTable.id})::int`,
-      bytes: sql<number>`coalesce(sum(octet_length(${pasteFile.content})), 0)::float8`,
+      count: sql<number>`count(*)::int`,
+      bytes: sql<number>`coalesce(sum(${pasteTable.bytes}), 0)::float8`,
     })
     .from(pasteTable)
-    .leftJoin(
-      pasteFile,
-      and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, pasteTable.id)),
-    )
     .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
   return row ?? { count: 0, bytes: 0 }
 }
@@ -289,15 +285,7 @@ export async function listSharedPage(query: SharedListQuery) {
         query.owners.length ? inArray(pasteTable.ownerId, query.owners) : undefined,
         query.access.length ? inArray(pasteShare.access, query.access) : undefined,
       )
-      const [[all], [matching], languages, owners] = await Promise.all([
-        db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(pasteShare)
-          .innerJoin(
-            pasteTable,
-            and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
-          )
-          .where(base),
+      const baseTotals = Promise.resolve(
         db
           .select({
             count: sql<number>`count(*)::int`,
@@ -308,7 +296,26 @@ export async function listSharedPage(query: SharedListQuery) {
             pasteTable,
             and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
           )
-          .where(filters),
+          .where(base),
+      )
+      const filtered =
+        query.q || query.languages.length || query.owners.length || query.access.length
+      const matchingTotals = filtered
+        ? db
+            .select({
+              count: sql<number>`count(*)::int`,
+              people: sql<number>`count(distinct ${pasteTable.ownerId})::int`,
+            })
+            .from(pasteShare)
+            .innerJoin(
+              pasteTable,
+              and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
+            )
+            .where(filters)
+        : baseTotals
+      const [[all], [matching], languages, owners] = await Promise.all([
+        baseTotals,
+        matchingTotals,
         db
           .selectDistinct({ language: firstLanguage })
           .from(pasteShare)
