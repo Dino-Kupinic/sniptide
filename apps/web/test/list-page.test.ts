@@ -5,7 +5,8 @@ import { getDb } from "@/lib/db"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage } from "@/lib/pastes/lists"
-import { readRawFile, readSharedPaste } from "@/lib/pastes/store"
+import { getPaste, readRawFile, readSharedPaste } from "@/lib/pastes/store"
+import { telemetrySnapshot } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs, unlock } from "./harness"
 
@@ -20,6 +21,26 @@ describeDb("bounded paste reads", () => {
     await seedUser("owner")
     await seedUser("other")
     signInAs("owner")
+  })
+
+  test("detail hydration reuses ordered file metadata and preserves UTF-8 sizes", async () => {
+    const { id } = await seedPaste({
+      slug: "detail",
+      owner: "owner",
+      content: "é",
+      language: "typescript",
+    })
+    await getDb()
+      .insert(pasteFile)
+      .values({ pasteId: id, position: 1, name: "second.sql", language: "sql", content: "😀" })
+    const before = telemetrySnapshot().metrics["db:select"]?.count ?? 0
+    const detail = await getPaste("detail", 999)
+    expect(detail?.bytes).toBe(6)
+    expect(detail?.language).toBe("typescript")
+    expect(detail?.files.map((file) => file.content)).toEqual(["é", "😀"])
+    expect(detail?.revisionPage).toBe(1)
+    expect(detail?.author.name).toBe("owner")
+    expect((telemetrySnapshot().metrics["db:select"]?.count ?? 0) - before).toBeLessThanOrEqual(6)
   })
 
   test("pages cover the owner's pastes once, clamp stale pages, and omit history", async () => {

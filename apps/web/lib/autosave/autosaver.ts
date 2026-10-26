@@ -68,6 +68,7 @@ export class Autosaver<T> {
   private readonly retryDelaysMs: number[]
 
   private current: T
+  private currentKey: string
   private savedKey: string
   private lastState: AutosaveState = { kind: "idle" }
   private everSaved = false
@@ -87,7 +88,8 @@ export class Autosaver<T> {
     this.maxWaitMs = options.maxWaitMs ?? 15_000
     this.retryDelaysMs = options.retryDelaysMs ?? [2000, 4000, 8000, 16_000, 30_000]
     this.current = options.initial
-    this.savedKey = JSON.stringify(options.initial)
+    this.currentKey = JSON.stringify(options.initial)
+    this.savedKey = this.currentKey
   }
 
   get state() {
@@ -96,13 +98,14 @@ export class Autosaver<T> {
 
   // Whether the latest edit has reached the server.
   hasUnsavedChanges() {
-    return JSON.stringify(this.current) !== this.savedKey
+    return this.currentKey !== this.savedKey
   }
 
   // Call with the whole value every time it may have changed.
   update(value: T) {
     if (this.disposed) return
     this.current = value
+    this.currentKey = JSON.stringify(value)
 
     if (!this.hasUnsavedChanges()) {
       this.cancelTimers()
@@ -168,7 +171,8 @@ export class Autosaver<T> {
     this.conflicted = false
     this.attempt = 0
     this.current = value
-    this.savedKey = JSON.stringify(value)
+    this.currentKey = JSON.stringify(value)
+    this.savedKey = this.currentKey
     this.set({ kind: "idle" })
   }
 
@@ -240,6 +244,7 @@ export class Autosaver<T> {
     }
 
     const sent = this.current
+    const sentKey = this.currentKey
     this.set({ kind: "saving" })
     this.inflight = (async () => {
       let outcome: SaveOutcome<T>
@@ -264,7 +269,10 @@ export class Autosaver<T> {
       this.attempt = 0
       if (outcome.ok) {
         this.everSaved = true
-        this.savedKey = JSON.stringify(outcome.saved ?? sent)
+        this.savedKey =
+          outcome.saved === undefined || outcome.saved === null
+            ? sentKey
+            : JSON.stringify(outcome.saved)
         if (this.hasUnsavedChanges()) {
           // More edits arrived while saving: save them next, after the usual quiet moment.
           const next = this.options.validate?.(this.current) ?? null

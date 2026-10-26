@@ -121,13 +121,59 @@ export async function fetchGist(id: string): Promise<FetchGist> {
   }
 }
 
-// The whole text of a file GitHub only sent part of, or null when it can't be fetched or turns
-// out bigger than the limit.
-async function fetchRaw(url: string, limit: number) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(10_000) }).catch(() => null)
-  if (!response?.ok) return null
-  const text = await response.text().catch(() => null)
-  return text !== null && byteLength(text) <= limit ? text : null
+interface DownloadBudget {
+  remaining: number
+  exceeded: boolean
+  controller: AbortController
+}
+
+async function fetchRaw(url: string, limit: number, budget: DownloadBudget) {
+  const response = await fetch(url, {
+    signal: AbortSignal.any([AbortSignal.timeout(10_000), budget.controller.signal]),
+  }).catch(() => null)
+  if (!response?.ok) {
+    if (response?.body) void response.body.cancel().catch(() => {})
+    return null
+  }
+  if (!response.body) return ""
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const chunks: string[] = []
+  let bytes = 0
+  let rawBytes = 0
+  let complete = false
+  const append = (text: string) => {
+    const size = byteLength(text)
+    if (!size) return true
+    if (bytes + size > limit) return false
+    if (size > budget.remaining) {
+      budget.exceeded = true
+      budget.controller.abort()
+      return false
+    }
+    bytes += size
+    budget.remaining -= size
+    chunks.push(text)
+    return true
+  }
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) {
+        if (!append(decoder.decode())) return null
+        complete = true
+        return chunks.join("")
+      }
+      rawBytes += value.byteLength
+      // Decoding removes an initial UTF-8 BOM, which does not count towards the paste size.
+      if (rawBytes > limit + 3 || !append(decoder.decode(value, { stream: true }))) return null
+    }
+  } catch {
+    return null
+  } finally {
+    if (!complete) void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
 
 export type GistFiles =
@@ -146,12 +192,36 @@ export async function readGistFiles(gist: Gist, names: string[]): Promise<GistFi
   }
 
   const { maxPasteBytes } = getConfig()
-  const files = await Promise.all(
-    chosen.map(async (file) => ({
-      name: file.name,
-      content: file.content ?? (file.rawUrl ? await fetchRaw(file.rawUrl, maxPasteBytes) : null),
-    })),
+  const tooLarge = {
+    ok: false as const,
+    error: `Pastes are limited to ${formatLimit(maxPasteBytes)}.`,
+  }
+  const budget: DownloadBudget = {
+    remaining: maxPasteBytes,
+    exceeded: false,
+    controller: new AbortController(),
+  }
+  for (const file of chosen) {
+    if (file.content !== null) budget.remaining -= byteLength(file.content)
+  }
+  if (budget.remaining < 0) return tooLarge
+  const files = chosen.map((file) => ({ name: file.name, content: file.content }))
+  let next = 0
+  await Promise.all(
+    Array.from({ length: Math.min(2, chosen.length) }, async () => {
+      while (next < chosen.length && !budget.exceeded) {
+        const index = next++
+        const file = chosen[index]
+        if (file?.content === null && file.rawUrl) {
+          files[index] = {
+            name: file.name,
+            content: await fetchRaw(file.rawUrl, maxPasteBytes, budget),
+          }
+        }
+      }
+    }),
   )
+  if (budget.exceeded) return tooLarge
   for (const file of files) {
     if (file.content === null)
       return { ok: false, error: `${file.name} couldn't be read from GitHub.` }

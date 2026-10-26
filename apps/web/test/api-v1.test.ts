@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { apiToken, collection, envVariable, paste, pasteFile } from "@workspace/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { GET as getCollectionPastes } from "@/app/api/v1/collections/[slug]/pastes/route"
 import { DELETE as deleteEnv, GET as getEnv, PUT as putEnv } from "@/app/api/v1/env/[group]/route"
 import { GET as listEnv } from "@/app/api/v1/env/route"
@@ -255,6 +255,63 @@ describeDb("token API", () => {
       expect((await listPastes(call("pastes?limit=500", token))).status).toBe(400)
     })
 
+    test("new cursors preserve microsecond order and cover every paste exactly once", async () => {
+      const token = await tokenFor("ada")
+      const ids: string[] = []
+      for (let index = 0; index < 4; index++) {
+        const { id } = await seedPaste({ slug: `precise-${index}`, owner: "ada" })
+        ids.push(id)
+      }
+      ids.sort()
+      for (const [index, id] of ids.entries()) {
+        const timestamp = `2026-10-01T12:00:00.123${String(index).padStart(3, "0")}Z`
+        await getDb().execute(
+          sql`UPDATE paste SET updated_at = ${timestamp}::timestamptz WHERE id = ${id}`,
+        )
+      }
+      let cursor: string | null = null
+      const seen: string[] = []
+      do {
+        const page = await body(
+          await listPastes(call(`pastes?limit=1${cursor ? `&cursor=${cursor}` : ""}`, token)),
+        )
+        seen.push(...page.pastes.map((item: { id: string }) => item.id))
+        cursor = page.nextCursor
+        if (cursor) {
+          const decoded = JSON.parse(Buffer.from(cursor, "base64url").toString())
+          expect(decoded.v).toBe(2)
+          expect(decoded.at).toMatch(/\.\d{6}Z$/)
+        }
+      } while (cursor && seen.length < 10)
+      expect(cursor).toBeNull()
+      expect(seen).toEqual(ids.reverse())
+    })
+
+    test("legacy cursors retain their millisecond ordering across microsecond ties", async () => {
+      const token = await tokenFor("ada")
+      const ids: string[] = []
+      for (let index = 0; index < 4; index++) {
+        const { id } = await seedPaste({ slug: `legacy-${index}`, owner: "ada" })
+        ids.push(id)
+      }
+      ids.sort()
+      for (const [index, id] of ids.entries()) {
+        await getDb().execute(
+          sql`UPDATE paste SET updated_at = ${`2026-10-01T12:00:00.123${String(index).padStart(3, "0")}Z`}::timestamptz WHERE id = ${id}`,
+        )
+      }
+      let cursor: string | null = Buffer.from(
+        JSON.stringify({ at: "2026-10-01T12:00:00.123Z", id: ids[0] }),
+      ).toString("base64url")
+      const seen: string[] = []
+      do {
+        const page = await body(await listPastes(call(`pastes?limit=1&cursor=${cursor}`, token)))
+        seen.push(...page.pastes.map((item: { id: string }) => item.id))
+        cursor = page.nextCursor
+      } while (cursor)
+      expect(seen).toEqual(ids.slice(1))
+    })
+
     test("search matches every word across description, tags, file paths and code", async () => {
       const token = await tokenFor("ada")
       const post = (data: object) =>
@@ -341,6 +398,61 @@ describeDb("token API", () => {
         (await getCollectionPastes(call("collections/kit/pastes", bob), ctx({ slug: "kit" })))
           .status,
       ).toBe(404)
+    })
+
+    test("collection cursors preserve microseconds across the fifty-item boundary", async () => {
+      const token = await tokenFor("ada")
+      await getDb().insert(collection).values({ ownerId: "ada", slug: "precise", name: "Precise" })
+      const ids: string[] = []
+      for (let index = 0; index < 55; index++) {
+        const { id } = await seedPaste({
+          slug: `collection-precise-${index}`,
+          owner: "ada",
+          collection: "precise",
+        })
+        ids.push(id)
+      }
+      ids.sort().reverse()
+      for (const [index, id] of ids.entries()) {
+        const timestamp = `2026-10-01T12:00:00.123${String(index).padStart(3, "0")}Z`
+        await getDb().execute(
+          sql`UPDATE paste SET created_at = ${timestamp}::timestamptz WHERE id = ${id}`,
+        )
+      }
+      const first = await body(
+        await getCollectionPastes(
+          call("collections/precise/pastes", token),
+          ctx({ slug: "precise" }),
+        ),
+      )
+      const second = await body(
+        await getCollectionPastes(
+          call(`collections/precise/pastes?cursor=${first.nextCursor}`, token),
+          ctx({ slug: "precise" }),
+        ),
+      )
+      expect([...first.pastes, ...second.pastes].map((item: { id: string }) => item.id)).toEqual(
+        ids,
+      )
+      expect(second.nextCursor).toBeNull()
+
+      const legacyOrder = [...ids].sort()
+      let legacyCursor: string | null = Buffer.from(
+        JSON.stringify({ at: "2026-10-01T12:00:00.123Z", id: legacyOrder[0] }),
+      ).toString("base64url")
+      const legacySeen: string[] = []
+      do {
+        const page = await body(
+          await getCollectionPastes(
+            call(`collections/precise/pastes?cursor=${legacyCursor}`, token),
+            ctx({ slug: "precise" }),
+          ),
+        )
+        legacySeen.push(...page.pastes.map((item: { id: string }) => item.id))
+        legacyCursor = page.nextCursor
+      } while (legacyCursor && legacySeen.length < 100)
+      expect(legacyCursor).toBeNull()
+      expect(legacySeen).toEqual(legacyOrder.slice(1))
     })
   })
 

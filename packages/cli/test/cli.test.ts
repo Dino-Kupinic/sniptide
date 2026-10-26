@@ -247,6 +247,66 @@ describe("built Node CLI", () => {
     expect(requests).toHaveLength(0)
   })
 
+  test("batches ignore checks and reuses overlapping selections", async () => {
+    await exec("git", ["init", "-q"], { cwd: source })
+    await fixture(".gitignore", "src/ignored-*.ts\n")
+    for (let index = 0; index < 64; index++) await fixture(`src/ignored-${index}.ts`, "ignored")
+    await fixture("src/with space.ts", "export {}")
+    const trace = path.join(root, "git-trace.log")
+    const result = await cli(
+      ["push", "src/**/*.ts", "src/with space.ts", "--dry-run", "--json"],
+      source,
+      { GIT_TRACE: trace },
+    )
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout).data.files.map((file: { name: string }) => file.name)).toEqual(
+      ["src/with space.ts"],
+    )
+    const checks = (await readFile(trace, "utf8"))
+      .split("\n")
+      .filter((line) => line.includes("built-in: git check-ignore"))
+    expect(checks).toHaveLength(1)
+  })
+
+  test("captures files when Git closes its input pipe early", async () => {
+    await fixture()
+    const preload = path.join(root, "closed-git-stdin.cjs")
+    const trace = path.join(root, "closed-git-stdin.log")
+    await writeFile(
+      preload,
+      `const childProcess = require("node:child_process")
+const { promisify } = require("node:util")
+const { syncBuiltinESMExports } = require("node:module")
+const { writeFileSync } = require("node:fs")
+const original = childProcess.execFile
+const execute = promisify(original)
+const execFile = (...args) => original(...args)
+execFile[promisify.custom] = (...args) => {
+  const execution = execute(...args)
+  if (args[0] === "git" && args[1][0] === "check-ignore") {
+    const input = execution.child.stdin
+    input.end = () => {
+      writeFileSync(${JSON.stringify(trace)}, "EPIPE")
+      process.nextTick(() => input.destroy(Object.assign(new Error("write EPIPE"), { code: "EPIPE" })))
+      return input
+    }
+  }
+  return execution
+}
+childProcess.execFile = execFile
+syncBuiltinESMExports()
+`,
+    )
+    const result = await cli(["push", component.name, "--dry-run", "--json"], source, {
+      NODE_OPTIONS: `--require=${JSON.stringify(preload)}`,
+    })
+    expect(await readFile(trace, "utf8")).toBe("EPIPE")
+    expect(result.stderr).not.toContain("Unhandled 'error' event")
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout).data.files).toEqual([component])
+    expect(requests).toHaveLength(0)
+  })
+
   test("rejects symlink capture and paths outside the source root", async () => {
     await writeFile(path.join(root, "outside.ts"), "outside")
     await symlink(path.join(root, "outside.ts"), path.join(source, "link.ts"))

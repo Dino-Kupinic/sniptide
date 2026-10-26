@@ -3,15 +3,10 @@
 import * as React from "react"
 import type { HighlighterCore } from "shiki/core"
 import { detectLanguage } from "@/lib/pastes/languages"
+import { isLargeEditorContent } from "./editor-limits"
 import { grammarFor } from "./grammars"
 import { loadGrammar, tokenize } from "./shiki"
 import type { HighlightedLines } from "./types"
-
-// Live highlighting for the editors. Big enough pastes would make every keystroke wait on the
-// tokenizer, so past this they stay plain while being edited (the saved paste page still
-// colours them, up to its own limit).
-const maxLines = 1500
-const maxBytes = 120_000
 
 // Syntax-coloured lines for text being edited, or undefined while the grammar loads, for plain
 // text and for very large files. Tokenizing is synchronous once the grammar is in, and runs on a
@@ -37,7 +32,7 @@ export function useHighlight(content: string, filename: string): HighlightedLine
 
   return React.useMemo(() => {
     if (!grammar || ready?.grammar !== grammar) return undefined
-    if (deferred.length > maxBytes || deferred.split("\n").length > maxLines) return undefined
+    if (isLargeEditorContent(deferred)) return undefined
     try {
       return tokenize(ready.core, deferred, grammar)
     } catch {

@@ -19,6 +19,7 @@ import {
   desc,
   eq,
   exists,
+  getTableColumns,
   gt,
   gte,
   ilike,
@@ -201,6 +202,18 @@ async function summarize(
       .where(inArray(user.id, [...new Set(records.map((record) => record.ownerId))])),
   ])
 
+  return summariesOf(records, viewer, files, days, authors, withHistory, firstDay)
+}
+
+function summariesOf(
+  records: PasteRecord[],
+  viewer: string | null,
+  files: { pasteId: string; language: string; bytes: number }[],
+  days: (typeof pasteViewDay.$inferSelect)[],
+  authors: Pick<typeof user.$inferSelect, "id" | "name" | "username" | "displayUsername">[],
+  withHistory: boolean,
+  firstDay: number,
+): PasteSummary[] {
   const people = new Map<string, Person>(
     authors.map((author) => [
       author.id,
@@ -275,33 +288,62 @@ async function hydrate(
   requestedRevisionPage = 1,
 ): Promise<Paste | null> {
   const db = getDb()
-  const [revisionTotal] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(pasteRevision)
-    .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
-  const revisionCount = revisionTotal?.count ?? 0
-  const revisionPageCount = Math.max(1, Math.ceil(revisionCount / 20))
-  const revisionPage = Math.min(Math.max(1, requestedRevisionPage), revisionPageCount)
-  const [[summary], files, revisions] = await Promise.all([
-    summarize([record], viewer, true),
-    db
-      .select()
-      .from(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      .orderBy(pasteFile.position),
-    db
-      .select({
-        id: pasteRevision.id,
-        message: pasteRevision.message,
-        createdAt: pasteRevision.createdAt,
-        restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
-      })
-      .from(pasteRevision)
-      .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-      .limit(20)
-      .offset((revisionPage - 1) * 20),
-  ])
+  const today = utcDay(Date.now())
+  const firstDay = today - VIEW_HISTORY_DAYS + 1
+  const [{ revisionCount, revisionPageCount, revisionPage, revisions }, files, days, authors] =
+    await Promise.all([
+      (async () => {
+        const [total] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(pasteRevision)
+          .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
+        const revisionCount = total?.count ?? 0
+        const revisionPageCount = Math.max(1, Math.ceil(revisionCount / 20))
+        const revisionPage = Math.min(Math.max(1, requestedRevisionPage), revisionPageCount)
+        const revisions = await db
+          .select({
+            id: pasteRevision.id,
+            message: pasteRevision.message,
+            createdAt: pasteRevision.createdAt,
+            restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
+          })
+          .from(pasteRevision)
+          .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
+          .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+          .limit(20)
+          .offset((revisionPage - 1) * 20)
+        return { revisionCount, revisionPageCount, revisionPage, revisions }
+      })(),
+      db
+        .select({
+          ...getTableColumns(pasteFile),
+          bytes: sql<number>`octet_length(${pasteFile.content})::int`,
+        })
+        .from(pasteFile)
+        .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
+        .orderBy(pasteFile.position, pasteFile.id),
+      db
+        .select()
+        .from(pasteViewDay)
+        .where(
+          and(
+            allowedParent(pasteViewDay.pasteId),
+            eq(pasteViewDay.pasteId, record.id),
+            gte(pasteViewDay.day, firstDay),
+            lt(pasteViewDay.day, today + 1),
+          ),
+        ),
+      db
+        .select({
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          displayUsername: user.displayUsername,
+        })
+        .from(user)
+        .where(eq(user.id, record.ownerId)),
+    ])
+  const [summary] = summariesOf([record], viewer, files, days, authors, true, firstDay)
   if (!summary || files.length === 0) return null
 
   return {
@@ -978,8 +1020,6 @@ export async function readSharedPaste(
   const counted = (sealed || options.visit) && !owned
   const record = counted ? await claimVisit(found.id) : found
   if (!record) return { status: "missing" }
-  if (counted) await recordPasteEvent(record.id, "view")
-
   const db = getDb()
   const [files, [author]] = await Promise.all([
     db
@@ -991,6 +1031,7 @@ export async function readSharedPaste(
       .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
       .from(user)
       .where(eq(user.id, record.ownerId)),
+    counted ? recordPasteEvent(record.id, "view") : undefined,
   ])
   if (files.length === 0) return { status: "missing" }
   const paste: SharedPaste = {
