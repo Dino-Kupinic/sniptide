@@ -114,9 +114,14 @@ async function ignoredFiles(cwd: string, names: string[]) {
     timeout: 5000,
     maxBuffer: 1024 * 1024,
   })
-  execution.child.stdin?.end(`${names.join("\0")}\0`)
   try {
-    const { stdout } = await execution
+    const input = execution.child.stdin
+    const written = new Promise<void>((resolve, reject) => {
+      if (!input) return resolve()
+      input.on("error", reject)
+      input.end(`${names.join("\0")}\0`, resolve)
+    })
+    const [{ stdout }] = await Promise.all([execution, written])
     return new Set(stdout.split("\0"))
   } catch {
     return new Set<string>()
