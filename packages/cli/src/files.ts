@@ -249,6 +249,16 @@ export async function restoreFiles(
 ): Promise<string[]> {
   const files = pastes.flatMap((paste) => paste.files)
   if (!files.length) throw new CliError("There are no files to pull.")
+  return writeFiles(directory, files, force, dryRun)
+}
+
+// Writes every file under one root, or none of them when a path is unsafe or already taken.
+export async function writeFiles(
+  directory: string,
+  files: { name: string; content: string }[],
+  force: boolean,
+  dryRun: boolean,
+): Promise<string[]> {
   const names = new Set<string>()
   let bytes = 0
   for (const file of files) {
