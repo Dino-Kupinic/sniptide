@@ -47,7 +47,8 @@ textarea remounting at the large-file threshold; the final implementation keeps 
 and checks focus and selection in both directions.
 
 The integrated branch passed `bun run check`, the production workspace build, and
-`TEST_DATABASE_URL=<disposable_test_database> bun run test`. That run passed 829 web tests,
+`TEST_DATABASE_URL=<disposable_test_database> bun run test`. After rebasing onto the current
+viewer changes and React 19.3.1, that run passed 832 web tests,
 36 CLI tests, 12 MCP tests, and 7 docs tests without database skips. Seven browser tests covering
 draft storage, recovery, threshold crossing, and paste flows also passed. API pagination's
 19-test suite passed again after replacing an unsupported array method with an equivalent lookup.
