@@ -32,41 +32,27 @@ export function HighlightedTextarea({
   const layer = React.useRef<HTMLDivElement>(null)
   const oversized = React.useMemo(() => plain ?? isLargeEditorContent(value), [plain, value])
 
-  if (oversized) {
-    return (
-      <div className="relative flex min-w-0 flex-1">
-        <textarea
-          {...props}
-          value={value}
-          onScroll={onScroll}
-          className={cn(
-            "block w-full resize-none bg-transparent whitespace-pre text-foreground caret-highlight outline-none selection:bg-primary/25 placeholder:text-muted-foreground",
-            metricsClassName,
-            className,
-          )}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="group/textarea relative min-w-0 flex-1">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div ref={layer} className={cn("w-max min-w-full whitespace-pre", metricsClassName)}>
-          {(lines ?? value.split("\n").map((line) => (line ? [line] : []))).map((line, index) => (
-            <div
-              key={index}
-              className={cn(
-                index + 1 === activeLine &&
-                  "rounded-sm group-focus-within/textarea:bg-border/60 dark:group-focus-within/textarea:bg-muted",
-              )}
-            >
-              {line.length ? line.map(renderToken) : " "}
-            </div>
-          ))}
+    <div className={cn("group/textarea relative min-w-0 flex-1", oversized && "flex")}>
+      {!oversized && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div ref={layer} className={cn("w-max min-w-full whitespace-pre", metricsClassName)}>
+            {(lines ?? value.split("\n").map((line) => (line ? [line] : []))).map((line, index) => (
+              <div
+                key={index}
+                className={cn(
+                  index + 1 === activeLine &&
+                    "rounded-sm group-focus-within/textarea:bg-border/60 dark:group-focus-within/textarea:bg-muted",
+                )}
+              >
+                {line.length ? line.map(renderToken) : " "}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <textarea
+        key="editor"
         {...props}
         value={value}
         onScroll={(event) => {
@@ -76,7 +62,8 @@ export function HighlightedTextarea({
           onScroll?.(event)
         }}
         className={cn(
-          "relative block w-full resize-none bg-transparent whitespace-pre text-transparent caret-highlight outline-none selection:bg-primary/25 placeholder:text-muted-foreground",
+          "relative block w-full resize-none bg-transparent whitespace-pre caret-highlight outline-none selection:bg-primary/25 placeholder:text-muted-foreground",
+          oversized ? "text-foreground" : "text-transparent",
           metricsClassName,
           className,
         )}
