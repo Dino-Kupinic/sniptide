@@ -223,7 +223,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 
   return (
     <ActiveFileProvider>
-      <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-6 lg:p-7 lg:pb-7">
+      <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-5 lg:p-7 lg:pb-7">
         {/* The page's own heading carries the visibility badge, so the bar keeps only the title. */}
         <HeaderTitle>
           <TruncatedText className="max-w-80">{paste.title}</TruncatedText>
@@ -282,18 +282,19 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 px-4 lg:px-0">
+        {/* Title, description and code card sit where the editor puts them, so Edit doesn't jump. */}
+        <div className="flex min-w-0 flex-col gap-1.5 px-4 lg:px-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
+            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-[32px] lg:leading-[38px]">
               {paste.title}
             </h1>
             {/* The owner's Sharing row below already shows the visibility. */}
             {owned ? null : <VisibilityBadge paste={paste} />}
           </div>
           {paste.description ? (
-            <p className="text-sm text-muted-foreground">{paste.description}</p>
+            <p className="text-base leading-6 lg:text-sm lg:leading-5">{paste.description}</p>
           ) : null}
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
             <a
               href={`/${paste.slug}`}
               className="hidden font-mono text-link hover:underline lg:inline"
@@ -343,20 +344,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               collapseAt={6}
               panelToggle
               printable
-              className="mx-4 lg:mx-0 lg:min-h-[612px] lg:flex-1"
-              bodyClassName="max-lg:bg-sidebar"
-              footerClassName="hidden lg:flex"
-              footer={
-                <>
-                  <span>
-                    UTF-8 · LF ·{" "}
-                    {preferences.indentation === "tab"
-                      ? t("indentTabs")
-                      : t("indentSpaces", { count: Number(preferences.indentation) })}
-                  </span>
-                  <span>{t("revision", { number: revision, total: revision })}</span>
-                </>
-              }
+              className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
+              bodyClassName="bg-muted dark:bg-sidebar"
+              footer={t("revision", { number: revision, total: revision })}
             />
 
             <PasteDetailPanel
