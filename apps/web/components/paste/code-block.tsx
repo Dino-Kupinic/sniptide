@@ -25,6 +25,10 @@ export function renderToken(token: HighlightedToken, index: number) {
   )
 }
 
+// Line-numbered code uses Paper Mono and plain ink unless the page passes `highlighted` lines
+// (see lib/highlight), then syntax-coloured. Each line is its own row so a wrapped line keeps its
+// number aligned with its first visual line. `wrap="mobile"` and `mobileMaxLines` only apply below
+// the lg breakpoint, so one render serves both layouts.
 export function CodeBlock({
   content,
   highlighted,
