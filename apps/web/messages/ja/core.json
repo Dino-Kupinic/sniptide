@@ -54,8 +54,6 @@
     "revisions": "リビジョン",
     "editPermission": "このスニペットを編集できます。共有と削除は{name}のみが行えます。",
     "viewPermission": "このスニペットを閲覧・コピーできます。変更できるのは{name}のみです。",
-    "indentTabs": "タブ",
-    "indentSpaces": "スペース{count}個",
     "gistError": "Gistを開けませんでした。",
     "metricViews": "閲覧数",
     "metricUnique": "ユニーク訪問者",

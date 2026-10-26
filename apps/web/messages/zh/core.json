@@ -54,8 +54,6 @@
     "revisions": "修订历史",
     "editPermission": "你可以编辑此代码片段。共享和删除权限仍由 {name} 保留。",
     "viewPermission": "你可以阅读和复制此代码片段。只有 {name} 可以修改它。",
-    "indentTabs": "制表符",
-    "indentSpaces": "{count} 个空格",
     "gistError": "无法打开该 Gist。",
     "metricViews": "浏览量",
     "metricUnique": "独立访客",

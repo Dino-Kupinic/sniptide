@@ -54,8 +54,6 @@
     "revisions": "Versionen",
     "editPermission": "Du kannst dieses Snippet bearbeiten. Nur {name} kann es teilen und löschen.",
     "viewPermission": "Du kannst dieses Snippet lesen und kopieren. Nur {name} kann es ändern.",
-    "indentTabs": "Tabulatoren",
-    "indentSpaces": "{count, plural, one {# Leerzeichen} other {# Leerzeichen}}",
     "gistError": "Dieses Gist konnte nicht geöffnet werden.",
     "metricViews": "Aufrufe",
     "metricUnique": "Eindeutige Besucher",

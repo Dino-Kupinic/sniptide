@@ -54,8 +54,6 @@
     "revisions": "Versiones",
     "editPermission": "Puedes editar este fragmento. Solo {name} puede compartirlo y eliminarlo.",
     "viewPermission": "Puedes leer y copiar este fragmento. Solo {name} puede modificarlo.",
-    "indentTabs": "Tabulaciones",
-    "indentSpaces": "{count, plural, one {# espacio} other {# espacios}}",
     "gistError": "No se pudo abrir ese gist.",
     "metricViews": "Visitas",
     "metricUnique": "Visitantes únicos",

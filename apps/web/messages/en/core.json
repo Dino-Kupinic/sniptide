@@ -54,8 +54,6 @@
     "revisions": "Revisions",
     "editPermission": "You can edit this paste. Sharing and deleting stay with {name}.",
     "viewPermission": "You can read and copy this paste. Only {name} can change it.",
-    "indentTabs": "Tabs",
-    "indentSpaces": "{count, plural, one {# space} other {# spaces}}",
     "gistError": "That gist couldn't be opened.",
     "metricViews": "Views",
     "metricUnique": "Unique visitors",

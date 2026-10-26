@@ -99,6 +99,7 @@ export function stressData(dataset: Dataset) {
     icon: ICONS[index % ICONS.length] ?? "square",
     hue: HUES[index % HUES.length] ?? "ink",
     pasteCount: worst ? ([0, 1, 1284, 1000000][index % 4] ?? 0) : 12,
+    updatedAt: worst && index % 4 === 0 ? null : Date.now() - index * 86_400_000,
   }))
   const viewer: ViewerSummary = {
     name: worst ? "👩🏽‍💻 Aleksandra Wiśniewska-Kowalczyk" : "Jane Doe",
