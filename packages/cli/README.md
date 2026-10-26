@@ -5,6 +5,15 @@ another project, and to sync a project's `.env` with Sniptide. It talks to the i
 ([summary](API.md), full reference at `/docs/api`) with a personal API token from Settings → API
 tokens. Offline bundle export and import work without an account.
 
+## Install
+
+The first npm release is pending owner approval. After it is approved, install on Node.js 24 or newer:
+
+```sh
+npm install --global @sniptide/cli@0.1.0
+sniptide --help
+```
+
 ## Run from this repository
 
 ```sh
@@ -20,7 +29,7 @@ project, create an alias with the absolute location of your checkout:
 alias sniptide='node /path/to/sniptide/packages/cli/dist/sniptide.js'
 ```
 
-This package is not published to npm yet. During local development, `bun run cli <command>` runs the
+During local development, `bun run cli <command>` runs the
 source, and `bun run test:cli` runs the built Node executable against temporary projects and a local
 HTTP server. `apps/web/test/cli-roundtrip.test.ts` runs the CLI against the app's real route handlers
 and database.

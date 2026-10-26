@@ -70,14 +70,14 @@ Keep real tokens out of source control. Use your self-hosted app URL in either c
 
 ## Local stdio
 
-Build from the repository with Bun; the resulting executable runs with Node.js 24+:
+The first npm release is pending owner approval. After approval, use the configuration below with Node.js 24+. Contributors can build from a checkout with Bun:
 
 ```sh
 bun install
 bun --filter @sniptide/mcp build
 ```
 
-This private workspace package is not published to npm. Use the absolute path of your checkout.
+For a checkout build, replace the command and arguments below with `node` and the absolute path to `packages/mcp/dist/sniptide-mcp.js`.
 It only reads `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`; it does not read the CLI's saved credentials.
 The hosted URL is the default. HTTPS is required except on localhost, and redirects are refused.
 Deployment path prefixes are supported.
@@ -89,8 +89,8 @@ Claude Code `.mcp.json`:
   "mcpServers": {
     "sniptide": {
       "type": "stdio",
-      "command": "node",
-      "args": ["/absolute/path/to/sniptide/packages/mcp/dist/sniptide-mcp.js"],
+      "command": "npx",
+      "args": ["--yes", "@sniptide/mcp@0.1.0"],
       "env": {
         "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
         "SNIPTIDE_BASE_URL": "https://app.sniptide.com"

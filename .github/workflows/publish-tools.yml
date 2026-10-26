@@ -1,0 +1,55 @@
+name: Stage CLI and MCP packages
+on:
+  push:
+    branches: [main]
+    paths: [packages/cli/**, packages/mcp/**, packages/contracts/**, package.json, bun.lock, scripts/npm-release.mjs, .github/workflows/publish-tools.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  stage:
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [cli, mcp]
+    concurrency:
+      group: npm-stage-${{ matrix.product }}
+      cancel-in-progress: false
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@12.2.1
+      - run: bun install --frozen-lockfile
+      - run: node --test scripts/test-release-gates.mjs
+      - run: node scripts/npm-release.mjs '${{ matrix.product }}' "$RUNNER_TEMP/artifacts"
+      - run: node packages/mcp/scripts/test-npm-release.mjs '${{ matrix.product }}' "$RUNNER_TEMP/artifacts"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-${{ matrix.product }}-${{ github.sha }}
+          path: ${{ runner.temp }}/artifacts/
+          if-no-files-found: error
+      - name: Check exact published version
+        id: check
+        env:
+          PRODUCT: ${{ matrix.product }}
+        run: node scripts/check-npm-version.mjs "$RUNNER_TEMP/artifacts/$PRODUCT.json"
+      - name: Stage reviewed artifact
+        if: steps.check.outputs.published == 'false'
+        env:
+          PRODUCT: ${{ matrix.product }}
+        run: |
+          tarball=$(node -p "require(process.env.RUNNER_TEMP + '/artifacts/' + process.env.PRODUCT + '.json').tarball")
+          if ! npm stage publish "$tarball" --access public --provenance; then
+            echo '::error::Staging failed. If this version is already staged, the owner must inspect npm stage list/view and approve or reject it before retrying.'
+            exit 1
+          fi

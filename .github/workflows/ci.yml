@@ -32,11 +32,13 @@ jobs:
           node-version: 24
 
       - run: bun install --frozen-lockfile
+      - run: node --test scripts/test-release-gates.mjs
 
       - run: bun run check
 
       - run: bun run test:cli
       - run: bun run test:mcp
+      - run: node packages/mcp/scripts/test-npm-release.mjs
       - run: bun run test:docs
 
       - run: bun run build
