@@ -659,8 +659,8 @@ export async function collectionCaptures(
         .limit(COLLECTION_PAGE_SIZE + 1)
       const page = records.slice(0, COLLECTION_PAGE_SIZE)
       const pastes = await withFiles(page, db)
-      const visibleIds = new Set(pastes.map((paste) => paste.id))
-      const last = page.findLast((record) => visibleIds.has(record.id))
+      const lastId = pastes.at(-1)?.id
+      const last = page.find((record) => record.id === lastId)
       return {
         pastes,
         nextCursor:
