@@ -58,7 +58,6 @@ function mailTransport(smtp: NonNullable<Config["smtp"]>) {
   }
 }
 
-// One owner sends sequentially, so a delivery deadline can only close its own connection.
 export function createMailSender(smtp: NonNullable<Config["smtp"]>) {
   let current: ReturnType<typeof mailTransport> | undefined
   return {

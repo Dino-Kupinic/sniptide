@@ -72,9 +72,9 @@ export async function rollUpAnalytics(now = new Date()) {
           INSERT INTO paste_breakdown_day (paste_id, day, dimension, key, hits)
           ${eventBreakdown(from, to)}
           ON CONFLICT (paste_id, day, dimension, key) DO UPDATE SET hits = EXCLUDED.hits`)
-        // Publish only the completed prefix, in the same commit as its aggregates.
+        const finalizedDay = Math.min(day, settled)
         await tx.execute(sql`
-          INSERT INTO analytics_rollup (id, finalized_day) VALUES (1, ${Math.min(day, settled)})
+          INSERT INTO analytics_rollup (id, finalized_day) VALUES (1, ${finalizedDay})
           ON CONFLICT (id) DO UPDATE SET
             finalized_day = GREATEST(analytics_rollup.finalized_day, EXCLUDED.finalized_day)`)
         return { day }
