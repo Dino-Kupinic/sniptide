@@ -58,7 +58,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   if (!paste) notFound()
 
   const owned = !paste.owner
-  const [starred, share, { origin, host }, preferences, collections, people, session] =
+  const [starred, share, { origin, host }, preferences, collections, people, session, files] =
     await Promise.all([
       isStarred(slug),
       owned ? null : getShare(slug),
@@ -67,12 +67,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
       listCollections(),
       owned ? listPasteShares(slug) : null,
       getSession(),
+      highlightFiles(paste.files),
     ])
   if (share && !share.seen) await markShareSeen(slug)
 
   const canEdit = owned || share?.access === "edit"
   const url = `${origin}/${paste.slug}`
-  const files = await highlightFiles(paste.files)
   const first = files[0]
   const collection = owned ? collections.find((c) => c.slug === paste.collection) : undefined
   const parent = owned
