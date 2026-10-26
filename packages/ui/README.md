@@ -29,7 +29,10 @@ import { Logo } from "@sniptide/ui/components/logo"
 ```
 
 The theme reads three font variables, so set them on `<html>` (for example with `next/font`):
-`--font-sans` (Inter), `--font-mono` (JetBrains Mono) and `--font-heading` (Archivo).
+`--font-sans` (Inter), `--font-mono` (Paper Mono) and `--font-heading` (Archivo).
+The Paper Mono fonts in `src/fonts` come from the
+[v1.000 release](https://github.com/paper-design/paper-mono/releases/tag/v1.000). The included
+`OFL.txt` contains their SIL Open Font License 1.1.
 The logo uses vector outlines and does not need a font.
 
 `globals.css` already tells Tailwind to scan this package's components; your own files are found
