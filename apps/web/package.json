@@ -41,7 +41,7 @@
     "zod": "catalog:runtime"
   },
   "devDependencies": {
-    "@e2e-dev/web": "0.13.0",
+    "@e2e-dev/web": "0.15.2",
     "@formatjs/icu-messageformat-parser": "^3.5.21",
     "@iconify-json/material-icon-theme": "^1.2.73",
     "@modelcontextprotocol/sdk": "catalog:runtime",
@@ -51,7 +51,7 @@
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
-    "e2e": "0.18.0",
+    "e2e": "0.21.2",
     "linguist-languages": "9.5.0",
     "typescript": "catalog:tooling"
   }
