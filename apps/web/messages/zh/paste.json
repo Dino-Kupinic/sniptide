@@ -24,7 +24,7 @@
     "rename": "重命名",
     "changeLanguage": "更改语言",
     "removeFileAction": "移除文件",
-    "renameHint": "双击标签页即可重命名。在触摸屏上，点按当前标签页即可查看操作。",
+    "renameHint": "使用方向键切换文件，按 F2 重命名，按 Delete 删除，或按向下方向键打开操作。双击可重命名；触屏上点击当前标签可打开操作。",
     "language": "语言",
     "shareVia": "通过其他方式分享…",
     "addFile": "添加文件",
@@ -199,6 +199,7 @@
     "embedUnavailable": "此 Paste 无法嵌入。",
     "openOnSniptide": "在 Sniptide 中打开",
     "print": "打印",
-    "backToPaste": "返回 Paste"
+    "backToPaste": "返回 Paste",
+    "editorTabHint": "Tab 用于缩进。先按 Escape 再按 Tab 可移到下一个控件。"
   }
 }

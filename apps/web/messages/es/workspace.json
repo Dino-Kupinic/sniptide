@@ -341,7 +341,8 @@
     "move_up": "Subir",
     "move_down": "Bajar",
     "done": "Listo",
-    "searching": "Buscando…"
+    "searching": "Buscando…",
+    "skipToMain": "Saltar al contenido principal"
   },
   "Secrets": {
     "title": "Secretos",

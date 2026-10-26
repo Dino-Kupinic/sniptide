@@ -24,7 +24,7 @@
     "rename": "Umbenennen",
     "changeLanguage": "Sprache ändern",
     "removeFileAction": "Datei entfernen",
-    "renameHint": "Doppelklicke auf einen Tab, um ihn umzubenennen. Auf einem Touchscreen tippst du auf den aktiven Tab, um seine Aktionen zu öffnen.",
+    "renameHint": "Mit den Pfeiltasten Dateien wechseln, mit F2 umbenennen, mit Entf entfernen oder mit Pfeil nach unten Aktionen öffnen. Doppelklick benennt um; auf Touchscreens öffnet ein Tippen auf den aktiven Tab die Aktionen.",
     "language": "Sprache",
     "shareVia": "Teilen über…",
     "addFile": "Datei hinzufügen",
@@ -199,6 +199,7 @@
     "embedUnavailable": "Dieser Paste kann nicht eingebettet werden.",
     "openOnSniptide": "Auf Sniptide öffnen",
     "print": "Drucken",
-    "backToPaste": "Zurück zum Paste"
+    "backToPaste": "Zurück zum Paste",
+    "editorTabHint": "Tab rückt ein. Drücke Escape und dann Tab, um zum nächsten Element zu wechseln."
   }
 }

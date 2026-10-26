@@ -6,6 +6,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { CopyIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { navigateTabs } from "@/components/tab-navigation"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { CodeBlock } from "./code-block"
 import { reportCopy, useCopy } from "./copy-button"
@@ -34,6 +35,7 @@ export function EmbedViewer({
   files: EmbedFile[]
 }) {
   const t = useTranslations("Paste")
+  const panelId = React.useId()
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
   const { copied, copy } = useCopy()
   const active = files.find((file) => file.name === activeName) ?? files[0]
@@ -79,14 +81,25 @@ export function EmbedViewer({
           aria-label={t("files")}
           className="flex h-11 shrink-0 overflow-x-auto border-b border-border"
         >
-          {files.map((file) => {
+          {files.map((file, index) => {
             const selected = file.name === active.name
             return (
               <button
                 key={file.name}
                 type="button"
                 role="tab"
+                id={`${panelId}-tab-${index}`}
                 aria-selected={selected}
+                aria-controls={panelId}
+                tabIndex={selected ? 0 : -1}
+                onKeyDown={(event) =>
+                  navigateTabs(
+                    event,
+                    files.map((item) => item.name),
+                    file.name,
+                    setActiveName,
+                  )
+                }
                 onClick={() => setActiveName(file.name)}
                 className={cn(
                   "flex shrink-0 items-center border-r border-border px-4 font-mono text-[13px] outline-none focus-visible:underline",
@@ -103,9 +116,18 @@ export function EmbedViewer({
       ) : null}
 
       <CodeBlock
+        id={panelId}
+        role={files.length > 1 ? "tabpanel" : "region"}
+        aria-labelledby={
+          files.length > 1
+            ? `${panelId}-tab-${files.findIndex((file) => file.name === active.name)}`
+            : undefined
+        }
+        aria-label={files.length === 1 ? active.name : undefined}
+        tabIndex={0}
         content={active.content}
         highlighted={active.lines}
-        className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto bg-sidebar"
+        className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto bg-sidebar outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       />
     </div>
   )
