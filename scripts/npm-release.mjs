@@ -85,6 +85,8 @@ export async function packRelease(product, output, options = {}) {
         path.join(stage, "postcss.config.mjs"),
       )
     }
+    const metadata =
+      product === "mcp" ? await json(path.join(source, "server.template.json")) : null
     const manifest = {
       name: pkg.name,
       version,
@@ -109,13 +111,12 @@ export async function packRelease(product, output, options = {}) {
         ...(product === "mcp" ? ["server.json"] : []),
       ],
       ...(Object.keys(dependencies).length ? { dependencies } : {}),
-      ...(product === "mcp" ? { mcpName: "io.github.dino-kupinic/sniptide" } : {}),
+      ...(product === "mcp" ? { mcpName: metadata.name } : {}),
     }
     await writeFile(path.join(stage, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`)
     await copyFile(path.join(source, "README.md"), path.join(stage, "README.md"))
     await copyFile(path.join(root, "LICENSE"), path.join(stage, "LICENSE"))
     if (product === "mcp") {
-      const metadata = await json(path.join(source, "server.template.json"))
       if (
         metadata.name !== manifest.mcpName ||
         metadata.packages.length !== 1 ||
