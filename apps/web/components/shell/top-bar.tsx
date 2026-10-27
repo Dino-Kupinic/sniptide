@@ -16,7 +16,7 @@ const iconButtonClass =
   "rounded-lg inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
 
 // Desktop top bar (lg and up): the page title on the left, the page's own actions on the right,
-// with utilities before page actions so the primary action stays at the right edge. The sidebar
+// with notifications at the far right, separated from page actions. The sidebar
 // toggle lives next to the logo, and moves in here only while the sidebar is hidden.
 // Below lg the shell shows MobileTopBar instead.
 export function TopBar({
@@ -67,16 +67,16 @@ export function TopBar({
       </div>
 
       {sidebarOpen ? null : <SearchField />}
-      <NotificationsMenu className={`${iconButtonClass} border border-border`} />
-      <span
-        aria-hidden="true"
-        className="hidden h-5 w-px bg-border group-has-[[data-header-actions]:not(:empty)]/header:block"
-      />
       <div
         ref={setActions}
         data-header-actions=""
         className="flex max-w-full shrink-0 flex-wrap items-center gap-2 empty:hidden"
       />
+      <span
+        aria-hidden="true"
+        className="hidden h-5 w-px bg-border group-has-[[data-header-actions]:not(:empty)]/header:block"
+      />
+      <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>
   )
 }

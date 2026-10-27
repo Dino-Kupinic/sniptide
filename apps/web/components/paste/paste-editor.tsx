@@ -1013,7 +1013,7 @@ export function PasteEditor({
       <HeaderActions>
         {editing ? null : (
           <Button
-            variant="ghost"
+            variant="destructive"
             size="lg"
             render={<Link href={cancelHref} />}
             nativeButton={false}
