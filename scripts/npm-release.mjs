@@ -151,13 +151,14 @@ export async function packRelease(product, output, options = {}) {
       await writeFile(path.join(stage, "server.json"), `${JSON.stringify(metadata, null, 2)}\n`)
     }
     await mkdir(output, { recursive: true })
-    const result = JSON.parse(
+    const results = JSON.parse(
       execFileSync("npm", ["pack", "--json", "--pack-destination", output], {
         cwd: stage,
         encoding: "utf8",
         env: { ...process.env, npm_config_cache: path.join(stage, "cache") },
       }),
-    )[0]
+    )
+    const result = Array.isArray(results) ? results[0] : results[pkg.name]
     const tarball = path.join(output, result.filename)
     const integrity = `sha512-${createHash("sha512")
       .update(await readFile(tarball))

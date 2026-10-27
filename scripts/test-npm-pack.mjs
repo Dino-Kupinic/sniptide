@@ -22,7 +22,9 @@ await test("packing returns the exact npm tarball with verified integrity", asyn
     assert.equal(manifest.gitHead, artifact.commit)
     assert.equal(
       artifact.integrity,
-      `sha512-${createHash("sha512").update(await readFile(artifact.tarball)).digest("base64")}`,
+      `sha512-${createHash("sha512")
+        .update(await readFile(artifact.tarball))
+        .digest("base64")}`,
     )
     assert.deepEqual(JSON.parse(await readFile(path.join(output, "ui.json"), "utf8")), artifact)
   } finally {
