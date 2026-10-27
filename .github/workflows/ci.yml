@@ -31,8 +31,13 @@ jobs:
         with:
           node-version: 24
 
+      - run: npm install --global npm@12.2.1
       - run: bun install --frozen-lockfile
+      - run: node --test scripts/test-npm-pack.mjs
+      - run: npm pack @sniptide/mcp@0.1.0 --pack-destination "$RUNNER_TEMP"
       - run: node --test scripts/test-release-gates.mjs
+        env:
+          LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
       - run: node --test scripts/test-package-releases.mjs
 
       - run: bun run check
