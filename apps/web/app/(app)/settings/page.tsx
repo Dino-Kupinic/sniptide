@@ -1,7 +1,9 @@
 import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getTranslations } from "next-intl/server"
+import { Suspense } from "react"
 import { SettingsView } from "@/components/settings/settings-view"
+import { UsageSection, UsageSectionSkeleton } from "@/components/settings/usage-section"
 import { readAccountSecurity } from "@/lib/account/store"
 import { listTokens } from "@/lib/api/tokens"
 import { getSocialProviders, isDemoMode, requireSession } from "@/lib/auth"
@@ -46,6 +48,11 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
 
   return (
     <SettingsView
+      usage={
+        <Suspense fallback={<UsageSectionSkeleton />}>
+          <UsageSection ownerId={session.user.id} />
+        </Suspense>
+      }
       profile={{
         name: session.user.name,
         username: session.user.username ?? "",

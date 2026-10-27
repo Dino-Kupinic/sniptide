@@ -186,6 +186,24 @@
     "revokeTokenTitle": "{name} widerrufen?",
     "revokeTokenDescription": "Skripte und Agents, die dieses Token nutzen, funktionieren sofort nicht mehr. Das lässt sich nicht rückgängig machen.",
     "deleteEnvGroupTitle": "{slug} löschen?",
-    "deleteEnvGroupDescription": "Die Variablen werden endgültig gelöscht, und die CLI kann sie nicht mehr abrufen. Das lässt sich nicht rückgängig machen."
+    "deleteEnvGroupDescription": "Die Variablen werden endgültig gelöscht, und die CLI kann sie nicht mehr abrufen. Das lässt sich nicht rückgängig machen.",
+    "usage": "Nutzung",
+    "usagePastes": "Pastes",
+    "usageFiles": "Dateien",
+    "usageDescription": "Deine Kontonutzung, einschließlich Elementen im Papierkorb.",
+    "usageOfLimit": "von {limit}",
+    "usageUnlimited": "Unbegrenzt",
+    "usageWarning": "Limit fast erreicht",
+    "usageFull": "Limit erreicht",
+    "usageIncludesTrash": "Speicher und Paste-Anzahl umfassen Elemente im Papierkorb.",
+    "usageApiRequests": "API-Anfragen",
+    "usageHistoryDescription": "Anfragen der letzten 30 Tage einschließlich heute (UTC).",
+    "usageRequestsTotal": "Anfragen in den letzten 30 Tagen",
+    "usageNoRequests": "Keine API-Anfragen in den letzten 30 Tagen.",
+    "usageDailyValues": "Tageswerte anzeigen",
+    "usageDateUtc": "Datum (UTC)",
+    "usageLoading": "Nutzung wird geladen…",
+    "usageUnavailable": "Nutzung ist nicht verfügbar.",
+    "usageReload": "Neu laden"
   }
 }

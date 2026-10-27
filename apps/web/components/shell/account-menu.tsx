@@ -106,7 +106,7 @@ export function AccountMenuItems({
         {t("settings")}
         <ShortcutKeys id="settings" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
-      <DropdownMenuItem render={<Link href="/settings?tab=billing" />}>
+      <DropdownMenuItem render={<Link href="/settings?tab=usage" />}>
         <ChartColumnIcon />
         {t("usage")}
       </DropdownMenuItem>

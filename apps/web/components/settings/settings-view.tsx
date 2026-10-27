@@ -5,6 +5,7 @@ import { Progress } from "@sniptide/ui/components/progress"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   BellIcon,
+  ChartColumnIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CreditCardIcon,
@@ -38,7 +39,15 @@ import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-const SETTINGS_TABS = ["general", "account", "defaults", "notifications", "api", "billing"] as const
+const SETTINGS_TABS = [
+  "general",
+  "account",
+  "defaults",
+  "notifications",
+  "api",
+  "usage",
+  "billing",
+] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function parseTab(value: string | null): SettingsTab | null {
@@ -78,7 +87,9 @@ export function SettingsView({
   storage,
   api,
   security,
+  usage,
 }: {
+  usage: React.ReactNode
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
@@ -99,6 +110,7 @@ export function SettingsView({
     { value: "defaults", label: t("pasteDefaults"), icon: SlidersHorizontalIcon },
     { value: "notifications", label: t("notifications"), icon: BellIcon },
     { value: "api", label: t("apiTokens"), icon: KeyRoundIcon },
+    { value: "usage", label: t("usage"), icon: ChartColumnIcon },
     { value: "billing", label: t("billing"), icon: CreditCardIcon },
   ]
   const router = useRouter()
@@ -272,6 +284,7 @@ export function SettingsView({
             <EnvGroupsSection groups={api.envGroups} />
           </>
         ) : null}
+        {tab === "usage" ? usage : null}
         {tab === "billing" ? (
           <SettingsSection title={t("plan")} description={t("sniptideIsFreeWhileItS")}>
             <div className="rounded-lg flex flex-col gap-1 border border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">

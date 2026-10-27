@@ -186,6 +186,24 @@
     "revokeTokenTitle": "¿Revocar {name}?",
     "revokeTokenDescription": "Los scripts y agentes que usan este token dejan de funcionar al instante. No se puede deshacer.",
     "deleteEnvGroupTitle": "¿Eliminar {slug}?",
-    "deleteEnvGroupDescription": "Sus variables se eliminan para siempre y la CLI ya no podrá descargarlas. No se puede deshacer."
+    "deleteEnvGroupDescription": "Sus variables se eliminan para siempre y la CLI ya no podrá descargarlas. No se puede deshacer.",
+    "usage": "Uso",
+    "usagePastes": "Pastes",
+    "usageFiles": "Archivos",
+    "usageDescription": "Uso de tu cuenta, incluidos los elementos en la papelera.",
+    "usageOfLimit": "de {limit}",
+    "usageUnlimited": "Ilimitado",
+    "usageWarning": "Cerca del límite",
+    "usageFull": "Límite alcanzado",
+    "usageIncludesTrash": "El almacenamiento y los pastes incluyen elementos en la papelera.",
+    "usageApiRequests": "Solicitudes API",
+    "usageHistoryDescription": "Solicitudes de los últimos 30 días, incluido hoy (UTC).",
+    "usageRequestsTotal": "solicitudes en los últimos 30 días",
+    "usageNoRequests": "No hay solicitudes API en los últimos 30 días.",
+    "usageDailyValues": "Ver valores diarios",
+    "usageDateUtc": "Fecha (UTC)",
+    "usageLoading": "Cargando uso…",
+    "usageUnavailable": "El uso no está disponible.",
+    "usageReload": "Recargar"
   }
 }
