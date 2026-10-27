@@ -37,7 +37,7 @@ import {
   setStarred,
   trashPaste,
 } from "@/lib/pastes/actions"
-import { reportCopy, useCopy } from "./copy-button"
+import { CopyFeedbackLabel, reportCopy, useCopy } from "./copy-button"
 import { useActiveFile } from "./file-viewer"
 
 export function StarButton({
@@ -94,7 +94,7 @@ export function CopyLinkButton({ url, className }: { url: string; className?: st
       }}
     >
       {copied ? <SuccessCheck /> : <LinkIcon />}
-      <span aria-live="polite">{copied ? t("copied") : t("copyLink")}</span>
+      <CopyFeedbackLabel copied={copied} label={t("copyLink")} copiedLabel={t("copied")} />
     </Button>
   )
 }
@@ -160,7 +160,7 @@ export function CopyCodeButton({ slug, className }: { slug: string; className?: 
       }}
     >
       {copied ? <SuccessCheck /> : <CopyIcon />}
-      <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
+      <CopyFeedbackLabel copied={copied} label={t("copyCode")} copiedLabel={t("copied")} />
     </Button>
   )
 }

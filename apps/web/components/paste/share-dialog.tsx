@@ -12,7 +12,7 @@ import {
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
-import { EyeIcon, GlobeIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
+import { EyeIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { showUndo } from "@/components/undo-toast"
@@ -26,7 +26,7 @@ import {
 } from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
-import { useCopy } from "./copy-button"
+import { CopyFeedbackLabel, useCopy } from "./copy-button"
 import { EmbedShare } from "./embed-share"
 import { useNativeShare } from "./paste-actions"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
@@ -249,8 +249,8 @@ function ShareLinkRow({ url, title }: { url: string; title: string }) {
             return copy(url)
           }}
         >
-          {copied ? <SuccessCheck /> : null}
-          <span aria-live="polite">{copied ? t("copied") : t("copy")}</span>
+          {copied ? <SuccessCheck /> : <LinkIcon />}
+          <CopyFeedbackLabel copied={copied} label={t("copy")} copiedLabel={t("copied")} />
         </Button>
       </div>
       {canShare ? (

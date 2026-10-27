@@ -230,6 +230,15 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         </HeaderTitle>
         <HeaderActions>
           <StarButton slug={slug} starred={starred} />
+          <Button
+            variant="outline"
+            size="lg"
+            render={<Link href={`/new?from=${slug}`} />}
+            nativeButton={false}
+          >
+            <CopyIcon />
+            {t("duplicate")}
+          </Button>
           {canEdit ? (
             <Button
               variant="outline"
@@ -242,15 +251,6 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             </Button>
           ) : null}
           {shareDialog("button")}
-          <Button
-            variant="outline"
-            size="lg"
-            render={<Link href={`/new?from=${slug}`} />}
-            nativeButton={false}
-          >
-            <CopyIcon />
-            {t("duplicate")}
-          </Button>
           <CopyLinkButton url={url} />
         </HeaderActions>
 
@@ -267,9 +267,6 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <span className="truncate">{parent.label}</span>
           </Button>
           <div className="flex shrink-0 items-center">
-            {shareDialog("icon") ?? (
-              <ShareButton url={url} title={paste.title} className="size-10" />
-            )}
             <StarButton slug={slug} starred={starred} variant="ghost" className="size-10" />
             <PasteOverflowMenu
               slug={slug}
@@ -279,6 +276,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               rawAllowed={paste.allowRaw}
               url={url}
             />
+            {shareDialog("icon") ?? (
+              <ShareButton url={url} title={paste.title} className="size-10" />
+            )}
           </div>
         </div>
 
