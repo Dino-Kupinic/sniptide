@@ -1216,7 +1216,7 @@ export function PasteEditor({
                 </div>
               )}
 
-              <span id={editorHintId} className="px-4 pb-2 text-xs text-muted-foreground">
+              <span id={editorHintId} className="sr-only">
                 {t("editorTabHint")}
               </span>
             </div>
