@@ -82,6 +82,7 @@
     "@workspace/typescript": "workspace:*",
     "husky": "catalog:tooling",
     "knip": "catalog:tooling",
+    "tar": "7.5.22",
     "turbo": "catalog:tooling",
     "typescript": "catalog:tooling"
   },

@@ -16,7 +16,7 @@ const iconButtonClass =
   "rounded-lg inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
 
 // Desktop top bar (lg and up): the page title on the left, the page's own actions on the right,
-// then the bell. There is no breadcrumb; the sidebar already marks where you are. The sidebar
+// with notifications at the far right, separated from page actions. The sidebar
 // toggle lives next to the logo, and moves in here only while the sidebar is hidden.
 // Below lg the shell shows MobileTopBar instead.
 export function TopBar({
@@ -66,20 +66,15 @@ export function TopBar({
         </span>
       </div>
 
+      {sidebarOpen ? null : <SearchField />}
       <div
         ref={setActions}
         data-header-actions=""
         className="flex max-w-full shrink-0 flex-wrap items-center gap-2 empty:hidden"
       />
-      {sidebarOpen ? null : <SearchField />}
-      {/* Separates the page's own actions (or the search field) from the bell, so it only shows
-          when something sits before it. */}
       <span
         aria-hidden="true"
-        className={cn(
-          "h-5 w-px bg-border",
-          sidebarOpen && "hidden group-has-[[data-header-actions]:not(:empty)]/header:block",
-        )}
+        className="hidden h-5 w-px bg-border group-has-[[data-header-actions]:not(:empty)]/header:block"
       />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>

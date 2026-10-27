@@ -9,11 +9,10 @@ import { CopyButton } from "./copy-button"
 export function EmbedShare({ code }: { code?: string }) {
   const t = useTranslations("Paste")
   return (
-    <div className="flex flex-col gap-3 border-t border-border px-4 py-4 lg:px-6">
+    <div className="flex flex-col gap-3 border-t border-border px-4 py-3 lg:px-6">
       <p className="text-sm font-medium">{t("embed")}</p>
       {code ? (
         <>
-          <p className="text-xs text-muted-foreground">{t("embedHint")}</p>
           <div className="flex items-center gap-2">
             <Input
               readOnly
