@@ -16,7 +16,6 @@ import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { timeAgo } from "@/lib/format"
 import type { SidebarPaste } from "@/lib/pastes/types"
-import type { ShortcutId } from "@/lib/shortcuts"
 import type { Command } from "./commands"
 import { highlight, matches, parseQuery, SCOPES, type Scope } from "./search"
 import { usePasteSearch } from "./use-paste-search"
@@ -309,11 +308,8 @@ export function CommandMenuDialog({
           ) : null}
         </div>
 
-        <div className="hidden h-10 shrink-0 items-center gap-4 border-t border-border bg-sidebar px-4 text-xs text-muted-foreground lg:flex">
-          <Hint id="menu-navigate">{t("navigate")}</Hint>
-          <Hint id="menu-open">{t("open")}</Hint>
-          <Hint id="menu-new-tab">{t("new_tab")}</Hint>
-          {seeAll ? (
+        {seeAll ? (
+          <div className="hidden h-10 shrink-0 items-center gap-4 border-t border-border bg-sidebar px-4 text-xs text-muted-foreground lg:flex">
             <Link
               href={`/pastes?q=${encodeURIComponent(text)}`}
               onClick={() => onOpenChange(false)}
@@ -322,25 +318,10 @@ export function CommandMenuDialog({
               {t("see_all_pastes", { count: search.total })}
               <ArrowRightIcon className="size-3.5" />
             </Link>
-          ) : scope !== "commands" && text === "" ? (
-            <span className="ml-auto flex items-center gap-1.5">
-              {t.rich("command_hint", {
-                key: (chunks) => <Kbd className="border border-border">{chunks}</Kbd>,
-              })}
-            </span>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
-  )
-}
-
-function Hint({ id, children }: { id: ShortcutId; children: React.ReactNode }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <ShortcutKeys id={id} className="border border-border" />
-      {children}
-    </span>
   )
 }
 

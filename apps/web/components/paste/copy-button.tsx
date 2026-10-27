@@ -42,6 +42,36 @@ export function reportCopy(slug: string) {
   navigator.sendBeacon?.(`/${encodeURIComponent(slug)}/copy`)
 }
 
+// Both labels reserve space, so copy feedback never shifts nearby actions.
+export function CopyFeedbackLabel({
+  copied,
+  label,
+  copiedLabel,
+}: {
+  copied: boolean
+  label: string
+  copiedLabel: string
+}) {
+  return (
+    <span className="inline-grid" aria-live="polite">
+      <span
+        className="col-start-1 row-start-1"
+        style={{ visibility: copied ? "hidden" : "visible" }}
+        aria-hidden={copied}
+      >
+        {label}
+      </span>
+      <span
+        className="col-start-1 row-start-1"
+        style={{ visibility: copied ? "visible" : "hidden" }}
+        aria-hidden={!copied}
+      >
+        {copiedLabel}
+      </span>
+    </span>
+  )
+}
+
 export function CopyButton({
   text,
   label,
@@ -60,7 +90,11 @@ export function CopyButton({
   return (
     <Button type="button" onClick={() => copy(text)} {...props}>
       {icon ? copied ? <SuccessCheck /> : <CopyIcon /> : null}
-      <span aria-live="polite">{copied ? (copiedLabel ?? t("copied")) : (label ?? t("copy"))}</span>
+      <CopyFeedbackLabel
+        copied={copied}
+        label={label ?? t("copy")}
+        copiedLabel={copiedLabel ?? t("copied")}
+      />
     </Button>
   )
 }
