@@ -163,9 +163,7 @@ export function ShareDialog({
         <div className="flex flex-col gap-4 p-4 lg:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 flex-col gap-1">
-              <DialogTitle className="truncate text-xl normal-case">
-                {t("shareTitle", { title })}
-              </DialogTitle>
+              <DialogTitle className="truncate text-xl normal-case">{t("share")}</DialogTitle>
               <DialogDescription>{t("invitePeopleWithASniptideAccount")}</DialogDescription>
             </div>
             <DialogClose
@@ -175,7 +173,7 @@ export function ShareDialog({
               <XIcon className="size-5 lg:size-4" />
             </DialogClose>
           </div>
-          <MobileLinkRow url={url} title={title} />
+          <ShareLinkRow url={url} title={title} />
           <InviteField
             onInvite={invite}
             submitLabel={t("invite")}
@@ -186,9 +184,6 @@ export function ShareDialog({
 
         <div className="flex items-center justify-between border-y border-border bg-sidebar px-4 py-2.5 text-[13px] lg:px-6">
           <span className="font-medium">{t("peopleWithAccess")}</span>
-          <span className="text-muted-foreground">
-            {t("invitedCount", { count: people.length })}
-          </span>
         </div>
 
         <ul className="flex max-h-[40svh] flex-col divide-y divide-border overflow-y-auto">
@@ -219,14 +214,6 @@ export function ShareDialog({
             <note.icon className="size-3.5 shrink-0" />
             {t(note.text)}
           </span>
-          <DialogClose render={<Button variant="inverted" size="lg" className="hidden lg:flex" />}>
-            {t("done")}
-          </DialogClose>
-          <DialogClose
-            render={<Button variant="inverted" size="xl" className="w-full lg:hidden" />}
-          >
-            {t("done")}
-          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>
@@ -242,15 +229,15 @@ function PersonName({ name, handle }: { name: string; handle: string }) {
   )
 }
 
-// Phones only: the paste's link with Copy, and the system share sheet where the browser has one.
-function MobileLinkRow({ url, title }: { url: string; title: string }) {
+// Keep the link visible; offer native sharing on phones where the browser supports it.
+function ShareLinkRow({ url, title }: { url: string; title: string }) {
   const t = useTranslations("Paste")
   const { copied, copy } = useCopy()
   const { share } = useNativeShare(url, title, "share_dialog")
   const [canShare, setCanShare] = React.useState(false)
   React.useEffect(() => setCanShare(typeof navigator.share === "function"), [])
   return (
-    <div className="flex flex-col gap-2 lg:hidden">
+    <div className="flex flex-col gap-2">
       <div className="rounded-lg flex h-10 items-center gap-2 border border-border bg-sidebar pr-1 pl-3">
         <span className="min-w-0 flex-1 truncate font-mono text-xs">{url}</span>
         <Button
@@ -267,7 +254,7 @@ function MobileLinkRow({ url, title }: { url: string; title: string }) {
         </Button>
       </div>
       {canShare ? (
-        <Button type="button" variant="outline" size="xl" onClick={share}>
+        <Button type="button" variant="outline" size="xl" className="lg:hidden" onClick={share}>
           <ShareIcon />
           {t("shareVia")}
         </Button>
