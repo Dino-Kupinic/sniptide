@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@sniptide/ui/components/dialog"
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@sniptide/ui/components/dialog"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@sniptide/ui/components/select"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { loadComparisonRevisions } from "@/lib/pastes/actions"
@@ -31,23 +32,35 @@ export function RevisionComparison({
     id === "current" ? current : revisions.find((r) => String(r.id) === id)?.snapshot
   const a = snapshot(before),
     b = snapshot(after)
+  const items = [
+    { value: "current", label: t("compareCurrent") },
+    ...revisions.map((revision) => ({
+      value: String(revision.id),
+      label: `#${revision.id} · ${revision.message}`,
+    })),
+  ]
   const select = (label: string, value: string, update: (value: string) => void) => (
-    <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-      {label}
-      <select
-        aria-label={label}
-        className="w-full rounded border border-border bg-background p-2"
+    <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+      <span>{label}</span>
+      <Select
         value={value}
-        onChange={(e) => update(e.target.value)}
+        onValueChange={(next) => {
+          if (next !== null) update(next)
+        }}
+        items={items}
       >
-        <option value="current">{t("compareCurrent")}</option>
-        {revisions.map((r) => (
-          <option key={r.id} value={r.id}>
-            #{r.id} · {r.message}
-          </option>
-        ))}
-      </select>
-    </label>
+        <SelectTrigger aria-label={label} className="w-full min-w-0">
+          <SelectValue className="truncate" />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
   const field = (name: string, oldValue: string, newValue: string) => (
     <section key={name} className="overflow-hidden rounded border border-border">
@@ -73,7 +86,6 @@ export function RevisionComparison({
         {select(t("compareFrom"), before, setBefore)}
         {select(t("compareTo"), after, setAfter)}
       </div>
-      <p className="text-xs text-muted-foreground">{t("compareLegend")}</p>
       {!a || !b ? (
         <p role="status">{t("compareUnavailable")}</p>
       ) : before === after ? (
@@ -143,9 +155,11 @@ export function CompareRevisions({ slug, current }: { slug: string; current: Sna
         {t("compareRevisions")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85dvh] max-w-4xl overflow-y-auto">
+        <DialogContent
+          aria-describedby={undefined}
+          className="max-h-[85dvh] max-w-4xl overflow-y-auto"
+        >
           <DialogTitle>{t("compareRevisions")}</DialogTitle>
-          <DialogDescription>{t("compareRetention")}</DialogDescription>
           {error ? (
             <p role="alert">{t("compareError")}</p>
           ) : revisions ? (
