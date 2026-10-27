@@ -91,6 +91,7 @@
     "notificationExpiring": "“{title}”的到期时间：{time}",
     "notificationExpiringDetail": "可在代码片段的共享面板中延长有效期",
     "notificationViews": "“{title}”已达到 {count, number} 次浏览",
-    "notificationViewsDetail": "在统计分析中查看访问来源"
+    "notificationViewsDetail": "在统计分析中查看访问来源",
+    "snapshotUnavailable": "Snapshot unavailable"
   }
 }
