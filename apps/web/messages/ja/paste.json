@@ -200,7 +200,6 @@
     "openOnSniptide": "Sniptide で開く",
     "print": "印刷",
     "backToPaste": "Paste に戻る",
-    "editorTabHint": "Tabでインデントします。次の操作へ移るにはEscapeの後にTabを押してください。",
     "compareRevisions": "Compare revisions",
     "compareCurrent": "Current paste",
     "compareFrom": "From",
@@ -216,6 +215,8 @@
     "compareIdentical": "These versions are identical.",
     "compareError": "Could not load snapshots. Close and try again.",
     "compareLoading": "Loading snapshots…",
-    "compareClose": "Close"
+    "compareClose": "Close",
+    "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
+    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
   }
 }

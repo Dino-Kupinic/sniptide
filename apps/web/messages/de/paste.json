@@ -200,7 +200,6 @@
     "openOnSniptide": "Auf Sniptide öffnen",
     "print": "Drucken",
     "backToPaste": "Zurück zum Paste",
-    "editorTabHint": "Tab rückt ein. Drücke Escape und dann Tab, um zum nächsten Element zu wechseln.",
     "compareRevisions": "Compare revisions",
     "compareCurrent": "Current paste",
     "compareFrom": "From",
@@ -216,6 +215,8 @@
     "compareIdentical": "These versions are identical.",
     "compareError": "Could not load snapshots. Close and try again.",
     "compareLoading": "Loading snapshots…",
-    "compareClose": "Close"
+    "compareClose": "Close",
+    "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
+    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
   }
 }
