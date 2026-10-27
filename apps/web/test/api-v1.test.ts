@@ -530,7 +530,9 @@ describeDb("token API", () => {
         .update(envVariable)
         .set({ value: first?.value ?? "" })
         .where(eq(envVariable.name, "EMPTY"))
-      await expect(getEnv(call("env/app", token), ctx({ group: "app" }))).rejects.toThrow()
+      const response = await getEnv(call("env/app", token), ctx({ group: "app" }))
+      expect(response.status).toBe(500)
+      expect(await response.json()).toMatchObject({ code: "internal_error" })
     })
 
     test("bad names, duplicates and bad group names are refused", async () => {

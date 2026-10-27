@@ -5,7 +5,11 @@ import { recordApiRequest } from "@/lib/account/usage"
 import { hit, type Limit } from "@/lib/rate-limit"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS } from "@/lib/time"
-import { authenticate, type Scope, type TokenOwner } from "./tokens"
+import { failure } from "./errors"
+import type { Scope } from "./scopes"
+import { authenticate, type TokenOwner } from "./tokens"
+
+export { failure } from "./errors"
 
 // Shared plumbing for the token API under /api/v1: bearer authentication, scope checks, rate
 // limits and JSON responses. Errors use the same `{ ok: false, error }` shape as the rest of the
@@ -34,19 +38,6 @@ export class ApiError extends Error {
 
 export function json(data: unknown, status = 200) {
   return Response.json(data, { status, headers })
-}
-
-export function failure(status: number, message: string, retryAfterSeconds?: number) {
-  return Response.json(
-    { ok: false, error: message },
-    {
-      status,
-      headers: {
-        ...headers,
-        ...(retryAfterSeconds ? { "retry-after": String(retryAfterSeconds) } : {}),
-      },
-    },
-  )
 }
 
 // Reads a JSON body of at most `maxBytes`, or throws a 400/413.
@@ -80,6 +71,7 @@ export async function withToken(
       return failure(error.status, error.message, error.retryAfterSeconds)
     if (error instanceof ZodError)
       return failure(400, error.issues[0]?.message ?? "The request isn't valid.")
-    throw error
+    console.error(JSON.stringify({ event: "token_api_error" }))
+    return failure(500, "An unexpected error occurred.")
   }
 }
