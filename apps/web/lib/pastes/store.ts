@@ -912,6 +912,30 @@ export const getPaste = cache(async (slug: string, revisionPage = 1) => {
   return hydrate(record, viewer, revisionPage)
 })
 
+// Apply the same app access and moderation rules as the history page.
+export async function getComparisonRevisions(slug: string) {
+  const viewer = await viewerId()
+  if (!viewer) return null
+  const [record] = await getDb().select().from(pasteTable).where(appPasteWhere(slug, viewer))
+  if (!record) return null
+  const rows = await getDb()
+    .select({
+      id: pasteRevision.id,
+      message: pasteRevision.message,
+      snapshot: pasteRevision.snapshot,
+    })
+    .from(pasteRevision)
+    .where(
+      and(
+        allowedParent(pasteRevision.pasteId),
+        eq(pasteRevision.pasteId, record.id),
+        sql`${pasteRevision.snapshot} is not null`,
+      ),
+    )
+    .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+  return rows
+}
+
 // Metadata never needs content, view history or revision rows.
 export const getPasteMeta = cache(async (slug: string) => {
   const viewer = await viewerId()
