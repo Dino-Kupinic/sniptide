@@ -16,8 +16,7 @@ import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 import { NotificationsSheet } from "./notifications-menu"
 
-// Top bar below lg, from the Paper mobile artboards: wordmark, search, notifications, account
-// avatar.
+// Top bar below lg: wordmark, search, account, then notifications at the far right.
 export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   const t = useTranslations("Workspace")
   const { open: openCommandMenu } = useCommandMenu()
@@ -34,7 +33,6 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
         <Button variant="outline" size="icon-lg" aria-label={t("search")} onClick={openCommandMenu}>
           <SearchIcon />
         </Button>
-        <NotificationsSheet />
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={t("account")}
@@ -49,6 +47,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             <AccountMenuItems name={viewer.name} email={viewer.email} inlineLanguage />
           </DropdownMenuContent>
         </DropdownMenu>
+        <NotificationsSheet />
       </div>
     </header>
   )
