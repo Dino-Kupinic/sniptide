@@ -211,11 +211,6 @@ export function ShareDialog({
             </li>
           ))}
         </ul>
-        {people.length === 0 ? (
-          <p className="border-t border-border px-4 py-4 text-[13px] text-muted-foreground lg:px-6">
-            {t("theyLlSeeItUnderShared")}
-          </p>
-        ) : null}
 
         <WebhookShare slug={slug} targets={webhookTargets} allowed={webhookAllowed} />
         <EmbedShare code={embedCode} />

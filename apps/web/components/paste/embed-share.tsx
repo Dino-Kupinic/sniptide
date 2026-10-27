@@ -13,7 +13,6 @@ export function EmbedShare({ code }: { code?: string }) {
       <p className="text-sm font-medium">{t("embed")}</p>
       {code ? (
         <>
-          <p className="text-xs text-muted-foreground">{t("embedHint")}</p>
           <div className="flex items-center gap-2">
             <Input
               readOnly
