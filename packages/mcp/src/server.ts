@@ -3,7 +3,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import { mcpCaptureSchema, mcpTagSchema, visibilitySchema } from "@sniptide/contracts"
 import { z } from "zod"
-import { version } from "../package.json"
+import { version as developmentVersion } from "../package.json"
+
+const version = process.env.SNIPTIDE_RELEASE_VERSION ?? developmentVersion
 
 const identifier = z
   .string()

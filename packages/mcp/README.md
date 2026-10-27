@@ -70,7 +70,7 @@ Keep real tokens out of source control. Use your self-hosted app URL in either c
 
 ## Local stdio
 
-The first npm release is pending owner approval. After approval, use the configuration below with Node.js 24+. Contributors can build from a checkout with Bun:
+Use the npm configuration below with Node.js 24+. Contributors can build from a checkout with Bun:
 
 ```sh
 bun install
@@ -90,7 +90,7 @@ Claude Code `.mcp.json`:
     "sniptide": {
       "type": "stdio",
       "command": "npx",
-      "args": ["--yes", "@sniptide/mcp@0.1.0"],
+      "args": ["--yes", "@sniptide/mcp"],
       "env": {
         "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
         "SNIPTIDE_BASE_URL": "https://app.sniptide.com"

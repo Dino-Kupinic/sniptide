@@ -1,34 +1,79 @@
-# Publishing the CLI and MCP packages
+# Automatic npm releases
 
-The first releases are pending npm owner approval. Each package has its own version in
-`packages/cli/package.json` or `packages/mcp/package.json`. Bump the relevant version for every
-changed release artifact. Once a version is public, npm cannot replace it, even if only the code
-changes. The private workspace manifests remain the source for web imports; the release packer
-creates bin-only public manifests and bundles the internal contracts.
+Merging a PR into `main` releases changed public packages after CI passes. The app and the three
+npm packages have independent versions. No manual package version bump, release PR, or npm stage
+approval is needed for normal releases.
 
-On main, the Stage CLI and MCP packages workflow builds and smoke tests both installed packages,
-then uploads each tarball and its integrity metadata before staging it with npm provenance. Review
-that artifact and the source commit before approving. The package jobs are independent and the
-workflow can also be dispatched manually.
+The `Release` workflow is the only npm publisher. Its package jobs compare the current packed
+contents with the highest stable public version of `@sniptide/ui`, `@sniptide/cli`, and
+`@sniptide/mcp`. Files and resolved dependencies count. An unrelated app change or a change to
+source commit metadata alone does not publish another package version.
 
-Use Node.js 24.15 or newer and npm 12.2.1 for the maintainer commands below.
-For the first release, the npm owner must log in locally with `npm login`, pack the reviewed commit
-with `node scripts/npm-release.mjs cli <output-directory>` or `mcp`, and use
-`npm stage publish <tarball> --access public`. Inspect with `npm stage list` and `npm stage view`,
-then approve the reviewed stage using `npm stage approve <id>` with 2FA. If the package must exist
-before npm permits trusted publisher configuration, complete this bootstrap first. Configure each
-package's trusted publisher on npm with GitHub owner `Dino-Kupinic`, repository `sniptide`, workflow
-filename `publish-tools.yml`, and no environment. Grant staging permission. No long-lived token is
-needed in GitHub Actions.
+For a changed package, relevant Conventional Commits since its published source determine the
+bump. `feat` selects minor, a breaking change selects major, and other changes select patch.
+Dependency changes without a package commit select patch. The first automatic run uses verified
+source baselines for the existing releases, so it includes the UI changes since `0.1.1`.
 
-A published exact version is skipped. An existing pending stage can reserve the version and cause
-staging to fail. OIDC cannot list stages. The owner must inspect the pending stage and either approve
-it or reject it before retrying. Do not assume a failed stage is a successful release. After
-approval, verify `npm view @sniptide/cli@<version>` or `npm view @sniptide/mcp@<version>` and test
-installation. A changed artifact needs a new version after publication.
+The checked-in package versions are development defaults. CI injects the computed version when
+building the CLI and MCP executable and writes the same version into the public package and MCP
+metadata. Source workspace manifests and imports remain usable by the app. Published metadata
+records the source commit in `gitHead`; CI does not push version commits back to `main`.
 
-After the MCP package is publicly approved, dispatch **Publish MCP Registry metadata** with its exact
-npm version. It verifies the public tarball's integrity and included metadata before GitHub OIDC
-login. It publishes under `io.github.dino-kupinic/sniptide`; an existing matching version is a no-op
-and mismatched metadata fails. Verify the exact version in the official MCP Registry. Pending npm
-stages are not public and cannot pass this gate.
+Before publication, CI installs the exact generated tarball in an isolated consumer. It checks
+CLI/MCP commands and protocol behavior, or UI TypeScript imports, rendering, theme compilation,
+and fonts. Direct npm Trusted Publishing adds provenance without a permanent npm token.
+
+## Configure npm once
+
+For each of `@sniptide/ui`, `@sniptide/cli`, and `@sniptide/mcp`, configure a GitHub trusted publisher:
+
+- Owner `Dino-Kupinic`.
+- Repository `sniptide`.
+- Workflow filename `release.yml`.
+- No environment name.
+- Allow direct `npm publish`.
+
+The npm publish steps are directly in `release.yml`, so there is no reusable-workflow identity to
+configure. The previous `publish-ui.yml` and `publish-tools.yml` workflows are removed. An old
+stage-only trusted publisher does not authorize automatic direct publication. Use npm's package
+settings to add the configuration, or run this with npm 12.2.1 and complete its owner 2FA flow:
+
+```sh
+npm trust github @sniptide/ui --repo Dino-Kupinic/sniptide --file release.yml --allow-publish --yes
+npm trust github @sniptide/cli --repo Dino-Kupinic/sniptide --file release.yml --allow-publish --yes
+npm trust github @sniptide/mcp --repo Dino-Kupinic/sniptide --file release.yml --allow-publish --yes
+```
+
+See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for package permissions.
+First publication must succeed within npm's trusted-publisher configuration expiry window.
+
+## Retry a failed release
+
+Rerun failed package jobs, or dispatch **Release** on `main`. A manual run still verifies that the
+current commit came from a merged PR and passed push CI. It cannot publish an arbitrary branch.
+Package jobs run even when the app release already exists. Each package job is independent.
+
+Public npm contents are the durable record. If npm accepted an artifact before a job failed, the
+next run recognizes its contents and does not bump or publish it again. An existing version with
+different integrity is a conflict, and network or authorization errors fail the job. No package
+version tag is required for recovery.
+
+The MCP Registry job reconciles every stable public MCP version, including versions whose npm
+publication succeeded before registry publication failed. It verifies each public tarball and its
+included `server.json`, then publishes missing metadata through GitHub OIDC. Matching registry
+records are left intact. To retry only one version, dispatch **Publish MCP Registry metadata** with
+that public version, or leave the input empty to reconcile all public versions.
+
+## Inspect a local release plan
+
+```sh
+node scripts/package-releases.mjs ui artifacts/npm/ui-preview
+```
+
+This reads npm and generates a plan and tarball. It does not publish. The same command accepts
+`cli` and `mcp`. An older package without `gitHead` needs an explicitly verified source baseline
+before its next changed release. Unknown baselines fail rather than guessing.
+
+The separate website currently accepts `@sniptide/ui` versions matching `^0.1.1`. A `0.2.0` UI
+release requires an intentional website dependency update. Compatible releases also require its
+lockfile to be refreshed; npm publication alone does not redeploy that repository.

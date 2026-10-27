@@ -27,7 +27,7 @@ try {
     dist: { tarball: "https://fixture/tarball", integrity: artifact.integrity },
   }
   const output = path.join(temp, "output")
-  const artifactFile = path.join(temp, "mcp.json")
+  process.env.GITHUB_OUTPUT = output
   const run = async (script, args, fetch) => {
     globalThis.fetch = fetch
     process.argv = [originalArgv[0], script, ...args]
@@ -35,28 +35,6 @@ try {
   }
   const response = (body, status = 200) =>
     new Response(body === null ? null : JSON.stringify(body), { status })
-  await test("npm gate skips only a valid exact public version or accepts a 404", async () => {
-    process.env.GITHUB_OUTPUT = output
-    await writeFile(output, "")
-    await run("check-npm-version.mjs", [artifactFile], async () => response(null, 404))
-    assert.match(await readFile(output, "utf8"), /published=false/)
-    await writeFile(output, "")
-    await run("check-npm-version.mjs", [artifactFile], async () =>
-      response({ name: artifact.name, version: artifact.version }),
-    )
-    assert.match(await readFile(output, "utf8"), /published=true/)
-    for (const status of [401, 500])
-      await assert.rejects(
-        run("check-npm-version.mjs", [artifactFile], async () => response({}, status)),
-        /lookup failed/,
-      )
-    await assert.rejects(
-      run("check-npm-version.mjs", [artifactFile], async () =>
-        response({ name: "wrong", version: artifact.version }),
-      ),
-      /identity/,
-    )
-  })
   await test("registry gate verifies public npm artifact and exact registry metadata", async () => {
     process.env.VERSION = artifact.version
     const target = path.join(temp, "server.json")

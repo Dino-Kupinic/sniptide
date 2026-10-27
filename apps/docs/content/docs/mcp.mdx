@@ -99,7 +99,7 @@ with **Streamable HTTP**, not the older SSE transport.
 ## Connect locally (stdio)
 
 Instead of the HTTP endpoint you can run the server as a local process that calls the token API.
-The first npm release is pending owner approval. After approval, use the configuration below with Node.js 24 or newer. Contributors can build from a checkout:
+Use the npm configuration below with Node.js 24 or newer. Contributors can build from a checkout:
 
 ```bash
 bun install
@@ -114,7 +114,7 @@ For a checkout build, use `node` and the absolute path to `packages/mcp/dist/sni
     "sniptide": {
       "type": "stdio",
       "command": "npx",
-      "args": ["--yes", "@sniptide/mcp@0.1.0"],
+      "args": ["--yes", "@sniptide/mcp"],
       "env": {
         "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
         "SNIPTIDE_BASE_URL": "https://app.sniptide.com"

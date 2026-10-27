@@ -72,6 +72,11 @@ If image publishing fails after the GitHub release was created, re-run the faile
 **Publish Docker image** manually with that existing release tag. Coolify continues deploying
 `main` independently; publishing a release does not report a production deployment to GitHub.
 
+The UI, CLI, and MCP npm packages release independently after the same CI gate. Packed contents
+are compared with npm, so unrelated app changes do not release a package. Relevant Conventional
+Commits determine the bump, and CI publishes through trusted publishing without manual version
+commits or stage approvals. See [automatic npm releases](docs/npm-publishing.md) for setup and retries.
+
 ## Database migrations
 
 See the [development guide](docs/development.md#change-the-database-schema) for the schema and migration commands.

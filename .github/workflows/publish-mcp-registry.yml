@@ -1,10 +1,15 @@
 name: Publish MCP Registry metadata
 on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       version:
-        description: Exact public @sniptide/mcp version
-        required: true
+        description: Exact public version, or leave empty to reconcile all versions
+        required: false
         type: string
 permissions:
   contents: read
@@ -13,12 +18,14 @@ jobs:
   publish:
     if: github.ref == 'refs/heads/main'
     concurrency:
-      group: mcp-registry-${{ inputs.version }}
+      group: mcp-registry
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -26,16 +33,14 @@ jobs:
         id: verify
         env:
           VERSION: ${{ inputs.version }}
-        run: node scripts/verify-mcp-registry.mjs "$RUNNER_TEMP/server.json"
+        run: node scripts/reconcile-mcp-registry.mjs "$RUNNER_TEMP/registry"
       - name: Install pinned MCP publisher
-        if: steps.verify.outputs.published == 'false'
+        if: steps.verify.outputs.pending != '0'
         run: |
           curl --fail --location --retry 3 -o "$RUNNER_TEMP/mcp-publisher.tar.gz" https://github.com/modelcontextprotocol/registry/releases/download/v1.8.5/mcp-publisher_linux_amd64.tar.gz
           echo '2d151ac57275c9a6684d9d22b1cba81058bab195ea0a162e8fce3c6a5ec32812  '"$RUNNER_TEMP/mcp-publisher.tar.gz" | sha256sum --check
           tar -xzf "$RUNNER_TEMP/mcp-publisher.tar.gz" -C "$RUNNER_TEMP" mcp-publisher
       - name: Publish metadata
-        if: steps.verify.outputs.published == 'false'
-        working-directory: ${{ runner.temp }}
+        if: steps.verify.outputs.pending != '0'
         run: |
-          ./mcp-publisher login github-oidc
-          ./mcp-publisher publish
+          node scripts/reconcile-mcp-registry.mjs "$RUNNER_TEMP/registry" "$RUNNER_TEMP/mcp-publisher"

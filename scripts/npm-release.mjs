@@ -1,35 +1,60 @@
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { chmod, copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-const products = {
-  cli: { bin: "sniptide", bundled: ["@sniptide/contracts"], external: [] },
+export const products = {
+  ui: {
+    name: "@sniptide/ui",
+    baseline: { version: "0.1.1", commit: "5a612783adfe6c4d910afe8de4c2cde56bb8ca8d" },
+    paths: ["packages/ui"],
+  },
+  cli: {
+    name: "@sniptide/cli",
+    baseline: { version: "0.1.0", commit: "b06859e6352003bc8c73ae9edacc64d48c988a67" },
+    paths: ["packages/cli", "packages/contracts"],
+    bin: "sniptide",
+    bundled: ["@sniptide/contracts"],
+    external: [],
+  },
   mcp: {
+    name: "@sniptide/mcp",
+    baseline: { version: "0.1.0", commit: "b06859e6352003bc8c73ae9edacc64d48c988a67" },
+    paths: ["packages/mcp", "packages/contracts"],
     bin: "sniptide-mcp",
     bundled: ["@sniptide/contracts"],
     external: ["@modelcontextprotocol/sdk", "zod"],
   },
 }
 const json = async (file) => JSON.parse(await readFile(file, "utf8"))
-export async function packRelease(product, output) {
+export async function packRelease(product, output, options = {}) {
   const spec = products[product]
   if (!spec) throw new Error(`Unknown product: ${product}`)
   const source = path.join(root, "packages", product)
   const pkg = await json(path.join(source, "package.json"))
-  const catalog = (await json(path.join(root, "package.json"))).catalogs.runtime
-  const allowed = [...spec.bundled, ...spec.external].sort()
-  if (JSON.stringify(Object.keys(pkg.dependencies ?? {}).sort()) !== JSON.stringify(allowed))
+  const catalogs = (await json(path.join(root, "package.json"))).catalogs
+  const version = options.version ?? pkg.version
+  if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version))
+    throw new Error("Releases require an exact stable version")
+  const commit =
+    options.commit ??
+    execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim()
+  if (!/^[a-f0-9]{40}$/.test(commit)) throw new Error("Invalid release source commit")
+  const allowed = [...(spec.bundled ?? []), ...(spec.external ?? [])].sort()
+  if (
+    spec.bin &&
+    JSON.stringify(Object.keys(pkg.dependencies ?? {}).sort()) !== JSON.stringify(allowed)
+  )
     throw new Error(
       `${pkg.name} runtime dependencies must be accounted for in the release inventory`,
     )
   const dependencies = Object.fromEntries(
-    spec.external.map((name) => {
+    (spec.external ?? Object.keys(pkg.dependencies ?? {})).map((name) => {
       const value = pkg.dependencies[name]
-      const resolved = value === "catalog:runtime" ? catalog[name] : value
+      const resolved = value.startsWith("catalog:") ? catalogs[value.slice(8)]?.[name] : value
       if (!resolved || /^(workspace|catalog):/.test(resolved))
         throw new Error(`Unresolved dependency ${name}`)
       return [name, resolved]
@@ -37,23 +62,33 @@ export async function packRelease(product, output) {
   )
   const stage = await mkdtemp(path.join(tmpdir(), "sniptide-pack-"))
   try {
-    await mkdir(path.join(stage, "dist"))
-    const binary = path.join(stage, "dist", `${spec.bin}.js`)
-    execFileSync(
-      "bun",
-      [
-        "build",
-        path.join(source, "src/bin.ts"),
-        "--target=node",
-        `--outfile=${binary}`,
-        ...spec.external.map((name) => `--external=${name}`),
-      ],
-      { cwd: root, stdio: "inherit" },
-    )
-    await chmod(binary, 0o755)
+    if (spec.bin) {
+      await mkdir(path.join(stage, "dist"))
+      const binary = path.join(stage, "dist", `${spec.bin}.js`)
+      execFileSync(
+        "bun",
+        [
+          "build",
+          path.join(source, "src/bin.ts"),
+          "--target=node",
+          `--outfile=${binary}`,
+          `--define=process.env.SNIPTIDE_RELEASE_VERSION=${JSON.stringify(version)}`,
+          ...spec.external.map((name) => `--external=${name}`),
+        ],
+        { cwd: root, stdio: "inherit" },
+      )
+      await chmod(binary, 0o755)
+    } else {
+      await cp(path.join(source, "src"), path.join(stage, "src"), { recursive: true })
+      await copyFile(
+        path.join(source, "postcss.config.mjs"),
+        path.join(stage, "postcss.config.mjs"),
+      )
+    }
     const manifest = {
       name: pkg.name,
-      version: pkg.version,
+      version,
+      gitHead: commit,
       description: pkg.description,
       license: pkg.license,
       type: "module",
@@ -63,10 +98,17 @@ export async function packRelease(product, output) {
         directory: `packages/${product}`,
       },
       engines: pkg.engines,
-      bin: { [spec.bin]: `dist/${spec.bin}.js` },
-      exports: {},
-      files: ["dist", "README.md", "LICENSE", ...(product === "mcp" ? ["server.json"] : [])],
-      ...(spec.external.length ? { dependencies } : {}),
+      ...(spec.bin
+        ? { bin: { [spec.bin]: `dist/${spec.bin}.js` } }
+        : { peerDependencies: pkg.peerDependencies }),
+      exports: spec.bin ? {} : pkg.exports,
+      files: [
+        ...(spec.bin ? ["dist"] : ["src", "postcss.config.mjs"]),
+        "README.md",
+        "LICENSE",
+        ...(product === "mcp" ? ["server.json"] : []),
+      ],
+      ...(Object.keys(dependencies).length ? { dependencies } : {}),
       ...(product === "mcp" ? { mcpName: "io.github.dino-kupinic/sniptide" } : {}),
     }
     await writeFile(path.join(stage, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`)
@@ -104,8 +146,8 @@ export async function packRelease(product, output) {
         !auth.variables?.token?.isSecret
       )
         throw new Error("MCP metadata transport or credentials mismatch")
-      metadata.version = pkg.version
-      entry.version = pkg.version
+      metadata.version = version
+      entry.version = version
       await writeFile(path.join(stage, "server.json"), `${JSON.stringify(metadata, null, 2)}\n`)
     }
     await mkdir(output, { recursive: true })
@@ -121,7 +163,7 @@ export async function packRelease(product, output) {
       .update(await readFile(tarball))
       .digest("base64")}`
     if (integrity !== result.integrity) throw new Error("npm pack integrity mismatch")
-    const artifact = { product, name: pkg.name, version: pkg.version, tarball, integrity }
+    const artifact = { product, name: pkg.name, version, commit, tarball, integrity }
     await writeFile(path.join(output, `${product}.json`), `${JSON.stringify(artifact, null, 2)}\n`)
     return artifact
   } finally {

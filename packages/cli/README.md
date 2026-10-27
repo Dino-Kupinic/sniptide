@@ -7,10 +7,10 @@ tokens. Offline bundle export and import work without an account.
 
 ## Install
 
-The first npm release is pending owner approval. After it is approved, install on Node.js 24 or newer:
+Install on Node.js 24 or newer:
 
 ```sh
-npm install --global @sniptide/cli@0.1.0
+npm install --global @sniptide/cli
 sniptide --help
 ```
 
