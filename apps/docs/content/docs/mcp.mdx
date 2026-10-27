@@ -99,22 +99,22 @@ with **Streamable HTTP**, not the older SSE transport.
 ## Connect locally (stdio)
 
 Instead of the HTTP endpoint you can run the server as a local process that calls the token API.
-It isn't published to npm, so build it from a checkout of the repository (Node.js 24 or newer):
+Use the npm configuration below with Node.js 24 or newer. Contributors can build from a checkout:
 
 ```bash
 bun install
 bun --filter @sniptide/mcp build
 ```
 
-Then point the client at the absolute path of the build. For Claude Code, in `.mcp.json`:
+For a checkout build, use `node` and the absolute path to `packages/mcp/dist/sniptide-mcp.js`. For Claude Code, in `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "sniptide": {
       "type": "stdio",
-      "command": "node",
-      "args": ["/absolute/path/to/sniptide/packages/mcp/dist/sniptide-mcp.js"],
+      "command": "npx",
+      "args": ["--yes", "@sniptide/mcp"],
       "env": {
         "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
         "SNIPTIDE_BASE_URL": "https://app.sniptide.com"

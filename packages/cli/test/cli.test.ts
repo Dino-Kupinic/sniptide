@@ -4,6 +4,7 @@ import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
+import { version } from "../package.json"
 import type { Capture } from "../src/contract"
 
 const exec = promisify(execFile)
@@ -94,7 +95,7 @@ async function localBundle(pastes: Capture[]) {
 describe("built Node CLI", () => {
   test("prints help and version without configuration or credentials", async () => {
     expect((await cli(["--version", "--json"], source, { SNIPTIDE_TOKEN: "" })).stdout).toBe(
-      '{"ok":true,"data":{"version":"0.1.0"}}\n',
+      `${JSON.stringify({ ok: true, data: { version } })}\n`,
     )
     const result = await cli(["--help"])
     expect(result.code).toBe(0)

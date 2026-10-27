@@ -1,6 +1,7 @@
 import { rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { parseArgs } from "node:util"
+import { version as developmentVersion } from "../package.json"
 import { Api } from "./api"
 import { configPath, normalizeBaseUrl, resolveConfig, saveConfig } from "./config"
 import { bundle, type Capture, type Paste, paste, record, string } from "./contract"
@@ -16,6 +17,8 @@ import {
 import { CliError } from "./errors"
 import { collectFiles, readBundle, restoreFiles, writeFiles } from "./files"
 import { buildSkill, skillName, skillRoots } from "./skill"
+
+const version = process.env.SNIPTIDE_RELEASE_VERSION ?? developmentVersion
 
 const options = {
   "base-url": { type: "string" },
@@ -156,7 +159,7 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
       return 0
     }
     if (values.version) {
-      emit({ version: "0.1.0" }, "0.1.0")
+      emit({ version }, version)
       return 0
     }
     if (!command) {

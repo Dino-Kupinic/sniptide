@@ -1,0 +1,42 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Dino-Kupinic/sniptide",
+  "description": "Search and manage your Sniptide snippets.",
+  "repository": { "url": "https://github.com/Dino-Kupinic/sniptide", "source": "github" },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@sniptide/mcp",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "SNIPTIDE_TOKEN",
+          "description": "Personal API token",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "SNIPTIDE_BASE_URL",
+          "description": "Sniptide instance URL",
+          "default": "https://app.sniptide.com"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://app.sniptide.com/api/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer token",
+          "value": "Bearer {token}",
+          "isRequired": true,
+          "isSecret": true,
+          "variables": { "token": { "isRequired": true, "isSecret": true } }
+        }
+      ]
+    }
+  ]
+}

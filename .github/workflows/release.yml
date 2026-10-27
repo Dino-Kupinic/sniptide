@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -17,16 +18,20 @@ permissions:
 jobs:
   release:
     if: >-
+      github.event_name == 'workflow_dispatch' || (
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      actions: read
       contents: write
       pull-requests: read
       issues: read
     outputs:
+      eligible: ${{ steps.eligible.outputs.release }}
+      sha: ${{ steps.eligible.outputs.sha }}
       published: ${{ steps.release.outputs.new_release_published }}
       tag: ${{ steps.release.outputs.new_release_git_tag }}
     steps:
@@ -36,22 +41,27 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const sha = context.payload.workflow_run.head_sha;
+            const sha = context.payload.workflow_run?.head_sha ?? context.sha;
             const { data: branch } = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
             const pulls = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
               owner, repo, commit_sha: sha, per_page: 100,
             });
             const merged = pulls.some(pr => pr.merged_at && pr.base.ref === 'main' && pr.merge_commit_sha === sha);
-            core.setOutput('release', branch.commit.sha === sha && merged);
+            const { data: checks } = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: 'ci.yml', head_sha: sha, event: 'push', per_page: 100,
+            });
+            const passed = checks.workflow_runs.some(run => run.head_sha === sha && run.conclusion === 'success' && run.head_repository.full_name === context.repo.owner + '/' + context.repo.repo);
+            core.setOutput('release', branch.commit.sha === sha && merged && passed);
+            core.setOutput('sha', sha);
       - uses: actions/checkout@v4
         if: steps.eligible.outputs.release == 'true'
         with:
-          ref: main
+          ref: ${{ steps.eligible.outputs.sha }}
           fetch-depth: 0
       - name: Verify the checked-out commit passed CI
         if: steps.eligible.outputs.release == 'true'
         env:
-          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          TESTED_SHA: ${{ steps.eligible.outputs.sha }}
         run: test "$(git rev-parse HEAD)" = "$TESTED_SHA"
       - uses: actions/setup-node@v4
         if: steps.eligible.outputs.release == 'true'
@@ -78,3 +88,62 @@ jobs:
     uses: ./.github/workflows/publish-docker.yml
     with:
       tag: ${{ needs.release.outputs.tag }}
+
+  packages:
+    needs: release
+    if: ${{ always() && !cancelled() && needs.release.outputs.eligible == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [ui, cli, mcp]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@12.2.1
+      - run: bun install --frozen-lockfile
+      - name: Plan independent package version
+        env:
+          PRODUCT: ${{ matrix.product }}
+          RELEASE_SHA: ${{ needs.release.outputs.sha }}
+        run: node scripts/package-releases.mjs "$PRODUCT" "$RUNNER_TEMP/artifacts"
+      - name: Verify exact release artifact
+        env:
+          PRODUCT: ${{ matrix.product }}
+        run: |
+          if [ "$PRODUCT" = ui ]; then
+            node packages/ui/scripts/test-npm-release.mjs "$RUNNER_TEMP/artifacts"
+          else
+            node packages/mcp/scripts/test-npm-release.mjs "$PRODUCT" "$RUNNER_TEMP/artifacts"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-${{ matrix.product }}-${{ needs.release.outputs.sha }}
+          path: ${{ runner.temp }}/artifacts/
+      - name: Publish changed package
+        env:
+          RELEASE_SHA: ${{ needs.release.outputs.sha }}
+        run: node scripts/publish-npm-artifact.mjs "$RUNNER_TEMP/artifacts/plan.json"
+
+  mcp-registry:
+    needs: [release, packages]
+    if: ${{ always() && !cancelled() && needs.release.outputs.eligible == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish-mcp-registry.yml
+    with:
+      source_sha: ${{ needs.release.outputs.sha }}
