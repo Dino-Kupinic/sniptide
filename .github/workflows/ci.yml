@@ -31,7 +31,9 @@ jobs:
         with:
           node-version: 24
 
+      - run: npm install --global npm@12.2.1
       - run: bun install --frozen-lockfile
+      - run: node --test scripts/test-npm-pack.mjs
       - run: node --test scripts/test-release-gates.mjs
       - run: node --test scripts/test-package-releases.mjs
 
