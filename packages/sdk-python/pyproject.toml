@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sniptide"
+version = "0.1.0"
+description = "Official Sniptide API client"
+requires-python = ">=3.9"
+license = {text = "AGPL-3.0-only"}
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://sniptide.com"
+Repository = "https://github.com/Dino-Kupinic/sniptide"

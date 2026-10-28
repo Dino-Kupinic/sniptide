@@ -44,6 +44,8 @@ jobs:
 
       - run: bun run test:cli
       - run: bun run test:mcp
+      - run: bun run test:sdk
+      - run: node packages/sdk/scripts/test-npm-release.mjs
       - run: node packages/mcp/scripts/test-npm-release.mjs
       - run: node scripts/npm-release.mjs ui "$RUNNER_TEMP/ui-package"
       - run: node packages/ui/scripts/test-npm-release.mjs "$RUNNER_TEMP/ui-package"
