@@ -1716,6 +1716,7 @@ export const internalRoutes = [
   "/api/analytics",
   "/api/analytics/[...path]",
   "/api/auth/[...all]",
+  "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",

@@ -27,7 +27,7 @@ export function AuthScreen({
   title?: string
   subtitle: string
   centered?: boolean
-  legal: string
+  legal: React.ReactNode
   pitch: Pitch
   children: React.ReactNode
 }) {
@@ -76,7 +76,7 @@ export function AuthScreen({
 
         <footer className="flex flex-col items-center gap-3 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:items-start lg:p-0">
           <LanguageSwitcher />
-          <p className="text-center text-xs text-muted-foreground lg:text-left">{legal}</p>
+          {legal}
         </footer>
       </div>
 
