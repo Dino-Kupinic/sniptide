@@ -41,3 +41,19 @@ test("generated paste links skip app routes regardless of case", () => {
     random.mockRestore()
   }
 })
+
+test("custom paste links reserve marketing routes on the share host", async () => {
+  for (const slug of [
+    "about",
+    "ask",
+    "contact",
+    "home",
+    "impressum",
+    "privacy",
+    "skills",
+    "terms",
+  ]) {
+    expect(await isSlugAvailable(slug, slug)).toBe(false)
+    expect(await isSlugAvailable(slug.toUpperCase(), slug.toUpperCase())).toBe(false)
+  }
+})
