@@ -56,7 +56,7 @@ export function visitQueuePressure() {
   )
 }
 
-async function sampleQueue() {
+async function sampleQueue(drained: boolean) {
   const limit = envInteger("VISIT_QUEUE_MAX_BACKLOG", 10_000, 1, 1_000_000)
   const [sample] = await getDb().execute<{ backlog: number; oldest: string | null }>(sql`
     SELECT count(*)::int AS backlog, min(accepted_at)::text AS oldest
@@ -66,18 +66,18 @@ async function sampleQueue() {
     backlog: sample?.backlog ?? 0,
     oldestAgeMs: sample?.oldest ? Math.max(0, now - new Date(sample.oldest).getTime()) : 0,
     sampledAt: now,
-    lastSuccessAt: now,
+    lastSuccessAt: drained ? now : health().lastSuccessAt,
     failed: false,
   })
   recordMaintenance({
     visitsBacklog: health().backlog,
     visitsOldestAgeMs: health().oldestAgeMs,
-    visitsLastSuccessAt: now,
+    visitsLastSuccessAt: health().lastSuccessAt,
+    visitsSampledAt: now,
     visitsFailed: false,
   })
 }
 
-// A batch may cross several milestones, including one between its first and last visit.
 function crossedMilestones(before: number, after: number) {
   const counts: number[] = []
   for (let power = 10; power <= after; power *= 10) {
@@ -105,7 +105,6 @@ export async function drainVisits(options: { batchSize?: number } = {}) {
         .from(pasteVisit)
         .orderBy(asc(pasteVisit.acceptedAt), asc(pasteVisit.id))
         .limit(batchSize)
-        .for("update", { skipLocked: true })
       const grouped = new Map<string, { total: number; days: Map<number, number> }>()
       for (const visit of pending) {
         let group = grouped.get(visit.pasteId)
@@ -117,7 +116,6 @@ export async function drainVisits(options: { batchSize?: number } = {}) {
         group.days.set(visit.day, (group.days.get(visit.day) ?? 0) + 1)
       }
       for (const [pasteId, group] of [...grouped].sort(([a], [b]) => a.localeCompare(b))) {
-        // Accepted visits remain valid if the paste is later trashed, expires or is moderated.
         const [updated] = await tx
           .update(paste)
           .set({
@@ -157,7 +155,7 @@ export async function drainVisits(options: { batchSize?: number } = {}) {
       }
       return { consumed: pending.length, pastes: grouped.size }
     })
-    if (result) await sampleQueue()
+    await sampleQueue(result !== null)
     recordMetric("maintenance:visits", performance.now() - started)
     return result
   } catch (error) {

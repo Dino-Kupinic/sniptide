@@ -38,14 +38,22 @@ export async function setUpClientIp() {
 }
 
 export async function startBackgroundJobs() {
-  const { scheduleNotificationEmails } = await import("@/lib/notifications/email")
-  scheduleNotificationEmails()
-  const { schedulePurge } = await import("@/lib/pastes/purge")
-  schedulePurge()
-  const { scheduleRollup } = await import("@/lib/pastes/rollup")
-  scheduleRollup()
-  if (getConfig().demoMode) {
-    const { scheduleDemoReset } = await import("@/lib/demo/reset")
-    scheduleDemoReset()
-  }
+  const { registerAdmissionPressure, runMaintenanceWork } = await import("@/lib/request-admission")
+  const { drainVisits, scheduleVisitDrain, visitQueuePressure } = await import(
+    "@/lib/pastes/visits"
+  )
+  registerAdmissionPressure("visits", visitQueuePressure)
+  await runMaintenanceWork(async () => {
+    await scheduleVisitDrain(async () => await runMaintenanceWork(() => drainVisits()))
+    const { scheduleNotificationEmails } = await import("@/lib/notifications/email")
+    scheduleNotificationEmails()
+    const { schedulePurge } = await import("@/lib/pastes/purge")
+    schedulePurge()
+    const { scheduleRollup } = await import("@/lib/pastes/rollup")
+    scheduleRollup()
+    if (getConfig().demoMode) {
+      const { scheduleDemoReset } = await import("@/lib/demo/reset")
+      scheduleDemoReset()
+    }
+  })
 }

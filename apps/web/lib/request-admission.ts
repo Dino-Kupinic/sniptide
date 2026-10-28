@@ -65,7 +65,6 @@ function unavailable(response: ServerResponse) {
   response.end(unavailableBody)
 }
 
-// One owner for HTTP lifetimes, disconnected contexts and the work actually submitted to the pool.
 export function createRequestAdmission(
   limits: Limits,
   staticAssets: ReadonlySet<string> = new Set(),

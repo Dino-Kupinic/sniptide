@@ -64,6 +64,7 @@ export const paste = pgTable(
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     bytes: integer("bytes").notNull().default(0),
+    firstLanguage: text("first_language"),
     visibility: visibility("visibility").notNull(),
     // scrypt hash ("salt:hash", hex), never the password itself.
     passwordHash: text("password_hash"),
@@ -151,7 +152,6 @@ export const pasteViewDay = pgTable(
   ],
 )
 
-// Accepted ordinary visits survive process exits until the counter drain commits.
 export const pasteVisit = pgTable(
   "paste_visit",
   {

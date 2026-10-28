@@ -168,16 +168,7 @@ async function summarize(
   const today = utcDay(Date.now())
   const firstDay = today - VIEW_HISTORY_DAYS + 1
 
-  const [files, days, authors] = await Promise.all([
-    db
-      .select({
-        pasteId: pasteFile.pasteId,
-        language: pasteFile.language,
-        bytes: sql<number>`octet_length(${pasteFile.content})::int`,
-      })
-      .from(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), inArray(pasteFile.pasteId, ids)))
-      .orderBy(pasteFile.position, pasteFile.id),
+  const [days, authors] = await Promise.all([
     withHistory
       ? db
           .select()
@@ -213,12 +204,6 @@ async function summarize(
     ]),
   )
 
-  const fileSummaries = new Map<string, { language: string; bytes: number }>()
-  for (const file of files) {
-    const summary = fileSummaries.get(file.pasteId)
-    if (summary) summary.bytes += file.bytes
-    else fileSummaries.set(file.pasteId, { language: file.language, bytes: file.bytes })
-  }
   const history = new Map<string, number[]>()
   for (const day of days) {
     let series = history.get(day.pasteId)
@@ -229,7 +214,7 @@ async function summarize(
     series[day.day - firstDay] = day.views
   }
   return records
-    .filter((record) => fileSummaries.has(record.id))
+    .filter((record) => record.firstLanguage !== null)
     .map((record) => {
       const viewsByDay = withHistory
         ? (history.get(record.id) ?? Array<number>(VIEW_HISTORY_DAYS).fill(0))
@@ -240,14 +225,13 @@ async function summarize(
         initials: "?",
         tone: "muted",
       }
-      const own = fileSummaries.get(record.id)
 
       return {
         slug: record.slug,
         title: record.title,
         description: record.description,
-        language: own?.language ?? "text",
-        bytes: own?.bytes ?? 0,
+        language: record.firstLanguage ?? "text",
+        bytes: record.bytes,
         visibility: record.visibility,
         password: record.passwordHash,
         burnAfterRead: record.burnAfterRead,
@@ -710,16 +694,20 @@ export async function restoreShare(slug: string) {
 
 // Whether the viewer may open this paste right now: their own, one shared with them, or one whose
 // public link is open to them. Stars never widen that, so they are checked against it when made and when listed.
-async function viewerMayRead(record: PasteRecord, viewer: string | null) {
+async function viewerMayRead(
+  record: PasteRecord,
+  viewer: string | null,
+  db: Pick<Database, "select"> = getDb(),
+) {
   if (record.deletedAt) return false
   if (record.ownerId === viewer) return true
   if (record.burnAfterRead) return false
-  return !recordExpired(record) && (await canOpenLink(record, viewer)) === "ok"
+  return !recordExpired(record) && (await canOpenLink(record, viewer, db)) === "ok"
 }
 
 // Build the readable-star predicate before paging/counting. Only password-protected stars
 // with a supplied unlock cookie need a hash lookup; ordinary stars are filtered entirely in SQL.
-export async function readableStarsWhere(viewer: string) {
+export async function readableStarsWhere(viewer: string, db: Pick<Database, "select"> = getDb()) {
   const jar = await cookies()
   const cookieSlugs = jar
     .getAll()
@@ -727,7 +715,7 @@ export async function readableStarsWhere(viewer: string) {
     .map(({ name }) => name.slice(unlockCookieName("").length))
     .filter((slug) => slug.length > 0 && slug.length <= 40)
   const candidates = cookieSlugs.length
-    ? await getDb()
+    ? await db
         .select({ id: pasteTable.id, slug: pasteTable.slug, hash: pasteTable.passwordHash })
         .from(pasteTable)
         .innerJoin(pasteStar, eq(pasteStar.pasteId, pasteTable.id))
@@ -754,7 +742,7 @@ export async function readableStarsWhere(viewer: string) {
     allowedPaste(),
     isNull(pasteTable.deletedAt),
     exists(
-      getDb()
+      db
         .select({ id: pasteStar.pasteId })
         .from(pasteStar)
         .where(and(eq(pasteStar.userId, viewer), eq(pasteStar.pasteId, pasteTable.id))),
@@ -765,7 +753,7 @@ export async function readableStarsWhere(viewer: string) {
         eq(pasteTable.burnAfterRead, false),
         or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
         exists(
-          getDb()
+          db
             .select({ id: pasteShare.pasteId })
             .from(pasteShare)
             .where(
@@ -937,9 +925,6 @@ async function claimBurn(tx: Transaction, record: PasteRecord, now: Date) {
   return row
 }
 
-// SHARE locks allow concurrent ordinary readers, but block access and file mutations until
-// authorization, content loading and durable acceptance commit together. Burn readers use an
-// exclusive lock from the outset, so concurrent reveals never need to upgrade shared locks.
 async function lockSharedRead(tx: Transaction, slug: string) {
   const where = and(allowedPaste(), eq(pasteTable.slug, slug))
   const [ordinary] = await tx
@@ -1039,8 +1024,6 @@ function pasteAuthor(
     : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" }
 }
 
-// Shared by metadata and copy recording. React memoizes this only within a render;
-// content reads and burn claims remain separate and are never cached across requests.
 const sharedAccess = cache(async (slug: string) => {
   const record = await findSharedRecord(slug)
   if (!record) return { status: "missing" as const }
@@ -1722,7 +1705,7 @@ export async function setStarred(slug: string, starred: boolean) {
         .from(pasteTable)
         .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
         .for("update")
-      if (!locked || !(await viewerMayRead(locked, viewer))) return
+      if (!locked || !(await viewerMayRead(locked, viewer, tx))) return
       await tx
         .insert(pasteStar)
         .values({ userId: viewer, pasteId: record.id })

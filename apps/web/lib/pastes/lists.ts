@@ -2,7 +2,7 @@ import "server-only"
 
 import { allowedParent, allowedPaste } from "@workspace/db/moderation"
 
-import { pasteFile, pasteShare, paste as pasteTable, user } from "@workspace/db/schema"
+import { pasteShare, paste as pasteTable, user } from "@workspace/db/schema"
 import {
   and,
   asc,
@@ -51,16 +51,10 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
   if (scope.mode === "trash") await purgeTrash(viewer)
   return getDb().transaction(
     async (db) => {
-      const language = db
-        .select({ language: pasteFile.language })
-        .from(pasteFile)
-        .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, pasteTable.id)))
-        .orderBy(pasteFile.position, pasteFile.id)
-        .limit(1)
-      const firstLanguage = sql<string>`coalesce((${language}), 'text')`
+      const firstLanguage = sql<string>`coalesce(${pasteTable.firstLanguage}, 'text')`
       const base =
         scope.mode === "starred"
-          ? await readableStarsWhere(viewer)
+          ? await readableStarsWhere(viewer, db)
           : and(
               allowedPaste(),
               eq(pasteTable.ownerId, viewer),
@@ -262,14 +256,10 @@ export async function trashTotals() {
   if (!viewer) return { count: 0, bytes: 0 }
   const [row] = await getDb()
     .select({
-      count: sql<number>`count(distinct ${pasteTable.id})::int`,
-      bytes: sql<number>`coalesce(sum(octet_length(${pasteFile.content})), 0)::float8`,
+      count: sql<number>`count(*)::int`,
+      bytes: sql<number>`coalesce(sum(${pasteTable.bytes}), 0)::float8`,
     })
     .from(pasteTable)
-    .leftJoin(
-      pasteFile,
-      and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, pasteTable.id)),
-    )
     .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
   return row ?? { count: 0, bytes: 0 }
 }
@@ -287,13 +277,7 @@ export async function listSharedPage(query: SharedListQuery) {
     }
   return getDb().transaction(
     async (db) => {
-      const language = db
-        .select({ language: pasteFile.language })
-        .from(pasteFile)
-        .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, pasteTable.id)))
-        .orderBy(pasteFile.position, pasteFile.id)
-        .limit(1)
-      const firstLanguage = sql<string>`coalesce((${language}), 'text')`
+      const firstLanguage = sql<string>`coalesce(${pasteTable.firstLanguage}, 'text')`
       const base = sharedWithWhere(viewer)
       const needle = `%${query.q.replace(/[\\%_]/g, "\\$&")}%`
       const filters = and(

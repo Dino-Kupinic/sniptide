@@ -194,6 +194,9 @@ describeDb("durable ordinary visits", () => {
 
   test("a second worker skips while the transaction advisory lock is held", async () => {
     await visit()
+    await getDb()
+      .update(pasteVisit)
+      .set({ acceptedAt: new Date(Date.now() - 60_000) })
     const locked = deferred()
     const release = deferred()
     const holder = getDb().transaction(async (tx) => {
@@ -205,6 +208,8 @@ describeDb("durable ordinary visits", () => {
     try {
       expect(await drainVisits()).toBeNull()
       expect(await pending()).toHaveLength(1)
+      expect(visitQueueSnapshot().oldestAgeMs).toBeGreaterThan(30_000)
+      expect(visitQueuePressure()).toBe(true)
     } finally {
       release.resolve()
       await holder
@@ -212,6 +217,28 @@ describeDb("durable ordinary visits", () => {
     const runs = await Promise.all([drainVisits(), drainVisits()])
     expect(runs.reduce((sum, result) => sum + (result?.consumed ?? 0), 0)).toBe(1)
     expect((await pasteRow("ordinary"))?.views).toBe(1)
+  })
+
+  test("permanent deletion can finish while a drain waits for the parent", async () => {
+    await visit()
+    const locked = deferred()
+    const remove = deferred()
+    const deleting = getDb().transaction(async (tx) => {
+      await tx.select().from(paste).where(eq(paste.slug, "ordinary")).for("update")
+      locked.resolve()
+      await remove.promise
+      await tx.delete(paste).where(eq(paste.slug, "ordinary"))
+    })
+    await locked.promise
+    const draining = drainVisits()
+    try {
+      await waitForBlockedReader()
+    } finally {
+      remove.resolve()
+    }
+    await Promise.all([deleting, draining])
+    expect(await pending()).toEqual([])
+    expect(await pasteRow("ordinary")).toBeUndefined()
   })
 
   test("accepted deltas apply after trash, expiry and moderation but hard deletion cascades", async () => {
@@ -281,7 +308,7 @@ describeDb("durable ordinary visits", () => {
       ready = true
     })
     try {
-      expect(scheduleVisitDrain()).toBe(globals.__sniptideVisitSchedule)
+      expect(globals.__sniptideVisitSchedule).toBe(scheduleVisitDrain())
       await Promise.resolve()
       expect(ready).toBe(false)
       expect(globals.__sniptideVisitTimer).toBeUndefined()

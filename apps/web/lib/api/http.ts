@@ -2,6 +2,7 @@ import "server-only"
 
 import { ZodError } from "zod"
 import { hit, type Limit } from "@/lib/rate-limit"
+import { isAdmissionError } from "@/lib/request-admission"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS } from "@/lib/time"
 import { authenticate, type Scope, type TokenOwner } from "./tokens"
@@ -74,6 +75,8 @@ export async function withToken(
       return failure(429, "Too many requests. Slow down.", limit.retryAfterSeconds)
     return await handler(owner)
   } catch (error) {
+    if (isAdmissionError(error))
+      return failure(error.status, error.message, error.retryAfterSeconds)
     if (error instanceof ApiError)
       return failure(error.status, error.message, error.retryAfterSeconds)
     if (error instanceof ZodError)

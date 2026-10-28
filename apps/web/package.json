@@ -10,7 +10,8 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "bun test ./test",
+    "test": "bun test ./test && node ./test/run-admission-node.mjs",
+    "test:admission": "node ./test/run-admission-node.mjs",
     "test:e2e": "bun tests/run.ts run",
     "test:e2e:mcp": "bun tests/run.ts mcp",
     "test:e2e:install": "e2e-web install chromium"
