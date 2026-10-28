@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   checks:
-    name: Lint, typecheck and unit tests
+    name: Lint, typecheck and build
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -168,7 +168,7 @@ jobs:
   # Two shards split the test files between runners. Each has its own Postgres and builds the app,
   # which the Next build cache keeps cheap.
   e2e:
-    name: Browser tests (shard ${{ matrix.shard }})
+    name: Browser tests shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -244,3 +244,17 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7
+
+  # Branch protection requires a check named "Browser tests", so this job reports one result for
+  # both shards.
+  e2e-result:
+    name: Browser tests
+    needs: e2e
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every shard to pass
+        env:
+          RESULT: ${{ needs.e2e.result }}
+        run: test "$RESULT" = success
