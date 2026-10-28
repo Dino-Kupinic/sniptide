@@ -57,11 +57,11 @@ function commitOnEnter(onCommit?: () => void) {
   }
 }
 
-export function useSlugStatus(slug: string, except?: string) {
+export function useSlugStatus(slug: string, except?: string, enabled = true) {
   const [status, setStatus] = React.useState<SlugStatus>("idle")
 
   React.useEffect(() => {
-    if (!slug || slug === except) return setStatus("idle")
+    if (!enabled || !slug || slug === except) return setStatus("idle")
 
     setStatus("checking")
     let cancelled = false
@@ -74,7 +74,7 @@ export function useSlugStatus(slug: string, except?: string) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [slug, except])
+  }, [slug, except, enabled])
 
   return status
 }
@@ -118,6 +118,7 @@ export function SlugInput({
   onCommit,
   status,
   large = false,
+  disabled = false,
 }: {
   value: string
   onChange: (value: string) => void
@@ -126,6 +127,7 @@ export function SlugInput({
   status: SlugStatus
   // Touch size for the mobile settings sheet.
   large?: boolean
+  disabled?: boolean
 }) {
   const t = useTranslations("Paste")
   const host = useSiteHost()
@@ -136,6 +138,7 @@ export function SlugInput({
           "flex h-[34px] items-center overflow-hidden rounded-lg border border-input focus-within:border-primary",
           large && "h-10",
           status === "taken" && "border-destructive",
+          disabled && "opacity-50",
         )}
       >
         <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-2.5 font-mono text-xs text-muted-foreground">
@@ -143,6 +146,7 @@ export function SlugInput({
         </span>
         <input
           aria-label={t("customLink")}
+          disabled={disabled}
           value={value}
           onChange={(event) => onChange(event.target.value.replace(/[^A-Za-z0-9_-]/g, ""))}
           onBlur={onCommit}
