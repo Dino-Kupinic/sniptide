@@ -12,6 +12,7 @@ import { instrumentDatabase } from "../lib/telemetry"
 const limits = {
   http: 1,
   probes: 1,
+  streams: 1,
   database: 3,
   databaseQueue: 0,
   databaseProbes: 1,
@@ -322,6 +323,7 @@ test("configuration validates capacity and partitions reserves within the pool",
   assert.deepEqual(getConfig({}).admission, {
     http: 64,
     probes: 2,
+    streams: 128,
     database: 10,
     databaseQueue: 64,
     databaseProbes: 1,
@@ -331,6 +333,8 @@ test("configuration validates capacity and partitions reserves within the pool",
     { HTTP_ADMISSION_LIMIT: "0" },
     { HTTP_ADMISSION_LIMIT: "1.5" },
     { PROBE_ADMISSION_LIMIT: "9999" },
+    { LIVE_ADMISSION_LIMIT: "0" },
+    { LIVE_ADMISSION_LIMIT: "4097" },
     { DATABASE_POOL_SIZE: "0" },
     { DATABASE_POOL_SIZE: "3", DATABASE_MAINTENANCE_RESERVE: "2" },
   ])
@@ -661,6 +665,59 @@ test("optional database work keeps the request abort context and bounded queue",
   } finally {
     hold.resolve()
     await pending
+    await close(listener)
+  }
+})
+
+test("live streams have finite HTTP capacity without occupying normal or probe slots", async () => {
+  const admission = createRequestAdmission({ ...limits, streams: 1 })
+  const hold = deferred()
+  const finished = deferred()
+  const { listener, url } = await server(admission, async (path, response) => {
+    if (path === "/api/live") {
+      await admission.runDatabaseWork(async () => "authenticate")
+      response.writeHead(200, { "content-type": "text/event-stream" })
+      response.write("data: connected\n\n")
+      await hold.promise
+    }
+    response.end("ok")
+    if (path === "/api/live") finished.resolve()
+  })
+  try {
+    const request = get(`${url}/api/live`)
+    request.on("error", () => {})
+    const [stream] = await once(request, "response")
+    stream.resume()
+    assert.equal((await fetch(`${url}/normal`)).status, 200)
+    assert.equal((await fetch(`${url}/api/health`)).status, 200)
+    assert.equal((await fetch(`${url}/api/live`)).status, 503)
+    assert.equal((await fetch(`${url}/api/live?head`, { method: "HEAD" })).status, 503)
+    assert.equal((await fetch(`${url}/api/live?post`, { method: "POST" })).status, 200)
+    assert.equal((await fetch(`${url}/api/live/`)).status, 200)
+    const removePressure = admission.registerPressure("visits", () => true)
+    assert.equal((await fetch(`${url}/normal`)).status, 503)
+    assert.equal((await fetch(`${url}/api/metrics`)).status, 200)
+    stream.on("error", () => {})
+    const disconnected = new Promise<void>((resolve) => stream.once("close", resolve))
+    request.destroy()
+    await disconnected
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    hold.resolve()
+    await finished.promise
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(admission.snapshot().http.live.active, 0)
+    assert.equal((await fetch(`${url}/api/live?pressure`)).status, 503)
+    removePressure()
+    assert.equal((await fetch(`${url}/api/live?reopened`)).status, 200)
+    assert.equal(admission.snapshot().http.live.active, 0)
+    assert.equal(admission.snapshot().http.live.peak, 1)
+    assert.equal(admission.snapshot().http.normal.peak, 1)
+    assert.equal(admission.snapshot().http.probe.peak, 1)
+    assert.equal(admission.snapshot().aborted, 1)
+    assert.equal(admission.snapshot().database.normal?.peak, 1)
+    assert.equal(admission.snapshot().database.total?.peak, 1)
+  } finally {
+    hold.resolve()
     await close(listener)
   }
 })

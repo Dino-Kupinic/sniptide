@@ -71,7 +71,11 @@ export function createRequestAdmission(
 ) {
   const contexts = new AsyncLocalStorage<RequestContext>()
   const bestEffort = new AsyncLocalStorage<boolean>()
-  const http = { normal: budget(limits.http), probe: budget(limits.probes) }
+  const http = {
+    normal: budget(limits.http),
+    probe: budget(limits.probes),
+    live: budget(limits.streams),
+  }
   const database = {
     normal: budget(
       Math.max(1, limits.database - limits.databaseProbes - limits.databaseMaintenance),
@@ -187,13 +191,19 @@ export function createRequestAdmission(
     const pathname = (request.url ?? "/").split("?")[0] ?? "/"
     const read = request.method === "GET" || request.method === "HEAD"
     if (read && staticAssets.has(pathname)) return dispatch()
-    const lane = read && ["/api/health", "/api/metrics"].includes(pathname) ? "probe" : "normal"
-    const blocked = lane === "normal" && pressured()
-    const release = blocked ? null : acquire(http[lane])
+    const httpLane =
+      read && ["/api/health", "/api/metrics"].includes(pathname)
+        ? "probe"
+        : read && pathname === "/api/live"
+          ? "live"
+          : "normal"
+    const lane = httpLane === "probe" ? "probe" : "normal"
+    const blocked = httpLane !== "probe" && pressured()
+    const release = blocked ? null : acquire(http[httpLane])
     if (!release) {
       if (blocked) {
         pressureRejected++
-        http.normal.rejected++
+        http[httpLane].rejected++
       }
       response.setHeader("connection", "close")
       unavailable(response)
@@ -282,7 +292,7 @@ export function createRequestAdmission(
     },
     snapshot() {
       return {
-        http: { normal: { ...http.normal }, probe: { ...http.probe } },
+        http: { normal: { ...http.normal }, probe: { ...http.probe }, live: { ...http.live } },
         database: Object.fromEntries(
           Object.entries(database).map(([name, value]) => [name, { ...value }]),
         ),

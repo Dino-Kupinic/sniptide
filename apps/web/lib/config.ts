@@ -106,6 +106,7 @@ const schema = z.object({
   DATABASE_URL: z.string().optional(),
   DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(100).default(10),
   HTTP_ADMISSION_LIMIT: z.coerce.number().int().min(1).max(1024).default(64),
+  LIVE_ADMISSION_LIMIT: z.coerce.number().int().min(1).max(4096).default(128),
   PROBE_ADMISSION_LIMIT: z.coerce.number().int().min(1).max(16).default(2),
   DATABASE_ADMISSION_QUEUE_LIMIT: z.coerce.number().int().min(0).max(4096).default(64),
   DATABASE_PROBE_RESERVE: z.coerce.number().int().min(1).max(16).default(1),
@@ -226,6 +227,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     admission: {
       http: value.HTTP_ADMISSION_LIMIT,
       probes: value.PROBE_ADMISSION_LIMIT,
+      streams: value.LIVE_ADMISSION_LIMIT,
       database: value.DATABASE_POOL_SIZE,
       databaseQueue: value.DATABASE_ADMISSION_QUEUE_LIMIT,
       databaseProbes: value.DATABASE_PROBE_RESERVE,
