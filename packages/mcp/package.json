@@ -13,7 +13,7 @@
     "sniptide-mcp": "dist/sniptide-mcp.js"
   },
   "scripts": {
-    "build": "bun build src/bin.ts --target=node --outfile=dist/sniptide-mcp.js",
+    "build": "bun build src/bin.ts --target=node --external=@modelcontextprotocol/sdk --external=zod --outfile=dist/sniptide-mcp.js",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",

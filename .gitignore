@@ -61,3 +61,5 @@ data/
 
 # Local load-test fixtures/results may contain operational telemetry.
 /apps/web/load/artifacts/
+
+/artifacts/npm/

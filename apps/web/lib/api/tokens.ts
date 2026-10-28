@@ -6,13 +6,13 @@ import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
+import { SCOPES, type Scope } from "./scopes"
 
 // Personal API tokens (packages/db/src/schema/tokens.ts). A token acts for the account that made
 // it, limited to its scopes: `read` lists and pulls pastes and env groups, `write` creates them.
 // Only a hash is stored, so a lost token can't be shown again; it's revoked and replaced.
 
-export const SCOPES = ["read", "write"] as const
-export type Scope = (typeof SCOPES)[number]
+export { SCOPES, type Scope } from "./scopes"
 
 export const TOKEN_PREFIX = "snpt_"
 export const MAX_TOKENS = 25

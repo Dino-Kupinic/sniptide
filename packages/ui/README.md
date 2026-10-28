@@ -55,13 +55,13 @@ prefers reduced motion.
 
 ## Releasing
 
-Bump `version` in `package.json` and merge to `main`. The `Publish @sniptide/ui` workflow stages
-any version that isn't on npm yet (Trusted Publishing, no token). Approve it with 2FA to publish:
+Merges to `main` automatically release this package after CI passes when its packed contents
+change. Conventional Commits choose the version bump. The workflow verifies the package in an
+isolated consumer, then publishes through npm Trusted Publishing with provenance.
 
-```bash
-npm stage list @sniptide/ui
-npm stage approve <stage-id>
-```
+The source package version is a development default; npm records the released version. No manual
+version bump or stage approval is needed. See [automatic npm releases](../../docs/npm-publishing.md)
+for one-time owner configuration and retries.
 
 ## License
 

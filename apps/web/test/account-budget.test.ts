@@ -260,7 +260,13 @@ describeDb("account limits through the token API", () => {
 
     const refused = await post(bearer, "two")
     expect(refused.status).toBe(413)
-    expect(await refused.json()).toEqual({ ok: false, error: PASTE_LIMIT_ERROR })
+    expect(await refused.json()).toEqual({
+      ok: false,
+      error: PASTE_LIMIT_ERROR,
+      code: "payload_too_large",
+      message: PASTE_LIMIT_ERROR,
+      resolution: "Reduce the request or stored content and try again.",
+    })
   })
 
   test("answers 413 with the storage limit message when a capture doesn't fit", async () => {
@@ -270,7 +276,13 @@ describeDb("account limits through the token API", () => {
 
     const refused = await post(bearer, "b")
     expect(refused.status).toBe(413)
-    expect(await refused.json()).toEqual({ ok: false, error: STORAGE_LIMIT_ERROR })
+    expect(await refused.json()).toEqual({
+      ok: false,
+      error: STORAGE_LIMIT_ERROR,
+      code: "payload_too_large",
+      message: STORAGE_LIMIT_ERROR,
+      resolution: "Reduce the request or stored content and try again.",
+    })
   })
 
   test("checks replacements too, and lets them shrink", async () => {
@@ -290,7 +302,13 @@ describeDb("account limits through the token API", () => {
 
     const grown = await put("a".repeat(KB + 1))
     expect(grown.status).toBe(413)
-    expect(await grown.json()).toEqual({ ok: false, error: STORAGE_LIMIT_ERROR })
+    expect(await grown.json()).toEqual({
+      ok: false,
+      error: STORAGE_LIMIT_ERROR,
+      code: "payload_too_large",
+      message: STORAGE_LIMIT_ERROR,
+      resolution: "Reduce the request or stored content and try again.",
+    })
     expect((await put("a")).status).toBe(200)
   })
 
