@@ -70,10 +70,12 @@ Invalid integer settings fail explicitly. The account limits count only current 
 older revisions (the newest 20 per paste keep a copy) add to the real database size. Size the pool from the database's usable connection
 budget, not from traffic alone:
 
-`maximum app connections = app processes (including overlapping releases) × DATABASE_POOL_SIZE`
+`maximum app connections = app processes (including overlapping releases) × (DATABASE_POOL_SIZE + 1)`
 
-Reserve connections for migrations, backups, monitoring, and administration. For example, two
-replicas with ten connections each need twenty normally and forty while both releases overlap.
+The extra connection is the dedicated live-update listener, opened when live updates are used.
+Probes and maintenance share the configured pool. Reserve additional connections for migrations,
+backups, monitoring, and administration. Two replicas with ten pool connections and one listener
+each need twenty-two normally and forty-four while both releases overlap.
 Transaction-acquisition duration includes pool queueing and BEGIN; individual query durations
 include queueing, SQL execution, and result mapping. PostgreSQL deadlines limit SQL execution and
 lock waits, not the entire HTTP request or pool queue. Configure the reverse proxy's request
