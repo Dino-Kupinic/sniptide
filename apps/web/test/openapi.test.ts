@@ -135,6 +135,32 @@ describe("API reference", () => {
     }
   })
 
+  test("token operation scopes match the route handlers", () => {
+    for (const { route, method, operation } of operations.filter(
+      ({ route }) => route === "/api/mcp" || route.startsWith("/api/v1/"),
+    )) {
+      const file = path.join(appDir, route.replace(/\{(\w+)\}/g, "[$1]"), "route.ts")
+      const source = readFileSync(file, "utf8")
+      const body = source.match(
+        new RegExp(`export async function ${method}\\b[\\s\\S]*?(?=export async function|$)`),
+      )?.[0]
+      expect(body, `${method} ${route}`).toBeDefined()
+      const direct = body?.match(/withToken\(\s*request,\s*"(read|write)"/)
+      const scope =
+        direct?.[1] ??
+        (route === "/api/mcp" && method === "DELETE" && /return GET\(request\)/.test(body ?? "")
+          ? source
+              .match(/export async function GET\b[\s\S]*?(?=export async function|$)/)?.[0]
+              .match(/withToken\(\s*request,\s*"(read|write)"/)?.[1]
+          : undefined)
+      if (!scope) throw new Error(`Missing token scope for ${method} ${route}`)
+      expect((operation as { "x-required-scopes"?: string[] })["x-required-scopes"]).toEqual([
+        scope,
+      ])
+      expect((operation as { security?: unknown }).security).toEqual([{ apiToken: [] }])
+    }
+  })
+
   test("only references schemas and security schemes that exist", () => {
     const text = JSON.stringify(openApiDocument)
     for (const [, name] of text.matchAll(/#\/components\/schemas\/(\w+)/g))
