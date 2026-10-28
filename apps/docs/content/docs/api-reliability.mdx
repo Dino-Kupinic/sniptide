@@ -1,0 +1,79 @@
+---
+title: API reliability
+description: Quotas, safe create retries, batch operations, and the v1 compatibility policy.
+---
+
+## Quotas
+
+Authenticated token API and hosted MCP responses report the quota state observed by their requests.
+`RateLimit-Policy` identifies each policy, its quota, and its window in seconds.
+`RateLimit` reports its remaining requests and seconds until reset. For example:
+
+```http
+RateLimit-Policy: "api-token";q=3600;w=3600, "paste-create";q=30;w=3600
+RateLimit: "api-token";r=3599;t=3600, "paste-create";r=29;t=3600
+```
+
+The counters live in Postgres and apply across app instances. Concurrent requests can consume the
+remaining quota after a response is sent. A `429` response includes `Retry-After` for the actual
+remaining window. Refused requests still count. Invalid or missing tokens have no quota headers.
+
+## Create retries
+
+`POST /api/v1/pastes` and `POST /api/v1/collections` accept an optional `Idempotency-Key` header.
+Other mutations and MCP tools do not support this header. Keys contain 1 to 128 visible ASCII
+characters and belong to one token across both supported routes.
+
+For 24 hours after a successful create, the same key, route, and JSON payload return the original
+`201` body, even if the resource later changes. JSON object property order does not affect the
+fingerprint. Reusing the key with another route or payload returns `409`. A different token has a
+separate key space. After 24 hours, a key can create another resource. Expired receipts are deleted
+by the hourly maintenance job in bounded batches. Revoking a token deletes its receipts.
+
+Authentication, scope checks, token quotas, and paste-create quotas apply before replay. Storage
+budgets apply to new mutations. The resource, receipt, and saved response commit in one database
+transaction. A failed transaction saves neither a resource nor a receipt, so retrying can create it.
+Without a key, retrying a create can create a second resource.
+
+## Batch creates
+
+`POST /api/v1/batch` requires write scope and accepts 1 to 20 typed operations in a JSON body of at
+most 8 MiB. Each operation has an idempotency key and either `create_paste` or `create_collection`:
+
+```json
+{
+  "operations": [
+    { "operation": "create_collection", "key": "import-collection", "body": { "name": "Imported" } },
+    { "operation": "create_paste", "key": "import-paste-1", "body": {
+      "title": "Example", "collection": "imported", "files": [{ "name": "example.ts", "content": "export const value = 1" }]
+    } }
+  ]
+}
+```
+
+Operations run in input order, each in its own transaction. The response has status `207` and a
+`results` array in the same order, with each item's `index`, `key`, `status`, and `body`. A failed
+item does not undo earlier successes or stop later items. A rate-limited item also includes
+`retryAfterSeconds`. Invalid envelopes and unsupported operation names reject the whole batch
+before any mutations.
+
+Each item consumes one token request, and creating a paste also consumes its account create quota.
+The batch request itself consumes one token request. Storage budgets and collection limits apply
+per item. Item keys use the corresponding single-create route's namespace, so the same key and
+payload can also be retried through that route. Reusing a key for two different items produces a
+conflict. Replay the original batch with the original keys after a transport failure.
+
+## Version and deprecation policy
+
+The public token API uses the major version in `/api/v1`. Additive fields, optional parameters,
+and new endpoints can ship within v1. Clients must ignore unknown response fields. Breaking
+changes to required fields, field meanings, or supported operations require a new major path.
+Security fixes can restrict unsafe behavior immediately.
+
+Hosted API removals receive at least 90 days' notice in the documentation and release notes.
+Affected hosted responses include a `Deprecation` header and a `Sunset` HTTP date during that
+period. No v1 endpoint is currently deprecated. Self-hosted operators control their upgrade
+schedule. The unversioned browser session API is internal and has no compatibility guarantee.
+
+The OpenAPI document's `info.version` describes the API contract, independently of the app,
+CLI, and MCP package release versions. MCP protocol versions follow the MCP negotiation rules.

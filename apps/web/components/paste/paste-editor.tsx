@@ -39,7 +39,6 @@ import {
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
-import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
 import { LanguageIcon } from "@/components/paste/language-icon"
 import { LanguagePicker } from "@/components/paste/language-picker"
 import {
@@ -63,6 +62,7 @@ import {
   useSaveBroadcast,
 } from "@/lib/autosave/use-autosave"
 import type { Collection } from "@/lib/collections/types"
+import { editorEdit } from "@/lib/editor-editing"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
 import { editorLineCount, isLargeEditorContent } from "@/lib/highlight/editor-limits"
@@ -92,6 +92,8 @@ export interface EditorInitial {
 }
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
+// Keep the custom-link section available to restore later; existing paste URLs stay unchanged.
+const CUSTOM_LINKS_ENABLED = false
 
 type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
@@ -120,6 +122,7 @@ function snapshotOf(textarea: HTMLTextAreaElement): Snapshot {
     value: textarea.value,
     selectionStart: textarea.selectionStart,
     selectionEnd: textarea.selectionEnd,
+    selectionDirection: textarea.selectionDirection,
   }
 }
 
@@ -256,7 +259,6 @@ export function PasteEditor({
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
-  const [invites, setInvites] = React.useState<PendingInvite[]>([])
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
@@ -272,9 +274,10 @@ export function PasteEditor({
     exitOnTab.current = false
   }, [activeId])
   // Where the caret goes once the next render has put new text in the textarea (Undo, Redo, Tab).
-  const pendingSelection = React.useRef<Pick<Snapshot, "selectionStart" | "selectionEnd"> | null>(
-    null,
-  )
+  const pendingSelection = React.useRef<Pick<
+    Snapshot,
+    "selectionStart" | "selectionEnd" | "selectionDirection"
+  > | null>(null)
   const removalToasts = React.useRef(new Set<number>())
   const history = useEditorHistory()
   const formId = React.useId()
@@ -295,7 +298,7 @@ export function PasteEditor({
         ? t("neverExpires")
         : t("expiresAt", { date: formatDateTime(savedExpiresAt, locale) })
   const versionRef = React.useRef(initial.version ?? 0)
-  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined)
+  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined, CUSTOM_LINKS_ENABLED)
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
@@ -324,11 +327,15 @@ export function PasteEditor({
   )
 
   // The paste as the server would store it. Editing sends this after every pause in typing.
-  const slugForSave = !editing
-    ? slug
-    : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+  const slugForSave = !CUSTOM_LINKS_ENABLED
+    ? editing
+      ? savedSlug
+      : ""
+    : !editing
       ? slug
-      : savedSlug
+      : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+        ? slug
+        : savedSlug
   const passwordForSave = !passwordOn
     ? null
     : !editing
@@ -665,7 +672,11 @@ export function PasteEditor({
     const textarea = textareaRef.current
     if (!selection || !textarea) return
     pendingSelection.current = null
-    textarea.setSelectionRange(selection.selectionStart, selection.selectionEnd)
+    textarea.setSelectionRange(
+      selection.selectionStart,
+      selection.selectionEnd,
+      selection.selectionDirection,
+    )
     trackCursor(textarea)
   })
 
@@ -706,31 +717,27 @@ export function PasteEditor({
       return
     }
 
-    // Tab indents (by the Settings indentation) instead of leaving the editor.
-    const key = event.key.toLowerCase()
-    if (
-      key !== "tab" ||
-      event.shiftKey ||
-      event.altKey ||
-      event.ctrlKey ||
-      event.metaKey ||
-      !active
-    )
-      return
-    event.preventDefault()
+    // Option and AltGr produce braces on many keyboard layouts; keep their text keys working.
+    const textKey =
+      event.key.length === 1 &&
+      !event.metaKey &&
+      (!event.ctrlKey || event.getModifierState("AltGraph"))
+    if (!active || (!textKey && (event.altKey || event.ctrlKey || event.metaKey))) return
     const textarea = event.currentTarget
-    const { selectionStart, selectionEnd, value } = textarea
-    const unit = indentUnit(indentation)
-    const next = `${value.slice(0, selectionStart)}${unit}${value.slice(selectionEnd)}`
-    const caret = selectionStart + unit.length
-    history.edit(
-      active.id,
-      value,
-      { value: next, selectionStart: caret, selectionEnd: caret },
-      "other",
-    )
-    pendingSelection.current = { selectionStart: caret, selectionEnd: caret }
-    updateActive({ content: next })
+    const before = snapshotOf(textarea)
+    const next = editorEdit(before, event.key, indentUnit(indentation), event.shiftKey)
+    if (!next) return
+    event.preventDefault()
+    history.moveCaret(active.id, before)
+    if (next.value === before.value) {
+      textarea.setSelectionRange(next.selectionStart, next.selectionEnd, next.selectionDirection)
+      history.moveCaret(active.id, next)
+      trackCursor(textarea)
+      return
+    }
+    history.edit(active.id, before.value, next, "other")
+    pendingSelection.current = next
+    updateActive({ content: next.value })
   }
 
   function submit() {
@@ -747,14 +754,7 @@ export function PasteEditor({
     }
 
     startTransition(async () => {
-      const result = await savePaste(
-        value,
-        undefined,
-        // Only a new private paste invites people; switching away from Private drops them.
-        visibility === "private"
-          ? invites.map((invite) => ({ userId: invite.person.id, access: invite.access }))
-          : [],
-      ).catch(() => null)
+      const result = await savePaste(value).catch(() => null)
 
       if (!result) {
         setError(t("couldnTSaveThePasteCheck"))
@@ -770,8 +770,8 @@ export function PasteEditor({
         expiry,
         burn_after_read: burnAfterRead,
         password: passwordOn,
-        custom_link: Boolean(slug),
-        invites: visibility === "private" ? invites.length : 0,
+        custom_link: Boolean(slugForSave),
+        invites: 0,
       })
       toast.success(t("pasteCreated"))
       autosaver.rebase(value)
@@ -844,12 +844,7 @@ export function PasteEditor({
       </>
     ) : null
 
-    const inviteMenu =
-      !editing && visibility === "private" ? (
-        <InvitePeople invites={invites} onChange={setInvites} large={large} />
-      ) : null
-
-    return [
+    const sections: PanelSection[] = [
       {
         id: "access",
         label: t("visibilityExpiry"),
@@ -872,9 +867,6 @@ export function PasteEditor({
             <p className="text-xs text-muted-foreground">
               {t("visibilityHelp", { value: visibility })}
             </p>
-            {inviteMenu ? (
-              <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div>
-            ) : null}
             <div className="mt-1 flex flex-col gap-2">
               <span className="text-muted-foreground">{t("expiresAfter")}</span>
               <ExpiryChips
@@ -901,6 +893,7 @@ export function PasteEditor({
             onChange={setSlug}
             onCommit={editing ? () => setCommittedSlug(slug) : undefined}
             status={slugStatus}
+            disabled={!CUSTOM_LINKS_ENABLED}
             large={large}
           />
         ),
@@ -945,6 +938,7 @@ export function PasteEditor({
         ),
       },
     ]
+    return sections.filter((section) => CUSTOM_LINKS_ENABLED || section.id !== "slug")
   }
 
   const panelSections = optionSections(false)

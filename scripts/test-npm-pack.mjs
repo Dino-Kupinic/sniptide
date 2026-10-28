@@ -17,6 +17,7 @@ await test("packing returns the exact npm tarball with verified integrity", asyn
       }),
     )
     assert.equal(path.basename(artifact.tarball), `sniptide-ui-${artifact.version}.tgz`)
+    assert.equal(manifest.homepage, "https://sniptide.com")
     assert.equal(manifest.name, artifact.name)
     assert.equal(manifest.version, artifact.version)
     assert.equal(manifest.gitHead, artifact.commit)
