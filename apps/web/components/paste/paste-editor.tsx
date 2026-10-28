@@ -39,7 +39,6 @@ import {
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
-import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
 import { LanguageIcon } from "@/components/paste/language-icon"
 import { LanguagePicker } from "@/components/paste/language-picker"
 import {
@@ -93,6 +92,8 @@ export interface EditorInitial {
 }
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
+// Keep custom-link editing available to restore later; existing paste URLs stay unchanged.
+const CUSTOM_LINKS_ENABLED = false
 
 type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
@@ -258,7 +259,6 @@ export function PasteEditor({
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
-  const [invites, setInvites] = React.useState<PendingInvite[]>([])
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
@@ -298,7 +298,7 @@ export function PasteEditor({
         ? t("neverExpires")
         : t("expiresAt", { date: formatDateTime(savedExpiresAt, locale) })
   const versionRef = React.useRef(initial.version ?? 0)
-  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined)
+  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined, CUSTOM_LINKS_ENABLED)
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
@@ -327,11 +327,15 @@ export function PasteEditor({
   )
 
   // The paste as the server would store it. Editing sends this after every pause in typing.
-  const slugForSave = !editing
-    ? slug
-    : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+  const slugForSave = !CUSTOM_LINKS_ENABLED
+    ? editing
+      ? savedSlug
+      : ""
+    : !editing
       ? slug
-      : savedSlug
+      : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+        ? slug
+        : savedSlug
   const passwordForSave = !passwordOn
     ? null
     : !editing
@@ -750,14 +754,7 @@ export function PasteEditor({
     }
 
     startTransition(async () => {
-      const result = await savePaste(
-        value,
-        undefined,
-        // Only a new private paste invites people; switching away from Private drops them.
-        visibility === "private"
-          ? invites.map((invite) => ({ userId: invite.person.id, access: invite.access }))
-          : [],
-      ).catch(() => null)
+      const result = await savePaste(value).catch(() => null)
 
       if (!result) {
         setError(t("couldnTSaveThePasteCheck"))
@@ -773,8 +770,8 @@ export function PasteEditor({
         expiry,
         burn_after_read: burnAfterRead,
         password: passwordOn,
-        custom_link: Boolean(slug),
-        invites: visibility === "private" ? invites.length : 0,
+        custom_link: Boolean(slugForSave),
+        invites: 0,
       })
       toast.success(t("pasteCreated"))
       autosaver.rebase(value)
@@ -847,11 +844,6 @@ export function PasteEditor({
       </>
     ) : null
 
-    const inviteMenu =
-      !editing && visibility === "private" ? (
-        <InvitePeople invites={invites} onChange={setInvites} large={large} />
-      ) : null
-
     return [
       {
         id: "access",
@@ -875,9 +867,6 @@ export function PasteEditor({
             <p className="text-xs text-muted-foreground">
               {t("visibilityHelp", { value: visibility })}
             </p>
-            {inviteMenu ? (
-              <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div>
-            ) : null}
             <div className="mt-1 flex flex-col gap-2">
               <span className="text-muted-foreground">{t("expiresAfter")}</span>
               <ExpiryChips
@@ -904,6 +893,7 @@ export function PasteEditor({
             onChange={setSlug}
             onCommit={editing ? () => setCommittedSlug(slug) : undefined}
             status={slugStatus}
+            disabled={!CUSTOM_LINKS_ENABLED}
             large={large}
           />
         ),
