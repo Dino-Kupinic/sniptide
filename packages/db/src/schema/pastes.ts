@@ -151,6 +151,23 @@ export const pasteViewDay = pgTable(
   ],
 )
 
+// Accepted ordinary visits survive process exits until the counter drain commits.
+export const pasteVisit = pgTable(
+  "paste_visit",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pasteId: uuid("paste_id")
+      .notNull()
+      .references(() => paste.id, { onDelete: "cascade" }),
+    acceptedAt: time("accepted_at").notNull().defaultNow(),
+    day: integer("day").notNull(),
+  },
+  (table) => [
+    index("paste_visit_pending_idx").on(table.acceptedAt, table.id),
+    index("paste_visit_paste_idx").on(table.pasteId),
+  ],
+)
+
 export const pasteStar = pgTable(
   "paste_star",
   {

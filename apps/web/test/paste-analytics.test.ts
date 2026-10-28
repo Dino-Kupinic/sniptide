@@ -18,6 +18,7 @@ import { getDb } from "@/lib/db"
 import { getAnalyticsReport } from "@/lib/pastes/analytics-report"
 import { type EventKind, recordPasteEvent } from "@/lib/pastes/events"
 import { rollUpAnalytics } from "@/lib/pastes/rollup"
+import { drainVisits } from "@/lib/pastes/visits"
 import { DAY, HOUR } from "@/lib/time"
 import {
   hasDatabase,
@@ -105,6 +106,8 @@ describeDb("paste analytics", () => {
       for (const leaked of ["203.0.113.9", "Chrome", "item?id", "secret"]) {
         expect(stored).not.toContain(leaked)
       }
+      expect(await viewDayTotal("pub")).toBe(0)
+      await drainVisits()
       expect(await viewDayTotal("pub")).toBe(1)
     })
 
