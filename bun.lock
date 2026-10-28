@@ -161,6 +161,13 @@
         "typescript": "catalog:tooling",
       },
     },
+    "packages/sdk": {
+      "name": "@sniptide/sdk",
+      "version": "0.1.0",
+      "devDependencies": {
+        "typescript": "catalog:tooling",
+      },
+    },
     "packages/typescript": {
       "name": "@workspace/typescript",
       "version": "0.0.0",
@@ -922,6 +929,8 @@
     "@sniptide/contracts": ["@sniptide/contracts@workspace:packages/contracts"],
 
     "@sniptide/mcp": ["@sniptide/mcp@workspace:packages/mcp"],
+
+    "@sniptide/sdk": ["@sniptide/sdk@workspace:packages/sdk"],
 
     "@sniptide/ui": ["@sniptide/ui@workspace:packages/ui"],
 
