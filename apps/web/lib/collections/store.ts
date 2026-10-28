@@ -1,5 +1,6 @@
 import "server-only"
 
+import type { Database } from "@workspace/db"
 import { allowedPaste } from "@workspace/db/moderation"
 
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
@@ -136,8 +137,11 @@ export async function createCollectionFor(
   owner: string,
   name: string,
   look?: { icon: CollectionIcon; hue: Hue },
+  transaction?: Parameters<Parameters<Database["transaction"]>[0]>[0],
 ): Promise<CollectionResult> {
-  return getDb().transaction(async (tx) => {
+  const create = async (
+    tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  ): Promise<CollectionResult> => {
     await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
     const existing = await tx
       .select({ slug: collectionTable.slug, name: collectionTable.name })
@@ -160,7 +164,8 @@ export async function createCollectionFor(
       if (row) return { status: "ok", collection: toCollection({ ...row, pasteCount: 0 }) }
     }
     return { status: "duplicate" }
-  })
+  }
+  return transaction ? create(transaction) : getDb().transaction(create)
 }
 
 export async function renameCollection(

@@ -1,0 +1,31 @@
+---
+title: Test agents in an isolated instance
+description: Set up a separate self-hosted instance and database for agent integration tests.
+---
+
+Use a separate self-hosted Sniptide instance for destructive agent tests and retry experiments.
+Sniptide does not offer a public hosted private sandbox. A second token for your production
+account still reaches that account's data and does not isolate tests.
+
+1. Follow [Self-hosted setup](/getting-started/self-hosted) in a separate directory. Give its Compose
+   project a distinct name, for example `sniptide-agent-test`.
+2. Give the instance a separate Postgres database or Compose volume. Set `DATABASE_URL` to that
+   database. Never reuse your production database or volume.
+3. Set `SNIPTIDE_PORT=3001`, `POSTGRES_PORT=5433`, and `SNIPTIDE_BIND=127.0.0.1` in the test
+   `.env`. Set `BETTER_AUTH_URL=http://localhost:3001`. Set `SHARE_URL` to that URL too, or
+   leave it unset. Start the test project with `docker compose -p sniptide-agent-test up -d`.
+4. Create a test account on that instance. In **Settings → API tokens**, create a token with
+   write access and an expiry that covers your tests.
+5. Set `SNIPTIDE_BASE_URL=http://localhost:3001` and `SNIPTIDE_TOKEN` to the test token in the
+   agent's environment. For hosted HTTP MCP clients, use `http://localhost:3001/api/mcp` with
+   `Authorization: Bearer <test token>`. For the CLI and stdio MCP, the same environment selects
+   the test instance.
+6. Call `GET /api/v1/me` on the test URL and confirm that it returns the test account before
+   running mutations. Exercise create retries with the same `Idempotency-Key` and verify that
+   the returned resource ID stays the same.
+7. Stop the instance after testing. Remove only the test Compose project's volumes when you no
+   longer need its fixtures. Revoke the test token if you retain the instance.
+
+The test instance enforces the same authentication, quotas, storage budgets, and receipt retention
+as a normal instance. Use synthetic snippets and env values so failures and logs contain no
+production secrets.

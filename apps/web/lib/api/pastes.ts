@@ -51,14 +51,16 @@ import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
 import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
 import { insertPaste } from "@/lib/pastes/insert"
-import { limited, limits } from "@/lib/pastes/limits"
+import { limits } from "@/lib/pastes/limits"
 import { hashPassword } from "@/lib/pastes/passwords"
 import { parsePasteInput } from "@/lib/pastes/schema"
 import { pruneSnapshots, snapshotOf } from "@/lib/pastes/snapshot"
 import { expiresAtFor, randomSlug } from "@/lib/pastes/store"
 import { EXPIRIES, type Expiry, type Visibility } from "@/lib/pastes/types"
+import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
+import { type CreateReceipt, createWithReceipt } from "./idempotency"
 
 // Pastes over the token API: what `sniptide push`, `pull`, `list` and `search` read and write.
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
@@ -149,8 +151,8 @@ function liveOwned(owner: string): SQL {
   ) as SQL
 }
 
-async function ownsCollection(owner: string, slug: string) {
-  const [row] = await getDb()
+async function ownsCollection(owner: string, slug: string, db: Pick<Database, "select"> = getDb()) {
+  const [row] = await db
     .select({ id: collectionTable.id })
     .from(collectionTable)
     .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
@@ -159,36 +161,44 @@ async function ownsCollection(owner: string, slug: string) {
 
 // Saves a capture as a new paste. Validation, size limits, the account's storage budget and the
 // per-account create limit are the same ones the editor goes through.
-export async function createCapture(owner: string, input: unknown): Promise<ApiPaste> {
-  const capture = captureSchema.parse(input)
-  const data = parsePasteInput({
-    title: capture.title,
-    description: capture.description,
-    files: capture.files.map(({ name, content }) => ({ name, content, language: "text" })),
-    visibility: capture.visibility,
-    expiry: "never",
-    slug: "",
-    collection: capture.collection,
-    password: null,
-    burnAfterRead: false,
-  })
-  if (data.collection && !(await ownsCollection(owner, data.collection)))
-    throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
-  const tooOften = await limited(limits.create(owner))
-  if (tooOften) throw new ApiError(429, tooOften, 60)
+export async function createCapture(
+  owner: string,
+  input: unknown,
+  receipt?: CreateReceipt,
+): Promise<ApiPaste> {
+  const quota = await hit([limits.create(owner)])
+  if (!quota.allowed)
+    throw new ApiError(429, "Too many paste creates. Slow down.", quota.retryAfterSeconds)
 
-  let slug: string
-  do slug = randomSlug()
-  while (
-    (await getDb().select({ id: pasteTable.id }).from(pasteTable).where(eq(pasteTable.slug, slug)))
-      .length
-  )
-
-  const id = crypto.randomUUID()
-  const now = new Date()
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   try {
-    await getDb().transaction(async (tx) => {
+    const response = await createWithReceipt(receipt, async (tx) => {
+      const capture = captureSchema.parse(input)
+      const data = parsePasteInput({
+        title: capture.title,
+        description: capture.description,
+        files: capture.files.map(({ name, content }) => ({ name, content, language: "text" })),
+        visibility: capture.visibility,
+        expiry: "never",
+        slug: "",
+        collection: capture.collection,
+        password: null,
+        burnAfterRead: false,
+      })
+      if (data.collection && !(await ownsCollection(owner, data.collection, tx)))
+        throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
+      let slug: string
+      do slug = randomSlug()
+      while (
+        (await tx.select({ id: pasteTable.id }).from(pasteTable).where(eq(pasteTable.slug, slug)))
+          .length
+      )
+
+      const id = crypto.randomUUID()
+      const now = new Date()
+      const bytes = data.files.reduce(
+        (sum, file) => sum + Buffer.byteLength(file.content, "utf8"),
+        0,
+      )
       await enforceBudget(tx, owner, bytes)
       await insertPaste(tx, {
         id,
@@ -210,15 +220,18 @@ export async function createCapture(owner: string, input: unknown): Promise<ApiP
         })),
         createdAt: now,
       })
+      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, id))
+      if (!record) throw new Error("The created paste wasn't returned.")
+      const [created] = await withFiles([record], tx)
+      if (!created) throw new Error("The created paste files weren't returned.")
+      return { paste: created }
     })
+    await announceChange(owner)
+    return response.paste
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
     throw error
   }
-  await announceChange(owner)
-  const created = await getCapture(owner, id)
-  if (!created) throw new Error("A paste that was just created can't be read back.")
-  return created
 }
 
 // One of the owner's pastes by its id or its slug.

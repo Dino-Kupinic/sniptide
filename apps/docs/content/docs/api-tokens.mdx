@@ -74,6 +74,8 @@ are not accepted on these endpoints.
 | Operation | Request | Needs |
 | --- | --- | --- |
 | Check a token | `GET /me` | read |
+| Create a collection | `POST /collections` | write |
+| Batch creates | `POST /batch` | write |
 | Create a paste | `POST /pastes` | write |
 | Update a paste | `PUT /pastes/{id or slug}` | write |
 | Read a paste | `GET /pastes/{id or slug}` | read |
@@ -95,3 +97,6 @@ schemas are in the API reference, served by every instance at `/docs/api` (for t
 - Errors are `{ "ok": false, "error": "…" }` with a status: `400` invalid input, `401` missing,
   invalid, expired or revoked token, `403` missing access, `404` not found (or not yours), `409` too
   many env groups, `413` too large or out of storage, `429` rate limited (with `Retry-After`).
+
+See [API reliability](/api-reliability) for quota headers, idempotent create retries, batch results,
+and the v1 deprecation policy. For isolated integration tests, use a [separate test instance](/agent-sandbox).
