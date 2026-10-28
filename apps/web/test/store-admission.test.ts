@@ -16,6 +16,7 @@ async function withOneExecution(work: () => Promise<void>) {
   state.__sniptideAdmission = createRequestAdmission({
     http: 64,
     probes: 2,
+    streams: 128,
     database: 3,
     databaseProbes: 1,
     databaseMaintenance: 1,

@@ -53,7 +53,8 @@ samples and do not impose a hard global disk limit. Queue rows survive app resta
 ## Connection and execution budgets
 
 Node HTTP admission bounds dynamic requests before Next renders them. Defaults admit 64 normal
-requests and two health/metrics requests. Only exact existing immutable static asset paths bypass
+requests, two health/metrics requests, and 128 live-update streams in a separate finite lane.
+Live streams use normal DB capacity. Only exact existing immutable static asset paths bypass
 this gate. Exhaustion returns a small private/no-store 503 with Retry-After: 1. Unknown routes,
 prefetches, Server Actions and RSC requests count toward admission.
 
@@ -83,6 +84,7 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | DATABASE_POOL_SIZE | 10 | Connections per process |
 | HTTP_ADMISSION_LIMIT | 64 | Active normal dynamic HTTP requests |
 | PROBE_ADMISSION_LIMIT | 2 | Active health/metrics HTTP requests |
+| LIVE_ADMISSION_LIMIT | 128 | Active live-update streams |
 | DATABASE_PROBE_RESERVE | 1 | Probe execution capacity |
 | DATABASE_MAINTENANCE_RESERVE | 1 | Maintenance execution capacity |
 | DATABASE_ADMISSION_QUEUE_LIMIT | 64 | Waiting DB submissions; zero disables waiting |
