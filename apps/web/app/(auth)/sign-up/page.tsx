@@ -1,9 +1,11 @@
 import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
+import { LegalNotice } from "@/components/auth/legal-notice"
 import { RequestAccess } from "@/components/auth/request-access"
 import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { getConfig } from "@/lib/config"
 import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -15,7 +17,7 @@ export async function generateMetadata() {
 export default async function Page({ searchParams }: PageProps<"/sign-up">) {
   const [{ host }, t] = await Promise.all([getSiteOrigin(), getTranslations("Auth")])
   const inviteOnly = getInviteOnly()
-  const legal = t("signUpLegal")
+  const legal = <LegalNotice action="signUp" />
 
   // ALLOW_SIGN_UP=false: no accounts can be created, not even with ?invite.
   if (isSignUpClosed()) {
@@ -73,7 +75,10 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
         note: t("publicProfile"),
       }}
     >
-      <SignUpForm socialProviders={inviteOnly ? null : await getSocialProviders()} />
+      <SignUpForm
+        socialProviders={inviteOnly ? null : await getSocialProviders()}
+        minimumAge={getConfig().legal.minimumAge}
+      />
     </AuthScreen>
   )
 }

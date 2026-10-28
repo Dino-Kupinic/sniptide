@@ -41,22 +41,27 @@ const providers = [
 ] as const
 
 // Social sign-in buttons for the providers that have OAuth credentials on the server. The
-// forms leave out the buttons and the divider when none do.
+// forms leave out the buttons and the divider when none do. `check` runs before the redirect; a
+// message from it is shown as the error and stops the sign-in (the sign-up age confirmation).
 export function SocialButtons({
   enabled,
   verb,
   callbackURL,
   onError,
+  check,
 }: {
   enabled: SocialProvider[]
   verb: "Continue" | "Sign up"
   callbackURL: string
   onError: (message: string) => void
+  check?: () => string | null
 }) {
   const t = useTranslations("Auth")
   const [pending, setPending] = React.useState<SocialProvider | null>(null)
 
   async function signIn(provider: SocialProvider) {
+    const problem = check?.()
+    if (problem) return onError(problem)
     setPending(provider)
     // The account is created after the provider's redirect; this marks the attempt. The result
     // is reported on return: new accounts land on newUserCallbackURL, the rest on callbackURL.
@@ -64,6 +69,7 @@ export function SocialButtons({
     const { error } = await authClient.signIn
       .social({
         provider,
+        requestSignUp: verb === "Sign up",
         callbackURL: withAuthMarker(callbackURL, "signed_in", provider),
         newUserCallbackURL: withAuthMarker(callbackURL, "signed_up", provider),
       })

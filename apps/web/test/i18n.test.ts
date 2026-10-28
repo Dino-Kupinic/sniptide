@@ -127,6 +127,7 @@ test("all five catalogs have the same messages and valid ICU arguments", async (
     "auth.json",
     "core.json",
     "errors.json",
+    "legal.json",
     "not-found.json",
     "paste.json",
     "settings.json",

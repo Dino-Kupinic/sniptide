@@ -1,0 +1,20 @@
+{
+  "Copyright": {
+    "title": "Avisos de derechos de autor",
+    "description": "Cómo pedir a {operator} que retire un paste que infringe tus derechos de autor.",
+    "intro": "{operator} aloja pastes que suben sus usuarios. Si un paste infringe tus derechos de autor, envía un aviso al agente indicado abajo y el paste se retirará o dejará de estar disponible.",
+    "agentHeading": "Agente designado",
+    "noticeHeading": "Qué incluye un aviso",
+    "noticeIntro": "Según 17 U.S.C. § 512(c)(3), un aviso incluye todo lo siguiente.",
+    "notice1": "Tu firma física o electrónica, como titular o como persona autorizada para actuar en su nombre.",
+    "notice2": "La obra protegida que crees que se ha infringido.",
+    "notice3": "El enlace a cada paste que quieres que se retire.",
+    "notice4": "Tu nombre, dirección postal, teléfono y correo electrónico.",
+    "notice5": "Una declaración de que crees de buena fe que el uso no está autorizado por el titular, su agente ni la ley.",
+    "notice6": "Una declaración de que la información del aviso es exacta y, bajo pena de perjurio, de que eres el titular o estás autorizado para actuar en su nombre.",
+    "counterHeading": "Contranotificaciones",
+    "counterBody": "Si se retiró tu paste y crees que fue un error o una identificación equivocada, envía una contranotificación a la misma dirección. Incluye tu firma, el enlace al paste retirado, una declaración bajo pena de perjurio de que se retiró por error o identificación equivocada, tu nombre, dirección postal y teléfono, y tu aceptación de la jurisdicción del tribunal federal de distrito de tu dirección o, si vives fuera de Estados Unidos, de cualquier distrito judicial donde se encuentre el operador. El paste puede restaurarse entre 10 y 14 días hábiles después de que la contranotificación llegue a quien envió el aviso, salvo que esa persona acuda a los tribunales.",
+    "repeat": "Las cuentas que infringen derechos de autor de forma reiterada se cierran.",
+    "falseClaims": "Quien tergiverse los hechos a sabiendas en un aviso o una contranotificación puede tener que pagar daños según 17 U.S.C. § 512(f)."
+  }
+}

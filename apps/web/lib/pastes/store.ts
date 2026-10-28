@@ -106,6 +106,7 @@ const RESERVED = new Set([
   "analytics",
   "api",
   "collections",
+  "copyright",
   "dashboard",
   "demo",
   "dev",

@@ -41,6 +41,9 @@ export interface AuthConfig {
   // Providers without credentials are left out, so the sign-in page can hide or disable them.
   github?: OAuthCredentials
   google?: OAuthCredentials
+  // True makes GitHub and Google create accounts only from the sign-up page (requestSignUp), so a
+  // new visitor can't skip what sign-up asks for, such as the age confirmation, through sign-in.
+  explicitSocialSignUp?: boolean
   emailVerification?: Pick<
     NonNullable<BetterAuthOptions["emailVerification"]>,
     "sendVerificationEmail"
@@ -71,6 +74,7 @@ export function createAuth({
   demo = false,
   github,
   google,
+  explicitSocialSignUp = false,
   emailVerification,
   sendResetPassword,
   sendChangeEmailConfirmation,
@@ -194,8 +198,8 @@ export function createAuth({
       },
     },
     socialProviders: {
-      ...(github ? { github } : {}),
-      ...(google ? { google } : {}),
+      ...(github ? { github: { ...github, disableImplicitSignUp: explicitSocialSignUp } } : {}),
+      ...(google ? { google: { ...google, disableImplicitSignUp: explicitSocialSignUp } } : {}),
     },
     plugins: [
       username({

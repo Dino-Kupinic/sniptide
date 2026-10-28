@@ -169,3 +169,39 @@ describe("optional SMTP configuration", () => {
     expect(() => getConfig({ ...complete, SMTP_REQUIRE_TLS: "maybe" })).toThrow(/SMTP_REQUIRE_TLS/)
   })
 })
+
+describe("legal settings", () => {
+  test("are all off by default", () => {
+    expect(getConfig({}).legal).toEqual({
+      termsUrl: undefined,
+      privacyUrl: undefined,
+      minimumAge: undefined,
+      operator: undefined,
+      copyrightEmail: undefined,
+    })
+  })
+  test("read the operator, documents, minimum age and copyright contact", () => {
+    expect(
+      getConfig({
+        TERMS_URL: "https://example.com/terms",
+        PRIVACY_URL: "https://example.com/privacy",
+        MINIMUM_AGE: "16",
+        OPERATOR_NAME: "Example GmbH",
+        OPERATOR_ADDRESS: "Ring 1\n1010 Wien",
+        COPYRIGHT_EMAIL: "copyright@example.com",
+      }).legal,
+    ).toEqual({
+      termsUrl: "https://example.com/terms",
+      privacyUrl: "https://example.com/privacy",
+      minimumAge: 16,
+      operator: { name: "Example GmbH", address: "Ring 1\n1010 Wien" },
+      copyrightEmail: "copyright@example.com",
+    })
+  })
+  test("reject an age outside 13 to 21 and a malformed address", () => {
+    expect(() => getConfig({ MINIMUM_AGE: "12" })).toThrow(/MINIMUM_AGE/)
+    expect(() => getConfig({ MINIMUM_AGE: "adult" })).toThrow(/MINIMUM_AGE/)
+    expect(() => getConfig({ COPYRIGHT_EMAIL: "nope" })).toThrow(/COPYRIGHT_EMAIL/)
+    expect(() => getConfig({ TERMS_URL: "terms" })).toThrow(/TERMS_URL/)
+  })
+})

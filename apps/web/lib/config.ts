@@ -151,6 +151,15 @@ const schema = z.object({
   ACCOUNT_STORAGE_BYTES: sizeCap.default(DEFAULT_ACCOUNT_STORAGE_BYTES),
   ACCOUNT_PASTE_LIMIT: countCap.default(DEFAULT_ACCOUNT_PASTES),
 
+  TERMS_URL: z.url({ message: "must be a full URL like https://example.com/terms." }).optional(),
+  PRIVACY_URL: z
+    .url({ message: "must be a full URL like https://example.com/privacy." })
+    .optional(),
+  MINIMUM_AGE: z.coerce.number().int().min(13).max(21).optional(),
+  OPERATOR_NAME: z.string().max(200).optional(),
+  OPERATOR_ADDRESS: z.string().max(500).optional(),
+  COPYRIGHT_EMAIL: z.string().email().optional(),
+
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
 })
@@ -237,6 +246,17 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     accountLimits: {
       bytes: value.ACCOUNT_STORAGE_BYTES,
       pastes: value.ACCOUNT_PASTE_LIMIT,
+    },
+    // Who runs this instance and the documents sign-up points to. Each is optional, so a private
+    // self-hosted server can leave them all unset.
+    legal: {
+      termsUrl: value.TERMS_URL,
+      privacyUrl: value.PRIVACY_URL,
+      minimumAge: value.MINIMUM_AGE,
+      operator: value.OPERATOR_NAME
+        ? { name: value.OPERATOR_NAME, address: value.OPERATOR_ADDRESS }
+        : undefined,
+      copyrightEmail: value.COPYRIGHT_EMAIL,
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

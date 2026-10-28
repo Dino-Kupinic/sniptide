@@ -40,7 +40,7 @@ test("user agents name the browser and system, most specific first", () => {
 test("OAuth error codes map to a message key, unknown ones to the generic message", () => {
   expect(oauthErrorKey("account_not_linked")).toBe("accountNotLinked")
   expect(oauthErrorKey("invite_only")).toBe("inviteOnly")
-  expect(oauthErrorKey("signup_disabled")).toBe("signUpClosed")
+  expect(oauthErrorKey("signup_disabled")).toBe("noAccount")
   expect(oauthErrorKey("state_mismatch")).toBe("generic")
   expect(oauthErrorKey("__proto__")).toBe("generic")
   expect(oauthErrorKey(undefined)).toBeNull()
