@@ -12,9 +12,9 @@ import { eventBreakdown, eventStats } from "./stats-sql"
 // (lib/pastes/events.ts); this job folds them into the per-day tables that keep the history
 // cheap, then lets go of the hits it no longer needs.
 //
-// Each run recomputes every day from the one after the last finalized day up to today and
-// replaces those days' rows, so a run that is repeated, interrupted or run twice at once leaves the
-// same numbers. A day is finalized, and from then on read from the rollup tables only, once the run
+// Runs resume after the last finalized day and replace each completed day's rows, so a run that
+// is repeated, interrupted or run twice at once leaves the same numbers. A day is finalized,
+// and from then on read from the rollup tables only, once the run
 // that rolled it up started after the day had been over for SETTLE_MS. The Analytics page reads
 // the days after that straight from paste_event, so it is exact whenever it is opened and never
 // waits for this job.
@@ -37,34 +37,30 @@ function dayOf(time: number) {
 export async function rollUpAnalytics(now = new Date()) {
   const started = performance.now()
   const batch = envInteger("PURGE_BATCH_SIZE", 500, 1, 5000)
-  let result: { days: number; removed: number } | null
+  const budget = envInteger("ANALYTICS_ROLLUP_TIME_BUDGET_MS", 2000, 100, 60000)
+  const today = dayOf(now.getTime())
+  const settled = dayOf(now.getTime() - SETTLE_MS) - 1
+  let result: { days: number; removed: number } | null = { days: 0, removed: 0 }
+  let nextDay: number | undefined
   try {
-    result = await getDb().transaction(async (tx) => {
-      let days = 0
-      let removed = 0
-      const [lock] = await tx.execute<{ locked: boolean }>(
-        sql`SELECT pg_try_advisory_xact_lock(${ROLLUP_LOCK}) AS locked`,
-      )
-      if (!lock?.locked) return null
-
-      const today = dayOf(now.getTime())
-      // Days up to this one are over for good; a hit committed in the last minutes of a day can
-      // still be on its way in when the clock turns.
-      const settled = dayOf(now.getTime() - SETTLE_MS) - 1
-
-      const [state] = await tx.execute<{ finalized: number | null }>(
-        sql`SELECT finalized_day AS finalized FROM analytics_rollup WHERE id = 1`,
-      )
-      let first = state?.finalized == null ? null : state.finalized + 1
-      if (first === null) {
-        const [oldest] = await tx.execute<{ day: number | null }>(
-          sql`SELECT floor(extract(epoch FROM min(at)) / 86400)::int AS day FROM paste_event`,
+    do {
+      const rolled = await getDb().transaction(async (tx) => {
+        const [lock] = await tx.execute<{ locked: boolean }>(
+          sql`SELECT pg_try_advisory_xact_lock(${ROLLUP_LOCK}) AS locked`,
         )
-        first = oldest?.day ?? today
-      }
-
-      // One statement per day, so a backlog after downtime stays under the statement timeout.
-      for (let day = first; day <= today; day++) {
+        if (!lock?.locked) return null
+        const [state] = await tx.execute<{ finalized: number }>(
+          sql`SELECT finalized_day AS finalized FROM analytics_rollup WHERE id = 1`,
+        )
+        let first = state ? state.finalized + 1 : null
+        if (first === null) {
+          const [oldest] = await tx.execute<{ day: number | null }>(
+            sql`SELECT floor(extract(epoch FROM min(at)) / 86400)::int AS day FROM paste_event`,
+          )
+          first = Math.min(oldest?.day ?? today, today)
+        }
+        const day = Math.max(first, nextDay ?? first)
+        if (day > today) return { day: null }
         const from = day * DAY
         const to = from + DAY
         await tx.execute(sql`
@@ -76,28 +72,47 @@ export async function rollUpAnalytics(now = new Date()) {
           INSERT INTO paste_breakdown_day (paste_id, day, dimension, key, hits)
           ${eventBreakdown(from, to)}
           ON CONFLICT (paste_id, day, dimension, key) DO UPDATE SET hits = EXCLUDED.hits`)
-        days++
+        const finalizedDay = Math.min(day, settled)
+        await tx.execute(sql`
+          INSERT INTO analytics_rollup (id, finalized_day) VALUES (1, ${finalizedDay})
+          ON CONFLICT (id) DO UPDATE SET
+            finalized_day = GREATEST(analytics_rollup.finalized_day, EXCLUDED.finalized_day)`)
+        return { day }
+      })
+      if (!rolled) {
+        if (!result.days) result = null
+        break
       }
+      if (rolled.day === null) break
+      result.days++
+      nextDay = rolled.day + 1
+    } while (nextDay <= today && performance.now() - started < budget)
 
-      await tx.execute(sql`
-        INSERT INTO analytics_rollup (id, finalized_day) VALUES (1, ${settled})
-        ON CONFLICT (id) DO UPDATE SET
-          finalized_day = GREATEST(analytics_rollup.finalized_day, EXCLUDED.finalized_day)`)
-
-      // Only days that were just finalized above are old enough to go, so nothing is dropped
-      // before it has been counted.
-      const cutoff = new Date((today - EVENT_DAYS + 1) * DAY).toISOString()
-      for (;;) {
-        const gone = await tx.execute(
-          sql`DELETE FROM paste_event WHERE id IN (SELECT id FROM paste_event WHERE at < ${cutoff} ORDER BY at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+    while (result && performance.now() - started < budget) {
+      const removed = await getDb().transaction(async (tx) => {
+        const [lock] = await tx.execute<{ locked: boolean }>(
+          sql`SELECT pg_try_advisory_xact_lock(${ROLLUP_LOCK}) AS locked`,
         )
-        removed += gone.length
-        if (gone.length < batch) break
-      }
-      // Yesterday's salt can still be needed by a server whose clock is a little behind.
-      await tx.execute(sql`DELETE FROM analytics_salt WHERE day < ${today - 1}`)
-      return { days, removed }
-    })
+        if (!lock?.locked) return null
+        const [state] = await tx.execute<{ finalized: number }>(
+          sql`SELECT finalized_day AS finalized FROM analytics_rollup WHERE id = 1`,
+        )
+        if (!state) return 0
+        const cutoff = new Date(Math.min(today - EVENT_DAYS + 1, state.finalized + 1) * DAY)
+        const gone = await tx.execute(sql`
+          DELETE FROM paste_event WHERE id IN (
+            SELECT id FROM paste_event WHERE at < ${cutoff.toISOString()}
+            ORDER BY at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED
+          ) RETURNING id`)
+        return gone.length
+      })
+      if (removed === null) break
+      result.removed += removed
+      if (removed < batch) break
+    }
+    if (result && performance.now() - started < budget) {
+      await getDb().execute(sql`DELETE FROM analytics_salt WHERE day < ${today - 1}`)
+    }
   } catch (error) {
     recordMetric("maintenance:analytics-rollup", performance.now() - started, true)
     throw error

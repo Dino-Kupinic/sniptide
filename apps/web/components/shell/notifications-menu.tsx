@@ -24,6 +24,7 @@ import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { timeAgo } from "@/lib/format"
 import { dismiss, markAllRead, markRead } from "@/lib/notifications/actions"
+import { NotificationReader } from "@/lib/notifications/reader"
 import {
   NOTIFICATION_POLL_MS,
   type NotificationFeed,
@@ -63,23 +64,27 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const [feed, setFeed] = React.useState<Feed>(null)
-  // Only the newest answer counts, so a slow earlier request can't undo a mark-as-read.
-  const latest = React.useRef(0)
-
-  const load = React.useCallback(async () => {
-    const id = ++latest.current
-    try {
-      const response = await fetch("/api/notifications", { cache: "no-store" })
-      if (!response.ok) throw new Error(String(response.status))
-      const next = (await response.json()) as NotificationFeed
-      if (id === latest.current) setFeed(next)
-    } catch {
-      // Keep showing what we have; only a bell that never loaded reports the failure.
-      if (id === latest.current) setFeed((current) => (current === null ? "error" : current))
-    }
-  }, [locale])
+  const currentLocale = React.useRef(locale)
+  currentLocale.current = locale
+  const [reader] = React.useState(
+    () =>
+      new NotificationReader({
+        async read() {
+          const response = await fetch("/api/notifications", {
+            cache: "no-store",
+            headers: { "accept-language": currentLocale.current },
+          })
+          if (!response.ok) throw new Error(String(response.status))
+          return (await response.json()) as NotificationFeed
+        },
+        publish: setFeed,
+        failed: () => setFeed((current) => (current === null ? "error" : current)),
+      }),
+  )
+  const load = React.useCallback(() => reader.load(), [reader])
 
   React.useEffect(() => {
+    reader.invalidate()
     void load()
     const poll = () => {
       if (document.visibilityState === "visible") void load()
@@ -91,8 +96,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       window.clearInterval(timer)
       document.removeEventListener("visibilitychange", poll)
       window.removeEventListener("focus", poll)
+      reader.invalidate()
     }
-  }, [load])
+  }, [load, locale, reader])
 
   const loaded = typeof feed === "object" && feed !== null ? feed : null
   const unread = loaded?.unread ?? 0
@@ -103,18 +109,16 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     change: (current: NotificationFeed) => NotificationFeed,
     save: () => Promise<{ ok: boolean }>,
   ) {
-    latest.current++
     setFeed((current) =>
       typeof current === "object" && current !== null ? change(current) : current,
     )
-    save()
-      .then((result) => {
+    reader
+      .mutate(async () => {
+        const result = await save()
         if (!result.ok) throw new Error("not saved")
-        return load()
       })
       .catch(() => {
         toast.error(t("couldnt_update_notifications_try_again"))
-        void load()
       })
   }
 

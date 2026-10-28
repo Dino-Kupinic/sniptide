@@ -92,6 +92,12 @@ export const paste = pgTable(
     uniqueIndex("paste_slug_unique").on(table.slug),
     index("paste_owner_idx").on(table.ownerId, table.updatedAt),
     index("paste_collection_idx").on(table.ownerId, table.collection, table.updatedAt, table.id),
+    index("paste_api_updated_idx")
+      .on(table.ownerId, table.updatedAt.desc().nullsFirst(), table.id)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("paste_api_collection_created_idx")
+      .on(table.ownerId, table.collection, table.createdAt, table.id)
+      .where(sql`${table.deletedAt} IS NULL`),
     index("paste_deleted_idx").on(table.deletedAt),
     index("paste_expired_idx").on(table.expiresAt),
     index("paste_title_search_idx").using("gin", table.title.op("gin_trgm_ops")),

@@ -5,7 +5,8 @@ import { getDb } from "@/lib/db"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage } from "@/lib/pastes/lists"
-import { readRawFile, readSharedPaste } from "@/lib/pastes/store"
+import { getPaste, readRawFile, readSharedPaste } from "@/lib/pastes/store"
+import { telemetrySnapshot } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs, unlock } from "./harness"
 
@@ -20,6 +21,26 @@ describeDb("bounded paste reads", () => {
     await seedUser("owner")
     await seedUser("other")
     signInAs("owner")
+  })
+
+  test("detail hydration reuses ordered file metadata and preserves UTF-8 sizes", async () => {
+    const { id } = await seedPaste({
+      slug: "detail",
+      owner: "owner",
+      content: "é",
+      language: "typescript",
+    })
+    await getDb()
+      .insert(pasteFile)
+      .values({ pasteId: id, position: 1, name: "second.sql", language: "sql", content: "😀" })
+    const before = telemetrySnapshot().metrics["db:select"]?.count ?? 0
+    const detail = await getPaste("detail", 999)
+    expect(detail?.bytes).toBe(6)
+    expect(detail?.language).toBe("typescript")
+    expect(detail?.files.map((file) => file.content)).toEqual(["é", "😀"])
+    expect(detail?.revisionPage).toBe(1)
+    expect(detail?.author.name).toBe("owner")
+    expect((telemetrySnapshot().metrics["db:select"]?.count ?? 0) - before).toBeLessThanOrEqual(6)
   })
 
   test("pages cover the owner's pastes once, clamp stale pages, and omit history", async () => {
@@ -99,6 +120,47 @@ describeDb("bounded paste reads", () => {
         (p) => p.slug,
       ),
     ).toEqual(["sort-0", "sort-11"])
+  })
+
+  test("a flipped direction reverses the order and cursors walk it page by page", async () => {
+    for (let i = 0; i < 25; i++) {
+      const seeded = await seedPaste({
+        slug: `dir-${String(i).padStart(2, "0")}`,
+        title: `t${String(i % 7).padStart(2, "0")}`,
+        owner: "owner",
+        expiresAt: i % 4 === 0 ? undefined : new Date(Date.now() + (i % 9) * DAY),
+      })
+      await getDb()
+        .update(paste)
+        .set({ views: i % 5, updatedAt: new Date(Date.now() - i * DAY) })
+        .where(eq(paste.id, seeded.id))
+    }
+    for (const sort of ["updated", "views", "expires", "title", "language", "visibility"] as const)
+      for (const dir of ["asc", "desc"] as const) {
+        const slugs = async (page: number, cursor?: string) =>
+          listPastePage(
+            { mode: "mine" },
+            query({ sort, dir, page: String(page), ...(cursor ? { cursor } : {}) }),
+          )
+        const offset: string[] = []
+        const walked: string[] = []
+        let next: string | undefined
+        for (const page of [1, 2, 3]) {
+          offset.push(...(await slugs(page)).pastes.map((p) => p.slug))
+          const result = await slugs(page, next)
+          walked.push(...result.pastes.map((p) => p.slug))
+          next = "nextCursor" in result.pagination ? result.pagination.nextCursor : undefined
+        }
+        expect(walked, `${sort} ${dir}`).toEqual(offset)
+        expect(new Set(offset).size, `${sort} ${dir}`).toBe(25)
+      }
+    const first = async (sort: "views" | "expires", dir: "asc" | "desc") =>
+      (await listPastePage({ mode: "mine" }, query({ sort, dir }))).pastes[0]?.slug
+    expect(await first("views", "asc")).not.toBe(await first("views", "desc"))
+    // Pastes that never expire come after every date ascending and before every date descending.
+    const never = new Set(["dir-00", "dir-04", "dir-08", "dir-12", "dir-16", "dir-20", "dir-24"])
+    expect(never.has((await first("expires", "desc")) ?? "")).toBe(true)
+    expect(never.has((await first("expires", "asc")) ?? "")).toBe(false)
   })
 
   test("star counts and pages hide private, expired and password-locked foreign stars", async () => {

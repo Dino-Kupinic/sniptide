@@ -94,6 +94,8 @@ export interface AnalyticsReport {
   languages: LanguageRow[]
 }
 
+export type AnalyticsSeries = Pick<AnalyticsReport, "range" | "scope" | "points">
+
 export function parseRange(value: string | undefined): AnalyticsRange {
   return ANALYTICS_RANGES.find((range) => range === value) ?? DEFAULT_RANGE
 }

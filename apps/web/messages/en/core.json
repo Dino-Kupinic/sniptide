@@ -54,8 +54,6 @@
     "revisions": "Revisions",
     "editPermission": "You can edit this paste. Sharing and deleting stay with {name}.",
     "viewPermission": "You can read and copy this paste. Only {name} can change it.",
-    "indentTabs": "Tabs",
-    "indentSpaces": "{count, plural, one {# space} other {# spaces}}",
     "gistError": "That gist couldn't be opened.",
     "metricViews": "Views",
     "metricUnique": "Unique visitors",
@@ -93,6 +91,7 @@
     "notificationExpiring": "“{title}” expires {time}",
     "notificationExpiringDetail": "Extend it from the paste's sharing panel",
     "notificationViews": "“{title}” reached {count, number} views",
-    "notificationViewsDetail": "See where they came from in Analytics"
+    "notificationViewsDetail": "See where they came from in Analytics",
+    "snapshotUnavailable": "Snapshot unavailable"
   }
 }

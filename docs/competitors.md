@@ -26,7 +26,7 @@ How Sniptide compares with the tools people use today to share snippets and secr
 | Encryption | Passwords hashed; HTTPS in transit. Paste content is stored as plain text in Postgres, so the operator can read it. Not zero-knowledge | Not documented | Not documented | Client-side AES-256-GCM, key in the URL fragment; the server cannot read pastes | Not documented |
 | Version history | Revisions with rollback | Not documented | Full git history | Not documented | Not documented |
 | API | Token API under `/api/v1`, OpenAPI document and Scalar docs at `/docs/api` | HTTP API; needs a developer key; login key for private pastes | REST API (`gist` OAuth scope) | The FAQ says plain `curl` does not work because encryption happens client-side; community CLI clients exist | Not documented |
-| CLI | `sniptide` captures files, folders and globs, restores paths, syncs `.env` files (not on npm yet) | Not documented | Not documented | Community clients only | Community clients only |
+| CLI | `sniptide` captures files, folders and globs, restores paths, syncs `.env` files (available on npm) | Not documented | Not documented | Community clients only | Community clients only |
 | Agent / MCP support | Built-in MCP endpoint (`/api/mcp`) plus a local stdio server: search, read, fetch collection, create, update | No first-party MCP found | No first-party MCP server found; community servers exist (GistPad) | No | No |
 | Analytics | Views, uniques, copies, raw reads, referrers, devices, countries; no cookies, stored in your own database | View counts | Not documented | No | No |
 | Pricing | Free in early access; no paid plan yet | Free with ads. Pro removes ads and raises limits (paid; the Pro page said "sold out" when we fetched it) | Free | Free (self-hosted) | Free (self-hosted) |
@@ -77,8 +77,7 @@ where the overlap ends.
 3. **Env groups are not a secrets manager.** No history or rollback, no audit log, no SSO, no
    per-environment structure, and the encryption key sits on the same server. Infisical and
    Doppler cover all of that. Position env sync as a convenience, not a replacement.
-4. **Distribution.** The CLI and MCP package are not published to npm yet, so setup is "clone and
-   build". Gist, Infisical and Doppler ship installable clients.
+4. **Distribution.** The CLI and local MCP server are available on npm; the remote MCP endpoint ships with the app. Gist, Infisical and Doppler ship installable clients.
 5. **MCP auth is bearer-token only.** No OAuth login or discovery yet.
 6. **Reach.** Gist is where developers already are, with discovery, comments and embeds. Pastebin
    has years of search traffic. Sniptide has neither network effect yet.
@@ -90,19 +89,19 @@ where the overlap ends.
 | Claim | Where |
 | --- | --- |
 | AGPL-3.0 | `LICENSE` |
-| Docker, Compose, Coolify, sign-up and invite settings | `README.md` (Self-hosting, Settings) |
+| Docker, Compose, Coolify, sign-up and invite settings | `apps/docs/content/docs/self-hosting/` |
 | Visibility, password hash, burn after read, tags, collection, expiry | `packages/db/src/schema/pastes.ts` |
 | Expiry choices `1h`, `1d`, `1w`, `1m`, `never` | `apps/web/lib/pastes/types.ts` |
 | View/edit access when sharing with a person | `apps/web/lib/pastes/types.ts` (`ACCESSES`) |
 | Revisions with snapshots | `packages/db/src/schema/pastes.ts` (`pasteRevision`) |
 | Collections | `packages/db/src/schema/collections.ts` |
 | Env values encrypted with AES-256-GCM | `packages/db/src/schema/env.ts`, `apps/web/lib/env/crypto.ts` |
-| Token API and OpenAPI | `README.md` (API reference), `apps/web/lib/openapi.ts` |
-| MCP tools, bearer-token auth, not on npm | `packages/mcp/README.md` |
-| CLI features, not on npm | `packages/cli/README.md` |
+| Token API and OpenAPI | `docs/development.md` (Document the API), `apps/web/lib/openapi.ts` |
+| MCP tools, bearer-token auth, available on npm | `packages/mcp/README.md` |
+| CLI features, available on npm | `packages/cli/README.md` |
 | Limits (1 MiB, 10 files, 1 GiB, 10,000 pastes) | `packages/cli/README.md`, `docs/scaling.md` |
 | Free during early access | `apps/web/components/settings/settings-view.tsx` (Billing tab) |
-| Analytics | `README.md` (Settings) |
+| Analytics | `apps/docs/content/docs/core-concepts/analytics.mdx` |
 
 ## Sources
 

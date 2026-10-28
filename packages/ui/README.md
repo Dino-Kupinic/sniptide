@@ -29,7 +29,10 @@ import { Logo } from "@sniptide/ui/components/logo"
 ```
 
 The theme reads three font variables, so set them on `<html>` (for example with `next/font`):
-`--font-sans` (Inter), `--font-mono` (JetBrains Mono) and `--font-heading` (Archivo).
+`--font-sans` (Inter), `--font-mono` (Paper Mono) and `--font-heading` (Archivo).
+The Paper Mono fonts in `src/fonts` come from the
+[v1.000 release](https://github.com/paper-design/paper-mono/releases/tag/v1.000). The included
+`OFL.txt` contains their SIL Open Font License 1.1.
 The logo uses vector outlines and does not need a font.
 
 `globals.css` already tells Tailwind to scan this package's components; your own files are found
@@ -52,13 +55,13 @@ prefers reduced motion.
 
 ## Releasing
 
-Bump `version` in `package.json` and merge to `main`. The `Publish @sniptide/ui` workflow stages
-any version that isn't on npm yet (Trusted Publishing, no token). Approve it with 2FA to publish:
+Merges to `main` automatically release this package after CI passes when its packed contents
+change. Conventional Commits choose the version bump. The workflow verifies the package in an
+isolated consumer, then publishes through npm Trusted Publishing with provenance.
 
-```bash
-npm stage list @sniptide/ui
-npm stage approve <stage-id>
-```
+The source package version is a development default; npm records the released version. No manual
+version bump or stage approval is needed. See [automatic npm releases](../../docs/npm-publishing.md)
+for one-time owner configuration and retries.
 
 ## License
 

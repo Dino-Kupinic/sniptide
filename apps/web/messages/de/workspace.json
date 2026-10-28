@@ -341,7 +341,8 @@
     "move_up": "Nach oben",
     "move_down": "Nach unten",
     "done": "Fertig",
-    "searching": "Wird gesucht…"
+    "searching": "Wird gesucht…",
+    "skipToMain": "Zum Hauptinhalt springen"
   },
   "Secrets": {
     "title": "Geheimnisse",

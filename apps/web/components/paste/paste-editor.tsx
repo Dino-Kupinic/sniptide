@@ -65,6 +65,7 @@ import {
 import type { Collection } from "@/lib/collections/types"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
+import { editorLineCount, isLargeEditorContent } from "@/lib/highlight/editor-limits"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
@@ -265,6 +266,11 @@ export function PasteEditor({
   const titleRef = useAutoHeight(title)
   const formRef = React.useRef<HTMLFormElement>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const exitOnTab = React.useRef(false)
+  const filePanelId = React.useId()
+  React.useEffect(() => {
+    exitOnTab.current = false
+  }, [activeId])
   // Where the caret goes once the next render has put new text in the textarea (Undo, Redo, Tab).
   const pendingSelection = React.useRef<Pick<Snapshot, "selectionStart" | "selectionEnd"> | null>(
     null,
@@ -293,8 +299,22 @@ export function PasteEditor({
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
-  const totalBytes = files.reduce((size, file) => size + byteLength(file.content), 0)
-  const lineCount = (active?.content ?? "").split("\n").length
+  const [fileSizes] = React.useState(() => new WeakMap<EditorFile, number>())
+  const totalBytes = React.useMemo(
+    () =>
+      files.reduce((size, file) => {
+        let bytes = fileSizes.get(file)
+        if (bytes === undefined) {
+          bytes = byteLength(file.content)
+          fileSizes.set(file, bytes)
+        }
+        return size + bytes
+      }, 0),
+    [files, fileSizes],
+  )
+  const content = active?.content ?? ""
+  const lineCount = React.useMemo(() => editorLineCount(content), [content])
+  const plainEditor = isLargeEditorContent(content, lineCount)
   const lines = useHighlight(active?.content ?? "", active?.name ?? "")
   // The code view drops one trailing newline; the textarea shows it as an empty last line.
   const previewLines = active?.content.endsWith("\n") ? lines?.slice(0, -1) : lines
@@ -593,9 +613,19 @@ export function PasteEditor({
   }, [])
 
   function trackCursor(textarea: HTMLTextAreaElement) {
-    const before = textarea.value.slice(0, textarea.selectionStart)
-    const lines = before.split("\n")
-    setCursor({ line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 })
+    const position = textarea.selectionStart
+    let line = 1
+    let start = 0
+    for (let index = 0; index < position; index++) {
+      if (textarea.value.charCodeAt(index) === 10) {
+        line++
+        start = index + 1
+      }
+    }
+    const column = position - start + 1
+    setCursor((current) =>
+      current.line === line && current.column === column ? current : { line, column },
+    )
   }
 
   // Undo and Redo walk this file's own history (see useEditorHistory), not the browser's, so they
@@ -641,6 +671,29 @@ export function PasteEditor({
 
   function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.nativeEvent.isComposing) return
+    if (
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      event.key === "Escape"
+    ) {
+      exitOnTab.current = true
+      event.stopPropagation()
+      return
+    }
+    if (
+      event.key === "Tab" &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      exitOnTab.current
+    ) {
+      exitOnTab.current = false
+      return
+    }
+    if (!["Shift", "Control", "Alt", "Meta"].includes(event.key)) exitOnTab.current = false
 
     // ⌘Z / ⌘⇧Z (and Ctrl+Y off the Mac) go through our own history.
     const undo = matchesCombo(event, shortcut("undo").keys)
@@ -655,7 +708,15 @@ export function PasteEditor({
 
     // Tab indents (by the Settings indentation) instead of leaving the editor.
     const key = event.key.toLowerCase()
-    if (key !== "tab" || event.shiftKey || !active) return
+    if (
+      key !== "tab" ||
+      event.shiftKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      !active
+    )
+      return
     event.preventDefault()
     const textarea = event.currentTarget
     const { selectionStart, selectionEnd, value } = textarea
@@ -951,7 +1012,7 @@ export function PasteEditor({
       <HeaderActions>
         {editing ? null : (
           <Button
-            variant="ghost"
+            variant="destructive"
             size="lg"
             render={<Link href={cancelHref} />}
             nativeButton={false}
@@ -1066,6 +1127,7 @@ export function PasteEditor({
           <div className="overflow-hidden rounded-lg mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
             <FileTabs
               files={files}
+              panelId={filePanelId}
               activeId={active?.id}
               onSelect={setActiveId}
               onRename={(id, name) => {
@@ -1079,68 +1141,79 @@ export function PasteEditor({
               trailing={sharedEdit ? undefined : <SidePanelToggle />}
             />
 
-            {preview ? (
-              <CodeBlock
-                content={active?.content || " "}
-                highlighted={previewLines}
-                wrap
-                lineNumbers={lineNumbers}
-                className="flex-1 bg-muted dark:bg-sidebar"
-              />
-            ) : (
-              <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
-                {lineNumbers ? (
-                  <div
-                    aria-hidden="true"
-                    style={{ minWidth: `${String(lineCount).length}ch` }}
-                    className="shrink-0 text-right text-muted-foreground tabular-nums select-none"
-                  >
-                    {Array.from({ length: lineCount }, (_, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          index + 1 === cursor.line && "group-focus-within/code:text-foreground",
-                        )}
-                      >
-                        {index + 1}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                <HighlightedTextarea
-                  aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
-                  lines={lines}
-                  activeLine={cursor.line}
-                  value={active?.content ?? ""}
-                  ref={bindTextarea}
-                  onChange={(event) => {
-                    const textarea = event.target
-                    if (active) {
-                      history.edit(
-                        active.id,
-                        active.content,
-                        snapshotOf(textarea),
-                        editKind((event.nativeEvent as InputEvent).inputType),
-                      )
-                    }
-                    updateActive({ content: textarea.value })
-                    trackCursor(textarea)
-                  }}
-                  onSelect={(event) => {
-                    if (active) history.moveCaret(active.id, snapshotOf(event.currentTarget))
-                    trackCursor(event.currentTarget)
-                  }}
-                  onKeyDown={onEditorKeyDown}
-                  spellCheck={false}
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  placeholder={t("pasteOrTypeCode")}
-                  rows={Math.max(lineCount, 12)}
-                  wrap="off"
-                  metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
+            <div
+              id={filePanelId}
+              role="tabpanel"
+              aria-labelledby={`${filePanelId}-tab-${files.findIndex((file) => file.id === active?.id)}`}
+              className="flex flex-1 flex-col"
+            >
+              {preview ? (
+                <CodeBlock
+                  content={active?.content || " "}
+                  highlighted={previewLines}
+                  wrap
+                  lineNumbers={lineNumbers}
+                  className="flex-1 bg-muted dark:bg-sidebar"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
+                  {lineNumbers && !plainEditor ? (
+                    <div
+                      aria-hidden="true"
+                      style={{ minWidth: `${String(lineCount).length}ch` }}
+                      className="shrink-0 text-right text-muted-foreground tabular-nums select-none"
+                    >
+                      {Array.from({ length: lineCount }, (_, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            index + 1 === cursor.line && "group-focus-within/code:text-foreground",
+                          )}
+                        >
+                          {index + 1}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <HighlightedTextarea
+                    aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
+                    onBlur={() => {
+                      exitOnTab.current = false
+                    }}
+                    lines={lines}
+                    plain={plainEditor}
+                    activeLine={cursor.line}
+                    value={active?.content ?? ""}
+                    ref={bindTextarea}
+                    onChange={(event) => {
+                      const textarea = event.target
+                      if (active) {
+                        history.edit(
+                          active.id,
+                          active.content,
+                          snapshotOf(textarea),
+                          editKind((event.nativeEvent as InputEvent).inputType),
+                        )
+                      }
+                      updateActive({ content: textarea.value })
+                      trackCursor(textarea)
+                    }}
+                    onSelect={(event) => {
+                      if (active) history.moveCaret(active.id, snapshotOf(event.currentTarget))
+                      trackCursor(event.currentTarget)
+                    }}
+                    onKeyDown={onEditorKeyDown}
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    placeholder={t("pasteOrTypeCode")}
+                    rows={plainEditor ? 12 : Math.max(lineCount, 12)}
+                    wrap="off"
+                    metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
+                  />
+                </div>
+              )}
+            </div>
 
             {secret ? (
               <p

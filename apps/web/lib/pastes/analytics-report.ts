@@ -12,6 +12,7 @@ import { DAY, HOUR } from "@/lib/time"
 import {
   type AnalyticsQuery,
   type AnalyticsReport,
+  type AnalyticsSeries,
   type CountryRow,
   type DeviceRow,
   type Kpi,
@@ -153,6 +154,19 @@ async function dailySeries(rows: SQL, first: number): Promise<Series> {
   return series
 }
 
+async function hourlyRows(from: number, to: number, ids: SQL) {
+  return getDb().execute<SeriesRow>(sql`
+    SELECT floor(extract(epoch FROM e.at) / 3600)::int AS slot,
+      (count(*) FILTER (WHERE e.kind = 'view'))::int AS views,
+      (count(DISTINCT (e.paste_id, e.visitor)) FILTER (WHERE e.kind = 'view'))::int AS uniques,
+      (count(*) FILTER (WHERE e.kind = 'raw'))::int AS raw,
+      (count(*) FILTER (WHERE e.kind = 'copy'))::int AS copies
+    FROM paste_event e
+    WHERE e.at >= ${new Date(from).toISOString()} AND e.at < ${new Date(to).toISOString()}
+      AND e.paste_id IN (${ids})
+    GROUP BY 1`)
+}
+
 // Per hour, plus the totals of the two 24-hour windows counted on their own, because a reader
 // who comes back in another hour is still one reader in the window.
 async function hourlySeries(
@@ -171,9 +185,7 @@ async function hourlySeries(
       (count(*) FILTER (WHERE e.kind = 'raw'))::int AS raw,
       (count(*) FILTER (WHERE e.kind = 'copy'))::int AS copies`
   const [hours, windows] = await Promise.all([
-    db.execute<SeriesRow>(sql`
-      SELECT floor(extract(epoch FROM e.at) / 3600)::int AS slot, ${counts}
-      ${events} GROUP BY 1`),
+    hourlyRows(prevStart, end, ids),
     db.execute<Omit<SeriesRow, "slot"> & { recent: boolean }>(sql`
       SELECT (e.at >= ${new Date(start).toISOString()}) AS recent, ${counts}
       ${events} GROUP BY 1`),
@@ -300,23 +312,64 @@ function point(
   time: number,
   hourly: boolean,
   row: SeriesRow | undefined,
-  locale: Locale,
+  dayFormat: Intl.DateTimeFormat | null,
 ): SeriesPoint {
-  const dayFormat = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  })
   const iso = new Date(time).toISOString()
   return {
     date: hourly ? `${iso.slice(0, 13).replace("T", " ")}:00` : iso.slice(0, 10),
-    label: hourly ? `${iso.slice(11, 13)}:00` : dayFormat.format(time),
+    label: dayFormat ? dayFormat.format(time) : `${iso.slice(11, 13)}:00`,
     values: {
       views: row?.views ?? 0,
       unique: row?.uniques ?? 0,
       copies: row?.copies ?? 0,
       raw: row?.raw ?? 0,
     },
+  }
+}
+
+function windowOf({ range }: AnalyticsQuery, now: number) {
+  const hourly = range === "24h"
+  const count = POINT_COUNT[range]
+  const step = hourly ? HOUR : DAY
+  const last = Math.floor(now / step)
+  const first = last - count + 1
+  return { hourly, count, step, last, first, previous: first - count }
+}
+
+function pointsOf(
+  rows: Map<number, SeriesRow>,
+  { hourly, count, step, first }: ReturnType<typeof windowOf>,
+  locale: Locale,
+) {
+  const dayFormat = hourly
+    ? null
+    : new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" })
+  return Array.from({ length: count }, (_, index) =>
+    point((first + index) * step, hourly, rows.get(first + index), dayFormat),
+  )
+}
+
+export async function getAnalyticsSeries(
+  query: AnalyticsQuery,
+  now = Date.now(),
+  locale: Locale = "en",
+): Promise<AnalyticsSeries> {
+  const viewer = (await getSession())?.user.id ?? null
+  const window = windowOf(query, now)
+  const { hourly, first, last } = window
+  const [{ scope, ids }, rawFrom] = await Promise.all([
+    resolveScope(viewer, query),
+    hourly ? 0 : firstUnrolledDay(),
+  ])
+  const rows = hourly
+    ? new Map(
+        (await hourlyRows(first * HOUR, (last + 1) * HOUR, ids)).map((row) => [row.slot, row]),
+      )
+    : (await dailySeries(dayStats(first, last, rawFrom, ids), first)).rows
+  return {
+    range: query.range,
+    scope: scope?.type === "paste" ? (await resolveScope(viewer, query)).scope : scope,
+    points: pointsOf(rows, window, locale),
   }
 }
 
@@ -331,12 +384,8 @@ export async function getAnalyticsReport(
   const { range } = query
   const { scope, ids } = await resolveScope(viewer, query)
 
-  const hourly = range === "24h"
-  const count = POINT_COUNT[range]
-  const step = hourly ? HOUR : DAY
-  const last = Math.floor(now / step)
-  const first = last - count + 1
-  const previous = first - count
+  const window = windowOf(query, now)
+  const { hourly, last, first, previous } = window
 
   // Which hits and rollups answer for the current period, and for this and the one before it.
   const rawFrom = hourly ? 0 : await firstUnrolledDay()
@@ -368,9 +417,7 @@ export async function getAnalyticsReport(
       : [],
   ])
 
-  const points = Array.from({ length: count }, (_, index) =>
-    point((first + index) * step, hourly, series.rows.get(first + index), locale),
-  )
+  const points = pointsOf(series.rows, window, locale)
   const kpis: Kpi[] = METRICS.map((metric) => ({
     id: metric.id,
     label: t(

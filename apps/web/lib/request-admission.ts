@@ -4,6 +4,7 @@ import { AsyncLocalStorage } from "node:async_hooks"
 import { readdirSync } from "node:fs"
 import { type IncomingMessage, Server, type ServerResponse } from "node:http"
 import path from "node:path"
+import { errorBody } from "@/lib/api/errors"
 import { type Config, getConfig } from "@/lib/config"
 
 type Lane = "normal" | "probe" | "maintenance"
@@ -28,10 +29,7 @@ export class AdmissionError extends Error {
 export function isAdmissionError(error: unknown): error is AdmissionError {
   return error instanceof AdmissionError
 }
-const unavailableBody = JSON.stringify({
-  ok: false,
-  error: "The server is busy. Try again shortly.",
-})
+const unavailableBody = JSON.stringify(errorBody(503, "The server is busy. Try again shortly."))
 export const admissionHeaders = {
   "retry-after": "1",
   "cache-control": "private, no-store",

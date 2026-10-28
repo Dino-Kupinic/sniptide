@@ -26,6 +26,20 @@ up, and turn on **write access** only if it should save and edit snippets.
 | `update_snippet_settings` | Changes visibility, expiry, password or burn after read. Needs write access and is marked destructive. The password is never returned. |
 | `trash_snippet` | Moves a snippet to the trash, where you can restore it in the app. Needs write access and is marked destructive. Nothing is deleted for good. |
 
+## Prompts
+
+The server also offers three prompts, which Claude Code and Cursor list in their slash menus. Each
+one starts a common job with the right tools in the right order.
+
+| Prompt | Arguments | What it asks the agent to do |
+| --- | --- | --- |
+| `use_snippet` | `task` | Search your snippets for the task, read the best match and adapt it to the project. |
+| `save_snippet` | `code`, optional `collection` | Propose a title, tags and paths, leave secrets out, and save a private snippet once you confirm. |
+| `apply_collection` | `collection`, optional `goal` | Fetch every page of the collection, list its steps and wait for your go-ahead before applying them in order. |
+
+The `collection` argument completes from your collection slugs. To have a collection available
+without starting the server, install it as a skill with [`sniptide skill`](/cli).
+
 Only the token owner's **own** snippets are available, private ones included. Other people's, ones
 shared with you, trash and expired pastes are not. The server doesn't run code, doesn't write files
 to your machine, doesn't expose env secrets, and doesn't accept browser sessions. Renaming and
@@ -85,22 +99,22 @@ with **Streamable HTTP**, not the older SSE transport.
 ## Connect locally (stdio)
 
 Instead of the HTTP endpoint you can run the server as a local process that calls the token API.
-It isn't published to npm, so build it from a checkout of the repository (Node.js 24 or newer):
+Use the npm configuration below with Node.js 24 or newer. Contributors can build from a checkout:
 
 ```bash
 bun install
 bun --filter @sniptide/mcp build
 ```
 
-Then point the client at the absolute path of the build. For Claude Code, in `.mcp.json`:
+For a checkout build, use `node` and the absolute path to `packages/mcp/dist/sniptide-mcp.js`. For Claude Code, in `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "sniptide": {
       "type": "stdio",
-      "command": "node",
-      "args": ["/absolute/path/to/sniptide/packages/mcp/dist/sniptide-mcp.js"],
+      "command": "npx",
+      "args": ["--yes", "@sniptide/mcp"],
       "env": {
         "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
         "SNIPTIDE_BASE_URL": "https://app.sniptide.com"

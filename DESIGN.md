@@ -94,7 +94,7 @@ Keywords share the brand blue and the other hues stay muted, so blue leads. Ever
 | --- | --- | --- |
 | Archivo, weight 700 | `--font-heading` | Page titles, dialog titles, stat numbers, landing headlines |
 | Inter | `--font-sans` | Body text, controls, menus |
-| JetBrains Mono | `--font-mono` | Paste slugs, code, shortcuts, tooltips, stat labels |
+| Paper Mono | `--font-mono` | Paste slugs, code, shortcuts, tooltips, stat labels |
 | Archivo, weight 700 | Paper `--font-display` | Landing hero display type |
 
 ### Type scale
@@ -341,7 +341,7 @@ These rules apply to the interface, the landing page, the docs, commit messages,
 - Prose lines run 60 to 68 characters. A stranded word in a large heading gets fixed by rewriting the copy or adjusting the measure, never by shrinking that one element.
 - Peers share one type role, size, weight and line height. A longer string or a larger value never resizes a single peer.
 - Numbers that line up in columns use tabular numerals.
-- JetBrains Mono sets identifiers only: paste slugs, code, paths, commands, shortcuts and tokens. The sentence around an identifier stays in Inter.
+- Paper Mono sets identifiers only: paste slugs, code, paths, commands, shortcuts and tokens. The sentence around an identifier stays in Inter.
 - Paragraphs separate with space and carry no first-line indent.
 - Body text keeps a comfortable size and line height, and dense layouts get more room instead of smaller text.
 

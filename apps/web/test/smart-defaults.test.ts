@@ -7,6 +7,7 @@ import {
   suggestedTitle,
   suggestedVisibility,
 } from "@/lib/pastes/smart-defaults"
+import { findSecrets } from "@/lib/secrets"
 
 describe("paste suggestions", () => {
   test.each([
@@ -62,6 +63,35 @@ describe("paste suggestions", () => {
     expect(hasSensitiveContent([file])).toBe(true)
     expect(suggestedVisibility([file], "public")).toBe("private")
     expect(suggestedTitle([file])).toBe(file.name)
+  })
+
+  test("tracks secret matches across edits, renames and reordered files", () => {
+    const first = { name: "first.txt", content: "ordinary" }
+    const second = { name: "second.txt", content: "\n-----BEGIN PRIVATE KEY-----" }
+    expect(findSecrets([first, second])).toEqual({
+      name: "a private key",
+      file: "second.txt",
+      line: 2,
+    })
+    first.content = `AKIA${"A".repeat(16)}`
+    expect(findSecrets([first, second])?.file).toBe("first.txt")
+    first.name = "renamed.txt"
+    expect(findSecrets([first])?.file).toBe("renamed.txt")
+    expect(findSecrets([second, first])?.file).toBe("second.txt")
+    first.content = "ordinary"
+    expect(findSecrets([first])).toBeNull()
+    first.content = `AKIA${"A".repeat(16)}`
+    expect(findSecrets([first])?.file).toBe("renamed.txt")
+    expect(suggestedVisibility([second], "public")).toBe("private")
+  })
+
+  test("preserves CRLF and comment stripping when suggesting titles", () => {
+    expect(
+      suggestedTitle([{ name: "untitled.txt", content: "\r\n/*\r\n * Hello */\r\nnext" }]),
+    ).toBe("Hello")
+    expect(suggestedTitle([{ name: "untitled.txt", content: "//\r\n;  title\r\nnext" }])).toBe(
+      "title",
+    )
   })
 
   test("keeps the chosen visibility for ordinary files", () => {

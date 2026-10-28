@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { PasteList } from "@/components/lists/paste-list"
 import { listCollections } from "@/lib/collections/store"
+import { cardPreviews } from "@/lib/pastes/card-preview"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage } from "@/lib/pastes/lists"
 import { toRows } from "@/lib/pastes/rows"
@@ -21,11 +22,16 @@ export default async function Page({ searchParams }: PageProps<"/starred">) {
     getSiteOrigin(),
     listCollections(),
   ])
+  const [rows, previews] = await Promise.all([
+    toRows(data.pastes, locale),
+    cardPreviews(data.pastes),
+  ])
   return (
     <PasteList
       title={t("starred")}
       mode="starred"
-      rows={await toRows(data.pastes, locale)}
+      rows={rows}
+      previews={previews}
       origin={origin}
       host={host}
       collections={collections}

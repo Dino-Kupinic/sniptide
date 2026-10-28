@@ -34,11 +34,14 @@ import {
   desc,
   eq,
   exists,
+  getTableColumns,
   gt,
+  gte,
   ilike,
   inArray,
   isNull,
   lt,
+  lte,
   or,
   type SQL,
   sql,
@@ -123,12 +126,16 @@ async function withFiles(
       ),
     )
     .orderBy(asc(pasteFile.position), asc(pasteFile.id))
-  return records
-    .filter((record) => files.some((file) => file.pasteId === record.id))
-    .map((record) => ({
-      ...toSummaryFields(record, origin),
-      files: files.filter((file) => file.pasteId === record.id).map(toApiFile),
-    }))
+  const byPaste = new Map<string, ApiFile[]>()
+  for (const file of files) {
+    const group = byPaste.get(file.pasteId)
+    if (group) group.push(toApiFile(file))
+    else byPaste.set(file.pasteId, [toApiFile(file)])
+  }
+  return records.flatMap((record) => {
+    const files = byPaste.get(record.id)
+    return files ? [{ ...toSummaryFields(record, origin), files }] : []
+  })
 }
 
 // The owner's live pastes: not trashed and not expired.
@@ -436,20 +443,34 @@ export async function trashCapture(
   return { trashed: { id: existing.id, slug: existing.slug } }
 }
 
-// Postgres keeps microseconds and JavaScript milliseconds, so cursors compare and order on
-// timestamps truncated to the millisecond; the id breaks ties.
-const ms = (column: typeof pasteTable.updatedAt | typeof pasteTable.createdAt) =>
-  sql`date_trunc('milliseconds', ${column})`
+type TimestampColumn = typeof pasteTable.updatedAt | typeof pasteTable.createdAt
+
+function cursorColumn(column: TimestampColumn, cursor: Cursor | null) {
+  // Existing tokens retain their original ordering until that traversal finishes.
+  return cursor && cursor.v !== 2 ? sql`date_trunc('milliseconds', ${column})` : sql`${column}`
+}
+
+function preciseTimestamp(column: TimestampColumn) {
+  return sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`
+}
 
 const stamp = (iso: string) => sql`${iso}::timestamptz`
 
 interface Cursor {
   at: string
   id: string
+  v?: 2
 }
 
-function encodeCursor(record: PasteRecord, field: "updatedAt" | "createdAt") {
-  const cursor: Cursor = { at: record[field].toISOString(), id: record.id }
+function encodeCursor(
+  record: PasteRecord & { cursorAt: string },
+  field: "updatedAt" | "createdAt",
+  previous: Cursor | null,
+) {
+  const cursor: Cursor =
+    previous && previous.v !== 2
+      ? { at: record[field].toISOString(), id: record.id }
+      : { v: 2, at: record.cursorAt, id: record.id }
   return Buffer.from(JSON.stringify(cursor)).toString("base64url")
 }
 
@@ -461,6 +482,8 @@ function decodeCursor(value: string | null): Cursor | null {
     if (
       typeof cursor.at !== "string" ||
       Number.isNaN(Date.parse(cursor.at)) ||
+      (cursor.v !== undefined && cursor.v !== 2) ||
+      (cursor.v === 2 && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(cursor.at)) ||
       typeof cursor.id !== "string" ||
       !UUID.test(cursor.id)
     )
@@ -533,6 +556,7 @@ export async function listCaptures(
   return getDb().transaction(
     async (db) => {
       const cursor = decodeCursor(query.cursor)
+      const updatedAt = cursorColumn(pasteTable.updatedAt, cursor)
       const conditions: (SQL | undefined)[] = [liveOwned(owner)]
       if (query.q) conditions.push(matchesQuery(query.q))
       if (query.tags.length) conditions.push(arrayContains(pasteTable.tags, query.tags))
@@ -555,17 +579,20 @@ export async function listCaptures(
       if (cursor) {
         const at = stamp(cursor.at)
         conditions.push(
-          or(
-            lt(ms(pasteTable.updatedAt), at),
-            and(eq(ms(pasteTable.updatedAt), at), gt(pasteTable.id, cursor.id)),
+          and(
+            lte(updatedAt, at),
+            or(lt(updatedAt, at), and(eq(updatedAt, at), gt(pasteTable.id, cursor.id))),
           ),
         )
       }
       const records = await db
-        .select()
+        .select({
+          ...getTableColumns(pasteTable),
+          cursorAt: preciseTimestamp(pasteTable.updatedAt),
+        })
         .from(pasteTable)
         .where(and(...conditions))
-        .orderBy(desc(ms(pasteTable.updatedAt)), asc(pasteTable.id))
+        .orderBy(desc(updatedAt), asc(pasteTable.id))
         .limit(query.limit + 1)
       const page = records.slice(0, query.limit)
       const files = await (page.length
@@ -586,18 +613,22 @@ export async function listCaptures(
             )
             .orderBy(asc(pasteFile.position))
         : [])
-      const visible = page.filter((record) => files.some((file) => file.pasteId === record.id))
+      const languages = new Map<string, Set<string>>()
+      for (const file of files) {
+        const group = languages.get(file.pasteId)
+        if (group) group.add(file.language)
+        else languages.set(file.pasteId, new Set([file.language]))
+      }
+      const visible = page.filter((record) => languages.has(record.id))
       const last = visible.at(-1)
       return {
-        pastes: visible.map((record) => {
-          const own = files.filter((file) => file.pasteId === record.id)
-          return {
-            ...toSummaryFields(record, origin),
-            languages: [...new Set(own.map((file) => file.language))],
-            bytes: record.bytes,
-          }
-        }),
-        nextCursor: records.length > query.limit && last ? encodeCursor(last, "updatedAt") : null,
+        pastes: visible.map((record) => ({
+          ...toSummaryFields(record, origin),
+          languages: [...(languages.get(record.id) ?? [])],
+          bytes: record.bytes,
+        })),
+        nextCursor:
+          records.length > query.limit && last ? encodeCursor(last, "updatedAt", cursor) : null,
       }
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
@@ -616,31 +647,40 @@ export async function collectionCaptures(
     async (db) => {
       if (!(await ownsCollection(db, owner, slug))) return null
       const cursor = decodeCursor(cursorValue)
+      const createdAt = cursorColumn(pasteTable.createdAt, cursor)
       const records = await db
-        .select()
+        .select({
+          ...getTableColumns(pasteTable),
+          cursorAt: preciseTimestamp(pasteTable.createdAt),
+        })
         .from(pasteTable)
         .where(
           and(
             liveOwned(owner),
             eq(pasteTable.collection, slug),
             cursor
-              ? or(
-                  gt(ms(pasteTable.createdAt), stamp(cursor.at)),
-                  and(eq(ms(pasteTable.createdAt), stamp(cursor.at)), gt(pasteTable.id, cursor.id)),
+              ? and(
+                  gte(createdAt, stamp(cursor.at)),
+                  or(
+                    gt(createdAt, stamp(cursor.at)),
+                    and(eq(createdAt, stamp(cursor.at)), gt(pasteTable.id, cursor.id)),
+                  ),
                 )
               : undefined,
           ),
         )
-        .orderBy(asc(ms(pasteTable.createdAt)), asc(pasteTable.id))
+        .orderBy(asc(createdAt), asc(pasteTable.id))
         .limit(COLLECTION_PAGE_SIZE + 1)
       const page = records.slice(0, COLLECTION_PAGE_SIZE)
       const pastes = await withFiles(page, db, origin)
-      const visibleIds = new Set(pastes.map((paste) => paste.id))
-      const last = page.filter((record) => visibleIds.has(record.id)).at(-1)
+      const lastId = pastes.at(-1)?.id
+      const last = page.find((record) => record.id === lastId)
       return {
         pastes,
         nextCursor:
-          records.length > COLLECTION_PAGE_SIZE && last ? encodeCursor(last, "createdAt") : null,
+          records.length > COLLECTION_PAGE_SIZE && last
+            ? encodeCursor(last, "createdAt", cursor)
+            : null,
       }
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },

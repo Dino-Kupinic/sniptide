@@ -6,13 +6,13 @@ import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
+import { SCOPES, type Scope } from "./scopes"
 
 // Personal API tokens (packages/db/src/schema/tokens.ts). A token acts for the account that made
 // it, limited to its scopes: `read` lists and pulls pastes and env groups, `write` creates them.
 // Only a hash is stored, so a lost token can't be shown again; it's revoked and replaced.
 
-export const SCOPES = ["read", "write"] as const
-export type Scope = (typeof SCOPES)[number]
+export { SCOPES, type Scope } from "./scopes"
 
 export const TOKEN_PREFIX = "snpt_"
 export const MAX_TOKENS = 25
@@ -142,22 +142,23 @@ export async function authenticate(request: Request): Promise<TokenOwner | null>
       ownerId: apiToken.ownerId,
       scopes: apiToken.scopes,
       expiresAt: apiToken.expiresAt,
+      lastUsedAt: apiToken.lastUsedAt,
     })
     .from(apiToken)
     .where(eq(apiToken.hash, hashToken(match[1])))
   if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
   const now = new Date()
-  await db
-    .update(apiToken)
-    .set({ lastUsedAt: now })
-    .where(
-      and(
-        eq(apiToken.id, row.id),
-        or(
-          isNull(apiToken.lastUsedAt),
-          lt(apiToken.lastUsedAt, new Date(now.getTime() - LAST_USED_GRANULARITY_MS)),
+  const threshold = new Date(now.getTime() - LAST_USED_GRANULARITY_MS)
+  if (!row.lastUsedAt || row.lastUsedAt < threshold) {
+    await db
+      .update(apiToken)
+      .set({ lastUsedAt: now })
+      .where(
+        and(
+          eq(apiToken.id, row.id),
+          or(isNull(apiToken.lastUsedAt), lt(apiToken.lastUsedAt, threshold)),
         ),
-      ),
-    )
+      )
+  }
   return { tokenId: row.id, userId: row.ownerId, scopes: scopesOf(row.scopes) }
 }

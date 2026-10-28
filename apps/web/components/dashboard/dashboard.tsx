@@ -7,6 +7,8 @@ import {
   TableCell,
   TableHead,
   TableHeader,
+  TablePinnedCell,
+  TablePinnedHead,
   TableRow,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
@@ -18,6 +20,7 @@ import { ImportGistButton } from "@/components/lists/import-gist"
 import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { navigateTabs } from "@/components/tab-navigation"
 import { formatNumber } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow } from "@/lib/pastes/rows"
@@ -129,6 +132,7 @@ export function Dashboard({
   }
   const [range, setRange] = React.useState<Range>("7")
   const [tab, setTab] = React.useState<Tab>("all")
+  const panelId = React.useId()
   const days = Number(range)
 
   const views = sum(data.dailyViews.slice(-days))
@@ -290,7 +294,18 @@ export function Dashboard({
                   key={value}
                   type="button"
                   role="tab"
+                  id={`${panelId}-tab-${value}`}
                   aria-selected={tab === value}
+                  aria-controls={panelId}
+                  tabIndex={tab === value ? 0 : -1}
+                  onKeyDown={(event) =>
+                    navigateTabs(
+                      event,
+                      ["all", "public", "unlisted", "private"] as const,
+                      value,
+                      setTab,
+                    )
+                  }
                   onClick={() => setTab(value)}
                   className={cn(
                     "h-10 shrink-0 rounded-md px-3 text-sm text-muted-foreground capitalize lg:h-7 lg:text-[13px] outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
@@ -311,43 +326,45 @@ export function Dashboard({
           </Link>
         </div>
 
-        {recent.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {t("no_recent_pastes", { visibility: tab })}{" "}
-            <Link href="/new" className="font-medium text-link hover:underline">
-              {t("create_one")}
-            </Link>
-          </p>
-        ) : (
-          <>
-            <RecentTable rows={recent} origin={origin} host={host} />
-            <ul className="flex flex-col lg:hidden">
-              {recent.map((row) => (
-                <li
-                  key={row.slug}
-                  className="relative flex items-center gap-3 border-b border-border py-3 last:border-b-0"
-                >
-                  <LanguageIcon language={row.language} />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <Link
-                      href={`/pastes/${row.slug}`}
-                      className="truncate text-[15px] font-medium after:absolute after:inset-0"
-                    >
-                      {row.title}
-                    </Link>
-                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                      <VisibilityIcon row={row} />
-                      <span className="truncate">
-                        <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
+        <div id={panelId} role="tabpanel" aria-labelledby={`${panelId}-tab-${tab}`}>
+          {recent.length === 0 ? (
+            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+              {t("no_recent_pastes", { visibility: tab })}{" "}
+              <Link href="/new" className="font-medium text-link hover:underline">
+                {t("create_one")}
+              </Link>
+            </p>
+          ) : (
+            <>
+              <RecentTable rows={recent} origin={origin} host={host} />
+              <ul className="flex flex-col lg:hidden">
+                {recent.map((row) => (
+                  <li
+                    key={row.slug}
+                    className="relative flex items-center gap-3 border-b border-border py-3 last:border-b-0"
+                  >
+                    <LanguageIcon language={row.language} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <Link
+                        href={`/pastes/${row.slug}`}
+                        className="truncate text-[15px] font-medium after:absolute after:inset-0"
+                      >
+                        {row.title}
+                      </Link>
+                      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                        <VisibilityIcon row={row} />
+                        <span className="truncate">
+                          <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
+                        </span>
                       </span>
-                    </span>
-                  </div>
-                  <RowMenu row={row} origin={origin} variant="sheet" />
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+                    </div>
+                    <RowMenu row={row} origin={origin} variant="sheet" />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       </section>
     </div>
   )
@@ -357,7 +374,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
   const locale = useLocale()
   const t = useTranslations("Workspace")
   return (
-    <Table className="hidden table-fixed lg:table">
+    <Table className="hidden min-w-[900px] table-fixed lg:table">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>{t("paste")}</TableHead>
@@ -366,9 +383,9 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
           <TableHead className="w-20 text-right">{t("views")}</TableHead>
           <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
           <TableHead className="w-[116px]">{t("updated")}</TableHead>
-          <TableHead className="w-12">
+          <TablePinnedHead className="w-12">
             <span className="sr-only">{t("actions")}</span>
-          </TableHead>
+          </TablePinnedHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -398,9 +415,9 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
               {row.expiresLabel}
             </TableCell>
             <TableCell className="text-[13px] text-muted-foreground">{row.updatedLabel}</TableCell>
-            <TableCell className="pr-3 text-right">
+            <TablePinnedCell className="pr-3 text-right">
               <RowMenu row={row} origin={origin} />
-            </TableCell>
+            </TablePinnedCell>
           </TableRow>
         ))}
       </TableBody>

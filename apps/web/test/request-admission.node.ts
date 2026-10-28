@@ -85,7 +85,16 @@ test("finite HTTP admission covers unknown paths, forged bypass headers and prob
       assert.equal(response.status, 503)
       assert.equal(response.headers.get("retry-after"), "1")
       assert.equal(response.headers.get("cache-control"), "private, no-store")
-      assert((await response.text()).length < 128)
+      const body = (await response.json()) as {
+        code: string
+        error: string
+        message: string
+        resolution: string
+      }
+      assert.equal(body.code, "service_unavailable")
+      assert.equal(body.message, body.error)
+      assert(body.resolution.includes("Retry-After"))
+      assert(JSON.stringify(body).length < 512)
     }
     for (const path of ["/api/health", "/api/metrics", "/_next/static/hash.js"]) {
       const response = await fetch(`${url}${path}`)
