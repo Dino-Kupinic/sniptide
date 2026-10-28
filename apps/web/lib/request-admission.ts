@@ -203,7 +203,6 @@ export function createRequestAdmission(
         pressureRejected++
         http[httpLane].rejected++
       }
-      response.setHeader("connection", "close")
       unavailable(response)
       request.resume()
       return true
