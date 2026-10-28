@@ -64,6 +64,16 @@ included `server.json`, then publishes missing metadata through GitHub OIDC. Mat
 records are left intact. To retry only one version, dispatch **Publish MCP Registry metadata** with
 that public version, or leave the input empty to reconcile all public versions.
 
+The canonical server name is `io.github.Dino-Kupinic/sniptide`, with the GitHub owner's exact
+capitalization. `packages/mcp/server.template.json` owns this identity. The packer derives the npm
+`mcpName` from that template, and the verifier requires the same identity in the public tarball.
+
+The immutable npm release `@sniptide/mcp@0.1.0` contains the former lowercase identity
+`io.github.dino-kupinic/sniptide`. Automatic reconciliation warns and skips only that exact artifact
+after checking its pinned integrity and matching package metadata. It creates no registry entry for
+0.1.0. An explicit request for 0.1.0 fails and requires a newer npm release with the corrected name.
+Every other identity or integrity mismatch fails verification before any version is published.
+
 ## Inspect a local release plan
 
 ```sh

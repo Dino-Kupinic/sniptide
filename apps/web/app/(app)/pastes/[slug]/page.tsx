@@ -4,6 +4,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
+import { CompareRevisions } from "@/components/paste/compare-revisions"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
   CopyCodeButton,
@@ -149,6 +150,10 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   )
   const revisions = (
     <div>
+      <CompareRevisions
+        slug={slug}
+        current={{ title: paste.title, description: paste.description, files: paste.files }}
+      />
       <ol className="flex flex-col divide-y divide-border">
         {paste.revisions.map((entry, index) => {
           // Counted from the oldest, the way "Restored revision 3" names them.
@@ -177,6 +182,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                   #{number} · {timeAgo(entry.createdAt, Date.now(), locale)}
                 </span>
               </span>
+              {!entry.restorable ? (
+                <span className="text-xs text-muted-foreground">{t("snapshotUnavailable")}</span>
+              ) : null}
               {canEdit && !current && entry.restorable ? (
                 <RestoreRevision slug={slug} revisionId={entry.id} number={number} />
               ) : null}

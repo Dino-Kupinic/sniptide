@@ -10,7 +10,7 @@
     "typecheck": "turbo typecheck",
     "check": "biome ci . && bun run typecheck",
     "check:deps": "knip --include dependencies,unlisted,binaries",
-    "audit:deps": "bun audit",
+    "audit:deps": "bun audit --audit-level=moderate",
     "test": "bun run test:cli && bun run test:mcp && bun run test:docs && bun run test:web",
     "test:docs": "bun --filter docs test",
     "test:web": "bun --filter web test",

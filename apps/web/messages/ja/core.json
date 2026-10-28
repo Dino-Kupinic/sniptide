@@ -91,6 +91,7 @@
     "notificationExpiring": "「{title}」の有効期限：{time}",
     "notificationExpiringDetail": "共有パネルで有効期限を延長できます",
     "notificationViews": "「{title}」の閲覧数が{count, number}回に達しました",
-    "notificationViewsDetail": "アクセス解析で参照元を確認できます"
+    "notificationViewsDetail": "アクセス解析で参照元を確認できます",
+    "snapshotUnavailable": "Snapshot unavailable"
   }
 }

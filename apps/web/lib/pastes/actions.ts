@@ -526,3 +526,8 @@ export async function importGist(input: z.input<typeof importSchema>): Promise<S
     throw error
   }
 }
+
+export async function loadComparisonRevisions(slug: string) {
+  if (typeof slug !== "string" || slug.length > 200) return null
+  return store.getComparisonRevisions(slug)
+}

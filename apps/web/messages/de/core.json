@@ -91,6 +91,7 @@
     "notificationExpiring": "„{title}“ läuft {time} ab",
     "notificationExpiringDetail": "Verlängere die Frist im Teilen-Bereich des Snippets",
     "notificationViews": "„{title}“ hat {count, number} Aufrufe erreicht",
-    "notificationViewsDetail": "Sieh dir die Herkunft unter Statistiken an"
+    "notificationViewsDetail": "Sieh dir die Herkunft unter Statistiken an",
+    "snapshotUnavailable": "Snapshot unavailable"
   }
 }

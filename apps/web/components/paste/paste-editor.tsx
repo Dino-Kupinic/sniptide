@@ -268,7 +268,6 @@ export function PasteEditor({
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
   const exitOnTab = React.useRef(false)
   const filePanelId = React.useId()
-  const editorHintId = React.useId()
   React.useEffect(() => {
     exitOnTab.current = false
   }, [activeId])
@@ -1013,7 +1012,7 @@ export function PasteEditor({
       <HeaderActions>
         {editing ? null : (
           <Button
-            variant="ghost"
+            variant="destructive"
             size="lg"
             render={<Link href={cancelHref} />}
             nativeButton={false}
@@ -1178,7 +1177,6 @@ export function PasteEditor({
                   ) : null}
                   <HighlightedTextarea
                     aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
-                    aria-describedby={editorHintId}
                     onBlur={() => {
                       exitOnTab.current = false
                     }}
@@ -1215,10 +1213,6 @@ export function PasteEditor({
                   />
                 </div>
               )}
-
-              <span id={editorHintId} className="sr-only">
-                {t("editorTabHint")}
-              </span>
             </div>
 
             {secret ? (
