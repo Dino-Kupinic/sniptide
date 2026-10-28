@@ -17,6 +17,7 @@ COPY packages/auth/package.json packages/auth/
 COPY packages/cli/package.json packages/cli/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/mcp/package.json packages/mcp/
+COPY packages/sdk/package.json packages/sdk/
 COPY packages/db/package.json packages/db/
 COPY packages/typescript/package.json packages/typescript/
 COPY packages/ui/package.json packages/ui/

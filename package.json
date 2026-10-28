@@ -11,7 +11,7 @@
     "check": "biome ci . && bun run typecheck",
     "check:deps": "knip --include dependencies,unlisted,binaries",
     "audit:deps": "bun audit --audit-level=moderate",
-    "test": "bun run test:cli && bun run test:mcp && bun run test:docs && bun run test:web",
+    "test": "bun run test:cli && bun run test:mcp && bun run test:docs && bun run test:web && bun run test:sdk",
     "test:docs": "bun --filter docs test",
     "test:web": "bun --filter web test",
     "prepare": "husky",
@@ -21,7 +21,8 @@
     "test:mcp": "bun --filter @sniptide/mcp test",
     "load:seed": "bun apps/web/load/seed.ts",
     "load:run": "bun apps/web/load/run.ts",
-    "test:e2e": "bun --filter web test:e2e"
+    "test:e2e": "bun --filter web test:e2e",
+    "test:sdk": "bun --filter @sniptide/sdk test && cd packages/sdk-python && python3 -m unittest discover -s tests"
   },
   "catalogs": {
     "docs": {
