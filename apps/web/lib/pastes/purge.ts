@@ -56,6 +56,9 @@ export async function purgeStaleData(now = new Date()) {
         const limits = await tx.execute(
           sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY).toISOString()} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
+        const receipts = await tx.execute(
+          sql`DELETE FROM api_receipt WHERE (token_id, key) IN (SELECT token_id, key FROM api_receipt WHERE expires_at < ${now.toISOString()} ORDER BY expires_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
+        )
         const auth = await tx.execute(
           sql`DELETE FROM auth_rate_limit WHERE id IN (SELECT id FROM auth_rate_limit WHERE last_request < ${now.getTime() - DAY} ORDER BY last_request LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
         )
@@ -66,7 +69,7 @@ export async function purgeStaleData(now = new Date()) {
           trashed: trashed.length,
           expired: expired.length,
           days: days.length + stats.length + breakdown.length,
-          full: [trashed, expired, days, stats, breakdown, limits, auth, notices].some(
+          full: [trashed, expired, days, stats, breakdown, limits, auth, notices, receipts].some(
             (rows) => rows.length === batch,
           ),
         }
