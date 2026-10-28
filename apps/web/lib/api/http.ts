@@ -2,7 +2,7 @@ import "server-only"
 
 import { ZodError } from "zod"
 import { recordApiRequest } from "@/lib/account/usage"
-import { hit, type Limit } from "@/lib/rate-limit"
+import { hit, type Limit, quotaHeaders, requestQuotas } from "@/lib/rate-limit"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
 import { HOUR_SECONDS } from "@/lib/time"
 import { failure } from "./errors"
@@ -20,6 +20,7 @@ const headers = { "cache-control": "private, no-store" }
 export const apiLimits = {
   // Every request a token makes, so a leaked token or a looping agent can't hammer the server.
   request: (token: string): Limit => ({
+    policy: "api-token",
     key: `api:token:${token}`,
     max: 3600,
     windowSeconds: HOUR_SECONDS,
@@ -56,22 +57,34 @@ export async function withToken(
   scope: Scope,
   handler: (owner: TokenOwner) => Promise<Response>,
 ): Promise<Response> {
-  try {
-    const owner = await authenticate(request)
-    if (!owner) return failure(401, "The API token is missing, invalid, expired or revoked.")
-    await recordApiRequest(owner)
-    if (!owner.scopes.includes(scope))
-      return failure(403, `This token doesn't have the ${scope} scope.`)
-    const limit = await hit([apiLimits.request(owner.tokenId)])
-    if (!limit.allowed)
-      return failure(429, "Too many requests. Slow down.", limit.retryAfterSeconds)
-    return await handler(owner)
-  } catch (error) {
-    if (error instanceof ApiError)
-      return failure(error.status, error.message, error.retryAfterSeconds)
-    if (error instanceof ZodError)
-      return failure(400, error.issues[0]?.message ?? "The request isn't valid.")
-    console.error(JSON.stringify({ event: "token_api_error" }))
-    return failure(500, "An unexpected error occurred.")
+  return requestQuotas.run(new Map(), async () => {
+    const response = await execute()
+    for (const [name, value] of Object.entries(
+      quotaHeaders(requestQuotas.getStore()?.values() ?? []),
+    )) {
+      if (value) response.headers.set(name, value)
+    }
+    return response
+  })
+
+  async function execute() {
+    try {
+      const owner = await authenticate(request)
+      if (!owner) return failure(401, "The API token is missing, invalid, expired or revoked.")
+      await recordApiRequest(owner)
+      const limit = await hit([apiLimits.request(owner.tokenId)])
+      if (!limit.allowed)
+        return failure(429, "Too many requests. Slow down.", limit.retryAfterSeconds)
+      if (!owner.scopes.includes(scope))
+        return failure(403, `This token doesn't have the ${scope} scope.`)
+      return await handler(owner)
+    } catch (error) {
+      if (error instanceof ApiError)
+        return failure(error.status, error.message, error.retryAfterSeconds)
+      if (error instanceof ZodError)
+        return failure(400, error.issues[0]?.message ?? "The request isn't valid.")
+      console.error(JSON.stringify({ event: "token_api_error" }))
+      return failure(500, "An unexpected error occurred.")
+    }
   }
 }

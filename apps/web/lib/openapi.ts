@@ -92,6 +92,15 @@ const tokenJsonError = (status: number, description: string, example: string) =>
   },
 })
 
+const idempotencyParameter = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: false,
+  description:
+    "Optional on create paste and create collection only. Token-scoped, visible ASCII, 1–128 characters. For 24 hours, the same route and JSON payload replay the original 201 response. A changed route or payload returns 409. Authentication, scope, and rate limits apply to every attempt.",
+  schema: { type: "string", minLength: 1, maxLength: 128, pattern: "^[!-~]+$" },
+} as const
+
 const tokenAccess = (scope: Scope) => ({
   security: [{ apiToken: [] }],
   "x-required-scopes": [scope],
@@ -191,13 +200,14 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "Sniptide HTTP API",
-    version: "1.0.0",
+    version: "1.1.0",
     summary: "The endpoints Sniptide serves to the public.",
     description: [
       "Everything a share link does over HTTP: reading a paste's files as plain text, unlocking a",
       "password-protected paste and revealing a burn-after-read one, plus the health and metrics",
       "endpoints that self-hosters point their monitoring at.",
       "",
+      "The v1 compatibility and deprecation policy is at https://docs.sniptide.com/api-reliability.",
       "With a personal API token (Settings → API tokens) the `/api/v1` endpoints capture code as",
       "pastes, list and pull your pastes and collections, and sync env groups. They are what the",
       "`sniptide` CLI calls, and coding agents can call them directly.",
@@ -253,6 +263,123 @@ export const openApiDocument = {
     },
   ],
   paths: {
+    "/api/v1/batch": {
+      post: {
+        operationId: "batchCreate",
+        tags: ["Token API"],
+        summary: "Create up to 20 pastes or collections",
+        description:
+          "Runs typed create operations sequentially in input order, each in its own transaction. Returns 207 with an ordered result for every item. Earlier successes remain committed when another item fails. Each item requires a token-scoped idempotency key, uses the corresponding single-create route namespace, and consumes one token request plus the paste-create quota when applicable. The batch request itself also consumes one token request. Limits and storage budgets apply before each mutation. Maximum JSON body is 8 MiB.",
+        ...tokenAccess("write"),
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["operations"],
+                properties: {
+                  operations: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: 20,
+                    items: {
+                      oneOf: [
+                        {
+                          type: "object",
+                          additionalProperties: false,
+                          required: ["operation", "key", "body"],
+                          properties: {
+                            operation: { const: "create_paste" },
+                            key: { type: "string", minLength: 1, maxLength: 128 },
+                            body: { $ref: "#/components/schemas/Capture" },
+                          },
+                        },
+                        {
+                          type: "object",
+                          additionalProperties: false,
+                          required: ["operation", "key", "body"],
+                          properties: {
+                            operation: { const: "create_collection" },
+                            key: { type: "string", minLength: 1, maxLength: 128 },
+                            body: {
+                              type: "object",
+                              required: ["name"],
+                              additionalProperties: false,
+                              properties: { name: { type: "string", minLength: 1, maxLength: 40 } },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              example: {
+                operations: [
+                  {
+                    operation: "create_collection",
+                    key: "import-collection-1",
+                    body: { name: "Imported" },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          "207": {
+            description: "Ordered independent results, including partial failures.",
+            content: {
+              "application/json": {
+                example: {
+                  results: [
+                    {
+                      index: 0,
+                      key: "import-collection-1",
+                      status: 201,
+                      body: { collection: { slug: "imported", name: "Imported", pasteCount: 0 } },
+                    },
+                  ],
+                },
+                schema: {
+                  type: "object",
+                  required: ["results"],
+                  properties: {
+                    results: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["index", "key", "status", "body"],
+                        properties: {
+                          index: { type: "integer" },
+                          key: { type: "string" },
+                          status: { type: "integer" },
+                          body: { type: "object" },
+                          retryAfterSeconds: { type: "integer" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": tokenJsonError(
+            400,
+            "Invalid batch envelope or unsupported operation.",
+            "The request isn't valid.",
+          ),
+          "413": tokenJsonError(
+            413,
+            "The batch body exceeds 8 MiB.",
+            "The request body is too large.",
+          ),
+          ...tokenErrors,
+        },
+      },
+    },
     "/{slug}/raw": {
       get: {
         operationId: "getRawFile",
@@ -685,6 +812,7 @@ export const openApiDocument = {
       },
       post: {
         operationId: "createPaste",
+        parameters: [idempotencyParameter],
         tags: ["Token API"],
         summary: "Capture code as a paste",
         description: [
@@ -718,6 +846,11 @@ export const openApiDocument = {
             },
           },
           "400": tokenJsonError(400, "The capture isn't valid.", "Give the paste a title."),
+          "409": tokenJsonError(
+            409,
+            "An idempotency key was reused with a different route or payload.",
+            "This Idempotency-Key was used for another route or payload.",
+          ),
           "404": tokenJsonError(
             404,
             "The collection doesn't exist.",
@@ -952,6 +1085,7 @@ export const openApiDocument = {
       },
       post: {
         operationId: "createOwnCollection",
+        parameters: [idempotencyParameter],
         tags: ["Token API"],
         summary: "Create a collection",
         description:
@@ -1572,6 +1706,8 @@ export const openApiDocument = {
 } as const
 
 export const internalRoutes = [
+  "/.well-known/api-catalog",
+  "/api/agent-share/[...path]",
   "/[slug]/copy",
   "/[slug]/preview",
   "/[slug]/preview.mp4",

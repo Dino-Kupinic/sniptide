@@ -11,8 +11,10 @@ export async function POST(request: Request) {
   const expectedOrigin = process.env.BETTER_AUTH_URL
     ? new URL(process.env.BETTER_AUTH_URL).origin
     : new URL(request.url).origin
-  if (origin && origin !== expectedOrigin) return failure(403, "This origin isn't allowed.")
-  return withToken(request, "read", (owner) => handleMcpRequest(request, mcpBackend(owner)))
+  return withToken(request, "read", async (owner) => {
+    if (origin && origin !== expectedOrigin) return failure(403, "This origin isn't allowed.")
+    return handleMcpRequest(request, mcpBackend(owner))
+  })
 }
 
 // Stateless JSON responses: no standalone SSE stream or session to delete.
