@@ -165,10 +165,16 @@ jobs:
 
       - run: bun run test:web
 
+  # Two shards split the test files between runners. Each has its own Postgres and builds the app,
+  # which the Next build cache keeps cheap.
   e2e:
-    name: Browser tests
+    name: Browser tests (shard ${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
     services:
       postgres:
         image: postgres:17-alpine
@@ -210,7 +216,13 @@ jobs:
           install=$!
           bun run build
           wait "$install"
-      - run: bun run test:e2e
+      - name: Run this shard's browser tests
+        working-directory: apps/web
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          files="$(ls tests/*.e2e.ts | sort | awk -v shard="$SHARD" 'NR % 2 == shard')"
+          bun run test:e2e $files
       - name: Publish browser test summary
         if: ${{ !cancelled() }}
         run: |
@@ -221,7 +233,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.shard }}
           path: |
             apps/web/.e2e/report.json
             apps/web/.e2e/junit.xml
