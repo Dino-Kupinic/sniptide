@@ -11,11 +11,9 @@
 services:
   sniptide:
     image: ghcr.io/dino-kupinic/sniptide:latest
-    # A ceiling per container, so a busy app restarts on its own instead of the kernel killing
-    # other services on the server. NODE_OPTIONS (the heap) stays well below it.
-    mem_limit: ${SNIPTIDE_MEMORY:-768m}
+    mem_limit: ${SNIPTIDE_MEMORY:-0}
     environment:
-      - NODE_OPTIONS=${NODE_OPTIONS:---max-old-space-size=384}
+      - NODE_OPTIONS=${NODE_OPTIONS:-}
       - SERVICE_URL_SNIPTIDE_3000
       - DATABASE_URL=postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-sniptide}
       - BETTER_AUTH_SECRET=${SERVICE_BASE64_64_SNIPTIDE}
@@ -63,7 +61,7 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    mem_limit: ${POSTGRES_MEMORY:-512m}
+    mem_limit: ${POSTGRES_MEMORY:-0}
     environment:
       - POSTGRES_USER=${SERVICE_USER_POSTGRES}
       - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}

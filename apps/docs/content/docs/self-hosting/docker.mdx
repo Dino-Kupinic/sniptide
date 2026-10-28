@@ -24,7 +24,7 @@ BETTER_AUTH_URL=http://localhost:3000
 ## Run it
 
 ```bash
-docker run -d --name sniptide --restart unless-stopped --memory 768m --memory-swap 768m \
+docker run -d --name sniptide --restart unless-stopped \
   -p 3000:3000 --env-file sniptide.env ghcr.io/dino-kupinic/sniptide:latest
 ```
 
