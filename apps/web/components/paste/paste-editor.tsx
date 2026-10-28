@@ -63,6 +63,7 @@ import {
   useSaveBroadcast,
 } from "@/lib/autosave/use-autosave"
 import type { Collection } from "@/lib/collections/types"
+import { editorEdit } from "@/lib/editor-editing"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
 import { editorLineCount, isLargeEditorContent } from "@/lib/highlight/editor-limits"
@@ -120,6 +121,7 @@ function snapshotOf(textarea: HTMLTextAreaElement): Snapshot {
     value: textarea.value,
     selectionStart: textarea.selectionStart,
     selectionEnd: textarea.selectionEnd,
+    selectionDirection: textarea.selectionDirection,
   }
 }
 
@@ -272,9 +274,10 @@ export function PasteEditor({
     exitOnTab.current = false
   }, [activeId])
   // Where the caret goes once the next render has put new text in the textarea (Undo, Redo, Tab).
-  const pendingSelection = React.useRef<Pick<Snapshot, "selectionStart" | "selectionEnd"> | null>(
-    null,
-  )
+  const pendingSelection = React.useRef<Pick<
+    Snapshot,
+    "selectionStart" | "selectionEnd" | "selectionDirection"
+  > | null>(null)
   const removalToasts = React.useRef(new Set<number>())
   const history = useEditorHistory()
   const formId = React.useId()
@@ -665,7 +668,11 @@ export function PasteEditor({
     const textarea = textareaRef.current
     if (!selection || !textarea) return
     pendingSelection.current = null
-    textarea.setSelectionRange(selection.selectionStart, selection.selectionEnd)
+    textarea.setSelectionRange(
+      selection.selectionStart,
+      selection.selectionEnd,
+      selection.selectionDirection,
+    )
     trackCursor(textarea)
   })
 
@@ -706,31 +713,27 @@ export function PasteEditor({
       return
     }
 
-    // Tab indents (by the Settings indentation) instead of leaving the editor.
-    const key = event.key.toLowerCase()
-    if (
-      key !== "tab" ||
-      event.shiftKey ||
-      event.altKey ||
-      event.ctrlKey ||
-      event.metaKey ||
-      !active
-    )
-      return
-    event.preventDefault()
+    // Option and AltGr produce braces on many keyboard layouts; keep their text keys working.
+    const textKey =
+      event.key.length === 1 &&
+      !event.metaKey &&
+      (!event.ctrlKey || event.getModifierState("AltGraph"))
+    if (!active || (!textKey && (event.altKey || event.ctrlKey || event.metaKey))) return
     const textarea = event.currentTarget
-    const { selectionStart, selectionEnd, value } = textarea
-    const unit = indentUnit(indentation)
-    const next = `${value.slice(0, selectionStart)}${unit}${value.slice(selectionEnd)}`
-    const caret = selectionStart + unit.length
-    history.edit(
-      active.id,
-      value,
-      { value: next, selectionStart: caret, selectionEnd: caret },
-      "other",
-    )
-    pendingSelection.current = { selectionStart: caret, selectionEnd: caret }
-    updateActive({ content: next })
+    const before = snapshotOf(textarea)
+    const next = editorEdit(before, event.key, indentUnit(indentation), event.shiftKey)
+    if (!next) return
+    event.preventDefault()
+    history.moveCaret(active.id, before)
+    if (next.value === before.value) {
+      textarea.setSelectionRange(next.selectionStart, next.selectionEnd, next.selectionDirection)
+      history.moveCaret(active.id, next)
+      trackCursor(textarea)
+      return
+    }
+    history.edit(active.id, before.value, next, "other")
+    pendingSelection.current = next
+    updateActive({ content: next.value })
   }
 
   function submit() {

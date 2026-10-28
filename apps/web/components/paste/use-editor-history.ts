@@ -36,8 +36,8 @@ export function useEditorHistory() {
       },
       // The caret moved without the text changing; ignored if the text isn't what's recorded.
       moveCaret(id: string, next: Snapshot) {
-        const known = histories.current.get(id)
-        if (known && known.present.value === next.value) {
+        const known = histories.current.get(id) ?? createHistory(next.value)
+        if (known.present.value === next.value) {
           histories.current.set(id, record(known, next, "other", Date.now()))
         }
       },
