@@ -24,14 +24,26 @@ docker compose up -d
 
 Open [localhost:3000](http://localhost:3000) and create an account.
 Use your public HTTPS URL for `BETTER_AUTH_URL` when deploying to a server.
-See the [self-hosting guide](apps/docs/content/docs/self-hosting/index.mdx) for HTTPS, configuration, backups, and upgrades.
+See the [self-hosting guide](https://docs.sniptide.com/self-hosting) for HTTPS, configuration, backups, and upgrades.
 
 The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/sniptide`.
 
+## Connect a coding agent
+
+Create a token in Settings, API tokens, then add the MCP server to Claude Code:
+
+```bash
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp --header "Authorization: Bearer $SNIPTIDE_TOKEN"
+```
+
+Use `<your-instance-url>/api/mcp` on a self-hosted instance.
+The [MCP guide](https://docs.sniptide.com/mcp) covers Cursor and a local server, and the [CLI](https://docs.sniptide.com/cli) installs a collection as an agent skill.
+
 ## Documentation
 
-- [User guide](apps/docs/content/docs/index.mdx)
-- [CLI](packages/cli/README.md) and [MCP server](packages/mcp/README.md)
+- [User guide](https://docs.sniptide.com)
+- [CLI](https://docs.sniptide.com/cli) and [MCP server](https://docs.sniptide.com/mcp)
+- [Self-hosting](https://docs.sniptide.com/self-hosting)
 - [Development](docs/development.md) and [contributing](CONTRIBUTING.md)
 - [Operations and scaling](docs/scaling.md)
 
