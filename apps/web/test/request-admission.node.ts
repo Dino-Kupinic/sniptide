@@ -1,6 +1,15 @@
 import assert from "node:assert/strict"
 import { once } from "node:events"
-import { createServer, get, type Server, type ServerResponse } from "node:http"
+import {
+  Agent,
+  createServer,
+  get,
+  type IncomingHttpHeaders,
+  request,
+  type Server,
+  type ServerResponse,
+} from "node:http"
+import type { Socket } from "node:net"
 import test from "node:test"
 import { defineRelations, sql } from "drizzle-orm"
 import { integer, pgTable } from "drizzle-orm/pg-core"
@@ -112,6 +121,72 @@ test("finite HTTP admission covers unknown paths, forged bypass headers and prob
     await close(listener)
   }
 })
+
+for (const method of ["GET", "POST"]) {
+  test(`HTTP ${method} refusals reuse a keepalive connection through recovery`, async () => {
+    const admission = createRequestAdmission(limits)
+    const held = deferred()
+    const started = deferred()
+    const agent = new Agent({ keepAlive: true, maxSockets: 1 })
+    const { listener, url } = await server(admission, async (path, response) => {
+      if (path === "/hold") {
+        started.resolve()
+        await held.promise
+      }
+      response.end("ok")
+    })
+    const first = fetch(`${url}/hold`)
+    const send = (path: string) =>
+      new Promise<{
+        status: number | undefined
+        headers: IncomingHttpHeaders
+        socket: Socket | null
+      }>((resolve, reject) => {
+        const body = method === "POST" ? "x".repeat(128 * 1024) : undefined
+        const pending = request(
+          `${url}${path}`,
+          {
+            agent,
+            method,
+            headers: body ? { "content-length": Buffer.byteLength(body) } : undefined,
+          },
+          (response) => {
+            const socket = response.socket
+            response.resume()
+            response.once("error", reject)
+            response.once("end", () =>
+              resolve({ status: response.statusCode, headers: response.headers, socket }),
+            )
+          },
+        )
+        pending.once("error", reject)
+        pending.end(body)
+      })
+    try {
+      await started.promise
+      let socket: Socket | undefined
+      for (let index = 0; index < 20; index++) {
+        const response = await send("/rejected")
+        assert.equal(response.status, 503)
+        assert.equal(response.headers["retry-after"], "1")
+        assert.equal(response.headers["cache-control"], "private, no-store")
+        assert(response.socket)
+        socket ??= response.socket
+        assert(response.socket === socket, "rejected requests must reuse the same socket")
+      }
+      held.resolve()
+      assert.equal((await first).status, 200)
+      const recovered = await send("/recovered")
+      assert.equal(recovered.status, 200)
+      assert(recovered.socket === socket, "recovery must reuse the rejection socket")
+    } finally {
+      held.resolve()
+      await (await first).text()
+      agent.destroy()
+      await close(listener)
+    }
+  })
+}
 
 test("probe HTTP capacity is separately finite", async () => {
   const admission = createRequestAdmission(limits)
