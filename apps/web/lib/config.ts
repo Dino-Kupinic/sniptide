@@ -155,7 +155,6 @@ const schema = z.object({
   PRIVACY_URL: z
     .url({ message: "must be a full URL like https://example.com/privacy." })
     .optional(),
-  MINIMUM_AGE: z.coerce.number().int().min(13).max(21).optional(),
   OPERATOR_NAME: z.string().max(200).optional(),
   OPERATOR_ADDRESS: z.string().max(500).optional(),
   COPYRIGHT_EMAIL: z.string().email().optional(),
@@ -252,7 +251,6 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     legal: {
       termsUrl: value.TERMS_URL,
       privacyUrl: value.PRIVACY_URL,
-      minimumAge: value.MINIMUM_AGE,
       operator: value.OPERATOR_NAME
         ? { name: value.OPERATOR_NAME, address: value.OPERATOR_ADDRESS }
         : undefined,

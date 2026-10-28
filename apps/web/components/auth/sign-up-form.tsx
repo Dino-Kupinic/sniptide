@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@sniptide/ui/components/button"
-import { Checkbox } from "@sniptide/ui/components/checkbox"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
@@ -44,16 +43,7 @@ function useUsernameAvailability(username: string) {
   return status
 }
 
-// With MINIMUM_AGE set, a required checkbox confirms the visitor's age before either the form or
-// a social button can create the account. It's a self-declaration: no birth date is asked for or
-// stored.
-export function SignUpForm({
-  socialProviders,
-  minimumAge,
-}: {
-  socialProviders: SocialProvider[] | null
-  minimumAge?: number
-}) {
+export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
   const t = useTranslations("Auth")
   const host = useSiteHost()
   const router = useRouter()
@@ -62,20 +52,10 @@ export function SignUpForm({
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
   const [verificationEmail, setVerificationEmail] = React.useState<string | null>(null)
-  const [ageConfirmed, setAgeConfirmed] = React.useState(false)
   const availability = useUsernameAvailability(username)
-
-  function ageProblem() {
-    return minimumAge && !ageConfirmed ? t("errors.ageRequired", { age: minimumAge }) : null
-  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const problem = ageProblem()
-    if (problem) {
-      setError(problem)
-      return
-    }
     if (availability === "invalid" || availability === "taken") {
       setError(t(availability === "taken" ? "errors.usernameTaken" : "errors.usernameInvalid"))
       return
@@ -124,7 +104,6 @@ export function SignUpForm({
             verb="Sign up"
             callbackURL="/dashboard"
             onError={setError}
-            check={ageProblem}
           />
           <EmailDivider />
         </>
@@ -199,20 +178,6 @@ export function SignUpForm({
             labelClassName="text-sm lg:text-[13px]"
           />
         </div>
-
-        {minimumAge ? (
-          <Label className="flex items-center gap-2 text-sm font-normal lg:text-[13px]">
-            <Checkbox
-              name="age-confirmed"
-              checked={ageConfirmed}
-              onCheckedChange={(checked) => {
-                setAgeConfirmed(checked)
-                if (checked) setError(null)
-              }}
-            />
-            {t("ageConfirm", { age: minimumAge })}
-          </Label>
-        ) : null}
 
         <FormError message={error} />
 

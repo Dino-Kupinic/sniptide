@@ -5,7 +5,6 @@ import { RequestAccess } from "@/components/auth/request-access"
 import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
-import { getConfig } from "@/lib/config"
 import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -75,10 +74,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
         note: t("publicProfile"),
       }}
     >
-      <SignUpForm
-        socialProviders={inviteOnly ? null : await getSocialProviders()}
-        minimumAge={getConfig().legal.minimumAge}
-      />
+      <SignUpForm socialProviders={inviteOnly ? null : await getSocialProviders()} />
     </AuthScreen>
   )
 }

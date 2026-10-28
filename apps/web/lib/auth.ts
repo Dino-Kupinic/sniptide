@@ -37,7 +37,6 @@ export async function getAuth() {
     ipAddressHeaders: [RESOLVED_IP_HEADER],
     github: config.github,
     google: config.google,
-    explicitSocialSignUp: Boolean(config.legal.minimumAge),
     plugins: [nextCookies()],
     emailVerification: smtp ? { sendVerificationEmail: sendEmailVerification } : undefined,
     sendResetPassword: smtp ? sendPasswordReset : undefined,

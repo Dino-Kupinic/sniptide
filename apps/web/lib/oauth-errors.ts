@@ -4,7 +4,7 @@ const KNOWN = {
   account_not_linked: "accountNotLinked",
   invite_only: "inviteOnly",
   sign_up_closed: "signUpClosed",
-  signup_disabled: "noAccount",
+  signup_disabled: "signUpClosed",
   email_not_found: "emailNotFound",
   account_already_linked_to_different_user: "alreadyLinked",
   access_denied: "cancelled",
