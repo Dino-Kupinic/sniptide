@@ -71,6 +71,7 @@ export function createRequestAdmission(
   staticAssets: ReadonlySet<string> = new Set(),
 ) {
   const contexts = new AsyncLocalStorage<RequestContext>()
+  const bestEffort = new AsyncLocalStorage<boolean>()
   const http = { normal: budget(limits.http), probe: budget(limits.probes) }
   const database = {
     normal: budget(
@@ -100,7 +101,7 @@ export function createRequestAdmission(
   }
   function refuse(): never {
     const context = contexts.getStore()
-    if (context && !context.overloaded) {
+    if (context && !context.overloaded && !bestEffort.getStore()) {
       context.overloaded = !context.response?.headersSent
       if (!context.overloaded) lateDatabaseRejected++
     }
@@ -265,6 +266,9 @@ export function createRequestAdmission(
     hasContext: () => contexts.getStore() !== undefined,
     runDatabaseWork,
     assertRequestActive,
+    runBestEffortWork<T>(work: () => T | PromiseLike<T>) {
+      return bestEffort.run(true, work)
+    },
     runMaintenanceWork<T>(work: () => T | PromiseLike<T>) {
       return contexts.run(
         { lane: "maintenance", aborted: false, overloaded: false, cancelQueued: new Set() },
@@ -335,6 +339,9 @@ export function admissionSnapshot() {
 }
 export function registerAdmissionPressure(name: string, check: () => boolean) {
   return admission().registerPressure(name, check)
+}
+export function runBestEffortWork<T>(work: () => T | PromiseLike<T>) {
+  return admission().runBestEffortWork(work)
 }
 export function runMaintenanceWork<T>(work: () => T | PromiseLike<T>) {
   return admission().runMaintenanceWork(work)

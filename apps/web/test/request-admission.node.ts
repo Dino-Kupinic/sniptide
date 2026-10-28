@@ -575,3 +575,92 @@ test("Drizzle relational queries and prepared executions use admission", async (
   await running
   assert.equal(admission.snapshot().database.normal?.active, 0)
 })
+
+test("optional postcommit refusal preserves the committed response and mandatory refusal still sends 503", async () => {
+  const admission = createRequestAdmission(limits)
+  const hold = deferred()
+  const pending = admission.runDatabaseWork(() => hold.promise)
+  let submissions = 0
+  const { listener, url } = await server(admission, async (path, response) => {
+    const notify = () =>
+      admission.runDatabaseWork(async () => {
+        submissions++
+      })
+    try {
+      if (path === "/optional") await admission.runBestEffortWork(notify)
+      else {
+        await admission.runBestEffortWork(async () => "optional work finished")
+        await notify()
+      }
+    } catch (error) {
+      assert(isAdmissionError(error))
+    }
+    response.statusCode = 201
+    response.setHeader("content-type", "application/json")
+    response.end(JSON.stringify({ id: "committed" }))
+  })
+  try {
+    const optional = await fetch(`${url}/optional`)
+    assert.equal(optional.status, 201)
+    assert.deepEqual(await optional.json(), { id: "committed" })
+    assert.equal(optional.headers.get("retry-after"), null)
+    const mandatory = await fetch(`${url}/mandatory`)
+    assert.equal(mandatory.status, 503)
+    assert.equal(mandatory.headers.get("retry-after"), "1")
+    assert.equal(((await mandatory.json()) as { ok: boolean }).ok, false)
+    assert.equal(submissions, 0)
+    assert.equal(admission.snapshot().database.total?.active, 1)
+    assert.equal(admission.snapshot().database.total?.rejected, 2)
+  } finally {
+    hold.resolve()
+    await pending
+    await close(listener)
+  }
+})
+
+test("optional database work keeps the request abort context and bounded queue", async () => {
+  const admission = createRequestAdmission({ ...limits, databaseQueue: 1 })
+  const hold = deferred()
+  const pending = admission.runDatabaseWork(() => hold.promise)
+  const queued = deferred()
+  const cancelled = deferred()
+  let submissions = 0
+  const { listener, url } = await server(admission, async (_path, response) => {
+    const work = admission.runBestEffortWork(() =>
+      admission.runDatabaseWork(async () => {
+        submissions++
+      }),
+    )
+    queued.resolve()
+    await assert.rejects(Promise.resolve(work), isAdmissionError)
+    await assert.rejects(
+      Promise.resolve(
+        admission.runBestEffortWork(() =>
+          admission.runDatabaseWork(async () => {
+            submissions++
+          }),
+        ),
+      ),
+      isAdmissionError,
+    )
+    response.end()
+    cancelled.resolve()
+  })
+  try {
+    const request = get(url)
+    request.on("error", () => {})
+    await queued.promise
+    assert.equal(admission.snapshot().databaseQueue.active, 1)
+    request.destroy()
+    await cancelled.promise
+    assert.equal(admission.snapshot().databaseQueue.active, 0)
+    assert.equal(admission.snapshot().databaseQueue.aborted, 1)
+    hold.resolve()
+    await pending
+    assert.equal(submissions, 0)
+  } finally {
+    hold.resolve()
+    await pending
+    await close(listener)
+  }
+})
