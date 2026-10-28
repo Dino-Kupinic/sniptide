@@ -92,7 +92,7 @@ export interface EditorInitial {
 }
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
-// Keep custom-link editing available to restore later; existing paste URLs stay unchanged.
+// Keep the custom-link section available to restore later; existing paste URLs stay unchanged.
 const CUSTOM_LINKS_ENABLED = false
 
 type EditorDraft = SavePasteInput & {
@@ -844,7 +844,7 @@ export function PasteEditor({
       </>
     ) : null
 
-    return [
+    const sections: PanelSection[] = [
       {
         id: "access",
         label: t("visibilityExpiry"),
@@ -938,6 +938,7 @@ export function PasteEditor({
         ),
       },
     ]
+    return sections.filter((section) => CUSTOM_LINKS_ENABLED || section.id !== "slug")
   }
 
   const panelSections = optionSections(false)
