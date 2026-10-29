@@ -34,6 +34,8 @@ export interface TokenSummary {
   createdAt: number
   lastUsedAt: number | null
   expiresAt: number | null
+  // Held by an app the owner connected through OAuth (lib/oauth) rather than made in Settings.
+  connectedApp: boolean
 }
 
 export interface TokenOwner {
@@ -66,7 +68,9 @@ function summary(row: typeof apiToken.$inferSelect): TokenSummary {
     scopes: scopesOf(row.scopes),
     createdAt: row.createdAt.getTime(),
     lastUsedAt: row.lastUsedAt?.getTime() ?? null,
-    expiresAt: row.expiresAt?.getTime() ?? null,
+    // A connected app renews its hourly access token, so the grant ends with its refresh token.
+    expiresAt: (row.clientId ? row.refreshExpiresAt : row.expiresAt)?.getTime() ?? null,
+    connectedApp: row.clientId !== null,
   }
 }
 

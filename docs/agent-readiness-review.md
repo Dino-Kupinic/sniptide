@@ -40,9 +40,6 @@ this work was **80/100, B**. This document does not predict a new score.
 
 | Item | What remains |
 | --- | --- |
-| OAuth, protected-resource metadata, PKCE, CIMD, OAuth WWW-Authenticate hints | A real delegated authorization server and consent/token/revocation flows are not implemented. Personal bearer tokens remain supported. Track WRK-401. Publishing metadata alone would advertise nonexistent flows. |
-| WorkOS auth.md discovery/register/claim/exchange and agent_auth endpoints | These depend on the missing authorization server and a provider trust configuration. Current auth.md documents the actual personal-token method. Track WRK-401. |
-| A2A agent card | There is no A2A agent service. An MCP server or docs search endpoint is not an A2A agent. No card is fabricated. |
 | Web Bot Auth signing directory | No operational Ed25519 signing identity, key lifecycle, or request signature verification is configured. No placeholder JWK is published. |
 | Wikipedia/Wikidata | Independent coverage and notability evidence are needed before drafting or submitting an entity/article. No entity or citation is invented. |
 | ChatGPT directory | Requires publisher identity verification, submission access, listing/review materials, test credentials where applicable, and external approval. Source plugin preparation does not create an approved listing. Track WRK-402. |
@@ -50,18 +47,41 @@ this work was **80/100, B**. This document does not predict a new score.
 | skills.sh listing and quality evaluation | Three source skills are prepared. They must merge, be installed through the skills CLI, and be indexed externally before claiming a listing. Track WRK-402. |
 | Additional sameAs profiles | Only the verified project GitHub link is used. No Wikipedia, Wikidata, LinkedIn, or social profile is invented. |
 | Complete Markdown twins | Legal pages and the `/home` alias still have HTML only. Authored main/developer/trust pages have Markdown; universal page coverage is not claimed. |
-| Bot User-Agent Markdown bonus | Automatic UA-only Markdown is not enabled. Explicit Accept negotiation and agent mode are supported. |
 | Hosted isolated API sandbox | Local isolated self-hosting is documented; no new hosted sandbox is provisioned. The public shared demo must not receive private data. |
 | Async jobs | Existing 202 is an MCP notification acknowledgement. The API has no long-running job to poll, so no fake jobs endpoint is added. |
 | All-mutation idempotency | Only supported create routes accept the header. PUT, PATCH, DELETE and MCP tools do not gain automatic retry guarantees. |
 | HTML Vary | Next.js replaces rendered HTML Vary values. HTML uses private, no-store; negotiated Markdown includes Vary: Accept. Shared cache behavior should be checked at the production edge. |
 | Production rescan | Run only after merge/deployment. Scanning unmerged changes would remeasure the old public site. Track WRK-402. |
 
+## October 29 follow-up
+
+The October 29 scan scored 93/100 (A). WRK-404 delivers the following across the app and
+marketing repositories.
+
+| Scan finding | Change |
+| --- | --- |
+| OAuth 2.0 support, scoped permissions, PRM, AS metadata, WWW-Authenticate hint | The app is an OAuth 2.1 authorization server: dynamic client registration, a consent screen, PKCE S256, hourly access tokens with rotating refresh tokens, and RFC 7009 revocation. Grants are personal API token rows, so scopes, quotas and revocation in Settings apply unchanged. RFC 8414 and RFC 9728 metadata are published, the OpenAPI document declares an `oauth2` scheme with `read` and `write`, and every API and MCP `401` carries `WWW-Authenticate: Bearer resource_metadata=...`. WRK-401 tracked this. |
+| auth.md format and structure | Marketing serves `/auth.md` with a leading heading, organized as Discover, Pick a method, Register, Exchange, Use the access token, Errors and Revocation, linking the live metadata. |
+| Rate-limit headers | Requests without a valid token count against a per-address `api-unauthenticated` quota, so a `401` also carries `RateLimit` headers. |
+| Agent Plugins manifest | The main repository has `plugin.json`, `mcp.json` and the three skills. |
+| Agent skills index v0.2.0 | The index declares the v0.2.0 `$schema`, and every entry has `type: skill-md` and a `sha256:` digest of the served file. |
+| Modular llms.txt | `/skills/llms.txt` joins `/docs/llms.txt`, and the root file links both. |
+| JSON-LD breadth and sameAs | The homepage graph adds WebPage and SoftwareSourceCode, and `sameAs` adds the npm organization, packages, container image and MCP registry entry. |
+| Bot-UA Markdown | Pages with a Markdown twin serve it to AI agents and crawlers by user agent. Search engine crawlers keep HTML. |
+| A2A agent card | `/.well-known/agent-card.json` describes a working documentation agent at `/api/a2a` that answers `message/send` with the same keyword search as `/ask`. It reads no account data. |
+| Documentation MCP | The server states instructions, marks its tools read-only, and answers unknown tools and invalid arguments with JSON-RPC `-32602`. |
+| ARD trust manifest | Every ARD entry carries a `trustManifest` with the publisher identity. No attestation or signature is claimed. |
+
+Still open: client ID metadata documents (CIMD), the WorkOS `agent_auth` identity, claim and
+exchange flows, the Web Bot Auth signing directory, async jobs, and the external listings in
+WRK-402.
+
 ## Evidence and follow-ups
 
 - [WRK-399](https://linear.app/dkupinic/issue/WRK-399/close-remaining-orank-agent-readiness-gaps) tracks this delivery.
 - [WRK-400](https://linear.app/dkupinic/issue/WRK-400/add-official-typescript-and-python-api-clients) tracks SDK source delivery.
 - [WRK-401](https://linear.app/dkupinic/issue/WRK-401/implement-delegated-oauth-authorization-for-agent-clients) tracks delegated authentication.
+- [WRK-404](https://linear.app/dkupinic/issue/WRK-404/close-agent-readiness-gaps-from-the-october-29-orank-scan) tracks the October 29 follow-up.
 - [WRK-402](https://linear.app/dkupinic/issue/WRK-402/complete-external-agent-directory-and-sdk-publication-steps) tracks external publication and post-deployment verification.
 - [Official MCP registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.Dino-Kupinic%2Fsniptide/versions/latest).
 - [Published CLI package](https://www.npmjs.com/package/@sniptide/cli) and [published MCP package](https://www.npmjs.com/package/@sniptide/mcp).

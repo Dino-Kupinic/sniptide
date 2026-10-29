@@ -101,8 +101,9 @@ const idempotencyParameter = {
   schema: { type: "string", minLength: 1, maxLength: 128, pattern: "^[!-~]+$" },
 } as const
 
+// Either a personal API token, or an OAuth access token granted `scope` (lib/oauth).
 const tokenAccess = (scope: Scope) => ({
-  security: [{ apiToken: [] }],
+  security: [{ apiToken: [] }, { oauth: [scope] }],
   "x-required-scopes": [scope],
 })
 
@@ -579,7 +580,7 @@ export const openApiDocument = {
         tags: ["MCP"],
         summary: "Call the Sniptide MCP server",
         description:
-          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No OAuth discovery or SSE sessions. See packages/mcp/README.md for client configuration.",
+          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with OAuth (the client discovers it from the 401's WWW-Authenticate header) or a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No SSE sessions. See packages/mcp/README.md for client configuration.",
         ...tokenAccess("read"),
         requestBody: {
           required: true,
@@ -1478,6 +1479,27 @@ export const openApiDocument = {
         description:
           "A personal API token (`snpt_…`) from Settings → API tokens. Shown once when created; revoke it there.",
       },
+      oauth: {
+        type: "oauth2",
+        description: [
+          "OAuth 2.1 for agents and apps that act for a user. Clients register themselves at",
+          "`/api/oauth/register` (RFC 7591), use PKCE with S256, and get an access token that lasts",
+          "an hour plus a rotating refresh token. Discovery: `/.well-known/oauth-authorization-server`",
+          "and `/.well-known/oauth-protected-resource`. The user can disconnect the app in",
+          "Settings → API tokens. Relative URLs resolve against the instance this document came from.",
+        ].join(" "),
+        flows: {
+          authorizationCode: {
+            authorizationUrl: "/oauth/authorize",
+            tokenUrl: "/api/oauth/token",
+            refreshUrl: "/api/oauth/token",
+            scopes: {
+              read: "Search and read your snippets, collections and env groups.",
+              write: "Create, edit and delete snippets, collections and env groups. Includes read.",
+            },
+          },
+        },
+      },
       metricsToken: {
         type: "http",
         scheme: "bearer",
@@ -1707,6 +1729,13 @@ export const openApiDocument = {
 
 export const internalRoutes = [
   "/.well-known/api-catalog",
+  // OAuth follows its RFCs and is discovered from these metadata documents instead (lib/oauth).
+  "/.well-known/oauth-authorization-server",
+  "/.well-known/oauth-protected-resource/[[...path]]",
+  "/api/oauth/authorize",
+  "/api/oauth/register",
+  "/api/oauth/revoke",
+  "/api/oauth/token",
   "/api/agent-share/[...path]",
   "/[slug]/copy",
   "/[slug]/preview",

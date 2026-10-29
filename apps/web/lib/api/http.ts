@@ -3,6 +3,7 @@ import "server-only"
 import { ZodError } from "zod"
 import { recordApiRequest } from "@/lib/account/usage"
 import { clientAddress } from "@/lib/client-ip"
+import { bearerChallenge } from "@/lib/oauth/metadata"
 import { hit, type Limit, quotaHeaders, requestQuotas } from "@/lib/rate-limit"
 import { isAdmissionError } from "@/lib/request-admission"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
@@ -86,14 +87,30 @@ export async function withToken(
         const limit = address === "unknown" ? null : await hit([apiLimits.unauthenticated(address)])
         if (limit && !limit.allowed)
           return failure(429, "Too many requests without a valid token.", limit.retryAfterSeconds)
-        return failure(401, "The API token is missing, invalid, expired or revoked.")
+        // The challenge names the protected resource metadata, so an agent can find the OAuth
+        // server from this one response (RFC 9728 5.1).
+        const response = failure(401, "The API token is missing, invalid, expired or revoked.")
+        response.headers.set(
+          "www-authenticate",
+          bearerChallenge(
+            request.url,
+            request.headers.has("authorization") ? { code: "invalid_token" } : undefined,
+          ),
+        )
+        return response
       }
       await recordApiRequest(owner)
       const limit = await hit([apiLimits.request(owner.tokenId)])
       if (!limit.allowed)
         return failure(429, "Too many requests. Slow down.", limit.retryAfterSeconds)
-      if (!owner.scopes.includes(scope))
-        return failure(403, `This token doesn't have the ${scope} scope.`)
+      if (!owner.scopes.includes(scope)) {
+        const response = failure(403, `This token doesn't have the ${scope} scope.`)
+        response.headers.set(
+          "www-authenticate",
+          bearerChallenge(request.url, { code: "insufficient_scope", scope }),
+        )
+        return response
+      }
       return await handler(owner)
     } catch (error) {
       if (isAdmissionError(error))

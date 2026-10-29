@@ -78,7 +78,7 @@ where the overlap ends.
    per-environment structure, and the encryption key sits on the same server. Infisical and
    Doppler cover all of that. Position env sync as a convenience, not a replacement.
 4. **Distribution.** The CLI and local MCP server are available on npm; the remote MCP endpoint ships with the app. Gist, Infisical and Doppler ship installable clients.
-5. **MCP auth is bearer-token only.** No OAuth login or discovery yet.
+5. **MCP auth is OAuth 2.1 or a personal bearer token.** No OpenID Connect or agent identity assertions.
 6. **Reach.** Gist is where developers already are, with discovery, comments and embeds. Pastebin
    has years of search traffic. Sniptide has neither network effect yet.
 7. **Expiry granularity.** Pastebin offers 10 minutes, 2 weeks and 6 months; Sniptide's shortest

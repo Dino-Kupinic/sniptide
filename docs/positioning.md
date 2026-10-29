@@ -57,7 +57,7 @@ and keep the comparison to what we can verify.
 - **Developer to developer.** Show the command or the result before the adjective.
 - **Calm about security.** State what is encrypted, what is private and what isn't. No fear
   marketing, no "military-grade".
-- **Honest about scope.** Name what Sniptide does not do (no key rotation, no OAuth for MCP yet).
+- **Honest about scope.** Name what Sniptide does not do (no key rotation, no OpenID Connect or agent identity assertions).
 - **Delightful in small ways.** A little warmth is welcome; jokes in the empty states, never in
   errors or security copy.
 

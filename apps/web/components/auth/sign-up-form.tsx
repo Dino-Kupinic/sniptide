@@ -43,7 +43,14 @@ function useUsernameAvailability(username: string) {
   return status
 }
 
-export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
+// `redirectTo` is where the new account goes next (lib/auth-redirect.ts).
+export function SignUpForm({
+  socialProviders,
+  redirectTo = "/dashboard",
+}: {
+  socialProviders: SocialProvider[] | null
+  redirectTo?: string
+}) {
   const t = useTranslations("Auth")
   const host = useSiteHost()
   const router = useRouter()
@@ -72,7 +79,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
         username,
         email,
         password,
-        callbackURL: "/dashboard",
+        callbackURL: redirectTo,
       })
       .catch(() => ({ error: { status: 0 } }))
 
@@ -89,7 +96,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
     }
 
     track("signed_up", { method: "email" })
-    router.replace("/dashboard")
+    router.replace(redirectTo)
     router.refresh()
   }
 
@@ -102,7 +109,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
           <SocialButtons
             enabled={socialProviders}
             verb="Sign up"
-            callbackURL="/dashboard"
+            callbackURL={redirectTo}
             onError={setError}
           />
           <EmailDivider />
@@ -188,7 +195,14 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
         <SwitchPrompt>
           {t.rich("existingAccountPrompt", {
             link: (children) => (
-              <Link href="/sign-in" className={inlineLinkClass}>
+              <Link
+                href={
+                  redirectTo === "/dashboard"
+                    ? "/sign-in"
+                    : `/sign-in?next=${encodeURIComponent(redirectTo)}`
+                }
+                className={inlineLinkClass}
+              >
                 {children}
               </Link>
             ),
