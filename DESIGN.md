@@ -231,7 +231,7 @@ The checkbox is 16px with a 1px border and fills blue when checked. The switch i
 ### Toast
 **Role:** Confirmations, errors and undo.
 
-A floating layer at most 384px wide with a hairline border, `--float-shadow` and 13px text. On desktop toasts stack in the bottom-right corner at one width, 24px from the edges. On phones they stack centered under the top bar within the 16px gutter. A success toast leads with a check in `--highlight`, and an error toast leads with an alert icon in `--destructive` on a red-tinted border. An action such as Undo is a 24px `--primary` chip with `--primary-foreground` text, and every toast ends in a dismiss button.
+A floating layer with 16px of padding on the left, 10px elsewhere, a hairline border, `--float-shadow` and 13px text. On desktop toasts stack in the bottom-right corner at one 320px width, 24px from the edges. On phones they stack centered under the top bar within the 16px gutter, at most 384px wide. A success toast leads with a check in `--highlight`, and an error toast leads with an alert icon in `--destructive` on a red-tinted border. An action such as Undo is a 24px `--primary` chip with `--primary-foreground` text, and every toast ends in a dismiss button.
 
 Success messages state what happened in a short past-tense phrase with no closing period, such as "Link copied" or "Moved “Notes” to trash". Names the reader chose sit in the locale's quotation marks. Errors say what failed and what to do in full sentences, such as "Couldn't copy. Allow clipboard access and try again." An action that can be taken back ends in a success toast with Undo.
 

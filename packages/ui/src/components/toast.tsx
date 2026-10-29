@@ -95,7 +95,7 @@ function Toaster({
     <div
       data-slot="toaster"
       className={cn(
-        "pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+3.75rem)] z-100 flex flex-col items-center gap-2 px-4 lg:top-auto lg:right-[calc(env(safe-area-inset-right)+1.5rem)] lg:bottom-6 lg:left-auto lg:w-96 lg:px-0",
+        "pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+3.75rem)] z-100 flex flex-col items-center gap-2 px-4 lg:top-auto lg:right-[calc(env(safe-area-inset-right)+1.5rem)] lg:bottom-6 lg:left-auto lg:w-80 lg:px-0",
         className,
       )}
     >
@@ -106,7 +106,7 @@ function Toaster({
           data-kind={item.kind}
           role={item.kind === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-auto flex w-full max-w-sm min-h-10 items-center gap-2.5 rounded-lg border bg-popover py-1.5 pr-1.5 pl-3 text-[13px] leading-[18px] text-popover-foreground shadow-(--float-shadow) animate-in fade-in slide-in-from-top-2 duration-200 lg:slide-in-from-bottom-2 motion-reduce:animate-none",
+            "pointer-events-auto flex w-full max-w-sm min-h-12 items-center gap-3 rounded-lg border bg-popover py-2.5 pr-2.5 pl-4 text-[13px] leading-[18px] text-popover-foreground shadow-(--float-shadow) animate-in fade-in slide-in-from-top-2 duration-200 lg:slide-in-from-bottom-2 motion-reduce:animate-none",
             item.kind === "error" ? "border-destructive/40" : "border-border",
           )}
         >
@@ -115,7 +115,7 @@ function Toaster({
           ) : (
             <SuccessCheck className="text-highlight" />
           )}
-          <span className="min-w-0 flex-1 py-0.5">{item.message}</span>
+          <span className="min-w-0 flex-1">{item.message}</span>
           {item.action ? (
             <button
               type="button"
