@@ -300,4 +300,31 @@ describeDb("API create reliability", () => {
     )
     expect(response.headers.get("ratelimit")).toContain('"api-token";r=3597;')
   })
+
+  test("requests without a valid token carry their own quota and are limited per address", async () => {
+    const previous = process.env.CLIENT_IP_SOURCE
+    process.env.CLIENT_IP_SOURCE = "x-real-ip"
+    try {
+      const anonymous = () =>
+        me(
+          new Request("http://localhost:3000/api/v1/me", {
+            headers: { "x-real-ip": "203.0.113.9" },
+          }),
+        )
+      const first = await anonymous()
+      expect(first.status).toBe(401)
+      expect(first.headers.get("ratelimit-policy")).toBe('"api-unauthenticated";q=60;w=600')
+      expect(first.headers.get("ratelimit")).toContain('"api-unauthenticated";r=59;')
+      await getDb()
+        .update(rateLimit)
+        .set({ count: 60 })
+        .where(eq(rateLimit.key, "api:unauthenticated:203.0.113.9"))
+      const limited = await anonymous()
+      expect(limited.status).toBe(429)
+      expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0)
+    } finally {
+      if (previous === undefined) delete process.env.CLIENT_IP_SOURCE
+      else process.env.CLIENT_IP_SOURCE = previous
+    }
+  })
 })
