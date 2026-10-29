@@ -16,7 +16,13 @@ RateLimit: "api-token";r=3599;t=3600, "paste-create";r=29;t=3600
 
 The counters live in Postgres and apply across app instances. Concurrent requests can consume the
 remaining quota after a response is sent. A `429` response includes `Retry-After` for the actual
-remaining window. Refused requests still count. Invalid or missing tokens have no quota headers.
+remaining window. Refused requests still count.
+
+Requests with a missing, invalid, expired, or revoked token count against the
+`api-unauthenticated` policy instead: 60 requests per 10 minutes for each client address. Their
+`401` responses carry the same headers, and the 61st request in a window returns `429`. An
+instance that can't tell client addresses apart (see `CLIENT_IP_SOURCE`) skips this limit and
+sends no quota headers on a `401`.
 
 ## Create retries
 

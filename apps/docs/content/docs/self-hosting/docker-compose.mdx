@@ -33,8 +33,8 @@ These settings belong to compose itself:
 | `SNIPTIDE_PORT` | `3000` | Host port for the app. |
 | `POSTGRES_PASSWORD` | `sniptide` | Password for the bundled Postgres. Takes effect on the first start only; the database keeps the password it was created with. Use letters and digits, since it goes into a connection URL. |
 | `POSTGRES_PORT` | `5432` | Port Postgres uses on `127.0.0.1`. |
-| `SNIPTIDE_MEMORY` | `768m` | Memory ceiling for the app container. See [Memory](/self-hosting/memory). |
-| `POSTGRES_MEMORY` | `512m` | Memory ceiling for Postgres. |
+| `SNIPTIDE_MEMORY` | `0` (unset) | Memory ceiling for the app container. See [Memory](/self-hosting/memory). |
+| `POSTGRES_MEMORY` | `0` (unset) | Memory ceiling for Postgres. |
 | `SNIPTIDE_DOMAIN` | `localhost` | Domain for the HTTPS proxy profile. |
 
 ## HTTPS with the bundled proxy

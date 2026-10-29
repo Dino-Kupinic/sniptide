@@ -119,6 +119,35 @@ async function onFreshDatabase(run: (db: ReturnType<typeof createDb>) => Promise
 }
 
 describeDb("upgrading a database", () => {
+  test("a database with main's API receipts applies the pending visit and projection migrations", async () => {
+    const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-visits-"))
+    const pending = ["20261027210723_lush_archangel", "20261028075842_condemned_stephen_strange"]
+    try {
+      for (const entry of fs.readdirSync(folder)) {
+        if (!pending.includes(entry))
+          fs.cpSync(path.join(folder, entry), path.join(previous, entry), { recursive: true })
+      }
+      await onFreshDatabase(async (db) => {
+        await migrateDb(db, previous)
+        await db.$client`INSERT INTO "user" (id, name, email) VALUES ('merge-owner', 'Merge', 'merge@example.com')`
+        const [saved] =
+          await db.$client`INSERT INTO paste (owner_id, slug, title, visibility) VALUES ('merge-owner', 'before-visits', 'Before upgrade', 'unlisted') RETURNING id`
+        await db.$client`INSERT INTO paste_file (paste_id, position, name, language, content) VALUES (${saved?.id}, 0, 'a.ts', 'typescript', 'é🙂')`
+        expect((await migrateDb(db, folder)).applied).toEqual(pending)
+        const [paste] =
+          await db.$client`SELECT bytes, first_language FROM paste WHERE id = ${saved?.id}`
+        expect(paste).toEqual({ bytes: 6, first_language: "typescript" })
+        const [receipt] = await db.$client`SELECT to_regclass('public.api_receipt') as name`
+        expect(receipt?.name).toBe("api_receipt")
+        await db.$client`INSERT INTO paste_visit (paste_id, day) VALUES (${saved?.id}, 1)`
+        expect((await db.$client`SELECT count(*)::int as n FROM paste_visit`)[0]?.n).toBe(1)
+        expect((await migrateDb(db, folder)).applied).toEqual([])
+      })
+    } finally {
+      fs.rmSync(previous, { recursive: true, force: true })
+    }
+  })
+
   test("usage migration backfills existing accounts and counts later mutations", async () => {
     const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-usage-"))
     try {

@@ -6,10 +6,12 @@ import { POST as batchCreate } from "@/app/api/v1/batch/route"
 import { POST as createCollection } from "@/app/api/v1/collections/route"
 import { GET as me } from "@/app/api/v1/me/route"
 import { POST as createPaste } from "@/app/api/v1/pastes/route"
+import { withToken } from "@/lib/api/http"
 import { createToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { purgeStaleData } from "@/lib/pastes/purge"
 import { hit } from "@/lib/rate-limit"
+import { AdmissionError } from "@/lib/request-admission"
 import { HOUR_SECONDS } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser } from "./harness"
 
@@ -49,6 +51,17 @@ describeDb("API create reliability", () => {
     const result = await tokenFor()
     token = result.token
     tokenId = result.summary.id
+  })
+
+  test("overload responses preserve retry metadata and the counted token quota", async () => {
+    const response = await withToken(call("/api/v1/me"), "read", async () => {
+      throw new AdmissionError()
+    })
+    expect(response.status).toBe(503)
+    expect(response.headers.get("retry-after")).toBe("1")
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("ratelimit")).toContain('"api-token";r=3599;')
+    expect((await response.json()).code).toBe("service_unavailable")
   })
 
   test("concurrent duplicate paste creates commit one paste and its stored response", async () => {
@@ -299,5 +312,32 @@ describeDb("API create reliability", () => {
       }),
     )
     expect(response.headers.get("ratelimit")).toContain('"api-token";r=3597;')
+  })
+
+  test("requests without a valid token carry their own quota and are limited per address", async () => {
+    const previous = process.env.CLIENT_IP_SOURCE
+    process.env.CLIENT_IP_SOURCE = "x-real-ip"
+    try {
+      const anonymous = () =>
+        me(
+          new Request("http://localhost:3000/api/v1/me", {
+            headers: { "x-real-ip": "203.0.113.9" },
+          }),
+        )
+      const first = await anonymous()
+      expect(first.status).toBe(401)
+      expect(first.headers.get("ratelimit-policy")).toBe('"api-unauthenticated";q=60;w=600')
+      expect(first.headers.get("ratelimit")).toContain('"api-unauthenticated";r=59;')
+      await getDb()
+        .update(rateLimit)
+        .set({ count: 60 })
+        .where(eq(rateLimit.key, "api:unauthenticated:203.0.113.9"))
+      const limited = await anonymous()
+      expect(limited.status).toBe(429)
+      expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0)
+    } finally {
+      if (previous === undefined) delete process.env.CLIENT_IP_SOURCE
+      else process.env.CLIENT_IP_SOURCE = previous
+    }
   })
 })

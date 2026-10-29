@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sniptide",
+  "version": "0.2.0",
+  "description": "Search, read and save Sniptide snippets and collections from a coding agent, through the Sniptide MCP server and three skills.",
+  "homepage": "https://sniptide.com/docs/mcp",
+  "repository": "https://github.com/Dino-Kupinic/sniptide",
+  "license": "AGPL-3.0-only"
+}

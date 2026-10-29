@@ -40,6 +40,7 @@ For a client without OAuth, create a token in Settings, API tokens, and pass it 
 
 Use `<your-instance-url>/api/mcp` on a self-hosted instance.
 The [MCP guide](https://docs.sniptide.com/mcp) covers Cursor and a local server, and the [CLI](https://docs.sniptide.com/cli) installs a collection as an agent skill.
+This repository is also an [Agent Plugin](https://agent-plugins.org): `plugin.json` bundles the MCP servers in `mcp.json` with the skills in `skills/`.
 
 ## Documentation
 
