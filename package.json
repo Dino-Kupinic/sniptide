@@ -14,6 +14,8 @@
     "test": "bun run test:cli && bun run test:mcp && bun run test:docs && bun run test:web && bun run test:sdk",
     "test:docs": "bun --filter docs test",
     "test:web": "bun --filter web test",
+    "test:web:unit": "bun --filter web test:unit",
+    "test:web:integration": "bun --filter web test:integration",
     "prepare": "husky",
     "cli": "bun packages/cli/src/bin.ts",
     "test:cli": "bun --filter @sniptide/cli test",
