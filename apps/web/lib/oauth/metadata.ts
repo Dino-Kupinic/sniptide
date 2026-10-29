@@ -45,7 +45,7 @@ export function authorizationServerMetadata(origin: string) {
     token_endpoint_auth_methods_supported: ["none"],
     revocation_endpoint_auth_methods_supported: ["none"],
     authorization_response_iss_parameter_supported: true,
-    service_documentation: "https://sniptide.com/auth.md",
+    service_documentation: "https://docs.sniptide.com/oauth",
   }
 }
 
@@ -56,7 +56,7 @@ export function protectedResourceMetadata(origin: string, resourcePath = "") {
     authorization_servers: [origin],
     scopes_supported: [...SCOPES],
     bearer_methods_supported: ["header"],
-    resource_documentation: "https://sniptide.com/auth.md",
+    resource_documentation: "https://docs.sniptide.com/oauth",
   }
 }
 

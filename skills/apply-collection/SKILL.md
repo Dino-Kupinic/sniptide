@@ -5,7 +5,7 @@ description: Apply a Sniptide collection as an ordered recipe when the user asks
 
 # Apply a Sniptide collection
 
-Connect the Sniptide MCP server with a read-scoped personal token. Setup is at https://sniptide.com/docs/mcp and authentication is at https://sniptide.com/auth.md.
+Connect the Sniptide MCP server with a read-scoped personal token. Setup is at https://docs.sniptide.com/mcp and authentication is at https://docs.sniptide.com/api-tokens.
 
 1. Resolve the requested collection with `list_collections`. If the name is ambiguous, use the returned names and slugs to identify the intended collection.
 2. Call `fetch_collection` with its slug. Read the returned steps in their capture order. Continue with `nextCursor` and `nextStep` until the recipe is complete or you have the steps the task needs.
