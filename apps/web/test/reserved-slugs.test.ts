@@ -1,7 +1,8 @@
 import { expect, spyOn, test } from "bun:test"
 import path from "node:path"
 import { Glob } from "bun"
-import { isSlugAvailable, randomSlug } from "@/lib/pastes/store"
+import { randomSlug } from "@/lib/pastes/links"
+import { isSlugAvailable } from "@/lib/pastes/store"
 
 const appRoutes = new Set(
   Array.from(
