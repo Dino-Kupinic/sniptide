@@ -191,20 +191,20 @@
     "usage": "Usage",
     "usagePastes": "Pastes",
     "usageFiles": "Files",
-    "usageDescription": "Your account usage, including items in the trash.",
-    "usageOfLimit": "of {limit}",
-    "usageUnlimited": "Unlimited",
+    "usageDescription": "Storage and paste counts include items in the trash.",
+    "usageOfLimit": "{used} of {limit}",
     "usageWarning": "Approaching limit",
     "usageFull": "Limit reached",
-    "usageIncludesTrash": "Storage and paste counts include items in the trash.",
     "usageApiRequests": "API requests",
-    "usageHistoryDescription": "Requests over the last 30 days, including today (UTC).",
-    "usageRequestsTotal": "requests in the last 30 days",
+    "usageHistoryDescription": "Requests your API tokens made each day, in UTC.",
+    "usageRequestsTotal": "Total for {range}",
     "usageNoRequests": "No API requests in the last 30 days.",
     "usageDailyValues": "View daily values",
     "usageDateUtc": "Date (UTC)",
     "usageLoading": "Loading usage…",
     "usageUnavailable": "Usage is unavailable.",
-    "usageReload": "Reload"
+    "usageReload": "Reload",
+    "usageCreateToken": "Create an API token",
+    "usageChartLabel": "API requests per day: {values}"
   }
 }

@@ -191,20 +191,20 @@
     "usage": "使用状況",
     "usagePastes": "ペースト",
     "usageFiles": "ファイル",
-    "usageDescription": "ゴミ箱内の項目を含むアカウントの使用状況。",
-    "usageOfLimit": "上限 {limit}",
-    "usageUnlimited": "無制限",
+    "usageDescription": "ストレージとペースト数にはゴミ箱内の項目が含まれます。",
+    "usageOfLimit": "{used} / 上限 {limit}",
     "usageWarning": "上限に近づいています",
     "usageFull": "上限に達しました",
-    "usageIncludesTrash": "ストレージとペースト数にはゴミ箱内の項目が含まれます。",
     "usageApiRequests": "APIリクエスト",
-    "usageHistoryDescription": "今日を含む過去30日間のリクエスト（UTC）。",
-    "usageRequestsTotal": "過去30日間のリクエスト",
+    "usageHistoryDescription": "APIトークンによる1日ごとのリクエスト数（UTC）。",
+    "usageRequestsTotal": "{range}の合計",
     "usageNoRequests": "過去30日間にAPIリクエストはありません。",
     "usageDailyValues": "日別の値を表示",
     "usageDateUtc": "日付（UTC）",
     "usageLoading": "使用状況を読み込み中…",
     "usageUnavailable": "使用状況を表示できません。",
-    "usageReload": "再読み込み"
+    "usageReload": "再読み込み",
+    "usageCreateToken": "APIトークンを作成",
+    "usageChartLabel": "1日ごとのAPIリクエスト: {values}"
   }
 }

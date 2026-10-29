@@ -1,6 +1,9 @@
 import { Progress } from "@sniptide/ui/components/progress"
-import { AlertCircleIcon, AlertTriangleIcon } from "lucide-react"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
+import { AlertTriangleIcon } from "lucide-react"
+import Link from "next/link"
 import { getLocale, getTranslations } from "next-intl/server"
+import { ViewsBarChart } from "@/components/dashboard/views-chart"
 import { getAccountUsage, USAGE_HISTORY_DAYS } from "@/lib/account/usage"
 import { usageHistory, usageLimitState } from "@/lib/account/usage-display"
 import { formatBytes } from "@/lib/format"
@@ -8,6 +11,8 @@ import { accountBudget } from "@/lib/pastes/budget"
 import { DAY } from "@/lib/time"
 import { SettingsSection } from "./section"
 
+// Usage from the account reader: one panel of counts, with a meter under each count that has a
+// quota, and the last 30 UTC days of API requests as a bar chart over a table of daily values.
 export async function UsageSection({ ownerId }: { ownerId: string }) {
   const [t, locale] = await Promise.all([getTranslations("Settings"), getLocale()])
   const now = new Date()
@@ -17,10 +22,13 @@ export async function UsageSection({ ownerId }: { ownerId: string }) {
   } catch (error) {
     console.error("Unable to read account usage", error)
     return (
-      <SettingsSection title={t("usage")}>
+      <SettingsSection title={t("usage")} repeatsHeading>
         <p role="alert" className="text-sm text-muted-foreground">
           {t("usageUnavailable")}{" "}
-          <a className="text-link underline" href="/settings?tab=usage">
+          <a
+            className="font-medium text-link outline-none hover:underline focus-visible:underline"
+            href="/settings?tab=usage"
+          >
             {t("usageReload")}
           </a>
         </p>
@@ -34,174 +42,160 @@ export async function UsageSection({ ownerId }: { ownerId: string }) {
     USAGE_HISTORY_DAYS,
   )
   const number = new Intl.NumberFormat(locale)
-  const date = new Intl.DateTimeFormat(locale, {
+  const fullDate = new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
     timeZone: "UTC",
   })
-  const formatDate = (value: string) => date.format(new Date(`${value}T00:00:00Z`))
+  const shortDate = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  })
+  const utc = (value: string) => new Date(`${value}T00:00:00Z`)
+  const first = history.days[0]?.date ?? now.toISOString().slice(0, 10)
+  const last = history.days[history.days.length - 1]?.date ?? first
   const metrics = [
     {
       label: t("storage"),
-      displayLimit: true,
       used: usage.storageBytes,
       limit: budget.bytes,
       format: (value: number) => formatBytes(value, locale),
     },
     {
       label: t("usagePastes"),
-      displayLimit: true,
       used: usage.pasteCount,
       limit: budget.pastes,
       format: (value: number) => number.format(value),
     },
     {
       label: t("collections"),
-      displayLimit: false,
       used: usage.collectionCount,
       limit: null,
       format: (value: number) => number.format(value),
     },
     {
       label: t("usageFiles"),
-      displayLimit: false,
       used: usage.fileCount,
       limit: null,
       format: (value: number) => number.format(value),
     },
   ]
-  const max = Math.max(1, ...history.days.map((day) => day.requests))
   return (
     <>
       <SettingsSection title={t("usage")} description={t("usageDescription")} repeatsHeading>
-        <div className="grid grid-cols-2 gap-3">
+        <ul className="flex flex-col rounded-lg border border-border">
           {metrics.map((metric) => {
             const state = usageLimitState(metric.used, metric.limit)
-            const limited = state.kind === "limited"
             return (
-              <div
+              <li
                 key={metric.label}
-                className="flex min-w-0 flex-col gap-3 rounded-lg border border-border p-4"
+                className="flex flex-col gap-3 border-t border-border px-4 py-3.5 first:border-t-0"
               >
-                <span className="text-sm text-muted-foreground">{metric.label}</span>
-                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-                  <span className="text-xl font-semibold tabular-nums">
-                    {metric.format(metric.used)}
+                <div className="flex items-baseline justify-between gap-4 text-sm">
+                  <span className="font-medium">{metric.label}</span>
+                  <span className="text-right text-muted-foreground tabular-nums">
+                    {metric.limit === null
+                      ? metric.format(metric.used)
+                      : t("usageOfLimit", {
+                          used: metric.format(metric.used),
+                          limit: metric.format(metric.limit),
+                        })}
                   </span>
-                  {metric.displayLimit ? (
-                    <span className="text-xs text-muted-foreground">
-                      {metric.limit !== null
-                        ? t("usageOfLimit", { limit: metric.format(metric.limit) })
-                        : t("usageUnlimited")}
-                    </span>
-                  ) : null}
                 </div>
-                {limited ? (
+                {state.kind === "limited" ? (
                   <>
-                    <Progress
-                      value={state.percent}
-                      aria-label={metric.label}
-                      className={
-                        state.status === "full"
-                          ? "[&>*>*]:bg-destructive"
-                          : state.status === "warning"
-                            ? "[&>*>*]:bg-amber-600"
-                            : undefined
-                      }
-                    />
-                    {state.status !== "normal" ? (
-                      <p
-                        className={
-                          state.status === "full"
-                            ? "flex items-center gap-1 text-xs text-destructive"
-                            : "flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
-                        }
-                      >
-                        {state.status === "full" ? (
-                          <AlertCircleIcon aria-hidden="true" className="size-3.5" />
-                        ) : (
-                          <AlertTriangleIcon aria-hidden="true" className="size-3.5" />
-                        )}
+                    <Progress value={state.percent} aria-label={metric.label} />
+                    {state.status === "normal" ? null : (
+                      <p className="flex items-center gap-1.5 text-[13px] font-medium">
+                        <AlertTriangleIcon
+                          aria-hidden="true"
+                          className="size-3.5 shrink-0 text-muted-foreground"
+                        />
                         {t(state.status === "full" ? "usageFull" : "usageWarning")}
                       </p>
-                    ) : null}
+                    )}
                   </>
                 ) : null}
-              </div>
+              </li>
             )
           })}
-        </div>
-        <p className="text-xs text-muted-foreground">{t("usageIncludesTrash")}</p>
+        </ul>
       </SettingsSection>
       <SettingsSection title={t("usageApiRequests")} description={t("usageHistoryDescription")}>
-        <div className="rounded-lg border border-border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-2xl font-semibold tabular-nums">{number.format(history.total)}</p>
-              <p className="text-xs text-muted-foreground">{t("usageRequestsTotal")}</p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {formatDate(history.days[0]?.date ?? now.toISOString().slice(0, 10))} –{" "}
-              {formatDate(
-                history.days[history.days.length - 1]?.date ?? now.toISOString().slice(0, 10),
-              )}{" "}
-              · UTC
-            </p>
+        {history.total === 0 ? (
+          <div className="flex flex-col items-start gap-1 text-sm">
+            <p className="text-muted-foreground">{t("usageNoRequests")}</p>
+            <Link
+              href="/settings?tab=api"
+              className="font-medium text-link outline-none hover:underline focus-visible:underline"
+            >
+              {t("usageCreateToken")}
+            </Link>
           </div>
-          {history.total === 0 ? (
-            <p className="mt-5 text-sm text-muted-foreground">{t("usageNoRequests")}</p>
-          ) : (
-            <div aria-hidden="true" className="mt-5 flex h-20 items-end gap-0.5">
-              {history.days.map((day) => (
-                <div
-                  key={day.date}
-                  className="min-w-0 flex-1 rounded-t-sm bg-primary/70"
-                  style={{ height: `${(day.requests / max) * 100}%` }}
-                />
-              ))}
+        ) : (
+          <>
+            <div className="flex flex-col gap-0.5">
+              <p className="font-heading text-3xl leading-9 font-bold tracking-[-0.02em] tabular-nums">
+                {number.format(history.total)}
+              </p>
+              <p className="text-[13px] text-muted-foreground">
+                {t("usageRequestsTotal", { range: fullDate.formatRange(utc(first), utc(last)) })}
+              </p>
             </div>
-          )}
-          <details className="mt-4 text-sm">
-            <summary className="cursor-pointer text-link">{t("usageDailyValues")}</summary>
-            <table className="mt-3 w-full text-left text-xs">
-              <thead>
-                <tr>
-                  <th className="pb-2 font-medium">{t("usageDateUtc")}</th>
-                  <th className="pb-2 text-right font-medium">{t("usageApiRequests")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.days.map((day) => (
-                  <tr key={day.date} className="border-t border-border">
-                    <td className="py-1.5">{formatDate(day.date)}</td>
-                    <td className="py-1.5 text-right tabular-nums">
-                      {number.format(day.requests)}
-                    </td>
+            <ViewsBarChart
+              values={history.days.map((day) => day.requests)}
+              labels={history.days.map((day) => shortDate.format(utc(day.date)))}
+              label={t("usageChartLabel", {
+                values: history.days
+                  .map((day) => `${shortDate.format(utc(day.date))} ${number.format(day.requests)}`)
+                  .join(", "),
+              })}
+            />
+            <details className="text-sm">
+              <summary className="w-fit cursor-pointer font-medium text-link outline-none hover:underline focus-visible:underline">
+                {t("usageDailyValues")}
+              </summary>
+              <table className="mt-3 w-full">
+                <thead>
+                  <tr className="text-[13px] text-muted-foreground">
+                    <th className="pb-2 text-left font-medium">{t("usageDateUtc")}</th>
+                    <th className="pb-2 text-right font-medium">{t("usageApiRequests")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </details>
-        </div>
+                </thead>
+                <tbody>
+                  {history.days.map((day) => (
+                    <tr key={day.date} className="border-t border-border">
+                      <td className="py-2">{fullDate.format(utc(day.date))}</td>
+                      <td className="py-2 text-right tabular-nums">
+                        {number.format(day.requests)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          </>
+        )}
       </SettingsSection>
     </>
   )
 }
 
+// Keeps the section titles in place while the counts load, so the panel fills in without a jump.
 export async function UsageSectionSkeleton() {
   const t = await getTranslations("Settings")
   return (
-    <div role="status" aria-busy="true" className="py-6">
+    <div role="status" aria-busy="true">
+      <SettingsSection title={t("usage")} description={t("usageDescription")} repeatsHeading>
+        <Skeleton className="h-[214px] rounded-lg" />
+      </SettingsSection>
+      <SettingsSection title={t("usageApiRequests")} description={t("usageHistoryDescription")}>
+        <Skeleton className="h-[248px] rounded-lg" />
+      </SettingsSection>
+      {/* After the sections, so the first one still drops its top border. */}
       <span className="sr-only">{t("usageLoading")}</span>
-      <div aria-hidden="true" className="max-w-[560px] space-y-5">
-        <div className="grid grid-cols-2 gap-3">
-          {[0, 1, 2, 3].map((item) => (
-            <div key={item} className="h-28 animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
-        <div className="h-40 animate-pulse rounded-lg bg-muted" />
-      </div>
     </div>
   )
 }

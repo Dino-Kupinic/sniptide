@@ -191,20 +191,20 @@
     "usage": "Uso",
     "usagePastes": "Pastes",
     "usageFiles": "Archivos",
-    "usageDescription": "Uso de tu cuenta, incluidos los elementos en la papelera.",
-    "usageOfLimit": "de {limit}",
-    "usageUnlimited": "Ilimitado",
+    "usageDescription": "El almacenamiento y los pastes incluyen elementos en la papelera.",
+    "usageOfLimit": "{used} de {limit}",
     "usageWarning": "Cerca del límite",
     "usageFull": "Límite alcanzado",
-    "usageIncludesTrash": "El almacenamiento y los pastes incluyen elementos en la papelera.",
     "usageApiRequests": "Solicitudes API",
-    "usageHistoryDescription": "Solicitudes de los últimos 30 días, incluido hoy (UTC).",
-    "usageRequestsTotal": "solicitudes en los últimos 30 días",
+    "usageHistoryDescription": "Solicitudes diarias de tus tokens de API, en UTC.",
+    "usageRequestsTotal": "Total del periodo {range}",
     "usageNoRequests": "No hay solicitudes API en los últimos 30 días.",
     "usageDailyValues": "Ver valores diarios",
     "usageDateUtc": "Fecha (UTC)",
     "usageLoading": "Cargando uso…",
     "usageUnavailable": "El uso no está disponible.",
-    "usageReload": "Recargar"
+    "usageReload": "Recargar",
+    "usageCreateToken": "Crear un token de API",
+    "usageChartLabel": "Solicitudes API por día: {values}"
   }
 }

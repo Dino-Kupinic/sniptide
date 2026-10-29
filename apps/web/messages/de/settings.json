@@ -191,20 +191,20 @@
     "usage": "Nutzung",
     "usagePastes": "Pastes",
     "usageFiles": "Dateien",
-    "usageDescription": "Deine Kontonutzung, einschließlich Elementen im Papierkorb.",
-    "usageOfLimit": "von {limit}",
-    "usageUnlimited": "Unbegrenzt",
+    "usageDescription": "Speicher und Paste-Anzahl umfassen Elemente im Papierkorb.",
+    "usageOfLimit": "{used} von {limit}",
     "usageWarning": "Limit fast erreicht",
     "usageFull": "Limit erreicht",
-    "usageIncludesTrash": "Speicher und Paste-Anzahl umfassen Elemente im Papierkorb.",
     "usageApiRequests": "API-Anfragen",
-    "usageHistoryDescription": "Anfragen der letzten 30 Tage einschließlich heute (UTC).",
-    "usageRequestsTotal": "Anfragen in den letzten 30 Tagen",
+    "usageHistoryDescription": "Anfragen deiner API-Tokens pro Tag, in UTC.",
+    "usageRequestsTotal": "Gesamt für {range}",
     "usageNoRequests": "Keine API-Anfragen in den letzten 30 Tagen.",
     "usageDailyValues": "Tageswerte anzeigen",
     "usageDateUtc": "Datum (UTC)",
     "usageLoading": "Nutzung wird geladen…",
     "usageUnavailable": "Nutzung ist nicht verfügbar.",
-    "usageReload": "Neu laden"
+    "usageReload": "Neu laden",
+    "usageCreateToken": "API-Token erstellen",
+    "usageChartLabel": "API-Anfragen pro Tag: {values}"
   }
 }

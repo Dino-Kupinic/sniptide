@@ -191,20 +191,20 @@
     "usage": "使用情况",
     "usagePastes": "粘贴",
     "usageFiles": "文件",
-    "usageDescription": "账户使用情况，包括回收站中的项目。",
-    "usageOfLimit": "上限 {limit}",
-    "usageUnlimited": "无限制",
+    "usageDescription": "存储空间和粘贴数量包括回收站中的项目。",
+    "usageOfLimit": "{used} / 上限 {limit}",
     "usageWarning": "接近上限",
     "usageFull": "已达上限",
-    "usageIncludesTrash": "存储空间和粘贴数量包括回收站中的项目。",
     "usageApiRequests": "API 请求",
-    "usageHistoryDescription": "过去 30 天的请求，包括今天（UTC）。",
-    "usageRequestsTotal": "过去 30 天的请求",
+    "usageHistoryDescription": "API 令牌每天发出的请求数（UTC）。",
+    "usageRequestsTotal": "{range} 合计",
     "usageNoRequests": "过去 30 天没有 API 请求。",
     "usageDailyValues": "查看每日数据",
     "usageDateUtc": "日期（UTC）",
     "usageLoading": "正在加载使用情况…",
     "usageUnavailable": "无法获取使用情况。",
-    "usageReload": "重新加载"
+    "usageReload": "重新加载",
+    "usageCreateToken": "创建 API 令牌",
+    "usageChartLabel": "每日 API 请求：{values}"
   }
 }
