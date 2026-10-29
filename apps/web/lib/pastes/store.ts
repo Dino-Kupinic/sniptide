@@ -103,9 +103,18 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
 
 // Paths the app already uses, so a custom link can't shadow a page.
 const RESERVED = new Set([
+  "about",
+  "ask",
+  "contact",
+  "home",
+  "impressum",
+  "privacy",
+  "skills",
+  "terms",
   "analytics",
   "api",
   "collections",
+  "copyright",
   "dashboard",
   "demo",
   "dev",

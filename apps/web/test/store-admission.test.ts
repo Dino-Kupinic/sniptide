@@ -1,4 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
+import { createApiCollection } from "@/lib/api/collections"
+import { createCapture, updateCapture } from "@/lib/api/pastes"
+import { createToken } from "@/lib/api/tokens"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage } from "@/lib/pastes/lists"
 import { setStarred, sharePaste } from "@/lib/pastes/store"
@@ -37,6 +40,32 @@ describeDb("store operations with one admitted database execution", () => {
     await resetDatabase()
     await seedUser("owner")
     await seedUser("reader")
+  })
+  test("a receipted API create and replay use one execution and preserve the original snapshot", async () => {
+    const token = await createToken("owner", { name: "retry", write: true, expiry: "never" })
+    if (!token.ok) throw new Error(token.error)
+    const { collection } = await createApiCollection("owner", { name: "Receipts" })
+    const input = {
+      title: "Original",
+      collection: collection.slug,
+      files: [{ name: "original.txt", content: "Original" }],
+    }
+    const receipt = {
+      tokenId: token.summary.id,
+      key: "single-execution",
+      route: "/api/v1/pastes",
+      body: input,
+    }
+    await withOneExecution(async () => {
+      const original = await createCapture("owner", input, receipt)
+      expect(original.collection).toBe(collection.slug)
+      expect(original.files[0]?.content).toBe("Original")
+      await updateCapture("owner", original.id, {
+        title: "Edited",
+        files: [{ name: "edited.txt", content: "Edited" }],
+      })
+      expect(await createCapture("owner", input, receipt)).toEqual(original)
+    })
   })
   test("a password-unlocked starred list uses its transaction for candidate reads", async () => {
     await seedPaste({ slug: "locked-star", owner: "owner", password: "secret" })

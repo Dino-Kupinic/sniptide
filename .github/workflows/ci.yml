@@ -44,16 +44,34 @@ jobs:
 
       - run: bun run test:cli
       - run: bun run test:mcp
+      - run: bun run test:sdk
+      - run: node packages/sdk/scripts/test-npm-release.mjs
       - run: node packages/mcp/scripts/test-npm-release.mjs
       - run: node scripts/npm-release.mjs ui "$RUNNER_TEMP/ui-package"
       - run: node packages/ui/scripts/test-npm-release.mjs "$RUNNER_TEMP/ui-package"
       - run: bun run test:docs
 
-      - run: bun run build
+  # The same image Coolify deploys, so a broken Dockerfile shows up in the PR. Layers come from
+  # the GitHub Actions cache, so the dependency install and the ffmpeg layer rarely rebuild.
+  docker:
+    name: Docker image, upgrade and compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
 
-      # Builds the same image Coolify deploys, so a broken Dockerfile shows up in the PR.
+      - uses: docker/setup-buildx-action@v4
+
       - name: Build the Docker image
-        run: docker build --tag sniptide:ci .
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: sniptide:ci
+          cache-from: |
+            type=gha,scope=ci-web
+            type=gha,scope=docker-amd64
+          cache-to: type=gha,mode=max,scope=ci-web,ignore-error=true
 
       - name: Verify the Docker image against a fresh database
         run: bash scripts/test-docker.sh sniptide:ci
@@ -85,16 +103,32 @@ jobs:
           PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
         run: bash scripts/test-upgrade.sh "$PREVIOUS_IMAGE" sniptide:ci
 
-      # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
-      - name: Build the docs Docker image
-        run: docker build --file apps/docs/Dockerfile --tag sniptide-docs:ci .
-
-      - name: Verify the docs Docker image
-        run: bash scripts/test-docs-image.sh sniptide-docs:ci
-
       # docker-compose.yml and the Coolify template, the two ways self-hosters start Sniptide.
       - name: Verify docker compose and the Coolify template
         run: bash scripts/test-compose.sh sniptide:ci
+
+  # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
+  docs-image:
+    name: Docs Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build the docs Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/docs/Dockerfile
+          load: true
+          tags: sniptide-docs:ci
+          cache-from: type=gha,scope=ci-docs
+          cache-to: type=gha,mode=max,scope=ci-docs,ignore-error=true
+
+      - name: Verify the docs Docker image
+        run: bash scripts/test-docs-image.sh sniptide-docs:ci
 
   # Runs the store and routes against a real Postgres: the access rules and the one-time-read
   # claim live in SQL, so a mock would prove nothing.
@@ -133,10 +167,16 @@ jobs:
 
       - run: bun run test:web
 
+  # Two shards split the test files between runners. Each has its own Postgres and builds the app,
+  # which the Next build cache keeps cheap.
   e2e:
-    name: Browser tests
+    name: Browser tests shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
     services:
       postgres:
         image: postgres:17-alpine
@@ -164,9 +204,27 @@ jobs:
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
-      - run: bun --filter web test:e2e:install --with-deps
-      - run: bun run build
-      - run: bun run test:e2e
+      # Next's build cache makes the second and later builds on a branch much faster.
+      - uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ hashFiles('apps/web/**/*.ts', 'apps/web/**/*.tsx') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
+      # The browser download is network-bound and the build is CPU-bound, so they run together.
+      - name: Install the browser and build
+        run: |
+          bun --filter web test:e2e:install --with-deps &
+          install=$!
+          bun run build
+          wait "$install"
+      - name: Run this shard's browser tests
+        working-directory: apps/web
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          files="$(ls tests/*.e2e.ts | sort | awk -v shard="$SHARD" 'NR % 2 == shard')"
+          bun run test:e2e $files
       - name: Publish browser test summary
         if: ${{ !cancelled() }}
         run: |
@@ -177,7 +235,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-results
+          name: e2e-results-${{ matrix.shard }}
           path: |
             apps/web/.e2e/report.json
             apps/web/.e2e/junit.xml
@@ -188,3 +246,17 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7
+
+  # Branch protection requires a check named "Browser tests", so this job reports one result for
+  # both shards.
+  e2e-result:
+    name: Browser tests
+    needs: e2e
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every shard to pass
+        env:
+          RESULT: ${{ needs.e2e.result }}
+        run: test "$RESULT" = success
