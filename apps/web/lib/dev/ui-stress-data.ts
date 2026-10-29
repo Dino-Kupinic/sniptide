@@ -2,12 +2,22 @@ import type { PendingInvite } from "@/components/paste/invite-people"
 import type { EditorInitial } from "@/components/paste/paste-editor"
 import { type Collection, HUES, ICONS } from "@/lib/collections/types"
 import { initials } from "@/lib/format"
+import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow, SharedRow, TrashRow } from "@/lib/pastes/rows"
 import type { ViewerSummary } from "@/lib/viewer"
 
 export const datasets = ["demo", "worst", "empty", "one", "large"] as const
 export type Dataset = (typeof datasets)[number]
-export const screens = ["pastes", "shared", "trash", "collections", "editor", "invites"] as const
+export const screens = [
+  "dashboard",
+  "pastes",
+  "shared",
+  "trash",
+  "collections",
+  "editor",
+  "viewer",
+  "invites",
+] as const
 export type StressScreen = (typeof screens)[number]
 
 const names = [
@@ -23,6 +33,7 @@ const names = [
   "",
 ]
 const titles = [
+  "Platform infrastructure migration: production rollback instructions and business customer notification deployment guide.",
   "Benachrichtigungseinstellungen",
   "Platform infrastructure migration — production rollback instructions and customer communication checklist for Oct 2026",
   "J",
@@ -51,10 +62,15 @@ export function stressData(dataset: Dataset) {
       language: ["typescript", "objective-c", "text", "python"][index % 4] ?? "text",
       visibility: (["public", "unlisted", "private"] as const)[index % 3] ?? "private",
       burnAfterRead: index % 4 === 3,
-      views: worst ? ([0, 1, 1284, 1000000, 12345678][index % 5] ?? 0) : 12,
-      expiresLabel: index % 4 === 3 ? "after 1 view" : index % 4 === 1 ? "in 1 hour" : "Never",
-      expiresSoon: index % 4 === 1,
-      expiresAt: index % 4 === 1 ? now + 3600000 : null,
+      views: dataset === "one" ? 1 : worst ? ([0, 1, 1284, 1000000, 12345678][index % 5] ?? 0) : 12,
+      expiresLabel:
+        index % 4 === 3
+          ? "after 1 view"
+          : index % 4 === 1 || dataset === "one"
+            ? "in 1 hour"
+            : "Never",
+      expiresSoon: index % 4 === 1 || dataset === "one",
+      expiresAt: index % 4 === 1 || dataset === "one" ? now + 3600000 : null,
       updatedAt: now - index * 86400000,
       updatedLabel: ["just now", "1 hour ago", "Yesterday", "Oct 1"][index % 4] ?? "Oct 1",
       collection: null,
@@ -72,7 +88,6 @@ export function stressData(dataset: Dataset) {
       unseen: index === 0,
     }
   })
-  const pastes: PasteRow[] = rows.map((row) => ({ ...row, owner: null, canEdit: true }))
   const trash: TrashRow[] = rows.map((row, index) => ({
     slug: row.slug,
     title: row.title,
@@ -98,9 +113,44 @@ export function stressData(dataset: Dataset) {
       : `Project ${index + 1}`,
     icon: ICONS[index % ICONS.length] ?? "square",
     hue: HUES[index % HUES.length] ?? "ink",
-    pasteCount: worst ? ([0, 1, 1284, 1000000][index % 4] ?? 0) : 12,
-    updatedAt: worst && index % 4 === 0 ? null : Date.now() - index * 86_400_000,
+    pasteCount: dataset === "one" ? 1 : worst ? ([0, 1, 1284, 1000000][index % 4] ?? 0) : 12,
+    updatedAt: worst && dataset !== "one" && index % 4 === 0 ? null : now - index * 86_400_000,
   }))
+  const pastes: PasteRow[] = rows.map((row, index) => ({
+    ...row,
+    owner: null,
+    canEdit: true,
+    collection: index % 2 === 0 ? (collections[index % collections.length]?.slug ?? null) : null,
+  }))
+  const dailyViews = Array.from({ length: 60 }, (_, index) =>
+    length === 0
+      ? 0
+      : length === 1
+        ? index === 59
+          ? 1
+          : 0
+        : worst
+          ? ([0, 1, 1284, 1000000][index % 4] ?? 0)
+          : 12,
+  )
+  const days = dailyViews.map((_, index) => new Date(now - (59 - index) * 86_400_000))
+  const dashboard: DashboardData = {
+    dailyViews,
+    dayNames: days.map((day) =>
+      new Intl.DateTimeFormat("en", { weekday: "short", timeZone: "UTC" }).format(day),
+    ),
+    dayDates: days.map((day) =>
+      new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(
+        day,
+      ),
+    ),
+    newPastes: { "1": Math.min(length, 1), "7": Math.min(length, 7), "30": Math.min(length, 30) },
+    totalPastes: length,
+    activeLinks: rows.filter((row) => row.visibility !== "private").length,
+    passwordProtected: length === 1 ? 1 : Math.floor(length / 4),
+    expiringSoon: rows.filter((row) => row.expiresSoon).length,
+    recent: pastes.slice(0, 15),
+  }
   const viewer: ViewerSummary = {
     name: worst ? "👩🏽‍💻 Aleksandra Wiśniewska-Kowalczyk" : "Jane Doe",
     email: worst
@@ -114,14 +164,17 @@ export function stressData(dataset: Dataset) {
   }
   const editor: EditorInitial = {
     title: dataset === "empty" ? "" : (pastes[0]?.title ?? "Deployment notes"),
-    description: worst
-      ? "Migration instructions: https://example.com/workspaces/platform-infrastructure/projects/q3-launch/docs/9f8e7d6c5b4a?tab=comments&filter=unresolved"
-      : "Deployment notes for the team.",
+    description:
+      dataset === "empty"
+        ? ""
+        : worst
+          ? "Migration instructions: https://example.com/workspaces/platform-infrastructure/projects/q3-launch/docs/9f8e7d6c5b4a?tab=comments&filter=unresolved Review the rollback checklist with the on-call engineer before deploying customer notifications to the EU production cluster securely"
+          : "Deployment notes for the team.",
     files: Array.from(
       { length: worst && dataset !== "one" && dataset !== "empty" ? 10 : 1 },
       (_, index) => ({
         name: worst
-          ? `platform-infrastructure.production.customer-notification-preferences.rollback-instructions.v${index + 1}.ts`
+          ? `platform-infrastructure.production.customer-notification-preferences.rollback.instructions.enterprise-eur.release-v${String(index + 1).padStart(2, "0")}.ts`
           : "deploy.ts",
         content:
           dataset === "empty"
@@ -145,5 +198,5 @@ export function stressData(dataset: Dataset) {
     },
     access: row.access,
   }))
-  return { rows, pastes, trash, collections, viewer, editor, invites }
+  return { rows, pastes, trash, collections, viewer, editor, invites, dashboard }
 }

@@ -21,15 +21,15 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   const t = useTranslations("Workspace")
   const { open: openCommandMenu } = useCommandMenu()
   return (
-    <header className="sticky top-0 z-30 flex min-h-[52px] shrink-0 items-center justify-between gap-3 bg-background pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] box-content lg:hidden">
+    <header className="sticky top-0 z-30 flex min-h-[52px] shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] box-content lg:hidden">
       <Link
         href="/dashboard"
         aria-label={t("sniptide_dashboard")}
-        className="min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="min-w-[calc(29.05px+0.5rem)] flex-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
-        <Logo className="min-w-0 [&>span]:truncate" />
+        <Logo className="min-w-0 max-w-full [&>span]:min-w-0 [&>span]:shrink [&>span>svg]:max-w-full" />
       </Link>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         <Button variant="outline" size="icon-lg" aria-label={t("search")} onClick={openCommandMenu}>
           <SearchIcon />
         </Button>

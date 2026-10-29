@@ -90,7 +90,7 @@ function Stat({
     <div className={cn("flex flex-col gap-1.5 px-4 py-4 lg:px-5", className)}>
       <span className="text-[13px] text-muted-foreground">{label}</span>
       <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="font-heading text-[26px] leading-9 font-bold tracking-[-0.02em] tabular-nums lg:text-3xl">
+        <span className="font-heading text-[26px] leading-9 font-bold tracking-[-0.02em] whitespace-nowrap tabular-nums lg:text-3xl">
           {value}
         </span>
         {note ? (
@@ -182,49 +182,51 @@ export function Dashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 rounded-lg border border-border lg:grid-cols-4">
-        <Stat
-          label={t("total_pastes")}
-          value={formatNumber(data.totalPastes, locale)}
-          note={
-            created > 0
-              ? t("created_in_period", { count: created, period: rangeLabels[range] })
-              : undefined
-          }
-          noteTone="primary"
-          className="border-r border-b border-border lg:border-b-0"
-        />
-        <Stat
-          label={t("views")}
-          value={formatNumber(views, locale)}
-          note={viewsTrend === "new" ? t("new") : (viewsTrend ?? undefined)}
-          noteTone="primary"
-          className="border-b border-border lg:border-r lg:border-b-0"
-        />
-        <Stat
-          label={t("active_share_links")}
-          value={formatNumber(data.activeLinks, locale)}
-          note={
-            data.passwordProtected > 0
-              ? t("password_protected_count", { count: data.passwordProtected })
-              : undefined
-          }
-          className="border-r border-border"
-        />
-        <Stat
-          label={t("expiring_in_48h")}
-          value={formatNumber(data.expiringSoon, locale)}
-          note={
-            data.expiringSoon > 0 ? (
-              <Link
-                href="/pastes?sort=expires"
-                className="font-medium text-foreground underline underline-offset-2 hover:text-link"
-              >
-                {t("review")}
-              </Link>
-            ) : undefined
-          }
-        />
+      <div className="@container rounded-lg border border-border">
+        <div className="grid grid-cols-1 @min-[24rem]:grid-cols-2 @min-[48rem]:grid-cols-4">
+          <Stat
+            label={t("total_pastes")}
+            value={formatNumber(data.totalPastes, locale)}
+            note={
+              created > 0
+                ? t("created_in_period", { count: created, period: rangeLabels[range] })
+                : undefined
+            }
+            noteTone="primary"
+            className="border-b border-border @min-[24rem]:border-r @min-[48rem]:border-b-0"
+          />
+          <Stat
+            label={t("views")}
+            value={formatNumber(views, locale)}
+            note={viewsTrend === "new" ? t("new") : (viewsTrend ?? undefined)}
+            noteTone="primary"
+            className="border-b border-border @min-[48rem]:border-r @min-[48rem]:border-b-0"
+          />
+          <Stat
+            label={t("active_share_links")}
+            value={formatNumber(data.activeLinks, locale)}
+            note={
+              data.passwordProtected > 0
+                ? t("password_protected_count", { count: data.passwordProtected })
+                : undefined
+            }
+            className="border-b border-border @min-[24rem]:border-r @min-[24rem]:border-b-0"
+          />
+          <Stat
+            label={t("expiring_in_48h")}
+            value={formatNumber(data.expiringSoon, locale)}
+            note={
+              data.expiringSoon > 0 ? (
+                <Link
+                  href="/pastes?sort=expires"
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-link"
+                >
+                  {t("review")}
+                </Link>
+              ) : undefined
+            }
+          />
+        </div>
       </div>
 
       <div className="flex flex-col gap-5 lg:flex-row">

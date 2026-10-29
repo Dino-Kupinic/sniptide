@@ -957,10 +957,10 @@ export function PasteEditor({
         event.preventDefault()
         submit()
       }}
-      className="flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7"
+      className="@container/editor flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7"
     >
       {/* Mobile header from the Paper "New paste" artboard */}
-      <div className="sticky top-0 z-20 box-content flex h-[52px] items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
+      <div className="sticky top-0 z-20 box-content flex min-h-[52px] flex-wrap items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
         {editing ? (
           <Button
             type="button"
@@ -983,7 +983,7 @@ export function PasteEditor({
             {t("cancel")}
           </Button>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-center font-heading text-xl leading-7 font-bold tracking-[-0.02em]">
+        <h1 className="order-first min-w-0 flex-1 basis-full truncate text-center font-heading text-xl leading-7 font-bold tracking-[-0.02em] @min-[20rem]/editor:order-none @min-[20rem]/editor:basis-0">
           {heading}
         </h1>
         <Button
@@ -1251,7 +1251,7 @@ export function PasteEditor({
           while the on-screen keyboard is up, so the code being typed stays in view. */}
       <div
         hidden={keyboardUp}
-        className="sticky bottom-0 z-20 mt-6 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
+        className="sticky bottom-0 z-20 mt-6 box-content flex min-h-14 flex-wrap items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
       >
         {sharedEdit ? null : (
           <Button
@@ -1261,7 +1261,7 @@ export function PasteEditor({
             aria-haspopup="dialog"
             aria-label={`${t("pasteSettings")}: ${settingsSummary}`}
             onClick={() => setSettingsOpen(true)}
-            className="min-w-0 flex-1 justify-start px-3"
+            className="h-auto min-h-[38px] min-w-0 flex-1 basis-[10rem] justify-start px-3 py-2"
           >
             {passwordOn || burnAfterRead ? <LockIcon /> : <EyeIcon />}
             <span className="truncate">{settingsSummary}</span>
@@ -1272,7 +1272,10 @@ export function PasteEditor({
           type="submit"
           size="xl"
           loading={pending}
-          className={cn("shrink-0", sharedEdit && "flex-1")}
+          className={cn(
+            "h-auto min-h-[38px] max-w-full shrink-0 px-4 py-2 whitespace-normal",
+            sharedEdit && "flex-1",
+          )}
         >
           {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>

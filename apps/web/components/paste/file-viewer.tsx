@@ -123,11 +123,15 @@ export function FileViewer({
     >
       <div
         className={cn(
-          "flex h-11 shrink-0 items-center justify-between gap-2 border-b border-border bg-sidebar pr-1.5",
+          "flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border bg-sidebar pr-1.5",
           headerClassName,
         )}
       >
-        <div role="tablist" aria-label={t("files")} className="flex h-full min-w-0 overflow-x-auto">
+        <div
+          role="tablist"
+          aria-label={t("files")}
+          className="flex h-11 min-w-0 flex-1 basis-[12rem] overflow-x-auto"
+        >
           {files.map((file, index) => {
             const selected = file.name === active.name
             return (
@@ -138,6 +142,8 @@ export function FileViewer({
                 id={`${panelId}-tab-${index}`}
                 aria-selected={selected}
                 aria-controls={panelId}
+                aria-label={file.name}
+                title={file.name}
                 tabIndex={selected ? 0 : -1}
                 onKeyDown={(event) =>
                   navigateTabs(
@@ -156,12 +162,19 @@ export function FileViewer({
                 )}
               >
                 <LanguageIcon language={file.language} />
-                {file.name}
+                <span aria-hidden="true" className="flex min-w-0 max-w-[min(24ch,36vw)]">
+                  <span className="truncate">
+                    {file.name.length > 24 ? file.name.slice(0, -12) : file.name}
+                  </span>
+                  {file.name.length > 24 ? (
+                    <span className="shrink-0">{file.name.slice(-12)}</span>
+                  ) : null}
+                </span>
               </button>
             )
           })}
         </div>
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="ml-auto flex h-11 shrink-0 items-center gap-0.5">
           <Tool label={wrap ? t("donTWrapLines") : t("wrapLines")}>
             <button
               type="button"

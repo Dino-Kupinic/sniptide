@@ -80,7 +80,7 @@ export function FileTabs({
   }
 
   return (
-    <div className="flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar">
+    <div className="@container flex h-11 shrink-0 overflow-x-auto border-b border-border bg-sidebar">
       {/* Only the tabs live in the tablist; the add button and the trailing controls sit beside it. */}
       <div role="tablist" aria-label={t("files")} className="flex shrink-0">
         {files.map((file, index) => {
@@ -132,7 +132,7 @@ export function FileTabs({
                       event.currentTarget.blur()
                     }
                   }}
-                  className="w-36 bg-transparent font-mono text-[13px] outline-none"
+                  className="w-36 min-w-0 max-w-[max(0px,calc(100cqw-6rem))] bg-transparent font-mono text-[13px] outline-none"
                 />
               ) : (
                 <DropdownMenu
@@ -147,6 +147,8 @@ export function FileTabs({
                     id={tabId(index)}
                     aria-selected={selected}
                     aria-controls={panelId}
+                    aria-label={file.name}
+                    title={file.name}
                     tabIndex={selected ? 0 : -1}
                     aria-describedby={hintId}
                     aria-keyshortcuts={files.length > 1 ? "F2 Delete" : "F2"}
@@ -192,11 +194,18 @@ export function FileTabs({
                     }}
                     onDoubleClick={() => rename(file.id)}
                     className={cn(
-                      "self-stretch font-mono text-[13px] outline-none focus-visible:underline",
+                      "min-w-0 max-w-[min(15rem,max(0px,calc(100cqw-6rem)))] self-stretch truncate font-mono text-[13px] outline-none focus-visible:underline",
                       selected ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
-                    {file.name}
+                    <span aria-hidden="true" className="flex min-w-0">
+                      <span className="truncate">
+                        {file.name.length > 24 ? file.name.slice(0, -8) : file.name}
+                      </span>
+                      {file.name.length > 24 ? (
+                        <span className="shrink-0">{file.name.slice(-8)}</span>
+                      ) : null}
+                    </span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     finalFocus={renamingId || pendingFocus.current ? false : undefined}
@@ -241,7 +250,7 @@ export function FileTabs({
                   aria-hidden="true"
                   title={t("removeFile", { name: file.name })}
                   onClick={() => onRemove(file.id)}
-                  className="inline-flex items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 max-lg:-mr-2 max-lg:size-8"
+                  className="inline-flex shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 max-lg:-mr-2 max-lg:size-8"
                 >
                   <XIcon className="size-3" strokeWidth={2.5} />
                 </button>
