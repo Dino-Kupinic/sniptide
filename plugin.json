@@ -3,7 +3,7 @@
   "name": "sniptide",
   "version": "0.2.0",
   "description": "Search, read and save Sniptide snippets and collections from a coding agent, through the Sniptide MCP server and three skills.",
-  "homepage": "https://sniptide.com/docs/mcp",
+  "homepage": "https://docs.sniptide.com/mcp",
   "repository": "https://github.com/Dino-Kupinic/sniptide",
   "license": "AGPL-3.0-only"
 }
