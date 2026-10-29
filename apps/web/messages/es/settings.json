@@ -141,7 +141,7 @@
     "connect": "Conectar",
     "disconnect": "Desconectar",
     "couldnTConnect": "No se pudo contactar con el proveedor. Vuelve a intentarlo.",
-    "accountDisconnected": "{provider} desconectado.",
+    "accountDisconnected": "{provider} desconectado",
     "sessions": "Sesiones",
     "sessionsDescription": "Dispositivos con sesión iniciada en tu cuenta. Cierra la sesión en los que no reconozcas.",
     "sessionsDemo": "Las sesiones no se muestran en la demo.",

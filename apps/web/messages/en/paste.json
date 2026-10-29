@@ -163,7 +163,7 @@
     "everyFileNeedsAName": "every file needs a name",
     "fileNamesMustBeUnique": "file names must be unique",
     "pasteSomeCode": "paste some code",
-    "removedFile": "Removed {name}",
+    "removedFile": "Removed “{name}”",
     "linkTaken": "{link} is taken. Pick another custom link.",
     "draftKept": "A draft from {savedAt} was kept on this device. Restoring it replaces what's here now.",
     "contentsOf": "Contents of {name}",

@@ -163,7 +163,7 @@
     "everyFileNeedsAName": "每个文件都需要名称",
     "fileNamesMustBeUnique": "文件名不能重复",
     "pasteSomeCode": "请粘贴代码",
-    "removedFile": "已移除 {name}",
+    "removedFile": "已移除“{name}”",
     "linkTaken": "{link} 已被占用。请选择其他自定义链接。",
     "draftKept": "此设备上保留了 {savedAt} 的草稿。恢复后将替换当前内容。",
     "contentsOf": "{name} 的内容",

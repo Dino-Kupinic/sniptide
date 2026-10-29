@@ -163,7 +163,7 @@
     "everyFileNeedsAName": "cada archivo necesita un nombre",
     "fileNamesMustBeUnique": "los nombres de archivo no pueden repetirse",
     "pasteSomeCode": "pega algo de código",
-    "removedFile": "Se ha quitado {name}",
+    "removedFile": "Se ha quitado «{name}»",
     "linkTaken": "{link} ya está ocupado. Elige otro enlace personalizado.",
     "draftKept": "Se conservó un borrador del {savedAt} en este dispositivo. Restaurarlo sustituye el contenido actual.",
     "contentsOf": "Contenido de {name}",

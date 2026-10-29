@@ -163,7 +163,7 @@
     "everyFileNeedsAName": "すべてのファイルに名前を付けてください",
     "fileNamesMustBeUnique": "ファイル名は重複できません",
     "pasteSomeCode": "コードを貼り付けてください",
-    "removedFile": "{name} を削除しました",
+    "removedFile": "「{name}」を削除しました",
     "linkTaken": "{link} は使用済みです。別のカスタムリンクを選んでください。",
     "draftKept": "{savedAt} の下書きがこの端末に残っています。復元すると、現在の内容が置き換わります。",
     "contentsOf": "{name} の内容",
