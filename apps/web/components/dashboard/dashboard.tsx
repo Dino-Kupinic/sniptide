@@ -28,6 +28,7 @@ import { formatNumber } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { QuickPaste } from "./quick-paste"
+import { SignupSourcePrompt } from "./signup-source-prompt"
 import { ViewsBarChart } from "./views-chart"
 
 type Range = "1" | "7" | "30"
@@ -118,8 +119,10 @@ export function Dashboard({
   host,
   defaults,
   draftScope,
+  askSignupSource = false,
 }: {
   draftScope: string
+  askSignupSource?: boolean
   defaults: React.ComponentProps<typeof QuickPaste>["defaults"]
   data: DashboardData | Promise<DashboardData>
   firstName: string
@@ -132,6 +135,7 @@ export function Dashboard({
   const panelId = React.useId()
   return (
     <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
+      {askSignupSource ? <SignupSourcePrompt /> : null}
       <div className="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-1.5">
           <Greeting firstName={firstName} />

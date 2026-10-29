@@ -1,5 +1,6 @@
 import { authRelations } from "./auth"
 
+export * from "./acquisition"
 export * from "./analytics"
 export * from "./auth"
 export * from "./collections"
