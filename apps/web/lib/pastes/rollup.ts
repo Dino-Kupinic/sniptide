@@ -24,11 +24,6 @@ const SETTLE_MS = 5 * MINUTE
 // Hits stay this many whole days back from today (today included), so the page can show the last
 // 24 hours by the hour next to the 24 before.
 const EVENT_DAYS = 3
-const INTERVAL_MS = 15 * MINUTE
-
-const globalJobs = globalThis as typeof globalThis & {
-  __sniptideRollupTimer?: ReturnType<typeof setInterval>
-}
 
 function dayOf(time: number) {
   return Math.floor(time / DAY)
@@ -125,23 +120,4 @@ export async function rollUpAnalytics(now = new Date()) {
     console.info(JSON.stringify({ event: "analytics_rollup", durationMs, ...result }))
   }
   return result
-}
-
-export function scheduleRollup() {
-  if (globalJobs.__sniptideRollupTimer) return
-  let running = false
-  const run = async () => {
-    if (running) return
-    running = true
-    try {
-      await rollUpAnalytics()
-    } catch (error) {
-      console.error("Analytics rollup failed", error)
-    } finally {
-      running = false
-    }
-  }
-  void run()
-  globalJobs.__sniptideRollupTimer = setInterval(run, INTERVAL_MS)
-  globalJobs.__sniptideRollupTimer.unref()
 }

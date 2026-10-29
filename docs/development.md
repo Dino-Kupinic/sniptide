@@ -41,7 +41,7 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 
 | Change | Start here | Related checks |
 | --- | --- | --- |
-| Browser paste reads and writes | `apps/web/lib/pastes/store.ts`, `actions.ts`, `schema.ts` | Web store, action, and access tests |
+| Browser paste reads and writes | `apps/web/lib/pastes/store.ts`, `actions.ts`, `mutations.ts`, `schema.ts` | Web store, action, and access tests |
 | Token API | `apps/web/app/api/v1`, `apps/web/lib/api` | `apps/web/test/api-v1.test.ts`, `cli-roundtrip.test.ts` |
 | Shared wire contracts | `packages/contracts/src` | CLI contract tests, MCP tests, and web API tests |
 | Documentation site | `apps/docs` | `bun run test:docs` |
@@ -58,8 +58,14 @@ Use `rg --files` to locate files and `rg` to find callers. Check the current bra
 changing a contract. Newer branches can have different owners and exports.
 
 Browser mutations enter through server actions and the session-aware paste store. CLI and MCP
-mutations enter through the token API with an explicit owner. Both paths use paste validation,
-insertion, and budget helpers. Trace both paths when a change affects saved paste data.
+mutations enter through the token API. Both adapters pass an explicit actor and an existing
+transaction to `lib/pastes/mutations.ts`, which owns creation, content replacement, sharing
+settings, trash, and revision edits. Token creation keeps its idempotency receipt and response
+inside the same transaction. Pure slug and expiry policy lives in `lib/pastes/links.ts`.
+Trace both adapters when changing input or response contracts. Shared operations preserve
+browser collaborator rights, token owner-only access, version checks, and autosave batching.
+Browser edits retain capture line ranges for files whose names and contents are unchanged;
+changed files clear stale ranges.
 
 ## Document the API
 
@@ -123,6 +129,8 @@ Run these commands from the repository root:
 | `bun run test:mcp` | MCP tool schemas and transports | Temporary loopback HTTP listeners |
 | `bun run test:docs` | Documentation site metadata and structured data | Installed dependencies |
 | `bun run test:web` | Web unit tests and available integration tests | `TEST_DATABASE_URL` for database coverage |
+| `bun run test:web:unit` | Non-database web cases and Node admission tests; ignores ambient database URLs | Installed dependencies and loopback listeners |
+| `bun run test:web:integration` | Web cases with required database coverage and Node admission tests | A valid dedicated `TEST_DATABASE_URL` |
 | `bun run test` | CLI, MCP, docs, then web tests in separate processes | Same requirements as the individual suites |
 | `bun run build` | Production workspace builds | Installed dependencies |
 | `bun run test:e2e` | Browser behavior | Chromium and a dedicated `E2E_DATABASE_URL` |
@@ -131,16 +139,26 @@ The test suites run in separate processes because web tests preload mocks for Ne
 APIs. Use `bun run test`, rather than unfiltered `bun test` from the root, to preserve the web
 working directory and preload configuration.
 
-Without `TEST_DATABASE_URL`, web integration tests skip. For database coverage, create a
+`test:web:unit` clears both database URLs before loading the test preload. Database cases in
+mixed test files are excluded. `test:web` prints an explicit coverage skip when the URL is
+absent. `test:web:integration` fails before setup when the URL is absent or invalid; CI uses
+this command so database coverage cannot be omitted accidentally.
+
+For database coverage, create a
 disposable database whose name ends in `_test`, then run:
 
 ```sh
-TEST_DATABASE_URL=postgres://sniptide:sniptide@localhost:5432/sniptide_test bun run test:web
+TEST_DATABASE_URL=postgres://sniptide:sniptide@localhost:5432/sniptide_test bun run test:web:integration
 ```
 
 The harness migrates that database and clears accounts and related tables between tests. Do
 not use an application database. The `_test` suffix belongs in the database name, not a query
 parameter. Inspect skipped tests before treating a run as integration verification.
+Test URLs require a single TCP host and a database name containing only letters, digits,
+underscores, or hyphens before the `_test` suffix. Encoded database names, fragments, and
+query parameters that override the connection target are rejected. Ordinary SSL and timeout
+options remain supported. Remote dedicated test databases are allowed; the suffix does not
+replace checking that the database is disposable.
 
 To run one web test file with the correct preload and aliases:
 

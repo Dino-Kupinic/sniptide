@@ -93,6 +93,7 @@ function route(path = "/") {
     return pathname.endsWith("/edit") ? "/pastes/[slug]/edit" : "/pastes/[slug]"
   if (/^\/collections\/[^/]+/.test(pathname)) return "/collections/[slug]"
   if (pathname.startsWith("/api/auth/")) return "/api/auth/[...all]"
+  if (pathname.startsWith("/api/jobs/")) return "/api/jobs/[name]"
   if (pathname.startsWith("/_next/")) return "/_next/*"
   if (
     [

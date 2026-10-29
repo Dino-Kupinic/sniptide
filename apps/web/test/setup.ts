@@ -2,7 +2,12 @@ import { mock } from "bun:test"
 import { createTranslator } from "next-intl"
 import { localeCookie, resolveLocale } from "@/lib/i18n/config"
 import { loadMessages } from "@/lib/i18n/messages"
+import { validateTestDatabaseUrl } from "./database-url"
 import { request } from "./request"
+
+if (process.env.TEST_DATABASE_URL) {
+  validateTestDatabaseUrl(process.env.TEST_DATABASE_URL)
+}
 
 // Stand-ins for what only exists inside a Next request.
 mock.module("server-only", () => ({}))
