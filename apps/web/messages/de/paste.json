@@ -11,7 +11,7 @@
     "random": "zufällig",
     "available": "Verfügbar",
     "taken": "Vergeben",
-    "thatLinkIsTakenOrReserved": "Dieser Link ist vergeben oder reserviert.",
+    "thatLinkIsTaken": "Dieser Link ist vergeben.",
     "noCollection": "Keine Sammlung",
     "collection": "Sammlung",
     "pastePassword": "Paste-Passwort",

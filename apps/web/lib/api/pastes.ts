@@ -21,12 +21,7 @@ export {
   type CodeFile as ApiFile,
 } from "@sniptide/contracts"
 
-import {
-  collection as collectionTable,
-  pasteFile,
-  pasteRevision,
-  paste as pasteTable,
-} from "@workspace/db/schema"
+import { collection as collectionTable, pasteFile, paste as pasteTable } from "@workspace/db/schema"
 import {
   and,
   arrayContains,
@@ -49,14 +44,18 @@ import {
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
-import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
-import { insertPaste } from "@/lib/pastes/insert"
+import { PasteBudgetError } from "@/lib/pastes/budget"
 import { limits } from "@/lib/pastes/limits"
-import { hashPassword } from "@/lib/pastes/passwords"
+import {
+  type CaptureReplacement,
+  changePasteSharing,
+  createPasteRecord,
+  PasteCollectionError,
+  replacePaste,
+  trashPasteRecord,
+} from "@/lib/pastes/mutations"
 import { parsePasteInput } from "@/lib/pastes/schema"
-import { pruneSnapshots, snapshotOf } from "@/lib/pastes/snapshot"
-import { expiresAtFor, randomSlug } from "@/lib/pastes/store"
-import { EXPIRIES, type Expiry, type Visibility } from "@/lib/pastes/types"
+import { EXPIRIES, type Visibility } from "@/lib/pastes/types"
 import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
@@ -184,41 +183,22 @@ export async function createCapture(
         password: null,
         burnAfterRead: false,
       })
-      if (data.collection && !(await ownsCollection(tx, owner, data.collection)))
-        throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
-      let slug: string
-      do slug = randomSlug()
-      while (
-        (await tx.select({ id: pasteTable.id }).from(pasteTable).where(eq(pasteTable.slug, slug)))
-          .length
-      )
-
-      const id = crypto.randomUUID()
-      const now = new Date()
-      const bytes = data.files.reduce(
-        (sum, file) => sum + Buffer.byteLength(file.content, "utf8"),
-        0,
-      )
-      await enforceBudget(tx, owner, bytes)
-      await insertPaste(tx, {
-        id,
-        slug,
-        ownerId: owner,
-        title: data.title,
-        description: data.description,
-        bytes,
-        visibility: data.visibility,
-        collection: data.collection,
-        tags: capture.tags,
-        source: capture.source,
-        files: data.files.map((file, position) => ({
-          name: file.name,
-          language: file.language,
-          content: file.content,
-          startLine: capture.files[position]?.lines?.start ?? null,
-          endLine: capture.files[position]?.lines?.end ?? null,
-        })),
-        createdAt: now,
+      const { id } = await createPasteRecord(tx, {
+        kind: "capture",
+        actor: { kind: "token", userId: owner },
+        input: {
+          title: data.title,
+          description: data.description,
+          visibility: data.visibility,
+          collection: data.collection,
+          tags: capture.tags,
+          source: capture.source,
+          files: data.files.map((file, position) => ({
+            ...file,
+            startLine: capture.files[position]?.lines?.start ?? null,
+            endLine: capture.files[position]?.lines?.end ?? null,
+          })),
+        },
       })
       const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, id))
       if (!record) throw new Error("The created paste wasn't returned.")
@@ -230,6 +210,7 @@ export async function createCapture(
     return response.paste
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
+    if (error instanceof PasteCollectionError) throw new ApiError(404, error.message)
     throw error
   }
 }
@@ -284,81 +265,41 @@ export async function updateCapture(
     password: "",
     burnAfterRead: false,
   })
-  const existing = await findLive(owner, idOrSlug)
-  if (!existing) throw new ApiError(404, "No paste with that id.")
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0)
+  const parsed = captureSchema.parse(replacement)
+  const update: CaptureReplacement = {
+    title: data.title,
+    files: data.files.map((file, position) => ({
+      ...file,
+      startLine: parsed.files[position]?.lines?.start ?? null,
+      endLine: parsed.files[position]?.lines?.end ?? null,
+    })),
+    ...(Object.hasOwn(replacement, "description")
+      ? { description: z.string().trim().max(280).parse(parsed.description) }
+      : {}),
+    ...(Object.hasOwn(replacement, "visibility") ? { visibility: parsed.visibility } : {}),
+    ...(Object.hasOwn(replacement, "collection") ? { collection: parsed.collection } : {}),
+    ...(Object.hasOwn(replacement, "tags") ? { tags: parsed.tags } : {}),
+    ...(Object.hasOwn(replacement, "source") ? { source: parsed.source } : {}),
+  }
   const origin = await shareOrigin()
   let updated: ApiPaste
   try {
     updated = await getDb().transaction(async (tx) => {
-      await enforceBudget(tx, owner, bytes, existing.id)
-      const [record] = await tx
-        .select()
-        .from(pasteTable)
-        .where(and(allowedPaste(), eq(pasteTable.id, existing.id), liveOwned(owner)))
-        .for("update")
+      const saved = await replacePaste(tx, pasteKey(idOrSlug), {
+        kind: "capture",
+        actor: { kind: "token", userId: owner },
+        input: update,
+      })
+      if (!saved || "conflict" in saved) throw new ApiError(404, "No paste with that id.")
+      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, saved.id))
       if (!record) throw new ApiError(404, "No paste with that id.")
-      const capture = captureSchema.parse({
-        description: record.description,
-        visibility: record.visibility,
-        collection: record.collection,
-        tags: record.tags,
-        source: record.source,
-        ...replacement,
-      })
-      const description = z.string().trim().max(280).parse(capture.description)
-      if (capture.collection && !(await ownsCollection(tx, owner, capture.collection)))
-        throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
-      const now = new Date()
-      const [updatedRecord] = await tx
-        .update(pasteTable)
-        .set({
-          title: data.title,
-          description,
-          bytes,
-          visibility: capture.visibility,
-          collection: capture.collection,
-          tags: capture.tags,
-          source: capture.source,
-          updatedAt: now,
-          version: sql`${pasteTable.version} + 1`,
-        })
-        .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
-        .returning()
-      if (!updatedRecord) throw new ApiError(404, "No paste with that id.")
-      await tx
-        .delete(pasteFile)
-        .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      await tx.insert(pasteFile).values(
-        data.files.map((file, position) => ({
-          pasteId: record.id,
-          position,
-          name: file.name,
-          language: file.language,
-          content: file.content,
-          startLine: capture.files[position]?.lines?.start ?? null,
-          endLine: capture.files[position]?.lines?.end ?? null,
-        })),
-      )
-      await tx.insert(pasteRevision).values({
-        pasteId: record.id,
-        message: "Edited via API",
-        snapshot: snapshotOf({ title: data.title, description }, [
-          ...data.files.map((file, position) => ({
-            ...file,
-            startLine: capture.files[position]?.lines?.start ?? null,
-            endLine: capture.files[position]?.lines?.end ?? null,
-          })),
-        ]),
-        createdAt: now,
-      })
-      await pruneSnapshots(tx, record.id)
-      const [paste] = await withFiles([updatedRecord], tx, origin)
+      const [paste] = await withFiles([record], tx, origin)
       if (!paste) throw new ApiError(404, "No paste with that id.")
       return paste
     })
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
+    if (error instanceof PasteCollectionError) throw new ApiError(404, error.message)
     throw error
   }
   await announceChange(owner)
@@ -395,18 +336,8 @@ function settingsOf(record: PasteRecord): ApiSettings {
   }
 }
 
-async function findLive(owner: string, idOrSlug: string) {
-  const key = UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug)
-  const [record] = await getDb()
-    .select()
-    .from(pasteTable)
-    .where(and(key, liveOwned(owner)))
-  return record ?? null
-}
-
-function expiresAtOrNull(expiry: Expiry) {
-  const at = expiresAtFor(expiry)
-  return at === null ? null : new Date(at)
+function pasteKey(idOrSlug: string) {
+  return UUID.test(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
 }
 
 // Changes how a live paste is shared, the same fields as the editor's sharing panel. The
@@ -416,24 +347,22 @@ export async function updateSettings(
   idOrSlug: string,
   input: unknown,
 ): Promise<{ paste: Omit<ApiPaste, "files">; settings: ApiSettings }> {
-  const { expiry, password, ...rest } = settingsSchema.parse(input)
-  const existing = await findLive(owner, idOrSlug)
-  if (!existing) throw new ApiError(404, "No paste with that id.")
-  const [record] = await getDb()
-    .update(pasteTable)
-    .set({
-      ...rest,
-      version: sql`${pasteTable.version} + 1`,
-      ...(password !== undefined
-        ? { passwordHash: password ? await hashPassword(password) : null }
-        : {}),
-      ...(expiry ? { expiresAt: expiresAtOrNull(expiry) } : {}),
-    })
-    .where(eq(pasteTable.id, existing.id))
-    .returning()
-  if (!record) throw new ApiError(404, "No paste with that id.")
+  const settings = settingsSchema.parse(input)
+  const origin = await shareOrigin()
+  const result = await getDb().transaction(async (tx) => {
+    const saved = await changePasteSharing(
+      tx,
+      { kind: "token", userId: owner },
+      pasteKey(idOrSlug),
+      settings,
+    )
+    if (!saved) throw new ApiError(404, "No paste with that id.")
+    const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, saved.id))
+    if (!record) throw new ApiError(404, "No paste with that id.")
+    return { paste: toSummaryFields(record, origin), settings: settingsOf(record) }
+  })
   await announceChange(owner)
-  return { paste: toSummaryFields(record, await shareOrigin()), settings: settingsOf(record) }
+  return result
 }
 
 // Moves a live paste to the trash, where its owner can restore it until the trash is emptied.
@@ -442,14 +371,12 @@ export async function trashCapture(
   owner: string,
   idOrSlug: string,
 ): Promise<{ trashed: { id: string; slug: string } }> {
-  const existing = await findLive(owner, idOrSlug)
-  if (!existing) throw new ApiError(404, "No paste with that id.")
-  await getDb()
-    .update(pasteTable)
-    .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })
-    .where(eq(pasteTable.id, existing.id))
+  const trashed = await getDb().transaction((tx) =>
+    trashPasteRecord(tx, { kind: "token", userId: owner }, pasteKey(idOrSlug)),
+  )
+  if (!trashed) throw new ApiError(404, "No paste with that id.")
   await announceChange(owner)
-  return { trashed: { id: existing.id, slug: existing.slug } }
+  return { trashed }
 }
 
 type TimestampColumn = typeof pasteTable.updatedAt | typeof pasteTable.createdAt

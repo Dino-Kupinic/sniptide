@@ -28,7 +28,6 @@ import {
   isNotNull,
   isNull,
   lt,
-  lte,
   ne,
   or,
   sql,
@@ -46,21 +45,31 @@ import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { recordNotifications } from "@/lib/notifications/record"
 import { DAY } from "@/lib/time"
-import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
-import { isLargeEdit } from "./edit-size"
+import { SLUG_PATTERN } from "./links"
+import {
+  changePasteSharing,
+  createPasteRecord,
+  type RestoreResult,
+  replacePaste,
+  restorePasteRevision,
+  sealPasteRevision,
+  trashPasteRecord,
+  type UpdateOptions,
+  type UpdateResult,
+} from "./mutations"
+
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
+
 import { recordPasteEvent } from "./events"
-import { insertPaste } from "./insert"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
-import { pruneSnapshots, snapshotOf } from "./snapshot"
 
 export { PasteBudgetError } from "./budget"
 
 import { parsePasteInput } from "./schema"
 import type {
   Access,
-  Expiry,
   NavCounts,
   Paste,
   PasteFile,
@@ -93,52 +102,6 @@ export { TRASH_DAYS }
 // How many days of views the charts show.
 export const VIEW_HISTORY_DAYS = 60
 
-const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
-  "1h": 3_600_000,
-  "1d": DAY,
-  "1w": 7 * DAY,
-  "1m": 30 * DAY,
-  "1y": 365 * DAY,
-}
-
-// Paths the app already uses, so a custom link can't shadow a page.
-const RESERVED = new Set([
-  "about",
-  "ask",
-  "contact",
-  "home",
-  "impressum",
-  "privacy",
-  "skills",
-  "terms",
-  "analytics",
-  "api",
-  "collections",
-  "copyright",
-  "dashboard",
-  "demo",
-  "dev",
-  "docs",
-  "forgot-password",
-  "new",
-  "oauth",
-  "pastes",
-  "reset-password",
-  "secrets",
-  "secret-share",
-  "settings",
-  "shared",
-  "sign-in",
-  "sign-up",
-  "starred",
-  "trash",
-  "raw",
-  "_next",
-  "_site",
-])
-
-export const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
-
 type PasteRecord = typeof pasteTable.$inferSelect
 
 async function viewerId() {
@@ -160,10 +123,6 @@ function ms(date: Date): number
 function ms(date: Date | null): number | null
 function ms(date: Date | null) {
   return date ? date.getTime() : null
-}
-
-function at(time: number | null) {
-  return time === null ? null : new Date(time)
 }
 
 // List summaries use the stored first language and size. View history and authors load in
@@ -376,14 +335,6 @@ async function findOwned(slug: string, includeRestricted = false) {
   const viewer = await requireViewerId()
   const record = await findRecord(slug, includeRestricted)
   return record && record.ownerId === viewer ? record : null
-}
-
-export function expiresAtFor(expiry: Expiry, from = Date.now()) {
-  return expiry === "never" ? null : from + EXPIRY_MS[expiry]
-}
-
-function resolveExpiry(expiry: Expiry | "keep", current: Date | null, from: number) {
-  return expiry === "keep" ? current : at(expiresAtFor(expiry, from))
 }
 
 export function isExpired(paste: Pick<Paste, "expiresAt">) {
@@ -1389,387 +1340,59 @@ export async function summarizePastes(
 }
 
 export async function isSlugAvailable(slug: string, except?: string) {
-  if (!SLUG_PATTERN.test(slug) || RESERVED.has(slug.toLowerCase())) return false
+  if (!SLUG_PATTERN.test(slug)) return false
   return slug === except || !(await findRecord(slug, true))
 }
 
-export function randomSlug() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-  let slug: string
-  do {
-    const bytes = crypto.getRandomValues(new Uint8Array(6))
-    slug = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
-  } while (RESERVED.has(slug.toLowerCase()))
-  return slug
-}
-
-function fileRows(pasteId: string, files: PasteInput["files"]) {
-  return files.map((file, position) => ({ pasteId, position, ...file }))
-}
-
-// Creates a paste and shares it with `invites`, people the editor already looked up. Invites of
-// the owner or of accounts that no longer exist are dropped.
 export async function createPaste(input: PasteInput, invites: ShareInvite[] = []) {
   const data = parsePasteInput(input)
-  const owner = await requireViewerId()
-  let slug = data.slug
-  if (!slug) {
-    do slug = randomSlug()
-    while (await findRecord(slug, true))
-  }
-
-  const now = new Date()
-  const id = crypto.randomUUID()
+  const actor = { kind: "session", userId: await requireViewerId() } as const
   const passwordHash = data.password ? await hashPassword(data.password) : null
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-  await getDb().transaction(async (tx) => {
-    await enforceBudget(tx, owner, bytes)
-    await insertPaste(tx, {
-      id,
-      slug,
-      ownerId: owner,
-      title: data.title,
-      description: data.description,
-      bytes,
-      visibility: data.visibility,
-      passwordHash,
-      burnAfterRead: data.burnAfterRead,
-      collection: data.collection,
-      files: data.files,
-      createdAt: now,
-      expiresAt: resolveExpiry(data.expiry, null, now.getTime()),
-    })
-    const wanted = new Map(
-      invites.filter((invite) => invite.userId !== owner).map((i) => [i.userId, i.access]),
-    )
-    if (wanted.size === 0) return
-    const people = await tx
-      .select({ id: user.id })
-      .from(user)
-      .where(inArray(user.id, [...wanted.keys()]))
-    if (people.length === 0) return
-    await tx.insert(pasteShare).values(
-      people.map((person) => ({
-        pasteId: id,
-        userId: person.id,
-        access: wanted.get(person.id) ?? "view",
-        createdAt: now,
-      })),
-    )
-  })
-
-  return { slug }
+  const saved = await getDb().transaction((tx) =>
+    createPasteRecord(tx, { kind: "editor", actor, input: data, passwordHash, invites }),
+  )
+  return { slug: saved.slug }
 }
 
-type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0]
-
-async function lockEditable(
-  tx: Transaction,
-  identity: Pick<PasteRecord, "id" | "ownerId">,
-  viewer: string,
-) {
-  await lockAccount(tx, identity.ownerId)
-  const [record] = await tx
-    .select()
-    .from(pasteTable)
-    .where(and(allowedPaste(), eq(pasteTable.id, identity.id)))
-    .for("update")
-  if (!record || record.deletedAt) return null
-  if (record.ownerId === viewer) return { record, owned: true }
-  if (recordExpired(record) || record.burnAfterRead) return null
-  const [share] = await tx
-    .select({ access: pasteShare.access })
-    .from(pasteShare)
-    .where(
-      and(
-        and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, record.id)),
-        eq(pasteShare.userId, viewer),
-        isNull(pasteShare.leftAt),
-      ),
-    )
-  return share?.access === "edit" ? { record, owned: false } : null
-}
-
-// Revisions made by editing are batched: while the newest revision has the same message, is
-// less than this old and wasn't closed with Done, another edit folds into it instead of adding a
-// row. A save that rewrites most of the paste (see isLargeEdit) still gets a row of its own.
-// Auto-save would otherwise fill the history with one entry per pause in typing.
-export const REVISION_WINDOW_MS = 10 * 60_000
-
-export interface UpdateOptions {
-  // Only save if the paste is still at this version, so an edit made from a stale
-  // copy can't silently overwrite a newer one.
-  expectedVersion?: number
-  // Fold the edit into the latest revision when it is recent (see REVISION_WINDOW_MS).
-  batchRevision?: boolean
-}
-
-export type UpdateResult =
-  | {
-      slug: string
-      // The paste's new version: pass it as `expectedVersion` on the next save.
-      version: number
-      expiresAt: number | null
-      hasPassword: boolean
-    }
-  // `slug` is where the paste lives now, in case the newer save moved it.
-  | { conflict: true; version: number; slug: string }
-
-// Saves an edit. Someone the paste is shared with changes only its title, description and files;
-// its link, visibility, expiry, password, collection and burn setting stay the owner's.
 export async function updatePaste(
   slug: string,
   input: PasteInput,
   message: string,
   options: UpdateOptions = {},
 ): Promise<UpdateResult | null> {
-  const parsed = parsePasteInput(input)
-  const viewer = await requireViewerId()
-  const identity = await findRecord(slug)
-  if (!identity) return null
-  const replacementHash =
-    identity.ownerId === viewer && parsed.password ? await hashPassword(parsed.password) : null
-  return getDb().transaction(async (tx): Promise<UpdateResult | null> => {
-    const editable = await lockEditable(tx, identity, viewer)
-    if (!editable) return null
-    const { record, owned } = editable
-    const data = parsed
-    const now = new Date()
-    const passwordHash = owned && data.password !== "" ? replacementHash : record.passwordHash
-    const expiresAt = owned
-      ? resolveExpiry(data.expiry, record.expiresAt, now.getTime())
-      : record.expiresAt
-    const nextSlug = owned ? data.slug || record.slug : record.slug
-    const stamp = new Date(Math.max(now.getTime(), record.updatedAt.getTime() + 1))
-    const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
-    await enforceBudget(tx, record.ownerId, bytes, record.id)
-    const changed = await tx
-      .update(pasteTable)
-      .set({
-        bytes,
-        title: data.title,
-        description: data.description,
-        ...(owned
-          ? {
-              slug: nextSlug,
-              visibility: data.visibility,
-              passwordHash,
-              burnAfterRead: data.burnAfterRead,
-              collection: data.collection,
-              expiresAt,
-            }
-          : {}),
-        updatedAt: stamp,
-        version: sql`${pasteTable.version} + 1`,
-      })
-      .where(
-        and(
-          allowedPaste(),
-          eq(pasteTable.id, record.id),
-          options.expectedVersion === undefined
-            ? undefined
-            : eq(pasteTable.version, options.expectedVersion),
-        ),
-      )
-      .returning({ version: pasteTable.version })
-    if (!changed[0]) {
-      const [latest] = await tx
-        .select({ version: pasteTable.version, slug: pasteTable.slug })
-        .from(pasteTable)
-        .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
-      if (!latest) return null
-      return {
-        conflict: true,
-        version: latest?.version ?? record.version,
-        slug: latest?.slug ?? record.slug,
-      }
-    }
-
-    // Read before they are replaced, to tell a small edit from a rewrite.
-    const before = options.batchRevision
-      ? await tx
-          .select({ name: pasteFile.name, content: pasteFile.content })
-          .from(pasteFile)
-          .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      : []
-    await tx
-      .delete(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-    await tx.insert(pasteFile).values(fileRows(record.id, data.files))
-
-    const [latest] = options.batchRevision
-      ? await tx
-          .select()
-          .from(pasteRevision)
-          .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
-          .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-          .limit(1)
-      : []
-    const batched =
-      latest?.message === message &&
-      !latest.sealed &&
-      now.getTime() - latest.createdAt.getTime() < REVISION_WINDOW_MS &&
-      !isLargeEdit(before, data.files)
-    const snapshot = snapshotOf(data, data.files)
-    if (batched && latest) {
-      // The revision stands for the state the batch ended in.
-      await tx.update(pasteRevision).set({ snapshot }).where(eq(pasteRevision.id, latest.id))
-    } else {
-      await tx
-        .insert(pasteRevision)
-        .values({ pasteId: record.id, message, snapshot, createdAt: stamp })
-      await pruneSnapshots(tx, record.id)
-    }
-
-    return {
-      slug: nextSlug,
-      version: changed[0].version,
-      expiresAt: ms(expiresAt),
-      hasPassword: passwordHash !== null,
-    }
-  })
+  const data = parsePasteInput(input)
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  const passwordHash = data.password ? await hashPassword(data.password) : null
+  const result = await getDb().transaction((tx) =>
+    replacePaste(
+      tx,
+      { slug },
+      { kind: "editor", actor, input: data, passwordHash, message, options },
+    ),
+  )
+  if (!result || "conflict" in result) return result
+  return {
+    slug: result.slug,
+    version: result.version,
+    expiresAt: result.expiresAt,
+    hasPassword: result.hasPassword,
+  }
 }
 
-// Closes the editing session: the next edit starts a new revision. Only the revision made by
-// auto-save is closed; one made another way (created, imported, restored) is left alone.
 export async function sealRevision(slug: string, message: string): Promise<boolean> {
-  const viewer = await requireViewerId()
-  const identity = await findRecord(slug)
-  if (!identity) return false
-  return getDb().transaction(async (tx) => {
-    const editable = await lockEditable(tx, identity, viewer)
-    if (!editable) return false
-    const [latest] = await tx
-      .select({ id: pasteRevision.id, message: pasteRevision.message })
-      .from(pasteRevision)
-      .where(eq(pasteRevision.pasteId, editable.record.id))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-      .limit(1)
-    if (latest?.message === message) {
-      await tx.update(pasteRevision).set({ sealed: true }).where(eq(pasteRevision.id, latest.id))
-    }
-    return true
-  })
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  return getDb().transaction((tx) => sealPasteRevision(tx, actor, { slug }, message))
 }
 
-export type RestoreResult =
-  | { ok: true; slug: string; version: number }
-  | { ok: false; error: string }
-
-// Rolls the title, description and files back to how a revision left them. The sharing settings,
-// the link and the collection stay as they are. The rollback is a revision of its own, so the
-// version it replaced is still in the history and can be restored in turn.
 export async function restoreRevision(slug: string, revisionId: number): Promise<RestoreResult> {
-  const viewer = await requireViewerId()
-  const identity = await findRecord(slug)
-  if (!identity) return { ok: false, error: "That paste no longer exists." }
-
-  return getDb().transaction(async (tx): Promise<RestoreResult> => {
-    const editable = await lockEditable(tx, identity, viewer)
-    if (!editable) return { ok: false, error: "That paste no longer exists." }
-    const { record } = editable
-
-    const [target] = await tx
-      .select()
-      .from(pasteRevision)
-      .where(
-        and(
-          eq(pasteRevision.id, revisionId),
-          and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)),
-        ),
-      )
-    const snapshot = target?.snapshot
-    if (!target || !snapshot || snapshot.files.length === 0) {
-      return { ok: false, error: "That version can't be restored." }
-    }
-
-    const [newest] = await tx
-      .select({ id: pasteRevision.id })
-      .from(pasteRevision)
-      .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-      .limit(1)
-    if (newest?.id === target.id) return { ok: false, error: "That is the current version." }
-
-    const [position] = await tx
-      .select({ count: sql<number>`count(*)::int` })
-      .from(pasteRevision)
-      .where(
-        and(
-          and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)),
-          or(
-            lt(pasteRevision.createdAt, target.createdAt),
-            and(eq(pasteRevision.createdAt, target.createdAt), lte(pasteRevision.id, target.id)),
-          ),
-        ),
-      )
-
-    const bytes = snapshot.files.reduce(
-      (sum, file) => sum + Buffer.byteLength(file.content, "utf8"),
-      0,
-    )
-    try {
-      await enforceBudget(tx, record.ownerId, bytes, record.id)
-    } catch (error) {
-      if (error instanceof PasteBudgetError) return { ok: false, error: error.message }
-      throw error
-    }
-
-    const version = record.version + 1
-    const stamp = new Date(Math.max(Date.now(), record.updatedAt.getTime() + 1))
-    await tx
-      .update(pasteTable)
-      .set({
-        title: snapshot.title,
-        description: snapshot.description,
-        bytes,
-        updatedAt: stamp,
-        version: sql`${pasteTable.version} + 1`,
-      })
-      .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
-    await tx
-      .delete(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-    await tx.insert(pasteFile).values(
-      snapshot.files.map((file, index) => ({
-        pasteId: record.id,
-        position: index,
-        name: file.name,
-        language: file.language,
-        content: file.content,
-        startLine: file.startLine ?? null,
-        endLine: file.endLine ?? null,
-      })),
-    )
-    await tx.insert(pasteRevision).values({
-      pasteId: record.id,
-      message: `Restored revision ${position?.count ?? 0}`,
-      snapshot,
-      createdAt: stamp,
-    })
-    await pruneSnapshots(tx, record.id)
-    return { ok: true, slug: record.slug, version }
-  })
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  return getDb().transaction((tx) => restorePasteRevision(tx, actor, { slug }, revisionId))
 }
 
 export async function updateSharing(slug: string, input: SharingInput) {
-  const record = await findOwned(slug)
-  if (!record || record.deletedAt) return null
-
-  const { expiry, password, ...rest } = input
-  const changed = await getDb()
-    .update(pasteTable)
-    .set({
-      ...rest,
-      version: sql`${pasteTable.version} + 1`,
-      ...(password !== undefined
-        ? { passwordHash: password ? await hashPassword(password) : null }
-        : {}),
-      ...(expiry ? { expiresAt: at(expiresAtFor(expiry)) } : {}),
-    })
-    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
-    .returning({ id: pasteTable.id })
-  return changed.length ? { slug } : null
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  const result = await getDb().transaction((tx) => changePasteSharing(tx, actor, { slug }, input))
+  return result ? { slug: result.slug } : null
 }
 
 export async function setStarred(slug: string, starred: boolean) {
@@ -1823,12 +1446,8 @@ export async function setPasteCollection(slug: string, collection: string | null
 }
 
 export async function trashPaste(slug: string) {
-  const record = await findOwned(slug, true)
-  if (!record) return
-  await getDb()
-    .update(pasteTable)
-    .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })
-    .where(eq(pasteTable.id, record.id))
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  await getDb().transaction((tx) => trashPasteRecord(tx, actor, { slug }))
 }
 
 // False when the paste is gone for good (or was never the viewer's), so Undo can say so.

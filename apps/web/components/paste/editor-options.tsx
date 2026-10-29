@@ -173,7 +173,7 @@ export function SlugInput({
         ) : null}
       </div>
       {status === "taken" ? (
-        <p className="text-xs text-destructive">{t("thatLinkIsTakenOrReserved")}</p>
+        <p className="text-xs text-destructive">{t("thatLinkIsTaken")}</p>
       ) : null}
     </div>
   )

@@ -5,9 +5,9 @@ import { updateCapture } from "@/lib/api/pastes"
 import { deleteCollection, restoreCollection } from "@/lib/collections/store"
 import { getDb } from "@/lib/db"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
+import { REVISION_WINDOW_MS } from "@/lib/pastes/mutations"
 import {
   getPaste,
-  REVISION_WINDOW_MS,
   readSharedPaste,
   renamePaste,
   restorePaste,

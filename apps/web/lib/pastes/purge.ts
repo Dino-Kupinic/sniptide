@@ -4,16 +4,12 @@ import { performance } from "node:perf_hooks"
 import { envInteger } from "@workspace/db/config"
 import { sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { notifyExpiringPastes } from "@/lib/notifications/expiring"
 import { READ_RETENTION_DAYS, UNREAD_RETENTION_DAYS } from "@/lib/notifications/retention"
 import { recordMaintenance, recordMetric } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 
 export const TRASH_DAYS = 30
 const PURGE_LOCK = 0x5e1d_7a1d
-const globalJobs = globalThis as typeof globalThis & {
-  __sniptidePurgeTimer?: ReturnType<typeof setInterval>
-}
 
 // Each batch commits independently. The time budget bounds a run; one in-flight batch can
 // exceed it up to the database deadline. Other replicas use the same transaction lock.
@@ -130,28 +126,4 @@ export async function purgeStaleData(now = new Date()) {
       }),
     )
   }
-}
-
-export function schedulePurge() {
-  if (globalJobs.__sniptidePurgeTimer) return
-  let running = false
-  const run = async () => {
-    if (running) return
-    running = true
-    try {
-      await purgeStaleData()
-    } catch (error) {
-      console.error("Paste purge failed", error)
-    }
-    try {
-      await notifyExpiringPastes()
-    } catch (error) {
-      console.error("Expiry notifications failed", error)
-    } finally {
-      running = false
-    }
-  }
-  void run()
-  globalJobs.__sniptidePurgeTimer = setInterval(run, 3_600_000)
-  globalJobs.__sniptidePurgeTimer.unref()
 }

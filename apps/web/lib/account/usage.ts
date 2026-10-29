@@ -105,26 +105,3 @@ export async function reconcileUsageBatch(now = new Date()) {
     return rows.length
   })
 }
-
-const jobs = globalThis as typeof globalThis & {
-  __sniptideUsageTimer?: ReturnType<typeof setInterval>
-}
-
-export function scheduleUsageReconciliation() {
-  if (jobs.__sniptideUsageTimer) return
-  let running = false
-  const run = async () => {
-    if (running) return
-    running = true
-    try {
-      await reconcileUsageBatch()
-    } catch (error) {
-      console.error("Account usage reconciliation failed", error)
-    } finally {
-      running = false
-    }
-  }
-  void run()
-  jobs.__sniptideUsageTimer = setInterval(run, 60_000)
-  jobs.__sniptideUsageTimer.unref()
-}

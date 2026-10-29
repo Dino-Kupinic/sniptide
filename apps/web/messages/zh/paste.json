@@ -11,7 +11,7 @@
     "random": "随机",
     "available": "可用",
     "taken": "已被占用",
-    "thatLinkIsTakenOrReserved": "该链接已被占用或保留。",
+    "thatLinkIsTaken": "该链接已被占用。",
     "noCollection": "不加入合集",
     "collection": "合集",
     "pastePassword": "Paste 密码",

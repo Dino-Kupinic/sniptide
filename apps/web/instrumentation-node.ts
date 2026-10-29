@@ -45,14 +45,8 @@ export async function startBackgroundJobs() {
   registerAdmissionPressure("visits", visitQueuePressure)
   await runMaintenanceWork(async () => {
     await scheduleVisitDrain(async () => await runMaintenanceWork(() => drainVisits()))
-    const { scheduleUsageReconciliation } = await import("@/lib/account/usage")
-    scheduleUsageReconciliation()
-    const { scheduleNotificationEmails } = await import("@/lib/notifications/email")
-    scheduleNotificationEmails()
-    const { schedulePurge } = await import("@/lib/pastes/purge")
-    schedulePurge()
-    const { scheduleRollup } = await import("@/lib/pastes/rollup")
-    scheduleRollup()
+    const { scheduleMaintenanceJobs } = await import("@/lib/jobs")
+    scheduleMaintenanceJobs()
     if (getConfig().demoMode) {
       const { scheduleDemoReset } = await import("@/lib/demo/reset")
       scheduleDemoReset()

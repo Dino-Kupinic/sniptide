@@ -16,9 +16,6 @@ import { createUnsubscribeToken } from "./unsubscribe"
 const LEASE_MS = 90_000
 const MAX_ATTEMPTS = 5
 const retryDelays = [60_000, 300_000, 900_000, 3_600_000]
-const globalJobs = globalThis as typeof globalThis & {
-  __sniptideEmailTimer?: ReturnType<typeof setInterval>
-}
 
 const subjects = {
   shared: "A paste was shared with you",
@@ -227,23 +224,4 @@ export async function deliverNotificationEmails() {
   const failed = workers.find((worker) => worker.status === "rejected")
   if (failed) throw failed.reason
   return totals
-}
-
-export function scheduleNotificationEmails() {
-  if (!getConfig().smtp || globalJobs.__sniptideEmailTimer) return
-  let running = false
-  const run = async () => {
-    if (running) return
-    running = true
-    try {
-      await deliverNotificationEmails()
-    } catch {
-      console.error(JSON.stringify({ event: "notification_email_worker_failed" }))
-    } finally {
-      running = false
-    }
-  }
-  void run()
-  globalJobs.__sniptideEmailTimer = setInterval(run, 60_000)
-  globalJobs.__sniptideEmailTimer.unref()
 }
