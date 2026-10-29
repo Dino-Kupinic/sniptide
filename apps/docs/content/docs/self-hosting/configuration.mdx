@@ -157,7 +157,7 @@ Trash and expired pastes are removed after 30 days by a cleanup that runs at sta
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `METRICS_TOKEN` | unset | A long random bearer token enables `GET /api/metrics` (latency histograms, query counts, memory, event-loop delay, cleanup progress, database size and locks). Without it the endpoint returns 404. Keep it behind your normal access controls, and scrape every replica. |
+| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, and `email`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
 | `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set, so a self-hosted instance sends nothing. Cookieless, no session replay, events never include paste content or links' slugs. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing
