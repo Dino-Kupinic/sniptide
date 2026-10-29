@@ -19,6 +19,7 @@ import { analyticsCsv } from "@/lib/pastes/analytics-csv"
 import { getAnalyticsReport, getAnalyticsSeries } from "@/lib/pastes/analytics-report"
 import { type EventKind, recordPasteEvent } from "@/lib/pastes/events"
 import { rollUpAnalytics } from "@/lib/pastes/rollup"
+import { drainVisits } from "@/lib/pastes/visits"
 import { telemetrySnapshot } from "@/lib/telemetry"
 import { DAY, HOUR } from "@/lib/time"
 import {
@@ -107,6 +108,8 @@ describeDb("paste analytics", () => {
       for (const leaked of ["203.0.113.9", "Chrome", "item?id", "secret"]) {
         expect(stored).not.toContain(leaked)
       }
+      expect(await viewDayTotal("pub")).toBe(0)
+      await drainVisits()
       expect(await viewDayTotal("pub")).toBe(1)
     })
 

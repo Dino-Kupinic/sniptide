@@ -6,10 +6,12 @@ import { POST as batchCreate } from "@/app/api/v1/batch/route"
 import { POST as createCollection } from "@/app/api/v1/collections/route"
 import { GET as me } from "@/app/api/v1/me/route"
 import { POST as createPaste } from "@/app/api/v1/pastes/route"
+import { withToken } from "@/lib/api/http"
 import { createToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { purgeStaleData } from "@/lib/pastes/purge"
 import { hit } from "@/lib/rate-limit"
+import { AdmissionError } from "@/lib/request-admission"
 import { HOUR_SECONDS } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser } from "./harness"
 
@@ -49,6 +51,17 @@ describeDb("API create reliability", () => {
     const result = await tokenFor()
     token = result.token
     tokenId = result.summary.id
+  })
+
+  test("overload responses preserve retry metadata and the counted token quota", async () => {
+    const response = await withToken(call("/api/v1/me"), "read", async () => {
+      throw new AdmissionError()
+    })
+    expect(response.status).toBe(503)
+    expect(response.headers.get("retry-after")).toBe("1")
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(response.headers.get("ratelimit")).toContain('"api-token";r=3599;')
+    expect((await response.json()).code).toBe("service_unavailable")
   })
 
   test("concurrent duplicate paste creates commit one paste and its stored response", async () => {

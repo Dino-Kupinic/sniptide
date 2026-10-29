@@ -119,12 +119,22 @@ Pick these to match what sits in front of the app: see [Reverse proxy and client
 
 ## Database and capacity
 
-Pool size is per process: replicas × pool size, plus migration and admin connections, must fit
-Postgres' connection budget. Invalid values stop the server with the allowed range.
+Each process uses its configured pool and can open one dedicated live-update listener. Budget for
+replicas × (pool size + 1), plus migration and admin connections, within Postgres' connection limit.
+Invalid values stop the server with the allowed range.
 
 | Variable | Default | Range | What it does |
 | --- | --- | --- | --- |
 | `DATABASE_POOL_SIZE` | `10` | 1 to 100 | Connections per process. |
+| `HTTP_ADMISSION_LIMIT` | `64` | 1 to 1024 | Active ordinary dynamic requests per process. Excess requests receive 503. |
+| `PROBE_ADMISSION_LIMIT` | `2` | 1 to 16 | Active health and metrics requests. |
+| `LIVE_ADMISSION_LIMIT` | `128` | 1 to 4096 | Active live-update streams, separate from ordinary requests. |
+| `DATABASE_PROBE_RESERVE` | `1` | 1 to 16 | Reserved database execution capacity for probes. |
+| `DATABASE_MAINTENANCE_RESERVE` | `1` | 1 to 16 | Reserved database execution capacity for background jobs. |
+| `DATABASE_ADMISSION_QUEUE_LIMIT` | `64` | 0 to 4096 | Maximum waiting database submissions per process. |
+| `VISIT_DRAIN_BATCH_SIZE` | `500` | 1 to 5000 | Maximum ordinary visits applied per drain batch. |
+| `VISIT_QUEUE_MAX_LAG_MS` | `30000` | 1000 to 3600000 | Pending-visit age that triggers temporary backpressure. |
+| `VISIT_QUEUE_MAX_BACKLOG` | `10000` | 1 to 1000000 | Sampled pending-visit count that triggers temporary backpressure. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | `10` | 1 to 120 | Opening a database connection. |
 | `DATABASE_IDLE_TIMEOUT_SECONDS` | `20` | 1 to 3600 | Retire idle connections. |
 | `DATABASE_MAX_LIFETIME_SECONDS` | `1800` | 60 to 86400 | Recycle connections. |

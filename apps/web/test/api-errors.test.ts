@@ -16,8 +16,10 @@ describe("API failures", () => {
       [422, "unprocessable_entity"],
       [429, "too_many_requests"],
       [500, "internal_error"],
+      [503, "service_unavailable"],
     ] as const) {
-      const response = failure(status, "Example error", status === 429 ? 30 : undefined)
+      const retryAfter = status === 429 ? 30 : status === 503 ? 1 : undefined
+      const response = failure(status, "Example error", retryAfter)
       const body = await response.json()
       expect(body).toMatchObject({
         ok: false,
@@ -27,7 +29,7 @@ describe("API failures", () => {
       })
       expect(body.resolution).toBeTruthy()
       expect(response.headers.get("cache-control")).toBe("private, no-store")
-      expect(response.headers.get("retry-after")).toBe(status === 429 ? "30" : null)
+      expect(response.headers.get("retry-after")).toBe(retryAfter ? String(retryAfter) : null)
     }
   })
 

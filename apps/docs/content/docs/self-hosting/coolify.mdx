@@ -35,8 +35,8 @@ service list.
 - `BETTER_AUTH_SECRET` (generated) and `BETTER_AUTH_URL` (from the domain you assign).
 - `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`, because Coolify's proxy appends
   the visitor's address to `X-Forwarded-For`. See [Reverse proxy and client IP](/self-hosting/reverse-proxy).
-- A memory ceiling for each container (768 MB for the app, 512 MB for Postgres) and a heap cap for
-  Node. See [Memory](/self-hosting/memory).
+- Optional container memory ceilings, left unset by default. Node uses its normal heap sizing.
+  See [Memory](/self-hosting/memory).
 - A health check against `/api/health` with a 30-second start period.
 
 The optional settings (sign-up, OAuth, webhooks, `MAX_PASTE_SIZE`, SMTP) show up as environment
