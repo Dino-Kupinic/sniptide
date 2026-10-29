@@ -2,10 +2,11 @@ import "server-only"
 
 import { ZodError } from "zod"
 import { recordApiRequest } from "@/lib/account/usage"
+import { clientAddress } from "@/lib/client-ip"
 import { hit, type Limit, quotaHeaders, requestQuotas } from "@/lib/rate-limit"
 import { isAdmissionError } from "@/lib/request-admission"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
-import { HOUR_SECONDS } from "@/lib/time"
+import { HOUR_SECONDS, seconds } from "@/lib/time"
 import { failure } from "./errors"
 import type { Scope } from "./scopes"
 import { authenticate, type TokenOwner } from "./tokens"
@@ -25,6 +26,14 @@ export const apiLimits = {
     key: `api:token:${token}`,
     max: 3600,
     windowSeconds: HOUR_SECONDS,
+  }),
+  // Requests without a valid token, per address, so nobody can guess tokens at full speed. An
+  // agent that forgot its token still learns the quota from the RateLimit headers on the 401.
+  unauthenticated: (address: string): Limit => ({
+    policy: "api-unauthenticated",
+    key: `api:unauthenticated:${address}`,
+    max: 60,
+    windowSeconds: seconds(600),
   }),
 }
 
@@ -71,7 +80,14 @@ export async function withToken(
   async function execute() {
     try {
       const owner = await authenticate(request)
-      if (!owner) return failure(401, "The API token is missing, invalid, expired or revoked.")
+      if (!owner) {
+        // An unknown address (no CLIENT_IP_SOURCE behind a proxy) would pool every visitor.
+        const address = clientAddress(request.headers)
+        const limit = address === "unknown" ? null : await hit([apiLimits.unauthenticated(address)])
+        if (limit && !limit.allowed)
+          return failure(429, "Too many requests without a valid token.", limit.retryAfterSeconds)
+        return failure(401, "The API token is missing, invalid, expired or revoked.")
+      }
       await recordApiRequest(owner)
       const limit = await hit([apiLimits.request(owner.tokenId)])
       if (!limit.allowed)
