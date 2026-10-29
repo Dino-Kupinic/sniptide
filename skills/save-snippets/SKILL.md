@@ -5,7 +5,7 @@ description: Save a reusable code pattern to Sniptide with source context when t
 
 # Save a Sniptide snippet
 
-Use the connected Sniptide MCP server. Setup and scoped token instructions are at https://sniptide.com/docs/mcp and https://sniptide.com/auth.md.
+Use the connected Sniptide MCP server. Setup and scoped token instructions are at https://docs.sniptide.com/mcp and https://docs.sniptide.com/api-tokens.
 
 1. Identify the files or selected code the user wants to save. Keep relative paths and the language of each file. Do not include environment values, credentials, build output, or unrelated files.
 2. Search with `search_snippets` for an existing copy. If the user wants to update a match, use `read_snippet` first and preserve every file they want to keep. `update_snippet` replaces the complete file list.

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
+import { LocalDateTime } from "@/components/local-date-time"
 import { CompareRevisions } from "@/components/paste/compare-revisions"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
@@ -26,7 +27,7 @@ import { TruncatedText } from "@/components/truncated-text"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
-import { formatDateTime, formatNumber, lineCount, timeAgo } from "@/lib/format"
+import { formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { embedCode } from "@/lib/pastes/embed"
 import {
@@ -51,7 +52,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   const { slug } = await params
   const [t, locale] = await Promise.all([getTranslations("Core"), getLocale()])
   const expiresLabel = (paste: Paste) =>
-    paste.expiresAt ? formatDateTime(paste.expiresAt, locale) : t("never")
+    paste.expiresAt === null ? t("never") : <LocalDateTime value={paste.expiresAt} />
   const revisionParam = Number((await searchParams).revisions)
   const revisionPage =
     Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1
@@ -117,8 +118,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     slug,
     url,
     visibility: paste.visibility,
-    expiresLabel: expiresLabel(paste),
-    neverExpires: !paste.expiresAt,
+    expiresAt: paste.expiresAt,
     hasPassword: Boolean(paste.password),
     burnAfterRead: paste.burnAfterRead,
     allowRaw: paste.allowRaw,
@@ -473,7 +473,7 @@ async function SharedWithYou({
   )
 }
 
-function MobileRow({ label, value }: { label: string; value: string }) {
+function MobileRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex h-12 items-center justify-between px-4">
       <dt>{label}</dt>
