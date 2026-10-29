@@ -207,7 +207,7 @@ export function SettingsView({
       <div
         role="tablist"
         aria-label={t("settings")}
-        className="hidden gap-6 border-b border-border lg:flex"
+        className="hidden gap-4 border-b border-border lg:flex xl:gap-6"
       >
         {tabs.map((item) => (
           <button
