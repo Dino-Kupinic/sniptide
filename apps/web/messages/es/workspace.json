@@ -342,7 +342,21 @@
     "move_down": "Bajar",
     "done": "Listo",
     "searching": "Buscando…",
-    "skipToMain": "Saltar al contenido principal"
+    "skipToMain": "Saltar al contenido principal",
+    "signupSource": {
+      "title": "¿Cómo has conocido Sniptide?",
+      "skip": "Omitir",
+      "error": "No se ha podido guardar. Inténtalo de nuevo.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "Un amigo",
+        "ai_agent": "Un agente de IA",
+        "search": "Buscador",
+        "other": "Otro sitio"
+      }
+    }
   },
   "Secrets": {
     "title": "Secretos",

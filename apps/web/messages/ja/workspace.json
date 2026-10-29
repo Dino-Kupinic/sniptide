@@ -342,7 +342,21 @@
     "move_down": "下へ移動",
     "done": "完了",
     "searching": "検索中…",
-    "skipToMain": "メインコンテンツへ移動"
+    "skipToMain": "メインコンテンツへ移動",
+    "signupSource": {
+      "title": "Sniptideをどこで知りましたか？",
+      "skip": "スキップ",
+      "error": "保存できませんでした。もう一度お試しください。",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "友人",
+        "ai_agent": "AIエージェント",
+        "search": "検索",
+        "other": "その他"
+      }
+    }
   },
   "Secrets": {
     "title": "シークレット",

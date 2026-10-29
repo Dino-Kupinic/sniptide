@@ -342,7 +342,21 @@
     "move_down": "下移",
     "done": "完成",
     "searching": "正在搜索…",
-    "skipToMain": "跳转到主要内容"
+    "skipToMain": "跳转到主要内容",
+    "signupSource": {
+      "title": "你是怎么知道 Sniptide 的？",
+      "skip": "跳过",
+      "error": "无法保存，请重试。",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "朋友",
+        "ai_agent": "AI 智能体",
+        "search": "搜索",
+        "other": "其他"
+      }
+    }
   },
   "Secrets": {
     "title": "密钥",
