@@ -11,7 +11,7 @@
     "random": "random",
     "available": "Available",
     "taken": "Taken",
-    "thatLinkIsTakenOrReserved": "That link is taken or reserved.",
+    "thatLinkIsTaken": "That link is taken.",
     "noCollection": "No collection",
     "collection": "Collection",
     "pastePassword": "Paste password",

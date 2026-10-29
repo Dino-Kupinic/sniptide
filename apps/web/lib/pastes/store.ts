@@ -45,7 +45,7 @@ import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { recordNotifications } from "@/lib/notifications/record"
 import { DAY } from "@/lib/time"
-import { RESERVED, SLUG_PATTERN } from "./links"
+import { SLUG_PATTERN } from "./links"
 import {
   changePasteSharing,
   createPasteRecord,
@@ -1340,7 +1340,7 @@ export async function summarizePastes(
 }
 
 export async function isSlugAvailable(slug: string, except?: string) {
-  if (!SLUG_PATTERN.test(slug) || RESERVED.has(slug.toLowerCase())) return false
+  if (!SLUG_PATTERN.test(slug)) return false
   return slug === except || !(await findRecord(slug, true))
 }
 

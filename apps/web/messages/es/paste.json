@@ -11,7 +11,7 @@
     "random": "aleatorio",
     "available": "Disponible",
     "taken": "Ocupado",
-    "thatLinkIsTakenOrReserved": "Ese enlace ya está ocupado o reservado.",
+    "thatLinkIsTaken": "Ese enlace ya está ocupado.",
     "noCollection": "Sin colección",
     "collection": "Colección",
     "pastePassword": "Contraseña del paste",

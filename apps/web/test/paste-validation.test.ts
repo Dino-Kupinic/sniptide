@@ -48,7 +48,7 @@ describeDb("persistence validation", () => {
     await seedUser("owner")
     signInAs("owner")
   })
-  test("custom paste links cannot claim app routes", async () => {
+  test("paste links allow route words but still require uniqueness", async () => {
     for (const slug of [
       "analytics",
       "demo",
@@ -59,8 +59,10 @@ describeDb("persistence validation", () => {
       "secret-share",
       "Analytics",
     ]) {
+      expect(await isSlugAvailable(slug)).toBe(true)
+      expect((await savePaste({ ...input("route word fixture"), slug })).ok).toBe(true)
       expect(await isSlugAvailable(slug)).toBe(false)
-      expect((await savePaste({ ...input("route collision fixture"), slug })).ok).toBe(false)
+      expect((await savePaste({ ...input("duplicate link fixture"), slug })).ok).toBe(false)
     }
   })
   test("direct creation and editing cannot bypass size and filename rules", async () => {
