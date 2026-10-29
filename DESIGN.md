@@ -29,7 +29,7 @@ When code and Paper differ, the shipped code wins for the app. A change to a tok
 
 Components use the Tailwind classes generated from these variables, such as `bg-primary` and `text-muted-foreground`. Hex values stay in `globals.css`.
 
-Sniptide has two brand colors. Tide Blue is the color of every action: buttons, links, focus, selection and chart bars. Pink is the second color and marks what stands out without being an action: search matches, stars, the peak of a chart, the pink collection icon and toasts. Pink never fills a button in the app apart from the toast's action chip, never marks an error and never sets running text in light mode.
+Sniptide has two brand colors. Tide Blue is the color of every action: buttons, links, focus, selection and chart bars. Pink is the second color and marks what stands out without being an action: search matches, stars, the peak of a chart, the pink collection icon and the check on a toast. Pink never fills a button in the app, never marks an error and never sets running text in light mode.
 
 ### Light
 
@@ -231,7 +231,7 @@ The checkbox is 16px with a 1px border and fills blue when checked. The switch i
 ### Toast
 **Role:** Confirmations, errors and undo.
 
-A floating layer at most 384px wide with a hairline border, `--float-shadow` and 13px text. On desktop toasts stack in the bottom-right corner at one width, 24px from the edges. On phones they stack centered above the tab bar within the 16px gutter. A success toast leads with a check in `--highlight`, and an error toast leads with an alert icon in `--destructive` on a red-tinted border. An action such as Undo is a 24px `--pink` chip with `--pink-foreground` text, and every toast ends in a dismiss button.
+A floating layer at most 384px wide with a hairline border, `--float-shadow` and 13px text. On desktop toasts stack in the bottom-right corner at one width, 24px from the edges. On phones they stack centered under the top bar within the 16px gutter. A success toast leads with a check in `--highlight`, and an error toast leads with an alert icon in `--destructive` on a red-tinted border. An action such as Undo is a 24px `--primary` chip with `--primary-foreground` text, and every toast ends in a dismiss button.
 
 Success messages state what happened in a short past-tense phrase with no closing period, such as "Link copied" or "Moved “Notes” to trash". Names the reader chose sit in the locale's quotation marks. Errors say what failed and what to do in full sentences, such as "Couldn't copy. Allow clipboard access and try again." An action that can be taken back ends in a success toast with Undo.
 
@@ -417,7 +417,7 @@ Avoiding these defaults must not produce a sterile template. Precise hierarchy, 
 - Don't write hex values in components. Use the variables.
 - Don't add shadows to cards, rows or inputs.
 - Don't use red for anything other than destructive actions and invalid fields.
-- Don't use the pink section outside the landing page, and don't give pink to buttons, links or errors in the app. The toast's action chip is the one pink control.
+- Don't use the pink section outside the landing page, and don't give pink to buttons, links or errors in the app.
 - Don't add eyebrow labels, taglines or decorative copy, as the copy rules describe.
 
 ## Agent prompt guide

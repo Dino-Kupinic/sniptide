@@ -60,7 +60,7 @@ function show(kind: ToastKind, message: string, options: ToastOptions = {}) {
 
 // Feedback for actions that have no button or form of their own to report on, like a menu item.
 // `success` confirms something that happened with a pink check, and `error` says what failed.
-// Pass `action` for something the reader can take back, like Undo; it renders as a pink chip.
+// Pass `action` for something the reader can take back, like Undo; it renders as a blue chip.
 // Mount <Toaster /> once near the root.
 const toast = {
   success: (message: string, options?: ToastOptions) => show("success", message, options),
@@ -88,14 +88,14 @@ function Toaster({
     () => EMPTY,
   )
 
-  // Phones stack toasts centered above the tab bar; from 1024px they sit in the bottom-right
+  // Phones stack toasts centered under the top bar; from 1024px they sit in the bottom-right
   // corner at one width, so a stack lines up on its right edge. On touch screens the 24px buttons
   // reach 40px through an invisible hit area.
   return (
     <div
       data-slot="toaster"
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-100 flex flex-col items-center gap-2 px-4 lg:right-[calc(env(safe-area-inset-right)+1.5rem)] lg:bottom-6 lg:left-auto lg:w-96 lg:px-0",
+        "pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+3.75rem)] z-100 flex flex-col items-center gap-2 px-4 lg:top-auto lg:right-[calc(env(safe-area-inset-right)+1.5rem)] lg:bottom-6 lg:left-auto lg:w-96 lg:px-0",
         className,
       )}
     >
@@ -106,7 +106,7 @@ function Toaster({
           data-kind={item.kind}
           role={item.kind === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-auto flex w-full max-w-sm min-h-10 items-center gap-2.5 rounded-lg border bg-popover py-1.5 pr-1.5 pl-3 text-[13px] leading-[18px] text-popover-foreground shadow-(--float-shadow) animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
+            "pointer-events-auto flex w-full max-w-sm min-h-10 items-center gap-2.5 rounded-lg border bg-popover py-1.5 pr-1.5 pl-3 text-[13px] leading-[18px] text-popover-foreground shadow-(--float-shadow) animate-in fade-in slide-in-from-top-2 duration-200 lg:slide-in-from-bottom-2 motion-reduce:animate-none",
             item.kind === "error" ? "border-destructive/40" : "border-border",
           )}
         >
@@ -123,7 +123,7 @@ function Toaster({
                 dismiss(item.id)
                 void item.action?.run()
               }}
-              className="relative h-6 shrink-0 rounded-md bg-pink px-2 text-[13px] font-medium text-pink-foreground outline-none transition-colors hover:bg-pink/85 focus-visible:ring-2 focus-visible:ring-ring/40 active:translate-y-px pointer-coarse:after:absolute pointer-coarse:after:-inset-2"
+              className="relative h-6 shrink-0 rounded-md bg-primary px-2 text-[13px] font-medium text-primary-foreground outline-none transition-colors hover:bg-primary/85 focus-visible:ring-2 focus-visible:ring-ring/40 active:translate-y-px pointer-coarse:after:absolute pointer-coarse:after:-inset-2"
             >
               {item.action.label}
             </button>
