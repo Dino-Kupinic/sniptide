@@ -141,7 +141,7 @@
     "connect": "連携",
     "disconnect": "連携を解除",
     "couldnTConnect": "プロバイダーに接続できませんでした。もう一度お試しください。",
-    "accountDisconnected": "{provider} の連携を解除しました。",
+    "accountDisconnected": "{provider} の連携を解除しました",
     "sessions": "セッション",
     "sessionsDescription": "あなたのアカウントにログインしているデバイスです。心当たりのないものはログアウトしてください。",
     "sessionsDemo": "デモではセッションは表示されません。",

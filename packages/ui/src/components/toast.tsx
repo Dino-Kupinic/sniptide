@@ -5,7 +5,7 @@ import { cn } from "cn"
 import { AlertCircleIcon, XIcon } from "lucide-react"
 import * as React from "react"
 
-type ToastKind = "success" | "error" | "info"
+type ToastKind = "success" | "error"
 type ToastAction = { label: string; run: () => void | Promise<void> }
 type ToastItem = {
   id: number
@@ -21,7 +21,7 @@ type ToastOptions = {
   duration?: number
 }
 
-const DURATION: Record<ToastKind, number> = { success: 3000, error: 6000, info: 3000 }
+const DURATION: Record<ToastKind, number> = { success: 3000, error: 6000 }
 const ACTION_DURATION = 8000
 const MAX_VISIBLE = 3
 const EMPTY: ToastItem[] = []
@@ -59,12 +59,12 @@ function show(kind: ToastKind, message: string, options: ToastOptions = {}) {
 }
 
 // Feedback for actions that have no button or form of their own to report on, like a menu item.
-// `info` is neutral; pass `action` for something the reader can take back, like Undo.
+// `success` confirms something that happened with a pink check, and `error` says what failed.
+// Pass `action` for something the reader can take back, like Undo; it renders as a pink chip.
 // Mount <Toaster /> once near the root.
 const toast = {
   success: (message: string, options?: ToastOptions) => show("success", message, options),
   error: (message: string, options?: ToastOptions) => show("error", message, options),
-  info: (message: string, options?: ToastOptions) => show("info", message, options),
   dismiss,
 }
 
@@ -88,29 +88,34 @@ function Toaster({
     () => EMPTY,
   )
 
+  // Phones stack toasts centered above the tab bar; from 1024px they sit in the bottom-right
+  // corner at one width, so a stack lines up on its right edge. On touch screens the 24px buttons
+  // reach 40px through an invisible hit area.
   return (
     <div
       data-slot="toaster"
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-100 flex flex-col items-center gap-2 px-4 lg:bottom-6",
+        "pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-100 flex flex-col items-center gap-2 px-4 lg:right-[calc(env(safe-area-inset-right)+1.5rem)] lg:bottom-6 lg:left-auto lg:w-96 lg:px-0",
         className,
       )}
     >
       {current.map((item) => (
         <div
           key={item.id}
+          data-slot="toast"
+          data-kind={item.kind}
           role={item.kind === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-auto flex max-w-sm items-center gap-2 rounded-lg border bg-popover py-2 pr-1.5 pl-3 text-[13px] text-popover-foreground shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
+            "pointer-events-auto flex w-full max-w-sm min-h-10 items-center gap-2.5 rounded-lg border bg-popover py-1.5 pr-1.5 pl-3 text-[13px] leading-[18px] text-popover-foreground shadow-(--float-shadow) animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none",
             item.kind === "error" ? "border-destructive/40" : "border-border",
           )}
         >
           {item.kind === "error" ? (
             <AlertCircleIcon className="size-4 shrink-0 text-destructive" aria-hidden="true" />
-          ) : item.kind === "success" ? (
-            <SuccessCheck className="text-primary" />
-          ) : null}
-          <span className="min-w-0 flex-1">{item.message}</span>
+          ) : (
+            <SuccessCheck className="text-highlight" />
+          )}
+          <span className="min-w-0 flex-1 py-0.5">{item.message}</span>
           {item.action ? (
             <button
               type="button"
@@ -118,7 +123,7 @@ function Toaster({
                 dismiss(item.id)
                 void item.action?.run()
               }}
-              className="rounded-md shrink-0 px-2 py-1 text-[13px] font-semibold text-link outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="relative h-6 shrink-0 rounded-md bg-pink px-2 text-[13px] font-medium text-pink-foreground outline-none transition-colors hover:bg-pink/85 focus-visible:ring-2 focus-visible:ring-ring/40 active:translate-y-px pointer-coarse:after:absolute pointer-coarse:after:-inset-2"
             >
               {item.action.label}
             </button>
@@ -127,7 +132,7 @@ function Toaster({
             type="button"
             aria-label={dismissLabel}
             onClick={() => dismiss(item.id)}
-            className="rounded-md flex size-6 shrink-0 items-center justify-center text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+            className="relative flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 pointer-coarse:after:absolute pointer-coarse:after:-inset-2"
           >
             <XIcon className="size-3.5" />
           </button>

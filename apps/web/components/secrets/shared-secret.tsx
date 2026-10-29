@@ -4,15 +4,16 @@ import { Button } from "@sniptide/ui/components/button"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
-import { toast } from "@sniptide/ui/components/toast"
 import { CopyIcon, EyeOffIcon, KeyRoundIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
+import { copyText } from "@/lib/feedback"
 import { entriesSchema, useSecretValues } from "./client"
 
 export function SharedSecret({ token }: { token: string }) {
   const t = useTranslations("Secrets")
+  const coreT = useTranslations("Core")
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const { values, setValues, clear, begin } = useSecretValues()
@@ -106,14 +107,9 @@ export function SharedSecret({ token }: { token: string }) {
                   size="icon-sm"
                   aria-label={t("copy_name", { name })}
                   className="col-start-2 row-start-1 text-muted-foreground hover:text-foreground sm:col-start-3"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(value)
-                      toast.success(t("copied", { name }))
-                    } catch {
-                      toast.error(t("copy_error"))
-                    }
-                  }}
+                  onClick={() =>
+                    copyText(value, { success: t("copied", { name }), error: coreT("copyError") })
+                  }
                 >
                   <CopyIcon />
                 </Button>

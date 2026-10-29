@@ -12,6 +12,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { z } from "zod"
 import type { SecretDetail } from "@/lib/env/web-store"
+import { copyText } from "@/lib/feedback"
 import { SecretRequestError, useSecretRequest } from "./client"
 import { Panel } from "./panel"
 
@@ -19,6 +20,7 @@ const HOURS = ["1", "24", "168"] as const
 
 export function SecretSharing({ group }: { group: SecretDetail }) {
   const t = useTranslations("Secrets")
+  const coreT = useTranslations("Core")
   const format = useFormatter()
   const secretRequest = useSecretRequest()
   const router = useRouter()
@@ -27,12 +29,7 @@ export function SecretSharing({ group }: { group: SecretDetail }) {
   const [error, setError] = useState("")
   const [busy, setBusy] = useState<string | null>(null)
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link)
-      toast.success(t("link_copied"))
-    } catch {
-      toast.error(t("copy_link_error"))
-    }
+    await copyText(link, { success: coreT("linkCopied"), error: coreT("copyError") })
   }
   return (
     <Panel title={t("sharing")} description={t("sharing_description")}>

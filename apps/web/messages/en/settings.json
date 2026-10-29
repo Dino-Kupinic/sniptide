@@ -141,7 +141,7 @@
     "connect": "Connect",
     "disconnect": "Disconnect",
     "couldnTConnect": "Couldn't reach the provider. Try again.",
-    "accountDisconnected": "{provider} disconnected.",
+    "accountDisconnected": "{provider} disconnected",
     "sessions": "Sessions",
     "sessionsDescription": "Devices signed in to your account. Sign out any you don't recognize.",
     "sessionsDemo": "Sessions aren't shown in the demo.",

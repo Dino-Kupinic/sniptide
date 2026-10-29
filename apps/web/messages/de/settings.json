@@ -141,7 +141,7 @@
     "connect": "Verbinden",
     "disconnect": "Trennen",
     "couldnTConnect": "Der Anbieter ist nicht erreichbar. Versuche es erneut.",
-    "accountDisconnected": "{provider} getrennt.",
+    "accountDisconnected": "{provider} getrennt",
     "sessions": "Sitzungen",
     "sessionsDescription": "Geräte, die bei deinem Konto angemeldet sind. Melde alle ab, die du nicht kennst.",
     "sessionsDemo": "In der Demo werden keine Sitzungen angezeigt.",

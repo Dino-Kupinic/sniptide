@@ -163,7 +163,7 @@
     "everyFileNeedsAName": "Jede Datei braucht einen Namen",
     "fileNamesMustBeUnique": "Dateinamen müssen eindeutig sein",
     "pasteSomeCode": "Füge Code ein",
-    "removedFile": "{name} entfernt",
+    "removedFile": "„{name}“ entfernt",
     "linkTaken": "{link} ist vergeben. Wähle einen anderen Link.",
     "draftKept": "Ein Entwurf vom {savedAt} ist auf diesem Gerät gespeichert. Beim Wiederherstellen wird der aktuelle Inhalt ersetzt.",
     "contentsOf": "Inhalt von {name}",

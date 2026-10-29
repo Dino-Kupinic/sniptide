@@ -141,7 +141,7 @@
     "connect": "关联",
     "disconnect": "取消关联",
     "couldnTConnect": "无法连接该服务，请重试。",
-    "accountDisconnected": "已取消关联 {provider}。",
+    "accountDisconnected": "已取消关联 {provider}",
     "sessions": "会话",
     "sessionsDescription": "已登录你账户的设备。如有不认识的设备，请将其退出登录。",
     "sessionsDemo": "演示中不显示会话。",
