@@ -481,7 +481,8 @@ describeDb("host moderation", () => {
       Promise<Awaited<ReturnType<typeof collectionCaptures>>>,
       Promise<Awaited<ReturnType<typeof listPastePage>>>,
     ] = await getDb().transaction(async (gate) => {
-      await gate.execute(sql`LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE`)
+      // Lists read author metadata instead of files after the projection migration.
+      await gate.execute(sql`LOCK TABLE paste_file, "user" IN ACCESS EXCLUSIVE MODE`)
       const pending: typeof reads = [
         listCaptures("owner", apiQuery),
         collectionCaptures("owner", "examples", null),

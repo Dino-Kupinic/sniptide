@@ -28,6 +28,8 @@ export async function migrateOnStartup() {
 // Checks the client-IP settings, so a bad CLIENT_IP_SOURCE stops the server here, and starts
 // recording each request's TCP peer for the "direct" source and the fallbacks.
 export async function setUpClientIp() {
+  const { installRequestAdmission } = await import("@/lib/request-admission")
+  installRequestAdmission()
   const { startTelemetry } = await import("@/lib/telemetry")
   startTelemetry()
   const { clientIpConfig, recordPeerAddresses } = await import("@/lib/client-ip")
@@ -36,16 +38,24 @@ export async function setUpClientIp() {
 }
 
 export async function startBackgroundJobs() {
-  const { scheduleUsageReconciliation } = await import("@/lib/account/usage")
-  scheduleUsageReconciliation()
-  const { scheduleNotificationEmails } = await import("@/lib/notifications/email")
-  scheduleNotificationEmails()
-  const { schedulePurge } = await import("@/lib/pastes/purge")
-  schedulePurge()
-  const { scheduleRollup } = await import("@/lib/pastes/rollup")
-  scheduleRollup()
-  if (getConfig().demoMode) {
-    const { scheduleDemoReset } = await import("@/lib/demo/reset")
-    scheduleDemoReset()
-  }
+  const { registerAdmissionPressure, runMaintenanceWork } = await import("@/lib/request-admission")
+  const { drainVisits, scheduleVisitDrain, visitQueuePressure } = await import(
+    "@/lib/pastes/visits"
+  )
+  registerAdmissionPressure("visits", visitQueuePressure)
+  await runMaintenanceWork(async () => {
+    await scheduleVisitDrain(async () => await runMaintenanceWork(() => drainVisits()))
+    const { scheduleUsageReconciliation } = await import("@/lib/account/usage")
+    scheduleUsageReconciliation()
+    const { scheduleNotificationEmails } = await import("@/lib/notifications/email")
+    scheduleNotificationEmails()
+    const { schedulePurge } = await import("@/lib/pastes/purge")
+    schedulePurge()
+    const { scheduleRollup } = await import("@/lib/pastes/rollup")
+    scheduleRollup()
+    if (getConfig().demoMode) {
+      const { scheduleDemoReset } = await import("@/lib/demo/reset")
+      scheduleDemoReset()
+    }
+  })
 }
