@@ -187,6 +187,24 @@
     "revokeTokenTitle": "{name}を無効にしますか？",
     "revokeTokenDescription": "このトークンを使うスクリプトとエージェントはすぐに動かなくなります。元に戻せません。",
     "deleteEnvGroupTitle": "{slug}を削除しますか？",
-    "deleteEnvGroupDescription": "変数は完全に削除され、CLIから取得できなくなります。元に戻せません。"
+    "deleteEnvGroupDescription": "変数は完全に削除され、CLIから取得できなくなります。元に戻せません。",
+    "usage": "使用状況",
+    "usagePastes": "ペースト",
+    "usageFiles": "ファイル",
+    "usageDescription": "ストレージとペースト数にはゴミ箱内の項目が含まれます。",
+    "usageOfLimit": "{used} / 上限 {limit}",
+    "usageWarning": "上限に近づいています",
+    "usageFull": "上限に達しました",
+    "usageApiRequests": "APIリクエスト",
+    "usageHistoryDescription": "APIトークンによる1日ごとのリクエスト数（UTC）。",
+    "usageRequestsTotal": "{range}の合計",
+    "usageNoRequests": "過去30日間にAPIリクエストはありません。",
+    "usageDailyValues": "日別の値を表示",
+    "usageDateUtc": "日付（UTC）",
+    "usageLoading": "使用状況を読み込み中…",
+    "usageUnavailable": "使用状況を表示できません。",
+    "usageReload": "再読み込み",
+    "usageCreateToken": "APIトークンを作成",
+    "usageChartLabel": "1日ごとのAPIリクエスト: {values}"
   }
 }

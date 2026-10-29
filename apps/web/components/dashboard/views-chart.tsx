@@ -7,10 +7,13 @@ import { formatNumber } from "@/lib/format"
 export function ViewsBarChart({
   values,
   labels,
+  label,
   className,
 }: {
   values: number[]
   labels: string[]
+  // Replaces the default "views per day" name for charts of other series.
+  label?: string
   className?: string
 }) {
   const locale = useLocale()
@@ -23,11 +26,14 @@ export function ViewsBarChart({
     <figure className={cn("flex flex-col gap-2", className)}>
       <div
         role="img"
-        aria-label={t("views_per_day", {
-          values: values
-            .map((value, index) => `${labels[index]} ${formatNumber(value, locale)}`)
-            .join(", "),
-        })}
+        aria-label={
+          label ??
+          t("views_per_day", {
+            values: values
+              .map((value, index) => `${labels[index]} ${formatNumber(value, locale)}`)
+              .join(", "),
+          })
+        }
         className={cn(
           // A definite height on phones (percent bar heights need one); on desktop it fills the card.
           "flex h-40 items-end border-b border-foreground lg:h-auto lg:min-h-42 lg:flex-1",
@@ -37,7 +43,7 @@ export function ViewsBarChart({
         {values.map((value, index) => (
           <div
             key={`${labels[index]}-${index}`}
-            className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+            className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
           >
             {index === peak && value > 0 ? (
               <span className="rounded-sm bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] text-background">
@@ -64,18 +70,21 @@ export function ViewsBarChart({
         aria-hidden="true"
         className={cn("flex text-xs text-muted-foreground", dense ? "gap-1" : "gap-2.5")}
       >
-        {labels.map((label, index) => (
-          <span
-            key={`${label}-${index}`}
-            className={cn(
-              "flex-1 text-center whitespace-nowrap",
-              index === peak && "font-semibold text-foreground",
-              dense && index % 5 !== values.length % 5 && "invisible",
-            )}
-          >
-            {label}
-          </span>
-        ))}
+        {labels.map((label, index) => {
+          // Skipped labels keep their slot but drop the text, so it cannot overflow the lane.
+          const skipped = dense && index % 5 !== values.length % 5
+          return (
+            <span
+              key={`${label}-${index}`}
+              className={cn(
+                "min-w-0 flex-1 text-center whitespace-nowrap",
+                index === peak && "font-semibold text-foreground",
+              )}
+            >
+              {skipped ? null : label}
+            </span>
+          )
+        })}
       </figcaption>
     </figure>
   )

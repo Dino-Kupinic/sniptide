@@ -187,6 +187,24 @@
     "revokeTokenTitle": "Revoke {name}?",
     "revokeTokenDescription": "Scripts and agents that use this token stop working right away. This can't be undone.",
     "deleteEnvGroupTitle": "Delete {slug}?",
-    "deleteEnvGroupDescription": "Its variables are deleted for good, and the CLI can no longer pull them. This can't be undone."
+    "deleteEnvGroupDescription": "Its variables are deleted for good, and the CLI can no longer pull them. This can't be undone.",
+    "usage": "Usage",
+    "usagePastes": "Pastes",
+    "usageFiles": "Files",
+    "usageDescription": "Storage and paste counts include items in the trash.",
+    "usageOfLimit": "{used} of {limit}",
+    "usageWarning": "Approaching limit",
+    "usageFull": "Limit reached",
+    "usageApiRequests": "API requests",
+    "usageHistoryDescription": "Requests your API tokens made each day, in UTC.",
+    "usageRequestsTotal": "Total for {range}",
+    "usageNoRequests": "No API requests in the last 30 days.",
+    "usageDailyValues": "View daily values",
+    "usageDateUtc": "Date (UTC)",
+    "usageLoading": "Loading usage…",
+    "usageUnavailable": "Usage is unavailable.",
+    "usageReload": "Reload",
+    "usageCreateToken": "Create an API token",
+    "usageChartLabel": "API requests per day: {values}"
   }
 }
