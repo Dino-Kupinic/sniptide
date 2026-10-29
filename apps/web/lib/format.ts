@@ -1,5 +1,5 @@
-// Display helpers for paste metadata. They run on the server, so relative times are computed
-// once per render and handed to client components as strings.
+// Display helpers for paste metadata. Relative times can be computed once per server render
+// and handed to client components as strings.
 
 import type { Locale } from "@/lib/i18n/config"
 import { DAY, HOUR, MINUTE } from "@/lib/time"
@@ -70,7 +70,11 @@ export function formatDate(time: number, locale: string = "en") {
   }).format(time)
 }
 
-export function formatDateTime(time: number, locale: string = "en") {
+export function formatDateTime(
+  time: number,
+  locale: string = "en",
+  options: Pick<Intl.DateTimeFormatOptions, "timeZone" | "timeZoneName"> = {},
+) {
   return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
@@ -78,6 +82,7 @@ export function formatDateTime(time: number, locale: string = "en") {
     minute: "2-digit",
     hourCycle: "h23",
     timeZone: "UTC",
+    ...options,
   }).format(time)
 }
 

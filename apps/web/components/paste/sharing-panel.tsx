@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { LocalDateTime } from "@/components/local-date-time"
 import { track } from "@/lib/analytics"
 import { runAction } from "@/lib/feedback"
 import { updateSharing } from "@/lib/pastes/actions"
@@ -36,9 +37,7 @@ export interface SharingState {
   slug: string
   url: string
   visibility: Visibility
-  expiresLabel: string
-  // No expiry set, so "Never" carries the check in the Expires menu.
-  neverExpires: boolean
+  expiresAt: number | null
   hasPassword: boolean
   burnAfterRead: boolean
   allowRaw: boolean
@@ -127,12 +126,14 @@ function useSharingControls(state: SharingState, list: boolean) {
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex items-center gap-1.5 outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
+          "flex items-center gap-1.5 rounded-lg outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
           !list && "h-9 w-full justify-between border border-border px-2.5 hover:text-foreground",
-          list && "-mr-2 h-10 rounded-lg px-2",
+          list && "-mr-2 h-10 px-2",
         )}
       >
-        <span className={cn(list && "text-muted-foreground")}>{state.expiresLabel}</span>
+        <span className={cn(list && "text-muted-foreground")}>
+          {state.expiresAt === null ? t("never") : <LocalDateTime value={state.expiresAt} />}
+        </span>
         <ChevronDownIcon className="size-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -143,7 +144,7 @@ function useSharingControls(state: SharingState, list: boolean) {
             onClick={() => save({ expiry: choice.value })}
           >
             {t(choice.label)}
-            {choice.value === "never" && state.neverExpires ? (
+            {choice.value === "never" && state.expiresAt === null ? (
               <CheckIcon className="ml-auto text-foreground!" />
             ) : null}
           </DropdownMenuItem>
