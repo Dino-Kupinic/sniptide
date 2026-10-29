@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { expiresAtFor } from "@/lib/pastes/store"
+import { expiresAtFor } from "@/lib/pastes/links"
 import { HOUR } from "@/lib/time"
 
 describe("paste expiry", () => {

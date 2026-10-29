@@ -109,7 +109,7 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | NOTIFICATION_EMAIL_CONCURRENCY | 2 | Concurrent notification deliveries per process, from 1 to 10 |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
 | SLOW_QUERY_MS | 500 | Threshold for slow-query log events |
-| METRICS_TOKEN | unset | Bearer token enabling the metrics endpoint |
+| METRICS_TOKEN | unset | Operator bearer token for metrics and explicit maintenance execution |
 
 Cleanup runs at startup and hourly. Transactions commit between batches and use a shared advisory
 lock and SKIP LOCKED. One batch can exceed the run budget up to SQL deadlines; cascaded child rows
@@ -128,7 +128,7 @@ replacing their rows, so a repeated or interrupted run is safe. Rows are deleted
 finalized and more than two days old; the Analytics page reads days that aren't finalized yet
 straight from `paste_event`, so its figures never wait for the job. Expect `paste_event` to hold
 about three days of traffic, one row per hit; if it grows past that the job is failing (look for
-`Analytics rollup failed` in the logs or `rollupLastRunAt` in the metrics). Rollup rows are removed
+`maintenance_job` with `name: analytics` and `outcome: failed` in the logs or job status in the metrics). Rollup rows are removed
 after `ANALYTICS_RETENTION_DAYS` by the cleanup run.
 
 ## Telemetry
@@ -156,6 +156,42 @@ rates, event-loop delay, heap pressure, and purge backlog that grows across hour
 with `exhausted: false` means the cleanup budget ended or another process held the lock; use
 fleet-wide progress when diagnosing it. Request/query histograms and proxy metrics should supply
 p95/p99 latency and traffic volume.
+
+## Run and observe maintenance
+
+Web startup schedules purge hourly, analytics every 15 minutes, and usage reconciliation and
+notification email every minute. All run immediately on startup; email is disabled without
+SMTP and an app URL. Each job retains its database locks, leases, batching, and retries.
+Purge also attempts expiry notifications even when cleanup fails.
+
+To run one bounded attempt independently of startup timers, send an authenticated POST:
+
+```sh
+curl --fail-with-body -X POST \
+  -H "Authorization: Bearer $METRICS_TOKEN" \
+  https://your-instance.example/api/jobs/purge
+```
+
+The job names are `purge`, `analytics`, `usage`, and `email`. Treat `METRICS_TOKEN` as an operator
+credential that permits maintenance writes. An unset token disables both operations endpoints;
+a wrong token returns 401. GET never starts a job. The response returns a run ID and outcome.
+`completed` means that attempt finished, `contended` means another worker held the task's lock,
+and `disabled` means email is not configured. A second invocation of the same job in this process
+returns `busy` with HTTP 409. Failed attempts return HTTP 500 with a safe failure code. Email
+retry or permanent-delivery failures count as a failed attempt, while retaining existing retries.
+
+`GET /api/metrics` includes `maintenanceJobs` with last success, last failure, current running
+state, and the latest attempt outcome for each job. Contention and failure do not advance the
+success timestamp. A job is overdue when no successful attempt completes for two intervals,
+counted from process observation if it has never succeeded. Disabled jobs are not overdue.
+Successful batches can leave backlog, so continue checking task-specific progress and counters.
+
+Status is per process and resets on restart. Scrape every replica and retain metrics and
+structured `maintenance_job` logs in your monitoring system for history across restarts. A
+restart resumes normal scheduling; existing coordination and resumable batches handle
+interrupted work. Email retains its at-least-once delivery and claim-lease behavior.
+A stopped web process cannot run timers; an external scheduler can POST to a live instance.
+No separate worker service or additional runtime is required.
 
 ## Migration and rollout
 

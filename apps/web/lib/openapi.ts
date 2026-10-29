@@ -1401,6 +1401,88 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/jobs/{name}": {
+      post: {
+        operationId: "runMaintenanceJob",
+        tags: ["Operations"],
+        summary: "Run one maintenance job",
+        description:
+          "Runs a bounded attempt independently of startup timers, using existing database coordination. Requires METRICS_TOKEN. Completion does not guarantee an empty backlog. Status is local to this process and resets on restart.",
+        security: [{ metricsToken: [] }],
+        parameters: [
+          {
+            name: "name",
+            in: "path",
+            required: true,
+            schema: { type: "string", enum: ["purge", "analytics", "usage", "email"] },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Completed, encountered another worker's lock, or disabled.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/JobReport" },
+                example: {
+                  name: "usage",
+                  runId: "b3e950b7-3c5f-4aeb-bb96-fd2ce606e901",
+                  outcome: "completed",
+                  startedAt: 1793268000000,
+                  finishedAt: 1793268000010,
+                  durationMs: 10,
+                  failureCode: null,
+                },
+              },
+            },
+          },
+          "409": {
+            description: "This process is already running this job.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/JobReport" },
+                example: {
+                  name: "usage",
+                  runId: "b3e950b7-3c5f-4aeb-bb96-fd2ce606e901",
+                  outcome: "busy",
+                  startedAt: 1793268000000,
+                  finishedAt: null,
+                  durationMs: null,
+                  failureCode: null,
+                },
+              },
+            },
+          },
+          "500": {
+            description: "The attempt failed. Job-specific retries remain in effect.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/JobReport" },
+                example: {
+                  name: "usage",
+                  runId: "b3e950b7-3c5f-4aeb-bb96-fd2ce606e901",
+                  outcome: "failed",
+                  startedAt: 1793268000000,
+                  finishedAt: 1793268000010,
+                  durationMs: 10,
+                  failureCode: "execution_failed",
+                },
+              },
+            },
+          },
+          "401": textError("The operator bearer token is missing or wrong.", "Unauthorized"),
+          "404": {
+            description: "METRICS_TOKEN is unset or the job name is unknown.",
+            content: {
+              "text/plain": { schema: { type: "string" }, example: "Not found" },
+              "application/json": {
+                schema: { type: "object", properties: { error: { type: "string" } } },
+                example: { error: "Unknown maintenance job." },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/metrics": {
       get: {
         operationId: "getMetrics",
@@ -1409,6 +1491,7 @@ export const openApiDocument = {
         description: [
           "Request timings, event loop delay, memory, database size and connections, and how many",
           "expired pastes are waiting to be purged.",
+          "Includes maintenance job success/failure timestamps and overdue state for this process; these reset on restart.",
           "",
           "Off until you set `METRICS_TOKEN` on the server: without it the endpoint answers 404.",
           "Authenticate with that value as a bearer token.",
@@ -1637,6 +1720,33 @@ export const openApiDocument = {
           },
         },
       },
+      JobReport: {
+        type: "object",
+        required: [
+          "name",
+          "runId",
+          "outcome",
+          "startedAt",
+          "finishedAt",
+          "durationMs",
+          "failureCode",
+        ],
+        properties: {
+          name: { type: "string" },
+          runId: { type: ["string", "null"] },
+          outcome: {
+            type: "string",
+            enum: ["completed", "contended", "failed", "busy", "disabled"],
+          },
+          startedAt: { type: ["number", "null"], description: "Unix time in milliseconds." },
+          finishedAt: { type: ["number", "null"], description: "Unix time in milliseconds." },
+          durationMs: { type: ["number", "null"] },
+          failureCode: {
+            type: ["string", "null"],
+            enum: ["execution_failed", "work_failed", null],
+          },
+        },
+      },
       Metrics: {
         type: "object",
         description:
@@ -1699,6 +1809,36 @@ export const openApiDocument = {
             type: "object",
             description: "Results of the last background maintenance run.",
             additionalProperties: { type: ["number", "boolean"] },
+          },
+          maintenanceJobs: {
+            type: "object",
+            description:
+              "Per-process attempts, last success/failure, and overdue state. Resets on restart. Disabled jobs are not overdue; contention does not advance success.",
+            properties: {
+              scope: { const: "process" },
+              resetsOnRestart: { const: true },
+              jobs: {
+                type: "object",
+                additionalProperties: {
+                  type: "object",
+                  properties: {
+                    running: { type: "boolean" },
+                    enabled: { type: "boolean" },
+                    overdue: { type: "boolean" },
+                    lastSucceededAt: { type: ["number", "null"] },
+                    lastFailedAt: { type: ["number", "null"] },
+                    lastStartedAt: { type: ["number", "null"] },
+                    lastFinishedAt: { type: ["number", "null"] },
+                    lastFailureCode: { type: ["string", "null"] },
+                    lastOutcome: { type: ["string", "null"] },
+                    intervalMs: { type: "number" },
+                    nextDueAt: { type: ["number", "null"] },
+                    runId: { type: ["string", "null"] },
+                    durationMs: { type: ["number", "null"] },
+                  },
+                },
+              },
+            },
           },
           database: {
             type: "object",

@@ -191,7 +191,7 @@ describeDb("API create reliability", () => {
       .where(eq(apiToken.id, tokenId))
     await getDb()
       .update(rateLimit)
-      .set({ count: 30, windowStart: new Date(Date.now() - 3550_000) })
+      .set({ count: 30, windowStart: sql`now() - interval '3550 seconds'` })
       .where(eq(rateLimit.key, "paste:create:retry-owner"))
     const limited = await createPaste(call("/api/v1/pastes", capture, "protected"))
     expect(limited.status).toBe(429)

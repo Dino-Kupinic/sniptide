@@ -11,7 +11,7 @@
     "random": "ランダム",
     "available": "利用可能",
     "taken": "使用済み",
-    "thatLinkIsTakenOrReserved": "このリンクは使用済み、または予約されています。",
+    "thatLinkIsTaken": "このリンクは使用済みです。",
     "noCollection": "コレクションなし",
     "collection": "コレクション",
     "pastePassword": "Paste のパスワード",
