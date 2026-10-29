@@ -102,6 +102,7 @@
     "tokenCreatedAt": "创建于 {date}",
     "tokenUsedAt": "使用于 {time}",
     "neverUsed": "从未使用",
+    "connectedApp": "已通过 OAuth 连接",
     "tokenExpiresAt": "于 {date} 到期",
     "groupUpdated": "{count} 个变量 · 更新于 {time}",
     "pushEnvHint": "使用 <command>sniptide env push my-app</command> 推送项目的 .env 文件，然后在其他设备上拉取或用它运行命令。",

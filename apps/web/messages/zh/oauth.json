@@ -1,0 +1,21 @@
+{
+  "OAuth": {
+    "metaTitle": "授权应用 · Sniptide",
+    "title": "连接 {client}",
+    "subtitle": "{client} 想要使用你的 Sniptide 账户。",
+    "read": "搜索和读取你的代码片段、集合和环境变量组",
+    "write": "创建、编辑和删除代码片段、集合和环境变量组",
+    "redirectNotice": "允许访问后，Sniptide 会将你送回 {host}。仅当你是从 {client} 发起时才继续。",
+    "revokeNotice": "你可以随时在“设置”的“API 令牌”中断开连接。",
+    "signedInAs": "当前登录为 {email}。",
+    "allow": "允许访问",
+    "deny": "取消",
+    "invalidTitle": "此链接无法使用",
+    "invalidClient": "将你引导到这里的应用未在 Sniptide 注册。请在该应用中重新发起连接。",
+    "invalidRedirect": "将你引导到这里的应用要求返回一个它未注册的地址。请在该应用中重新发起连接。",
+    "pitchTitle1": "你的代码片段，",
+    "pitchTitle2": "就在你的智能体中。",
+    "pitchBody": "已连接的应用只会在你在此允许的权限范围内代表你操作。",
+    "pitchNote": "MCP 服务器"
+  }
+}

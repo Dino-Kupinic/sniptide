@@ -121,6 +121,7 @@ const RESERVED = new Set([
   "docs",
   "forgot-password",
   "new",
+  "oauth",
   "pastes",
   "reset-password",
   "secrets",

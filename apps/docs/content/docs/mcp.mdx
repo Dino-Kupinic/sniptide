@@ -52,8 +52,10 @@ views. Searches and the read-back after a write don't count.
 ## Connect over HTTP (recommended)
 
 The endpoint is `https://app.sniptide.com/api/mcp`, or `<your-instance-url>/api/mcp` on a
-self-hosted one. You configure the bearer token yourself: this version has no OAuth login. Every
-request is authenticated again, so deleting a token cuts off access at once.
+self-hosted one. A client that supports OAuth needs only this URL and signs you in through the
+browser, as [OAuth for agents](/oauth) describes. Otherwise configure a personal API token as a
+bearer token, as below. Every request is authenticated again, so revoking a token or a connection
+cuts off access at once.
 
 <Tabs items={["Claude Code", "Cursor"]}>
 <Tab value="Claude Code">

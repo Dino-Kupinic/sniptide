@@ -30,11 +30,13 @@ The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/snip
 
 ## Connect a coding agent
 
-Create a token in Settings, API tokens, then add the MCP server to Claude Code:
+Add the MCP server to Claude Code, which signs you in to Sniptide in the browser through OAuth:
 
 ```bash
-claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp --header "Authorization: Bearer $SNIPTIDE_TOKEN"
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
+
+For a client without OAuth, create a token in Settings, API tokens, and pass it with `--header "Authorization: Bearer $SNIPTIDE_TOKEN"`.
 
 Use `<your-instance-url>/api/mcp` on a self-hosted instance.
 The [MCP guide](https://docs.sniptide.com/mcp) covers Cursor and a local server, and the [CLI](https://docs.sniptide.com/cli) installs a collection as an agent skill.

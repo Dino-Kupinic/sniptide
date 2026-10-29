@@ -104,6 +104,7 @@ const SECTIONS = new Set([
   "sign-up",
   "dashboard",
   "new",
+  "oauth",
   "pastes",
   "settings",
   "shared",

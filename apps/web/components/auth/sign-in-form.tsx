@@ -18,16 +18,19 @@ import { VerificationNotice } from "./verification-notice"
 // newcomers to the request-access page.
 // `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
 // `initialError` explains a failed GitHub or Google sign-in, `notice` confirms a password reset.
+// `redirectTo` is where a signed-in visitor goes next (lib/auth-redirect.ts).
 export function SignInForm({
   socialProviders,
   signUpClosed = false,
   initialError = null,
   notice = null,
+  redirectTo = "/dashboard",
 }: {
   socialProviders: SocialProvider[] | null
   signUpClosed?: boolean
   initialError?: string | null
   notice?: string | null
+  redirectTo?: string
 }) {
   const t = useTranslations("Auth")
   const router = useRouter()
@@ -64,7 +67,7 @@ export function SignInForm({
     }
 
     track("signed_in", { method: "email" })
-    router.replace("/dashboard")
+    router.replace(redirectTo)
     router.refresh()
   }
 
@@ -83,7 +86,7 @@ export function SignInForm({
           <SocialButtons
             enabled={socialProviders}
             verb="Continue"
-            callbackURL="/dashboard"
+            callbackURL={redirectTo}
             onError={setError}
           />
           <EmailDivider />
@@ -138,7 +141,14 @@ export function SignInForm({
           <SwitchPrompt>
             {t.rich(socialProviders ? "newAccountPrompt" : "requestAccessPrompt", {
               link: (children) => (
-                <Link href="/sign-up" className={inlineLinkClass}>
+                <Link
+                  href={
+                    redirectTo === "/dashboard"
+                      ? "/sign-up"
+                      : `/sign-up?next=${encodeURIComponent(redirectTo)}`
+                  }
+                  className={inlineLinkClass}
+                >
                   {children}
                 </Link>
               ),

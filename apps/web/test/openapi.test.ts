@@ -157,7 +157,10 @@ describe("API reference", () => {
       expect((operation as { "x-required-scopes"?: string[] })["x-required-scopes"]).toEqual([
         scope,
       ])
-      expect((operation as { security?: unknown }).security).toEqual([{ apiToken: [] }])
+      expect((operation as { security?: unknown }).security).toEqual([
+        { apiToken: [] },
+        { oauth: [scope] },
+      ])
     }
   })
 

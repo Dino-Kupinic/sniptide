@@ -6,7 +6,7 @@ import { type NextRequest, NextResponse } from "next/server"
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
   const appPath =
-    /^\/(?:api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|trash)(?:\/|$)/.test(
+    /^\/(?:api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|oauth|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|trash)(?:\/|$)/.test(
       path,
     )
   const markdown = (request.headers.get("accept") ?? "").split(",").some((range) => {
@@ -30,7 +30,7 @@ export function proxy(request: NextRequest) {
   }
   if (
     path !== "/" &&
-    !/^\/(?:sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|pastes|settings|shared|starred|trash|collections|secrets)(?:\/|$)/.test(
+    !/^\/(?:sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|oauth|pastes|settings|shared|starred|trash|collections|secrets)(?:\/|$)/.test(
       path,
     ) &&
     !path.startsWith("/api/auth/")
@@ -53,7 +53,7 @@ export const config = {
   matcher: [
     "/((?!_next|api|_site).*)",
     "/",
-    "/(sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|pastes|settings|shared|starred|trash|collections|secrets)/:path*",
+    "/(sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|oauth|pastes|settings|shared|starred|trash|collections|secrets)/:path*",
     "/api/auth/:path*",
   ],
 }

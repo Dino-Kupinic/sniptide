@@ -5,6 +5,7 @@ import { RequestAccess } from "@/components/auth/request-access"
 import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { afterSignIn } from "@/lib/auth-redirect"
 import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -74,7 +75,10 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
         note: t("publicProfile"),
       }}
     >
-      <SignUpForm socialProviders={inviteOnly ? null : await getSocialProviders()} />
+      <SignUpForm
+        socialProviders={inviteOnly ? null : await getSocialProviders()}
+        redirectTo={afterSignIn((await searchParams).next)}
+      />
     </AuthScreen>
   )
 }
