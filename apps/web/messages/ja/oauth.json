@@ -1,0 +1,21 @@
+{
+  "OAuth": {
+    "metaTitle": "アプリを承認 · Sniptide",
+    "title": "{client} を接続",
+    "subtitle": "{client} があなたの Sniptide アカウントの利用を求めています。",
+    "read": "スニペット、コレクション、環境変数グループの検索と閲覧",
+    "write": "スニペット、コレクション、環境変数グループの作成、編集、削除",
+    "redirectNotice": "アクセスを許可すると、Sniptide は {host} に戻ります。{client} から開始した場合にのみ続行してください。",
+    "revokeNotice": "接続はいつでも「設定」の「API トークン」で解除できます。",
+    "signedInAs": "{email} としてサインイン中です。",
+    "allow": "アクセスを許可",
+    "deny": "キャンセル",
+    "invalidTitle": "このリンクは使えません",
+    "invalidClient": "ここに案内したアプリは Sniptide に登録されていません。アプリから接続をやり直してください。",
+    "invalidRedirect": "ここに案内したアプリが、登録していないアドレスへの戻りを求めました。アプリから接続をやり直してください。",
+    "pitchTitle1": "あなたのスニペットを、",
+    "pitchTitle2": "エージェントの中に。",
+    "pitchBody": "接続したアプリは、ここで許可した範囲だけであなたの代わりに操作します。",
+    "pitchNote": "MCP サーバー"
+  }
+}

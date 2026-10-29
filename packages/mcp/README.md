@@ -32,8 +32,9 @@ restore files, expose env secrets or accept browser session cookies.
 ## Remote HTTP
 
 The endpoint is `https://app.sniptide.com/api/mcp`, or `<your-instance-url>/api/mcp`. It ships with the
-app; there is no separate service or port to deploy. Configure a bearer token explicitly; this
-version has no OAuth login or discovery. JSON responses use stateless Streamable HTTP, with no
+app; there is no separate service or port to deploy. Clients that support OAuth discover it from
+the `401` and sign in through the browser (see [OAuth for agents](https://docs.sniptide.com/oauth));
+otherwise configure a personal API token as a bearer token. JSON responses use stateless Streamable HTTP, with no
 session ID, standalone SSE stream, or session deletion. Every request is authenticated again, so
 revocation takes effect immediately. Origin headers, if present, must match the app's origin.
 

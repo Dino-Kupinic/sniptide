@@ -2,8 +2,10 @@ import { Button } from "@sniptide/ui/components/button"
 import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { authSubmitClass } from "@/components/auth/fields"
+import { LegalNotice } from "@/components/auth/legal-notice"
 import { SignInForm } from "@/components/auth/sign-in-form"
 import { getInviteOnly, getSocialProviders, isDemoMode, isSignUpClosed } from "@/lib/auth"
+import { afterSignIn } from "@/lib/auth-redirect"
 import { oauthErrorKey } from "@/lib/oauth-errors"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -13,7 +15,7 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/sign-in">) {
-  const [{ host }, t, { error, reset }] = await Promise.all([
+  const [{ host }, t, { error, reset, next }] = await Promise.all([
     getSiteOrigin(),
     getTranslations("Auth"),
     searchParams,
@@ -23,7 +25,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-in">) {
     <AuthScreen
       title={t("welcomeBack")}
       subtitle={t("signInSubtitle")}
-      legal={t("signInLegal")}
+      legal={<LegalNotice action="continue" />}
       pitch={{
         title: [t("signInPitchTitle1"), t("signInPitchTitle2")],
         body: t("signInPitchBody"),
@@ -47,6 +49,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-in">) {
         signUpClosed={isSignUpClosed()}
         initialError={errorKey ? t(`oauthErrors.${errorKey}`) : null}
         notice={reset === "1" ? t("passwordResetDone") : null}
+        redirectTo={afterSignIn(next)}
       />
     </AuthScreen>
   )

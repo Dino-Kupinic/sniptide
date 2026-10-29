@@ -169,3 +169,34 @@ describe("optional SMTP configuration", () => {
     expect(() => getConfig({ ...complete, SMTP_REQUIRE_TLS: "maybe" })).toThrow(/SMTP_REQUIRE_TLS/)
   })
 })
+
+describe("legal settings", () => {
+  test("are all off by default", () => {
+    expect(getConfig({}).legal).toEqual({
+      termsUrl: undefined,
+      privacyUrl: undefined,
+      operator: undefined,
+      copyrightEmail: undefined,
+    })
+  })
+  test("read the operator, documents and copyright contact", () => {
+    expect(
+      getConfig({
+        TERMS_URL: "https://example.com/terms",
+        PRIVACY_URL: "https://example.com/privacy",
+        OPERATOR_NAME: "Example GmbH",
+        OPERATOR_ADDRESS: "Ring 1\n1010 Wien",
+        COPYRIGHT_EMAIL: "copyright@example.com",
+      }).legal,
+    ).toEqual({
+      termsUrl: "https://example.com/terms",
+      privacyUrl: "https://example.com/privacy",
+      operator: { name: "Example GmbH", address: "Ring 1\n1010 Wien" },
+      copyrightEmail: "copyright@example.com",
+    })
+  })
+  test("reject a malformed address or link", () => {
+    expect(() => getConfig({ COPYRIGHT_EMAIL: "nope" })).toThrow(/COPYRIGHT_EMAIL/)
+    expect(() => getConfig({ TERMS_URL: "terms" })).toThrow(/TERMS_URL/)
+  })
+})

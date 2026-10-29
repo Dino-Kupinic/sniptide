@@ -13,6 +13,10 @@ const categories = {
     code: "too_many_requests",
     resolution: "Wait for the Retry-After interval before trying again.",
   },
+  503: {
+    code: "service_unavailable",
+    resolution: "Wait for the Retry-After interval before trying again.",
+  },
   500: {
     code: "internal_error",
     resolution:

@@ -56,19 +56,45 @@ export async function purgeStaleData(now = new Date()) {
         const limits = await tx.execute(
           sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY).toISOString()} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
+        const receipts = await tx.execute(
+          sql`DELETE FROM api_receipt WHERE (token_id, key) IN (SELECT token_id, key FROM api_receipt WHERE expires_at < ${now.toISOString()} ORDER BY expires_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
+        )
         const auth = await tx.execute(
           sql`DELETE FROM auth_rate_limit WHERE id IN (SELECT id FROM auth_rate_limit WHERE last_request < ${now.getTime() - DAY} ORDER BY last_request LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
         )
         const notices = await tx.execute(
           sql`DELETE FROM notification WHERE id IN (SELECT id FROM notification WHERE read_at < ${new Date(now.getTime() - READ_RETENTION_DAYS * DAY).toISOString()} OR created_at < ${new Date(now.getTime() - UNREAD_RETENTION_DAYS * DAY).toISOString()} ORDER BY created_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
         )
+        // OAuth (lib/oauth): codes past their ten minutes, grants whose refresh token lapsed, and
+        // clients that registered a day ago and hold neither, which is what an abandoned
+        // registration leaves behind.
+        const codes = await tx.execute(
+          sql`DELETE FROM oauth_code WHERE hash IN (SELECT hash FROM oauth_code WHERE expires_at < ${now.toISOString()} ORDER BY expires_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING hash`,
+        )
+        const grants = await tx.execute(
+          sql`DELETE FROM api_token WHERE id IN (SELECT id FROM api_token WHERE client_id IS NOT NULL AND refresh_expires_at < ${now.toISOString()} ORDER BY refresh_expires_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+        )
+        const clients = await tx.execute(
+          sql`DELETE FROM oauth_client WHERE id IN (SELECT id FROM oauth_client c WHERE created_at < ${new Date(now.getTime() - DAY).toISOString()} AND NOT EXISTS (SELECT 1 FROM api_token t WHERE t.client_id = c.id) AND NOT EXISTS (SELECT 1 FROM oauth_code o WHERE o.client_id = c.id) ORDER BY created_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+        )
         return {
           trashed: trashed.length,
           expired: expired.length,
           days: days.length + stats.length + breakdown.length,
-          full: [trashed, expired, days, stats, breakdown, limits, auth, notices].some(
-            (rows) => rows.length === batch,
-          ),
+          full: [
+            trashed,
+            expired,
+            days,
+            stats,
+            breakdown,
+            limits,
+            auth,
+            notices,
+            receipts,
+            codes,
+            grants,
+            clients,
+          ].some((rows) => rows.length === batch),
         }
       })
       if (!result) return batches ? totals : null

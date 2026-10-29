@@ -102,6 +102,7 @@
     "tokenCreatedAt": "{date} に作成",
     "tokenUsedAt": "{time}に使用",
     "neverUsed": "未使用",
+    "connectedApp": "OAuth で接続済み",
     "tokenExpiresAt": "{date} に期限切れ",
     "groupUpdated": "変数 {count} 個 · {time}に更新",
     "pushEnvHint": "<command>sniptide env push my-app</command> でプロジェクトの .env をプッシュし、別の端末でプルするか、その環境でコマンドを実行します。",

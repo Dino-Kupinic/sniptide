@@ -6,6 +6,9 @@
     "core-concepts",
     "settings",
     "api-tokens",
+    "oauth",
+    "api-reliability",
+    "agent-sandbox",
     "cli",
     "mcp",
     "self-hosting"

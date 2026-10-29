@@ -22,6 +22,7 @@ import {
   verifyUnsubscribeToken,
 } from "@/lib/notifications/unsubscribe"
 import { readSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import { drainVisits } from "@/lib/pastes/visits"
 import { readPreferences } from "@/lib/preference-store"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { updateNotificationPreference, updatePreferences } from "@/lib/settings-actions"
@@ -296,6 +297,7 @@ describeDb("notification channel delivery", () => {
       .set({ createdAt: new Date(Date.now() - 3 * DAY) })
       .where(eq(paste.id, soon.id))
     expect(await notifyExpiringPastes()).toBe(1)
+    await drainVisits()
     expect((await deliverNotificationEmails()).sent).toBe(4)
     expect((await rows()).map((row) => row.kind).sort()).toEqual([
       "burned",

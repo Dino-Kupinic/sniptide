@@ -104,6 +104,13 @@ const schema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().email().optional(),
   DATABASE_URL: z.string().optional(),
+  DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(100).default(10),
+  HTTP_ADMISSION_LIMIT: z.coerce.number().int().min(1).max(1024).default(64),
+  LIVE_ADMISSION_LIMIT: z.coerce.number().int().min(1).max(4096).default(128),
+  PROBE_ADMISSION_LIMIT: z.coerce.number().int().min(1).max(16).default(2),
+  DATABASE_ADMISSION_QUEUE_LIMIT: z.coerce.number().int().min(0).max(4096).default(64),
+  DATABASE_PROBE_RESERVE: z.coerce.number().int().min(1).max(16).default(1),
+  DATABASE_MAINTENANCE_RESERVE: z.coerce.number().int().min(1).max(16).default(1),
   MIGRATIONS_DIR: z.string().optional(),
 
   BETTER_AUTH_SECRET: z.string().optional(),
@@ -151,6 +158,14 @@ const schema = z.object({
   ACCOUNT_STORAGE_BYTES: sizeCap.default(DEFAULT_ACCOUNT_STORAGE_BYTES),
   ACCOUNT_PASTE_LIMIT: countCap.default(DEFAULT_ACCOUNT_PASTES),
 
+  TERMS_URL: z.url({ message: "must be a full URL like https://example.com/terms." }).optional(),
+  PRIVACY_URL: z
+    .url({ message: "must be a full URL like https://example.com/privacy." })
+    .optional(),
+  OPERATOR_NAME: z.string().max(200).optional(),
+  OPERATOR_ADDRESS: z.string().max(500).optional(),
+  COPYRIGHT_EMAIL: z.string().email().optional(),
+
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
 })
@@ -170,6 +185,13 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     throw new Error(`Invalid configuration:\n  ${problems.join("\n  ")}`)
   }
   const value = parsed.data
+  if (
+    value.DATABASE_POOL_SIZE > 2 &&
+    value.DATABASE_PROBE_RESERVE + value.DATABASE_MAINTENANCE_RESERVE >= value.DATABASE_POOL_SIZE
+  )
+    throw new Error(
+      "Invalid configuration: DATABASE_POOL_SIZE must exceed DATABASE_PROBE_RESERVE + DATABASE_MAINTENANCE_RESERVE.",
+    )
   const smtpPresent = [
     "SMTP_HOST",
     "SMTP_PORT",
@@ -210,6 +232,15 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
           }
         : undefined,
     databaseUrl: value.DATABASE_URL,
+    admission: {
+      http: value.HTTP_ADMISSION_LIMIT,
+      probes: value.PROBE_ADMISSION_LIMIT,
+      streams: value.LIVE_ADMISSION_LIMIT,
+      database: value.DATABASE_POOL_SIZE,
+      databaseQueue: value.DATABASE_ADMISSION_QUEUE_LIMIT,
+      databaseProbes: value.DATABASE_PROBE_RESERVE,
+      databaseMaintenance: value.DATABASE_MAINTENANCE_RESERVE,
+    },
     migrationsDir: value.MIGRATIONS_DIR,
     authSecret: value.BETTER_AUTH_SECRET,
     envSecretsKey: value.ENV_SECRETS_KEY,
@@ -237,6 +268,16 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     accountLimits: {
       bytes: value.ACCOUNT_STORAGE_BYTES,
       pastes: value.ACCOUNT_PASTE_LIMIT,
+    },
+    // Who runs this instance and the documents sign-up points to. Each is optional, so a private
+    // self-hosted server can leave them all unset.
+    legal: {
+      termsUrl: value.TERMS_URL,
+      privacyUrl: value.PRIVACY_URL,
+      operator: value.OPERATOR_NAME
+        ? { name: value.OPERATOR_NAME, address: value.OPERATOR_ADDRESS }
+        : undefined,
+      copyrightEmail: value.COPYRIGHT_EMAIL,
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

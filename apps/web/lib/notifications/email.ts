@@ -133,8 +133,20 @@ async function eligible(row: Claimed, now: Date) {
   }
 }
 
+// Names who sends the email and where, from OPERATOR_NAME and OPERATOR_ADDRESS, so every email
+// identifies its sender with a postal address next to the unsubscribe link.
+export function senderLine(operator: { name: string; address?: string } | undefined) {
+  if (!operator) return ""
+  const address = operator.address
+    ?.split(/\s*\n\s*/)
+    .filter(Boolean)
+    .join(", ")
+  return `\nSent by ${operator.name}${address ? `, ${address}` : ""}.\n`
+}
+
 export async function deliverNotificationEmails() {
-  const { smtp, appUrl } = getConfig()
+  const { smtp, appUrl, legal } = getConfig()
+  const footer = senderLine(legal.operator)
   const totals = { sent: 0, skipped: 0, retried: 0, failed: 0 }
   if (!smtp || !appUrl) return totals
   const concurrency = envInteger("NOTIFICATION_EMAIL_CONCURRENCY", 2, 1, 10)
@@ -174,7 +186,7 @@ export async function deliverNotificationEmails() {
               from: smtp.from,
               to: recipient.email,
               subject: subjects[row.kind],
-              text: `${subjects[row.kind]}.\n\nSign in to Sniptide to view this activity:\n${destination}\n\nNotification settings:\n${settings}\n\nStop these emails:\n${unsubscribe.href}\n`,
+              text: `${subjects[row.kind]}.\n\nSign in to Sniptide to view this activity:\n${destination}\n\nNotification settings:\n${settings}\n\nStop these emails:\n${unsubscribe.href}\n${footer}`,
               messageId: `<notification-${row.id}@${new URL(appUrl).hostname}>`,
               headers: {
                 "List-Unsubscribe": `<${unsubscribe.href}>`,

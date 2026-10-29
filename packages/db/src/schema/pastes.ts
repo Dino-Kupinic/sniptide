@@ -64,6 +64,7 @@ export const paste = pgTable(
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     bytes: integer("bytes").notNull().default(0),
+    firstLanguage: text("first_language"),
     visibility: visibility("visibility").notNull(),
     // scrypt hash ("salt:hash", hex), never the password itself.
     passwordHash: text("password_hash"),
@@ -154,6 +155,22 @@ export const pasteViewDay = pgTable(
   (table) => [
     primaryKey({ columns: [table.pasteId, table.day] }),
     index("paste_view_day_retention_idx").on(table.day, table.pasteId),
+  ],
+)
+
+export const pasteVisit = pgTable(
+  "paste_visit",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pasteId: uuid("paste_id")
+      .notNull()
+      .references(() => paste.id, { onDelete: "cascade" }),
+    acceptedAt: time("accepted_at").notNull().defaultNow(),
+    day: integer("day").notNull(),
+  },
+  (table) => [
+    index("paste_visit_pending_idx").on(table.acceptedAt, table.id),
+    index("paste_visit_paste_idx").on(table.pasteId),
   ],
 )
 

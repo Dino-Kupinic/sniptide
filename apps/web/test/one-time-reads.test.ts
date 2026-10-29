@@ -3,6 +3,7 @@ import SharePage from "@/app/[slug]/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { POST as revealRoute } from "@/app/[slug]/reveal/route"
 import { readSharedPaste } from "@/lib/pastes/store"
+import { drainVisits } from "@/lib/pastes/visits"
 import {
   hasDatabase,
   marker,
@@ -153,11 +154,14 @@ describeDb("one-time reads", () => {
     expect(await response.text()).not.toContain(marker("burnraw"))
   })
 
-  test("simultaneous views of an ordinary paste are all counted", async () => {
+  test("simultaneous ordinary views are counted when the durable queue drains", async () => {
     // Views come from browsers; a request with no user agent isn't counted.
     request.headers = new Headers({ "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/120.0" })
     await Promise.all(Array.from({ length: 8 }, () => page("plain")))
 
+    expect((await pasteRow("plain"))?.views).toBe(0)
+    expect(await viewDayTotal("plain")).toBe(0)
+    expect(await drainVisits()).toMatchObject({ consumed: 8 })
     expect((await pasteRow("plain"))?.views).toBe(8)
     expect(await viewDayTotal("plain")).toBe(8)
     expect((await pasteRow("plain"))?.deletedAt).toBeNull()

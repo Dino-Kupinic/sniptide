@@ -92,8 +92,18 @@ const tokenJsonError = (status: number, description: string, example: string) =>
   },
 })
 
+const idempotencyParameter = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: false,
+  description:
+    "Optional on create paste and create collection only. Token-scoped, visible ASCII, 1–128 characters. For 24 hours, the same route and JSON payload replay the original 201 response. A changed route or payload returns 409. Authentication, scope, and rate limits apply to every attempt.",
+  schema: { type: "string", minLength: 1, maxLength: 128, pattern: "^[!-~]+$" },
+} as const
+
+// Either a personal API token, or an OAuth access token granted `scope` (lib/oauth).
 const tokenAccess = (scope: Scope) => ({
-  security: [{ apiToken: [] }],
+  security: [{ apiToken: [] }, { oauth: [scope] }],
   "x-required-scopes": [scope],
 })
 
@@ -191,13 +201,14 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "Sniptide HTTP API",
-    version: "1.0.0",
+    version: "1.1.0",
     summary: "The endpoints Sniptide serves to the public.",
     description: [
       "Everything a share link does over HTTP: reading a paste's files as plain text, unlocking a",
       "password-protected paste and revealing a burn-after-read one, plus the health and metrics",
       "endpoints that self-hosters point their monitoring at.",
       "",
+      "The v1 compatibility and deprecation policy is at https://docs.sniptide.com/api-reliability.",
       "With a personal API token (Settings → API tokens) the `/api/v1` endpoints capture code as",
       "pastes, list and pull your pastes and collections, and sync env groups. They are what the",
       "`sniptide` CLI calls, and coding agents can call them directly.",
@@ -253,6 +264,123 @@ export const openApiDocument = {
     },
   ],
   paths: {
+    "/api/v1/batch": {
+      post: {
+        operationId: "batchCreate",
+        tags: ["Token API"],
+        summary: "Create up to 20 pastes or collections",
+        description:
+          "Runs typed create operations sequentially in input order, each in its own transaction. Returns 207 with an ordered result for every item. Earlier successes remain committed when another item fails. Each item requires a token-scoped idempotency key, uses the corresponding single-create route namespace, and consumes one token request plus the paste-create quota when applicable. The batch request itself also consumes one token request. Limits and storage budgets apply before each mutation. Maximum JSON body is 8 MiB.",
+        ...tokenAccess("write"),
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["operations"],
+                properties: {
+                  operations: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: 20,
+                    items: {
+                      oneOf: [
+                        {
+                          type: "object",
+                          additionalProperties: false,
+                          required: ["operation", "key", "body"],
+                          properties: {
+                            operation: { const: "create_paste" },
+                            key: { type: "string", minLength: 1, maxLength: 128 },
+                            body: { $ref: "#/components/schemas/Capture" },
+                          },
+                        },
+                        {
+                          type: "object",
+                          additionalProperties: false,
+                          required: ["operation", "key", "body"],
+                          properties: {
+                            operation: { const: "create_collection" },
+                            key: { type: "string", minLength: 1, maxLength: 128 },
+                            body: {
+                              type: "object",
+                              required: ["name"],
+                              additionalProperties: false,
+                              properties: { name: { type: "string", minLength: 1, maxLength: 40 } },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              example: {
+                operations: [
+                  {
+                    operation: "create_collection",
+                    key: "import-collection-1",
+                    body: { name: "Imported" },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          "207": {
+            description: "Ordered independent results, including partial failures.",
+            content: {
+              "application/json": {
+                example: {
+                  results: [
+                    {
+                      index: 0,
+                      key: "import-collection-1",
+                      status: 201,
+                      body: { collection: { slug: "imported", name: "Imported", pasteCount: 0 } },
+                    },
+                  ],
+                },
+                schema: {
+                  type: "object",
+                  required: ["results"],
+                  properties: {
+                    results: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["index", "key", "status", "body"],
+                        properties: {
+                          index: { type: "integer" },
+                          key: { type: "string" },
+                          status: { type: "integer" },
+                          body: { type: "object" },
+                          retryAfterSeconds: { type: "integer" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": tokenJsonError(
+            400,
+            "Invalid batch envelope or unsupported operation.",
+            "The request isn't valid.",
+          ),
+          "413": tokenJsonError(
+            413,
+            "The batch body exceeds 8 MiB.",
+            "The request body is too large.",
+          ),
+          ...tokenErrors,
+        },
+      },
+    },
     "/{slug}/raw": {
       get: {
         operationId: "getRawFile",
@@ -452,7 +580,7 @@ export const openApiDocument = {
         tags: ["MCP"],
         summary: "Call the Sniptide MCP server",
         description:
-          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No OAuth discovery or SSE sessions. See packages/mcp/README.md for client configuration.",
+          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with OAuth (the client discovers it from the 401's WWW-Authenticate header) or a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No SSE sessions. See packages/mcp/README.md for client configuration.",
         ...tokenAccess("read"),
         requestBody: {
           required: true,
@@ -685,6 +813,7 @@ export const openApiDocument = {
       },
       post: {
         operationId: "createPaste",
+        parameters: [idempotencyParameter],
         tags: ["Token API"],
         summary: "Capture code as a paste",
         description: [
@@ -718,6 +847,11 @@ export const openApiDocument = {
             },
           },
           "400": tokenJsonError(400, "The capture isn't valid.", "Give the paste a title."),
+          "409": tokenJsonError(
+            409,
+            "An idempotency key was reused with a different route or payload.",
+            "This Idempotency-Key was used for another route or payload.",
+          ),
           "404": tokenJsonError(
             404,
             "The collection doesn't exist.",
@@ -952,6 +1086,7 @@ export const openApiDocument = {
       },
       post: {
         operationId: "createOwnCollection",
+        parameters: [idempotencyParameter],
         tags: ["Token API"],
         summary: "Create a collection",
         description:
@@ -1344,6 +1479,27 @@ export const openApiDocument = {
         description:
           "A personal API token (`snpt_…`) from Settings → API tokens. Shown once when created; revoke it there.",
       },
+      oauth: {
+        type: "oauth2",
+        description: [
+          "OAuth 2.1 for agents and apps that act for a user. Clients register themselves at",
+          "`/api/oauth/register` (RFC 7591), use PKCE with S256, and get an access token that lasts",
+          "an hour plus a rotating refresh token. Discovery: `/.well-known/oauth-authorization-server`",
+          "and `/.well-known/oauth-protected-resource`. The user can disconnect the app in",
+          "Settings → API tokens. Relative URLs resolve against the instance this document came from.",
+        ].join(" "),
+        flows: {
+          authorizationCode: {
+            authorizationUrl: "/oauth/authorize",
+            tokenUrl: "/api/oauth/token",
+            refreshUrl: "/api/oauth/token",
+            scopes: {
+              read: "Search and read your snippets, collections and env groups.",
+              write: "Create, edit and delete snippets, collections and env groups. Includes read.",
+            },
+          },
+        },
+      },
       metricsToken: {
         type: "http",
         scheme: "bearer",
@@ -1572,6 +1728,15 @@ export const openApiDocument = {
 } as const
 
 export const internalRoutes = [
+  "/.well-known/api-catalog",
+  // OAuth follows its RFCs and is discovered from these metadata documents instead (lib/oauth).
+  "/.well-known/oauth-authorization-server",
+  "/.well-known/oauth-protected-resource/[[...path]]",
+  "/api/oauth/authorize",
+  "/api/oauth/register",
+  "/api/oauth/revoke",
+  "/api/oauth/token",
+  "/api/agent-share/[...path]",
   "/[slug]/copy",
   "/[slug]/preview",
   "/[slug]/preview.mp4",
@@ -1580,6 +1745,7 @@ export const internalRoutes = [
   "/api/analytics",
   "/api/analytics/[...path]",
   "/api/auth/[...all]",
+  "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",

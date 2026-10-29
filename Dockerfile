@@ -16,6 +16,7 @@ COPY packages/auth/package.json packages/auth/
 COPY packages/cli/package.json packages/cli/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/mcp/package.json packages/mcp/
+COPY packages/sdk/package.json packages/sdk/
 COPY packages/db/package.json packages/db/
 COPY packages/typescript/package.json packages/typescript/
 COPY packages/ui/package.json packages/ui/
@@ -38,12 +39,8 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
-# Without a heap limit V8 sizes the heap from the host's RAM, not the app's needs, and a server
-# that is never short of memory keeps growing until the host is (about 440 MB resident under load,
-# against about 260 MB with this cap). Set NODE_OPTIONS to change it; it replaces the whole value.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS=--max-old-space-size=384 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     MIGRATIONS_DIR=/app/migrations

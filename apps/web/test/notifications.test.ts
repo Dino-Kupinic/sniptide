@@ -14,6 +14,7 @@ import {
 } from "@/lib/notifications/store"
 import { purgeStaleData } from "@/lib/pastes/purge"
 import { leaveShare, readSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import { drainVisits } from "@/lib/pastes/visits"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // The bell's notifications (WRK-136): the events that make them, what the feed returns for whom,
@@ -80,7 +81,7 @@ describeDb("notifications", () => {
     expect(await kinds("owner")).toEqual([])
   })
 
-  test("a paste reaching 10 views tells its owner, and the 11th does not", async () => {
+  test("draining a paste reaching 10 views tells its owner, and the 11th does not", async () => {
     await seedPaste({ slug: "popular", owner: "owner", visibility: "public" })
     await getDb().update(paste).set({ views: 8 }).where(eq(paste.slug, "popular"))
     signInAs("reader")
@@ -88,10 +89,13 @@ describeDb("notifications", () => {
     expect(await kinds("owner")).toEqual([])
     signInAs("reader")
     await readSharedPaste("popular", { visit: true })
+    expect(await kinds("owner")).toEqual([])
+    await drainVisits()
     expect(await kinds("owner")).toEqual(["views"])
     signInAs("reader")
     await readSharedPaste("popular", { visit: true })
 
+    await drainVisits()
     const feed = await feedFor("owner")
     expect(feed.items).toHaveLength(1)
     expect(feed.items[0]).toMatchObject({

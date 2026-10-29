@@ -1,0 +1,35 @@
+{
+  "name": "@sniptide/sdk",
+  "version": "0.1.0",
+  "description": "Official Sniptide API client for JavaScript and TypeScript",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://sniptide.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dino-Kupinic/sniptide.git",
+    "directory": "packages/sdk"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "bun test test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:tooling"
+  }
+}

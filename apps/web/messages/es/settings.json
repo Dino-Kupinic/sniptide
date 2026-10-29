@@ -102,6 +102,7 @@
     "tokenCreatedAt": "Creado el {date}",
     "tokenUsedAt": "usado {time}",
     "neverUsed": "sin usar",
+    "connectedApp": "Conectado con OAuth",
     "tokenExpiresAt": "caduca el {date}",
     "groupUpdated": "{count, plural, one {# variable} other {# variables}} · actualizado {time}",
     "pushEnvHint": "Sube el .env de un proyecto con <command>sniptide env push my-app</command>; después descárgalo en otro equipo o ejecuta un comando con él.",

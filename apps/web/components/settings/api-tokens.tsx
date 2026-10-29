@@ -196,9 +196,16 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
             <li key={token.id} className={rowClass}>
               <div className="flex min-w-0 max-w-full flex-col gap-0.5">
                 <span className="truncate text-sm font-medium">{token.name}</span>
-                <span className="font-mono text-[12px] text-muted-foreground">
-                  {token.prefix}… · {token.scopes.join(" + ")}
-                </span>
+                {token.connectedApp ? (
+                  <span className="text-[12px] text-muted-foreground">
+                    {t("connectedApp")} ·{" "}
+                    <span className="font-mono">{token.scopes.join(" + ")}</span>
+                  </span>
+                ) : (
+                  <span className="font-mono text-[12px] text-muted-foreground">
+                    {token.prefix}… · {token.scopes.join(" + ")}
+                  </span>
+                )}
                 <span className="text-[12px] text-muted-foreground">
                   {t("tokenCreatedAt", { date: formatDate(token.createdAt, locale) })} ·{" "}
                   {token.lastUsedAt

@@ -1,0 +1,70 @@
+---
+title: OAuth for agents
+description: Let an MCP client or app connect to your account with a sign-in instead of a pasted token.
+---
+
+Sniptide is an OAuth 2.1 authorization server for its own API and MCP server. A client that
+supports OAuth, such as Claude Code, Claude, or Cursor, needs only the MCP URL. It discovers the
+rest, opens a Sniptide consent screen in the browser, and receives a token after you allow it.
+Personal [API tokens](/api-tokens) keep working, and a script or CI job should still use one.
+
+## Connect a client
+
+Add the MCP server without an `Authorization` header:
+
+```bash
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
+```
+
+The first request gets a `401` with this header, which points the client at the rest:
+
+```http
+WWW-Authenticate: Bearer resource_metadata="https://app.sniptide.com/.well-known/oauth-protected-resource/api/mcp"
+```
+
+The client then registers itself, sends you to the consent screen, and exchanges the code for a
+token. The screen names the client and the address it returns you to. Allow access only when you
+started the connection from that client.
+
+## What a connection can do
+
+| Scope | Allows |
+| --- | --- |
+| `read` | Search and read your snippets, collections and env groups. |
+| `write` | Create, edit and delete them as well. `write` always includes `read`. |
+
+A client that asks for no scope gets `read`. The access token lasts an hour. The client renews it
+with a refresh token, which changes on every use and expires after 30 days without one. The
+connection appears in Settings, API tokens, under the client's name, and revoking it there ends it
+at once.
+
+## Endpoints
+
+| Purpose | Endpoint |
+| --- | --- |
+| Protected resource metadata (RFC 9728) | `/.well-known/oauth-protected-resource`, and `/.well-known/oauth-protected-resource/api/mcp` for the MCP server |
+| Authorization server metadata (RFC 8414) | `/.well-known/oauth-authorization-server` |
+| Client registration (RFC 7591) | `POST /api/oauth/register` |
+| Consent screen | `GET /oauth/authorize` |
+| Token | `POST /api/oauth/token` |
+| Revocation (RFC 7009) | `POST /api/oauth/revoke` |
+
+Every client is public and proves itself with PKCE, so registration accepts only
+`token_endpoint_auth_method: "none"` and the code challenge method must be `S256`. Redirect URIs
+use `https`, `http` on `localhost` or `127.0.0.1` with any port, or an app's own scheme such as
+`cursor://`. A `resource` parameter, when sent, must be on the same instance.
+
+## Errors
+
+Errors follow RFC 6749: a JSON body with `error` and `error_description`. A code works once and
+for ten minutes, so `invalid_grant` usually means the client retried an exchange. Start the
+connection again. Registration allows 20 requests an hour and the token endpoint 60 a minute for
+each client address, with `RateLimit` headers and `Retry-After` on a `429`.
+
+## Self-hosted instances
+
+OAuth works on a self-hosted instance with no extra setup. Set `BETTER_AUTH_URL` to the address
+people use, because the issuer and every endpoint above are built from it.
+
+Sniptide doesn't support OpenID Connect, client secrets, the device flow, or agent identity
+assertions such as ID-JAG.

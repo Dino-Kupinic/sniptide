@@ -93,6 +93,7 @@ export async function packRelease(product, output, options = {}) {
       gitHead: commit,
       description: pkg.description,
       license: pkg.license,
+      homepage: "https://sniptide.com",
       type: "module",
       repository: {
         type: "git",

@@ -1,46 +1,34 @@
 ---
 title: Memory and resources
-description: How much memory Sniptide needs, and the limits the image and compose set.
+description: Default memory behavior and optional resource limits.
 ---
 
-One Sniptide server sits around 100 MB idle and 250 to 300 MB under load. The defaults are sized
-for a small server.
+The image leaves `NODE_OPTIONS` unset, so Node uses its normal heap sizing. The Compose and
+Coolify templates do not impose fixed RAM ceilings by default. Your hosting platform can still
+apply its own resource limits.
 
-## The two limits
+## Optional limits
 
-- **Heap cap.** The image runs Node with `NODE_OPTIONS=--max-old-space-size=384`. Without a cap
-  Node sizes its heap from the host's RAM and keeps growing into it, so a server that is never
-  short of memory ends up around 440 MB resident under load against about 260 MB with the cap.
-- **Container ceiling.** Give the container a memory limit too (`--memory 768m` with
-  `docker run`, or `SNIPTIDE_MEMORY` with compose). If the app ever reaches it, Docker restarts
-  Sniptide instead of the kernel killing other processes on the server. Set the swap limit to the
-  same value so a runaway restarts at the ceiling instead of thrashing.
+Set `SNIPTIDE_MEMORY` for the app container or `POSTGRES_MEMORY` for the database when you want
+an explicit ceiling. Both default to `0`, which leaves the template's ceiling unset. You can also
+supply Node flags through `NODE_OPTIONS`, including an explicit heap size when needed.
 
-Compose and the Coolify template set both: 768 MB for the app, 512 MB for Postgres (`POSTGRES_MEMORY`),
-and the 384 MB heap.
+Heap size is only part of the app's memory use. Leave room for native buffers, syntax highlighting,
+active requests and the database when choosing limits. Resource needs depend on your workload.
 
-<Callout type="warn">
-`NODE_OPTIONS` replaces the whole value. If you set it to add a flag, include
-`--max-old-space-size` too.
-</Callout>
+## Remove old overrides
 
-## On a bigger server
+Older images and templates supplied a fixed Node heap cap and small container ceilings. If an
+existing Coolify resource or `.env` file still sets `NODE_OPTIONS`, `SNIPTIDE_MEMORY` or
+`POSTGRES_MEMORY`, clear those values or set the container ceilings to `0`, then redeploy.
+Updating the template does not remove saved deployment overrides.
 
-Raise both, keeping the heap at about half the ceiling. For example `--memory 1536m` with
-`NODE_OPTIONS=--max-old-space-size=768`; in compose, set `SNIPTIDE_MEMORY=1536m` and
-`NODE_OPTIONS=--max-old-space-size=768` in `.env`. Raise `DATABASE_POOL_SIZE` only after checking
-Postgres' connection budget.
+## Build memory
 
-The syntax-highlight cache uses part of the heap (32 MB by default, `HIGHLIGHT_CACHE_BYTES`; `0`
-turns it off), and actual memory use is larger than the cached size.
+A production build needs more memory than a running app. On a small server, pull the published
+image instead of building it there. Each preview deployment also runs its own app and database.
 
-## Building the image is different
+## Monitor resources
 
-Building takes far more memory than running (a `next build` can use 2 GB or more). On a small
-server, pull the published image instead of building there. Every PR preview on a Coolify box is
-another server and database too, so budget for them.
-
-## Watching it
-
-Set `METRICS_TOKEN` to enable `GET /api/metrics` (memory, CPU time, event-loop delay and query
-statistics per process). See [Configuration](/self-hosting/configuration#monitoring).
+Set `METRICS_TOKEN` to enable `GET /api/metrics`, which reports process memory, CPU time,
+event-loop delay and query statistics. See [Configuration](/self-hosting/configuration#monitoring).
