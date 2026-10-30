@@ -128,7 +128,7 @@ export function QuickPaste({
 
   const router = useRouter()
   const draftKey = `sniptide:quick-paste:${encodeURIComponent(draftScope)}`
-  const fresh = React.useMemo(() => ({ ...emptyDraft, ...defaults }), [defaults])
+  const [fresh] = React.useState(() => ({ ...emptyDraft, ...defaults }))
   const [draft, setDraft] = React.useState<Draft>(fresh)
   const [saved, setSaved] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
