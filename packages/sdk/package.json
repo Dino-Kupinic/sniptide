@@ -2,7 +2,7 @@
   "name": "@sniptide/sdk",
   "version": "0.1.0",
   "description": "Official Sniptide API client for JavaScript and TypeScript",
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "homepage": "https://sniptide.com",
   "repository": {
     "type": "git",

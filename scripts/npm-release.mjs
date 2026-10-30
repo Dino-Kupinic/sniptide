@@ -18,6 +18,7 @@ export const products = {
     paths: ["packages/cli", "packages/contracts"],
     bin: "sniptide",
     bundled: ["@sniptide/contracts"],
+    notices: ["THIRD_PARTY_NOTICES"],
     external: [],
   },
   mcp: {
@@ -109,6 +110,7 @@ export async function packRelease(product, output, options = {}) {
         ...(spec.bin ? ["dist"] : ["src", "postcss.config.mjs"]),
         "README.md",
         "LICENSE",
+        ...(spec.notices ?? []),
         ...(product === "mcp" ? ["server.json"] : []),
       ],
       ...(Object.keys(dependencies).length ? { dependencies } : {}),
@@ -116,7 +118,8 @@ export async function packRelease(product, output, options = {}) {
     }
     await writeFile(path.join(stage, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`)
     await copyFile(path.join(source, "README.md"), path.join(stage, "README.md"))
-    await copyFile(path.join(root, "LICENSE"), path.join(stage, "LICENSE"))
+    for (const file of ["LICENSE", ...(spec.notices ?? [])])
+      await copyFile(path.join(source, file), path.join(stage, file))
     if (product === "mcp") {
       if (
         metadata.name !== manifest.mcpName ||

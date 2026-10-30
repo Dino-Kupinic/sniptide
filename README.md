@@ -54,5 +54,6 @@ The API reference is available at `/docs/api` on your instance.
 
 ## License
 
-Sniptide is licensed under [AGPL-3.0-only](LICENSE). See [Licensing](LICENSING.md) for the
+The app and UI are licensed under [AGPL-3.0-only](LICENSE). The client packages and shared
+contracts are licensed under MIT. See [Licensing](LICENSING.md) for the
 open-source core and hosted services.
