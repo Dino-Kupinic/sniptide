@@ -78,7 +78,7 @@ try {
         "package/README.md",
         `package/dist/${item.product === "cli" ? "sniptide" : "sniptide-mcp"}.js`,
         "package/package.json",
-        ...(item.product === "mcp" ? ["package/server.json"] : []),
+        ...(item.product === "mcp" ? ["package/server.json"] : ["package/THIRD_PARTY_NOTICES"]),
       ].sort(),
     )
   }
@@ -173,6 +173,20 @@ try {
     const manifest = JSON.parse(
       await readFile(path.join(install, "node_modules", artifact.name, "package.json")),
     )
+    assert.equal(manifest.license, "MIT")
+    const license = await readFile(
+      path.join(install, "node_modules", artifact.name, "LICENSE"),
+      "utf8",
+    )
+    assert.match(license, /^MIT License\n/)
+    assert.match(license, /Copyright \(c\) 2026 Dino Kupinic/)
+    if (artifact.product === "cli") {
+      const notice = await readFile(
+        path.join(install, "node_modules", artifact.name, "THIRD_PARTY_NOTICES"),
+        "utf8",
+      )
+      assert.match(notice, /Copyright \(c\) 2025 Colin McDonnell/)
+    }
     assert.equal(manifest.name, artifact.name)
     assert.equal(manifest.version, artifact.version)
     assert.deepEqual(manifest.bin, {

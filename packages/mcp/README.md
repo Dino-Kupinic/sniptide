@@ -154,3 +154,7 @@ revocation, expiry, pagination, protection preservation and rate limits. The dat
 `_test`; the suite clears it. CI runs both suites. Client configuration examples follow the linked
 Claude Code and Cursor documentation; acceptance in those desktop/editor clients should be checked
 with your own token after deploying the PR.
+
+## License
+
+This package is licensed under the [MIT License](LICENSE).

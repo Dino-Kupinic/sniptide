@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "sniptide"
 version = "0.1.0"
 description = "Official Sniptide API client"
 requires-python = ">=3.9"
-license = {text = "AGPL-3.0-only"}
+license = "MIT"
+license-files = ["LICENSE"]
 readme = "README.md"
 
 [project.urls]

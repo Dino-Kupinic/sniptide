@@ -175,3 +175,7 @@ passes stdio and signals through, and exits with the command's status (127 when 
 
 Values are never printed, in JSON output included, except by `env pull --stdout`. With `--json`,
 push and pull report variable names only.
+
+## License
+
+This package is licensed under the [MIT License](LICENSE).

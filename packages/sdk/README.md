@@ -24,3 +24,7 @@ Before publishing, verify ownership and availability of `@sniptide/sdk`, configu
 Environment group reads and writes return variable values, which can contain secrets. Handle responses accordingly. Listing groups returns counts, not values.
 
 The response limit defaults to 64 MiB. Set the fourth constructor argument `maxResponseBytes` to a positive integer for a different limit.
+
+## License
+
+This package is licensed under the [MIT License](LICENSE).
