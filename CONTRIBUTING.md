@@ -3,6 +3,11 @@
 Use the [development guide](docs/development.md) for setup, code ownership, and checks.
 This page covers commits, pull requests, releases, and database migration rules.
 
+## License
+
+Contributions are licensed under [AGPL-3.0-only](LICENSE). See [Licensing](LICENSING.md) for
+the scope of the open-source core and hosted services.
+
 ## Conventional Commits
 
 Sniptide uses [Conventional Commits](https://www.conventionalcommits.org/). Every commit message
