@@ -30,7 +30,7 @@ export function useHighlight(content: string, filename: string): HighlightedLine
     }
   }, [grammar])
 
-  return React.useMemo(() => {
+  const lines = React.useMemo(() => {
     if (!grammar || ready?.grammar !== grammar) return undefined
     if (isLargeEditorContent(deferred)) return undefined
     try {
@@ -39,4 +39,6 @@ export function useHighlight(content: string, filename: string): HighlightedLine
       return undefined
     }
   }, [grammar, ready, deferred])
+
+  return deferred === content ? lines : undefined
 }

@@ -7,6 +7,93 @@ import { expect } from "e2e"
 import { databaseUrl } from "./environment"
 import { test } from "./fixtures"
 
+test("refreshing server defaults preserves quick draft edits that are not stored yet", async ({
+  account,
+  app,
+  browser,
+  screen,
+}) => {
+  await app.open("/dashboard")
+  const code = screen.getByLabel("Code")
+  await code.fill("stored draft")
+  await code.press("Control+s")
+  await browser.evaluate(() => {
+    const setItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("sniptide:quick-paste:")) return
+      setItem.call(this, key, value)
+    }
+    return null
+  })
+  await code.fill("latest unsaved draft")
+  await screen.getByRole("button", new RegExp(account.email.split("@")[0] ?? "")).tap()
+  await screen.getByRole("menuitem", "Language", { exact: true }).tap()
+  await screen.getByRole("menuitemradio", "Deutsch", { exact: true }).tap()
+  await expect(screen.getByRole("heading", "Schneller Paste")).toBeVisible()
+  await expect(code).toHaveValue("latest unsaved draft")
+})
+
+test("the visible quick draft matches current input while highlighting catches up", async ({
+  app,
+  browser,
+  screen,
+}) => {
+  await app.open("/dashboard")
+  const code = screen.getByLabel("Code")
+  await code.fill("const answer: number = 42")
+  await expect
+    .poll(() =>
+      browser
+        .locator('section[aria-labelledby="quick-paste-heading"] [aria-hidden="true"] span')
+        .count(),
+    )
+    .toBeGreaterThan(0)
+  await browser.evaluate(() => {
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Code"]')
+    const parent = textarea?.parentElement
+    const layer = parent?.querySelector('[aria-hidden="true"] > div')
+    if (!textarea || !parent || !layer) throw new Error("The quick draft editor is missing")
+    const snapshots: { value: string; overlay: string }[] = []
+    const observer = new MutationObserver(() => {
+      snapshots.push({
+        value: textarea.value,
+        overlay: Array.from(layer.children, (line) => line.textContent).join("\n"),
+      })
+    })
+    observer.observe(parent, { childList: true, characterData: true, subtree: true })
+    Object.assign(window, {
+      finishHighlightCheck: () => {
+        observer.disconnect()
+        return snapshots
+      },
+    })
+    return null
+  })
+  const latest = "const answer: number = 43;\nconsole.log(answer)"
+  await code.fill(latest)
+  await expect
+    .poll(() =>
+      browser.evaluate(() => {
+        const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Code"]')
+        const layer = textarea?.parentElement?.querySelector('[aria-hidden="true"] > div')
+        return {
+          overlay: layer ? Array.from(layer.children, (line) => line.textContent).join("\n") : null,
+          highlighted: Boolean(layer?.querySelector("span")),
+        }
+      }),
+    )
+    .toEqual({ overlay: latest, highlighted: true })
+  const snapshots = await browser.evaluate(() =>
+    (
+      window as typeof window & {
+        finishHighlightCheck(): { value: string; overlay: string }[]
+      }
+    ).finishHighlightCheck(),
+  )
+  expect(snapshots.length).toBeGreaterThan(0)
+  expect(snapshots.every(({ value, overlay }) => value === overlay)).toBe(true)
+})
+
 test("quick drafts stay with their account when the browser changes accounts", async ({
   app,
   browser,
