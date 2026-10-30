@@ -124,10 +124,10 @@ export function InviteField({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className={cn("flex gap-2", submitLabel && "max-lg:flex-wrap")}>
+      <div className="flex flex-wrap gap-2">
         <label
           className={cn(
-            "rounded-lg flex min-w-0 flex-1 items-center gap-2 border border-input bg-background px-3 focus-within:border-foreground",
+            "rounded-lg flex min-w-0 flex-1 basis-[12rem] items-center gap-2 border border-input bg-background px-3 focus-within:border-foreground",
             submitLabel && "max-lg:basis-full",
             compact ? "h-9" : "h-10 lg:h-9",
             error && "border-destructive focus-within:border-destructive",

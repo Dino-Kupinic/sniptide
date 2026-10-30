@@ -4,11 +4,14 @@ import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { CollectionsView } from "@/components/collections/collections-view"
+import { Dashboard } from "@/components/dashboard/dashboard"
 import { PasteList } from "@/components/lists/paste-list"
 import { SharedList } from "@/components/lists/shared-list"
 import { TrashList } from "@/components/lists/trash-list"
+import { FileViewer } from "@/components/paste/file-viewer"
 import { InvitePeople } from "@/components/paste/invite-people"
 import { PasteEditor } from "@/components/paste/paste-editor"
+import { SidePanelProvider } from "@/components/paste/side-panel"
 import { AppShell } from "@/components/shell/app-shell"
 import { defaultSidebarState } from "@/components/shell/sidebar-state"
 import { SiteHostProvider } from "@/components/site-host"
@@ -65,6 +68,16 @@ export function UiStress({
             starred: starred.slice(0, 3).map((row) => ({ ...row, owned: true })),
           }}
         >
+          {screen === "dashboard" ? (
+            <Dashboard
+              data={data.dashboard}
+              firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
+              origin={origin}
+              host={host}
+              draftScope={`ui-stress-dashboard-${dataset}`}
+              defaults={{ expiry: "never", visibility: "private", burnAfterRead: false }}
+            />
+          ) : null}
           {screen === "pastes" ? (
             <PasteList
               title={dataset === "demo" ? "My pastes" : "Benachrichtigungseinstellungen"}
@@ -83,7 +96,7 @@ export function UiStress({
           {screen === "trash" ? (
             <TrashList
               rows={data.trash.slice(start, start + 10)}
-              sizeLabel="12.0 MB"
+              sizeLabel={dataset === "empty" ? "0 B" : dataset === "one" ? "1 B" : "12.0 MB"}
               host={host}
               query={query}
               pagination={pagination}
@@ -103,9 +116,21 @@ export function UiStress({
             <PasteEditor
               initial={data.editor}
               collections={data.collections}
-              draftScope="ui-stress"
+              draftScope={`ui-stress-${dataset}`}
               secretDetection={false}
             />
+          ) : null}
+          {screen === "viewer" ? (
+            <div className="mx-auto w-full max-w-5xl p-4">
+              <SidePanelProvider>
+                <FileViewer
+                  slug="ui-stress"
+                  files={data.editor.files.map((file) => ({ ...file, language: "typescript" }))}
+                  printable
+                  panelToggle
+                />
+              </SidePanelProvider>
+            </div>
           ) : null}
           {screen === "invites" ? (
             <div className="mx-auto w-full max-w-sm p-4">
