@@ -9,7 +9,7 @@ import {
 } from "@workspace/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { readRawFile, readSharedPaste, sharePaste } from "@/lib/pastes/store"
+import { readRawFile, readSharedPaste, revealSharedPaste, sharePaste } from "@/lib/pastes/store"
 import {
   drainVisits,
   scheduleVisitDrain,
@@ -412,9 +412,7 @@ describeDb("durable ordinary visits", () => {
 
   test("one explicit burn winner stays synchronous and is never queued", async () => {
     await seedPaste({ slug: "burn", owner: "owner", burnAfterRead: true })
-    const results = await Promise.all(
-      Array.from({ length: 20 }, () => readSharedPaste("burn", { reveal: true, visit: true })),
-    )
+    const results = await Promise.all(Array.from({ length: 20 }, () => revealSharedPaste("burn")))
     expect(results.filter(({ status }) => status === "ok")).toHaveLength(1)
     expect((await pasteRow("burn"))?.views).toBe(1)
     expect(await viewDayTotal("burn")).toBe(1)

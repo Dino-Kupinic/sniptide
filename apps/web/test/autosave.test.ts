@@ -11,6 +11,7 @@ import {
   readSharedPaste,
   renamePaste,
   restorePaste,
+  revealSharedPaste,
   setPasteCollection,
   setStarred,
   trashPaste,
@@ -206,7 +207,7 @@ describeDb("autosavePaste", () => {
   test("burning and restoring a paste invalidates an editor opened before the burn", async () => {
     const { slug, version } = await create({ burnAfterRead: true })
     signInAs(null)
-    expect((await readSharedPaste(slug, { reveal: true })).status).toBe("ok")
+    expect((await revealSharedPaste(slug)).status).toBe("ok")
     signInAs("owner")
     expect((await pasteRow(slug))?.version).toBe(version + 1)
     await restorePaste(slug)
