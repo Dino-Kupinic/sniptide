@@ -41,6 +41,7 @@ export function TopBar({
   counts: Record<string, number>
 }) {
   const t = useTranslations("Workspace")
+  const secretsT = useTranslations("Secrets")
   const locale = useLocale()
   const currentPath = usePathname()
   const pathname = currentPath.startsWith("/dev/ui-stress/")
@@ -108,7 +109,7 @@ export function TopBar({
         {pathname === "/secrets" && (
           <Button size="lg" render={<Link href="/secrets/new" />} nativeButton={false}>
             <PlusIcon />
-            {t("new_group")}
+            {secretsT("new_group")}
           </Button>
         )}
         {(collection || pathname === "/new" || pathname.endsWith("/edit")) && (
