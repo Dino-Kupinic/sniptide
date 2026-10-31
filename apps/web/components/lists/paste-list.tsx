@@ -35,6 +35,7 @@ import {
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { PasteCard } from "./paste-card"
+import { PasteIdentity } from "./paste-identity"
 import { RowMenu } from "./row-menu"
 import {
   FilterMenu,
@@ -257,7 +258,7 @@ export function PasteList({
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+        <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
         {quick}
       </div>
 
@@ -265,7 +266,7 @@ export function PasteList({
       <div className="flex flex-col gap-3">
         <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+            <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label={t("language")}
               options={languageOptions.map((id) => ({
@@ -343,17 +344,13 @@ export function PasteList({
                 {rows.map((row) => (
                   <TableRow key={row.slug} className="relative">
                     <TableCell className="truncate">
-                      <Link
-                        href={`/pastes/${row.slug}`}
+                      <PasteIdentity
                         title={row.title}
-                        className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-                      >
-                        {row.title}
-                      </Link>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {row.owner ? `@${row.owner.username} · ` : ""}
-                        {host}/{row.slug}
-                      </span>
+                        slug={row.slug}
+                        host={host}
+                        owner={row.owner?.username}
+                        href={`/pastes/${row.slug}`}
+                      />
                     </TableCell>
                     <TableCell className="text-[13px] text-foreground/80">
                       <LanguageLabel language={row.language} />

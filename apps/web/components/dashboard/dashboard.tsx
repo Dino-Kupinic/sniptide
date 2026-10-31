@@ -1,6 +1,7 @@
 "use client"
 
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import {
   Table,
   TableBody,
@@ -19,6 +20,9 @@ import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
+import { ListRowsSkeleton } from "@/components/loading/list-skeletons"
+import { ChartSkeleton, StatsSkeleton } from "@/components/loading/page-skeletons"
+import { LoadingRegion } from "@/components/loading/region"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { navigateTabs } from "@/components/tab-navigation"
 import { formatNumber } from "@/lib/format"
@@ -118,49 +122,29 @@ export function Dashboard({
 }: {
   draftScope: string
   defaults: React.ComponentProps<typeof QuickPaste>["defaults"]
-  data: DashboardData
+  data: DashboardData | Promise<DashboardData>
   firstName: string
   origin: string
   host: string
 }) {
-  const locale = useLocale()
   const t = useTranslations("Workspace")
-  const rangeLabels: Record<Range, string> = {
-    "1": t("today"),
-    "7": t("this_week"),
-    "30": t("this_month"),
-  }
   const [range, setRange] = React.useState<Range>("7")
   const [tab, setTab] = React.useState<Tab>("all")
   const panelId = React.useId()
-  const days = Number(range)
-
-  const views = sum(data.dailyViews.slice(-days))
-  const previousViews = sum(data.dailyViews.slice(-2 * days, -days))
-  const viewsTrend = trend(views, previousViews, locale)
-  const created = data.newPastes[range]
-
-  // The chart always shows at least a week so a single day still has context.
-  const chartDays = Math.max(7, days)
-  const chartValues = data.dailyViews.slice(-chartDays)
-  const chartLabels = (chartDays > 7 ? data.dayDates : data.dayNames).slice(-chartDays)
-  const peakIndex = chartValues.indexOf(Math.max(...chartValues))
-
-  const recent = data.recent
-    .filter((row) => tab === "all" || (row.visibility === tab && !row.burnAfterRead))
-    .slice(0, 5)
-
   return (
     <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
       <div className="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-col gap-1.5">
           <Greeting firstName={firstName} />
-          <p className="text-[15px] leading-5 text-muted-foreground lg:hidden">
-            {t("opens_in_period", { count: views, period: rangeLabels[range] })}{" "}
-            {data.expiringSoon > 0
-              ? t("expiring_links", { count: data.expiringSoon })
-              : t("nothing_expires_in_the_next_48_hours")}
-          </p>
+          <React.Suspense
+            fallback={
+              <LoadingRegion className="lg:hidden">
+                <Skeleton className="h-5 w-64 max-w-full" />
+              </LoadingRegion>
+            }
+          >
+            <DashboardSummary data={data} range={range} />
+          </React.Suspense>
         </div>
         {/* Phones get the range full width under the greeting; Import gist lives in the More sheet. */}
         <div className="mt-2 flex items-center gap-2 lg:mt-0">
@@ -182,99 +166,19 @@ export function Dashboard({
         </div>
       </div>
 
-      <div className="@container rounded-lg border border-border">
-        <div className="grid grid-cols-1 @min-[24rem]:grid-cols-2 @min-[48rem]:grid-cols-4">
-          <Stat
-            label={t("total_pastes")}
-            value={formatNumber(data.totalPastes, locale)}
-            note={
-              created > 0
-                ? t("created_in_period", { count: created, period: rangeLabels[range] })
-                : undefined
-            }
-            noteTone="primary"
-            className="border-b border-border @min-[24rem]:border-r @min-[48rem]:border-b-0"
-          />
-          <Stat
-            label={t("views")}
-            value={formatNumber(views, locale)}
-            note={viewsTrend === "new" ? t("new") : (viewsTrend ?? undefined)}
-            noteTone="primary"
-            className="border-b border-border @min-[48rem]:border-r @min-[48rem]:border-b-0"
-          />
-          <Stat
-            label={t("active_share_links")}
-            value={formatNumber(data.activeLinks, locale)}
-            note={
-              data.passwordProtected > 0
-                ? t("password_protected_count", { count: data.passwordProtected })
-                : undefined
-            }
-            className="border-b border-border @min-[24rem]:border-r @min-[24rem]:border-b-0"
-          />
-          <Stat
-            label={t("expiring_in_48h")}
-            value={formatNumber(data.expiringSoon, locale)}
-            note={
-              data.expiringSoon > 0 ? (
-                <Link
-                  href="/pastes?sort=expires"
-                  className="font-medium text-foreground underline underline-offset-2 hover:text-link"
-                >
-                  {t("review")}
-                </Link>
-              ) : undefined
-            }
-          />
-        </div>
-      </div>
+      <React.Suspense fallback={<StatsSkeleton />}>
+        <DashboardStats data={data} range={range} />
+      </React.Suspense>
 
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="hidden min-w-0 flex-[1.8] lg:flex">
           <QuickPaste key={draftScope} draftScope={draftScope} defaults={defaults} />
         </div>
-        <section
-          aria-labelledby="views-heading"
-          className="flex min-w-0 flex-1 flex-col gap-4 rounded-lg border border-border px-4 py-4 lg:px-5"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="views-heading" className="text-sm font-semibold">
-                <span className="lg:hidden">
-                  {t("views_in_period", {
-                    period: chartDays > 7 ? t("this_month") : t("this_week"),
-                  })}
-                </span>
-                <span className="hidden lg:inline">{t("views")}</span>
-              </h2>
-              <p className="hidden text-[13px] text-muted-foreground lg:block">
-                {t("across_all_share_links")}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-1.5 pt-0.5">
-              <Link
-                href="/analytics"
-                className="flex items-center gap-1 text-[13px] font-medium text-link outline-none hover:underline focus-visible:underline"
-              >
-                {t("view_analytics")}
-                <ArrowRightIcon className="size-3.5" />
-              </Link>
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="hidden size-2 bg-chart-1 lg:block" />
-                <span className="hidden lg:inline">
-                  {chartDays > 7 ? t("last_30_days") : t("last_7_days")}
-                </span>
-                <span className="lg:hidden">
-                  {t("peak_summary", {
-                    day: chartLabels[peakIndex] ?? "",
-                    count: formatNumber(chartValues[peakIndex] ?? 0, locale),
-                  })}
-                </span>
-              </span>
-            </div>
-          </div>
-          <ViewsBarChart values={chartValues} labels={chartLabels} className="flex-1" />
-        </section>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <React.Suspense fallback={<ChartSkeleton className="flex-1" />}>
+            <DashboardChart data={data} range={range} />
+          </React.Suspense>
+        </div>
       </div>
 
       <section
@@ -328,46 +232,205 @@ export function Dashboard({
           </Link>
         </div>
 
-        <div id={panelId} role="tabpanel" aria-labelledby={`${panelId}-tab-${tab}`}>
-          {recent.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              {t("no_recent_pastes", { visibility: tab })}{" "}
-              <Link href="/new" className="font-medium text-link hover:underline">
-                {t("create_one")}
-              </Link>
-            </p>
-          ) : (
-            <>
-              <RecentTable rows={recent} origin={origin} host={host} />
-              <ul className="flex flex-col lg:hidden">
-                {recent.map((row) => (
-                  <li
-                    key={row.slug}
-                    className="relative flex items-center gap-3 border-b border-border py-3 last:border-b-0"
-                  >
-                    <LanguageIcon language={row.language} />
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <Link
-                        href={`/pastes/${row.slug}`}
-                        className="truncate text-[15px] font-medium after:absolute after:inset-0"
-                      >
-                        {row.title}
-                      </Link>
-                      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <VisibilityIcon row={row} />
-                        <span className="truncate">
-                          <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
-                        </span>
-                      </span>
-                    </div>
-                    <RowMenu row={row} origin={origin} variant="sheet" />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
+        <React.Suspense fallback={<ListRowsSkeleton compact />}>
+          <RecentPastes data={data} tab={tab} panelId={panelId} origin={origin} host={host} />
+        </React.Suspense>
       </section>
+    </div>
+  )
+}
+
+type DashboardSource = DashboardData | Promise<DashboardData>
+
+function useDashboardData(source: DashboardSource) {
+  return "then" in source ? React.use(source) : source
+}
+
+function DashboardSummary({ data: source, range }: { data: DashboardSource; range: Range }) {
+  const data = useDashboardData(source)
+  const t = useTranslations("Workspace")
+  const views = sum(data.dailyViews.slice(-Number(range)))
+  const rangeLabels = { "1": t("today"), "7": t("this_week"), "30": t("this_month") }
+  return (
+    <p className="text-[15px] leading-5 text-muted-foreground lg:hidden">
+      {t("opens_in_period", { count: views, period: rangeLabels[range] })}{" "}
+      {data.expiringSoon > 0
+        ? t("expiring_links", { count: data.expiringSoon })
+        : t("nothing_expires_in_the_next_48_hours")}
+    </p>
+  )
+}
+
+function DashboardStats({ data: source, range }: { data: DashboardSource; range: Range }) {
+  const data = useDashboardData(source)
+  const t = useTranslations("Workspace")
+  const locale = useLocale()
+  const days = Number(range)
+  const views = sum(data.dailyViews.slice(-days))
+  const viewsTrend = trend(views, sum(data.dailyViews.slice(-2 * days, -days)), locale)
+  const created = data.newPastes[range]
+  const rangeLabels = { "1": t("today"), "7": t("this_week"), "30": t("this_month") }
+  return (
+    <div className="@container rounded-lg border border-border">
+      <div className="grid grid-cols-1 @min-[24rem]:grid-cols-2 @min-[48rem]:grid-cols-4">
+        <Stat
+          label={t("total_pastes")}
+          value={formatNumber(data.totalPastes, locale)}
+          note={
+            created > 0
+              ? t("created_in_period", { count: created, period: rangeLabels[range] })
+              : undefined
+          }
+          noteTone="primary"
+          className="border-b border-border @min-[24rem]:border-r @min-[48rem]:border-b-0"
+        />
+        <Stat
+          label={t("views")}
+          value={formatNumber(views, locale)}
+          note={viewsTrend === "new" ? t("new") : (viewsTrend ?? undefined)}
+          noteTone="primary"
+          className="border-b border-border @min-[48rem]:border-r @min-[48rem]:border-b-0"
+        />
+        <Stat
+          label={t("active_share_links")}
+          value={formatNumber(data.activeLinks, locale)}
+          note={
+            data.passwordProtected > 0
+              ? t("password_protected_count", { count: data.passwordProtected })
+              : undefined
+          }
+          className="border-b border-border @min-[24rem]:border-r @min-[24rem]:border-b-0"
+        />
+        <Stat
+          label={t("expiring_in_48h")}
+          value={formatNumber(data.expiringSoon, locale)}
+          note={
+            data.expiringSoon > 0 ? (
+              <Link
+                href="/pastes?sort=expires"
+                className="font-medium text-foreground underline underline-offset-2 hover:text-link"
+              >
+                {t("review")}
+              </Link>
+            ) : undefined
+          }
+        />
+      </div>
+    </div>
+  )
+}
+
+function DashboardChart({ data: source, range }: { data: DashboardSource; range: Range }) {
+  const data = useDashboardData(source)
+  const t = useTranslations("Workspace")
+  const locale = useLocale()
+  const chartDays = Math.max(7, Number(range))
+  const chartValues = data.dailyViews.slice(-chartDays)
+  const chartLabels = (chartDays > 7 ? data.dayDates : data.dayNames).slice(-chartDays)
+  const peakIndex = chartValues.indexOf(Math.max(...chartValues))
+  return (
+    <section
+      aria-labelledby="views-heading"
+      className="flex min-w-0 flex-1 flex-col gap-4 rounded-lg border border-border px-4 py-4 lg:px-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h2 id="views-heading" className="text-sm font-semibold">
+            <span className="lg:hidden">
+              {t("views_in_period", {
+                period: chartDays > 7 ? t("this_month") : t("this_week"),
+              })}
+            </span>
+            <span className="hidden lg:inline">{t("views")}</span>
+          </h2>
+          <p className="hidden text-[13px] text-muted-foreground lg:block">
+            {t("across_all_share_links")}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 pt-0.5">
+          <Link
+            href="/analytics"
+            className="flex items-center gap-1 text-[13px] font-medium text-link outline-none hover:underline focus-visible:underline"
+          >
+            {t("view_analytics")}
+            <ArrowRightIcon className="size-3.5" />
+          </Link>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="hidden size-2 bg-chart-1 lg:block" />
+            <span className="hidden lg:inline">
+              {chartDays > 7 ? t("last_30_days") : t("last_7_days")}
+            </span>
+            <span className="lg:hidden">
+              {t("peak_summary", {
+                day: chartLabels[peakIndex] ?? "",
+                count: formatNumber(chartValues[peakIndex] ?? 0, locale),
+              })}
+            </span>
+          </span>
+        </div>
+      </div>
+      <ViewsBarChart values={chartValues} labels={chartLabels} className="flex-1" />
+    </section>
+  )
+}
+
+function RecentPastes({
+  data: source,
+  tab,
+  panelId,
+  origin,
+  host,
+}: {
+  data: DashboardSource
+  tab: Tab
+  panelId: string
+  origin: string
+  host: string
+}) {
+  const data = useDashboardData(source)
+  const t = useTranslations("Workspace")
+  const recent = data.recent
+    .filter((row) => tab === "all" || (row.visibility === tab && !row.burnAfterRead))
+    .slice(0, 5)
+  return (
+    <div id={panelId} role="tabpanel" aria-labelledby={`${panelId}-tab-${tab}`}>
+      {recent.length === 0 ? (
+        <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+          {t("no_recent_pastes", { visibility: tab })}{" "}
+          <Link href="/new" className="font-medium text-link hover:underline">
+            {t("create_one")}
+          </Link>
+        </p>
+      ) : (
+        <>
+          <RecentTable rows={recent} origin={origin} host={host} />
+          <ul className="flex flex-col lg:hidden">
+            {recent.map((row) => (
+              <li
+                key={row.slug}
+                className="relative flex items-center gap-3 border-b border-border py-3 last:border-b-0"
+              >
+                <LanguageIcon language={row.language} />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <Link
+                    href={`/pastes/${row.slug}`}
+                    className="truncate text-[15px] font-medium after:absolute after:inset-0"
+                  >
+                    {row.title}
+                  </Link>
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                    <VisibilityIcon row={row} />
+                    <span className="truncate">
+                      <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
+                    </span>
+                  </span>
+                </div>
+                <RowMenu row={row} origin={origin} variant="sheet" />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   )
 }

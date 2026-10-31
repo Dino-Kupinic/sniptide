@@ -26,7 +26,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
-import { authClient } from "@/lib/auth-client"
+import { signOut as signOutAccount } from "@/lib/auth-client"
 import type { ViewerSummary } from "@/lib/viewer"
 import { isActivePath } from "./nav-config"
 
@@ -67,7 +67,7 @@ export function MoreSheet({
 
   async function signOut() {
     close()
-    await authClient.signOut()
+    await signOutAccount()
     router.replace("/sign-in")
     router.refresh()
   }

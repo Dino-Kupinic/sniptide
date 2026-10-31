@@ -23,7 +23,7 @@ import { navigateTabs } from "@/components/tab-navigation"
 import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
 import type { SocialProvider } from "@/lib/auth"
-import { authClient } from "@/lib/auth-client"
+import { signOut as signOutAccount } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import type { Preferences } from "@/lib/preferences"
 import {
@@ -194,7 +194,7 @@ export function SettingsView({
             size="xl"
             className="w-full"
             onClick={async () => {
-              await authClient.signOut()
+              await signOutAccount()
               router.replace("/sign-in")
               router.refresh()
             }}

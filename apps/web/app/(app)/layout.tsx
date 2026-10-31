@@ -1,4 +1,6 @@
 import { cookies } from "next/headers"
+import { Suspense } from "react"
+import { AppShellSkeleton } from "@/components/loading/app-shell-skeleton"
 import { AppShell } from "@/components/shell/app-shell"
 import { ResourceLinksProvider } from "@/components/shell/resource-links"
 import { parseSidebarState, SIDEBAR_COOKIE } from "@/components/shell/sidebar-state"
@@ -14,8 +16,26 @@ import { viewerFromUser } from "@/lib/viewer"
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // The sidebar cookie also holds each section's filter, which picks what sidebarData lists.
   const sidebar = parseSidebarState((await cookies()).get(SIDEBAR_COOKIE)?.value)
-  const [session, data, { host }, collections, trash] = await Promise.all([
-    requireSession(),
+  const session = await requireSession()
+  return (
+    <Suspense fallback={<AppShellSkeleton sidebar={sidebar} />}>
+      <LoadedShell sidebar={sidebar} session={session}>
+        {children}
+      </LoadedShell>
+    </Suspense>
+  )
+}
+
+async function LoadedShell({
+  children,
+  sidebar,
+  session,
+}: {
+  children: React.ReactNode
+  sidebar: ReturnType<typeof parseSidebarState>
+  session: Awaited<ReturnType<typeof requireSession>>
+}) {
+  const [data, { host }, collections, trash] = await Promise.all([
     sidebarData(sidebar.views),
     getSiteOrigin(),
     listCollections(),

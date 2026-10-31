@@ -8,7 +8,7 @@ export function PageHeader({
   className,
 }: {
   title: string
-  description?: string
+  description?: React.ReactNode
   actions?: React.ReactNode
   className?: string
 }) {
@@ -18,7 +18,7 @@ export function PageHeader({
         <h1 className="font-heading text-3xl leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
           {title}
         </h1>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        {description ? <div className="text-sm text-muted-foreground">{description}</div> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>

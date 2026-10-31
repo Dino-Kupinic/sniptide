@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@sniptide/ui/components/select"
+import { Spinner } from "@sniptide/ui/components/spinner"
 import { cn } from "@sniptide/ui/lib/utils"
 import { DownloadIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -46,7 +47,7 @@ export function AnalyticsControls({
   ]
 
   const router = useRouter()
-  const [, startTransition] = React.useTransition()
+  const [pending, startTransition] = React.useTransition()
   const [shown, setShown] = React.useOptimistic({ range, paste })
 
   function choose(next: { range: AnalyticsRange; paste: string | undefined }) {
@@ -64,7 +65,19 @@ export function AnalyticsControls({
   // Phones: the paste picker and an icon-only Export share the first row, and the range takes the
   // full second row. From lg everything sits on one row with Export last.
   return (
-    <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center">
+    <div
+      aria-busy={pending}
+      className="relative flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center"
+    >
+      {pending && (
+        <span
+          role="status"
+          className="absolute -top-5 right-0 flex items-center gap-1 text-xs text-muted-foreground"
+        >
+          <Spinner className="size-3" />
+          <span className="sr-only">{t("loading")}</span>
+        </span>
+      )}
       <div className="flex min-w-0 items-center gap-2 lg:contents">
         <Select
           value={shown.paste ?? ALL}

@@ -12,6 +12,7 @@ import {
 import { ChevronDownIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
+import { RevisionSkeleton } from "@/components/loading/page-skeletons"
 import { renderToken } from "@/components/paste/code-block"
 import { LanguageIcon } from "@/components/paste/language-icon"
 import { useHighlight } from "@/lib/highlight/use-highlight"
@@ -260,7 +261,7 @@ export function CompareRevisions({ slug, current }: { slug: string; current: Sna
           ) : revisions ? (
             <RevisionComparison current={current} revisions={revisions} />
           ) : (
-            <p role="status">{t("compareLoading")}</p>
+            <RevisionSkeleton />
           )}
           <DialogClose render={<Button variant="outline" />}>{t("compareClose")}</DialogClose>
         </DialogContent>

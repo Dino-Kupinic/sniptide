@@ -129,7 +129,7 @@ export function SharedList({
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+        <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
         <QuickChips
           label={t("access")}
           value={query.access.length === 1 ? (query.access[0] ?? "all") : "all"}
@@ -181,7 +181,7 @@ export function SharedList({
       <div className="flex flex-col gap-3">
         <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex flex-wrap items-center gap-2">
-            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+            <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label={t("language")}
               options={languageOptions.map((id) => ({

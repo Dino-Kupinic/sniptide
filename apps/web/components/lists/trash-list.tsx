@@ -246,6 +246,7 @@ export function TrashList({
       {empty ? null : (
         <div className="flex flex-col gap-3 lg:hidden">
           <SearchField
+            pending={pending}
             value={query.q}
             onChange={(q) => update({ q }, true)}
             placeholder={t("search_deleted_pastes")}
