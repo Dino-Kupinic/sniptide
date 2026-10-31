@@ -23,7 +23,7 @@ function NavigationFeedback() {
   return createPortal(
     <div
       role="status"
-      className="navigation-feedback pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 bg-primary/70"
+      className="navigation-feedback pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 bg-pink"
     >
       <span className="sr-only">{t("loading")}</span>
     </div>,
