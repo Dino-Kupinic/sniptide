@@ -39,7 +39,6 @@ import {
   UsersIcon,
   WorkflowIcon,
 } from "lucide-react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
@@ -48,6 +47,7 @@ import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistSheet } from "@/components/lists/import-gist"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import type { Collection } from "@/lib/collections/types"
 import { setStarred } from "@/lib/pastes/actions"

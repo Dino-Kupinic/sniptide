@@ -204,7 +204,17 @@ export function AppShell({
                         {t("demoBanner")}
                       </p>
                     ) : null}
-                    <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
+                    <TopBar
+                      onToggleSidebar={toggleSidebar}
+                      sidebarOpen={!layout.collapsed}
+                      counts={{
+                        "/pastes": sidebarProps.data.counts.pastes,
+                        "/starred": sidebarProps.data.counts.starred,
+                        "/shared": sidebarProps.data.counts.shared,
+                        "/collections": sidebarProps.collections.length,
+                        "/trash": trashCount,
+                      }}
+                    />
                     {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
                     <main
                       id="main-content"

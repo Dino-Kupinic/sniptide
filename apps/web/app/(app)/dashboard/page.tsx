@@ -12,9 +12,9 @@ export async function generateMetadata() {
 
 export default async function Page() {
   const locale = await getLocale()
-  const [session, data, { origin, host }, preferences] = await Promise.all([
+  const data = getDashboardData(locale)
+  const [session, { origin, host }, preferences] = await Promise.all([
     requireSession(),
-    getDashboardData(locale),
     getSiteOrigin(),
     getPreferences(),
   ])
