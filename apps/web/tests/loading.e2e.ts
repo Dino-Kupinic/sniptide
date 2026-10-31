@@ -31,7 +31,7 @@ test("dashboard streams its data regions without interrupting Quick Paste", asyn
   }
 })
 
-test("paste rows have measured first-load skeletons that resize on mobile", async ({
+test("slow page navigation keeps the outgoing screen and its header stable", async ({
   account,
   app,
   browser,
@@ -39,44 +39,81 @@ test("paste rows have measured first-load skeletons that resize on mobile", asyn
 }) => {
   void account
   await app.open("/new")
-  await screen.getByLabel("Title").fill("Loading state fixture")
-  await screen.getByLabel("Contents of untitled.txt").fill("export const ready = true")
+  await screen.getByLabel("Title").fill("Navigation fixture")
+  await screen.getByLabel("Contents of untitled.txt").fill("const ready = true")
   await screen.getByRole("button", /^Create paste/).tap()
   await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
-  await app.open("/pastes")
-  await expect(
-    screen.getByRole("searchbox", "Filter by title or slug", { visible: true }),
-  ).toBeVisible()
+  await app.open("/dashboard")
+  await expect(screen.getByLabel("Code", { exact: true })).toBeVisible()
+  await expect(browser.locator("main [aria-busy=true]")).toHaveCount(0)
+  const before = await browser.evaluate(
+    () => document.querySelector("main")?.getBoundingClientRect().top ?? null,
+  )
   const db = createDb(databaseUrl())
-  let navigation: ReturnType<typeof browser.reload> | undefined
   try {
     await db.$client.begin(async (tx) => {
       await tx.unsafe("LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE")
-      navigation = browser.reload()
-      await expect(browser.locator("main [skullet-reveal][aria-busy=true]").first()).toBeVisible()
-      await expect(
-        browser.locator("main [skullet-loading][aria-hidden=true][inert]").first(),
-      ).toBeVisible()
-      // Sample text must never become a focusable, prefetched paste link.
-      await expect(screen.getByRole("link", "Request validation")).toHaveCount(0)
-      await app.screenshot("pastes-loading-desktop")
-      await browser.setViewport({ width: 390, height: 844 })
+      await screen.getByRole("link", "View all", { exact: true }).tap()
+      await expect(browser.locator(".navigation-feedback")).toBeVisible()
       await expect
         .poll(() =>
-          browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+          browser.evaluate(() => {
+            const indicator = document.querySelector(".navigation-feedback")
+            return indicator ? getComputedStyle(indicator).opacity : null
+          }),
         )
-        .toBe(true)
-      await app.screenshot("pastes-loading-mobile")
+        .toBe("1")
+      await expect(screen.getByLabel("Code", { exact: true })).toBeVisible()
+      await expect(
+        browser.locator("main [data-slot=skeleton], main [skullet-loading]"),
+      ).toHaveCount(0)
+      expect(
+        await browser.evaluate(
+          () => document.querySelector("main")?.getBoundingClientRect().top ?? null,
+        ),
+      ).toBe(before)
+      await app.screenshot("navigation-retains-dashboard")
     })
-    await navigation
+    await expect(browser).toHaveURL("/pastes")
     await expect(
-      screen.getByRole("link", "Loading state fixture", { visible: true }).last(),
+      screen.getByRole("link", "Navigation fixture", { visible: true }).last(),
     ).toBeVisible()
-    await expect(browser.locator("main [skullet-reveal][aria-busy=true]")).toHaveCount(0)
+    await expect(screen.getByRole("radio", "Grid", { visible: true })).toBeVisible()
   } finally {
-    await navigation
     await db.$client.end()
   }
+})
+
+test("list header controls are in the server HTML and remain functional after hydration", async ({
+  account,
+  app,
+  browser,
+  screen,
+}) => {
+  void account
+  await app.open("/pastes")
+  const cookies = await browser.cookies()
+  const response = await fetch(new URL("/pastes", app.baseUrl), {
+    headers: { cookie: cookies.map(({ name, value }) => `${name}=${value}`).join("; ") },
+  })
+  const html = await response.text()
+  const start = html.indexOf('data-header-actions=""')
+  expect(start).toBeGreaterThan(-1)
+  const actions = html.slice(start, html.indexOf("</header>", start))
+  expect(actions).toContain('aria-label="Grid"')
+  expect(actions).toContain("Import gist")
+  await app.screenshot("pastes-stable-header")
+  await expect(screen.getByRole("radio", "Grid", { visible: true })).toHaveCount(1)
+  await screen.getByRole("radio", "Grid", { visible: true }).tap()
+  await expect(screen.getByRole("radio", "Grid", { visible: true })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  )
+  await screen.getByRole("button", "Import gist", { visible: true }).tap()
+  await expect(screen.getByRole("dialog")).toBeVisible()
+  await app.open("/collections")
+  await browser.locator("[data-header-actions]").getByRole("button", "New collection").tap()
+  await expect(screen.getByRole("dialog")).toBeVisible()
 })
 
 test("filtering retains current paste rows while the next result is pending", async ({

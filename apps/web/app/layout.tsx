@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getTranslations } from "next-intl/server"
 
 import "@sniptide/ui/globals.css"
+import "@/components/loading/loading.css"
 import { Toaster } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { Analytics } from "@/components/analytics"

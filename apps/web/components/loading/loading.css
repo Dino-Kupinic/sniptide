@@ -1,0 +1,20 @@
+/* Feedback is reserved in layout immediately, but fast reads never flash a placeholder.
+   Only loading elements get this delay; real content is never held back or animated in. */
+.loading-feedback,
+.loading-feedback-measured [skullet-layer],
+.navigation-feedback {
+  animation: loading-feedback-appear 1ms step-end 300ms both;
+}
+
+.loading-feedback [data-slot="skeleton"] {
+  animation: none;
+}
+
+@keyframes loading-feedback-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

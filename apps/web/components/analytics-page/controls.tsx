@@ -72,7 +72,7 @@ export function AnalyticsControls({
       {pending && (
         <span
           role="status"
-          className="absolute -top-5 right-0 flex items-center gap-1 text-xs text-muted-foreground"
+          className="loading-feedback absolute -top-5 right-0 flex items-center gap-1 text-xs text-muted-foreground"
         >
           <Spinner className="size-3" />
           <span className="sr-only">{t("loading")}</span>

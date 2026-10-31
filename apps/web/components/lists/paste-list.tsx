@@ -13,10 +13,11 @@ import {
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
 import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
-import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
-import * as React from "react"
+import type * as React from "react"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { useListView } from "@/components/shell/page-header"
 import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
@@ -35,7 +36,6 @@ import {
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { PasteCard } from "./paste-card"
-import { PasteIdentity } from "./paste-identity"
 import { RowMenu } from "./row-menu"
 import {
   FilterMenu,
@@ -160,7 +160,7 @@ export function PasteList({
 
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const { languages, visibility, collections: inCollections, owner, sort } = query
-  const [view, setView] = React.useState<"list" | "grid">("list")
+  const { view, setView } = useListView()
   const filtering = Boolean(
     query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
@@ -248,6 +248,7 @@ export function PasteList({
       <ListHeader
         title={title}
         count={pagination.totalAll}
+        headerActions={mode === "collection" ? actions : null}
         actions={
           <>
             <ViewToggle value={view} onChange={setView} />
@@ -344,13 +345,17 @@ export function PasteList({
                 {rows.map((row) => (
                   <TableRow key={row.slug} className="relative">
                     <TableCell className="truncate">
-                      <PasteIdentity
-                        title={row.title}
-                        slug={row.slug}
-                        host={host}
-                        owner={row.owner?.username}
+                      <Link
                         href={`/pastes/${row.slug}`}
-                      />
+                        title={row.title}
+                        className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                      >
+                        {row.title}
+                      </Link>
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                        {row.owner ? `@${row.owner.username} · ` : ""}
+                        {host}/{row.slug}
+                      </span>
                     </TableCell>
                     <TableCell className="text-[13px] text-foreground/80">
                       <LanguageLabel language={row.language} />

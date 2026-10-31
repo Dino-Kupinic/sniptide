@@ -21,11 +21,11 @@ import {
   UsersIcon,
   WorkflowIcon,
 } from "lucide-react"
-import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import type { ViewerSummary } from "@/lib/viewer"
 import { isActivePath } from "./nav-config"

@@ -16,7 +16,9 @@ export function LoadingRegion({
   return (
     <div role="status" aria-busy="true" className={cn("min-w-0", className)}>
       <span className="sr-only">{label ?? t("loading")}</span>
-      <div aria-hidden="true">{children}</div>
+      <div aria-hidden="true" className="loading-feedback">
+        {children}
+      </div>
     </div>
   )
 }

@@ -365,19 +365,19 @@ function Placeholder({ feed, retry }: { feed: Feed; retry: () => void }) {
   }
   if (feed === null) {
     return (
-      <MeasuredSkeleton className="min-w-0 overflow-hidden" loading label={t("loading")}>
-        <div className="divide-y divide-border">
-          {[0, 1, 2].map((index) => (
-            <div key={index} className="flex items-start gap-2.5 px-4 py-3">
-              <BellIcon className="mt-0.5 size-4 shrink-0" />
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-sm font-medium">{t("notifications")}</span>
-                <span className="text-xs text-muted-foreground">
-                  {t("shares_pastes_that_burned_after_reading_expiring_pastes")}
-                </span>
-              </span>
-            </div>
-          ))}
+      <MeasuredSkeleton
+        className="loading-feedback-measured min-h-[104px] min-w-0 overflow-hidden"
+        loading
+        label={t("loading")}
+      >
+        <div className="flex min-h-[104px] items-center gap-2.5 px-4 py-3">
+          <BellIcon className="size-4 shrink-0" />
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-sm font-medium">{t("notifications")}</span>
+            <span className="line-clamp-2 text-xs text-muted-foreground">
+              {t("shares_pastes_that_burned_after_reading_expiring_pastes")}
+            </span>
+          </span>
         </div>
       </MeasuredSkeleton>
     )

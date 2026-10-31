@@ -6,12 +6,12 @@ import { SkulletProvider } from "skullet/react"
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   return (
     <SkulletProvider
-      reveal="smart"
+      reveal={{ duration: 0, hold: 300 }}
       theme={{
         light: { base: "var(--muted)", highlight: "var(--border)" },
         dark: { base: "var(--muted)", highlight: "var(--border)" },
         radius: "4px",
-        animation: "shimmer",
+        animation: "none",
         speed: "slow",
       }}
     >

@@ -76,7 +76,7 @@ export function SearchField({
         className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground lg:text-[13px] [&::-webkit-search-cancel-button]:hidden"
       />
       {pending ? (
-        <span role="status" className="shrink-0 text-muted-foreground">
+        <span role="status" className="loading-feedback shrink-0 text-muted-foreground">
           <Spinner className="size-3.5" />
           <span className="sr-only">{t("loading")}</span>
         </span>
@@ -533,12 +533,14 @@ export function ListHeader({
   description,
   actions,
   mobileActions = actions,
+  headerActions = actions,
 }: {
   title: string
   count?: number
   description?: React.ReactNode
   actions?: React.ReactNode
   mobileActions?: React.ReactNode
+  headerActions?: React.ReactNode
 }) {
   const locale = useLocale()
   return (
@@ -551,7 +553,7 @@ export function ListHeader({
           </span>
         ) : null}
       </HeaderTitle>
-      {actions ? <HeaderActions>{actions}</HeaderActions> : null}
+      {headerActions ? <HeaderActions>{headerActions}</HeaderActions> : null}
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-baseline gap-3">
           <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">

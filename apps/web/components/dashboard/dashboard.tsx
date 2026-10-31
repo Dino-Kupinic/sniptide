@@ -14,15 +14,14 @@ import {
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon } from "lucide-react"
-import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
-import { ListRowsSkeleton } from "@/components/loading/list-skeletons"
 import { ChartSkeleton, StatsSkeleton } from "@/components/loading/page-skeletons"
 import { LoadingRegion } from "@/components/loading/region"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { navigateTabs } from "@/components/tab-navigation"
 import { formatNumber } from "@/lib/format"
@@ -232,7 +231,13 @@ export function Dashboard({
           </Link>
         </div>
 
-        <React.Suspense fallback={<ListRowsSkeleton compact />}>
+        <React.Suspense
+          fallback={
+            <LoadingRegion className="px-4 py-10 text-sm text-muted-foreground">
+              <span>{t("loading")}</span>
+            </LoadingRegion>
+          }
+        >
           <RecentPastes data={data} tab={tab} panelId={panelId} origin={origin} host={host} />
         </React.Suspense>
       </section>
