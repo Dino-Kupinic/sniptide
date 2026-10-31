@@ -342,7 +342,21 @@
     "move_down": "Move down",
     "done": "Done",
     "searching": "Searching…",
-    "skipToMain": "Skip to main content"
+    "skipToMain": "Skip to main content",
+    "signupSource": {
+      "title": "How did you hear about Sniptide?",
+      "skip": "Skip",
+      "error": "Couldn't save that. Try again.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "A friend",
+        "ai_agent": "An AI agent",
+        "search": "Search",
+        "other": "Somewhere else"
+      }
+    }
   },
   "Secrets": {
     "title": "Secrets",
