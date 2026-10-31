@@ -437,6 +437,58 @@ describe("Autosaver", () => {
     expect(sent).toEqual([doc("a")])
   })
 
+  test("unchanged updates and reverted edits keep the last successful save time", async () => {
+    const { autosaver, fake, sent } = setup()
+    autosaver.update(doc("a"))
+    await fake.advance(1000)
+    expect(autosaver.state).toEqual({ kind: "saved", at: 1000 })
+
+    await fake.advance(120_000)
+    autosaver.update(doc("a"))
+    expect(autosaver.state).toEqual({ kind: "saved", at: 1000 })
+    autosaver.update(doc("unsaved"))
+    autosaver.update(doc("a"))
+    expect(autosaver.state).toEqual({ kind: "saved", at: 1000 })
+    expect(sent).toEqual([doc("a")])
+
+    autosaver.update(doc("b"))
+    await fake.advance(1000)
+    expect(autosaver.state).toEqual({ kind: "saved", at: 122_000 })
+  })
+
+  for (const failure of ["offline", "refused", "conflict"] as const) {
+    test(`${failure} saves never advance the saved timestamp`, async () => {
+      const { autosaver, fake } = setup({
+        save: async (value) => {
+          if (value.text === "a") return { ok: true }
+          if (failure === "offline") throw new Error("network")
+          return failure === "conflict"
+            ? { ok: false, conflict: true }
+            : { ok: false, error: "nope" }
+        },
+      })
+      autosaver.update(doc("a"))
+      await fake.advance(1000)
+      autosaver.update(doc("b"))
+      await fake.advance(1000)
+      expect(autosaver.state.kind).toBe(
+        failure === "offline" ? "retrying" : failure === "conflict" ? "conflict" : "error",
+      )
+      if (failure === "conflict") autosaver.resolveConflict()
+      autosaver.update(doc("a"))
+      expect(autosaver.state).toEqual({ kind: "saved", at: 1000 })
+    })
+  }
+
+  test("loading a server version does not claim a new successful save", async () => {
+    const { autosaver, fake } = setup()
+    autosaver.update(doc("a"))
+    await fake.advance(1000)
+    autosaver.rebase(doc("server version"))
+    autosaver.update(doc("server version"))
+    expect(autosaver.state).toEqual({ kind: "idle" })
+  })
+
   test("manual mode tracks unsaved changes but never saves", async () => {
     const { autosaver, fake, sent } = setup({ manual: true })
 

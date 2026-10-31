@@ -73,7 +73,7 @@
     "autosaveDirty": "Ungespeicherte Änderungen…",
     "autosaveBlocked": "Noch nicht gespeichert: {reason}",
     "autosaveSaving": "Wird gespeichert…",
-    "autosaveSaved": "Alle Änderungen gespeichert",
+    "autosaveSaved": "Gespeichert {time}",
     "autosaveOffline": "Offline. Änderungen bleiben auf diesem Gerät gespeichert",
     "autosaveRetry": "Sniptide ist nicht erreichbar. Änderungen bleiben auf diesem Gerät gespeichert. Erneuter Versuch läuft",
     "autosaveError": "Nicht gespeichert: {message}",
