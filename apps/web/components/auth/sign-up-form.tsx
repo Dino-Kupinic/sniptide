@@ -15,7 +15,7 @@ import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
 import { NewPasswordField } from "./password-field"
-import { EmailDivider, SocialButtons } from "./social-buttons"
+import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
 type Availability = "idle" | "invalid" | "checking" | "available" | "taken"
@@ -104,6 +104,7 @@ export function SignUpForm({
     }
 
     track("signed_up", { method: "email" })
+    rememberSignInMethod("email")
     router.replace(redirectTo)
     router.refresh()
   }

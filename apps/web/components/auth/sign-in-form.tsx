@@ -11,7 +11,7 @@ import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
-import { EmailDivider, SocialButtons } from "./social-buttons"
+import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
 // `socialProviders` lists the configured GitHub and Google logins.
@@ -66,6 +66,7 @@ export function SignInForm({
     }
 
     track("signed_in", { method: "email" })
+    rememberSignInMethod("email")
     router.replace(redirectTo)
     router.refresh()
   }
