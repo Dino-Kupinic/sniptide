@@ -46,7 +46,6 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
         title: [t("signUpPitchTitle1"), t("signUpPitchTitle2")],
         body: t("signUpPitchBody"),
         link: `${host}/@you`,
-        note: t("publicProfile"),
       }}
     >
       <SignUpForm

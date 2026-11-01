@@ -1,5 +1,6 @@
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
+import { ArrowUpRightIcon } from "lucide-react"
 import type * as React from "react"
 import { LanguageMenu } from "@/components/language-switcher"
 import { getConfig } from "@/lib/config"
@@ -9,7 +10,7 @@ export interface Pitch {
   title: [string, string]
   body: string
   link: string
-  note: string
+  note?: string
 }
 
 // Split auth layout from the Paper Sign in / Sign up artboards: the form takes three fifths on the
@@ -92,9 +93,14 @@ export function AuthScreen({
             {pitch.title[1]}
           </p>
           <p className="text-sm leading-[21px] text-foreground/80">{pitch.body}</p>
-          <div className="rounded-md flex items-center justify-between bg-muted px-3 py-2.5">
-            <span className="font-mono text-[13px] text-link">{pitch.link}</span>
-            <span className="text-xs text-muted-foreground">{pitch.note}</span>
+          <div className="rounded-md flex items-center justify-between gap-3 bg-muted px-3 py-2.5">
+            <span className="flex min-w-0 items-center gap-1 font-mono text-[13px] text-link">
+              <span className="truncate">{pitch.link}</span>
+              <ArrowUpRightIcon aria-hidden="true" className="size-3.5 shrink-0" />
+            </span>
+            {pitch.note ? (
+              <span className="shrink-0 text-xs text-muted-foreground">{pitch.note}</span>
+            ) : null}
           </div>
         </div>
       </aside>
