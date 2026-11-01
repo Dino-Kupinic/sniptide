@@ -11,6 +11,8 @@ A self-hostable pastebin for code snippets, configs, and secrets.
 Share multi-file pastes with passwords, expiry, or burn-after-read links.
 Organize reusable snippets in collections, sync `.env` files, and connect coding agents through the CLI or MCP server.
 
+[![Sniptide MCP on mcprush](https://mcprush.com/badge/sniptide-mcp/score.svg)](https://mcprush.com/to/sniptide-mcp?ref=badge)
+
 ## Self-host
 
 Run Sniptide and Postgres with Docker Compose:
