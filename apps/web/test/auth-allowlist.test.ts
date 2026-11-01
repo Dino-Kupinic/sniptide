@@ -59,7 +59,10 @@ describeDb("invite-only sign-up", () => {
 
   test("only lets listed emails create an account", async () => {
     const auth = makeAuth("ada@example.com")
-    expect((await signUp(auth, "eve@example.com", "eve")).status).toBe(403)
+    const refused = await signUp(auth, "eve@example.com", "eve")
+    expect(refused.status).toBe(403)
+    // The sign-up form matches this code to explain the refusal.
+    expect((await refused.json()).code).toBe("invite_only")
     expect((await signUp(auth, "Ada@Example.com", "ada")).status).toBe(200)
   })
 

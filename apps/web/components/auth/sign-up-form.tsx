@@ -48,7 +48,7 @@ export function SignUpForm({
   socialProviders,
   redirectTo = "/dashboard",
 }: {
-  socialProviders: SocialProvider[] | null
+  socialProviders: SocialProvider[]
   redirectTo?: string
 }) {
   const t = useTranslations("Auth")
@@ -81,11 +81,19 @@ export function SignUpForm({
         password,
         callbackURL: redirectTo,
       })
-      .catch(() => ({ error: { status: 0 } }))
+      .catch(() => ({ error: { status: 0, code: "NETWORK_ERROR" } }))
 
     if (result.error) {
       setPending(false)
-      setError(t(result.error.status === 0 ? "errors.network" : "errors.signUp"))
+      setError(
+        t(
+          result.error.status === 0
+            ? "errors.network"
+            : result.error.code === "invite_only"
+              ? "errors.inviteOnly"
+              : "errors.signUp",
+        ),
+      )
       return
     }
 

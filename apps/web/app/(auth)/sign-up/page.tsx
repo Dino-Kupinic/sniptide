@@ -1,10 +1,9 @@
 import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { LegalNotice } from "@/components/auth/legal-notice"
-import { RequestAccess } from "@/components/auth/request-access"
 import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
-import { getInviteOnly, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { getSocialProviders, isInviteOnly, isSignUpClosed } from "@/lib/auth"
 import { afterSignIn } from "@/lib/auth-redirect"
 import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
@@ -16,10 +15,9 @@ export async function generateMetadata() {
 
 export default async function Page({ searchParams }: PageProps<"/sign-up">) {
   const [{ host }, t] = await Promise.all([getSiteOrigin(), getTranslations("Auth")])
-  const inviteOnly = getInviteOnly()
   const legal = <LegalNotice action="signUp" />
 
-  // ALLOW_SIGN_UP=false: no accounts can be created, not even with ?invite.
+  // ALLOW_SIGN_UP=false: no accounts can be created, not even for invited emails.
   if (isSignUpClosed()) {
     return (
       <AuthScreen
@@ -38,34 +36,19 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
     )
   }
 
-  // Invite-only: visitors get the request-access screen; ?invite opens the form for invitees.
-  if (inviteOnly && !("invite" in (await searchParams))) {
-    return (
-      <AuthScreen
-        subtitle={t("inviteOnlySubtitle")}
-        legal={legal}
-        centered
-        pitch={{
-          title: [t("invitePitchTitle1"), t("invitePitchTitle2")],
-          body: t("invitePitchBody"),
-          link: `${host}/@you`,
-          note: t("profileAfterJoining"),
-        }}
-      >
-        <RequestAccess applyUrl={inviteOnly.applyUrl} />
-      </AuthScreen>
-    )
-  }
-
   // A self-hosted server can turn the storage limit off, which leaves no figure to quote.
   const limitBytes = accountBudget().bytes
   return (
     <AuthScreen
       title={t("createAccount")}
       subtitle={
-        limitBytes === null
-          ? t("signUpSubtitleNoLimit")
-          : t("signUpSubtitle", { limit: limitBytes / 1024 / 1024 })
+        // Invite-only: the same form, so invitees can use GitHub or Google; the server refuses
+        // emails that aren't on ALLOWED_EMAILS.
+        isInviteOnly()
+          ? t("inviteOnlySubtitle")
+          : limitBytes === null
+            ? t("signUpSubtitleNoLimit")
+            : t("signUpSubtitle", { limit: limitBytes / 1024 / 1024 })
       }
       legal={legal}
       pitch={{
@@ -76,7 +59,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
       }}
     >
       <SignUpForm
-        socialProviders={inviteOnly ? null : await getSocialProviders()}
+        socialProviders={await getSocialProviders()}
         redirectTo={afterSignIn((await searchParams).next)}
       />
     </AuthScreen>

@@ -69,11 +69,10 @@ export function isDemoMode() {
   return getConfig().demoMode
 }
 
-// Set while ALLOWED_EMAILS limits sign-up: the sign-up page asks visitors to apply (at
-// WAITLIST_URL, when set) and sign-in drops the GitHub and Google buttons.
-export function getInviteOnly(): { applyUrl?: string } | null {
-  const config = getConfig()
-  return parseAllowlist(config.allowedEmails) ? { applyUrl: config.waitlistUrl } : null
+// True while ALLOWED_EMAILS limits sign-up to invited addresses. The sign-up page says so; the
+// server refuses every other email, by password or by GitHub and Google alike.
+export function isInviteOnly() {
+  return Boolean(parseAllowlist(getConfig().allowedEmails))
 }
 
 export const getSession = cache(async () => {
