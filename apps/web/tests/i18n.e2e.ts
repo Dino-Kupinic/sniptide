@@ -8,13 +8,14 @@ anonymousTest(
     await app.open("/sign-in")
     await browser.locator('input[name="email"]').fill("reader@example.test")
 
-    let current = "English"
-    for (const [locale, name, heading] of [
-      ["de", "Deutsch", "Bei Sniptide anmelden"],
-      ["es", "Español", "Inicia sesión en Sniptide"],
-      ["zh", "简体中文", "登录 Sniptide"],
-      ["ja", "日本語", "Sniptide にサインイン"],
-      ["en", "English", "Sign in to Sniptide"],
+    // The menu button is named after the language label and the current language, both localized.
+    let current = "Language: English"
+    for (const [locale, name, button, heading] of [
+      ["de", "Deutsch", "Sprache: Deutsch", "Bei Sniptide anmelden"],
+      ["es", "Español", "Idioma: Español", "Inicia sesión en Sniptide"],
+      ["zh", "简体中文", "语言: 简体中文", "登录 Sniptide"],
+      ["ja", "日本語", "言語: 日本語", "Sniptide にサインイン"],
+      ["en", "English", "Language: English", "Sign in to Sniptide"],
     ] as const) {
       await screen.getByRole("button", current).tap()
       await screen.getByRole("menuitemradio", name, { exact: true }).tap()
@@ -23,9 +24,9 @@ anonymousTest(
       await expect(browser.locator('input[name="email"]')).toHaveValue("reader@example.test")
       await browser.reload()
       await expect(screen.getByRole("heading", heading)).toBeVisible()
-      await expect(screen.getByRole("button", name)).toBeVisible()
+      await expect(screen.getByRole("button", button)).toBeVisible()
       await browser.locator('input[name="email"]').fill("reader@example.test")
-      current = name
+      current = button
     }
     await app.screenshot("sign-in-english")
   },
