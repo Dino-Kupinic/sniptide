@@ -20,6 +20,7 @@ import {
   SheetTrigger,
   sheetRowClass,
 } from "@sniptide/ui/components/sheet"
+import { Spinner } from "@sniptide/ui/components/spinner"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   CheckIcon,
@@ -44,16 +45,19 @@ export function SearchField({
   onChange,
   placeholder,
   className,
+  pending = false,
 }: {
   value: string
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  pending?: boolean
 }) {
   const t = useTranslations("Workspace")
   const searchPlaceholder = placeholder ?? t("filter_by_title_or_slug")
   return (
     <label
+      aria-busy={pending}
       className={cn(
         "rounded-lg flex h-[46px] items-center gap-2.5 border border-border px-3 focus-within:border-primary lg:h-8 lg:w-65 lg:gap-2 lg:px-2.5",
         className,
@@ -71,6 +75,12 @@ export function SearchField({
         placeholder={searchPlaceholder}
         className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground lg:text-[13px] [&::-webkit-search-cancel-button]:hidden"
       />
+      {pending ? (
+        <span role="status" className="loading-feedback shrink-0 text-muted-foreground">
+          <Spinner className="size-3.5" />
+          <span className="sr-only">{t("loading")}</span>
+        </span>
+      ) : null}
       {value ? (
         <button
           type="button"
@@ -523,12 +533,14 @@ export function ListHeader({
   description,
   actions,
   mobileActions = actions,
+  headerActions = actions,
 }: {
   title: string
   count?: number
   description?: React.ReactNode
   actions?: React.ReactNode
   mobileActions?: React.ReactNode
+  headerActions?: React.ReactNode
 }) {
   const locale = useLocale()
   return (
@@ -541,7 +553,7 @@ export function ListHeader({
           </span>
         ) : null}
       </HeaderTitle>
-      {actions ? <HeaderActions>{actions}</HeaderActions> : null}
+      {headerActions ? <HeaderActions>{headerActions}</HeaderActions> : null}
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-baseline gap-3">
           <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">

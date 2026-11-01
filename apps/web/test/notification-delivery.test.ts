@@ -21,7 +21,7 @@ import {
   unsubscribeNotificationEmail,
   verifyUnsubscribeToken,
 } from "@/lib/notifications/unsubscribe"
-import { readSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import { readSharedPaste, revealSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import { readPreferences } from "@/lib/preference-store"
 import { parsePreferences } from "@/lib/preferences-schema"
@@ -283,7 +283,7 @@ describeDb("notification channel delivery", () => {
     signInAs("reader")
     await sharePaste("private-secret", "owner", "view")
     await seedPaste({ slug: "burn-secret", owner: "owner", burnAfterRead: true })
-    await readSharedPaste("burn-secret", { reveal: true })
+    await revealSharedPaste("burn-secret")
     await seedPaste({ slug: "popular-secret", owner: "owner", visibility: "public" })
     await getDb().update(paste).set({ views: 9 }).where(eq(paste.slug, "popular-secret"))
     await readSharedPaste("popular-secret", { visit: true })

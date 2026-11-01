@@ -13,10 +13,10 @@ import {
   TableSortHead,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import Link from "next/link"
 import { useTranslations } from "next-intl"
-import * as React from "react"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { useListView } from "@/components/shell/page-header"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, SortDirection } from "@/lib/pastes/list-query"
 import type { SharedRow } from "@/lib/pastes/rows"
@@ -38,7 +38,6 @@ import {
   QuickChips,
   SearchField,
   SortMenu,
-  ViewToggle,
 } from "./toolbar"
 import { useListQuery } from "./use-list-query"
 
@@ -113,7 +112,7 @@ export function SharedList({
     onSort: (next: SortDirection) =>
       update({ sort: value, dir: next === DEFAULT_SHARED_DIRECTION[value] ? undefined : next }),
   })
-  const [view, setView] = React.useState<"list" | "grid">("list")
+  const { view } = useListView()
   const filtering = Boolean(
     query.q || query.languages.length || query.owners.length || query.access.length,
   )
@@ -123,13 +122,12 @@ export function SharedList({
       <ListHeader
         title={t("shared_with_me")}
         count={pagination.totalAll}
-        actions={<ViewToggle value={view} onChange={setView} />}
         // The grid view is desktop only.
         mobileActions={null}
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+        <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
         <QuickChips
           label={t("access")}
           value={query.access.length === 1 ? (query.access[0] ?? "all") : "all"}
@@ -181,7 +179,7 @@ export function SharedList({
       <div className="flex flex-col gap-3">
         <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex flex-wrap items-center gap-2">
-            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+            <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label={t("language")}
               options={languageOptions.map((id) => ({

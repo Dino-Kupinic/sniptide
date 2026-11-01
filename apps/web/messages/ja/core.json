@@ -73,7 +73,7 @@
     "autosaveDirty": "未保存の変更があります…",
     "autosaveBlocked": "未保存：{reason}",
     "autosaveSaving": "保存中…",
-    "autosaveSaved": "すべての変更を保存しました",
+    "autosaveSaved": "保存済み（{time}）",
     "autosaveOffline": "オフラインです。変更はこのデバイスに保存されています",
     "autosaveRetry": "Sniptideに接続できません。変更をこのデバイスに保存し、再試行しています",
     "autosaveError": "保存できませんでした：{message}",

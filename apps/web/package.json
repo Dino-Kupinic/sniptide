@@ -42,6 +42,7 @@
     "react-dom": "catalog:runtime",
     "server-only": "catalog:runtime",
     "shiki": "catalog:runtime",
+    "skullet": "0.0.3",
     "zod": "catalog:runtime"
   },
   "devDependencies": {

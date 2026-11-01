@@ -73,7 +73,7 @@
     "autosaveDirty": "尚有未保存的更改…",
     "autosaveBlocked": "尚未保存：{reason}",
     "autosaveSaving": "正在保存…",
-    "autosaveSaved": "所有更改已保存",
+    "autosaveSaved": "已保存（{time}）",
     "autosaveOffline": "当前离线，更改保存在此设备上",
     "autosaveRetry": "无法连接 Sniptide。更改保存在此设备上，正在重试",
     "autosaveError": "未保存：{message}",
