@@ -4,6 +4,7 @@ import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
+import { type ComponentProps, Suspense } from "react"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import { RevealPaste } from "@/components/paste/reveal-paste"
@@ -82,7 +83,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   const rawAllowed = paste.allowRaw
 
   const owner = paste.author
-  const files = await highlightFiles(paste.files)
+  const files = paste.files
   const first = files[0]
   const single = files.length === 1
   const lines = paste.files.reduce((count, file) => count + lineCount(file.content), 0)
@@ -143,15 +144,29 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
         </div>
 
         <ActiveFileProvider>
-          <FileViewer
-            slug={slug}
-            files={files}
-            rawAllowed={rawAllowed}
-            collapseAt={6}
-            printable
-            headerClassName={single ? "lg:hidden" : undefined}
-            bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
-          />
+          <Suspense
+            fallback={
+              <FileViewer
+                slug={slug}
+                files={files}
+                rawAllowed={rawAllowed}
+                collapseAt={6}
+                printable
+                headerClassName={single ? "lg:hidden" : undefined}
+                bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
+              />
+            }
+          >
+            <HighlightedFileViewer
+              slug={slug}
+              files={files}
+              rawAllowed={rawAllowed}
+              collapseAt={6}
+              printable
+              headerClassName={single ? "lg:hidden" : undefined}
+              bodyClassName={cn("bg-sidebar", single && "lg:py-5")}
+            />
+          </Suspense>
           {signedIn ? null : <SignUpPrompt />}
           {/* Phones keep the actions in reach in a bar at the bottom of the screen. */}
           {first ? (
@@ -165,6 +180,12 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
       <StripeBand />
     </div>
   )
+}
+
+// Access and existence checks finish before streaming, preserving real HTTP 404s.
+// Code stays readable while its syntax tokens are prepared.
+async function HighlightedFileViewer({ files, ...props }: ComponentProps<typeof FileViewer>) {
+  return <FileViewer {...props} files={await highlightFiles(files)} />
 }
 
 async function SignUpPrompt() {

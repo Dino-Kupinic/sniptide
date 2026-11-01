@@ -1,10 +1,10 @@
 "use client"
 
 import { PlusIcon } from "lucide-react"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import type { ViewerSummary } from "@/lib/viewer"
 import { type MoreCounts, MoreSheet } from "./more-sheet"
 import { isActivePath, mobileTabs, moreTab } from "./nav-config"

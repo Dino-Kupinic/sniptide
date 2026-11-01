@@ -22,6 +22,7 @@ import {
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { Skeleton as MeasuredSkeleton } from "skullet/react"
 import { timeAgo } from "@/lib/format"
 import { dismiss, markAllRead, markRead } from "@/lib/notifications/actions"
 import { NotificationReader } from "@/lib/notifications/reader"
@@ -364,9 +365,21 @@ function Placeholder({ feed, retry }: { feed: Feed; retry: () => void }) {
   }
   if (feed === null) {
     return (
-      <p role="status" className="px-4 py-8 text-center text-sm text-muted-foreground">
-        {t("loading")}
-      </p>
+      <MeasuredSkeleton
+        className="loading-feedback-measured min-h-[104px] min-w-0 overflow-hidden"
+        loading
+        label={t("loading")}
+      >
+        <div className="flex min-h-[104px] items-center gap-2.5 px-4 py-3">
+          <BellIcon className="size-4 shrink-0" />
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-sm font-medium">{t("notifications")}</span>
+            <span className="line-clamp-2 text-xs text-muted-foreground">
+              {t("shares_pastes_that_burned_after_reading_expiring_pastes")}
+            </span>
+          </span>
+        </div>
+      </MeasuredSkeleton>
     )
   }
   return (
