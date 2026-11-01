@@ -50,7 +50,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       className={cn(
-        "group/row border-b border-border/70 transition-colors hover:bg-muted/40",
+        "group/row border-b border-border/70 transition-colors hover:bg-muted/40 data-[selected=true]:bg-muted/70",
         className,
       )}
       {...props}
@@ -74,11 +74,12 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return <td className={cn("h-16 px-5 align-middle whitespace-nowrap", className)} {...props} />
 }
 
+// A checked row (`data-selected`) takes a deeper tint than hover, so a selection reads at a glance.
 // The actions column stays at the right edge while the other columns scroll under it. It paints an
 // opaque fill, so the row's hover tint is mixed into it rather than layered on top. A short fade on
 // its left edge shows that more columns sit behind it.
 const pinned =
-  "sticky right-0 bg-background before:pointer-events-none before:absolute before:inset-y-0 before:right-full before:w-8 before:bg-linear-to-l before:from-background before:to-transparent before:transition-opacity group-data-[at-end=true]/scroll:before:opacity-0 group-hover/row:bg-[color-mix(in_oklab,var(--background),var(--muted)_40%)] group-hover/row:before:from-[color-mix(in_oklab,var(--background),var(--muted)_40%)]"
+  "sticky right-0 bg-background before:pointer-events-none before:absolute before:inset-y-0 before:right-full before:w-8 before:bg-linear-to-l before:from-background before:to-transparent before:transition-opacity group-data-[at-end=true]/scroll:before:opacity-0 group-hover/row:bg-[color-mix(in_oklab,var(--background),var(--muted)_40%)] group-hover/row:before:from-[color-mix(in_oklab,var(--background),var(--muted)_40%)] group-data-[selected=true]/row:bg-[color-mix(in_oklab,var(--background),var(--muted)_70%)] group-data-[selected=true]/row:before:from-[color-mix(in_oklab,var(--background),var(--muted)_70%)]"
 
 function TablePinnedHead({ className, ...props }: React.ComponentProps<"th">) {
   return (

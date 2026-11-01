@@ -1,5 +1,13 @@
 "use client"
 
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
 import {
   type SortDirection,
@@ -13,13 +21,23 @@ import {
   TableSortHead,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, Trash2Icon } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import {
+  SelectAllHead,
+  SelectCell,
+  SelectionBar,
+  useRowSelection,
+} from "@/components/lists/selection"
 import { ListHeader } from "@/components/lists/toolbar"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import { useSidebarUpdate } from "@/components/shell/app-shell"
+import { showUndo } from "@/components/undo-toast"
+import { deleteCollections, restoreCollections } from "@/lib/collections/actions"
 import type { Collection } from "@/lib/collections/types"
+import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
 import { CollectionMenu } from "./collection-menu"
 import { CollectionIcon } from "./icon"
@@ -66,6 +84,7 @@ export function CollectionsView({
   const sorted = sort
     ? [...ordered].sort((a, b) => compare(a, b, sort.by) * (sort.direction === "asc" ? 1 : -1) || 0)
     : ordered
+  const selection = useRowSelection(sorted.map((item) => item.slug))
 
   // A third click on a header goes back to the sidebar's order.
   const headProps = (by: CollectionSort) => ({
@@ -161,7 +180,10 @@ export function CollectionsView({
             <Table className="min-w-[720px] table-fixed">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableSortHead {...headProps("name")}>{t("collection")}</TableSortHead>
+                  <SelectAllHead selection={selection} />
+                  <TableSortHead {...headProps("name")} className="pl-0">
+                    {t("collection")}
+                  </TableSortHead>
                   <TableSortHead {...headProps("pastes")} className="w-28" alignEnd>
                     {t("pastes")}
                   </TableSortHead>
@@ -177,8 +199,17 @@ export function CollectionsView({
                 {sorted.map((collection) => {
                   const index = ordered.indexOf(collection)
                   return (
-                    <TableRow key={collection.slug} className="relative">
-                      <TableCell className="truncate">
+                    <TableRow
+                      key={collection.slug}
+                      data-selected={selection.has(collection.slug)}
+                      className="relative"
+                    >
+                      <SelectCell
+                        selection={selection}
+                        rowKey={collection.slug}
+                        name={collection.name}
+                      />
+                      <TableCell className="truncate pl-0">
                         <div className="flex min-w-0 items-center gap-3">
                           <CollectionIcon icon={collection.icon} hue={collection.hue} />
                           <Link
@@ -218,6 +249,9 @@ export function CollectionsView({
               </TableBody>
             </Table>
           </div>
+          <SelectionBar selection={selection}>
+            <DeleteSelected collections={collections.filter((item) => selection.has(item.slug))} />
+          </SelectionBar>
         </>
       )}
 
@@ -227,5 +261,73 @@ export function CollectionsView({
         onOpenChange={setCreating}
       />
     </div>
+  )
+}
+
+// The selection bar's Delete: one confirmation for every checked collection, then an Undo that
+// brings them all back with their pastes.
+function DeleteSelected({ collections }: { collections: Collection[] }) {
+  const t = useTranslations("Workspace")
+  const feedbackT = useTranslations("Core")
+  const router = useRouter()
+  const [open, setOpen] = React.useState(false)
+  // Kept while the confirmation is open, so its count doesn't change under it.
+  const [deleting, setDeleting] = React.useState<Collection[]>([])
+  const [pending, startTransition] = React.useTransition()
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive"
+        onClick={() => {
+          setDeleting(collections)
+          setOpen(true)
+        }}
+      >
+        <Trash2Icon />
+        {t("delete")}
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            {t("delete_collections_title", { count: deleting.length })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>{t("delete_collections_description")}</AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" size="lg" />}>
+              {t("cancel")}
+            </AlertDialogClose>
+            <Button
+              size="lg"
+              className="bg-destructive text-white hover:bg-destructive/85"
+              loading={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await runAction(
+                    () => deleteCollections(deleting.map((item) => item.slug)),
+                    { error: t("couldnt_delete_the_collection_try_again") },
+                  )
+                  setOpen(false)
+                  if (!result.ok) return
+                  router.refresh()
+                  const snapshots = result.value
+                  if (snapshots.length > 0)
+                    showUndo({
+                      labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
+                      message: t("bulk_deleted_collections", { count: snapshots.length }),
+                      undo: () => restoreCollections(snapshots),
+                      onUndone: () => router.refresh(),
+                    })
+                })
+              }
+            >
+              {pending ? t("deleting") : t("delete")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

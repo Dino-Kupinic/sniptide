@@ -14,7 +14,7 @@ import {
 import { cn } from "@sniptide/ui/lib/utils"
 import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
-import type * as React from "react"
+import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { useListView } from "@/components/shell/page-header"
@@ -35,8 +35,10 @@ import {
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
+import { PasteBulkActions } from "./bulk-actions"
 import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
+import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
 import {
   FilterMenu,
   ListHeader,
@@ -120,6 +122,7 @@ export function PasteList({
   host,
   mode,
   collections,
+  collection,
   actions,
   mobileActions,
   query: serverQuery,
@@ -135,6 +138,8 @@ export function PasteList({
   host: string
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
+  // The collection whose page this is, in collection mode.
+  collection?: string
   actions?: React.ReactNode
   // A compact version of `actions` for the phone's title row.
   mobileActions?: React.ReactNode
@@ -172,6 +177,8 @@ export function PasteList({
     onSort: (next: SortDirection) =>
       update({ sort: value, dir: next === DEFAULT_SORT_DIRECTION[value] ? undefined : next }),
   })
+  const slugs = React.useMemo(() => rows.map((row) => row.slug), [rows])
+  const selection = useRowSelection(view === "grid" ? [] : slugs)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
   const range = `${formatNumber(start + 1, locale)}–${formatNumber(start + rows.length, locale)}`
 
@@ -320,7 +327,10 @@ export function PasteList({
             <Table className="hidden min-w-[1040px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableSortHead {...headProps("title")}>{t("paste")}</TableSortHead>
+                  <SelectAllHead selection={selection} />
+                  <TableSortHead {...headProps("title")} className="pl-0">
+                    {t("paste")}
+                  </TableSortHead>
                   <TableSortHead {...headProps("language")} className="w-[140px]">
                     {t("language")}
                   </TableSortHead>
@@ -343,8 +353,13 @@ export function PasteList({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.slug} className="relative">
-                    <TableCell className="truncate">
+                  <TableRow
+                    key={row.slug}
+                    data-selected={selection.has(row.slug)}
+                    className="relative"
+                  >
+                    <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
+                    <TableCell className="truncate pl-0">
                       <Link
                         href={`/pastes/${row.slug}`}
                         title={row.title}
@@ -468,6 +483,16 @@ export function PasteList({
             />
           </div>
         ) : null}
+
+        <SelectionBar selection={selection}>
+          <PasteBulkActions
+            rows={rows}
+            selection={selection}
+            mode={mode}
+            collections={collections}
+            collection={collection}
+          />
+        </SelectionBar>
       </div>
     </div>
   )

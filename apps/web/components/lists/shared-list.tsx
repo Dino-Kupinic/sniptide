@@ -14,6 +14,7 @@ import {
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
 import { useTranslations } from "next-intl"
+import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { useListView } from "@/components/shell/page-header"
@@ -28,8 +29,10 @@ import {
   sharedListSearch,
 } from "@/lib/pastes/shared-list-query"
 import type { Person } from "@/lib/pastes/types"
+import { SharedBulkActions } from "./bulk-actions"
 import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
+import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
 import {
   FilterMenu,
   ListHeader,
@@ -113,6 +116,8 @@ export function SharedList({
       update({ sort: value, dir: next === DEFAULT_SHARED_DIRECTION[value] ? undefined : next }),
   })
   const { view } = useListView()
+  const slugs = React.useMemo(() => rows.map((row) => row.slug), [rows])
+  const selection = useRowSelection(view === "grid" ? [] : slugs)
   const filtering = Boolean(
     query.q || query.languages.length || query.owners.length || query.access.length,
   )
@@ -282,7 +287,10 @@ export function SharedList({
             <Table className="hidden min-w-[1000px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableSortHead {...headProps("title")}>{t("paste")}</TableSortHead>
+                  <SelectAllHead selection={selection} />
+                  <TableSortHead {...headProps("title")} className="pl-0">
+                    {t("paste")}
+                  </TableSortHead>
                   <TableSortHead {...headProps("language")} className="w-[140px]">
                     {t("language")}
                   </TableSortHead>
@@ -302,8 +310,13 @@ export function SharedList({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.slug} className="relative">
-                    <TableCell className="truncate">
+                  <TableRow
+                    key={row.slug}
+                    data-selected={selection.has(row.slug)}
+                    className="relative"
+                  >
+                    <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
+                    <TableCell className="truncate pl-0">
                       <span className="flex items-center gap-2">
                         <Link
                           href={`/pastes/${row.slug}`}
@@ -406,6 +419,10 @@ export function SharedList({
             />
           </div>
         ) : null}
+
+        <SelectionBar selection={selection}>
+          <SharedBulkActions rows={rows} selection={selection} />
+        </SelectionBar>
       </div>
     </div>
   )

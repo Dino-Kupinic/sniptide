@@ -531,3 +531,65 @@ export async function loadComparisonRevisions(slug: string) {
   if (typeof slug !== "string" || slug.length > 200) return null
   return store.getComparisonRevisions(slug)
 }
+
+// Bulk versions of the row actions, for the selection bar on the lists. Each slug goes through
+// the same store call (and the same ownership and access checks) as its single-row action, and
+// the workspace refreshes once at the end. A list page holds PASTE_PAGE_SIZE rows, so a selection
+// stays small, and the cap only stops a crafted request from looping over a whole account.
+const BULK_LIMIT = 100
+
+const slugsSchema = z.array(z.string().min(1).max(100)).min(1).max(BULK_LIMIT)
+
+async function forEachSlug(slugs: string[], run: (slug: string) => Promise<unknown>) {
+  const user = await assertSignedIn()
+  const parsed = slugsSchema.parse([...new Set(slugs)])
+  for (const slug of parsed) await run(slug)
+  await revalidateWorkspace(user)
+}
+
+export async function trashPastes(slugs: string[]) {
+  await forEachSlug(slugs, store.trashPaste)
+}
+
+// Undoes trashPastes, and restores a trash selection. Fails only when none came back.
+export async function restorePastes(slugs: string[]): Promise<ActionOutcome> {
+  let restored = 0
+  await forEachSlug(slugs, async (slug) => {
+    if (await store.restorePaste(slug)) restored += 1
+  })
+  return restored > 0 ? { ok: true } : { ok: false, error: await actionError("pasteGone") }
+}
+
+export async function deletePastesForever(slugs: string[]) {
+  await forEachSlug(slugs, store.deleteForever)
+}
+
+export async function setPastesStarred(slugs: string[], starred: boolean) {
+  await forEachSlug(slugs, (slug) => store.setStarred(slug, starred))
+}
+
+export async function setPastesCollection(slugs: string[], collection: string | null) {
+  await assertSignedIn()
+  if (collection !== null && !(await collectionExists(collection))) {
+    return { ok: false as const, error: await actionError("collectionMissing") }
+  }
+  await forEachSlug(slugs, (slug) => store.setPasteCollection(slug, collection))
+  return { ok: true as const }
+}
+
+export async function setPastesVisibility(slugs: string[], visibility: Visibility) {
+  const parsed = z.enum(VISIBILITIES).parse(visibility)
+  await forEachSlug(slugs, (slug) => store.updateSharing(slug, { visibility: parsed }))
+}
+
+export async function leaveShares(slugs: string[]) {
+  await forEachSlug(slugs, store.leaveShare)
+}
+
+export async function restoreShares(slugs: string[]): Promise<ActionOutcome> {
+  let restored = 0
+  await forEachSlug(slugs, async (slug) => {
+    if (await store.restoreShare(slug)) restored += 1
+  })
+  return restored > 0 ? { ok: true } : { ok: false, error: await actionError("shareRevoked") }
+}

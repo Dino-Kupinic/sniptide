@@ -110,3 +110,36 @@ export async function restoreCollection(
   await revalidateWorkspace(user)
   return { ok: true }
 }
+
+// Deletes several collections at once, for the Collections page's selection bar. Returns what was
+// removed, for `restoreCollections` to take back.
+export async function deleteCollections(slugs: string[]): Promise<store.CollectionSnapshot[]> {
+  const user = await assertSignedIn()
+  const parsed = z
+    .array(z.string().min(1).max(60))
+    .min(1)
+    .max(MAX_COLLECTIONS)
+    .parse([...new Set(slugs)])
+  const snapshots: store.CollectionSnapshot[] = []
+  for (const slug of parsed) {
+    const snapshot = await store.deleteCollection(slug)
+    if (snapshot) snapshots.push(snapshot)
+  }
+  await revalidateWorkspace(user)
+  return snapshots
+}
+
+// Undoes `deleteCollections`. Brings back every collection it can and fails with the first reason
+// one could not come back.
+export async function restoreCollections(
+  snapshots: store.CollectionSnapshot[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = z.array(z.unknown()).max(MAX_COLLECTIONS).safeParse(snapshots)
+  if (!parsed.success) return { ok: false, error: await actionError("collectionRestore") }
+  let failure: { ok: false; error: string } | null = null
+  for (const snapshot of snapshots) {
+    const result = await restoreCollection(snapshot)
+    if (!result.ok) failure ??= result
+  }
+  return failure ?? { ok: true }
+}
