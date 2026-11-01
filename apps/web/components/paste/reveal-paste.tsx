@@ -6,7 +6,7 @@ import { FlameIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { track } from "@/lib/analytics"
-import { PasteGate } from "./paste-gate"
+import { GateLayout, PasteGate } from "./paste-gate"
 import { BurnNotice, SharedPasteView, type SharedPasteViewData } from "./shared-paste-view"
 import { OwnerNote } from "./unlock-form"
 
@@ -52,7 +52,7 @@ export function RevealPaste({
 
   const gone = error === "thisPasteIsGoneSomeoneAlready"
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6">
+    <GateLayout after={after}>
       <PasteGate
         slug={slug}
         icon={<FlameIcon />}
@@ -103,7 +103,6 @@ export function RevealPaste({
           </Button>
         )}
       </PasteGate>
-      {after}
-    </div>
+    </GateLayout>
   )
 }

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import type * as React from "react"
 import { type ComponentProps, Suspense } from "react"
 import { FileViewer } from "@/components/paste/file-viewer"
+import { GateLayout } from "@/components/paste/paste-gate"
 import { RevealPaste } from "@/components/paste/reveal-paste"
 import { SharedPasteView, sharedViewerProps } from "@/components/paste/shared-paste-view"
 import { UnlockForm } from "@/components/paste/unlock-form"
@@ -60,10 +61,9 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   if (read.status === "locked") {
     return (
       <Shell signedIn={signedIn}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-6">
+        <GateLayout after={signUp}>
           <UnlockForm slug={slug} ownerHref={ownerHref} />
-          {signUp}
-        </div>
+        </GateLayout>
       </Shell>
     )
   }

@@ -40,3 +40,20 @@ export function PasteGate({
     </section>
   )
 }
+
+// Centers the gate card in the page and keeps anything after it, such as the sign-up prompt, at
+// the bottom, so the card sits in the middle whether or not that line shows.
+export function GateLayout({
+  children,
+  after,
+}: {
+  children: React.ReactNode
+  after?: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-1 items-center justify-center">{children}</div>
+      {after ? <div className="flex justify-center">{after}</div> : null}
+    </div>
+  )
+}
