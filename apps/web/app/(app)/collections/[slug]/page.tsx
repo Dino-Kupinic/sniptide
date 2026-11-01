@@ -19,7 +19,7 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
   const locale = await getLocale()
   const { slug } = await params
   const query = parsePasteListQuery(await searchParams)
-  const [collection, collections, data, { origin, host }] = await Promise.all([
+  const [collection, collections, data, { origin }] = await Promise.all([
     getCollection(slug),
     listCollections(),
     listPastePage({ mode: "collection", collection: slug }, query),
@@ -39,7 +39,6 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
       rows={rows}
       previews={previews}
       origin={origin}
-      host={host}
       // For the selection bar's Move to collection.
       collections={collections}
       collection={collection.slug}

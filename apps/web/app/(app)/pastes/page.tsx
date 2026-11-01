@@ -17,7 +17,7 @@ export default async function Page({ searchParams }: PageProps<"/pastes">) {
   const locale = await getLocale()
   const t = await getTranslations("Core")
   const query = parsePasteListQuery(await searchParams)
-  const [data, { origin, host }, collections] = await Promise.all([
+  const [data, { origin }, collections] = await Promise.all([
     listPastePage({ mode: "mine" }, query),
     getSiteOrigin(),
     listCollections(),
@@ -33,7 +33,6 @@ export default async function Page({ searchParams }: PageProps<"/pastes">) {
       rows={rows}
       previews={previews}
       origin={origin}
-      host={host}
       collections={collections}
       actions={<ImportGistButton />}
       mobileActions={<ImportGistButton compact />}
