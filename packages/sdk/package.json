@@ -1,7 +1,7 @@
 {
   "name": "@sniptide/sdk",
-  "version": "0.1.1",
-  "description": "Official Sniptide API client for JavaScript and TypeScript",
+  "version": "0.1.2",
+  "description": "JavaScript and TypeScript SDK for Sniptide snippets, collections, and environment variables",
   "license": "MIT",
   "homepage": "https://sniptide.com",
   "repository": {
