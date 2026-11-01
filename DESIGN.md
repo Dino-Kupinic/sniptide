@@ -255,11 +255,6 @@ A stack of single-line rows (Sharing, Access, Views and Revisions on a paste, an
 
 Six horizontal stripes that taper from a hairline at the top to a full bar at the bottom. Blue `#2A26EC` on light surfaces and white on dark ones. The wordmark is uppercase, `#0A0A0A` on light and white on dark. Both live in `LogoMark` and `Logo`.
 
-### Stripes
-**Role:** Decorative motif.
-
-The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-in screen and the share-link page.
-
 ## Mobile
 
 Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.

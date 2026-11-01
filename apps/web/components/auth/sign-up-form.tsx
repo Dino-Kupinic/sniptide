@@ -15,7 +15,7 @@ import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
 import { NewPasswordField } from "./password-field"
-import { EmailDivider, SocialButtons } from "./social-buttons"
+import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
 type Availability = "idle" | "invalid" | "checking" | "available" | "taken"
@@ -104,6 +104,7 @@ export function SignUpForm({
     }
 
     track("signed_up", { method: "email" })
+    rememberSignInMethod("email")
     router.replace(redirectTo)
     router.refresh()
   }
@@ -124,8 +125,8 @@ export function SignUpForm({
         </>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
-        <div className="flex flex-col gap-3.5">
+      <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="username">{t("username")}</Label>
             <div
@@ -161,7 +162,7 @@ export function SignUpForm({
               id="username-status"
               aria-live="polite"
               className={cn(
-                "text-xs font-medium",
+                "text-xs font-medium empty:hidden",
                 availability === "available" && "text-link",
                 (availability === "taken" || availability === "invalid") && "text-destructive",
                 availability === "checking" && "text-muted-foreground",

@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl"
 import { reportCopy, useCopy } from "./copy-button"
 import { useActiveFile } from "./file-viewer"
 
-// Raw / Download / Print / Copy code on the public page, for the paste's first file. Print needs
+// Raw / Print / Download / Copy on the public page, for the paste's first file. Print needs
 // the slug, so a burn-after-read paste that is already gone doesn't offer it. The compact row for
 // phones follows the file open in the code card when an ActiveFileProvider wraps the page.
 export function ShareActions({
@@ -54,7 +54,7 @@ export function ShareActions({
         ) : null}
         <Button size="xl" className="min-w-0 flex-1" onClick={copyCode}>
           {copied ? <SuccessCheck /> : <CopyIcon />}
-          <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
+          <span aria-live="polite">{copied ? t("copied") : t("copy")}</span>
         </Button>
       </div>
     )
@@ -63,20 +63,9 @@ export function ShareActions({
   return (
     <div className="flex items-center gap-2">
       {rawHref ? (
-        <>
-          <Button variant="outline" size="lg" render={<a href={rawHref} />} nativeButton={false}>
-            {t("raw")}
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            render={<a href={`${rawHref}&download=1`} />}
-            nativeButton={false}
-          >
-            <DownloadIcon />
-            {t("download")}
-          </Button>
-        </>
+        <Button variant="outline" size="lg" render={<a href={rawHref} />} nativeButton={false}>
+          {t("raw")}
+        </Button>
       ) : null}
       {slug ? (
         <Tooltip>
@@ -96,9 +85,20 @@ export function ShareActions({
           <TooltipContent side="bottom">{t("print")}</TooltipContent>
         </Tooltip>
       ) : null}
+      {rawHref ? (
+        <Button
+          variant="outline"
+          size="lg"
+          render={<a href={`${rawHref}&download=1`} />}
+          nativeButton={false}
+        >
+          <DownloadIcon />
+          {t("download")}
+        </Button>
+      ) : null}
       <Button size="lg" onClick={copyCode}>
         {copied ? <SuccessCheck /> : <CopyIcon />}
-        <span aria-live="polite">{copied ? t("copied") : t("copyCode")}</span>
+        <span aria-live="polite">{copied ? t("copied") : t("copy")}</span>
       </Button>
     </div>
   )

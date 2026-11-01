@@ -1,5 +1,6 @@
 "use client"
 
+import { Badge } from "@sniptide/ui/components/badge"
 import { Button } from "@sniptide/ui/components/button"
 import { useTranslations } from "next-intl"
 import * as React from "react"
@@ -35,6 +36,26 @@ export function GoogleIcon() {
   )
 }
 
+// The sign-in method this browser used last, so the auth screens can mark it "Last used". Kept in
+// localStorage only; a private window or blocked storage simply shows no badge.
+const lastMethodKey = "sniptide-last-sign-in"
+
+export function rememberSignInMethod(method: SocialProvider | "email") {
+  try {
+    localStorage.setItem(lastMethodKey, method)
+  } catch {}
+}
+
+function useLastSignInMethod() {
+  const [method, setMethod] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    try {
+      setMethod(localStorage.getItem(lastMethodKey))
+    } catch {}
+  }, [])
+  return method
+}
+
 const providers = [
   { id: "github", name: "GitHub", icon: GitHubIcon },
   { id: "google", name: "Google", icon: GoogleIcon },
@@ -55,9 +76,11 @@ export function SocialButtons({
 }) {
   const t = useTranslations("Auth")
   const [pending, setPending] = React.useState<SocialProvider | null>(null)
+  const lastMethod = useLastSignInMethod()
 
   async function signIn(provider: SocialProvider) {
     setPending(provider)
+    rememberSignInMethod(provider)
     // The account is created after the provider's redirect; this marks the attempt. The result
     // is reported on return: new accounts land on newUserCallbackURL, the rest on callbackURL.
     if (verb === "Sign up") track("sign_up_started", { method: provider })
@@ -78,27 +101,39 @@ export function SocialButtons({
     <div className="flex gap-2 lg:flex-col">
       {providers
         .filter(({ id }) => enabled.includes(id))
-        .map(({ id, name, icon: Icon }) => (
-          <Button
-            key={id}
-            type="button"
-            variant="outline"
-            size="xl"
-            disabled={pending !== null && pending !== id}
-            loading={pending === id}
-            aria-label={t(verb === "Sign up" ? "socialSignUp" : "socialContinue", {
-              provider: name,
-            })}
-            onClick={() => signIn(id)}
-            className="flex-1 gap-2 lg:flex-none lg:gap-2.5"
-          >
-            <Icon />
-            <span className="lg:hidden">{name}</span>
-            <span className="hidden lg:inline">
-              {t(verb === "Sign up" ? "socialSignUp" : "socialContinue", { provider: name })}
-            </span>
-          </Button>
-        ))}
+        .map(({ id, name, icon: Icon }) => {
+          const label = t(verb === "Sign up" ? "socialSignUp" : "socialContinue", {
+            provider: name,
+          })
+          const last = lastMethod === id
+          return (
+            <div key={id} className="relative flex flex-1 lg:flex-none">
+              <Button
+                type="button"
+                variant="outline"
+                size="xl"
+                disabled={pending !== null && pending !== id}
+                loading={pending === id}
+                aria-label={last ? `${label} (${t("lastUsed")})` : label}
+                onClick={() => signIn(id)}
+                className="flex-1 gap-2 lg:gap-2.5"
+              >
+                <Icon />
+                <span className="lg:hidden">{name}</span>
+                <span className="hidden lg:inline">{label}</span>
+              </Button>
+              {last ? (
+                <Badge
+                  variant="primary"
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-2.5 right-2 h-5 px-1.5 text-[11px]"
+                >
+                  {t("lastUsed")}
+                </Badge>
+              ) : null}
+            </div>
+          )
+        })}
     </div>
   )
 }

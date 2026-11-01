@@ -5,7 +5,6 @@ import { SignUpClosed } from "@/components/auth/sign-up-closed"
 import { SignUpForm } from "@/components/auth/sign-up-form"
 import { getSocialProviders, isInviteOnly, isSignUpClosed } from "@/lib/auth"
 import { afterSignIn } from "@/lib/auth-redirect"
-import { accountBudget } from "@/lib/pastes/budget"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata() {
@@ -36,26 +35,17 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
     )
   }
 
-  // A self-hosted server can turn the storage limit off, which leaves no figure to quote.
-  const limitBytes = accountBudget().bytes
   return (
     <AuthScreen
-      title={t("createAccount")}
-      subtitle={
-        // Invite-only: the same form, so invitees can use GitHub or Google; the server refuses
-        // emails that aren't on ALLOWED_EMAILS.
-        isInviteOnly()
-          ? t("inviteOnlySubtitle")
-          : limitBytes === null
-            ? t("signUpSubtitleNoLimit")
-            : t("signUpSubtitle", { limit: limitBytes / 1024 / 1024 })
-      }
+      title={t("signUpHeading")}
+      // Invite-only keeps its subtitle, since it says whose email the server accepts. The same
+      // form still offers GitHub and Google; the server refuses emails not on ALLOWED_EMAILS.
+      subtitle={isInviteOnly() ? t("inviteOnlySubtitle") : undefined}
       legal={legal}
       pitch={{
         title: [t("signUpPitchTitle1"), t("signUpPitchTitle2")],
         body: t("signUpPitchBody"),
         link: `${host}/@you`,
-        note: t("publicProfile"),
       }}
     >
       <SignUpForm

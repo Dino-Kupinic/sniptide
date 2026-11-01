@@ -4,6 +4,8 @@ import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
 import type * as React from "react"
 import { type ComponentProps, Suspense } from "react"
+import { LifeField } from "@/components/auth/life-field"
+import { LanguageMenu } from "@/components/language-switcher"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { GateLayout } from "@/components/paste/paste-gate"
 import { RevealPaste } from "@/components/paste/reveal-paste"
@@ -48,7 +50,13 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   const { signedIn } = read
   const ownerHref =
     read.status !== "ok" && read.owned ? `${getAppOrigin()}/pastes/${slug}` : undefined
-  const signUp = signedIn ? null : <SignUpPrompt />
+  // Below the code card: the sign-up prompt for visitors, and the language on the right.
+  const signUp = (
+    <div className="flex flex-col items-center gap-3 lg:flex-row lg:justify-between">
+      {signedIn ? null : <SignUpPrompt />}
+      <LanguageMenu className="lg:-mr-3 lg:ml-auto" />
+    </div>
+  )
 
   if (read.status === "sealed") {
     return (
@@ -95,8 +103,11 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 
 function Shell({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-svh flex-col">
-      <PublicHeader signedIn={signedIn} />
+    <div className="relative isolate flex min-h-svh flex-col">
+      {/* The auth screens' Game of Life, faint and faded out before the paste column so it never
+          sits under text. Phones have no gutter for it. */}
+      <LifeField className="fixed -z-10 opacity-15 [mask-image:linear-gradient(to_right,black,transparent_calc(50%-480px),transparent_calc(50%+480px),black)] max-lg:hidden dark:opacity-25" />
+      <PublicHeader signedIn={signedIn} languageMenu={false} />
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 lg:gap-6 lg:pt-12">
         {children}
       </main>

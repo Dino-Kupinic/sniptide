@@ -11,7 +11,8 @@ import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
-import { EmailDivider, SocialButtons } from "./social-buttons"
+import { PasswordInput } from "./password-input"
+import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
 // `socialProviders` lists the configured GitHub and Google logins.
@@ -66,6 +67,7 @@ export function SignInForm({
     }
 
     track("signed_in", { method: "email" })
+    rememberSignInMethod("email")
     router.replace(redirectTo)
     router.refresh()
   }
@@ -92,8 +94,8 @@ export function SignInForm({
         </>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
-        <div className="flex flex-col gap-3.5">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">{t("email")}</Label>
             <Input
@@ -118,10 +120,9 @@ export function SignInForm({
                 {t("forgotPassword")}
               </Link>
             </div>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
               className={authInputClass}
