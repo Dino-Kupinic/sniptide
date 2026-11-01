@@ -5,8 +5,9 @@ This page covers commits, pull requests, releases, and database migration rules.
 
 ## License
 
-Contributions are licensed under [AGPL-3.0-only](LICENSE). See [Licensing](LICENSING.md) for
-the scope of the open-source core and hosted services.
+Contributions are licensed under the license of the package they change. The app and UI use
+[AGPL-3.0-only](LICENSE). The client packages and shared contracts use MIT. See
+[Licensing](LICENSING.md) for the package boundaries and hosted services.
 
 ## Conventional Commits
 

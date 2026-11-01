@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "description": "Capture and reuse code with Sniptide from a terminal or coding agent.",
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "sniptide": "dist/sniptide.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES"
   ],
   "engines": {
     "node": ">=24"

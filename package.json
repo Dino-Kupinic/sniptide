@@ -88,7 +88,8 @@
     "knip": "catalog:tooling",
     "tar": "7.5.22",
     "turbo": "catalog:tooling",
-    "typescript": "catalog:tooling"
+    "typescript": "catalog:tooling",
+    "zod": "catalog:runtime"
   },
   "overrides": {
     "minimatch": "11.0.3",
