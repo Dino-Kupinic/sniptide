@@ -8,14 +8,23 @@ import { getAppOrigin } from "@/lib/site"
 
 // Header for pages visitors see without signing in (the public share page). Plain <a> tags, not
 // <Link>: this page can be served on a different domain than the app (see getAppOrigin).
-export function PublicHeader({ signedIn, className }: { signedIn: boolean; className?: string }) {
+export function PublicHeader({
+  signedIn,
+  languageMenu = true,
+  className,
+}: {
+  signedIn: boolean
+  // The paste page offers the language below the code card instead.
+  languageMenu?: boolean
+  className?: string
+}) {
   const t = useTranslations("Auth")
   const appOrigin = getAppOrigin()
 
   return (
     <header
       className={cn(
-        "flex h-16 items-center justify-between border-b-0 px-4 lg:border-b lg:border-border lg:px-10",
+        "flex h-16 items-center justify-between border-b-0 bg-sidebar px-4 lg:border-b lg:border-border lg:px-10",
         className,
       )}
     >
@@ -26,7 +35,9 @@ export function PublicHeader({ signedIn, className }: { signedIn: boolean; class
         <Logo className="max-sm:[&>span]:hidden" />
       </a>
       <nav aria-label={t("navigation")} className="flex items-center gap-2">
-        <LanguageMenu side="bottom" size="default" compact className="max-sm:w-8 max-sm:px-0" />
+        {languageMenu ? (
+          <LanguageMenu side="bottom" size="default" compact className="max-sm:w-8 max-sm:px-0" />
+        ) : null}
         <Button
           variant="outline"
           aria-label={t("createPaste")}
