@@ -83,7 +83,6 @@ export function UiStress({
               title={dataset === "demo" ? "My pastes" : "Benachrichtigungseinstellungen"}
               rows={data.pastes.slice(start, start + 10)}
               origin={origin}
-              host={host}
               mode="mine"
               collections={data.collections}
               query={query}

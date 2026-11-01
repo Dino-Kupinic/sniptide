@@ -119,7 +119,6 @@ export function PasteList({
   title,
   rows,
   origin,
-  host,
   mode,
   collections,
   collection,
@@ -135,7 +134,6 @@ export function PasteList({
   // The first highlighted lines of each paste, by slug, for the grid view's cards.
   previews?: Record<string, HighlightedLines>
   origin: string
-  host: string
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
   // The collection whose page this is, in collection mode.
@@ -356,7 +354,7 @@ export function PasteList({
                   <TableRow
                     key={row.slug}
                     data-selected={selection.has(row.slug)}
-                    className="relative"
+                    className="relative [&>td]:h-11"
                   >
                     <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
                     <TableCell className="truncate pl-0">
@@ -367,10 +365,6 @@ export function PasteList({
                       >
                         {row.title}
                       </Link>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {row.owner ? `@${row.owner.username} · ` : ""}
-                        {host}/{row.slug}
-                      </span>
                     </TableCell>
                     <TableCell className="text-[13px] text-foreground/80">
                       <LanguageLabel language={row.language} />
