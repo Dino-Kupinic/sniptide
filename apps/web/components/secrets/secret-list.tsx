@@ -4,10 +4,10 @@ import { Badge } from "@sniptide/ui/components/badge"
 import { Button } from "@sniptide/ui/components/button"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { PlusIcon } from "lucide-react"
-import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { ListHeader, SearchField } from "@/components/lists/toolbar"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import type { SecretSummary } from "@/lib/env/web-store"
 import { ENVIRONMENTS, type Environment } from "./client"
 
@@ -38,6 +38,7 @@ export function SecretList({ groups }: { groups: SecretListItem[] }) {
   return (
     <div className="ph-no-capture flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
+        headerActions={null}
         title={t("title")}
         count={groups.length}
         description={t("list_description")}

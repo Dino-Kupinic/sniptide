@@ -34,7 +34,7 @@ import * as React from "react"
 import { useResourceLinks } from "@/components/shell/resource-links"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
-import { authClient } from "@/lib/auth-client"
+import { signOut as signOutAccount } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeNames, locales } from "@/lib/i18n/config"
 
@@ -85,7 +85,7 @@ export function AccountMenuItems({
   )
 
   async function signOut() {
-    await authClient.signOut()
+    await signOutAccount()
     router.replace("/sign-in")
     router.refresh()
   }

@@ -37,21 +37,25 @@ test("usage shows account totals, daily API history and settings navigation", as
       ])
     await app.open("/settings?tab=usage")
     await expect(screen.getByRole("tab", "Usage")).toHaveAttribute("aria-selected", "true")
-    await expect(screen.getByText("80.0 MB of 100.0 MB")).toBeVisible()
-    await expect(screen.getByText("1,000 of 1,000")).toBeVisible()
-    await expect(screen.getByText("Approaching limit")).toBeVisible()
-    await expect(screen.getByText("Limit reached")).toBeVisible()
+    await expect(
+      screen.getByText("80.0 MB of 100.0 MB", { exact: true, visible: true }),
+    ).toBeVisible()
+    await expect(screen.getByText("1,000 of 1,000", { exact: true, visible: true })).toBeVisible()
+    await expect(
+      screen.getByText("Approaching limit", { exact: true, visible: true }),
+    ).toBeVisible()
+    await expect(screen.getByText("Limit reached", { exact: true, visible: true })).toBeVisible()
     await expect(screen.getByRole("progressbar", "Storage")).toHaveAttribute("aria-valuenow", "80")
     await expect(screen.getByRole("progressbar", "Pastes")).toHaveAttribute("aria-valuenow", "100")
     const total = 12 + previousDays.reduce((sum, row) => sum + row.requests, 0)
     await expect(
       screen.getByText(total.toLocaleString("en"), { exact: true, visible: true }),
     ).toBeVisible()
-    await screen.getByText("View daily values").tap()
+    await screen.getByText("View daily values", { exact: true, visible: true }).tap()
     await expect(screen.getByRole("table")).toBeVisible()
     await expect(screen.getByRole("table").getByRole("row")).toHaveCount(31)
     await expect(screen.getByRole("table").getByRole("row").last()).toContainText("12")
-    await screen.getByText("View daily values").tap()
+    await screen.getByText("View daily values", { exact: true, visible: true }).tap()
     await app.screenshot("usage-desktop-populated")
     await screen.getByRole("tab", "Billing").tap()
     await screen.getByRole("tab", "Usage").tap()
@@ -83,7 +87,7 @@ test("an empty account still shows its usage and an empty history", async ({
   await expect(
     screen.getByText("No API requests in the last 30 days.", { visible: true }),
   ).toBeVisible()
-  await expect(screen.getByText("Storage", { exact: true })).toBeVisible()
+  await expect(screen.getByText("Storage", { exact: true, visible: true })).toBeVisible()
   await app.screenshot("usage-empty")
 })
 

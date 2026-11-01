@@ -1,9 +1,9 @@
 "use client"
 
 import { cn } from "@sniptide/ui/lib/utils"
-import Link from "next/link"
 import { useTranslations } from "next-intl"
 import type * as React from "react"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { renderToken } from "@/components/paste/code-block"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import type { HighlightedLines } from "@/lib/highlight/types"

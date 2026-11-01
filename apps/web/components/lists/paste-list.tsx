@@ -13,10 +13,11 @@ import {
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
 import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
-import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
-import * as React from "react"
+import type * as React from "react"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { useListView } from "@/components/shell/page-header"
 import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
@@ -159,7 +160,7 @@ export function PasteList({
 
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const { languages, visibility, collections: inCollections, owner, sort } = query
-  const [view, setView] = React.useState<"list" | "grid">("list")
+  const { view, setView } = useListView()
   const filtering = Boolean(
     query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
@@ -247,6 +248,7 @@ export function PasteList({
       <ListHeader
         title={title}
         count={pagination.totalAll}
+        headerActions={mode === "collection" ? actions : null}
         actions={
           <>
             <ViewToggle value={view} onChange={setView} />
@@ -257,7 +259,7 @@ export function PasteList({
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+        <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
         {quick}
       </div>
 
@@ -265,7 +267,7 @@ export function PasteList({
       <div className="flex flex-col gap-3">
         <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+            <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label={t("language")}
               options={languageOptions.map((id) => ({

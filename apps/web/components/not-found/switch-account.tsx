@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { authClient } from "@/lib/auth-client"
+import { signOut as signOutAccount } from "@/lib/auth-client"
 
 // Signs out and lands on the sign-in page, the same way the account menu's Log out does.
 export function SwitchAccount() {
@@ -10,7 +10,7 @@ export function SwitchAccount() {
   const router = useRouter()
 
   async function switchAccount() {
-    await authClient.signOut()
+    await signOutAccount()
     router.replace("/sign-in")
     router.refresh()
   }

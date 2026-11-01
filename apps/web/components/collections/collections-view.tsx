@@ -14,10 +14,10 @@ import {
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon } from "lucide-react"
-import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ListHeader } from "@/components/lists/toolbar"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { useSidebarUpdate } from "@/components/shell/app-shell"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
@@ -92,6 +92,7 @@ export function CollectionsView({
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
+        headerActions={null}
         title={t("collections")}
         count={collections.length}
         description={t("group_related_pastes_under_one_name")}
