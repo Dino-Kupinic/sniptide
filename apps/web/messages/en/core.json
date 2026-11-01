@@ -73,7 +73,7 @@
     "autosaveDirty": "Unsaved changes…",
     "autosaveBlocked": "Not saved yet: {reason}",
     "autosaveSaving": "Saving…",
-    "autosaveSaved": "All changes saved",
+    "autosaveSaved": "Saved {time}",
     "autosaveOffline": "Offline. Changes are kept on this device",
     "autosaveRetry": "Can't reach Sniptide. Changes are kept on this device; retrying",
     "autosaveError": "Not saved: {message}",

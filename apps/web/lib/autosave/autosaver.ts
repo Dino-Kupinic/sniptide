@@ -71,7 +71,7 @@ export class Autosaver<T> {
   private currentKey: string
   private savedKey: string
   private lastState: AutosaveState = { kind: "idle" }
-  private everSaved = false
+  private lastSavedAt: number | null = null
   private conflicted = false
   private disposed = false
   private attempt = 0
@@ -111,7 +111,9 @@ export class Autosaver<T> {
       this.cancelTimers()
       // Edits that came back to what the server has need no save.
       if (this.lastState.kind !== "saving" && this.lastState.kind !== "conflict") {
-        this.set(this.everSaved ? { kind: "saved", at: this.now() } : { kind: "idle" })
+        this.set(
+          this.lastSavedAt === null ? { kind: "idle" } : { kind: "saved", at: this.lastSavedAt },
+        )
       }
       return
     }
@@ -173,6 +175,7 @@ export class Autosaver<T> {
     this.current = value
     this.currentKey = JSON.stringify(value)
     this.savedKey = this.currentKey
+    this.lastSavedAt = null
     this.set({ kind: "idle" })
   }
 
@@ -268,7 +271,7 @@ export class Autosaver<T> {
 
       this.attempt = 0
       if (outcome.ok) {
-        this.everSaved = true
+        this.lastSavedAt = this.now()
         this.savedKey =
           outcome.saved === undefined || outcome.saved === null
             ? sentKey
@@ -282,7 +285,7 @@ export class Autosaver<T> {
             this.schedule()
           }
         } else {
-          this.set({ kind: "saved", at: this.now() })
+          this.set({ kind: "saved", at: this.lastSavedAt })
         }
       } else if ("conflict" in outcome) {
         this.conflicted = true
