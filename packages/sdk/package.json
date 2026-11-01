@@ -1,7 +1,7 @@
 {
   "name": "@sniptide/sdk",
-  "version": "0.1.2",
-  "description": "JavaScript and TypeScript SDK for Sniptide snippets, collections, and environment variables",
+  "version": "0.1.3",
+  "description": "Official Sniptide SDK for JavaScript and TypeScript: snippets, collections, environment variables, and account usage.",
   "license": "MIT",
   "homepage": "https://sniptide.com",
   "repository": {
@@ -31,5 +31,14 @@
   },
   "devDependencies": {
     "typescript": "catalog:tooling"
-  }
+  },
+  "keywords": [
+    "sniptide",
+    "sdk",
+    "api-client",
+    "code-snippets",
+    "collections",
+    "environment-variables",
+    "typescript"
+  ]
 }

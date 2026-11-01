@@ -4,13 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sniptide"
-version = "0.1.0"
-description = "Official Sniptide API client"
+version = "0.1.1"
+description = "Official Python SDK for Sniptide snippets, collections, environment variables, and account usage."
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"
+keywords = ["sniptide", "sdk", "api-client", "code-snippets", "collections", "environment-variables"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: OS Independent",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [project.urls]
 Homepage = "https://sniptide.com"
-Repository = "https://github.com/Dino-Kupinic/sniptide"
+Documentation = "https://docs.sniptide.com"
+Repository = "https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk-python"
+Issues = "https://github.com/Dino-Kupinic/sniptide/issues"
