@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import SharePage from "@/app/[slug]/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { POST as revealRoute } from "@/app/[slug]/reveal/route"
-import { readSharedPaste } from "@/lib/pastes/store"
+import { readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import {
   hasDatabase,
@@ -69,6 +69,49 @@ describeDb("one-time reads", () => {
     expect(row?.deletedAt).toBeNull()
   })
 
+  test("share reads cannot reveal a burn paste, even with a legacy reveal option", async () => {
+    // @ts-expect-error Revealing is no longer part of the share-read interface.
+    const read = await readSharedPaste("burn", { visit: true, reveal: true })
+    expect(read).toEqual({ status: "sealed", signedIn: false })
+    expect((await pasteRow("burn"))?.deletedAt).toBeNull()
+    expect((await pasteRow("burn"))?.views).toBe(0)
+    expect(await viewDayTotal("burn")).toBe(0)
+    expect(await drainVisits()).toMatchObject({ consumed: 0 })
+    expect(await reveal("burn")).toBe("content")
+  })
+
+  test("share reads racing with explicit reveals never receive burn content", async () => {
+    const [reads, claims] = await Promise.all([
+      Promise.all(Array.from({ length: 8 }, () => readSharedPaste("burn", { visit: true }))),
+      Promise.all(Array.from({ length: 8 }, () => revealSharedPaste("burn"))),
+    ])
+    expect(reads.every((read) => read.status === "sealed" || read.status === "missing")).toBe(true)
+    expect(claims.filter((read) => read.status === "ok")).toHaveLength(1)
+    expect(claims.filter((read) => read.status === "missing")).toHaveLength(7)
+    expect((await pasteRow("burn"))?.views).toBe(1)
+    expect(await viewDayTotal("burn")).toBe(1)
+  })
+
+  test("reveals preserve the public projection and never burn the owner's paste", async () => {
+    signInAs("owner")
+    const read = await revealSharedPaste("burn")
+    expect(read.status).toBe("ok")
+    if (read.status !== "ok") throw new Error("Owner could not read their paste")
+    expect(Object.keys(read.paste).sort()).toEqual([
+      "allowRaw",
+      "author",
+      "burnAfterRead",
+      "expiresAt",
+      "files",
+      "slug",
+      "title",
+      "updatedAt",
+      "views",
+    ])
+    expect((await pasteRow("burn"))?.deletedAt).toBeNull()
+    expect((await pasteRow("burn"))?.views).toBe(0)
+  })
+
   test("link previews and crawlers that open the page don't use it up either", async () => {
     request.headers = new Headers({ "user-agent": "Slackbot-LinkExpanding 1.0" })
     expect(await page("burn")).toBe("empty")
@@ -115,9 +158,7 @@ describeDb("one-time reads", () => {
 
   test("the same holds when signed-in readers race", async () => {
     signInAs("other")
-    const reads = await Promise.all(
-      Array.from({ length: 8 }, () => readSharedPaste("burn", { reveal: true })),
-    )
+    const reads = await Promise.all(Array.from({ length: 8 }, () => revealSharedPaste("burn")))
 
     expect(reads.filter((read) => read.status === "ok")).toHaveLength(1)
     expect(reads.filter((read) => read.status === "missing")).toHaveLength(7)

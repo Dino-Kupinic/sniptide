@@ -1,4 +1,4 @@
-import { readSharedPaste } from "@/lib/pastes/store"
+import { revealSharedPaste } from "@/lib/pastes/store"
 import { retryAfterSeconds } from "@/lib/public-limits"
 
 // Hands a burn-after-read paste to the visitor who asked for it, once. Only a POST reveals it, so
@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/r
   }
 
   const { slug } = await params
-  const read = await readSharedPaste(slug, { reveal: true })
+  const read = await revealSharedPaste(slug)
 
   if (read.status === "locked")
     return Response.json({ ok: false, error: "Unlock the paste first." }, { status: 401, headers })

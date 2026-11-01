@@ -903,7 +903,7 @@ export const getPasteMeta = cache(async (slug: string) => {
 
 export type SharedRead =
   | { status: "ok"; paste: SharedPaste; owned: boolean; signedIn: boolean }
-  // A burn-after-read paste someone else owns, before they ask for it with `reveal`.
+  // A burn-after-read paste someone else owns, before an explicit reveal.
   | { status: "sealed"; signedIn: boolean }
   | { status: "locked" }
   | { status: "missing" }
@@ -971,72 +971,94 @@ async function lockSharedRead(tx: Transaction, slug: string) {
   return record ?? null
 }
 
-// A paste by its public link (the share page and its raw files). Returns the content only when
-// the visitor may see it. `visit` marks the share page opening it, which counts a view for anyone
-// but the owner.
-//
-// A burn-after-read paste comes back "sealed" to everyone but its owner unless `reveal` is set,
-// which only the reveal route does, on an explicit POST from the visitor. Link previews, mail
-// scanners and prefetches only ever GET the page, so they can't use it up. Revealing counts the
-// view and burns the paste; a visitor who loses that race gets "missing" instead of a copy.
+// Load only the public projection, after the caller has authorized and locked the paste.
+async function loadSharedPaste(tx: Transaction, record: PasteRecord): Promise<SharedPaste | null> {
+  const [files, [author]] = await Promise.all([
+    tx
+      .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
+      .from(pasteFile)
+      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
+      .orderBy(pasteFile.position, pasteFile.id),
+    tx
+      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
+      .from(user)
+      .where(eq(user.id, record.ownerId)),
+  ])
+  if (files.length === 0 || recordExpired(record)) return null
+  return {
+    slug: record.slug,
+    title: record.title,
+    files,
+    author: pasteAuthor(author),
+    updatedAt: ms(record.updatedAt),
+    expiresAt: ms(record.expiresAt),
+    views: record.views,
+    burnAfterRead: record.burnAfterRead,
+    allowRaw: record.allowRaw,
+  }
+}
+
+// Read a share page without ever claiming a burn paste. Non-owner burn reads stay sealed,
+// including visits from link previews, scanners and prefetches. Ordinary visits queue a view.
 export async function readSharedPaste(
   slug: string,
-  options: { visit?: boolean; reveal?: boolean } = {},
+  options: { visit?: boolean } = {},
 ): Promise<SharedRead> {
   const viewer = await viewerId()
   const result = await getDb().transaction(
     async (tx): Promise<SharedRead & { countedId?: string }> => {
-      const found = await lockSharedRead(tx, slug)
-      if (!found || found.deletedAt || recordExpired(found)) return { status: "missing" }
-      const verdict = await canOpenLink(found, viewer, tx)
+      const record = await lockSharedRead(tx, slug)
+      if (!record || record.deletedAt || recordExpired(record)) return { status: "missing" }
+      const verdict = await canOpenLink(record, viewer, tx)
       if (verdict !== "ok") return { status: verdict }
-      const owned = found.ownerId === viewer
-      const sealed = found.burnAfterRead && !owned
-      if (sealed && !options.reveal) return { status: "sealed", signedIn: viewer !== null }
-      const counted = Boolean((sealed || options.visit) && !owned)
-      const [files, [author]] = await Promise.all([
-        tx
-          .select({
-            name: pasteFile.name,
-            language: pasteFile.language,
-            content: pasteFile.content,
-          })
-          .from(pasteFile)
-          .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, found.id)))
-          .orderBy(pasteFile.position, pasteFile.id),
-        tx
-          .select({
-            name: user.name,
-            username: user.username,
-            displayUsername: user.displayUsername,
-          })
-          .from(user)
-          .where(eq(user.id, found.ownerId)),
-      ])
-      if (files.length === 0 || recordExpired(found)) return { status: "missing" }
-      const now = new Date()
-      const record = sealed ? await claimBurn(tx, found, now) : found
-      if (counted && !sealed) {
+      const owned = record.ownerId === viewer
+      if (record.burnAfterRead && !owned) return { status: "sealed", signedIn: viewer !== null }
+      const paste = await loadSharedPaste(tx, record)
+      if (!paste) return { status: "missing" }
+      const counted = Boolean(options.visit && !owned)
+      if (counted) {
+        const now = new Date()
         await tx
           .insert(pasteVisit)
           .values({ pasteId: record.id, acceptedAt: now, day: utcDay(now.getTime()) })
       }
       return {
         status: "ok",
-        paste: {
-          slug: record.slug,
-          title: record.title,
-          files,
-          author: pasteAuthor(author),
-          updatedAt: ms(record.updatedAt),
-          expiresAt: ms(record.expiresAt),
-          views: record.views,
-          burnAfterRead: record.burnAfterRead,
-          allowRaw: record.allowRaw,
-        },
+        paste,
         owned,
         signedIn: viewer !== null,
         ...(counted ? { countedId: record.id } : {}),
+      }
+    },
+  )
+  const { countedId, ...read } = result
+  if (countedId) await recordPasteEvent(countedId, "view")
+  return read
+}
+
+// Only the explicit reveal POST uses this operation. Authorization and content loading stay
+// inside the row lock, so exactly one non-owner can claim a live burn-after-read paste.
+export async function revealSharedPaste(
+  slug: string,
+): Promise<Exclude<SharedRead, { status: "sealed" }>> {
+  const viewer = await viewerId()
+  const result = await getDb().transaction(
+    async (tx): Promise<Exclude<SharedRead, { status: "sealed" }> & { countedId?: string }> => {
+      const record = await lockSharedRead(tx, slug)
+      if (!record || record.deletedAt || recordExpired(record)) return { status: "missing" }
+      const verdict = await canOpenLink(record, viewer, tx)
+      if (verdict !== "ok") return { status: verdict }
+      const owned = record.ownerId === viewer
+      const paste = await loadSharedPaste(tx, record)
+      if (!paste) return { status: "missing" }
+      const burn = record.burnAfterRead && !owned
+      if (burn) paste.views = (await claimBurn(tx, record, new Date())).views
+      return {
+        status: "ok",
+        paste,
+        owned,
+        signedIn: viewer !== null,
+        ...(burn ? { countedId: record.id } : {}),
       }
     },
   )

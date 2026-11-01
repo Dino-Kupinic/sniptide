@@ -185,6 +185,8 @@ do Next.js and React. Major upgrades outside those groups stay separate from rou
 The dependency workflow checks declarations and advisories on PRs, pushes to `main`, and weekly.
 Keep the Zod override until the E2E runner stops pinning an affected version. Update the override
 with the runtime catalog, and verify `bun run audit:deps` after lockfile changes.
+Keep the minimatch override until shadcn's ts-morph dependency accepts a patched version
+(11.0.1 or newer for GHSA-g3hv-75wg-m249). Verify shadcn and ts-morph glob discovery when changing it.
 
 ## Make an agent change reviewable
 
