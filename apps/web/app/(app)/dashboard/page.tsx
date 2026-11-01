@@ -1,7 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server"
 import { Dashboard } from "@/components/dashboard/dashboard"
-import { getPreferences, requireSession } from "@/lib/auth"
+import { getPreferences, isDemoMode, requireSession } from "@/lib/auth"
 import { getDashboardData } from "@/lib/pastes/dashboard"
+import { shouldAskSignupSource } from "@/lib/signup-source-prompt"
 import { getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
@@ -18,11 +19,14 @@ export default async function Page() {
     getSiteOrigin(),
     getPreferences(),
   ])
+  // The shared demo account is used by many visitors, so it never asks.
+  const askSignupSource = !isDemoMode() && (await shouldAskSignupSource(session.user))
   const firstName = viewerFromUser(session.user).name.split(/[\s._-]/)[0] || "there"
 
   return (
     <Dashboard
       draftScope={session.user.id}
+      askSignupSource={askSignupSource}
       data={data}
       firstName={firstName}
       origin={origin}
