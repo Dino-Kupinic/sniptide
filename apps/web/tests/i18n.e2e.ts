@@ -8,21 +8,24 @@ anonymousTest(
     await app.open("/sign-in")
     await browser.locator('input[name="email"]').fill("reader@example.test")
 
-    for (const [locale, heading] of [
-      ["de", "Willkommen zurück"],
-      ["es", "Te damos la bienvenida de nuevo"],
-      ["zh", "欢迎回来"],
-      ["ja", "おかえりなさい"],
-      ["en", "Welcome back"],
+    let current = "English"
+    for (const [locale, name, heading] of [
+      ["de", "Deutsch", "Bei Sniptide anmelden"],
+      ["es", "Español", "Inicia sesión en Sniptide"],
+      ["zh", "简体中文", "登录 Sniptide"],
+      ["ja", "日本語", "Sniptide にサインイン"],
+      ["en", "English", "Sign in to Sniptide"],
     ] as const) {
-      await screen.getByRole("combobox").selectOption({ value: locale })
+      await screen.getByRole("button", current).tap()
+      await screen.getByRole("menuitemradio", name, { exact: true }).tap()
       await expect(screen.getByRole("heading", heading)).toBeVisible()
       await expect(browser.locator("html")).toHaveAttribute("lang", locale)
       await expect(browser.locator('input[name="email"]')).toHaveValue("reader@example.test")
       await browser.reload()
       await expect(screen.getByRole("heading", heading)).toBeVisible()
-      await expect(screen.getByRole("combobox")).toHaveValue(locale)
+      await expect(screen.getByRole("button", name)).toBeVisible()
       await browser.locator('input[name="email"]').fill("reader@example.test")
+      current = name
     }
     await app.screenshot("sign-in-english")
   },
