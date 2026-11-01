@@ -35,7 +35,7 @@ const { paste } = await client.createPaste({
 | Environment variables | `listEnvGroups`, `readEnvGroup`, `writeEnvGroup`, `deleteEnvGroup` |
 | Account | `me`, `usage` |
 
-Methods return the API's JSON envelopes. For example, `readPaste` returns `{ paste }`, and list methods return pages with a `nextCursor` when more results are available.
+Methods return the API's JSON envelopes. For example, `readPaste` returns `{ paste }`, and `listPastes` and `collectionPastes` return pages with a `nextCursor` when more results are available.
 
 ```ts
 const nextPage = page.nextCursor
