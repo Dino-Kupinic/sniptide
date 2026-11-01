@@ -534,8 +534,8 @@ export const openApiDocument = {
           "",
           "**Revealing a burn-after-read paste uses it up:** the first visitor gets the files, and",
           "everyone after them gets 404. Only `POST` reveals, so link previews and scanners that",
-          "fetch the share page with `GET` can't burn the paste. The owner, signed in, can reveal",
-          "their own paste without burning it.",
+          "fetch the share page with `GET` can't burn the paste. This holds for the owner too: their",
+          "own reveal uses the paste up, and they can read it without burning it in the app.",
           "",
           "A password-protected paste answers 401 until it has been unlocked.",
         ].join("\n"),
@@ -1715,8 +1715,30 @@ export const openApiDocument = {
                   examples: ["bash"],
                 },
                 content: { type: "string" },
+                lines: {
+                  type: "array",
+                  description:
+                    "Syntax tokens for the share page, one array per line. Each token is plain text or a [text, role] pair. Left out for plain text and very large files.",
+                  items: { type: "array" },
+                },
               },
             },
+          },
+          author: {
+            type: "object",
+            required: ["username", "initials"],
+            properties: { username: { type: "string" }, initials: { type: "string" } },
+          },
+          updatedAt: { type: "number", description: "Milliseconds since the epoch." },
+          expiresAt: {
+            type: ["number", "null"],
+            description: "Milliseconds since the epoch, or null when the paste doesn't expire.",
+          },
+          views: { type: "integer" },
+          burned: {
+            type: "boolean",
+            description:
+              "Whether this reveal deleted the paste, which is true for every burn-after-read paste.",
           },
         },
       },

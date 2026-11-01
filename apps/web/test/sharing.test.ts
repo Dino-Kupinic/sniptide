@@ -90,7 +90,7 @@ describeDb("sharing", () => {
     signInAs("friend")
     expect((await readSharedPaste("pw")).status).toBe("ok")
     signInAs("stranger")
-    expect(await readSharedPaste("pw")).toEqual({ status: "locked" })
+    expect(await readSharedPaste("pw")).toEqual({ status: "locked", owned: false, signedIn: true })
   })
 
   test("Shared with me lists new shares as unseen until opened, and counts them", async () => {
