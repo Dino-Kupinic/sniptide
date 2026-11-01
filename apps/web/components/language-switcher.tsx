@@ -121,7 +121,7 @@ export function LanguageMenu({
           onValueChange={(next) => change(next as string, () => toast.error(t("languageError")))}
         >
           {locales.map((value) => (
-            <DropdownMenuRadioItem key={value} value={value} lang={value}>
+            <DropdownMenuRadioItem key={value} value={value} lang={value} closeOnClick>
               {localeNames[value]}
             </DropdownMenuRadioItem>
           ))}
