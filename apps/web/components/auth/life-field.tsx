@@ -9,10 +9,10 @@ import * as React from "react"
 // it moves. Under reduced motion it draws one generation and sowing only adds cells.
 
 const cellSize = 8
-const generationsPerSecond = 5
+const generationsPerSecond = 4
 const decay = 0.55
-const density = 0.3
-const sparse = 0.04
+const density = 0.11
+const sparse = 0.012
 
 export function LifeField({ className }: { className?: string }) {
   const ref = React.useRef<HTMLCanvasElement>(null)
@@ -68,7 +68,7 @@ export function LifeField({ className }: { className?: string }) {
       previous = glow
       glow = glow.map((value, k) => (cells[k] ? 1 : value * decay))
       if (population < cells.length * sparse) {
-        sow(Math.floor(Math.random() * columns), Math.floor(Math.random() * rows), 14, 14, density)
+        sow(Math.floor(Math.random() * columns), Math.floor(Math.random() * rows), 10, 10, 0.3)
       }
     }
 
@@ -81,10 +81,10 @@ export function LifeField({ className }: { className?: string }) {
         if (value < 0.03) continue
         const x = (k % columns) * cellSize
         const y = Math.floor(k / columns) * cellSize
-        context.globalAlpha = Math.min(value, 0.7) * 0.85
+        context.globalAlpha = Math.min(value, 0.7) * 0.6
         context.fillStyle = trail
         context.fillRect(x, y, cellSize - 1, cellSize - 1)
-        const bright = Math.max(0, (value - 0.6) / 0.4) * 0.6
+        const bright = Math.max(0, (value - 0.6) / 0.4) * 0.5
         if (bright > 0) {
           context.globalAlpha = bright
           context.fillStyle = live

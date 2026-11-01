@@ -1,6 +1,5 @@
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ArrowUpRightIcon } from "lucide-react"
 import type * as React from "react"
 import { LanguageMenu } from "@/components/language-switcher"
 import { getConfig } from "@/lib/config"
@@ -94,10 +93,7 @@ export function AuthScreen({
           </p>
           <p className="text-sm leading-[21px] text-foreground/80">{pitch.body}</p>
           <div className="rounded-md flex items-center justify-between gap-3 bg-muted px-3 py-2.5">
-            <span className="flex min-w-0 items-center gap-1 font-mono text-[13px] text-link">
-              <span className="truncate">{pitch.link}</span>
-              <ArrowUpRightIcon aria-hidden="true" className="size-3.5 shrink-0" />
-            </span>
+            <span className="truncate font-mono text-[13px] text-link">{pitch.link}</span>
             {pitch.note ? (
               <span className="shrink-0 text-xs text-muted-foreground">{pitch.note}</span>
             ) : null}
