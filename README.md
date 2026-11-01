@@ -5,6 +5,11 @@
   </picture>
 </p>
 
+[![CI](https://github.com/Dino-Kupinic/sniptide/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/Dino-Kupinic/sniptide/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/Dino-Kupinic/sniptide)](https://github.com/Dino-Kupinic/sniptide/releases/latest)
+[![Documentation](https://img.shields.io/badge/docs-sniptide.com-blue)](https://docs.sniptide.com)
+[![Sniptide MCP on mcprush](https://mcprush.com/badge/sniptide-mcp/score.svg)](https://mcprush.com/to/sniptide-mcp?ref=badge)
+
 # Sniptide
 
 A self-hostable pastebin for code snippets, configs, and secrets.
