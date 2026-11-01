@@ -18,7 +18,7 @@ export async function LegalNotice({ action }: { action: "signUp" | "continue" })
   const key = termsUrl && privacyUrl ? "both" : termsUrl ? "terms" : "privacy"
 
   return (
-    <p className="text-center text-xs text-muted-foreground lg:text-left">
+    <p className="text-xs text-muted-foreground">
       {t.rich(key, { action, terms: link(termsUrl), privacy: link(privacyUrl) })}
     </p>
   )

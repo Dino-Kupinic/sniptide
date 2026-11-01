@@ -124,8 +124,8 @@ export function SignUpForm({
         </>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
-        <div className="flex flex-col gap-3.5">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="username">{t("username")}</Label>
             <div

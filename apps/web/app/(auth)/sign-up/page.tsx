@@ -40,7 +40,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
   const limitBytes = accountBudget().bytes
   return (
     <AuthScreen
-      title={t("createAccount")}
+      title={t("signUpHeading")}
       subtitle={
         // Invite-only: the same form, so invitees can use GitHub or Google; the server refuses
         // emails that aren't on ALLOWED_EMAILS.

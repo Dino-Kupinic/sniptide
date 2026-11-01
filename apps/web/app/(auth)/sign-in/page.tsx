@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-in">) {
   const errorKey = oauthErrorKey(error)
   return (
     <AuthScreen
-      title={t("welcomeBack")}
+      title={t("signInHeading")}
       subtitle={t("signInSubtitle")}
       legal={<LegalNotice action="continue" />}
       pitch={{

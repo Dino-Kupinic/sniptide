@@ -1,8 +1,9 @@
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { LanguageMenu } from "@/components/language-switcher"
 import { getConfig } from "@/lib/config"
+import { LifeField } from "./life-field"
 
 export interface Pitch {
   title: [string, string]
@@ -11,9 +12,9 @@ export interface Pitch {
   note: string
 }
 
-// Split auth layout from the Paper Sign in / Sign up artboards: form on the left, a pitch card on
-// the sidebar surface on the right. Below lg the card is gone and the pitch body moves under the
-// subtitle.
+// Split auth layout from the Paper Sign in / Sign up artboards: the form takes three fifths on the
+// left, and the right two fifths hold the pitch card over the Game of Life, always on the dark
+// surface. Below lg the card is gone and the pitch body moves under the subtitle.
 // `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
 export function AuthScreen({
   title,
@@ -32,7 +33,7 @@ export function AuthScreen({
 }) {
   return (
     <div className="flex min-h-svh bg-background">
-      <div className="flex min-w-0 flex-1 flex-col lg:w-1/2 lg:flex-none lg:px-10 lg:py-8">
+      <div className="flex min-w-0 flex-1 flex-col lg:w-3/5 lg:flex-none lg:px-10 lg:py-8">
         <div className="hidden px-2 py-1.5 lg:block">
           <HomeLogo />
         </div>
@@ -49,7 +50,7 @@ export function AuthScreen({
             {centered ? null : <HomeLogo className="lg:hidden" />}
             <div className="flex flex-col gap-1.5 lg:gap-2">
               {title ? (
-                <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
+                <h1 className="font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
                   {title}
                 </h1>
               ) : null}
@@ -69,14 +70,15 @@ export function AuthScreen({
           </div>
         </main>
 
-        <footer className="flex flex-col items-center gap-3 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:items-start lg:p-0">
-          <LanguageSwitcher />
-          {legal}
+        <footer className="flex items-center justify-between gap-4 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:p-0">
+          <div className="min-w-0">{legal}</div>
+          <LanguageMenu className="ml-auto shrink-0" />
         </footer>
       </div>
 
-      <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border bg-sidebar lg:flex">
-        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7">
+      <aside className="dark relative hidden w-2/5 items-center justify-center overflow-hidden border-l border-border bg-sidebar text-foreground lg:flex">
+        <LifeField />
+        <div className="rounded-lg relative mx-8 flex w-full max-w-[400px] flex-col gap-[18px] border border-border bg-background p-7">
           <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em]">
             {pitch.title[0]}
             <br />
