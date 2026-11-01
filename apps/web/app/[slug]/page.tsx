@@ -1,4 +1,3 @@
-import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, ClockIcon, EyeIcon } from "lucide-react"
 import { headers } from "next/headers"
@@ -61,7 +60,6 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           <RevealPaste slug={slug} />
           {read.signedIn ? null : <SignUpPrompt />}
         </main>
-        <StripeBand />
       </div>
     )
   }
@@ -73,7 +71,6 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
         <main className="flex flex-1 items-center justify-center p-4">
           <UnlockForm slug={slug} />
         </main>
-        <StripeBand />
       </div>
     )
   }
@@ -176,8 +173,6 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
           ) : null}
         </ActiveFileProvider>
       </main>
-
-      <StripeBand />
     </div>
   )
 }
@@ -201,13 +196,5 @@ async function SignUpPrompt() {
         <ArrowRightIcon className="size-3.5" />
       </a>
     </p>
-  )
-}
-
-function StripeBand() {
-  return (
-    <div aria-hidden="true" className="relative h-14 shrink-0 overflow-hidden lg:h-[72px]">
-      <Stripes className="-top-[360px] left-0 h-[900px] w-[720px] lg:w-full" />
-    </div>
   )
 }

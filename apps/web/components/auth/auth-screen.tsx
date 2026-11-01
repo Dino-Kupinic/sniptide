@@ -1,5 +1,4 @@
 import { Logo } from "@sniptide/ui/components/logo"
-import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
@@ -12,9 +11,9 @@ export interface Pitch {
   note: string
 }
 
-// Split auth layout from the Paper Sign in / Sign up artboards: form on the left, barcode
-// stripes with a pitch card on the right. Below lg the stripes become a strip above the form and
-// the pitch body moves under the subtitle.
+// Split auth layout from the Paper Sign in / Sign up artboards: form on the left, a pitch card on
+// the sidebar surface on the right. Below lg the card is gone and the pitch body moves under the
+// subtitle.
 // `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
 export function AuthScreen({
   title,
@@ -34,10 +33,6 @@ export function AuthScreen({
   return (
     <div className="flex min-h-svh bg-background">
       <div className="flex min-w-0 flex-1 flex-col lg:w-1/2 lg:flex-none lg:px-10 lg:py-8">
-        <div className="relative h-30 shrink-0 overflow-hidden lg:hidden">
-          <Stripes className="-top-[300px] -left-[150px] h-[900px] w-[720px]" />
-        </div>
-
         <div className="hidden px-2 py-1.5 lg:block">
           <HomeLogo />
         </div>
@@ -80,9 +75,8 @@ export function AuthScreen({
         </footer>
       </div>
 
-      <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border lg:flex">
-        <Stripes className="inset-0 size-full" />
-        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7 shadow-(--dialog-shadow)">
+      <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border bg-sidebar lg:flex">
+        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7">
           <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em]">
             {pitch.title[0]}
             <br />

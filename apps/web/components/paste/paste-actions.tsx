@@ -37,7 +37,7 @@ import {
   setStarred,
   trashPaste,
 } from "@/lib/pastes/actions"
-import { CopyFeedbackLabel, reportCopy, useCopy } from "./copy-button"
+import { CopyFeedbackLabel, LinkCopyContent, reportCopy, useCopy, useCopyLink } from "./copy-button"
 import { useActiveFile } from "./file-viewer"
 
 export function StarButton({
@@ -81,20 +81,11 @@ export function StarButton({
 
 export function CopyLinkButton({ url, className }: { url: string; className?: string }) {
   const t = useTranslations("Paste")
-  const { copied, copy } = useCopy()
+  const { state, props } = useCopyLink(url, () => track("share_link_copied", { from: "paste" }))
 
   return (
-    <Button
-      type="button"
-      size="lg"
-      className={className}
-      onClick={() => {
-        track("share_link_copied", { from: "paste" })
-        return copy(url)
-      }}
-    >
-      {copied ? <SuccessCheck /> : <LinkIcon />}
-      <CopyFeedbackLabel copied={copied} label={t("copyLink")} copiedLabel={t("copied")} />
+    <Button type="button" size="lg" className={className} {...props}>
+      <LinkCopyContent state={state} label={t("copyLink")} icon={<LinkIcon />} />
     </Button>
   )
 }

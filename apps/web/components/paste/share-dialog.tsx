@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@sniptide/ui/components/dialog"
-import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
@@ -26,7 +25,7 @@ import {
 } from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
-import { CopyFeedbackLabel, useCopy } from "./copy-button"
+import { LinkCopyContent, useCopyLink } from "./copy-button"
 import { EmbedShare } from "./embed-share"
 import { useNativeShare } from "./paste-actions"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
@@ -232,7 +231,9 @@ function PersonName({ name, handle }: { name: string; handle: string }) {
 // Keep the link visible; offer native sharing on phones where the browser supports it.
 function ShareLinkRow({ url, title }: { url: string; title: string }) {
   const t = useTranslations("Paste")
-  const { copied, copy } = useCopy()
+  const { state, props } = useCopyLink(url, () =>
+    track("share_link_copied", { from: "share_dialog" }),
+  )
   const { share } = useNativeShare(url, title, "share_dialog")
   const [canShare, setCanShare] = React.useState(false)
   React.useEffect(() => setCanShare(typeof navigator.share === "function"), [])
@@ -240,17 +241,8 @@ function ShareLinkRow({ url, title }: { url: string; title: string }) {
     <div className="flex flex-col gap-2">
       <div className="rounded-lg flex h-10 items-center gap-2 border border-border bg-sidebar pr-1 pl-3">
         <span className="min-w-0 flex-1 truncate font-mono text-xs">{url}</span>
-        <Button
-          type="button"
-          variant="inverted"
-          size="sm"
-          onClick={() => {
-            track("share_link_copied", { from: "share_dialog" })
-            return copy(url)
-          }}
-        >
-          {copied ? <SuccessCheck /> : <LinkIcon />}
-          <CopyFeedbackLabel copied={copied} label={t("copy")} copiedLabel={t("copied")} />
+        <Button type="button" variant="inverted" size="sm" {...props}>
+          <LinkCopyContent state={state} label={t("copy")} icon={<LinkIcon />} />
         </Button>
       </div>
       {canShare ? (
