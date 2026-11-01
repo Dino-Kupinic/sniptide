@@ -1,0 +1,75 @@
+name: Publish SDKs
+
+on:
+  workflow_dispatch:
+    inputs:
+      product:
+        description: SDK to publish using its checked-in version
+        type: choice
+        options: [javascript, python]
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-sdk-${{ inputs.product }}
+  cancel-in-progress: false
+
+jobs:
+  javascript:
+    if: github.ref == 'refs/heads/main' && inputs.product == 'javascript'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@12.2.1
+      - run: bun install --frozen-lockfile
+      - run: bun run test:sdk
+      - run: node packages/sdk/scripts/test-npm-release.mjs
+      - run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
+        working-directory: packages/sdk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: javascript-sdk
+          path: ${{ runner.temp }}/sniptide-sdk-*.tgz
+      - run: npm publish "$RUNNER_TEMP"/sniptide-sdk-*.tgz --access public --provenance
+
+  python:
+    if: github.ref == 'refs/heads/main' && inputs.product == 'python'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      - run: python -m unittest discover -s tests
+        working-directory: packages/sdk-python
+      - run: python -m build --outdir "$GITHUB_WORKSPACE/artifacts/sdk-python"
+        working-directory: packages/sdk-python
+      - run: python -m twine check "$GITHUB_WORKSPACE"/artifacts/sdk-python/*
+      - run: |
+          python -m venv "$RUNNER_TEMP/consumer"
+          "$RUNNER_TEMP/consumer/bin/pip" install --no-deps "$GITHUB_WORKSPACE"/artifacts/sdk-python/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/consumer/bin/python" -c 'from sniptide import SniptideClient, SniptideError'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-sdk
+          path: artifacts/sdk-python/*
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: artifacts/sdk-python/
