@@ -125,8 +125,8 @@ export function SignUpForm({
         </>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3">
+      <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="username">{t("username")}</Label>
             <div
@@ -162,7 +162,7 @@ export function SignUpForm({
               id="username-status"
               aria-live="polite"
               className={cn(
-                "text-xs font-medium",
+                "text-xs font-medium empty:hidden",
                 availability === "available" && "text-link",
                 (availability === "taken" || availability === "invalid") && "text-destructive",
                 availability === "checking" && "text-muted-foreground",

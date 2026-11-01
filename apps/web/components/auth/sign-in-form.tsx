@@ -11,6 +11,7 @@ import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
+import { PasswordInput } from "./password-input"
 import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
@@ -119,10 +120,9 @@ export function SignInForm({
                 {t("forgotPassword")}
               </Link>
             </div>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
               className={authInputClass}

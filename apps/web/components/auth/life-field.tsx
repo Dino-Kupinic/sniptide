@@ -9,7 +9,7 @@ import * as React from "react"
 // it moves. Under reduced motion it draws one generation and sowing only adds cells.
 
 const cellSize = 8
-const generationsPerSecond = 8
+const generationsPerSecond = 5
 const decay = 0.55
 const density = 0.3
 const sparse = 0.04

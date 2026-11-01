@@ -16,6 +16,7 @@ export interface Pitch {
 // left, and the right two fifths hold the pitch card over the Game of Life, always on the dark
 // surface. Below lg the card is gone and the pitch body moves under the subtitle.
 // `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
+// Without a subtitle the heading stands alone and centers over the form, as on sign-up.
 export function AuthScreen({
   title,
   subtitle,
@@ -25,7 +26,7 @@ export function AuthScreen({
   children,
 }: {
   title?: string
-  subtitle: string
+  subtitle?: string
   centered?: boolean
   legal: React.ReactNode
   pitch: Pitch
@@ -48,24 +49,30 @@ export function AuthScreen({
         >
           <div className="flex w-full flex-col gap-5 lg:max-w-[360px] lg:gap-6">
             {centered ? null : <HomeLogo className="lg:hidden" />}
-            <div className="flex flex-col gap-1.5 lg:gap-2">
-              {title ? (
-                <h1 className="font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
-                  {title}
-                </h1>
-              ) : null}
-              <p
-                className={cn(
-                  "text-[15px] leading-5 text-muted-foreground lg:text-sm",
-                  centered && "text-center lg:text-left",
+            {subtitle ? (
+              <div className="flex flex-col gap-1.5 lg:gap-2">
+                {title ? (
+                  <h1 className="font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
+                    {title}
+                  </h1>
+                ) : null}
+                <p
+                  className={cn(
+                    "text-[15px] leading-5 text-muted-foreground lg:text-sm",
+                    centered && "text-center lg:text-left",
+                  )}
+                >
+                  {subtitle}
+                </p>
+                {centered ? null : (
+                  <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
                 )}
-              >
-                {subtitle}
-              </p>
-              {centered ? null : (
-                <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
-              )}
-            </div>
+              </div>
+            ) : title ? (
+              <h1 className="text-center font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
+                {title}
+              </h1>
+            ) : null}
             {children}
           </div>
         </main>
