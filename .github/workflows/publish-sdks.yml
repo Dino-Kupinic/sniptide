@@ -58,18 +58,18 @@ jobs:
       - run: python -m pip install build twine
       - run: python -m unittest discover -s tests
         working-directory: packages/sdk-python
-      - run: python -m build --outdir "$RUNNER_TEMP/python-sdk"
+      - run: python -m build --outdir "$GITHUB_WORKSPACE/artifacts/sdk-python"
         working-directory: packages/sdk-python
-      - run: python -m twine check "$RUNNER_TEMP"/python-sdk/*
+      - run: python -m twine check "$GITHUB_WORKSPACE"/artifacts/sdk-python/*
       - run: |
           python -m venv "$RUNNER_TEMP/consumer"
-          "$RUNNER_TEMP/consumer/bin/pip" install --no-deps "$RUNNER_TEMP"/python-sdk/*.whl
+          "$RUNNER_TEMP/consumer/bin/pip" install --no-deps "$GITHUB_WORKSPACE"/artifacts/sdk-python/*.whl
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/consumer/bin/python" -c 'from sniptide import SniptideClient, SniptideError'
       - uses: actions/upload-artifact@v4
         with:
           name: python-sdk
-          path: ${{ runner.temp }}/python-sdk/*
+          path: artifacts/sdk-python/*
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: ${{ runner.temp }}/python-sdk/
+          packages-dir: artifacts/sdk-python/
