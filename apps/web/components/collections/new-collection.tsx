@@ -37,7 +37,7 @@ export function NewCollectionDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   existing: number
-  onCreated?: (slug: string) => void
+  onCreated?: (slug: string, name: string) => void
 }) {
   const t = useTranslations("Workspace")
   const router = useRouter()
@@ -71,7 +71,7 @@ export function NewCollectionDialog({
       onSubmit={async (name) => {
         const result = await createCollection(name, look)
         if (result.ok) {
-          if (onCreated) onCreated(result.slug)
+          if (onCreated) onCreated(result.slug, name)
           else router.push(`/collections/${result.slug}`)
         }
         return result

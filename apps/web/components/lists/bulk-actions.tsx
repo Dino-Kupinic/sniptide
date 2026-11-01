@@ -13,6 +13,7 @@ import {
   ChevronDownIcon,
   FolderInputIcon,
   FolderMinusIcon,
+  FolderPlusIcon,
   GlobeIcon,
   LinkIcon,
   LockIcon,
@@ -24,6 +25,7 @@ import {
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
+import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { withUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { runAction } from "@/lib/feedback"
@@ -128,6 +130,7 @@ export function PasteBulkActions({
   const t = useTranslations("Workspace")
   const { labels, error } = useLabels()
   const [pending, startTransition] = React.useTransition()
+  const [creating, setCreating] = React.useState(false)
   const selected = rows.filter((row) => selection.has(row.slug))
   const owned = selected.filter((row) => !row.owner)
   const slugs = (list: PasteRow[]) => list.map((row) => row.slug)
@@ -151,7 +154,7 @@ export function PasteBulkActions({
           }),
     )
 
-  const move = (target: Collection | null) => {
+  const move = (target: Pick<Collection, "slug" | "name"> | null) => {
     const moving = owned.filter((row) => row.collection !== (target?.slug ?? null))
     if (moving.length === 0) return
     run(() =>
@@ -224,16 +227,28 @@ export function PasteBulkActions({
                   <span className="truncate">{item.name}</span>
                 </DropdownMenuItem>
               ))}
+            {collections.length > (current ? 1 : 0) ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuItem onClick={() => setCreating(true)}>
+              <FolderPlusIcon />
+              {t("new_collection")}
+            </DropdownMenuItem>
             {owned.some((row) => row.collection) ? (
-              <>
-                {collections.length > (current ? 1 : 0) ? <DropdownMenuSeparator /> : null}
-                <DropdownMenuItem onClick={() => move(null)}>
-                  <FolderMinusIcon />
-                  {t("remove_from_collection")}
-                </DropdownMenuItem>
-              </>
+              <DropdownMenuItem onClick={() => move(null)}>
+                <FolderMinusIcon />
+                {t("remove_from_collection")}
+              </DropdownMenuItem>
             ) : null}
           </BarMenu>
+          {/* A new collection made from the bar takes the checked pastes straight away. */}
+          <NewCollectionDialog
+            open={creating}
+            onOpenChange={setCreating}
+            existing={collections.length}
+            onCreated={(slug, name) => {
+              setCreating(false)
+              move({ slug, name: name.trim() })
+            }}
+          />
           <BarMenu icon={GlobeIcon} label={t("visibility")} disabled={pending}>
             <DropdownMenuItem onClick={() => visibility("public")}>
               <GlobeIcon />
