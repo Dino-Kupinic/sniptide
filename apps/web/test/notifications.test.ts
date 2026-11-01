@@ -13,7 +13,13 @@ import {
   NOTIFICATION_LIMIT,
 } from "@/lib/notifications/store"
 import { purgeStaleData } from "@/lib/pastes/purge"
-import { leaveShare, readSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import {
+  leaveShare,
+  readSharedPaste,
+  revealSharedPaste,
+  sharePaste,
+  unsharePaste,
+} from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -58,8 +64,8 @@ describeDb("notifications", () => {
   test("a burned paste tells its owner, once, and links to the trash", async () => {
     await seedPaste({ slug: "burn", owner: "owner", burnAfterRead: true })
     signInAs("reader")
-    expect((await readSharedPaste("burn", { reveal: true })).status).toBe("ok")
-    expect((await readSharedPaste("burn", { reveal: true })).status).toBe("missing")
+    expect((await revealSharedPaste("burn")).status).toBe("ok")
+    expect((await revealSharedPaste("burn")).status).toBe("missing")
 
     const feed = await feedFor("owner")
     expect(feed.unread).toBe(1)

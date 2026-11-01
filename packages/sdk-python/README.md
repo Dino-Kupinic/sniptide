@@ -22,3 +22,7 @@ Before publishing, verify ownership and availability of the `sniptide` PyPI name
 Environment group reads and writes return variable values, which can contain secrets. Handle responses accordingly. Listing groups returns counts, not values.
 
 The response limit defaults to 64 MiB. Set `max_response_bytes` to a positive integer for a different limit.
+
+## License
+
+This package is licensed under the [MIT License](LICENSE).

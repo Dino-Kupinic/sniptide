@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { getPaste, getUnlockHash, readSharedPaste } from "@/lib/pastes/store"
+import { getPaste, getUnlockHash, readRawFile, readSharedPaste } from "@/lib/pastes/store"
 import {
   hasDatabase,
   marker,
@@ -100,7 +100,7 @@ describeDb("read access", () => {
 
         test("is locked out of a password paste, without any of its content", async () => {
           const read = await readSharedPaste("pw")
-          expect(read).toEqual({ status: "locked" })
+          expect(read).toEqual({ status: "locked", owned: false, signedIn: id !== null })
           expect(JSON.stringify(read)).not.toContain(marker("pw"))
         })
 
@@ -117,13 +117,27 @@ describeDb("read access", () => {
       })
     }
 
-    test("the owner reads their private and password pastes without unlocking", async () => {
+    test("the owner reads their private pastes without unlocking", async () => {
       signInAs("owner")
-      for (const slug of ["priv", "pw", "privpw", "pub"]) {
+      for (const slug of ["priv", "privpw", "pub"]) {
         const read = await readSharedPaste(slug)
         expect(read.status).toBe("ok")
         if (read.status === "ok") expect(read.owned).toBe(true)
       }
+    })
+
+    test("the owner's own link asks for the password like it does for everyone", async () => {
+      signInAs("owner")
+      const read = await readSharedPaste("pw")
+      expect(read).toEqual({ status: "locked", owned: true, signedIn: true })
+      expect(JSON.stringify(read)).not.toContain(marker("pw"))
+      // Their raw files and their own pages don't need it.
+      expect((await readRawFile("pw", null)).status).toBe("ok")
+      expect((await getPaste("pw"))?.files[0]?.content).toBe(marker("pw"))
+      await unlock("pw")
+      const unlocked = await readSharedPaste("pw")
+      expect(unlocked.status).toBe("ok")
+      if (unlocked.status === "ok") expect(unlocked.owned).toBe(true)
     })
 
     test("expired and trashed pastes are gone for the owner's public link too", async () => {
@@ -141,7 +155,11 @@ describeDb("read access", () => {
         "sniptide_unlock_pw2",
         request.cookies.get("sniptide_unlock_pw") as string,
       )
-      expect(await readSharedPaste("pw2")).toEqual({ status: "locked" })
+      expect(await readSharedPaste("pw2")).toEqual({
+        status: "locked",
+        owned: false,
+        signedIn: true,
+      })
     })
   })
 

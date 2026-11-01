@@ -1,6 +1,6 @@
 # @sniptide/ui
 
-Sniptide's shared React components (shadcn on Base UI), brand pieces (`Logo`, `Stripes`) and the
+Sniptide's shared React components (shadcn on Base UI), the brand `Logo` and the
 Tailwind v4 theme. The Sniptide app uses it from this monorepo; the website installs it from npm.
 
 The package ships TypeScript source, so the consuming Next.js app compiles it.

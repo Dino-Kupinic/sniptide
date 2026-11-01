@@ -235,6 +235,11 @@ A floating layer with 16px of padding on the left, 10px elsewhere, a hairline bo
 
 Success messages state what happened in a short past-tense phrase with no closing period, such as "Link copied" or "Moved “Notes” to trash". Names the reader chose sit in the locale's quotation marks. Errors say what failed and what to do in full sentences, such as "Couldn't copy. Allow clipboard access and try again." An action that can be taken back ends in a success toast with Undo.
 
+### Row selection
+**Role:** Acting on several rows of a table at once.
+
+Every desktop table starts with a 48px column of checkboxes, and the header box selects the whole page and shows a dash while only some rows are checked. Shift-click checks the range from the last row clicked. A checked row keeps a `bg-muted/70` tint, deeper than hover. While rows are checked, a selection bar floats at the bottom of the list, starting at its left edge so the Undo toast never covers it. It is a floating layer with a hairline border and `--float-shadow`, and it holds the count, the table's actions as `ghost` `sm` buttons (destructive ones in `--destructive` text) and a clear button. Escape clears the selection. Actions that can be taken back end in a success toast with Undo, and deleting for good asks first.
+
 ### Tooltip
 **Role:** Names for icon-only controls.
 
@@ -254,11 +259,6 @@ A stack of single-line rows (Sharing, Access, Views and Revisions on a paste, an
 **Role:** Brand mark.
 
 Six horizontal stripes that taper from a hairline at the top to a full bar at the bottom. Blue `#2A26EC` on light surfaces and white on dark ones. The wordmark is uppercase, `#0A0A0A` on light and white on dark. Both live in `LogoMark` and `Logo`.
-
-### Stripes
-**Role:** Decorative motif.
-
-The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-in screen and the share-link page.
 
 ## Mobile
 

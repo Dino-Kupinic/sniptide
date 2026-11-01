@@ -29,7 +29,7 @@ import * as React from "react"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { runAction } from "@/lib/feedback"
 import { formatNumber } from "@/lib/format"
-import { deleteForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
+import { deleteForever, deletePastesForever, emptyTrash, restorePaste } from "@/lib/pastes/actions"
 import {
   DEFAULT_SORT_DIRECTION,
   PASTE_PAGE_SIZE,
@@ -41,7 +41,9 @@ import {
   sortDirection,
 } from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
+import { TrashBulkActions } from "./bulk-actions"
 import { ActionSheet } from "./row-menu"
+import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
 import { ListHeader, Pagination, SearchField } from "./toolbar"
 import { useListQuery } from "./use-list-query"
 
@@ -196,6 +198,11 @@ export function TrashList({
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
+  const slugs = React.useMemo(() => rows.map((row) => row.slug), [rows])
+  const selection = useRowSelection(slugs)
+  const [deletingSelected, setDeletingSelected] = React.useState(false)
+  // Kept while the confirmation is open, so its count doesn't change under it.
+  const [deleting, setDeleting] = React.useState<string[]>([])
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
   // The trash sorts by title, language and deletion time. "Deleted" and "Gone for good" are the
   // same order, so both headers share the one sort and show the same arrow.
@@ -267,7 +274,10 @@ export function TrashList({
             <Table className="hidden min-w-[960px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableSortHead {...headProps("title")}>{t("paste")}</TableSortHead>
+                  <SelectAllHead selection={selection} />
+                  <TableSortHead {...headProps("title")} className="pl-0">
+                    {t("paste")}
+                  </TableSortHead>
                   <TableSortHead {...headProps("language")} className="w-[140px]">
                     {t("language")}
                   </TableSortHead>
@@ -284,8 +294,9 @@ export function TrashList({
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.slug}>
-                    <TableCell className="truncate">
+                  <TableRow key={row.slug} data-selected={selection.has(row.slug)}>
+                    <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
+                    <TableCell className="truncate pl-0">
                       <span className="block truncate text-sm text-foreground/70">{row.title}</span>
                       <span className="block truncate font-mono text-xs text-muted-foreground/80 line-through">
                         {host}/{row.slug}
@@ -390,6 +401,25 @@ export function TrashList({
           />
         </div>
       ) : null}
+
+      <SelectionBar selection={selection}>
+        <TrashBulkActions
+          selection={selection}
+          onDelete={() => {
+            setDeleting(selection.keys)
+            setDeletingSelected(true)
+          }}
+        />
+      </SelectionBar>
+      <ConfirmDelete
+        title={t("delete_selected_title", { count: deleting.length })}
+        description={t("delete_selected_description", { count: deleting.length })}
+        confirmLabel={t("delete_forever")}
+        successMessage={t("bulk_deleted", { count: deleting.length })}
+        onConfirm={() => deletePastesForever(deleting)}
+        open={deletingSelected}
+        onOpenChange={setDeletingSelected}
+      />
     </div>
   )
 }

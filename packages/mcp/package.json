@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sniptide tools for coding agents over MCP.",
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./src/server.ts",

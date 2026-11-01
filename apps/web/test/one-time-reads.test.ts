@@ -1,8 +1,11 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
+import { notification } from "@workspace/db/schema"
+import { and, eq } from "drizzle-orm"
 import SharePage from "@/app/[slug]/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { POST as revealRoute } from "@/app/[slug]/reveal/route"
-import { readSharedPaste } from "@/lib/pastes/store"
+import { getDb } from "@/lib/db"
+import { readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import {
   hasDatabase,
@@ -18,7 +21,8 @@ import {
 
 // A burn-after-read paste is handed to exactly one reader, whichever way they ask and however many
 // ask at once, and only when they ask for it: opening the share page alone, as link previews do,
-// never uses it up. "Allow raw access" holds for everyone but the owner.
+// never uses it up. Its owner gets the same sealed page and their reveal burns it too. "Allow raw
+// access" holds for everyone but the owner.
 
 const describeDb = hasDatabase ? describe : describe.skip
 
@@ -31,6 +35,14 @@ function renders(value: unknown, slug: string, seen = new WeakSet<object>()): bo
   if (typeof value !== "object" || value === null || seen.has(value)) return false
   seen.add(value)
   return Object.values(value).some((child) => renders(child, slug, seen))
+}
+
+async function burnedNotifications() {
+  const rows = await getDb()
+    .select()
+    .from(notification)
+    .where(and(eq(notification.userId, "owner"), eq(notification.kind, "burned")))
+  return rows.length
 }
 
 async function reveal(slug: string) {
@@ -67,6 +79,46 @@ describeDb("one-time reads", () => {
     const row = await pasteRow("burn")
     expect(row?.views).toBe(0)
     expect(row?.deletedAt).toBeNull()
+  })
+
+  test("share reads cannot reveal a burn paste, even with a legacy reveal option", async () => {
+    // @ts-expect-error Revealing is no longer part of the share-read interface.
+    const read = await readSharedPaste("burn", { visit: true, reveal: true })
+    expect(read).toEqual({ status: "sealed", owned: false, signedIn: false })
+    expect((await pasteRow("burn"))?.deletedAt).toBeNull()
+    expect((await pasteRow("burn"))?.views).toBe(0)
+    expect(await viewDayTotal("burn")).toBe(0)
+    expect(await drainVisits()).toMatchObject({ consumed: 0 })
+    expect(await reveal("burn")).toBe("content")
+  })
+
+  test("share reads racing with explicit reveals never receive burn content", async () => {
+    const [reads, claims] = await Promise.all([
+      Promise.all(Array.from({ length: 8 }, () => readSharedPaste("burn", { visit: true }))),
+      Promise.all(Array.from({ length: 8 }, () => revealSharedPaste("burn"))),
+    ])
+    expect(reads.every((read) => read.status === "sealed" || read.status === "missing")).toBe(true)
+    expect(claims.filter((read) => read.status === "ok")).toHaveLength(1)
+    expect(claims.filter((read) => read.status === "missing")).toHaveLength(7)
+    expect((await pasteRow("burn"))?.views).toBe(1)
+    expect(await viewDayTotal("burn")).toBe(1)
+  })
+
+  test("reveals preserve the public projection", async () => {
+    const read = await revealSharedPaste("burn")
+    expect(read.status).toBe("ok")
+    if (read.status !== "ok") throw new Error("Could not read the paste")
+    expect(Object.keys(read.paste).sort()).toEqual([
+      "allowRaw",
+      "author",
+      "burnAfterRead",
+      "expiresAt",
+      "files",
+      "slug",
+      "title",
+      "updatedAt",
+      "views",
+    ])
   })
 
   test("link previews and crawlers that open the page don't use it up either", async () => {
@@ -115,22 +167,50 @@ describeDb("one-time reads", () => {
 
   test("the same holds when signed-in readers race", async () => {
     signInAs("other")
-    const reads = await Promise.all(
-      Array.from({ length: 8 }, () => readSharedPaste("burn", { reveal: true })),
-    )
+    const reads = await Promise.all(Array.from({ length: 8 }, () => revealSharedPaste("burn")))
 
     expect(reads.filter((read) => read.status === "ok")).toHaveLength(1)
     expect(reads.filter((read) => read.status === "missing")).toHaveLength(7)
   })
 
-  test("the owner opening their own burn-after-read paste neither burns nor counts it", async () => {
+  test("the owner's own link is sealed too, and their reveal burns it without notifying them", async () => {
     signInAs("owner")
-    expect(await page("burn")).toBe("content")
-    expect(await page("burn")).toBe("content")
+    expect(await page("burn")).toBe("empty")
+    expect(await readSharedPaste("burn")).toEqual({ status: "sealed", owned: true, signedIn: true })
+    expect(await reveal("burn")).toBe("content")
+    expect(await reveal("burn")).toBe("404")
 
     const row = await pasteRow("burn")
-    expect(row?.views).toBe(0)
-    expect(row?.deletedAt).toBeNull()
+    expect(row?.views).toBe(1)
+    expect(row?.deletedAt).not.toBeNull()
+    expect(await burnedNotifications()).toBe(0)
+
+    signInAs("other")
+    expect(await reveal("burn")).toBe("404")
+  })
+
+  test("the reveal hands back the share page's details and syntax colours", async () => {
+    await seedPaste({
+      slug: "burnts",
+      owner: "owner",
+      burnAfterRead: true,
+      language: "typescript",
+      content: "const answer = 42",
+    })
+    const response = await revealRoute(
+      new Request("http://x/burnts/reveal", { method: "POST" }),
+      params("burnts"),
+    )
+    const body = await response.json()
+    expect(body).toMatchObject({
+      ok: true,
+      title: "title-of-burnts",
+      author: { username: "owner" },
+      views: 1,
+      burned: true,
+    })
+    expect(body.files[0].content).toBe("const answer = 42")
+    expect(body.files[0].lines?.[0]).toContainEqual(["const", "keyword"])
   })
 
   test("a burn-after-read paste has no raw route for anyone but its owner", async () => {

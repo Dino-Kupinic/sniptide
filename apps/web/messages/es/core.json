@@ -73,7 +73,7 @@
     "autosaveDirty": "Cambios sin guardar…",
     "autosaveBlocked": "Aún no se ha guardado: {reason}",
     "autosaveSaving": "Guardando…",
-    "autosaveSaved": "Todos los cambios guardados",
+    "autosaveSaved": "Guardado {time}",
     "autosaveOffline": "Sin conexión. Los cambios se conservan en este dispositivo",
     "autosaveRetry": "No se puede conectar con Sniptide. Los cambios se conservan en este dispositivo; reintentando",
     "autosaveError": "No se ha guardado: {message}",

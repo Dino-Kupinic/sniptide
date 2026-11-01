@@ -1,21 +1,22 @@
 import { Logo } from "@sniptide/ui/components/logo"
-import { Stripes } from "@sniptide/ui/components/stripes"
 import { cn } from "@sniptide/ui/lib/utils"
 import type * as React from "react"
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { LanguageMenu } from "@/components/language-switcher"
 import { getConfig } from "@/lib/config"
+import { LifeField } from "./life-field"
 
 export interface Pitch {
   title: [string, string]
   body: string
   link: string
-  note: string
+  note?: string
 }
 
-// Split auth layout from the Paper Sign in / Sign up artboards: form on the left, barcode
-// stripes with a pitch card on the right. Below lg the stripes become a strip above the form and
-// the pitch body moves under the subtitle.
-// `centered` is for short screens (request access): on phones the content sits mid-screen, centered.
+// Split auth layout from the Paper Sign in / Sign up artboards: the form takes three fifths on the
+// left, and the right two fifths hold the pitch card over the Game of Life, always on the dark
+// surface. Below lg the card is gone and the pitch body moves under the subtitle.
+// `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
+// Without a subtitle the heading stands alone and centers over the form, as on sign-up.
 export function AuthScreen({
   title,
   subtitle,
@@ -25,7 +26,7 @@ export function AuthScreen({
   children,
 }: {
   title?: string
-  subtitle: string
+  subtitle?: string
   centered?: boolean
   legal: React.ReactNode
   pitch: Pitch
@@ -33,11 +34,7 @@ export function AuthScreen({
 }) {
   return (
     <div className="flex min-h-svh bg-background">
-      <div className="flex min-w-0 flex-1 flex-col lg:w-1/2 lg:flex-none lg:px-10 lg:py-8">
-        <div className="relative h-30 shrink-0 overflow-hidden lg:hidden">
-          <Stripes className="-top-[300px] -left-[150px] h-[900px] w-[720px]" />
-        </div>
-
+      <div className="flex min-w-0 flex-1 flex-col lg:w-3/5 lg:flex-none lg:px-10 lg:py-8">
         <div className="hidden px-2 py-1.5 lg:block">
           <HomeLogo />
         </div>
@@ -52,46 +49,54 @@ export function AuthScreen({
         >
           <div className="flex w-full flex-col gap-5 lg:max-w-[360px] lg:gap-6">
             {centered ? null : <HomeLogo className="lg:hidden" />}
-            <div className="flex flex-col gap-1.5 lg:gap-2">
-              {title ? (
-                <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
-                  {title}
-                </h1>
-              ) : null}
-              <p
-                className={cn(
-                  "text-[15px] leading-5 text-muted-foreground lg:text-sm",
-                  centered && "text-center lg:text-left",
+            {subtitle ? (
+              <div className="flex flex-col gap-1.5 lg:gap-2">
+                {title ? (
+                  <h1 className="font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
+                    {title}
+                  </h1>
+                ) : null}
+                <p
+                  className={cn(
+                    "text-[15px] leading-5 text-muted-foreground lg:text-sm",
+                    centered && "text-center lg:text-left",
+                  )}
+                >
+                  {subtitle}
+                </p>
+                {centered ? null : (
+                  <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
                 )}
-              >
-                {subtitle}
-              </p>
-              {centered ? null : (
-                <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
-              )}
-            </div>
+              </div>
+            ) : title ? (
+              <h1 className="text-center font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
+                {title}
+              </h1>
+            ) : null}
             {children}
           </div>
         </main>
 
-        <footer className="flex flex-col items-center gap-3 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:items-start lg:p-0">
-          <LanguageSwitcher />
-          {legal}
+        <footer className="flex items-center justify-between gap-4 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:p-0">
+          <div className="min-w-0">{legal}</div>
+          <LanguageMenu className="ml-auto shrink-0" />
         </footer>
       </div>
 
-      <aside className="relative hidden w-1/2 items-center justify-center overflow-hidden border-l border-border lg:flex">
-        <Stripes className="inset-0 size-full" />
-        <div className="rounded-lg relative flex w-[400px] flex-col gap-[18px] border border-border bg-background p-7 shadow-(--dialog-shadow)">
+      <aside className="dark relative hidden w-2/5 items-center justify-center overflow-hidden border-l border-border bg-sidebar text-foreground lg:flex">
+        <LifeField />
+        <div className="rounded-lg relative mx-8 flex w-full max-w-[400px] flex-col gap-[18px] border border-border bg-background p-7">
           <p className="font-heading text-3xl leading-[34px] font-bold tracking-[-0.02em]">
             {pitch.title[0]}
             <br />
             {pitch.title[1]}
           </p>
           <p className="text-sm leading-[21px] text-foreground/80">{pitch.body}</p>
-          <div className="rounded-md flex items-center justify-between bg-muted px-3 py-2.5">
-            <span className="font-mono text-[13px] text-link">{pitch.link}</span>
-            <span className="text-xs text-muted-foreground">{pitch.note}</span>
+          <div className="rounded-md flex items-center justify-between gap-3 bg-muted px-3 py-2.5">
+            <span className="truncate font-mono text-[13px] text-link">{pitch.link}</span>
+            {pitch.note ? (
+              <span className="shrink-0 text-xs text-muted-foreground">{pitch.note}</span>
+            ) : null}
           </div>
         </div>
       </aside>

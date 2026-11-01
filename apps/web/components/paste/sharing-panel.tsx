@@ -10,7 +10,6 @@ import {
 import { Input } from "@sniptide/ui/components/input"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Sheet, SheetBody, SheetContent, SheetHeader } from "@sniptide/ui/components/sheet"
-import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
@@ -30,7 +29,7 @@ import { track } from "@/lib/analytics"
 import { runAction } from "@/lib/feedback"
 import { updateSharing } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
-import { useCopy } from "./copy-button"
+import { LinkCopyContent, useCopyLink } from "./copy-button"
 import { type PanelSection, SidePanel } from "./side-panel"
 
 export interface SharingState {
@@ -54,7 +53,9 @@ const expiryChoices: { value: Expiry; label: string }[] = [
 
 export function ShareLinkField({ url, className }: { url: string; className?: string }) {
   const t = useTranslations("Paste")
-  const { copied, copy } = useCopy()
+  const { state, props } = useCopyLink(url, () =>
+    track("share_link_copied", { from: "sharing_panel" }),
+  )
 
   return (
     <div
@@ -69,13 +70,9 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
         variant="inverted"
         size="sm"
         className="mr-1 h-[26px] text-xs"
-        onClick={() => {
-          track("share_link_copied", { from: "sharing_panel" })
-          return copy(url)
-        }}
+        {...props}
       >
-        {copied ? <SuccessCheck /> : null}
-        <span aria-live="polite">{copied ? t("copied") : t("copy")}</span>
+        <LinkCopyContent state={state} label={t("copy")} />
       </Button>
     </div>
   )

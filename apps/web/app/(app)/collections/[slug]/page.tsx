@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionMenu } from "@/components/collections/collection-menu"
 import { PasteList } from "@/components/lists/paste-list"
-import { getCollection } from "@/lib/collections/store"
+import { getCollection, listCollections } from "@/lib/collections/store"
 import { cardPreviews } from "@/lib/pastes/card-preview"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage } from "@/lib/pastes/lists"
@@ -19,8 +19,9 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
   const locale = await getLocale()
   const { slug } = await params
   const query = parsePasteListQuery(await searchParams)
-  const [collection, data, { origin, host }] = await Promise.all([
+  const [collection, collections, data, { origin, host }] = await Promise.all([
     getCollection(slug),
+    listCollections(),
     listPastePage({ mode: "collection", collection: slug }, query),
     getSiteOrigin(),
   ])
@@ -39,7 +40,9 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
       previews={previews}
       origin={origin}
       host={host}
-      collections={[]}
+      // For the selection bar's Move to collection.
+      collections={collections}
+      collection={collection.slug}
       query={data.query}
       pagination={data.pagination}
       languageOptions={data.languageOptions}

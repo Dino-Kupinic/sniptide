@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -19,6 +20,10 @@ try {
   })
   const [tarball] = readdirSync(packed).filter((name) => name.endsWith(".tgz"))
   if (!tarball) throw new Error("npm pack produced no tarball")
+  const readPacked = (file) =>
+    execFileSync("tar", ["-xOzf", join(packed, tarball), `package/${file}`], { encoding: "utf8" })
+  assert.equal(JSON.parse(readPacked("package.json")).license, "MIT")
+  assert.match(readPacked("LICENSE"), /^MIT License\n\nCopyright \(c\) 2026 Dino Kupinic/)
   writeFileSync(join(temp, "package.json"), '{"type":"module","private":true}')
   execFileSync(
     "npm",
