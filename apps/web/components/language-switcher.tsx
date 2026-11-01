@@ -84,7 +84,18 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
 }
 
 // A ghost button with the globe icon and the current language that opens the list in a menu.
-export function LanguageMenu({ className }: { className?: string }) {
+// Compact hides the language name on phones and keeps it in the accessible name.
+export function LanguageMenu({
+  className,
+  side = "top",
+  compact = false,
+  size = "sm",
+}: {
+  className?: string
+  side?: "top" | "bottom"
+  compact?: boolean
+  size?: "sm" | "default"
+}) {
   const locale = useLocale()
   const t = useTranslations("Core")
   const { pending, change } = useLocaleChange()
@@ -95,14 +106,16 @@ export function LanguageMenu({ className }: { className?: string }) {
         disabled={pending}
         aria-label={`${t("language")}: ${localeNames[locale as Locale]}`}
         render={
-          <Button variant="ghost" size="sm" className={cn("text-muted-foreground", className)} />
+          <Button variant="ghost" size={size} className={cn("text-muted-foreground", className)} />
         }
       >
         <LanguagesIcon />
-        {localeNames[locale as Locale]}
-        <ChevronDownIcon />
+        <span className={compact ? "max-sm:hidden" : undefined}>
+          {localeNames[locale as Locale]}
+        </span>
+        <ChevronDownIcon className={compact ? "max-sm:hidden" : undefined} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="top">
+      <DropdownMenuContent align="end" side={side}>
         <DropdownMenuRadioGroup
           value={locale}
           onValueChange={(next) => change(next as string, () => toast.error(t("languageError")))}

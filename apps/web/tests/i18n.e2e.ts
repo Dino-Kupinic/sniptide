@@ -47,7 +47,7 @@ test("settings language applies to the editor and mobile share pages", async ({
   await browser.setViewport({ width: 390, height: 844 })
   await app.open("/missing-localization-paste")
   await expect(browser.locator("html")).toHaveAttribute("lang", "ja")
-  await expect(screen.getByRole("combobox")).toHaveValue("ja")
+  await expect(screen.getByRole("button", "言語: 日本語")).toBeVisible()
   expect(
     await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBe(true)

@@ -1,8 +1,9 @@
 import { Button } from "@sniptide/ui/components/button"
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
+import { PlusIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { LanguageSwitcher } from "@/components/language-switcher"
+import { LanguageMenu } from "@/components/language-switcher"
 import { getAppOrigin } from "@/lib/site"
 
 // Header for pages visitors see without signing in (the public share page). Plain <a> tags, not
@@ -24,17 +25,20 @@ export function PublicHeader({ signedIn, className }: { signedIn: boolean; class
       >
         <Logo className="max-sm:[&>span]:hidden" />
       </a>
-      <nav aria-label={t("navigation")} className="flex items-center gap-3 text-sm sm:gap-5">
-        <LanguageSwitcher compact />
-        <a
-          href={`${appOrigin}/new`}
-          className="hidden text-foreground/80 hover:text-foreground lg:inline"
+      <nav aria-label={t("navigation")} className="flex items-center gap-2">
+        <LanguageMenu side="bottom" size="default" compact className="max-sm:w-8 max-sm:px-0" />
+        <Button
+          variant="outline"
+          aria-label={t("createPaste")}
+          className="max-sm:w-8 max-sm:px-0"
+          render={<a href={`${appOrigin}/new`} />}
+          nativeButton={false}
         >
-          {t("createPaste")}
-        </a>
+          <PlusIcon />
+          <span className="max-sm:hidden">{t("createPaste")}</span>
+        </Button>
         <Button
           variant="inverted"
-          className="h-[34px] px-3.5 text-sm"
           render={<a href={`${appOrigin}${signedIn ? "/dashboard" : "/sign-in"}`} />}
           nativeButton={false}
         >
