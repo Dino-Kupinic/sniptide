@@ -14,8 +14,7 @@ import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchProm
 import { EmailDivider, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
-// `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
-// newcomers to the request-access page.
+// `socialProviders` lists the configured GitHub and Google logins.
 // `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
 // `initialError` explains a failed GitHub or Google sign-in, `notice` confirms a password reset.
 // `redirectTo` is where a signed-in visitor goes next (lib/auth-redirect.ts).
@@ -26,7 +25,7 @@ export function SignInForm({
   notice = null,
   redirectTo = "/dashboard",
 }: {
-  socialProviders: SocialProvider[] | null
+  socialProviders: SocialProvider[]
   signUpClosed?: boolean
   initialError?: string | null
   notice?: string | null
@@ -139,7 +138,7 @@ export function SignInForm({
 
         {signUpClosed ? null : (
           <SwitchPrompt>
-            {t.rich(socialProviders ? "newAccountPrompt" : "requestAccessPrompt", {
+            {t.rich("newAccountPrompt", {
               link: (children) => (
                 <Link
                   href={

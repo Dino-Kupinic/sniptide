@@ -4,7 +4,7 @@ import { AuthScreen } from "@/components/auth/auth-screen"
 import { authSubmitClass } from "@/components/auth/fields"
 import { LegalNotice } from "@/components/auth/legal-notice"
 import { SignInForm } from "@/components/auth/sign-in-form"
-import { getInviteOnly, getSocialProviders, isDemoMode, isSignUpClosed } from "@/lib/auth"
+import { getSocialProviders, isDemoMode, isSignUpClosed } from "@/lib/auth"
 import { afterSignIn } from "@/lib/auth-redirect"
 import { oauthErrorKey } from "@/lib/oauth-errors"
 import { getSiteOrigin } from "@/lib/site"
@@ -45,7 +45,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-in">) {
         </Button>
       ) : null}
       <SignInForm
-        socialProviders={getInviteOnly() ? null : await getSocialProviders()}
+        socialProviders={await getSocialProviders()}
         signUpClosed={isSignUpClosed()}
         initialError={errorKey ? t(`oauthErrors.${errorKey}`) : null}
         notice={reset === "1" ? t("passwordResetDone") : null}

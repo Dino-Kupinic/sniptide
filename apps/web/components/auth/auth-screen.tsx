@@ -15,7 +15,7 @@ export interface Pitch {
 // Split auth layout from the Paper Sign in / Sign up artboards: form on the left, barcode
 // stripes with a pitch card on the right. Below lg the stripes become a strip above the form and
 // the pitch body moves under the subtitle.
-// `centered` is for short screens (request access): on phones the content sits mid-screen, centered.
+// `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
 export function AuthScreen({
   title,
   subtitle,
