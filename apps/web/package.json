@@ -36,7 +36,7 @@
     "next": "catalog:runtime",
     "next-intl": "^4.14.9",
     "next-themes": "catalog:runtime",
-    "nodemailer": "^10.1.4",
+    "nodemailer": "^10.3.1",
     "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
@@ -48,7 +48,7 @@
   "devDependencies": {
     "@e2e-dev/web": "0.15.3",
     "@formatjs/icu-messageformat-parser": "^3.5.21",
-    "@iconify-json/material-icon-theme": "^1.2.73",
+    "@iconify-json/material-icon-theme": "^1.2.75",
     "@modelcontextprotocol/sdk": "catalog:runtime",
     "@tailwindcss/postcss": "catalog:ui",
     "@types/bun": "catalog:tooling",
