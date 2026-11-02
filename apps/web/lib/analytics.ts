@@ -113,6 +113,7 @@ const SECTIONS = new Set([
   "collections",
   "secrets",
   "secret-share",
+  "welcome",
 ])
 
 // "/k7Qe2x/raw" -> "/[slug]/raw", "/pastes/k7Qe2x/edit" -> "/pastes/[slug]/edit".

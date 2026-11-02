@@ -1,0 +1,55 @@
+{
+  "Onboarding": {
+    "pageTitle": "Bienvenida",
+    "progress": "Paso {current} de {total}",
+    "skipSetup": "Omitir configuración",
+    "skip": "Omitir",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "saveFailed": "No se ha podido guardar. Inténtalo de nuevo.",
+    "source": {
+      "title": "¿Cómo has conocido Sniptide?",
+      "subtitle": "Tu respuesta nos dice dónde encontrar a más gente como tú.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "Un amigo",
+        "ai_agent": "Un agente de IA",
+        "search": "Buscador",
+        "other": "Otro sitio"
+      }
+    },
+    "useCase": {
+      "title": "¿Para qué vas a usar Sniptide?",
+      "subtitle": "Elige la opción más cercana. La usaremos para decidir qué construir después.",
+      "options": {
+        "agents": "Dar a mis agentes un sitio donde guardar y compartir",
+        "sharing": "Compartir código y logs con otras personas",
+        "team": "Alojarlo para mi equipo",
+        "exploring": "Solo estoy echando un vistazo"
+      }
+    },
+    "agent": {
+      "title": "Conecta un agente",
+      "subtitle": "Tu agente inicia sesión en Sniptide una vez y luego guarda pastes y los vuelve a leer por ti.",
+      "clientLabel": "Agente",
+      "clients": {
+        "claude_code": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "other": "Otro"
+      },
+      "terminalHint": "Ejecuta esto en tu terminal. {client} abre Sniptide en tu navegador, donde permites el acceso.",
+      "cursorHint": "Cursor se abre con Sniptide ya configurado. Permite el acceso en la pestaña del navegador que aparece después.",
+      "otherHint": "Añade esta dirección como servidor MCP remoto en tu cliente. Inicia sesión a través de tu navegador.",
+      "addToCursor": "Añadir a Cursor",
+      "yourAgent": "tu agente",
+      "waiting": "Esperando a que {client} se conecte…",
+      "connected": "{client} está conectado y ya puede guardar pastes.",
+      "connectedOther": "Tu agente está conectado y ya puede guardar pastes.",
+      "skipForNow": "Omitir por ahora",
+      "finish": "Ir al panel"
+    }
+  }
+}

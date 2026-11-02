@@ -2,9 +2,17 @@ import { randomUUID } from "node:crypto"
 import { test as base } from "@e2e-dev/web"
 import { createAuth } from "@workspace/auth"
 import { createDb } from "@workspace/db"
-import { user } from "@workspace/db/schema"
+import { onboarding, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { databaseUrl } from "./environment"
+
+// A new account goes through the welcome wizard first. Tests start on the dashboard, so every test
+// account has already skipped it.
+export async function skipOnboarding(db: ReturnType<typeof createDb>, email: string) {
+  const [created] = await db.select({ id: user.id }).from(user).where(eq(user.email, email))
+  if (!created) throw new Error(`No test account for ${email}.`)
+  await db.insert(onboarding).values({ userId: created.id, source: "skipped" })
+}
 
 // Seed through Better Auth, then install its real session cookie. This keeps screenshots
 // available for editor failures and leaves the sign-in UI to its own regression test.
@@ -25,6 +33,7 @@ export const test = base.extend<{ account: { email: string } }>({
         asResponse: true,
       })
       if (!response.ok) throw new Error(`Account fixture failed (${response.status}).`)
+      await skipOnboarding(db, email)
       const cookies = response.headers.getSetCookie().map((header) => {
         const pair = header.split(";")[0] ?? ""
         const separator = pair.indexOf("=")
