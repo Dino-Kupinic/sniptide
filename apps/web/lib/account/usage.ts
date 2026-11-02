@@ -25,10 +25,24 @@ export async function recordApiRequest(owner: TokenOwner, now = new Date()) {
     })
 }
 
+// The trigger-kept counters that limits are enforced against, so Usage, Billing and the
+// mobile settings meter all show the same numbers.
+export async function getAccountTotals(owner: string) {
+  const [usage] = await getDb().select().from(accountUsage).where(eq(accountUsage.ownerId, owner))
+  if (!usage) throw new Error("Account usage is missing.")
+  return {
+    storageBytes: usage.storageBytes,
+    pasteCount: usage.pasteCount,
+    fileCount: usage.fileCount,
+    collectionCount: usage.collectionCount,
+    reconciledAt: usage.reconciledAt.toISOString(),
+  }
+}
+
 export async function getAccountUsage(owner: string, now = new Date()) {
   const today = Math.floor(now.getTime() / DAY)
-  const [[usage], apiRequests] = await Promise.all([
-    getDb().select().from(accountUsage).where(eq(accountUsage.ownerId, owner)),
+  const [totals, apiRequests] = await Promise.all([
+    getAccountTotals(owner),
     getDb()
       .select({
         tokenId: apiTokenUsageDay.tokenId,
@@ -45,15 +59,7 @@ export async function getAccountUsage(owner: string, now = new Date()) {
       )
       .orderBy(asc(apiTokenUsageDay.day), asc(apiTokenUsageDay.tokenId)),
   ])
-  if (!usage) throw new Error("Account usage is missing.")
-  return {
-    storageBytes: usage.storageBytes,
-    pasteCount: usage.pasteCount,
-    fileCount: usage.fileCount,
-    collectionCount: usage.collectionCount,
-    reconciledAt: usage.reconciledAt.toISOString(),
-    apiRequests,
-  }
+  return { ...totals, apiRequests }
 }
 
 async function recount(tx: Transaction, owners: string[]) {

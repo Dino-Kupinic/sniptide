@@ -16,7 +16,7 @@ import {
   UserIcon,
 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { navigateTabs } from "@/components/tab-navigation"
@@ -25,6 +25,7 @@ import type { TokenSummary } from "@/lib/api/tokens"
 import type { SocialProvider } from "@/lib/auth"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
+import { formatBytes } from "@/lib/format"
 import type { Preferences } from "@/lib/preferences"
 import {
   ConnectedAccountsSection,
@@ -60,19 +61,27 @@ function tabHref(tab: SettingsTab) {
 
 const titleClass = "font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]"
 
-// No limit (a self-hosted server that turned it off) leaves nothing to measure against.
-function StorageMeter({ usedMb, limitMb }: { usedMb: number; limitMb: number | null }) {
+// The same counter the Usage tab reads. No limit (a self-hosted server that turned it off) leaves
+// nothing to measure against.
+function StorageMeter({ used, limit }: { used: number; limit: number | null }) {
   const t = useTranslations("Settings")
-  if (limitMb === null) return null
+  const locale = useLocale()
+  if (limit === null) return null
   return (
     <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
       <div className="flex items-center justify-between gap-3 text-sm">
         <span className="font-medium">{t("storage")}</span>
         <span className="text-muted-foreground tabular-nums">
-          {t("storageUsage", { used: usedMb, limit: limitMb })}
+          {t("usageOfLimit", {
+            used: formatBytes(used, locale),
+            limit: formatBytes(limit, locale),
+          })}
         </span>
       </div>
-      <Progress value={(usedMb / limitMb) * 100} aria-label={t("storage")} />
+      <Progress
+        value={limit > 0 ? Math.min(100, (used / limit) * 100) : 100}
+        aria-label={t("storage")}
+      />
     </div>
   )
 }
@@ -88,8 +97,10 @@ export function SettingsView({
   api,
   security,
   usage,
+  billing,
 }: {
   usage: React.ReactNode
+  billing: React.ReactNode
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
@@ -99,7 +110,7 @@ export function SettingsView({
     demo: boolean
   }
   pasteCount: number
-  storage: { usedMb: number; limitMb: number | null }
+  storage: { used: number; limit: number | null } | null
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
 }) {
   const t = useTranslations("Settings")
@@ -188,7 +199,7 @@ export function SettingsView({
               </a>
             ))}
           </nav>
-          <StorageMeter usedMb={storage.usedMb} limitMb={storage.limitMb} />
+          {storage ? <StorageMeter used={storage.used} limit={storage.limit} /> : null}
           <Button
             variant="outline"
             size="xl"
@@ -285,22 +296,7 @@ export function SettingsView({
           </>
         ) : null}
         {tab === "usage" ? usage : null}
-        {tab === "billing" ? (
-          <SettingsSection title={t("plan")} description={t("sniptideIsFreeWhileItS")}>
-            <div className="rounded-lg flex flex-col gap-1 border border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-              <div className="flex min-w-0 flex-col">
-                <span className="text-sm font-medium">{t("free")}</span>
-                {storage.limitMb === null ? null : (
-                  <span className="text-[13px] text-muted-foreground">
-                    {t("planStorage", { limit: storage.limitMb })}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground">{t("noPaymentMethodNeeded")}</span>
-            </div>
-            <StorageMeter usedMb={storage.usedMb} limitMb={storage.limitMb} />
-          </SettingsSection>
-        ) : null}
+        {tab === "billing" ? billing : null}
       </div>
     </div>
   )

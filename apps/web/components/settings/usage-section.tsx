@@ -1,15 +1,14 @@
-import { Progress } from "@sniptide/ui/components/progress"
 import { Skeleton } from "@sniptide/ui/components/skeleton"
-import { AlertTriangleIcon } from "lucide-react"
 import Link from "next/link"
 import { getLocale, getTranslations } from "next-intl/server"
 import { ViewsBarChart } from "@/components/dashboard/views-chart"
 import { getAccountUsage, USAGE_HISTORY_DAYS } from "@/lib/account/usage"
-import { usageHistory, usageLimitState } from "@/lib/account/usage-display"
+import { usageHistory } from "@/lib/account/usage-display"
 import { formatBytes } from "@/lib/format"
 import { accountBudget } from "@/lib/pastes/budget"
 import { DAY } from "@/lib/time"
 import { SettingsSection } from "./section"
+import { UsageMeters, type UsageMetric } from "./usage-meters"
 
 // Usage from the account reader: one panel of counts, with a meter under each count that has a
 // quota, and the last 30 UTC days of API requests as a bar chart over a table of daily values.
@@ -56,7 +55,7 @@ export async function UsageSection({ ownerId }: { ownerId: string }) {
   const utc = (value: string) => new Date(`${value}T00:00:00Z`)
   const first = history.days[0]?.date ?? now.toISOString().slice(0, 10)
   const last = history.days[history.days.length - 1]?.date ?? first
-  const metrics = [
+  const metrics: UsageMetric[] = [
     {
       label: t("storage"),
       used: usage.storageBytes,
@@ -85,43 +84,7 @@ export async function UsageSection({ ownerId }: { ownerId: string }) {
   return (
     <>
       <SettingsSection title={t("usage")} description={t("usageDescription")} repeatsHeading>
-        <ul className="flex flex-col rounded-lg border border-border">
-          {metrics.map((metric) => {
-            const state = usageLimitState(metric.used, metric.limit)
-            return (
-              <li
-                key={metric.label}
-                className="flex flex-col gap-3 border-t border-border px-4 py-3.5 first:border-t-0"
-              >
-                <div className="flex items-baseline justify-between gap-4 text-sm">
-                  <span className="font-medium">{metric.label}</span>
-                  <span className="text-right text-muted-foreground tabular-nums">
-                    {metric.limit === null
-                      ? metric.format(metric.used)
-                      : t("usageOfLimit", {
-                          used: metric.format(metric.used),
-                          limit: metric.format(metric.limit),
-                        })}
-                  </span>
-                </div>
-                {state.kind === "limited" ? (
-                  <>
-                    <Progress value={state.percent} aria-label={metric.label} />
-                    {state.status === "normal" ? null : (
-                      <p className="flex items-center gap-1.5 text-[13px] font-medium">
-                        <AlertTriangleIcon
-                          aria-hidden="true"
-                          className="size-3.5 shrink-0 text-muted-foreground"
-                        />
-                        {t(state.status === "full" ? "usageFull" : "usageWarning")}
-                      </p>
-                    )}
-                  </>
-                ) : null}
-              </li>
-            )
-          })}
-        </ul>
+        <UsageMeters metrics={metrics} />
       </SettingsSection>
       <SettingsSection title={t("usageApiRequests")} description={t("usageHistoryDescription")}>
         {history.total === 0 ? (

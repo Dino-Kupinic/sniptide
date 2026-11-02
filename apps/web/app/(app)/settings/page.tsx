@@ -2,16 +2,18 @@ import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getTranslations } from "next-intl/server"
 import { Suspense } from "react"
+import { BillingSection, BillingSectionSkeleton } from "@/components/settings/billing-section"
 import { SettingsView } from "@/components/settings/settings-view"
 import { UsageSection, UsageSectionSkeleton } from "@/components/settings/usage-section"
 import { readAccountSecurity } from "@/lib/account/store"
+import { getAccountTotals } from "@/lib/account/usage"
 import { listTokens } from "@/lib/api/tokens"
 import { getSocialProviders, isDemoMode, requireSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { listGroups } from "@/lib/env/store"
 import { oauthErrorKey } from "@/lib/oauth-errors"
-import { storageUsage } from "@/lib/pastes/budget"
+import { accountBudget } from "@/lib/pastes/budget"
 import { navCounts } from "@/lib/pastes/store"
 import { readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
@@ -23,20 +25,24 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/settings">) {
-  const [session, counts, storage, { error }] = await Promise.all([
+  const [session, counts, { error }] = await Promise.all([
     requireSession(),
     navCounts(),
-    storageUsage(),
     searchParams,
   ])
   const viewer = viewerFromUser(session.user)
-  const [tokens, envGroups, site, security, providers, authT] = await Promise.all([
+  const [tokens, envGroups, site, security, providers, authT, totals] = await Promise.all([
     listTokens(session.user.id),
     listGroups(session.user.id),
     getSiteOrigin(),
     readAccountSecurity(session.user.id, session.session.id),
     getSocialProviders(),
     getTranslations("Auth"),
+    // The phone settings list shows a storage meter, and Usage and Billing read their own.
+    getAccountTotals(session.user.id).catch((cause: unknown) => {
+      console.error("Unable to read account usage", cause)
+      return null
+    }),
   ])
   // Connecting GitHub or Google comes back here with ?error=<code> when it fails.
   const linkError = oauthErrorKey(error)
@@ -51,6 +57,11 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
       usage={
         <Suspense fallback={<UsageSectionSkeleton />}>
           <UsageSection ownerId={session.user.id} />
+        </Suspense>
+      }
+      billing={
+        <Suspense fallback={<BillingSectionSkeleton />}>
+          <BillingSection ownerId={session.user.id} />
         </Suspense>
       }
       profile={{
@@ -71,10 +82,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
       }}
       pasteCount={counts.pastes}
       api={{ tokens, envGroups, origin: getConfig().appUrl ?? site.origin }}
-      storage={{
-        usedMb: Math.round((storage.bytes / 1024 / 1024) * 10) / 10,
-        limitMb: storage.limit.bytes === null ? null : storage.limit.bytes / 1024 / 1024,
-      }}
+      storage={totals && { used: totals.storageBytes, limit: accountBudget().bytes }}
     />
   )
 }
