@@ -57,6 +57,9 @@ const fileProperties = {
   },
 }
 
+// A capture names its files and nothing else: the language comes from the name.
+const { language: _language, ...captureFileProperties } = fileProperties
+
 const slugParameter = {
   name: "slug",
   in: "path",
@@ -1602,7 +1605,7 @@ export const openApiDocument = {
       },
       CaptureFile: {
         ...jsonSchema(apiCaptureSchema.shape.files.element),
-        properties: fileProperties,
+        properties: captureFileProperties,
       },
       Source: {
         ...jsonSchema(sourceSchema.nullable()),

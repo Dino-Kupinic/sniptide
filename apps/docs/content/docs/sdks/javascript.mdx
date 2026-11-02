@@ -232,7 +232,7 @@ type Visibility = "public" | "unlisted" | "private"
 
 interface CaptureInput {
   title: string
-  files: Array<{ name: string; content: string; language?: string; lines?: { start: number; end: number } }>
+  files: Array<{ name: string; content: string; lines?: { start: number; end: number } }>
   description?: string
   visibility?: Visibility
   collection?: string | null

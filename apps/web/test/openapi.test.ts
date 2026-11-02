@@ -68,6 +68,7 @@ describe("API reference", () => {
       expect(field).not.toHaveProperty("default")
     expect(schemas.File.required).toEqual(["name", "language", "content"])
     expect(schemas.CaptureFile.required).toEqual(["name", "content"])
+    expect(schemas.CaptureFile.properties).not.toHaveProperty("language")
   })
 
   test("documents every route handler that isn't internal", () => {
