@@ -1,11 +1,16 @@
 "use server"
 
-import { onboarding } from "@workspace/db/schema"
-import { sql } from "drizzle-orm"
+import { apiToken, oauthClient, onboarding } from "@workspace/db/schema"
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { actionError } from "@/lib/i18n/action-errors"
-import { isSignupSourceAnswer, isUseCase } from "@/lib/onboarding"
+import {
+  type AgentClient,
+  agentClientFromName,
+  isSignupSourceAnswer,
+  isUseCase,
+} from "@/lib/onboarding"
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -44,4 +49,19 @@ export async function saveUseCase(answer: string): Promise<Result> {
     return { ok: false, error: await actionError("saveFailed") }
   }
   return { ok: true }
+}
+
+// The newest agent the account connected through OAuth, so the wizard can confirm the connection
+// as soon as the agent's consent screen is allowed. Null until one connects.
+export async function getAgentConnection(): Promise<{ client: AgentClient } | null> {
+  const session = await getSession()
+  if (!session) return null
+  const [row] = await getDb()
+    .select({ name: oauthClient.name })
+    .from(apiToken)
+    .innerJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
+    .where(and(eq(apiToken.ownerId, session.user.id), isNotNull(apiToken.clientId)))
+    .orderBy(desc(apiToken.createdAt))
+    .limit(1)
+  return row ? { client: agentClientFromName(row.name) } : null
 }

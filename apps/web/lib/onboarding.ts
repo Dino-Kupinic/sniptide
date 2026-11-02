@@ -13,8 +13,8 @@ export const SIGNUP_SOURCES = [
 
 export const USE_CASES = ["agents", "sharing", "team", "exploring"] as const
 
-// The clients the last step has setup instructions for.
-export const AGENT_CLIENTS = ["claude_code", "cursor", "other"] as const
+// The clients the last step has setup instructions for, most used first.
+export const AGENT_CLIENTS = ["claude_code", "codex", "cursor", "other"] as const
 
 export const ONBOARDING_STEPS = ["source", "use_case", "agent"] as const
 
@@ -36,14 +36,26 @@ export function isUseCase(value: unknown): value is UseCase {
 // they made months ago.
 export const ONBOARDING_WINDOW_DAYS = 14
 
-// The MCP server's address and the one-line setups for each client. Cursor installs from a deep
-// link whose config is base64 JSON.
+// The MCP server's address and the one-line setups for each client. Each one signs in through the
+// OAuth consent screen the first time it connects, so no token is pasted anywhere. Cursor installs
+// from a deep link whose config is base64 JSON.
 export function agentSetup(origin: string) {
   const url = `${origin}/api/mcp`
   const config = btoa(JSON.stringify({ url }))
   return {
     url,
     claudeCode: `claude mcp add --transport http sniptide ${url}`,
+    codex: `codex mcp add sniptide --url ${url}`,
     cursorLink: `cursor://anysphere.cursor-deeplink/mcp/install?name=sniptide&config=${encodeURIComponent(config)}`,
   }
+}
+
+// Which client an OAuth connection came from, judged by the name it registered with. The name is
+// chosen by the client, so it only picks one of the fixed values and is never shown or sent as is.
+export function agentClientFromName(name: string): AgentClient {
+  const value = name.toLowerCase()
+  if (value.includes("claude")) return "claude_code"
+  if (value.includes("codex") || value.includes("openai")) return "codex"
+  if (value.includes("cursor")) return "cursor"
+  return "other"
 }

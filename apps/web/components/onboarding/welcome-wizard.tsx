@@ -2,26 +2,15 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { Logo } from "@sniptide/ui/components/logo"
-import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { cn } from "@sniptide/ui/lib/utils"
-import {
-  ArrowLeftIcon,
-  BotIcon,
-  CompassIcon,
-  ExternalLinkIcon,
-  ServerIcon,
-  Share2Icon,
-} from "lucide-react"
+import { ArrowLeftIcon, BotIcon, CompassIcon, ServerIcon, Share2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { LifeField } from "@/components/auth/life-field"
-import { CopyButton } from "@/components/paste/copy-button"
 import { track } from "@/lib/analytics"
 import {
-  AGENT_CLIENTS,
   type AgentClient,
-  agentSetup,
   ONBOARDING_STEPS,
   type OnboardingStep,
   SIGNUP_SOURCES,
@@ -30,6 +19,7 @@ import {
   type UseCase,
 } from "@/lib/onboarding"
 import { saveSignupSource, saveUseCase } from "@/lib/onboarding-actions"
+import { AgentStep } from "./agent-step"
 
 const USE_CASE_ICONS: Record<UseCase, React.ComponentType<{ className?: string }>> = {
   agents: BotIcon,
@@ -89,13 +79,14 @@ export function WelcomeWizard({
     setStep(next)
   }
 
-  function finish(outcome: "completed" | "exited") {
+  function finish(outcome: "completed" | "exited", connected: AgentClient | null = null) {
     track(outcome === "completed" ? "onboarding_completed" : "onboarding_exited", {
       step,
       source: source ?? "skipped",
       use_case: useCase ?? "skipped",
       agent_client: client,
       agent_setup_copied: copied,
+      agent_connected: connected ?? "none",
     })
     router.replace("/dashboard")
     router.refresh()
@@ -152,16 +143,15 @@ export function WelcomeWizard({
     track("onboarding_agent_setup_copied", { client: which })
   }
 
-  function completeAgentStep() {
-    track(copied ? "onboarding_step_completed" : "onboarding_step_skipped", {
+  // The step counts as completed once an agent is connected, not when a command was copied.
+  function completeAgentStep(connected: AgentClient | null) {
+    track(connected ? "onboarding_step_completed" : "onboarding_step_skipped", {
       step: "agent",
       step_number: 3,
-      ...(copied ? { value: client } : {}),
+      ...(connected ? { value: connected } : {}),
     })
-    finish("completed")
+    finish("completed", connected)
   }
-
-  const setup = agentSetup(origin)
 
   return (
     <div className="flex min-h-svh bg-background">
@@ -241,85 +231,24 @@ export function WelcomeWizard({
               ) : null}
 
               {step === "agent" ? (
-                <section aria-labelledby="onboarding-title" className="flex flex-col gap-6">
-                  <StepHeading
-                    headingRef={headingRef}
-                    title={t("agent.title")}
-                    subtitle={t("agent.subtitle")}
-                  />
-                  <div className="flex flex-col gap-3">
-                    <SegmentedControl
-                      aria-label={t("agent.clientLabel")}
-                      value={client}
-                      onValueChange={(next) => {
-                        setClient(next)
-                        track("onboarding_agent_client_selected", { client: next })
-                      }}
-                      options={AGENT_CLIENTS.map((value) => ({
-                        value,
-                        label: t(`agent.clients.${value}`),
-                      }))}
+                <AgentStep
+                  origin={origin}
+                  heading={
+                    <StepHeading
+                      headingRef={headingRef}
+                      title={t("agent.title")}
+                      subtitle={t("agent.subtitle")}
                     />
-                    {client === "claude_code" ? (
-                      <SetupRow
-                        hint={t("agent.claudeCodeHint")}
-                        code={setup.claudeCode}
-                        action={
-                          <CopyButton
-                            variant="outline"
-                            text={setup.claudeCode}
-                            onClickCapture={() => onCopy("claude_code")}
-                          />
-                        }
-                      />
-                    ) : client === "cursor" ? (
-                      <SetupRow
-                        hint={t("agent.cursorHint")}
-                        code={setup.url}
-                        action={
-                          <Button
-                            variant="outline"
-                            nativeButton={false}
-                            render={<a href={setup.cursorLink} onClick={() => onCopy("cursor")} />}
-                          >
-                            <ExternalLinkIcon />
-                            {t("agent.addToCursor")}
-                          </Button>
-                        }
-                      />
-                    ) : (
-                      <SetupRow
-                        hint={t("agent.otherHint")}
-                        code={setup.url}
-                        action={
-                          <CopyButton
-                            variant="outline"
-                            text={setup.url}
-                            onClickCapture={() => onCopy("other")}
-                          />
-                        }
-                      />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:min-h-14 max-lg:border-t max-lg:border-border max-lg:bg-background max-lg:px-4 max-lg:pt-2 max-lg:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      className="max-lg:h-10"
-                      onClick={() => go("use_case")}
-                    >
-                      <ArrowLeftIcon />
-                      {t("back")}
-                    </Button>
-                    <Button
-                      size="lg"
-                      className="ml-auto max-lg:h-[38px]"
-                      onClick={completeAgentStep}
-                    >
-                      {t("agent.finish")}
-                    </Button>
-                  </div>
-                </section>
+                  }
+                  client={client}
+                  onClientChange={(next) => {
+                    setClient(next)
+                    track("onboarding_agent_client_selected", { client: next })
+                  }}
+                  onSetupUsed={onCopy}
+                  onBack={() => go("use_case")}
+                  onFinish={completeAgentStep}
+                />
               ) : null}
 
               {error ? (
@@ -520,21 +449,6 @@ function StepActions({
         >
           {continueLabel}
         </Button>
-      </div>
-    </div>
-  )
-}
-
-// The setup for one client: a line on what to do, the command or address in mono, and its action.
-function SetupRow({ hint, code, action }: { hint: string; code: string; action: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm leading-5 text-muted-foreground">{hint}</p>
-      <div className="rounded-lg flex min-w-0 flex-col gap-3 border border-border bg-muted p-3 sm:flex-row sm:items-center sm:py-2 sm:pr-2">
-        <code className="min-w-0 flex-1 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
-          {code}
-        </code>
-        {action}
       </div>
     </div>
   )

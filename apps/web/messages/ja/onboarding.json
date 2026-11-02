@@ -32,17 +32,23 @@
     },
     "agent": {
       "title": "エージェントを接続",
-      "subtitle": "エージェントはペーストを保存し、あとで読み返せます。初回の接続時にSniptideへのサインインを求められます。",
+      "subtitle": "エージェントは一度Sniptideにサインインすると、ペーストを保存し、あとで読み返せます。",
       "clientLabel": "エージェント",
       "clients": {
         "claude_code": "Claude Code",
+        "codex": "Codex",
         "cursor": "Cursor",
         "other": "その他"
       },
-      "claudeCodeHint": "ターミナルで実行してください。",
-      "cursorHint": "サーバーが入力済みの状態でCursorを開くか、このアドレスを手動で追加してください。",
-      "otherHint": "クライアントの設定で、このアドレスをリモートMCPサーバーとして追加してください。",
+      "terminalHint": "ターミナルで実行してください。{client}がブラウザでSniptideを開くので、そこでアクセスを許可します。",
+      "cursorHint": "Sniptideが入力済みの状態でCursorが開きます。続いて開くブラウザのタブでアクセスを許可してください。",
+      "otherHint": "このアドレスをクライアントのリモートMCPサーバーとして追加してください。ブラウザ経由でサインインします。",
       "addToCursor": "Cursorに追加",
+      "yourAgent": "エージェント",
+      "waiting": "{client}の接続を待っています…",
+      "connected": "{client}が接続され、ペーストを保存できるようになりました。",
+      "connectedOther": "エージェントが接続され、ペーストを保存できるようになりました。",
+      "skipForNow": "今はスキップ",
       "finish": "ダッシュボードへ"
     }
   }

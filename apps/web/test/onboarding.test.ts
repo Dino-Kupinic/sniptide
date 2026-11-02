@@ -1,9 +1,16 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { onboarding } from "@workspace/db/schema"
+import { apiToken, oauthClient, onboarding } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { agentSetup, ONBOARDING_WINDOW_DAYS, SIGNUP_SOURCES, USE_CASES } from "@/lib/onboarding"
-import { saveSignupSource, saveUseCase } from "@/lib/onboarding-actions"
+import {
+  AGENT_CLIENTS,
+  agentClientFromName,
+  agentSetup,
+  ONBOARDING_WINDOW_DAYS,
+  SIGNUP_SOURCES,
+  USE_CASES,
+} from "@/lib/onboarding"
+import { getAgentConnection, saveSignupSource, saveUseCase } from "@/lib/onboarding-actions"
 import { canOnboard, shouldOnboard } from "@/lib/onboarding-server"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
@@ -61,6 +68,32 @@ describeDb("onboarding answers", () => {
     expect(await stored()).toBeUndefined()
   })
 
+  test("reports the newest OAuth connection by client, and ignores personal tokens", async () => {
+    expect(await getAgentConnection()).toBeNull()
+    await getDb()
+      .insert(apiToken)
+      .values({ ownerId: "ada", name: "CLI", prefix: "snpt_a", hash: "a", scopes: ["read"] })
+    expect(await getAgentConnection()).toBeNull()
+
+    await getDb()
+      .insert(oauthClient)
+      .values({ id: "sntc_test", name: "Claude Code", redirectUris: ["http://localhost/cb"] })
+    await getDb()
+      .insert(apiToken)
+      .values({
+        ownerId: "ada",
+        name: "Claude Code",
+        prefix: "snpt_b",
+        hash: "b",
+        scopes: ["read", "write"],
+        clientId: "sntc_test",
+      })
+    expect(await getAgentConnection()).toEqual({ client: "claude_code" })
+
+    signInAs(null)
+    expect(await getAgentConnection()).toBeNull()
+  })
+
   test("deleting the account removes the answers", async () => {
     await saveSignupSource("x")
     await resetDatabase()
@@ -83,6 +116,7 @@ describe("onboarding", () => {
     expect(setup.claudeCode).toBe(
       "claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp",
     )
+    expect(setup.codex).toBe("codex mcp add sniptide --url https://app.sniptide.com/api/mcp")
     const link = new URL(setup.cursorLink)
     expect(link.protocol).toBe("cursor:")
     expect(link.searchParams.get("name")).toBe("sniptide")
@@ -91,11 +125,19 @@ describe("onboarding", () => {
     })
   })
 
+  test("a connection's client name maps onto the fixed list", () => {
+    expect(agentClientFromName("Claude Code (sniptide)")).toBe("claude_code")
+    expect(agentClientFromName("Codex")).toBe("codex")
+    expect(agentClientFromName("Cursor")).toBe("cursor")
+    expect(agentClientFromName("<script>")).toBe("other")
+  })
+
   test("every answer has a label in each language", async () => {
     for (const locale of ["en", "de", "es", "ja", "zh"]) {
       const messages = (await import(`@/messages/${locale}/onboarding.json`)).default.Onboarding
       for (const source of SIGNUP_SOURCES) expect(messages.source.options[source]).toBeTruthy()
       for (const useCase of USE_CASES) expect(messages.useCase.options[useCase]).toBeTruthy()
+      for (const client of AGENT_CLIENTS) expect(messages.agent.clients[client]).toBeTruthy()
     }
   })
 })

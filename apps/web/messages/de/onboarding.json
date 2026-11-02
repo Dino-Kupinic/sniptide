@@ -32,17 +32,23 @@
     },
     "agent": {
       "title": "Agenten verbinden",
-      "subtitle": "Dein Agent kann Pastes speichern und wieder lesen. Beim ersten Verbinden bittet er dich, dich bei Sniptide anzumelden.",
+      "subtitle": "Dein Agent meldet sich einmal bei Sniptide an und speichert dann Pastes und liest sie für dich wieder.",
       "clientLabel": "Agent",
       "clients": {
         "claude_code": "Claude Code",
+        "codex": "Codex",
         "cursor": "Cursor",
         "other": "Andere"
       },
-      "claudeCodeHint": "Führe das in deinem Terminal aus.",
-      "cursorHint": "Öffne Cursor mit dem Server schon eingetragen, oder füge diese Adresse von Hand hinzu.",
-      "otherHint": "Füge diese Adresse in den Einstellungen deines Clients als Remote-MCP-Server hinzu.",
+      "terminalHint": "Führe das in deinem Terminal aus. {client} öffnet Sniptide im Browser, wo du den Zugriff erlaubst.",
+      "cursorHint": "Cursor öffnet sich mit Sniptide schon eingetragen. Erlaube den Zugriff im Browser-Tab, der danach erscheint.",
+      "otherHint": "Füge diese Adresse in deinem Client als Remote-MCP-Server hinzu. Er meldet sich über deinen Browser an.",
       "addToCursor": "Zu Cursor hinzufügen",
+      "yourAgent": "deinen Agenten",
+      "waiting": "Warte darauf, dass sich {client} verbindet…",
+      "connected": "{client} ist verbunden und kann jetzt Pastes speichern.",
+      "connectedOther": "Dein Agent ist verbunden und kann jetzt Pastes speichern.",
+      "skipForNow": "Vorerst überspringen",
       "finish": "Zum Dashboard"
     }
   }
