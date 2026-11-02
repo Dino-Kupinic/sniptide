@@ -57,7 +57,7 @@ test("usage shows account totals, daily API history and settings navigation", as
     await expect(screen.getByRole("table").getByRole("row").last()).toContainText("12")
     await screen.getByText("View daily values", { exact: true, visible: true }).tap()
     await app.screenshot("usage-desktop-populated")
-    await screen.getByRole("tab", "Billing").tap()
+    await screen.getByRole("tab", "API tokens").tap()
     await screen.getByRole("tab", "Usage").tap()
     await expect(browser).toHaveURL("/settings?tab=usage")
     await browser.setViewport({ width: 390, height: 844 })
