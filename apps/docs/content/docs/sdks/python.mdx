@@ -1,0 +1,231 @@
+---
+title: Python
+description: Install the sniptide package, authenticate with an API token, and save, list, update and share pastes, collections and env groups from Python.
+---
+
+`sniptide` is the official client for Python scripts, command-line tools and server applications.
+It is synchronous, uses only the standard library and has no runtime dependencies.
+
+## Install
+
+```bash
+python -m pip install sniptide
+```
+
+It needs Python 3.9 or newer. The import name is `sniptide`, the same as the package.
+
+## Authenticate
+
+Create a token in **Settings → API tokens** with the access your code needs (see
+[API tokens](/api-tokens)), put it in the environment, and pass it to the client:
+
+```python
+import os
+from sniptide import SniptideClient
+
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+account = client.me()
+```
+
+`me` reads the token's account and access without changing anything, which makes it a good first
+call. `account["scopes"]` is `["read"]` for a read-only token and `["read", "write"]` otherwise.
+
+Every method returns the API's JSON envelope as a dictionary, with the API's camelCase keys such
+as `nextCursor` and `createdAt`.
+
+## Save a paste
+
+```python
+import uuid
+
+created = client.create_paste(
+    {
+        "title": "Retry helper",
+        "description": "Exponential backoff for requests.",
+        "files": [
+            {"name": "retry.py", "content": retry_source},
+            {"name": "test_retry.py", "content": test_source},
+        ],
+        "tags": ["http", "utils"],
+        "collection": "snippets",
+    },
+    idempotency_key=str(uuid.uuid4()),
+)
+
+print(created["paste"]["url"])
+```
+
+New pastes are **private** and never expire unless you say otherwise. Sniptide sets each file's
+language from its name. A collection must already exist, so create it first with
+`create_collection`. Send the same `idempotency_key` again after a timeout and the server returns
+the original paste instead of a duplicate.
+
+To record where code came from, add `source` with `repository`, `commit` and `dirty`. To capture
+part of a file, set `lines` to `{"start": 10, "end": 35}`.
+
+## List and search
+
+`list_pastes` takes the API's query parameters as keyword arguments and returns one page, newest
+first. `nextCursor` is `None` on the last page.
+
+```python
+results = []
+cursor = None
+
+while True:
+    page = client.list_pastes(q="retry", tag=["http"], limit=100, cursor=cursor)
+    results.extend(page["pastes"])
+    cursor = page["nextCursor"]
+    if not cursor:
+        break
+```
+
+`q` matches every word against the title, description, tags, file paths and code. `tag` takes a
+list, `limit` is 1 to 100 and defaults to 20, and `None` values are left out. List results are
+summaries without file contents, so call `read_paste` with an id or slug for the code:
+
+```python
+paste = client.read_paste("k3j9xq")["paste"]
+for file in paste["files"]:
+    print(file["name"], file["language"])
+```
+
+## Update a paste
+
+`update_paste` replaces the title and the **whole file list**, and the previous version stays in
+the paste's [revisions](/core-concepts/revisions). Read the paste first and send every file you
+want to keep:
+
+```python
+paste = client.read_paste("k3j9xq")["paste"]
+files = [
+    {**file, "content": new_source} if file["name"] == "retry.py" else file
+    for file in paste["files"]
+]
+client.update_paste(paste["id"], {"title": paste["title"], "files": files})
+```
+
+Sharing settings change separately with `update_settings`. Send only the keys you want to change:
+
+```python
+result = client.update_settings("k3j9xq", {
+    "visibility": "unlisted",
+    "expiry": "1w",
+    "password": None,
+})
+```
+
+`expiry` is counted from now and is one of `1h`, `1d`, `1w`, `1m`, `1y` or `never`. A `password`
+string protects the paste and `None` removes protection. `trash_paste` moves a paste to the trash,
+where it stays for 30 days.
+
+## Collections
+
+```python
+collection = client.create_collection("UI components")["collection"]
+collections = client.list_collections()["collections"]
+page = client.collection_pastes(collection["slug"])
+```
+
+`collection_pastes` returns full pastes, files included, oldest first. Pass `cursor=` with
+`page["nextCursor"]` for the next page.
+
+## Env groups
+
+Env groups hold a project's environment variables, encrypted at rest. They are the same groups the
+[CLI](/cli#sync-env-files) and the [Secrets editor](/core-concepts/secrets) use.
+
+```python
+client.write_env_group("my-app", [
+    {"name": "DATABASE_URL", "value": os.environ["DATABASE_URL"]},
+    {"name": "LOG_LEVEL", "value": "info"},
+])
+
+group = client.read_env_group("my-app")["group"]
+```
+
+`write_env_group` **replaces** every variable in the group. `read_env_group` and `write_env_group`
+return the values in plain text, so keep their results out of logs. `list_env_groups` returns
+names and counts without values.
+
+## Self-hosted instances
+
+Set `base_url` to your instance's address, including any path prefix:
+
+```python
+client = SniptideClient(
+    os.environ["SNIPTIDE_TOKEN"],
+    base_url="https://paste.example.com",
+    timeout=30,
+    max_response_bytes=64 * 1024 * 1024,
+)
+```
+
+`timeout` is in seconds and defaults to 30. `max_response_bytes` sets the largest response the
+client accepts and defaults to 64 MiB.
+
+## Handle errors
+
+```python
+import time
+from sniptide import SniptideError
+
+try:
+    client.create_paste(capture, idempotency_key=key)
+except SniptideError as error:
+    if error.code == "too_many_requests" and error.retry_after:
+        time.sleep(int(error.retry_after))
+    raise
+```
+
+`SniptideError` has the message as its string, plus `status`, `code` and `retry_after`. The
+[SDK overview](/sdks#errors) lists every code. The client never retries for you. Retry a create
+only with the same idempotency key, and read a paste back before you retry an update.
+
+The client blocks while a request runs. In an async application, call it from a worker thread,
+for example with `await asyncio.to_thread(client.read_paste, "k3j9xq")`.
+
+## Reference
+
+### Client
+
+```python
+SniptideClient(token, base_url="https://app.sniptide.com", timeout=30, max_response_bytes=64 * 1024 * 1024)
+```
+
+| Parameter | Type | Default |
+| --- | --- | --- |
+| `token` | `str` | Required. A personal API token. |
+| `base_url` | `str` | `"https://app.sniptide.com"` |
+| `timeout` | `float` | `30` seconds |
+| `max_response_bytes` | `int` | `67108864` (64 MiB) |
+
+The constructor raises `ValueError` for an empty token, a base URL that isn't HTTPS (outside
+loopback) or that has credentials, a query or a fragment, and a size limit that isn't a positive
+integer.
+
+### Methods
+
+| Method | Request | Access | Keys returned |
+| --- | --- | --- | --- |
+| `me()` | `GET /me` | read | `user`, `scopes` |
+| `usage()` | `GET /usage` | read | The [`Usage`](/sdks/javascript#types) fields |
+| `list_pastes(**options)` | `GET /pastes` | read | `pastes`, `nextCursor` |
+| `read_paste(identifier)` | `GET /pastes/{id}` | read | `paste` |
+| `create_paste(capture, idempotency_key=None)` | `POST /pastes` | write | `paste` |
+| `update_paste(identifier, capture)` | `PUT /pastes/{id}` | write | `paste` |
+| `update_settings(identifier, settings)` | `PATCH /pastes/{id}` | write | `paste`, `settings` |
+| `trash_paste(identifier)` | `DELETE /pastes/{id}` | write | `trashed` |
+| `list_collections()` | `GET /collections` | read | `collections` |
+| `create_collection(name, idempotency_key=None)` | `POST /collections` | write | `collection` |
+| `collection_pastes(slug, cursor=None)` | `GET /collections/{slug}/pastes` | read | `pastes`, `nextCursor` |
+| `list_env_groups()` | `GET /env` | read | `groups` |
+| `read_env_group(group)` | `GET /env/{group}` | read | `group` |
+| `write_env_group(group, variables)` | `PUT /env/{group}` | write | `group` |
+| `delete_env_group(group)` | `DELETE /env/{group}` | write | `ok` |
+
+`identifier` accepts a paste's id or its slug. Identifiers are URL-encoded for you, and an empty
+value, `.` or `..` raises `ValueError` before any request is sent. The dictionaries have the same
+fields as the [JavaScript types](/sdks/javascript#types). New fields can appear within v1, so
+ignore keys you don't use. The source is in
+[`packages/sdk-python`](https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk-python).

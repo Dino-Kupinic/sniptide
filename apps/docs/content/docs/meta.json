@@ -10,6 +10,7 @@
     "api-reliability",
     "agent-sandbox",
     "cli",
+    "sdks",
     "mcp",
     "self-hosting"
   ]

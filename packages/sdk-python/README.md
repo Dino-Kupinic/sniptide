@@ -75,7 +75,7 @@ except SniptideError as error:
 
 The SDK does not retry requests automatically. `create_paste` and `create_collection` accept an optional `idempotency_key` argument. Servers with idempotency support use that key to prevent duplicate creates; older instances may ignore it. Other mutations do not gain an automatic retry guarantee.
 
-See the [API documentation](https://docs.sniptide.com) and [source repository](https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk-python) for more details.
+See the [SDK documentation](https://docs.sniptide.com/sdks/python) and [source repository](https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk-python) for more details.
 
 ## License
 
