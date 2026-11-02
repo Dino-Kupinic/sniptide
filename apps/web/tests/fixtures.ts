@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { test as base } from "@e2e-dev/web"
 import { createAuth } from "@workspace/auth"
 import { createDb } from "@workspace/db"
-import { user } from "@workspace/db/schema"
+import { onboarding, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { databaseUrl } from "./environment"
 
@@ -25,6 +25,11 @@ export const test = base.extend<{ account: { email: string } }>({
         asResponse: true,
       })
       if (!response.ok) throw new Error(`Account fixture failed (${response.status}).`)
+      // A new account goes through the welcome wizard first. Tests start on the dashboard, so the
+      // fixture account has already skipped it.
+      const [created] = await db.select({ id: user.id }).from(user).where(eq(user.email, email))
+      if (!created) throw new Error("Account fixture did not create a user.")
+      await db.insert(onboarding).values({ userId: created.id, source: "skipped" })
       const cookies = response.headers.getSetCookie().map((header) => {
         const pair = header.split(";")[0] ?? ""
         const separator = pair.indexOf("=")
