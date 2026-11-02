@@ -2,7 +2,6 @@ import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getTranslations } from "next-intl/server"
 import { Suspense } from "react"
-import { BillingSection, BillingSectionSkeleton } from "@/components/settings/billing-section"
 import { SettingsView } from "@/components/settings/settings-view"
 import { UsageSection, UsageSectionSkeleton } from "@/components/settings/usage-section"
 import { readAccountSecurity } from "@/lib/account/store"
@@ -38,7 +37,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
     readAccountSecurity(session.user.id, session.session.id),
     getSocialProviders(),
     getTranslations("Auth"),
-    // The phone settings list shows a storage meter, and Usage and Billing read their own.
+    // The phone settings list shows a storage meter from the same counter the Usage tab reads.
     getAccountTotals(session.user.id).catch((cause: unknown) => {
       console.error("Unable to read account usage", cause)
       return null
@@ -57,11 +56,6 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
       usage={
         <Suspense fallback={<UsageSectionSkeleton />}>
           <UsageSection ownerId={session.user.id} />
-        </Suspense>
-      }
-      billing={
-        <Suspense fallback={<BillingSectionSkeleton />}>
-          <BillingSection ownerId={session.user.id} />
         </Suspense>
       }
       profile={{

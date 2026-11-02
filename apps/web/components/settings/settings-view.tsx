@@ -8,7 +8,6 @@ import {
   ChartColumnIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CreditCardIcon,
   KeyRoundIcon,
   type LucideIcon,
   ShieldIcon,
@@ -40,15 +39,7 @@ import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-const SETTINGS_TABS = [
-  "general",
-  "account",
-  "defaults",
-  "notifications",
-  "api",
-  "usage",
-  "billing",
-] as const
+const SETTINGS_TABS = ["general", "account", "defaults", "notifications", "api", "usage"] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function parseTab(value: string | null): SettingsTab | null {
@@ -97,10 +88,8 @@ export function SettingsView({
   api,
   security,
   usage,
-  billing,
 }: {
   usage: React.ReactNode
-  billing: React.ReactNode
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
@@ -122,7 +111,6 @@ export function SettingsView({
     { value: "notifications", label: t("notifications"), icon: BellIcon },
     { value: "api", label: t("apiTokens"), icon: KeyRoundIcon },
     { value: "usage", label: t("usage"), icon: ChartColumnIcon },
-    { value: "billing", label: t("billing"), icon: CreditCardIcon },
   ]
   const router = useRouter()
   // The tab lives in the URL, so it survives a reload, can be linked to, and the phone back
@@ -296,7 +284,6 @@ export function SettingsView({
           </>
         ) : null}
         {tab === "usage" ? usage : null}
-        {tab === "billing" ? billing : null}
       </div>
     </div>
   )

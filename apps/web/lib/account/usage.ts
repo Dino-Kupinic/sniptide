@@ -25,8 +25,8 @@ export async function recordApiRequest(owner: TokenOwner, now = new Date()) {
     })
 }
 
-// The trigger-kept counters that limits are enforced against, so Usage, Billing and the
-// mobile settings meter all show the same numbers.
+// The trigger-kept counters that limits are enforced against, so the Usage tab and the phone
+// settings meter show the same numbers.
 export async function getAccountTotals(owner: string) {
   const [usage] = await getDb().select().from(accountUsage).where(eq(accountUsage.ownerId, owner))
   if (!usage) throw new Error("Account usage is missing.")

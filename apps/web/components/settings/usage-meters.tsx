@@ -10,8 +10,7 @@ export type UsageMetric = {
   format: (value: number) => string
 }
 
-// One panel of counts, with a meter under each count that has a limit. Usage and Billing share
-// it, so both tabs read the same numbers against the same limits.
+// One panel of counts, with a meter under each count that has a limit.
 export function UsageMeters({ metrics }: { metrics: UsageMetric[] }) {
   const t = useTranslations("Settings")
   return (

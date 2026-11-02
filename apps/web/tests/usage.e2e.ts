@@ -57,19 +57,7 @@ test("usage shows account totals, daily API history and settings navigation", as
     await expect(screen.getByRole("table").getByRole("row").last()).toContainText("12")
     await screen.getByText("View daily values", { exact: true, visible: true }).tap()
     await app.screenshot("usage-desktop-populated")
-    await screen.getByRole("tab", "Billing").tap()
-    await expect(
-      screen.getByText("100.0 MB of storage and 1,000 pastes", { exact: true, visible: true }),
-    ).toBeVisible()
-    await expect(
-      screen.getByText("80.0 MB of 100.0 MB", { exact: true, visible: true }),
-    ).toBeVisible()
-    await expect(screen.getByText("1,000 of 1,000", { exact: true, visible: true })).toBeVisible()
-    await expect(screen.getByRole("progressbar", "Pastes")).toHaveAttribute("aria-valuenow", "100")
-    await app.screenshot("billing-desktop-populated")
-    await screen.getByText("View usage", { exact: true, visible: true }).tap()
-    await expect(browser).toHaveURL("/settings?tab=usage")
-    await screen.getByRole("tab", "Billing").tap()
+    await screen.getByRole("tab", "API tokens").tap()
     await screen.getByRole("tab", "Usage").tap()
     await expect(browser).toHaveURL("/settings?tab=usage")
     await browser.setViewport({ width: 390, height: 844 })
