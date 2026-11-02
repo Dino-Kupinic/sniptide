@@ -21,19 +21,19 @@ describe("HTTP capture wire contract", () => {
       apiReplacementSchema.parse({ ...minimal, collection: null, source: null, tags: [] }),
     ).toEqual({ ...minimal, collection: null, source: null, tags: [] })
   })
-  test("normalizes collection, tags and repository while preserving supplied language and ranges", () => {
-    const files = [{ name: "a", language: "guess", content: "", lines: { start: 3, end: 3 } }]
+  test("normalizes collection, tags and repository, keeps ranges and drops a supplied language", () => {
+    const file = { name: "a", content: "", lines: { start: 3, end: 3 } }
     expect(
       captureSchema.parse({
         ...minimal,
-        files,
+        files: [{ ...file, language: "guess" }],
         collection: " ui ",
         tags: [" React ", "react"],
         source: { repository: " git@github.com:org/repo.git ", commit: "abcdef0", dirty: false },
       }),
     ).toEqual({
       title: minimal.title,
-      files,
+      files: [file],
       description: "",
       visibility: "private",
       collection: "ui",

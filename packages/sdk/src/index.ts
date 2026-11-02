@@ -12,7 +12,7 @@ export interface CodeFile {
 }
 export interface CaptureInput {
   title: string
-  files: Array<Omit<CodeFile, "language"> & { language?: string }>
+  files: Array<Omit<CodeFile, "language">>
   description?: string
   visibility?: Visibility
   collection?: string | null
