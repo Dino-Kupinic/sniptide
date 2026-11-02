@@ -1,0 +1,49 @@
+{
+  "Onboarding": {
+    "pageTitle": "Welcome",
+    "progress": "Step {current} of {total}",
+    "skipSetup": "Skip setup",
+    "skip": "Skip",
+    "back": "Back",
+    "continue": "Continue",
+    "saveFailed": "Couldn't save that. Try again.",
+    "source": {
+      "title": "How did you hear about Sniptide?",
+      "subtitle": "Your answer tells us where to find more people like you.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "A friend",
+        "ai_agent": "An AI agent",
+        "search": "Search",
+        "other": "Somewhere else"
+      }
+    },
+    "useCase": {
+      "title": "What will you use Sniptide for?",
+      "subtitle": "Pick the closest one, and we'll use it to decide what to build next.",
+      "options": {
+        "agents": "Giving my agents a place to save and share",
+        "sharing": "Sharing code and logs with people",
+        "team": "Running it for my team",
+        "exploring": "Just looking around"
+      }
+    },
+    "agent": {
+      "title": "Connect an agent",
+      "subtitle": "Your agent can save pastes and read them back. It asks you to sign in to Sniptide the first time it connects.",
+      "clientLabel": "Agent",
+      "clients": {
+        "claude_code": "Claude Code",
+        "cursor": "Cursor",
+        "other": "Other"
+      },
+      "claudeCodeHint": "Run this in your terminal.",
+      "cursorHint": "Open Cursor with the server filled in, or add this address by hand.",
+      "otherHint": "Add this address as a remote MCP server in your client's settings.",
+      "addToCursor": "Add to Cursor",
+      "finish": "Go to dashboard"
+    }
+  }
+}
