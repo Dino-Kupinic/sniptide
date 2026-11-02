@@ -5,7 +5,7 @@ import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { expect } from "e2e"
 import { databaseUrl } from "./environment"
-import { test } from "./fixtures"
+import { skipOnboarding, test } from "./fixtures"
 
 test("refreshing server defaults preserves quick draft edits that are not stored yet", async ({
   account,
@@ -120,6 +120,7 @@ test("quick drafts stay with their account when the browser changes accounts", a
       asResponse: true,
     })
     expect(response.status).toBe(200)
+    await skipOnboarding(db, email)
     await browser.setCookies(
       response.headers.getSetCookie().map((header) => {
         const pair = header.split(";")[0] ?? ""
