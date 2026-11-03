@@ -1,0 +1,70 @@
+{
+  "Email": {
+    "logoAlt": "Sniptide",
+    "buttonFallback": "If the button doesn't work, copy this link into your browser:",
+    "accountReason": "We sent this email to {email} because of a request on your Sniptide account.",
+    "sentBy": "Sent by {name}.",
+    "sentByAddress": "Sent by {name}, {address}.",
+    "verify": {
+      "subject": "Verify your Sniptide email",
+      "preview": "Confirm this address to turn on email notifications. The link works for one hour.",
+      "heading": "Verify your email",
+      "body": "Confirm that <b>{email}</b> belongs to your Sniptide account.",
+      "next": "Once it's verified, you can choose which events also reach you by email in Settings.",
+      "action": "Verify email",
+      "note": "If you didn't ask for this email, you can ignore it. The link expires in one hour."
+    },
+    "change": {
+      "subject": "Approve your Sniptide email change",
+      "preview": "After you approve, we send a verification link to {newEmail}.",
+      "heading": "Approve your email change",
+      "body": "Someone asked to change the email of your Sniptide account from <b>{email}</b> to <b>{newEmail}</b>.",
+      "action": "Approve email change",
+      "after": "After you approve, we send a verification link to the new address. The change is complete once that link is opened.",
+      "note": "If you didn't ask for this, ignore this email and change your password. The link expires in one hour."
+    },
+    "reset": {
+      "subject": "Reset your Sniptide password",
+      "preview": "The link works once, for one hour.",
+      "heading": "Reset your password",
+      "body": "Use this link to choose a new password for your Sniptide account.",
+      "action": "Choose a new password",
+      "after": "The link works once, for one hour. Changing your password signs you out on every device.",
+      "note": "If you didn't ask for this, you can ignore this email. Your password stays the same."
+    },
+    "notification": {
+      "privacy": "To keep your pastes private, this email leaves out their titles, links and contents.",
+      "reason": "You get this email at {email} because you turned on email for {event} in your notification settings.",
+      "settings": "Notification settings",
+      "unsubscribe": "Stop these emails",
+      "shared": {
+        "subject": "A paste was shared with you",
+        "preview": "Sign in to see who shared it and open it.",
+        "body": "Someone shared a paste with your Sniptide account. Shared with me lists it with the person who shared it.",
+        "action": "Open Shared with me",
+        "event": "shared pastes"
+      },
+      "burned": {
+        "subject": "Your burn after read paste was read",
+        "preview": "It moved to your trash, where you can restore it for 30 days.",
+        "body": "One of your burn after read pastes was opened, so its link stopped working. The paste is in your trash, and you can restore it from there for 30 days.",
+        "action": "Open Trash",
+        "event": "burn after read pastes"
+      },
+      "expiring": {
+        "subject": "Your paste expires soon",
+        "preview": "Change its expiry before then to keep the link working.",
+        "body": "One of your pastes expires within 24 hours. To keep its link working, open it and change when it expires.",
+        "action": "Review your pastes",
+        "event": "expiring pastes"
+      },
+      "views": {
+        "subject": "Your paste reached a view milestone",
+        "preview": "Analytics shows which paste it was and where its views came from.",
+        "body": "One of your pastes reached a new view milestone. Analytics shows which paste it was, its views over time and where they came from.",
+        "action": "Open Analytics",
+        "event": "view milestones"
+      }
+    }
+  }
+}

@@ -9,6 +9,7 @@ import { z } from "zod"
 import { getAuth, getSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { requestLocale } from "@/lib/email/locale"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { NOTIFICATION_KINDS } from "@/lib/notifications/types"
 import { changePreferences } from "@/lib/preference-store"
@@ -90,10 +91,14 @@ export async function updateAvatar(image: string | null): Promise<Result> {
   return updateUser({ image: parsed.data })
 }
 
-const generalPatchSchema = preferencesSchema.omit({ notifications: true }).partial().strict()
+// The email language is saved by the server from the request, never patched from the client.
+const generalPatchSchema = preferencesSchema
+  .omit({ notifications: true, locale: true })
+  .partial()
+  .strict()
 
 export async function updatePreferences(
-  patch: Partial<Omit<Preferences, "notifications">>,
+  patch: Partial<Omit<Preferences, "notifications" | "locale">>,
 ): Promise<Result> {
   const session = await getSession()
   if (!session) return { ok: false, error: await actionError("signInSettings") }
@@ -134,8 +139,11 @@ export async function updateNotificationPreference(
     if (!account?.emailVerified)
       return { ok: false, error: "Verify your email address before enabling notification emails." }
   }
+  // Turning on an email records the language in use now, so background emails can match it.
+  const locale = channel === "email" && enabled ? await requestLocale() : undefined
   const saved = await changePreferences(session.user.id, (current) => ({
     ...current,
+    ...(locale ? { locale } : {}),
     notifications: {
       ...current.notifications,
       [kind]: { ...current.notifications[kind], [channel]: enabled },

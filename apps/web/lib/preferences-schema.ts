@@ -1,6 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
+import { locales } from "@/lib/i18n/config"
 import { EXPIRIES, VISIBILITIES } from "@/lib/pastes/types"
 import { defaultPreferences, type Preferences } from "./preferences"
 
@@ -25,6 +26,7 @@ export const preferencesSchema = z.object({
   defaultVisibility: z.enum(VISIBILITIES).catch(defaultPreferences.defaultVisibility),
   defaultExpiry: z.enum(EXPIRIES).catch(defaultPreferences.defaultExpiry),
   defaultBurnAfterRead: z.boolean().catch(defaultPreferences.defaultBurnAfterRead),
+  locale: z.enum(locales).optional().catch(undefined),
 }) satisfies z.ZodType<Preferences>
 
 export function parsePreferences(json: string | null | undefined): Preferences {

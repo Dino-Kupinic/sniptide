@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm"
 import { GET, POST } from "@/app/api/notifications/unsubscribe/route"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { setLocale } from "@/lib/i18n/actions"
+import { localeCookie } from "@/lib/i18n/config"
 import { sendEmailVerification, sendPasswordReset } from "@/lib/mail"
 import { deliverNotificationEmails } from "@/lib/notifications/email"
 import { notifyExpiringPastes } from "@/lib/notifications/expiring"
@@ -27,6 +29,7 @@ import { readPreferences } from "@/lib/preference-store"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { updateNotificationPreference, updatePreferences } from "@/lib/settings-actions"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
+import { request } from "./request"
 
 const DAY = 86_400_000
 const describeDb = hasDatabase ? describe : describe.skip
@@ -267,6 +270,9 @@ describeDb("notification channel delivery", () => {
       "http://localhost:3000/analytics",
       "List-Unsubscribe:",
       "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
+      "Content-Type: multipart/alternative",
+      "Content-Type: text/plain",
+      "Content-Type: text/html",
     ])
       expect(message).toContain(expected)
     for (const secret of [
@@ -276,6 +282,23 @@ describeDb("notification channel delivery", () => {
       "before-opt-in",
     ])
       expect(message).not.toContain(secret)
+  })
+  test("notification emails use the language in use when email was turned on", async () => {
+    request.cookies.set(localeCookie, "de")
+    await enable()
+    request.cookies.clear()
+    expect((await readPreferences("owner")).locale).toBe("de")
+    await queueViews()
+    expect((await deliverNotificationEmails()).sent).toBe(1)
+    const message = (sink.messages[0] ?? "").replace(/=\r\n/g, "")
+    expect(message).toContain("Meilenstein bei den Aufrufen")
+    expect(message).toContain('lang=3D"de"')
+    expect(message).not.toContain("Confidential paste title")
+  })
+  test("picking a language while signed in saves it for notification emails", async () => {
+    await setLocale("ja")
+    request.cookies.clear()
+    expect((await readPreferences("owner")).locale).toBe("ja")
   })
   test("real shared, burned, expiring and milestone events reach local SMTP", async () => {
     for (const kind of NOTIFICATION_KINDS) await enable(kind)
