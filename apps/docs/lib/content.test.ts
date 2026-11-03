@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join, relative } from "node:path"
 
 // Drift checks between the documentation and the code it describes. Each one fails when the code
@@ -59,7 +59,7 @@ describe("internal links", () => {
   test("every link points at an existing page and heading", () => {
     const broken: string[] = []
     for (const [url, { text }] of pages) {
-      const links = [...text.matchAll(/\]\((\/[^)\s]*)\)|href="(\/[^"]*)"/g)].map(
+      const links = [...text.matchAll(/(?<!!)\[[^\]]*\]\((\/[^)\s]*)\)|href="(\/[^"]*)"/g)].map(
         (match) => match[1] ?? match[2] ?? "",
       )
       for (const link of links) {
@@ -69,6 +69,22 @@ describe("internal links", () => {
         if (!target) broken.push(`${url}: ${link} (no such page)`)
         else if (anchor && !target.headings.has(anchor))
           broken.push(`${url}: ${link} (no such heading)`)
+      }
+    }
+    expect(broken).toEqual([])
+  })
+
+  test("every local image has alternative text and exists in public", () => {
+    const broken: string[] = []
+    for (const [url, { text }] of pages) {
+      for (const match of prose(text).matchAll(/!\[([^\]]*)\]\((\/[^)\s]*)\)/g)) {
+        const [, alt = "", path = ""] = match
+        if (!alt.trim()) broken.push(`${url}: ${path} (missing alternative text)`)
+        if (
+          path.split("/").includes("..") ||
+          !existsSync(join(import.meta.dir, "..", "public", path))
+        )
+          broken.push(`${url}: ${path} (no such image)`)
       }
     }
     expect(broken).toEqual([])

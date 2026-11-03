@@ -45,6 +45,7 @@ ENV NODE_ENV=production \
 # The standalone server and its static assets.
 COPY --from=build --chown=node:node /app/apps/docs/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/docs/.next/static ./apps/docs/.next/static
+COPY --from=build --chown=node:node /app/apps/docs/public ./apps/docs/public
 USER node
 
 EXPOSE 3000

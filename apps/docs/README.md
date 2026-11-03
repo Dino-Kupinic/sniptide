@@ -15,6 +15,11 @@ Pages are MDX files in `content/docs`; a `meta.json` in a folder orders its page
 heading comes from the `title` in the frontmatter, so start the body at `##`. Fumadocs' built-in
 components (`Cards`, `Callout`, `Tabs`, `Steps`, …) are available in every page.
 
+Store diagrams and screenshots in `public/visuals` and reference them from MDX with descriptive
+alternative text. Keep each visual in sync with the page it illustrates. `bun run test:docs` checks
+that local Markdown images have alternative text and exist; the Docker image copies `public` into
+the standalone server.
+
 Search is built in (Orama, served from `/api/search`) and needs no setup.
 
 ## Look
