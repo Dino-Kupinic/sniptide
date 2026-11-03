@@ -715,6 +715,49 @@ describe("env sync", () => {
     )
   })
 
+  test("a pulled file remembers its revision, and pushing a stale copy is refused", async () => {
+    let revision = 2
+    let stored = variables
+    handler = async (req) => {
+      if (req.method === "PUT") {
+        const body = (await req.json()) as { variables: typeof variables; revision?: number }
+        if (body.revision !== undefined && body.revision !== revision)
+          return Response.json({ ok: false, error: "changed" }, { status: 412 })
+        revision++
+        stored = body.variables
+      }
+      return Response.json({
+        group: {
+          slug: "my-app",
+          revision,
+          variables: stored,
+          updatedAt: "2026-10-13T00:00:00.000Z",
+        },
+      })
+    }
+    expect((await cli(["env", "pull", "my-app"], target)).code).toBe(0)
+    const filename = path.join(target, ".env")
+    expect(await readFile(filename, "utf8")).toStartWith("# sniptide env my-app revision 2\n")
+
+    // Pushing from the pulled file sends its revision and records the new one in the file.
+    expect((await cli(["env", "push", "my-app"], target)).code).toBe(0)
+    expect(requests.at(-1)?.body).toEqual({ variables, revision: 2 })
+    const stamped = await readFile(filename, "utf8")
+    expect(stamped).toStartWith("# sniptide env my-app revision 3\n")
+    expect(stamped.match(/# sniptide env/g)).toHaveLength(1)
+    expect((await lstat(filename)).mode & 0o777).toBe(0o600)
+
+    // Someone else pushes; the old copy is now stale.
+    revision = 5
+    const stale = await cli(["env", "push", "my-app", "--json"], target)
+    expect(stale.code).toBe(1)
+    expect(JSON.parse(stale.stderr).error.code).toBe("CONFLICT")
+    const forced = await cli(["env", "push", "my-app", "--force"], target)
+    expect(forced.code).toBe(0)
+    expect(requests.at(-1)?.body).toEqual({ variables })
+    expect(await readFile(filename, "utf8")).toStartWith("# sniptide env my-app revision 6\n")
+  })
+
   test("run injects the group into a command and passes its exit status through", async () => {
     group = { slug: "my-app", variables }
     const script =

@@ -71,6 +71,7 @@ import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
+import { passwordField, storedPasswordField } from "@/lib/pastes/password-intent"
 import { suggestedFilename, suggestedTitle, suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { indentUnit, type Preferences } from "@/lib/preferences"
@@ -341,7 +342,9 @@ export function PasteEditor({
     : !editing
       ? password
       : // Switched on but not set yet: the paste isn't protected until a password is typed.
-        committedPassword || (hasPassword ? "" : null)
+        committedPassword
+        ? passwordField({ kind: "set", password: committedPassword })
+        : storedPasswordField(hasPassword)
   const value = React.useMemo<SavePasteInput>(
     () => ({
       title,
@@ -374,7 +377,7 @@ export function PasteEditor({
     expiry: initial.expiry,
     slug: initial.slug,
     collection: initial.collection,
-    password: initial.hasPassword ? "" : null,
+    password: storedPasswordField(initial.hasPassword),
     burnAfterRead: initial.burnAfterRead,
   }))
 
@@ -420,7 +423,7 @@ export function PasteEditor({
         ...sent,
         expiry: "keep",
         slug: result.slug,
-        password: result.hasPassword ? "" : null,
+        password: storedPasswordField(result.hasPassword),
       },
     }
   }

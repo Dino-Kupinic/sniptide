@@ -87,6 +87,9 @@ export const paste = pgTable(
     expiresAt: time("expires_at"),
     // Set while the paste is in the trash.
     deletedAt: time("deleted_at"),
+    // Set when a burn-after-read paste was read, which also moves it to the trash. Restoring it
+    // clears both and brings it back private with burn after read off, so the read stays single.
+    burnedAt: time("burned_at"),
   },
   (table) => [
     uniqueIndex("paste_slug_unique").on(table.slug),

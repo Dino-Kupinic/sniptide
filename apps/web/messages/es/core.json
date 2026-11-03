@@ -21,6 +21,7 @@
     "viewsIn": "Visitas de {count, plural, one {# fragmento} other {# fragmentos}} en {title}",
     "viewsAll": "Visitas de {count, plural, one {# fragmento} other {los # fragmentos}}",
     "afterView": "tras una visita",
+    "burnedOn": "Leído el {date}",
     "never": "Nunca",
     "neverExpires": "no caduca",
     "expires": "Caduca {time}",

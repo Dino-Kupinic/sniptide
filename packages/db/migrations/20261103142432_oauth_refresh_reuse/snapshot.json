@@ -1,0 +1,91 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6b044f79-8647-44a1-b802-a3f0c0b25ab9",
+  "prevIds": [
+    "f2c3d13b-44aa-401b-9c4e-3cd11098b2f6"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "api_token",
+        "previous_refresh_hash"
+      ],
+      "writes": [
+        "s|col|public.api_token.previous_refresh_hash",
+        "n|col|public.api_token.previous_refresh_hash",
+        "e|col|public.api_token.previous_refresh_hash"
+      ],
+      "reads": [
+        "n|tbl|public.api_token",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "api_token",
+        "api_token_previous_refresh_hash_idx"
+      ],
+      "writes": [
+        "s|idx|public.api_token_previous_refresh_hash_idx",
+        "n|idx|public.api_token_previous_refresh_hash_idx",
+        "e|idx|public.api_token_previous_refresh_hash_idx",
+        "n|rel|public.api_token_previous_refresh_hash_idx"
+      ],
+      "reads": [
+        "n|tbl|public.api_token",
+        "n|sch|public",
+        "n|col|public.api_token.previous_refresh_hash"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "api_token",
+        "name": "previous_refresh_hash",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "api_token",
+        "name": "api_token_previous_refresh_hash_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "previous_refresh_hash",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    }
+  ]
+}
