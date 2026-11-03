@@ -1,4 +1,13 @@
+import { createTranslator } from "next-intl"
+import { defaultLocale, type Locale } from "@/lib/i18n/config"
 import type { NotificationKind } from "@/lib/notifications/types"
+import de from "@/messages/de/email.json"
+import en from "@/messages/en/email.json"
+import es from "@/messages/es/email.json"
+import ja from "@/messages/ja/email.json"
+import zh from "@/messages/zh/email.json"
+
+const catalogs = { en, de, es, ja, zh }
 
 // One run of text in a paragraph. `strong` sets an address or name the reader should check apart
 // from the sentence around it.
@@ -13,13 +22,18 @@ export interface EmailLink {
 // Everything one email says, written once. The HTML layout and the plain-text version both render
 // from it, so the two always carry the same sentences, links and footer.
 export interface EmailContent {
+  locale: Locale
   subject: string
   // The preheader: the line inbox lists show after the subject. It adds context and never repeats
   // the subject.
   preview: string
+  // The Sniptide lockup, served by this instance. Without an app URL the email shows the name as
+  // text instead.
+  logo?: { light: string; dark: string; alt: string }
   heading: string
   body: Paragraph[]
   action: EmailLink
+  buttonFallback: string
   // Paragraphs after the action, such as what happens once the reader follows it.
   after?: Paragraph[]
   // Who should ignore the email, in muted text below the action.
@@ -36,173 +50,148 @@ export interface Operator {
   address?: string
 }
 
+interface Common {
+  to: string
+  // The instance's public URL, which serves the logo images.
+  appUrl?: string
+  operator?: Operator
+  locale?: Locale
+}
+
+function translator(locale: Locale) {
+  return createTranslator({ locale, messages: catalogs[locale], namespace: "Email" })
+}
+
+type Translator = ReturnType<typeof translator>
+
+const open = "\u0001"
+const close = "\u0002"
+
+// Turns a message with <b> tags into segments, so the HTML can set the tagged part in bold and the
+// plain text can keep it as is.
+function paragraph(t: Translator, key: Parameters<Translator["markup"]>[0], values = {}) {
+  const marked = t.markup(key, { ...values, b: (chunks) => `${open}${chunks}${close}` })
+  return marked
+    .split(new RegExp(`(${open}[^${close}]*${close})`))
+    .filter(Boolean)
+    .map((part): Segment => (part.startsWith(open) ? { strong: part.slice(1, -1) } : part))
+}
+
 // Names who sends the email and where, from OPERATOR_NAME and OPERATOR_ADDRESS, so every email
 // identifies its sender with a postal address next to the unsubscribe link.
-export function senderLine(operator: Operator | undefined) {
+export function senderLine(operator: Operator | undefined, locale: Locale = defaultLocale) {
   if (!operator) return undefined
+  const t = translator(locale)
   const address = operator.address
     ?.split(/\s*\n\s*/)
     .filter(Boolean)
     .join(", ")
-  return `Sent by ${operator.name}${address ? `, ${address}` : ""}.`
+  return address
+    ? t("sentByAddress", { name: operator.name, address })
+    : t("sentBy", { name: operator.name })
 }
 
-function accountFooter(to: string, operator: Operator | undefined) {
+function shared(t: Translator, { appUrl, locale }: Common & { locale: Locale }) {
   return {
-    reason: `We sent this email to ${to} because of a request on your Sniptide account.`,
-    sender: senderLine(operator),
+    locale,
+    logo: appUrl
+      ? {
+          light: new URL("/email/sniptide-logo.png", appUrl).href,
+          dark: new URL("/email/sniptide-logo-dark.png", appUrl).href,
+          alt: t("logoAlt"),
+        }
+      : undefined,
+    buttonFallback: t("buttonFallback"),
   }
 }
 
-export function verifyEmail({
-  to,
-  url,
-  operator,
-}: {
-  to: string
-  url: string
-  operator?: Operator
-}): EmailContent {
+function accountFooter(t: Translator, { to, operator, locale }: Common & { locale: Locale }) {
+  return { reason: t("accountReason", { email: to }), sender: senderLine(operator, locale) }
+}
+
+export function verifyEmail(input: Common & { url: string }): EmailContent {
+  const locale = input.locale ?? defaultLocale
+  const t = translator(locale)
+  const common = { ...input, locale }
   return {
-    subject: "Verify your Sniptide email",
-    preview: "Confirm this address to turn on email notifications. The link works for one hour.",
-    heading: "Verify your email",
-    body: [
-      ["Confirm that ", { strong: to }, " belongs to your Sniptide account."],
-      ["Once it's verified, you can choose which events also reach you by email in Settings."],
-    ],
-    action: { label: "Verify email", href: url },
-    note: "If you didn't ask for this email, you can ignore it. The link expires in one hour.",
-    footer: accountFooter(to, operator),
+    ...shared(t, common),
+    subject: t("verify.subject"),
+    preview: t("verify.preview"),
+    heading: t("verify.heading"),
+    body: [paragraph(t, "verify.body", { email: input.to }), [t("verify.next")]],
+    action: { label: t("verify.action"), href: input.url },
+    note: t("verify.note"),
+    footer: accountFooter(t, common),
   }
 }
 
-export function approveEmailChange({
-  to,
-  newEmail,
-  url,
-  operator,
-}: {
-  to: string
-  newEmail: string
-  url: string
-  operator?: Operator
-}): EmailContent {
+export function approveEmailChange(
+  input: Common & { newEmail: string; url: string },
+): EmailContent {
+  const locale = input.locale ?? defaultLocale
+  const t = translator(locale)
+  const common = { ...input, locale }
   return {
-    subject: "Approve your Sniptide email change",
-    preview: `After you approve, we send a verification link to ${newEmail}.`,
-    heading: "Approve your email change",
-    body: [
-      [
-        "Someone asked to change the email of your Sniptide account from ",
-        { strong: to },
-        " to ",
-        { strong: newEmail },
-        ".",
-      ],
-    ],
-    action: { label: "Approve email change", href: url },
-    after: [
-      [
-        "After you approve, we send a verification link to the new address. The change is complete once that link is opened.",
-      ],
-    ],
-    note: "If you didn't ask for this, ignore this email and change your password. The link expires in one hour.",
-    footer: accountFooter(to, operator),
+    ...shared(t, common),
+    subject: t("change.subject"),
+    preview: t("change.preview", { newEmail: input.newEmail }),
+    heading: t("change.heading"),
+    body: [paragraph(t, "change.body", { email: input.to, newEmail: input.newEmail })],
+    action: { label: t("change.action"), href: input.url },
+    after: [[t("change.after")]],
+    note: t("change.note"),
+    footer: accountFooter(t, common),
   }
 }
 
-export function resetPassword({
-  to,
-  url,
-  operator,
-}: {
-  to: string
-  url: string
-  operator?: Operator
-}): EmailContent {
+export function resetPassword(input: Common & { url: string }): EmailContent {
+  const locale = input.locale ?? defaultLocale
+  const t = translator(locale)
+  const common = { ...input, locale }
   return {
-    subject: "Reset your Sniptide password",
-    preview: "The link works once, for one hour.",
-    heading: "Reset your password",
-    body: [["Use this link to choose a new password for your Sniptide account."]],
-    action: { label: "Choose a new password", href: url },
-    after: [
-      ["The link works once, for one hour. Changing your password signs you out on every device."],
-    ],
-    note: "If you didn't ask for this, you can ignore this email. Your password stays the same.",
-    footer: accountFooter(to, operator),
+    ...shared(t, common),
+    subject: t("reset.subject"),
+    preview: t("reset.preview"),
+    heading: t("reset.heading"),
+    body: [[t("reset.body")]],
+    action: { label: t("reset.action"), href: input.url },
+    after: [[t("reset.after")]],
+    note: t("reset.note"),
+    footer: accountFooter(t, common),
   }
 }
 
 // Notification emails carry no paste title, slug, content or person, so a forwarded or leaked
 // email reveals nothing about the paste. The reader signs in to see the details.
-const notifications = {
-  shared: {
-    subject: "A paste was shared with you",
-    preview: "Sign in to see who shared it and open it.",
-    body: "Someone shared a paste with your Sniptide account. Shared with me lists it with the person who shared it.",
-    action: "Open Shared with me",
-    event: "shared pastes",
+export function notificationEmail(
+  input: Common & {
+    kind: NotificationKind
+    url: string
+    settingsUrl: string
+    unsubscribeUrl: string
   },
-  burned: {
-    subject: "Your burn after read paste was read",
-    preview: "It moved to your trash, where you can restore it for 30 days.",
-    body: "One of your burn after read pastes was opened, so its link stopped working. The paste is in your trash, and you can restore it from there for 30 days.",
-    action: "Open Trash",
-    event: "burn after read pastes",
-  },
-  expiring: {
-    subject: "Your paste expires soon",
-    preview: "Change its expiry before then to keep the link working.",
-    body: "One of your pastes expires within 24 hours. To keep its link working, open it and change when it expires.",
-    action: "Review your pastes",
-    event: "expiring pastes",
-  },
-  views: {
-    subject: "Your paste reached a view milestone",
-    preview: "Analytics shows which paste it was and where its views came from.",
-    body: "One of your pastes reached a new view milestone. Analytics shows which paste it was, its views over time and where they came from.",
-    action: "Open Analytics",
-    event: "view milestones",
-  },
-} satisfies Record<
-  NotificationKind,
-  { subject: string; preview: string; body: string; action: string; event: string }
->
-
-export function notificationEmail({
-  kind,
-  to,
-  url,
-  settingsUrl,
-  unsubscribeUrl,
-  operator,
-}: {
-  kind: NotificationKind
-  to: string
-  url: string
-  settingsUrl: string
-  unsubscribeUrl: string
-  operator?: Operator
-}): EmailContent {
-  const copy = notifications[kind]
+): EmailContent {
+  const locale = input.locale ?? defaultLocale
+  const t = translator(locale)
+  const { kind } = input
+  const subject = t(`notification.${kind}.subject`)
   return {
-    subject: copy.subject,
-    preview: copy.preview,
-    heading: copy.subject,
-    body: [
-      [copy.body],
-      ["To keep your pastes private, this email leaves out their titles, links and contents."],
-    ],
-    action: { label: copy.action, href: url },
+    ...shared(t, { ...input, locale }),
+    subject,
+    preview: t(`notification.${kind}.preview`),
+    heading: subject,
+    body: [[t(`notification.${kind}.body`)], [t("notification.privacy")]],
+    action: { label: t(`notification.${kind}.action`), href: input.url },
     footer: {
-      reason: `You get this email at ${to} because you turned on email for ${copy.event} in your notification settings.`,
+      reason: t("notification.reason", {
+        email: input.to,
+        event: t(`notification.${kind}.event`),
+      }),
       links: [
-        { label: "Notification settings", href: settingsUrl },
-        { label: "Stop these emails", href: unsubscribeUrl },
+        { label: t("notification.settings"), href: input.settingsUrl },
+        { label: t("notification.unsubscribe"), href: input.unsubscribeUrl },
       ],
-      sender: senderLine(operator),
+      sender: senderLine(input.operator, locale),
     },
   }
 }

@@ -6,6 +6,7 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Link,
   Preview,
   Section,
@@ -42,82 +43,51 @@ function Runs({ paragraph }: { paragraph: Paragraph }) {
   )
 }
 
-// The logo mark drawn with table cells: six bars that grow from 1px to 6px with 1px gaps, the
-// same proportions as the SVG mark. It shows with images turned off and needs no hosted file.
-function LogoMark() {
-  const bars = [1, 2, 3, 4, 5, 6]
+// The Sniptide lockup as two images: the blue mark with the dark wordmark, and the white version
+// that clients with dark mode support swap in. Images that are blocked or missing show the alt text,
+// and without an app URL the name is set as text.
+function Brand({ logo }: { logo: EmailContent["logo"] }) {
+  if (!logo)
+    return (
+      <Text
+        className="st-text"
+        style={{
+          margin: 0,
+          fontFamily: fonts.heading,
+          fontSize: "18px",
+          lineHeight: "24px",
+          fontWeight: 700,
+          color: light.foreground,
+        }}
+      >
+        Sniptide
+      </Text>
+    )
+  const image = {
+    width: 143,
+    height: 24,
+    alt: logo.alt,
+    style: { display: "block", border: 0, outline: "none", height: "24px", width: "143px" },
+  }
   return (
-    <table
-      role="presentation"
-      cellPadding={0}
-      cellSpacing={0}
-      border={0}
-      width={27}
-      style={{ borderCollapse: "collapse" }}
-    >
-      <tbody>
-        {bars.map((height, index) => (
-          <tr key={height}>
-            <td
-              style={{
-                height: `${height}px`,
-                padding: 0,
-                paddingBottom: index < bars.length - 1 ? "1px" : 0,
-                fontSize: 0,
-                lineHeight: 0,
-              }}
-            >
-              <div
-                className="st-logo"
-                style={{
-                  height: `${height}px`,
-                  backgroundColor: light.logo,
-                  fontSize: 0,
-                  lineHeight: 0,
-                }}
-              >
-                &nbsp;
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-function Brand() {
-  return (
-    <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
-      <tbody>
-        <tr>
-          <td style={{ verticalAlign: "bottom", paddingRight: "10px" }}>
-            <LogoMark />
-          </td>
-          <td
-            className="st-text"
-            style={{
-              verticalAlign: "bottom",
-              fontFamily: fonts.heading,
-              fontSize: "18px",
-              lineHeight: "18px",
-              fontWeight: 700,
-              letterSpacing: "-0.02em",
-              color: light.foreground,
-            }}
-          >
-            Sniptide
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <>
+      <Img className="st-logo-light" src={logo.light} {...image} />
+      <div
+        className="st-logo-dark"
+        style={
+          { display: "none", maxHeight: 0, overflow: "hidden", msoHide: "all" } as CSSProperties
+        }
+      >
+        <Img src={logo.dark} {...image} />
+      </div>
+    </>
   )
 }
 
 export function EmailLayout({ content }: { content: EmailContent }) {
   const { preview, heading, body, action, after, note, footer } = content
   return (
-    <Html lang="en" dir="ltr">
+    <Html lang={content.locale} dir="ltr">
       <Head>
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
@@ -149,7 +119,7 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                   }}
                 >
                   <Section style={{ padding: "24px 24px 0" }}>
-                    <Brand />
+                    <Brand logo={content.logo} />
                   </Section>
                   <Section style={{ padding: "32px 24px 8px" }}>
                     <Heading
@@ -201,7 +171,7 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                       className="st-muted"
                       style={{ ...small, fontSize: "14px", lineHeight: "20px" }}
                     >
-                      If the button doesn't work, copy this link into your browser:
+                      {content.buttonFallback}
                     </Text>
                     <Text
                       style={{

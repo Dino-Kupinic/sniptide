@@ -70,10 +70,13 @@ changed files clear stale ranges.
 
 ## Change an email
 
-Each email's words live in one function in `apps/web/lib/email/content.ts`. The React Email layout
+Each email's words live in `apps/web/messages/<locale>/email.json`, one catalog per language, and
+`apps/web/lib/email/content.ts` turns them into one object per email. The React Email layout
 in `layout.tsx` and the plain-text version in `render.tsx` both render from it, so the HTML and
 plain-text parts can't drift apart. Brand colors are repeated in `theme.ts`, because email clients
-can't read the CSS variables in `globals.css`. Change a token in `globals.css` first.
+can't read the CSS variables in `globals.css`. Change a token in `globals.css` first. The logo
+images in `apps/web/public/email` are the brand lockup rendered at three times their 143 by 24
+pixel size, in blue and ink for light mode and white for dark mode.
 
 To see every email with sample data, run the React Email preview server:
 

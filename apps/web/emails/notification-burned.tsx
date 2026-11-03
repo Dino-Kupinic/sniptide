@@ -9,6 +9,8 @@ export default function PasteBurned(props: Props) {
 
 PasteBurned.PreviewProps = {
   to: "dana@example.com",
+  // The logo loads from a running app (bun dev).
+  appUrl: "http://localhost:3000",
   url: "https://sniptide.com/trash",
   settingsUrl: "https://sniptide.com/settings?tab=notifications",
   unsubscribeUrl: "https://sniptide.com/api/notifications/unsubscribe?token=preview",

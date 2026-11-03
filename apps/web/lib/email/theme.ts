@@ -11,7 +11,6 @@ export const light = {
   primaryForeground: "#ffffff",
   // The raised button edge: --primary mixed with 38% black in OKLCH, as in the Button component.
   depth: "#110f7c",
-  logo: "#2a26ec",
 }
 
 export const dark = {
@@ -21,7 +20,6 @@ export const dark = {
   foreground: "#f4f4f4",
   muted: "#a3a3a3",
   link: "#8f8cff",
-  logo: "#ffffff",
 }
 
 export const fonts = {
@@ -43,6 +41,7 @@ export const darkModeCss = `
   .st-muted { color: ${dark.muted} !important; }
   .st-link { color: ${dark.link} !important; }
   .st-rule { border-color: ${dark.border} !important; }
-  .st-logo { background-color: ${dark.logo} !important; }
+  .st-logo-light { display: none !important; }
+  .st-logo-dark { display: block !important; max-height: none !important; }
 }
 `

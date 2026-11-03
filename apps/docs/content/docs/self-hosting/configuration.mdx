@@ -105,8 +105,14 @@ people to contact the administrator.
 
 Every email goes out as HTML with a plain-text version that carries the same sentences and links.
 The HTML follows the reader's light or dark appearance in clients that support it, such as Apple
-Mail. Gmail and Outlook on the web apply their own dark mode instead. The Sniptide logo is drawn
-in HTML, so emails load no images or web fonts from your server or anyone else's.
+Mail. Gmail and Outlook on the web apply their own dark mode instead. The only images are the
+Sniptide logo, which email clients load from `<BETTER_AUTH_URL>/email/`, so that address must be
+reachable from the internet for the logo to show. Clients that block images show the name instead.
+
+Emails are written in the reader's language: English, German, Spanish, Japanese or Simplified
+Chinese. Account emails, such as a password reset, use the language of the browser that asked for
+them. Notification emails use the language the person last picked in Sniptide, or the one they were
+using when they turned on an email, and English before either happens.
 
 | Variable | Default | What it does |
 | --- | --- | --- |

@@ -9,6 +9,8 @@ export default function ResetPassword(props: Props) {
 
 ResetPassword.PreviewProps = {
   to: "dana@example.com",
+  // The logo loads from a running app (bun dev).
+  appUrl: "http://localhost:3000",
   url: "https://sniptide.com/api/auth/reset-password/preview?callbackURL=%2Freset-password",
   operator: { name: "Example GmbH", address: "Ring 1\n1010 Wien\nAustria" },
 } satisfies Props

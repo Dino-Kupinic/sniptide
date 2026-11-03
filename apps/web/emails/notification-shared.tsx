@@ -9,6 +9,8 @@ export default function PasteShared(props: Props) {
 
 PasteShared.PreviewProps = {
   to: "dana@example.com",
+  // The logo loads from a running app (bun dev).
+  appUrl: "http://localhost:3000",
   url: "https://sniptide.com/shared",
   settingsUrl: "https://sniptide.com/settings?tab=notifications",
   unsubscribeUrl: "https://sniptide.com/api/notifications/unsubscribe?token=preview",

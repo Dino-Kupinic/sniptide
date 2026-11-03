@@ -168,7 +168,9 @@ export async function deliverNotificationEmails() {
                 url: destination,
                 settingsUrl: settings,
                 unsubscribeUrl: unsubscribe.href,
+                appUrl,
                 operator: legal.operator,
+                locale: parsePreferences(recipient.preferences).locale,
               }),
             )
             await sender.send({
