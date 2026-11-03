@@ -127,6 +127,7 @@ Every error returns JSON with a status code:
 | `403` | `forbidden` | The token lacks the access the request needs, usually write. |
 | `404` | `not_found` | The paste, collection or env group doesn't exist or isn't yours. |
 | `409` | `conflict` | An `Idempotency-Key` was reused with another route or payload, a collection with that name exists, or the account has 100 env groups. |
+| `412` | `precondition_failed` | An env group changed after the `revision` the request sent. Read it again before you write. |
 | `422` | `unprocessable_entity` | The account already has 50 collections. |
 | `413` | `payload_too_large` | The request or paste is too large, or the account is out of storage. |
 | `429` | `too_many_requests` | A rate limit was reached. Wait for `Retry-After`. |

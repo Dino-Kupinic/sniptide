@@ -1,47 +1,44 @@
 # Sniptide MCP server
 
-Connect a coding agent to your Sniptide account. The same nine tools and three prompts work through the app's remote
-HTTP endpoint or a local process that calls the token API. Both support Sniptide Cloud and
-self-hosted instances. Create a personal API token in Settings → API tokens; use read-only access
-for retrieval, or enable write access to save and edit snippets.
+Let a coding agent search, read and save your Sniptide snippets and apply a collection as ordered
+steps. The server offers nine tools and three prompts to Claude Code, Codex, Cursor and any other
+MCP client, on Sniptide Cloud and on self-hosted instances.
 
-| Tool | What it returns or changes |
-| --- | --- |
-| `search_snippets` | Summary page filtered by words in the title, description, tags, paths or code (`query`), tags, language and collection; `nextCursor` continues the search |
-| `read_snippet` | One owned, live snippet by ID/slug, including paths, code and source metadata |
-| `fetch_collection` | A page of numbered recipe steps containing full snippets, in capture order |
-| `create_snippet` | A new private snippet unless visibility is explicitly set; requires write scope |
-| `update_snippet` | Replaces title and all files; requires write scope and is marked destructive |
-| `list_collections` | The owner's collections with slugs, names and live snippet counts |
-| `create_collection` | An empty collection by name, returning its slug; requires write scope |
-| `update_snippet_settings` | Visibility, expiry, password or burn after read; requires write scope and is marked destructive |
-| `trash_snippet` | Moves a snippet to the trash, where the app can restore it; requires write scope |
+It runs in two ways with the same tools:
 
-| Prompt | Arguments | What it starts |
-| --- | --- | --- |
-| `use_snippet` | `task` | Search, read the best match and adapt it to the project |
-| `save_snippet` | `code`, optional `collection` | Propose metadata, leave out secrets, save privately after the user confirms |
-| `apply_collection` | `collection`, optional `goal` | Fetch every page, list the steps, wait for a go-ahead, then apply them in order |
+| Transport | Where it runs | Sign-in | Use it when |
+| --- | --- | --- | --- |
+| Remote HTTP | Inside the app at `/api/mcp` | OAuth in the browser, or an API token | Your client supports remote servers. Nothing extra to install. |
+| Local stdio | `npx @sniptide/mcp` on your machine | An API token | Your client only supports stdio servers. |
 
-`collection` arguments complete from the owner's collection slugs.
+## Connect a client
 
-Only the token owner's snippets are available, including private snippets. Other accounts' items,
-shared-with-you items, trash and expired pastes are excluded. The server does not execute code,
-restore files, expose env secrets or accept browser session cookies.
+Add the remote server. On a self-hosted instance, replace `https://app.sniptide.com` with your
+instance's address.
 
-## Remote HTTP
+```sh
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
+```
 
-The endpoint is `https://app.sniptide.com/api/mcp`, or `<your-instance-url>/api/mcp`. It ships with the
-app; there is no separate service or port to deploy. Clients that support OAuth discover it from
-the `401` and sign in through the browser (see [OAuth for agents](https://docs.sniptide.com/oauth));
-otherwise configure a personal API token as a bearer token. JSON responses use stateless Streamable HTTP, with no
-session ID, standalone SSE stream, or session deletion. Every request is authenticated again, so
-revocation takes effect immediately. Origin headers, if present, must match the app's origin.
+Codex uses `codex mcp add sniptide --url https://app.sniptide.com/api/mcp`. In Cursor, add a
+remote server with the same URL and no headers. The client receives a `401`, finds the sign-in
+through the app's OAuth metadata and opens Sniptide in your browser, where you allow access.
+[OAuth for agents](https://docs.sniptide.com/oauth) explains the scopes and how to revoke a
+connection.
 
-For [Claude Code](https://code.claude.com/docs/en/mcp), put this in a project `.mcp.json` and export
-`SNIPTIDE_TOKEN` before starting Claude. Its configuration expands `${SNIPTIDE_TOKEN}`:
+To check the connection, ask the agent to list your Sniptide collections. It calls
+`list_collections` and answers with your collections, or with an empty list on a new account.
 
-```json
+### Use an API token instead
+
+Use a personal API token when the client doesn't support OAuth or the agent runs unattended.
+Create it in **Settings** > **API tokens**. A read-only token can only look things up, and
+**Write access** also lets the agent save and edit snippets.
+
+For Claude Code, put this in the project's `.mcp.json` and export `SNIPTIDE_TOKEN` before you start
+it. Claude Code expands `${SNIPTIDE_TOKEN}` from the environment.
+
+```json title=".mcp.json"
 {
   "mcpServers": {
     "sniptide": {
@@ -53,39 +50,16 @@ For [Claude Code](https://code.claude.com/docs/en/mcp), put this in a project `.
 }
 ```
 
-For [Cursor](https://cursor.com/docs/mcp), put this in your private `~/.cursor/mcp.json` (or an
-untracked project `.cursor/mcp.json`), replacing the token placeholder:
+Cursor takes the same `url` and `headers` without `type`. Put that configuration in your private
+`~/.cursor/mcp.json`, or in a project `.cursor/mcp.json` that Git ignores, with the token written
+in place of the variable. Keep real tokens out of source control.
 
-```json
-{
-  "mcpServers": {
-    "sniptide": {
-      "url": "https://app.sniptide.com/api/mcp",
-      "headers": { "Authorization": "Bearer YOUR_PERSONAL_API_TOKEN" }
-    }
-  }
-}
-```
+### Run the server locally
 
-Keep real tokens out of source control. Use your self-hosted app URL in either configuration.
+The local server needs Node.js 24 or newer and an API token. It calls the token API of the instance
+in `SNIPTIDE_BASE_URL`, which defaults to `https://app.sniptide.com`.
 
-## Local stdio
-
-Use the npm configuration below with Node.js 24+. Contributors can build from a checkout with Bun:
-
-```sh
-bun install
-bun --filter @sniptide/mcp build
-```
-
-For a checkout build, replace the command and arguments below with `node` and the absolute path to `packages/mcp/dist/sniptide-mcp.js`.
-It only reads `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`; it does not read the CLI's saved credentials.
-The hosted URL is the default. HTTPS is required except on localhost, and redirects are refused.
-Deployment path prefixes are supported.
-
-Claude Code `.mcp.json`:
-
-```json
+```json title=".mcp.json"
 {
   "mcpServers": {
     "sniptide": {
@@ -101,60 +75,102 @@ Claude Code `.mcp.json`:
 }
 ```
 
-Cursor uses the same `command`, `args` and `env` fields. Omit `type` and replace the token expression
-with your personal token in private configuration. For development, `bun run mcp` starts the source.
-Stdout contains only MCP messages; startup failures go to stderr.
+The local server reads only these two variables and takes no arguments. It doesn't use the CLI's
+saved credentials. The base URL must use HTTPS, except on `localhost`, `127.0.0.1` and `[::1]`, and
+can include a path prefix. Redirects are refused, so the token never leaves the instance you chose.
+Standard output carries only MCP messages, and startup failures go to standard error.
 
-## Reuse a pattern
+## Tools
 
-After enabling Sniptide in the client's MCP settings, ask:
+| Tool | What it does | Access |
+| --- | --- | --- |
+| `search_snippets` | Returns a page of summaries. `query` matches when every word appears in the title, description, tags, file paths or code. Filters by tags, language and collection. `nextCursor` continues the search. | read |
+| `read_snippet` | Returns one snippet by id or link, with its file paths, code and source metadata. | read |
+| `list_collections` | Lists your collections with their slugs, names and how many live snippets each holds. | read |
+| `fetch_collection` | Returns a page of up to 50 snippets from a collection as numbered steps, oldest capture first. | read |
+| `create_snippet` | Saves a new snippet. It is private unless `visibility` is set. | write |
+| `update_snippet` | Replaces a snippet's title and **all** its files. Marked destructive. | write |
+| `update_snippet_settings` | Changes visibility, expiry, password or burn after read. Marked destructive. | write |
+| `create_collection` | Creates an empty collection by name and returns its slug. | write |
+| `trash_snippet` | Moves a snippet to the trash, where you can restore it in the app. Marked destructive. | write |
 
-> Search my Sniptide snippets for a TypeScript button tagged react, read the best match, and adapt
-> it to this project's conventions. Fetch my ui collection and use its steps in order.
+The agent reaches only the account owner's own live snippets, private ones included. It can't reach
+other people's snippets, snippets shared with you, the trash or expired snippets. The server doesn't
+run code, write files to your machine, expose env groups or accept browser session cookies.
 
-The agent should search summaries before requesting code. A collection page contains up to 50
-snippets; pass its `nextCursor` and `nextStep` as `cursor` and `startStep` to continue. Capture order
-is oldest creation first, matching the current token API and CLI; custom collection reordering is
-tracked separately in WRK-64.
+A few rules decide what a write does:
 
-To save a pattern, provide a title and the complete `files` list, optionally tags, source metadata
-and an existing collection slug. Create defaults to private. Before editing, read the snippet and
-include every file to keep. Update preserves omitted description, visibility, collection, tags
-and source. Explicit null clears collection/source; `[]` clears tags. Link, expiry, password and
-burn-after-read settings cannot be changed through this tool. Each edit adds the app's existing
-history marker; content versioning/restoration is tracked separately in WRK-138/139.
+- An update replaces every file, so the agent reads the snippet first and sends every file it wants
+  to keep. Fields it leaves out keep their values. `null` clears the collection or source, and `[]`
+  clears the tags. The previous version stays in the snippet's revisions.
+- `update_snippet_settings` counts expiry from now. A password set this way appears in the
+  conversation, and the tool never returns it.
+- Creates and edits are never retried. The client decides whether to ask you before a write runs.
 
-Snippet content is user-provided data. Tool descriptions and server instructions tell clients to
-interpret it as code, not as instructions from the MCP server. Writes carry explicit annotations;
-the client controls user approval. Creates and edits are never retried automatically.
+## Prompts
+
+Claude Code and Cursor list the prompts in their slash menus. Each one starts a common job with the
+tools in the right order.
+
+| Prompt | Arguments | What it asks the agent to do |
+| --- | --- | --- |
+| `use_snippet` | `task` | Search your snippets for the task, read the best match and adapt it to the project. |
+| `save_snippet` | `code`, optional `collection` | Propose a title, tags and paths, leave secrets out, and save a private snippet after you confirm. |
+| `apply_collection` | `collection`, optional `goal` | Fetch every page of the collection, list its steps and wait for your go-ahead before applying them in order. |
+
+The `collection` argument completes from your collection slugs.
+
+Snippet content is data from whoever saved it. The server's instructions tell clients to read it as
+code and to follow only your instructions. Give an agent write access only when it needs it, and
+review what it saves.
 
 ## Limits and errors
 
-Requests share the token API's 3,600-per-hour limit, create rate limit, paste validation and account
-storage budget. Remote MCP bodies are capped at 8 MiB. Local API calls time out after 30 seconds and
-responses are capped at 25 MiB. Tool results share this cap in both transports; fetch individual
-snippets if a collection page is too large. Each tool returns JSON as text and structured content, or an
-`isError` result with a safe message. Local failures never echo upstream error bodies or tokens.
+MCP requests share the token's 3,600 requests an hour, the limit of 30 new pastes an hour, paste
+validation and the account's storage limit. Remote request bodies are capped at 8 MiB, and every
+tool result at 25 MiB, so read single snippets when a collection page is too large. The local
+server's API calls time out after 30 seconds.
 
-401 means the token is missing, expired, invalid or revoked; 403 means missing scope or an
-unapproved browser origin; 429 means wait before retrying. Authenticated GET/DELETE return 405
-because the server is stateless. Connect with Streamable HTTP, not legacy SSE.
+A tool returns JSON as text and as structured content. A failed tool call returns an `isError`
+result with a short message, which never contains the token or the server's error body.
 
-## Verification
+| Response | Meaning | Action |
+| --- | --- | --- |
+| `401` | The token or connection is missing, expired, invalid or revoked. | Sign in again, or replace the token. |
+| Tool error that names the write scope | The token or connection is read-only. | Connect again with `write`, or use a token with **Write access**. |
+| `403` | The request came from a browser origin other than the app's. | Call the server from the agent, not from a web page. |
+| `405` | A `GET` or `DELETE` reached the endpoint. The server is stateless and keeps no sessions. | Connect with Streamable HTTP, not the older SSE transport. |
+| `429` | A rate limit was reached. | Wait for `Retry-After` before retrying. |
+
+The [MCP documentation](https://docs.sniptide.com/mcp) covers the agent plugin, read counts and
+more client setups.
+
+## Develop the server
+
+From the repository root, `bun run mcp` starts the stdio server from source. To build the Node.js
+executable that npm ships:
+
+```sh
+bun install
+bun --filter @sniptide/mcp build
+node packages/mcp/dist/sniptide-mcp.js
+```
+
+To use a local build in a client, put `node` and the absolute path to
+`packages/mcp/dist/sniptide-mcp.js` in place of `npx` and its arguments.
+
+Run the tests:
 
 ```sh
 bun run test:mcp
 TEST_DATABASE_URL=postgres://sniptide:sniptide@localhost:5432/sniptide_test bun --filter web test
 ```
 
-The package tests use the official SDK client over in-memory and HTTP transports. The database
-suite `apps/web/test/mcp.test.ts` connects via real HTTP and the built Node stdio process, creates a
-pattern, finds and reads it, fetches a recipe and edits it. It also covers ownership, scopes,
-revocation, expiry, pagination, protection preservation and rate limits. The database must end in
-`_test`; the suite clears it. CI runs both suites. Client configuration examples follow the linked
-Claude Code and Cursor documentation; acceptance in those desktop/editor clients should be checked
-with your own token after deploying the PR.
+`test:mcp` drives the server with the official SDK client over in-memory and HTTP transports.
+The web suite in `apps/web/test/mcp.test.ts` connects over real HTTP and through the built stdio
+process, and checks ownership, scopes, revocation, expiry, pagination and rate limits. It clears
+its database, so the database name must end in `_test`. CI runs both suites.
 
 ## License
 
-This package is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE).

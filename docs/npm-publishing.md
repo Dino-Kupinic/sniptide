@@ -4,10 +4,11 @@ Merging a PR into `main` releases changed public packages after CI passes. The a
 npm packages have independent versions. No manual package version bump, release PR, or npm stage
 approval is needed for normal releases.
 
-The TypeScript and Python SDKs have no automated publication configured. Merging their changes
-does not publish them to npm or PyPI.
+The JavaScript and Python SDKs are not released on merge. A maintainer publishes their checked-in
+versions to npm and PyPI by running the **Publish SDKs** workflow by hand, as
+[Publish the SDKs](sdk-publishing.md) describes.
 
-The `Release` workflow is the only npm publisher. Its package jobs compare the current packed
+The `Release` workflow is the only publisher of these three packages. Its package jobs compare the current packed
 contents with the highest stable public version of `@sniptide/ui`, `@sniptide/cli`, and
 `@sniptide/mcp`. Files and resolved dependencies count. An unrelated app change or a change to
 source commit metadata alone does not publish another package version.
