@@ -63,3 +63,4 @@ data/
 /apps/web/load/artifacts/
 
 /artifacts/npm/
+__pycache__/
