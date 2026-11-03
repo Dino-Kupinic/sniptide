@@ -51,7 +51,12 @@ and open PRs.
 ## Pull requests
 
 - Keep a PR to one change, and say in the description what it does and why.
-- Run the checks from the development guide before pushing; CI runs the same ones.
+- Update the documentation in the same PR when the change affects readers. See
+  [Update the documentation](docs/development.md#update-the-documentation).
+- Run `bun run verify` and any focused checks from the development guide before pushing. CI runs
+  the same ones.
+- Fill in the template's Documentation and Verification sections, including checks you couldn't
+  run.
 
 ## Releases
 
