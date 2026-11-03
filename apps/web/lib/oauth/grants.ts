@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto"
-import { apiToken, oauthCode } from "@workspace/db/schema"
+import { apiToken, oauthCode, user } from "@workspace/db/schema"
 import { and, eq, sql } from "drizzle-orm"
 import { SCOPES, type Scope } from "@/lib/api/scopes"
 import { hashToken, MAX_TOKENS, TOKEN_PREFIX } from "@/lib/api/tokens"
@@ -198,6 +198,8 @@ export async function exchangeCode(form: URLSearchParams): Promise<TokenResponse
   const scopes = grant.scopes.filter((scope): scope is Scope => SCOPES.includes(scope as Scope))
   const credentials = newCredentials(scopes)
   return getDb().transaction(async (tx) => {
+    // Serializes token creation per account, so two at once can't both pass the limit.
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, grant.userId)).for("update")
     const [count] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(apiToken)
@@ -219,16 +221,27 @@ export async function exchangeCode(form: URLSearchParams): Promise<TokenResponse
 }
 
 // grant_type=refresh_token. The row keeps its id, name and scopes and gets a new access token and
-// refresh token, so the old pair stops working the moment the new one is issued.
+// refresh token, so the old pair stops working the moment the new one is issued. The replaced
+// refresh token is remembered: presenting it again means someone else holds a copy, so the whole
+// grant is revoked and the client has to authorize again (OAuth 2.1, section 4.3.1).
 export async function refresh(form: URLSearchParams): Promise<TokenResponse> {
   const token = form.get("refresh_token") ?? ""
   const clientId = form.get("client_id") ?? ""
   if (!token.startsWith(REFRESH_PREFIX) || !clientId)
     throw new GrantError("invalid_request", "Send refresh_token and client_id.")
-  const [row] = await getDb()
-    .select()
-    .from(apiToken)
-    .where(eq(apiToken.refreshHash, hashToken(token)))
+  const hash = hashToken(token)
+  const [row] = await getDb().select().from(apiToken).where(eq(apiToken.refreshHash, hash))
+  if (!row) {
+    const revoked = await getDb()
+      .delete(apiToken)
+      .where(and(eq(apiToken.previousRefreshHash, hash), eq(apiToken.clientId, clientId)))
+      .returning({ id: apiToken.id })
+    if (revoked.length)
+      throw new GrantError(
+        "invalid_grant",
+        "The refresh token was already used, so the grant was revoked. Authorize again.",
+      )
+  }
   if (
     !row?.refreshExpiresAt ||
     row.refreshExpiresAt.getTime() <= Date.now() ||
@@ -243,8 +256,8 @@ export async function refresh(form: URLSearchParams): Promise<TokenResponse> {
   const credentials = newCredentials(requested)
   const updated = await getDb()
     .update(apiToken)
-    .set({ ...credentials.row, scopes: requested })
-    .where(and(eq(apiToken.id, row.id), eq(apiToken.refreshHash, hashToken(token))))
+    .set({ ...credentials.row, scopes: requested, previousRefreshHash: hash })
+    .where(and(eq(apiToken.id, row.id), eq(apiToken.refreshHash, hash)))
     .returning({ id: apiToken.id })
   if (!updated.length) throw new GrantError("invalid_grant", "The refresh token was already used.")
   return credentials.response

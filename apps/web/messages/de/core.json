@@ -21,6 +21,7 @@
     "viewsIn": "Aufrufe von {count, plural, one {# Snippet} other {# Snippets}} in {title}",
     "viewsAll": "Aufrufe aller {count, plural, one {# Snippets} other {# Snippets}}",
     "afterView": "nach einem Aufruf",
+    "burnedOn": "Gelesen am {date}",
     "never": "Nie",
     "neverExpires": "läuft nie ab",
     "expires": "Läuft {time} ab",

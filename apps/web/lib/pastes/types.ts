@@ -60,6 +60,8 @@ export interface PasteSummary {
   updatedAt: number
   expiresAt: number | null
   deletedAt: number | null
+  // When its one read burned it. Only set while a burned paste is in the trash.
+  burnedAt: number | null
 }
 
 // One paste in full, for the screens that show or edit its content.

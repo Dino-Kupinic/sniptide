@@ -29,10 +29,14 @@ export const apiToken = pgTable(
     clientId: text("client_id").references(() => oauthClient.id, { onDelete: "cascade" }),
     refreshHash: text("refresh_hash"),
     refreshExpiresAt: time("refresh_expires_at"),
+    // The refresh token this one replaced. Presenting it again means it leaked, so the grant is
+    // revoked (OAuth 2.1 refresh token reuse detection).
+    previousRefreshHash: text("previous_refresh_hash"),
   },
   (table) => [
     uniqueIndex("api_token_hash_unique").on(table.hash),
     uniqueIndex("api_token_refresh_hash_unique").on(table.refreshHash),
+    index("api_token_previous_refresh_hash_idx").on(table.previousRefreshHash),
     index("api_token_owner_idx").on(table.ownerId, table.createdAt),
   ],
 )

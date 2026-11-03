@@ -53,7 +53,7 @@ A successful command atomically updates the state, increments both versions, and
 
 If the command exits nonzero, do not assume it applied. Inspect the current state and consult the restricted audit record. For an identical retry, preserve the original command. If another edit or moderation decision changed either version, inspect and assess the new state before issuing a new decision with a new command UUID.
 
-To release a paste, inspect again and issue a new command with `state` set to `allowed` and an appropriate reason code. Release does not remove a password, undo expiry or trash, revive a consumed one-time paste, or recreate a deleted collection.
+To release a paste, inspect again and issue a new command with `state` set to `allowed` and an appropriate reason code. A `removed` paste only changes state with the `appeal` or `correction` reason code. A command that names the paste's current state is refused and writes no event. Release does not remove a password, undo expiry or trash, revive a consumed one-time paste, or recreate a deleted collection.
 
 ## Verify containment
 

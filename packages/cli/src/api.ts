@@ -61,6 +61,12 @@ export class Api {
         "TOO_LARGE",
         1,
       )
+    if (response.status === 412)
+      throw new CliError(
+        "The env group changed since this file was pulled. Pull it again with --force, or push with --force to replace it.",
+        "CONFLICT",
+        1,
+      )
     if (!response.ok) {
       const retry = response.headers.get("retry-after")
       const suffix =
