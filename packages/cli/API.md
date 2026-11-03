@@ -1,4 +1,4 @@
-# CLI API (WRK-115, WRK-111)
+# Token API calls the CLI makes
 
 The CLI talks to the token API under `/api/v1`, served by `apps/web/app/api/v1`. The full reference,
 with request and response schemas and examples, is the app's OpenAPI document (`/docs/api` on any
@@ -12,10 +12,12 @@ revoked by deleting them in Settings. Scopes: `read` (every token) lists and pul
 groups; `write` also creates pastes and pushes or deletes env groups. Session cookies are not used.
 
 URLs append `/api/v1` to the instance's configured URL, including a deployment path prefix.
-Responses carry `Cache-Control: private, no-store`. Errors are `{ "ok": false, "error": "…" }` with
-`400` invalid input, `401` missing/invalid/expired/revoked token, `403` missing scope, `404` absent
-or not the token owner's, `409` env group limit, `413` size or storage limit, and `429` rate limited
-(with `Retry-After`). The CLI prints none of these bodies.
+Responses carry `Cache-Control: private, no-store`. Errors are
+`{ "ok": false, "error", "code", "message", "resolution" }` with `400` invalid input, `401` a
+missing, invalid, expired or revoked token, `403` a missing scope, `404` absent or not the token
+owner's, `409` the env group limit, `412` an env group that changed since the sent revision, `413` a
+size or storage limit, and `429` a rate limit (with `Retry-After`). The CLI prints none of these
+bodies.
 
 ## Endpoints
 
@@ -28,8 +30,8 @@ or not the token owner's, `409` env group limit, `413` size or storage limit, an
 | List/search | `GET /pastes?q&tag&language&collection&limit&cursor` | read | `{"pastes": [Summary], "nextCursor": string or null}` |
 | Ordered collection | `GET /collections/{slug}/pastes?cursor` | read | `{"pastes": [Paste], "nextCursor": string or null}` |
 | List env groups | `GET /env` | read | `{"groups": [{"slug","variables","createdAt","updatedAt"}]}` |
-| Read env group | `GET /env/{group}` | read | `{"group": {"slug","updatedAt","variables":[{"name","value"}]}}` |
-| Replace env group | `PUT /env/{group}` with `{"variables": [...]}` | write | `{"group": …}` |
+| Read env group | `GET /env/{group}` | read | `{"group": {"slug","updatedAt","revision","variables":[{"name","value"}]}}` |
+| Replace env group | `PUT /env/{group}` with `{"variables": [...], "revision"?: n}` | write | `{"group": …}` |
 | Delete env group | `DELETE /env/{group}` | write | `{"ok": true}` |
 
 A capture is `{ title, description, visibility, collection, tags, source, files }` where each file is
@@ -48,7 +50,9 @@ full pastes; the CLI reads every page before writing, and stops at 1,000 pastes 
 
 Env groups are named 1–64 lowercase letters, digits, `.`, `-` and `_`, hold up to 500 variables
 (32 KB per value, 256 KB per group), and an account has up to 100. `PUT` replaces the whole group in
-the order given, creating it if it's new. Values are encrypted with AES-256-GCM before they are
+the order given, creating it if it's new. A group's `revision` goes up by one with every change.
+`env push` sends the revision that `env pull` wrote into the file, and the server answers `412`
+without changing anything when the group has moved past it. Values are encrypted with AES-256-GCM before they are
 stored, bound to their group and name.
 
 ## Offline bundle

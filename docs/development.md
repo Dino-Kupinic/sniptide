@@ -29,10 +29,13 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 - `apps/docs`: the documentation site (Next.js and Fumadocs, MDX in `content/docs`); see
   `apps/docs/README.md`
 - `packages/auth`: better-auth setup on the Drizzle adapter
-- `packages/cli`: code capture and restore CLI, with a dependency-free Node.js executable
+- `packages/cli`: the `sniptide` CLI for capture, restore, agent skills and `.env` sync, built as a
+  dependency-free Node.js executable
 - `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable
 - `packages/contracts`: shared wire contracts for the web app, CLI, and MCP server
 - `packages/db`: Drizzle schema, Postgres client and migrations
+- `packages/sdk`: `@sniptide/sdk`, the JavaScript and TypeScript client for the token API
+- `packages/sdk-python`: `sniptide`, the Python client for the token API
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
   theme. Published to npm for the website repo; see `packages/ui/README.md`
 - `packages/typescript`: shared TypeScript configuration
@@ -46,6 +49,7 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 | Shared wire contracts | `packages/contracts/src` | CLI contract tests, MCP tests, and web API tests |
 | Documentation site | `apps/docs` | `bun run test:docs` |
 | CLI capture and restore | `packages/cli/src`, `packages/cli/API.md` | `bun run test:cli` |
+| SDKs | `packages/sdk/src`, `packages/sdk-python/sniptide` | `bun run test:sdk` |
 | MCP tools and transport | `packages/mcp/src`, `apps/web/lib/api/mcp.ts` | `bun run test:mcp`, `apps/web/test/mcp.test.ts` |
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
 | Database schema and migrations | `packages/db/src/schema`, `packages/db/migrations` | Web integration tests and migration tests |

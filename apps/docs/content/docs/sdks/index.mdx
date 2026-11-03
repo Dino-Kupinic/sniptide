@@ -113,6 +113,7 @@ on `429` and `503`, the `Retry-After` value.
 | `forbidden` | 403 | The token doesn't have the access the method needs. |
 | `not_found` | 404 | The paste, collection or env group doesn't exist or isn't yours. |
 | `conflict` | 409 | An idempotency key was reused with another payload, a collection with that name exists, or the account has 100 env groups. |
+| `precondition_failed` | 412 | The env group changed after the revision you passed. Read it again before you write. |
 | `unprocessable_entity` | 422 | The account already has 50 collections. |
 | `payload_too_large` | 413 | The paste is too large or the account is out of storage. |
 | `too_many_requests` | 429 | The token used its hourly quota. Wait for `Retry-After`. |
