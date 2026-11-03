@@ -222,6 +222,18 @@ describeDb("host moderation", () => {
     ).rejects.toThrow("version conflict")
   })
 
+  test("refuses a no-op, and releases a removed paste only on appeal or correction", async () => {
+    const target = await fixture()
+    await expect(transition(target.id, "allowed")).rejects.toThrow("already allowed")
+    await transition(target.id, "removed")
+    await expect(transition(target.id, "allowed")).rejects.toThrow("appeal or correction")
+    const appeal = { ...(await command(target.id, "allowed")), reasonCode: "appeal" as const }
+    await transitionModeration(getDb(), appeal, "operator")
+    expect((await inspectModeration(getDb(), target.id))?.state).toBe("allowed")
+    // Refused commands write no audit event.
+    expect(await getDb().select().from(moderationEvent)).toHaveLength(2)
+  })
+
   test("strict input rejects evidence-shaped fields and invalid states or versions", async () => {
     const target = await fixture()
     const input = await command(target.id, "pending")
