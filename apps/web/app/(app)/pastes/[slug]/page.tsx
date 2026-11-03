@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
 import { LocalDateTime } from "@/components/local-date-time"
 import { CompareRevisions } from "@/components/paste/compare-revisions"
+import { ExpiredBadge, ExpiredNotice } from "@/components/paste/expiry-status"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
   CopyCodeButton,
@@ -95,6 +96,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     people ? (
       <ShareDialog
         slug={slug}
+        expiresAt={paste.expiresAt}
         title={paste.title}
         url={url}
         visibility={paste.visibility}
@@ -262,7 +264,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             </Button>
           ) : null}
           {shareDialog("button")}
-          <CopyLinkButton url={url} />
+          <CopyLinkButton url={url} expiresAt={paste.expiresAt} />
         </HeaderActions>
 
         {/* Mobile header */}
@@ -282,13 +284,19 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <PasteOverflowMenu
               slug={slug}
               title={paste.title}
+              expiresAt={paste.expiresAt}
               canTrash={owned}
               canLeave={Boolean(share)}
               rawAllowed={paste.allowRaw}
               url={url}
             />
             {shareDialog("icon") ?? (
-              <ShareButton url={url} title={paste.title} className="size-10" />
+              <ShareButton
+                url={url}
+                title={paste.title}
+                expiresAt={paste.expiresAt}
+                className="size-10"
+              />
             )}
           </div>
         </div>
@@ -299,9 +307,11 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-[32px] lg:leading-[38px]">
               {paste.title}
             </h1>
+            <ExpiredBadge expiresAt={paste.expiresAt} />
             {/* The owner's Sharing row below already shows the visibility. */}
             {owned ? null : <VisibilityBadge paste={paste} />}
           </div>
+          <ExpiredNotice expiresAt={paste.expiresAt} />
           {paste.description ? (
             <p className="text-base leading-6 lg:text-sm lg:leading-5">{paste.description}</p>
           ) : null}

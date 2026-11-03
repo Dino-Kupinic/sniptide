@@ -51,6 +51,7 @@ export interface TrashRow {
 
 function expiresLabel(paste: PasteSummary, now: number, locale: Locale) {
   const t = coreTranslator(locale)
+  if (paste.expiresAt !== null && paste.expiresAt <= now) return t("expired")
   if (paste.burnAfterRead) return t("afterView")
   if (!paste.expiresAt) return t("never")
   return timeUntil(paste.expiresAt, now, locale)
@@ -71,7 +72,9 @@ function toRow(
     burnAfterRead: paste.burnAfterRead,
     views: paste.views,
     expiresLabel: expiresLabel(paste, now, locale),
-    expiresSoon: Boolean(paste.expiresAt && paste.expiresAt - now < 48 * HOUR),
+    expiresSoon: Boolean(
+      paste.expiresAt && paste.expiresAt > now && paste.expiresAt - now < 48 * HOUR,
+    ),
     expiresAt: paste.expiresAt,
     updatedAt: paste.updatedAt,
     updatedLabel: timeAgo(paste.updatedAt, now, locale),

@@ -30,6 +30,7 @@ import { runAction } from "@/lib/feedback"
 import { updateSharing } from "@/lib/pastes/actions"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { LinkCopyContent, useCopyLink } from "./copy-button"
+import { usePasteExpired } from "./expiry-status"
 import { type PanelSection, SidePanel } from "./side-panel"
 
 export interface SharingState {
@@ -51,8 +52,17 @@ const expiryChoices: { value: Expiry; label: string }[] = [
   { value: "never", label: "never" },
 ]
 
-export function ShareLinkField({ url, className }: { url: string; className?: string }) {
+export function ShareLinkField({
+  url,
+  expiresAt,
+  className,
+}: {
+  url: string
+  expiresAt: number | null
+  className?: string
+}) {
   const t = useTranslations("Paste")
+  const expired = usePasteExpired(expiresAt)
   const { state, props } = useCopyLink(url, () =>
     track("share_link_copied", { from: "sharing_panel" }),
   )
@@ -71,6 +81,8 @@ export function ShareLinkField({ url, className }: { url: string; className?: st
         size="sm"
         className="mr-1 h-[26px] text-xs"
         {...props}
+        disabled={expired}
+        title={expired ? t("expiredSharingHelp") : undefined}
       >
         <LinkCopyContent state={state} label={t("copy")} />
       </Button>
@@ -145,6 +157,7 @@ function useSharingControls(state: SharingState, list: boolean) {
   const expiry = (
     <DropdownMenu>
       <DropdownMenuTrigger
+        aria-label={t("expires")}
         className={cn(
           "flex items-center gap-1.5 rounded-lg outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
           !list && "h-9 w-full justify-between border border-border px-2.5 hover:text-foreground",
@@ -307,7 +320,7 @@ function OwnerPanel({ state, rest }: { state: SharingState; rest: PanelSection[]
       icon: LinkIcon,
       content: (
         <>
-          <ShareLinkField url={state.url} />
+          <ShareLinkField url={state.url} expiresAt={state.expiresAt} />
           {controls.visibilityControl}
           <p className="text-xs text-muted-foreground">
             {t("visibilityHelp", { value: controls.visibility })}

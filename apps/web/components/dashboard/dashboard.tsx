@@ -17,11 +17,12 @@ import { ArrowRightIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
-import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
+import { ExpiryLabel, expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
 import { RowMenu } from "@/components/lists/row-menu"
 import { ChartSkeleton, StatsSkeleton } from "@/components/loading/page-skeletons"
 import { LoadingRegion } from "@/components/loading/region"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { ExpiredBadge } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { navigateTabs } from "@/components/tab-navigation"
 import { formatNumber } from "@/lib/format"
@@ -428,6 +429,7 @@ function RecentPastes({
                     <span className="truncate">
                       <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
                     </span>
+                    <ExpiredBadge expiresAt={row.expiresAt} />
                   </span>
                 </div>
                 <RowMenu row={row} origin={origin} variant="sheet" />
@@ -482,7 +484,7 @@ function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string;
               {formatNumber(row.views, locale)}
             </TableCell>
             <TableCell className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}>
-              {row.expiresLabel}
+              <ExpiryLabel row={row} />
             </TableCell>
             <TableCell className="text-[13px] text-muted-foreground">{row.updatedLabel}</TableCell>
             <TablePinnedCell className="pr-3 text-right">

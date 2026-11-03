@@ -30,6 +30,7 @@
     "personMissing": "No Sniptide account has that email or username.",
     "pickAccess": "Pick view or edit access.",
     "shareMissing": "That paste or person no longer exists.",
+    "shareExpired": "This paste has expired. Set a new expiry or choose Never before sharing it.",
     "shareRestore": "That share can't be restored.",
     "shareRevoked": "That paste is no longer shared with you.",
     "checkTitle": "Check the title.",

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { PasteExpiryClock } from "@/components/paste/expiry-status"
 import { AppShell } from "@/components/shell/app-shell"
 import { ResourceLinksProvider } from "@/components/shell/resource-links"
 import { parseSidebarState, SIDEBAR_COOKIE } from "@/components/shell/sidebar-state"
@@ -27,16 +28,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <SiteHostProvider host={host}>
       <ResourceLinksProvider links={getConfig().resourceLinks}>
-        <AppShell
-          demo={isDemoMode()}
-          viewer={viewerFromUser(session.user)}
-          data={data}
-          collections={collections}
-          initialSidebar={sidebar}
-          trashCount={trash.count}
-        >
-          {children}
-        </AppShell>
+        <PasteExpiryClock>
+          <AppShell
+            demo={isDemoMode()}
+            viewer={viewerFromUser(session.user)}
+            data={data}
+            collections={collections}
+            initialSidebar={sidebar}
+            trashCount={trash.count}
+          >
+            {children}
+          </AppShell>
+        </PasteExpiryClock>
       </ResourceLinksProvider>
     </SiteHostProvider>
   )

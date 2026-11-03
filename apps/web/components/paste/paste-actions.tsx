@@ -38,6 +38,7 @@ import {
   trashPaste,
 } from "@/lib/pastes/actions"
 import { CopyFeedbackLabel, LinkCopyContent, reportCopy, useCopy, useCopyLink } from "./copy-button"
+import { usePasteExpired } from "./expiry-status"
 import { useActiveFile } from "./file-viewer"
 
 export function StarButton({
@@ -79,12 +80,28 @@ export function StarButton({
   )
 }
 
-export function CopyLinkButton({ url, className }: { url: string; className?: string }) {
+export function CopyLinkButton({
+  url,
+  expiresAt,
+  className,
+}: {
+  url: string
+  expiresAt: number | null
+  className?: string
+}) {
+  const expired = usePasteExpired(expiresAt)
   const t = useTranslations("Paste")
   const { state, props } = useCopyLink(url, () => track("share_link_copied", { from: "paste" }))
 
   return (
-    <Button type="button" size="lg" className={className} {...props}>
+    <Button
+      type="button"
+      size="lg"
+      className={className}
+      {...props}
+      disabled={expired}
+      title={expired ? t("expiredSharingHelp") : undefined}
+    >
       <LinkCopyContent state={state} label={t("copyLink")} icon={<LinkIcon />} />
     </Button>
   )
@@ -111,14 +128,17 @@ export function useNativeShare(url: string, title: string, from: string) {
 }
 
 export function ShareButton({
+  expiresAt,
   url,
   title,
   className,
 }: {
   url: string
   title: string
+  expiresAt: number | null
   className?: string
 }) {
+  const expired = usePasteExpired(expiresAt)
   const t = useTranslations("Paste")
   const { copied, share } = useNativeShare(url, title, "share_button")
   return (
@@ -128,6 +148,8 @@ export function ShareButton({
       size="icon-lg"
       aria-label={copied ? t("linkCopied") : t("share")}
       className={className}
+      disabled={expired}
+      title={expired ? t("expiredSharingHelp") : undefined}
       onClick={share}
     >
       {copied ? <SuccessCheck /> : <ShareIcon />}
@@ -196,6 +218,7 @@ export function LeaveShareButton({
 }
 
 export function PasteOverflowMenu({
+  expiresAt,
   slug,
   title,
   canTrash,
@@ -207,6 +230,7 @@ export function PasteOverflowMenu({
   slug: string
   title: string
   canTrash: boolean
+  expiresAt: number | null
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
   // View raw and Download, for the file open in the code card.
@@ -219,6 +243,7 @@ export function PasteOverflowMenu({
   const router = useRouter()
   const file = useActiveFile()
   const { copy } = useCopy()
+  const expired = usePasteExpired(expiresAt)
   const rawHref =
     rawAllowed && file ? `/${slug}/raw?file=${encodeURIComponent(file.name)}` : undefined
 
@@ -239,7 +264,10 @@ export function PasteOverflowMenu({
           {t("duplicate")}
         </DropdownMenuItem>
         <DropdownMenuItem
+          disabled={expired}
+          title={expired ? t("expiredSharingHelp") : undefined}
           onClick={async () => {
+            if (expired) return
             track("share_link_copied", { from: "overflow_menu" })
             if (await copy(url)) toast.success(t("linkCopied"))
           }}

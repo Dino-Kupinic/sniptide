@@ -30,6 +30,7 @@
     "personMissing": "没有使用该邮箱地址或用户名的 Sniptide 账号。",
     "pickAccess": "请选择查看或编辑权限。",
     "shareMissing": "该代码片段或用户已不存在。",
+    "shareExpired": "此代码片段已过期。请设置新的到期时间或选择“永不”后再分享。",
     "shareRestore": "无法恢复该共享权限。",
     "shareRevoked": "该代码片段已不再与你共享。",
     "checkTitle": "请检查标题。",

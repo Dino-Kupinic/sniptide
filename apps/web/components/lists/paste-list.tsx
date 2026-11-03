@@ -16,6 +16,7 @@ import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { usePasteExpired } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { useListView } from "@/components/shell/page-header"
 import { showUndo } from "@/components/undo-toast"
@@ -108,10 +109,19 @@ export function VisibilityIcon({ row }: { row: Pick<PasteRow, "visibility" | "bu
   )
 }
 
-// Expiring soon reads in blue; already expired reads muted, since nothing is left to do about it.
 export function expiryClass(row: Pick<PasteRow, "expiresSoon" | "expiresAt">) {
-  if (row.expiresAt !== null && row.expiresAt <= Date.now()) return "text-muted-foreground"
   return row.expiresSoon ? "text-link" : undefined
+}
+
+export function ExpiryLabel({ row, mobile = false }: { row: PasteRow; mobile?: boolean }) {
+  const expired = usePasteExpired(row.expiresAt)
+  const coreT = useTranslations("Core")
+  const t = useTranslations("Workspace")
+  if (expired) return <span className="font-medium text-muted-foreground">{coreT("expired")}</span>
+  if (!mobile || row.burnAfterRead) return row.expiresLabel
+  return row.expiresSoon
+    ? t("expires_label", { time: row.expiresLabel })
+    : t("views_count", { count: row.views })
 }
 
 // The table renders one authorized page. Filters, sorting and paging are URL-driven server reads.
@@ -376,7 +386,7 @@ export function PasteList({
                       {formatNumber(row.views, locale)}
                     </TableCell>
                     <TableCell className={cn("text-[13px] text-foreground/80", expiryClass(row))}>
-                      {row.expiresLabel}
+                      <ExpiryLabel row={row} />
                     </TableCell>
                     <TableCell className="text-[13px] text-muted-foreground">
                       {row.updatedLabel}
@@ -432,16 +442,12 @@ export function PasteList({
                       )}
                     >
                       <VisibilityIcon row={row} />
-                      <span className="truncate">
-                        <span className="font-mono">
-                          {row.owner ? `@${row.owner.username}` : row.slug}
-                        </span>
-                        {" · "}
-                        {row.burnAfterRead
-                          ? row.expiresLabel
-                          : row.expiresSoon
-                            ? t("expires_label", { time: row.expiresLabel })
-                            : t("views_count", { count: row.views })}
+                      <span className="min-w-0 truncate font-mono">
+                        {row.owner ? `@${row.owner.username}` : row.slug}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span className="shrink-0">
+                        <ExpiryLabel row={row} mobile />
                       </span>
                     </span>
                   </div>

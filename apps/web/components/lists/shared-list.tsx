@@ -16,6 +16,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { ExpiredBadge } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { useListView } from "@/components/shell/page-header"
 import type { HighlightedLines } from "@/lib/highlight/types"
@@ -359,6 +360,7 @@ export function SharedList({
                       {row.sharedLabel}
                     </TableCell>
                     <TablePinnedCell className="text-center">
+                      <ExpiredBadge expiresAt={row.expiresAt} />
                       <RowMenu row={row} origin={origin} shared />
                     </TablePinnedCell>
                   </TableRow>
@@ -397,6 +399,7 @@ export function SharedList({
                       {row.sharedLabel}
                     </span>
                   </div>
+                  <ExpiredBadge expiresAt={row.expiresAt} />
                   <RowMenu row={row} origin={origin} shared variant="sheet" />
                 </li>
               ))}

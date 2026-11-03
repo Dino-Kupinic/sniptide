@@ -30,6 +30,7 @@
     "personMissing": "No hay ninguna cuenta de Sniptide con ese correo o nombre de usuario.",
     "pickAccess": "Elige el permiso de lectura o edición.",
     "shareMissing": "Ese paste o esa persona ya no existe.",
+    "shareExpired": "Este paste ha caducado. Establece un nuevo plazo de caducidad o elige Nunca antes de compartirlo.",
     "shareRestore": "No se puede restaurar ese acceso compartido.",
     "shareRevoked": "Ese paste ya no se comparte contigo.",
     "checkTitle": "Revisa el título.",

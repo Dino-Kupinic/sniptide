@@ -93,6 +93,7 @@
     "notificationExpiringDetail": "Extend it from the paste's sharing panel",
     "notificationViews": "“{title}” reached {count, number} views",
     "notificationViewsDetail": "See where they came from in Analytics",
-    "snapshotUnavailable": "Snapshot unavailable"
+    "snapshotUnavailable": "Snapshot unavailable",
+    "expired": "Expired"
   }
 }
