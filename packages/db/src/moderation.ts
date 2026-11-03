@@ -29,8 +29,6 @@ export const moderationCommandSchema = z.strictObject({
   caseReference: z.uuid(),
 })
 
-type ModerationState = (typeof moderationState.enumValues)[number]
-
 // The moves an operator may make, and why. Any restricted state can be released or tightened, but
 // a removed paste only comes back through an appeal or a correction, and a command that would
 // leave the state as it is is refused instead of writing an empty audit event.

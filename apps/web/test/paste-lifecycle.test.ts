@@ -3,6 +3,7 @@ import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { openToAnyone, pasteState, restoredFields } from "@/lib/pastes/lifecycle"
+import { passwordField, passwordIntent, storedPasswordField } from "@/lib/pastes/password-intent"
 import { restorePaste, trashPaste } from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -74,5 +75,17 @@ describeDb("trash and restore", () => {
       .where(eq(paste.slug, "old"))
     expect(await restorePaste("old")).toBe(false)
     expect((await pasteRow("old"))?.deletedAt).not.toBeNull()
+  })
+})
+
+describe("password intent", () => {
+  test("the password field reads as keep, remove or set, and writes back the same", () => {
+    expect(passwordIntent("")).toEqual({ kind: "keep" })
+    expect(passwordIntent(null)).toEqual({ kind: "remove" })
+    expect(passwordIntent("hunter2")).toEqual({ kind: "set", password: "hunter2" })
+    for (const field of ["", null, "hunter2"])
+      expect(passwordField(passwordIntent(field))).toBe(field)
+    expect(storedPasswordField(true)).toBe("")
+    expect(storedPasswordField(false)).toBeNull()
   })
 })

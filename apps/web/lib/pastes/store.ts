@@ -62,6 +62,7 @@ type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 
 import { recordPasteEvent } from "./events"
 import { isLive, liveWhere, openToAnyone, restoredFields, unexpiredWhere } from "./lifecycle"
+import { type PasswordField, passwordIntent } from "./password-intent"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
@@ -1377,10 +1378,17 @@ export async function isSlugAvailable(slug: string, except?: string) {
   return slug === except || !(await findRecord(slug, true))
 }
 
+// The hash a save stores for its password field. Keep and remove both hash nothing: the
+// mutation keeps the stored hash for keep (lib/pastes/password-intent.ts).
+async function hashedPassword(field: PasswordField) {
+  const intent = passwordIntent(field)
+  return intent.kind === "set" ? hashPassword(intent.password) : null
+}
+
 export async function createPaste(input: PasteInput, invites: ShareInvite[] = []) {
   const data = parsePasteInput(input)
   const actor = { kind: "session", userId: await requireViewerId() } as const
-  const passwordHash = data.password ? await hashPassword(data.password) : null
+  const passwordHash = await hashedPassword(data.password)
   const saved = await getDb().transaction((tx) =>
     createPasteRecord(tx, { kind: "editor", actor, input: data, passwordHash, invites }),
   )
@@ -1395,7 +1403,7 @@ export async function updatePaste(
 ): Promise<UpdateResult | null> {
   const data = parsePasteInput(input)
   const actor = { kind: "session", userId: await requireViewerId() } as const
-  const passwordHash = data.password ? await hashPassword(data.password) : null
+  const passwordHash = await hashedPassword(data.password)
   const result = await getDb().transaction((tx) =>
     replacePaste(
       tx,

@@ -16,6 +16,7 @@ import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
 import { type InsertedFile, insertPaste } from "./insert"
 import { randomSlug, resolveExpiry } from "./links"
+import { passwordIntent } from "./password-intent"
 import { hashPassword } from "./passwords"
 import { pruneSnapshots, snapshotOf } from "./snapshot"
 import type { PasteInput, ShareInvite, SharingInput, Visibility } from "./types"
@@ -216,7 +217,9 @@ export async function replacePaste(
   const input = request.input
   const description = input.description ?? record.description
   const passwordHash =
-    editor && owned && editor.input.password !== "" ? editor.passwordHash : record.passwordHash
+    editor && owned && passwordIntent(editor.input.password).kind !== "keep"
+      ? editor.passwordHash
+      : record.passwordHash
   const expiresAt =
     editor && owned
       ? resolveExpiry(editor.input.expiry, record.expiresAt, now.getTime())

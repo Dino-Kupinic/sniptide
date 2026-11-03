@@ -19,6 +19,7 @@ import {
 } from "./gist"
 import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
+import { passwordIntent } from "./password-intent"
 import { pasteSchema } from "./schema"
 import { hasSensitiveContent, suggestedVisibility } from "./smart-defaults"
 import * as store from "./store"
@@ -74,9 +75,9 @@ async function checkedPayload(data: z.output<typeof pasteSchema>, editing?: stri
   if (data.collection !== null && !(await collectionExists(data.collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
-  // On edit an empty password means "keep the current one"; a new paste needs a real one.
+  // Keeping a password needs one to keep: a new paste, or one without a password, needs a real one.
   const current = editing ? await store.getPaste(editing) : null
-  if (data.password === "" && !current?.password) {
+  if (passwordIntent(data.password).kind === "keep" && !current?.password) {
     return {
       ok: false as const,
       error: await actionError("passwordRequired"),
