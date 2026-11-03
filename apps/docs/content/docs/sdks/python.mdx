@@ -148,6 +148,10 @@ group = client.read_env_group("my-app")["group"]
 return the values in plain text, so keep their results out of logs. `list_env_groups` returns
 names and counts without values.
 
+To refuse a write when someone changed the group after you read it, pass the revision you read:
+`write_env_group("my-app", variables, revision=group["revision"])`. A newer group fails with
+status 412 and stays as it was.
+
 ## Self-hosted instances
 
 Set `base_url` to your instance's address, including any path prefix:
@@ -221,7 +225,7 @@ integer.
 | `collection_pastes(slug, cursor=None)` | `GET /collections/{slug}/pastes` | read | `pastes`, `nextCursor` |
 | `list_env_groups()` | `GET /env` | read | `groups` |
 | `read_env_group(group)` | `GET /env/{group}` | read | `group` |
-| `write_env_group(group, variables)` | `PUT /env/{group}` | write | `group` |
+| `write_env_group(group, variables, revision=None)` | `PUT /env/{group}` | write | `group` |
 | `delete_env_group(group)` | `DELETE /env/{group}` | write | `ok` |
 
 `identifier` accepts a paste's id or its slug. Identifiers are URL-encoded for you, and an empty

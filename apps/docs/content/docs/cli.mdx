@@ -157,6 +157,11 @@ sniptide env delete my-app
 
 - A push **replaces** the whole group, so a variable you removed from the file is removed from the
   group.
+- `env pull` writes the group's revision as the file's first line, a comment such as
+  `# sniptide env my-app revision 4`. `env push` sends it back, and the push is refused if the
+  group changed since, so an old copy of the file can't erase newer variables. Pull again to get
+  the changes, or push with `--force` to replace the group anyway. After a push the line is
+  updated to the new revision.
 - `env pull` won't overwrite an existing file without `--force`.
 - `--file PATH` uses a file other than `.env`.
 - Values are never printed, even in `--json` output, except by `env pull --stdout`.
@@ -208,7 +213,7 @@ Pulling it never replaces an existing file.
 | `sniptide search <query>` | Search pastes | Same as `list` |
 | `sniptide skill <collection>` | Install a collection as a skill | `--agent`, `--name`, `--dir`, `--force`, `--dry-run` |
 | `sniptide env list` | List env groups | |
-| `sniptide env push <group>` | Upload `.env`, replacing the group | `--file`, `--dry-run` |
+| `sniptide env push <group>` | Upload `.env`, replacing the group | `--file`, `--force`, `--dry-run` |
 | `sniptide env pull <group>` | Write the group to `.env` | `--file`, `--force`, `--dry-run`, `--stdout` |
 | `sniptide env run <group> -- <command>` | Run a command with the group's variables | |
 | `sniptide env delete <group>` | Delete an env group | |
