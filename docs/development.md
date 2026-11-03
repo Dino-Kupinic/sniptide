@@ -76,6 +76,43 @@ under `/api/v1` that the CLI uses) are documented at
 handler, document it there, or list it as internal if it only serves the web app; the web test suite fails
 until you do.
 
+## Update the documentation
+
+A change that alters what a reader sees, sends, or configures updates the documentation in the
+same pull request. Write and review pages with the
+[documentation style guide](documentation-style-guide.md), and finish with its publication
+checklist. The pages live in `apps/docs/content/docs`, and each folder's `meta.json` sets the
+sidebar order.
+
+| When you change | Update |
+| --- | --- |
+| Paste, collection, sharing, expiry, burn, revision, secret, or analytics behavior | The matching page in `core-concepts/` |
+| Settings screens or paste defaults | `settings.mdx` |
+| Routes, scopes, limits, or errors under `/api/v1` | `api-tokens.mdx`, `api-reliability.mdx`, and `apps/web/lib/openapi.ts` |
+| MCP tools, prompts, or the OAuth flow | `mcp.mdx` and `oauth.mdx` |
+| CLI commands or options | `cli.mdx` and `packages/cli/API.md` |
+| The TypeScript or Python SDK | The pages in `sdks/` |
+| Skills or the agent plugin in `skills/` | `mcp.mdx#install-the-agent-plugin` |
+| Variables in `apps/web/.env.example` | `self-hosting/configuration.mdx` |
+| The image, `docker-compose.yml`, or `deploy/` | The matching page in `self-hosting/` |
+| A new failure a reader can hit | A row in `troubleshooting.mdx` |
+
+`bun run test:docs` checks the parts that drift mechanically, so a missing update fails the
+suite:
+
+- Every internal link and heading anchor resolves, and every page is in a sidebar.
+- Every variable in `apps/web/.env.example` appears in the configuration page.
+- Every registered MCP tool and prompt appears in the MCP page.
+- Every CLI command and option appears in the CLI page.
+- Every `/api/v1` route and method appears in the API tokens page.
+
+The checks live in `apps/docs/lib/content.test.ts`. When one fails, document the new item rather
+than loosening the check. The checks can't judge wording, completeness, or whether an example
+still works. Review those by hand, and run changed examples against a local instance before you
+publish them. If you can't verify a claim, say so in the page or the pull request instead of
+choosing a plausible answer. Run `bun --filter docs build` after editing MDX, because the tests
+read the files as text and don't compile them.
+
 ## Change the database schema
 
 The schema lives in `packages/db/src/schema`. After changing it:
@@ -127,12 +164,13 @@ Run these commands from the repository root:
 | `bun run audit:deps` | Known advisories in the complete dependency lockfile | Access to the npm advisory service |
 | `bun run test:cli` | CLI behavior through its built Node executable | Node and temporary loopback HTTP listeners |
 | `bun run test:mcp` | MCP tool schemas and transports | Temporary loopback HTTP listeners |
-| `bun run test:docs` | Documentation site metadata and structured data | Installed dependencies |
+| `bun run test:docs` | Documentation site metadata, structured data, links, and drift against the code | Installed dependencies |
 | `bun run test:web` | Web unit tests and available integration tests | `TEST_DATABASE_URL` for database coverage |
 | `bun run test:web:unit` | Non-database web cases and Node admission tests; ignores ambient database URLs | Installed dependencies and loopback listeners |
 | `bun run test:web:integration` | Web cases with required database coverage and Node admission tests | A valid dedicated `TEST_DATABASE_URL` |
 | `bun run test` | CLI, MCP, docs, then web tests in separate processes | Same requirements as the individual suites |
 | `bun run build` | Production workspace builds | Installed dependencies |
+| `bun run verify` | `check`, then `test`, then the docs build: the local gate before a pull request | Same requirements as `test` |
 | `bun run test:e2e` | Browser behavior | Chromium and a dedicated `E2E_DATABASE_URL` |
 
 The test suites run in separate processes because web tests preload mocks for Next request
@@ -190,6 +228,9 @@ Keep the minimatch override until shadcn's ts-morph dependency accepts a patched
 
 ## Make an agent change reviewable
 
+An agent works in a loop that it can check by itself: each step ends in a result the agent can
+observe, and the change isn't done until every check below has run.
+
 1. Read root and directory-specific `AGENTS.md` files. Read the installed Next.js guide under
    `apps/web/node_modules/next/dist/docs/` before changing Next.js code.
 2. Inspect `git status --short`, the current branch, and its relationship to the intended base.
@@ -197,12 +238,30 @@ Keep the minimatch override until shadcn's ts-morph dependency accepts a patched
 3. Find or create the WRK issue before coding. Use its `gitBranchName` and set it to In Progress.
 4. Trace the affected entry points, data contract, and tests before editing. Keep transport
    validation separate from persistence policy, and check callers before changing exports.
-5. Run the focused behavior checks, then `bun run check`. Report database skips and distinguish
-   checks you ran from checks that still need CI or a browser.
-6. Use the Conventional Commit and PR rules in [CONTRIBUTING.md](../CONTRIBUTING.md). Follow the
+5. Write or update a test that fails without the change, then make it pass. For a bug, reproduce
+   the failure first.
+6. Update the documentation as [Update the documentation](#update-the-documentation) describes,
+   including `apps/web/lib/openapi.ts` for route changes and the translations for new interface
+   text.
+7. Run the focused checks for the area from [Find the owner](#find-the-owner), then
+   `bun run verify`. Add `bun run test:web:integration` for database changes and
+   `bun run check:deps` for dependency changes. Report database skips and distinguish checks you
+   ran from checks that still need CI or a browser.
+8. Review your own diff with `git diff` against the base before you commit. Remove debugging
+   output, unrelated edits, and generated files the change doesn't need.
+9. Use the Conventional Commit and PR rules in [CONTRIBUTING.md](../CONTRIBUTING.md). Follow the
    issue status transitions in [AGENTS.md](../AGENTS.md).
-7. Stop owned processes and remove disposable resources. Preserve unfinished work and report
-   retained resources with their paths and reasons.
+10. Watch CI after you push. Reproduce a failing job locally, fix the cause, and push again. Don't
+    skip or weaken a test to get a green run.
+11. Stop owned processes and remove disposable resources. Preserve unfinished work and report
+    retained resources with their paths and reasons.
+
+A change is done when these hold:
+
+- The tests cover the new behavior, and `bun run verify` passes locally.
+- The documentation describes the change, and `bun run test:docs` passes.
+- CI is green on the pull request, and the pull request lists what was verified and what wasn't.
+- The WRK issue is In Review with the pull request linked, and moves to Done after the merge.
 
 Keep durable workflow facts here and executable checks in package scripts or CI. Avoid copying
 the same instructions into several agent-specific files.

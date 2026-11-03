@@ -1,54 +1,69 @@
 ---
 title: CLI
-description: Capture code into Sniptide from a terminal or a coding agent, restore it elsewhere, and sync .env files.
+description: Install the sniptide CLI, capture project files into pastes, restore them in another project, install collections as agent skills, and sync .env files.
 ---
 
-The `sniptide` CLI captures files into pastes, keeps their folder structure, and restores them in
-another project. It also syncs a project's `.env` with your instance. It talks to the
-[token API](/api-tokens), so you need a token for anything that touches your account. It prints
-JSON on request, never prompts, and works for people and for coding agents.
+The `sniptide` CLI captures files from a project into a paste with their folder structure,
+restores them in another project, and syncs a project's `.env` with your instance. It calls the
+[token API](/api-tokens), prints JSON on request and never prompts, so people and coding agents
+can both run it.
 
-## Install
+## Before you begin
 
-Install on Node.js 24 or newer:
+- Node.js 24 or newer.
+- An [API token](/api-tokens). Use a read-only token for `pull`, `list`, `search`, `skill` and
+  `env pull`. `push`, `env push` and `env delete` need **Write access**.
+- An HTTPS address for a self-hosted instance. The CLI allows plain HTTP only on `localhost`.
+
+## Install the CLI
 
 ```bash
 npm install --global @sniptide/cli
+sniptide --version
 ```
 
-Contributors can also build from a checkout:
+`--version` prints the installed version. Contributors can run the source from a checkout with
+`bun run cli <command>`, or build it with `bun --filter @sniptide/cli build` and run
+`node packages/cli/dist/sniptide.js`.
 
-```bash
-git clone https://github.com/Dino-Kupinic/sniptide.git && cd sniptide
-bun install
-bun --filter @sniptide/cli build
-alias sniptide='node /absolute/path/to/sniptide/packages/cli/dist/sniptide.js'
-```
+## Connect to your account
 
-Without building, `bun run cli <command>` from the checkout runs the source.
+Choose one way to give the CLI your token.
 
-## Connect to an instance
+<Tabs items={["Save the token", "Environment variables"]}>
+<Tab value="Save the token">
 
-Create a token in **Settings → API tokens** (see [API tokens](/api-tokens)), then either export it:
-
-```bash
-export SNIPTIDE_TOKEN='snpt_…'
-export SNIPTIDE_BASE_URL='https://paste.example.com'   # self-hosted; the default is https://app.sniptide.com
-```
-
-or save it once, without putting it in a process list:
+Pipe the token to `login`, so it never appears in the process list. Add `--base-url` for a
+self-hosted instance:
 
 ```bash
 printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin --base-url https://paste.example.com
 ```
 
-`login` checks the token with the instance before saving it, to `~/.config/sniptide/config.json`
-(`$XDG_CONFIG_HOME/sniptide/config.json`, readable only by you; `SNIPTIDE_CONFIG` picks another
-file). Environment variables beat saved values, and `--base-url` beats the environment. A saved
-token is only used for the exact instance URL it was saved for. `sniptide logout` removes it.
+```text
+Logged in to https://paste.example.com.
+```
 
-HTTPS is required except on localhost, and redirects are refused so a token never leaves the
-instance you chose.
+`login` checks the token with the instance before it saves it to
+`~/.config/sniptide/config.json`, or `$XDG_CONFIG_HOME/sniptide/config.json`, readable only by
+you. `SNIPTIDE_CONFIG` picks another file. A saved token is used only for the exact instance
+address it was saved for. `sniptide logout` removes it.
+
+</Tab>
+<Tab value="Environment variables">
+
+```bash
+export SNIPTIDE_TOKEN='snpt_…'
+export SNIPTIDE_BASE_URL='https://paste.example.com'
+```
+
+Leave `SNIPTIDE_BASE_URL` unset for the hosted app. It defaults to `https://app.sniptide.com`.
+
+</Tab>
+</Tabs>
+
+Environment variables take precedence over saved values, and `--base-url` takes precedence over
+the environment. The CLI refuses redirects, so a token never leaves the instance you chose.
 
 ## Capture code
 
@@ -59,22 +74,22 @@ sniptide push src/components/Button.tsx --lines 10:35
 ```
 
 `push` takes files, directories and quoted globs, and combines them. Every pattern must match
-something.
+something. It prints the new paste's id and how many files it captured.
 
-- A paste holds up to **10 text files** and **1 MiB**, the app's default limits. Narrow larger
-  selections instead of having files silently dropped.
-- Every file keeps its path relative to where you ran `push`, in sorted order.
-- Binary files, symlinks, `.env` files, Git internals and build or dependency directories are left
-  out, and so are Git-ignored files. Naming an unsafe path explicitly is an error. `.env` files go
-  through `sniptide env` instead.
-- `--lines START:END` captures part of **one** file (1-based, inclusive); the path and range are
-  remembered.
-- Inside a Git repository, the paste records the origin repository, the HEAD commit and whether the
-  files differ from it. Credentials in repository URLs are removed.
-- `--visibility private|unlisted|public` sets who can open it. **The default is private.**
-  `--collection` names a collection that already exists; it isn't created. `--tag` can be repeated.
-  `--description` adds text.
-- `--dry-run` shows the capture without authenticating or touching the network.
+- A paste holds up to **10 text files** and **1 MiB**. The CLI stops with an error instead of
+  dropping files, so narrow larger selections.
+- Every file keeps its path relative to the directory you ran `push` in, in sorted order.
+- Binary files, symbolic links, `.env` files, Git internals, build and dependency directories,
+  and Git-ignored files are left out. Naming one of them explicitly is an error. Use
+  [`sniptide env`](#sync-env-files) for `.env` files.
+- `--lines START:END` captures part of **one** file, counted from 1 and inclusive. The path and
+  range are recorded with the paste.
+- Inside a Git repository, the paste records the origin repository, the HEAD commit and whether
+  the files differ from it. Credentials in repository URLs are removed.
+- `--visibility private|unlisted|public` sets who can open the paste. **The default is private.**
+- `--collection` names a collection that already exists. The CLI doesn't create it.
+- `--tag` can be repeated, and `--description` adds a description.
+- `--dry-run` shows what would be captured without signing in or using the network.
 
 ## Restore code
 
@@ -83,14 +98,15 @@ sniptide pull PASTE_ID --dir src/imported
 sniptide pull collection:ui --dry-run
 ```
 
-`pull` takes a paste id or slug, or `collection:<slug>` for a whole collection. It checks every
-path before writing anything, creates nested directories, and refuses path traversal, symbolic
-links and duplicate paths across a collection. It never replaces an existing file unless you pass
-`--force`. `--dry-run` lists what it would write.
+`pull` takes a paste id or link, or `collection:<slug>` for a whole collection.
 
-A collection is pulled as the ordered set it is: oldest capture first, every page fetched before
-anything is written, up to 1,000 pastes and 20 MiB. Restore into a fresh directory if you want to
-review the result in isolation.
+1. It fetches everything and checks every path before it writes anything.
+2. It refuses path traversal, symbolic links and duplicate paths across a collection.
+3. It creates nested directories and writes the files.
+
+`pull` never replaces an existing file unless you pass `--force`. `--dry-run` lists what it would
+write. A collection is restored oldest capture first, up to 1,000 pastes and 20 MiB. Restore into
+a fresh directory when you want to review the result on its own.
 
 ## Install a collection as an agent skill
 
@@ -100,15 +116,19 @@ sniptide skill ui --agent cursor --name our-ui --dry-run
 ```
 
 `skill` turns a collection into a skill that Claude Code, Cursor or Codex loads when a task needs
-it. It writes `SKILL.md` with a description and a section for each paste, and puts the files next to
-it under `snippets/<paste-slug>/`, so the agent reads only the ones it uses. The skill goes in
-`.claude/skills/<name>` by default, in `.cursor/skills/<name>` with `--agent cursor` and in
-`.agents/skills/<name>` with `--agent codex`. `--dir` picks another skills folder.
+it. It writes `SKILL.md` with a description and a section for each paste, and puts the files next
+to it under `snippets/<paste-slug>/`, so the agent reads only the ones it uses.
 
-The name defaults to the collection slug. Run the command again with `--force` to refresh the skill
-after the collection changes. It replaces the files it writes and leaves files from removed pastes
-in place, so delete the skill folder first if you want an exact copy. The same path checks and size
-limits as `pull` apply.
+| Agent | Option | Folder |
+| --- | --- | --- |
+| Claude Code | none, the default | `.claude/skills/<name>` |
+| Cursor | `--agent cursor` | `.cursor/skills/<name>` |
+| Codex | `--agent codex` | `.agents/skills/<name>` |
+
+`--dir` picks another skills folder, and the name defaults to the collection slug. To refresh the
+skill after the collection changes, run the command again with `--force`. It replaces the files it
+writes and leaves files from removed pastes in place, so delete the skill folder first for an
+exact copy. The path checks and size limits of `pull` apply.
 
 ## Find pastes
 
@@ -117,37 +137,37 @@ sniptide search 'button' --language typescript --tag react --limit 20
 sniptide list --collection ui --cursor CURSOR
 ```
 
-`search` finds pastes where every word appears in the title, description, tags, a file path or
-the code. Both return one page; pass `--cursor` to continue (`--limit` is 1 to 100). Only your
-own live pastes are listed.
+`search` finds pastes where every word appears in the title, link, description, tags, a file path
+or the code. Both commands return one page. Pass the printed cursor to `--cursor` for the next
+one. `--limit` is 1 to 100. Only your own live pastes are listed.
 
-## Sync `.env` files
+## Sync .env files
 
-Env groups hold a project's environment variables on your instance, encrypted at rest.
-Use the [Secrets web editor](/core-concepts/secrets) to edit values and create expiring share links.
+Env groups hold a project's environment variables on your instance, encrypted at rest. Edit the
+same groups in the [Secrets](/core-concepts/secrets) page of the app.
 
 ```bash
 sniptide env push my-app              # upload ./.env, replacing the group's variables
-sniptide env pull my-app              # write ./.env (mode 0600); won't overwrite without --force
-sniptide env pull my-app --stdout     # print it instead
+sniptide env pull my-app              # write ./.env with mode 0600
+sniptide env pull my-app --stdout     # print the variables instead
 sniptide env run my-app -- bun dev    # run a command with the variables set
 sniptide env list
 sniptide env delete my-app
 ```
 
+- A push **replaces** the whole group, so a variable you removed from the file is removed from the
+  group.
+- `env pull` won't overwrite an existing file without `--force`.
+- `--file PATH` uses a file other than `.env`.
+- Values are never printed, even in `--json` output, except by `env pull --stdout`.
+
 Group names are 1 to 64 lowercase letters, digits, `.`, `-` and `_`. A group holds up to 500
-variables (32 KB per value, 256 KB in all) and an account up to 100 groups. A push **replaces** the
-whole group, so a variable you removed from the file is removed from the group. Values are never
-printed, even in `--json` output, except by `env pull --stdout`. `--file PATH` uses a file other
-than `.env`.
+variables (32 KB per value, 256 KB in all), and an account up to 100 groups.
 
-The encryption key comes from `ENV_SECRETS_KEY` or, without it, `BETTER_AUTH_SECRET`; see
-[Configuration](/self-hosting/configuration).
+## Use the CLI from scripts and agents
 
-## Use it from scripts and agents
-
-Add `--json` (`-j`) and each command writes one JSON object: a success to stdout, or a failure to
-stderr with stdout empty.
+Add `--json` (`-j`) and each command writes one JSON object: a success to standard output, or a
+failure to standard error with standard output empty.
 
 ```json
 {"ok":true,"data":{"directory":"/project","files":["src/Button.tsx"],"dryRun":false}}
@@ -158,19 +178,40 @@ stderr with stdout empty.
 | `0` | Success |
 | `1` | Configuration, network, server, response or filesystem failure |
 | `2` | Invalid input or a path conflict |
-| `3` | Token missing, invalid or without the needed access |
+| `3` | The token is missing, invalid or lacks the access the command needs |
 
-Requests time out after 30 seconds and responses are capped at 25 MiB. Pushes are never retried
-automatically, so a flaky connection can't create duplicates.
+Requests time out after 30 seconds, and responses are capped at 25 MiB. The CLI never retries a
+push, so a flaky connection can't create duplicates. Check `sniptide list` before you push again
+after a timeout.
 
-## Move code between projects offline
+## Move code between machines offline
 
-No account is needed to hand a capture to another machine:
+You don't need an account to hand a capture to another machine:
 
 ```bash
 sniptide push src/components/button --title 'Button' --output /tmp/button.json
 sniptide pull --input /tmp/button.json
 ```
 
-The bundle is versioned JSON with the code and its source metadata, written with owner-only
-permissions, and never replaces an existing file.
+The bundle is versioned JSON with the code and its source metadata, written readable only by you.
+Pulling it never replaces an existing file.
+
+## Command reference
+
+| Command | Purpose | Options |
+| --- | --- | --- |
+| `sniptide login --token-stdin` | Save a token after checking it | `--base-url` |
+| `sniptide logout` | Remove saved credentials | |
+| `sniptide push <files\|dirs\|globs>` | Capture up to 10 files | `--title`, `--description`, `--visibility`, `--collection`, `--tag`, `--lines`, `--dry-run`, `--output` |
+| `sniptide pull <id\|collection:slug>` | Restore files | `--dir`, `--force`, `--dry-run`, `--input` |
+| `sniptide list` | List pastes | `--tag`, `--language`, `--collection`, `--limit`, `--cursor` |
+| `sniptide search <query>` | Search pastes | Same as `list` |
+| `sniptide skill <collection>` | Install a collection as a skill | `--agent`, `--name`, `--dir`, `--force`, `--dry-run` |
+| `sniptide env list` | List env groups | |
+| `sniptide env push <group>` | Upload `.env`, replacing the group | `--file`, `--dry-run` |
+| `sniptide env pull <group>` | Write the group to `.env` | `--file`, `--force`, `--dry-run`, `--stdout` |
+| `sniptide env run <group> -- <command>` | Run a command with the group's variables | |
+| `sniptide env delete <group>` | Delete an env group | |
+
+Every command also takes `--base-url`, `--json` (`-j`) and `--help` (`-h`). Run
+`sniptide --help` for the same summary in the terminal.

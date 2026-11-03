@@ -10,6 +10,7 @@
     "format": "turbo format",
     "typecheck": "turbo typecheck",
     "check": "biome ci . && bun run typecheck",
+    "verify": "bun run check && bun run test && bun --filter docs build",
     "check:deps": "knip --include dependencies,unlisted,binaries",
     "audit:deps": "bun audit --audit-level=moderate",
     "test": "bun run test:cli && bun run test:mcp && bun run test:docs && bun run test:web && bun run test:sdk",

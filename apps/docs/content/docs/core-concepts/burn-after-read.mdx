@@ -1,38 +1,48 @@
 ---
 title: Burn after read
-description: Share something once. The paste deletes itself after its first read.
+description: Share a Sniptide paste that one person can read once, then it moves to your trash. Learn what readers, link previews and you see.
 ---
 
-**Burn after reading** makes a paste one-time: the first person to open it gets the code, and then
-the paste is gone. Use it for things that should be read once, like a one-off credential or a
-snippet you don't want to linger.
+**Burn after reading** makes a paste readable once. The first person who opens it and confirms
+gets the code, and then the paste is gone from its link. Use it for something that should be read
+once, such as a one-off credential.
 
-Turn it on in the editor under **Visibility & expiry**, or make it your default under Settings.
+Turn it on in the editor's **Protection** setting, or make it your default under
+[paste defaults](/settings#set-paste-defaults).
 
-## What the reader sees
+## What a reader sees
 
-Opening a burn-after-read link doesn't burn it. The reader first sees a sealed page explaining that
-the paste burns when opened, with an **Open and burn** button. Only that explicit choice reveals
-the code and deletes the paste. They should copy what they need straight away: once they leave
-the page it is gone.
+Opening the link doesn't burn the paste. The reader first sees a sealed page that says the paste
+can be read once, with an **Open and burn** button. Only that button reveals the code and burns
+the paste. After that, the code stays on the page until the reader leaves it, so they should copy
+what they need straight away.
 
-This also makes the paste safe to put in a chat. Link previews, mail scanners, search crawlers and
-browser prefetches only load the sealed page, so they can't use it up.
+The sealed page makes the link safe to post in a chat. Link previews, mail scanners, search
+crawlers and browser prefetches only load the sealed page, so they can't use up the read.
 
-## What happens to the paste
+## What you see as the owner
 
-- **Only one reader gets it.** If two people open it at the same moment, one wins and the other
-  sees the paste as gone.
-- **It moves to your trash**, not into thin air. You can **Restore** it for 30 days; after that it
-  is deleted. The link stops working immediately.
-- **You get a notification** (and an email, if you turned those on) that it was read.
-- **You aren't a reader.** Opening your own burn-after-read paste doesn't burn it.
-- **No raw access** for anyone but you, and it can't be posted to a Slack or Discord channel.
-- **It isn't listed under Shared with me** for people you invited. Like any other reader, they
-  read it once through its link.
+Your own paste's link behaves the same for you. Opening it shows the sealed page with a note that
+opening it there deletes it too. To look at the paste without burning it, open it from your
+pastes in the app instead.
 
-## Combining with other settings
+## What happens after the read
 
-A burn-after-read paste can still have a password, which the reader enters before the seal is
-offered, and an expiry, after which it is gone unread. A paste that expires unread is removed
-like any other expired paste.
+- **One reader gets it.** If two people select **Open and burn** at the same moment, one gets the
+  code and the other sees that the paste is gone.
+- **It moves to your trash.** The link stops working at once. You can **Restore** the paste from
+  **Trash** for 30 days, and after that it is deleted.
+- **You get a notification**, and an email if you turned those on, unless you burned it yourself.
+
+## Restrictions
+
+- Only you can read the paste's raw files or print it.
+- It can't be embedded, posted to Slack or Discord, or shown in a link preview.
+- It isn't listed under **Shared with me** for people you invited. They read it once through its
+  link, like anyone else.
+
+## Combine it with other settings
+
+A burn-after-read paste can also have a password, which the reader enters before the sealed page
+appears, and an expiry. A paste that expires before anyone reads it is removed like any other
+expired paste.
