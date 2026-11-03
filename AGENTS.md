@@ -27,6 +27,14 @@ pull request title: `type(scope): description`, with an imperative, lowercase de
 example `feat(web): add paste collections`). A husky `commit-msg` hook runs commitlint, and
 `.github/workflows/pr-title.yml` checks PR titles. See `CONTRIBUTING.md` for the allowed types.
 
+# Code graph
+
+Graphify is optional, and these steps apply when `graphify` is on your PATH. If `graphify-out/graph.json` is missing, run `graphify update .` once. It parses the code locally in a few seconds and sends nothing to a model.
+
+When the graph exists, run `graphify query "<question>"` before a broad search to find the files that matter, then read those files before you change them. `graphify path "<A>" "<B>"` shows how two symbols connect, and `graphify explain "<symbol>"` describes one. Use grep directly when you are looking for exact text.
+
+The graph can lag behind your branch, so the source files decide what is true. `graphify-out/` stays out of git.
+
 # Project Management
 
 Before coding, find or create the Linear issue (team WRK). Use its gitBranchName for the branch so the PR links automatically.
