@@ -6,6 +6,8 @@ import nodemailer from "nodemailer"
 import type Mail from "nodemailer/lib/mailer"
 import type { SMTPPoolOptions } from "nodemailer/lib/smtp-pool"
 import { type Config, getConfig } from "@/lib/config"
+import { approveEmailChange, resetPassword, verifyEmail } from "@/lib/email/content"
+import { renderEmail } from "@/lib/email/render"
 import { hit } from "@/lib/rate-limit"
 import { HOUR_SECONDS } from "@/lib/time"
 
@@ -107,7 +109,7 @@ export async function sendEmailVerification({
   user: { id: string; email: string }
   url: string
 }) {
-  const smtp = getConfig().smtp
+  const { smtp, legal } = getConfig()
   if (!smtp) throw new Error("Email delivery is not configured.")
   const allowance = await hit([
     { key: `email:verification:${user.id}`, max: 3, windowSeconds: HOUR_SECONDS },
@@ -117,8 +119,7 @@ export async function sendEmailVerification({
   await sendMail(smtp, {
     from: smtp.from,
     to: user.email,
-    subject: "Verify your Sniptide email",
-    text: `Open this link to confirm that this address belongs to your Sniptide account:\n\n${url}\n\nIf you did not request this email, you can ignore it.`,
+    ...(await renderEmail(verifyEmail({ to: user.email, url, operator: legal.operator }))),
   })
 }
 
@@ -133,7 +134,7 @@ export async function sendEmailChangeConfirmation({
   newEmail: string
   url: string
 }) {
-  const smtp = getConfig().smtp
+  const { smtp, legal } = getConfig()
   if (!smtp) throw new Error("Email delivery is not configured.")
   const allowance = await hit([
     { key: `email:change:${user.id}`, max: 3, windowSeconds: HOUR_SECONDS },
@@ -142,8 +143,9 @@ export async function sendEmailChangeConfirmation({
   await sendMail(smtp, {
     from: smtp.from,
     to: user.email,
-    subject: "Approve your Sniptide email change",
-    text: `Someone asked to change the email of your Sniptide account to ${newEmail}. Open this link to approve it, and we'll send a verification link to the new address:\n\n${url}\n\nIf you didn't ask for this, ignore this email and change your password.`,
+    ...(await renderEmail(
+      approveEmailChange({ to: user.email, newEmail, url, operator: legal.operator }),
+    )),
   })
 }
 
@@ -156,7 +158,7 @@ export async function sendPasswordReset({
   user: { id: string; email: string }
   url: string
 }) {
-  const smtp = getConfig().smtp
+  const { smtp, legal } = getConfig()
   if (!smtp) return
   void (async () => {
     const allowance = await hit([
@@ -166,8 +168,7 @@ export async function sendPasswordReset({
     await sendMail(smtp, {
       from: smtp.from,
       to: user.email,
-      subject: "Reset your Sniptide password",
-      text: `Open this link to choose a new password for your Sniptide account. It works once, for one hour:\n\n${url}\n\nChanging your password signs you out on every device. If you didn't ask for this, you can ignore this email.`,
+      ...(await renderEmail(resetPassword({ to: user.email, url, operator: legal.operator }))),
     })
   })().catch((error) => console.error("Password reset email failed", error))
 }

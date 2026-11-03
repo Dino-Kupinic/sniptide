@@ -267,6 +267,9 @@ describeDb("notification channel delivery", () => {
       "http://localhost:3000/analytics",
       "List-Unsubscribe:",
       "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
+      "Content-Type: multipart/alternative",
+      "Content-Type: text/plain",
+      "Content-Type: text/html",
     ])
       expect(message).toContain(expected)
     for (const secret of [

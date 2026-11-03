@@ -49,7 +49,7 @@ above.
 | --- | --- | --- |
 | `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` | The Sniptide project's site, docs and issue tracker | Where the **Homepage**, **Documentation** and **Help** links in the account menu go. They open in a new tab. |
 | `TERMS_URL`, `PRIVACY_URL` | unset | Turn "Terms" and "Privacy Policy" under the sign-in and sign-up forms into links. Without them that line is left out. |
-| `OPERATOR_NAME`, `OPERATOR_ADDRESS` | unset | Sign the foot of notification emails with who sends them and a postal address. |
+| `OPERATOR_NAME`, `OPERATOR_ADDRESS` | unset | Sign the foot of every email with who sends it and a postal address. |
 | `COPYRIGHT_EMAIL` | unset | Publishes `/copyright`, which explains how to send a copyright takedown notice or counter-notice to this address, with `OPERATOR_NAME` and `OPERATOR_ADDRESS` as the agent. |
 
 A private server can leave all of these unset.
@@ -102,6 +102,11 @@ work without it. Set the host, port and sender together, plus `BETTER_AUTH_URL` 
 
 The same SMTP settings enable password reset emails. Without SMTP, the forgot-password page asks
 people to contact the administrator.
+
+Every email goes out as HTML with a plain-text version that carries the same sentences and links.
+The HTML follows the reader's light or dark appearance in clients that support it, such as Apple
+Mail. Gmail and Outlook on the web apply their own dark mode instead. The Sniptide logo is drawn
+in HTML, so emails load no images or web fonts from your server or anyone else's.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
