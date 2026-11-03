@@ -34,6 +34,7 @@ Server loaders overlap independent locale, translation, origin, account and pref
 Only sidebar data waits for sidebar cookies. Paste content still requires authorization, revision
 rows still wait for their count and page clamp, and trash totals still wait for expired trash to
 be purged. CLI capture reads the remote and working-tree status together after finding a commit.
+The authenticated metrics endpoint reads database statistics and purge backlog together.
 
 `apps/web/test/hot-path-concurrency.test.ts` holds dependencies pending to check that independent
 work starts without waiting. It also checks revision paging, anonymous access, the hourly report

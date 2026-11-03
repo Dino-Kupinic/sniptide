@@ -12,6 +12,7 @@ const hold = async (name: string) => {
 }
 let viewer: string | null = "owner"
 let revisionOffset = -1
+let executions = 0
 const record = {
   id: "paste-id",
   slug: "example",
@@ -106,6 +107,14 @@ mock.module("@/lib/db", () => ({
   getDb: () => ({
     select: query,
     execute: async () => {
+      if (scenario === "metrics") {
+        if (executions++ === 0) {
+          await hold("database")
+          return [{ bytes: 7 }]
+        }
+        started.add("backlog")
+        return [{ pastes: 5 }]
+      }
       started.add("rollup")
       return []
     },
@@ -263,6 +272,25 @@ if (scenario === "hydrate") {
   gate.resolve()
   await pending
   if (scenario === "trash") assert(started.has("totals"))
+} else if (scenario === "metrics") {
+  let denied: Response | null = null
+  mock.module("@/lib/jobs", () => ({ jobStatus: () => ({}) }))
+  mock.module("@/lib/operations-auth", () => ({ operationsAuthFailure: () => denied }))
+  mock.module("@/lib/telemetry", () => ({ telemetrySnapshot: () => ({}) }))
+  const { GET } = await import("../../app/api/metrics/route")
+  const pending = GET(new Request("https://app.test/api/metrics"))
+  await tick()
+  assert(started.has("database"))
+  assert(started.has("backlog"), "purge backlog must not wait for database statistics")
+  gate.resolve()
+  const response = await pending
+  assert.equal(response.headers.get("cache-control"), "private, no-store")
+  const body = await response.json()
+  assert.equal(body.database.bytes, 7)
+  assert.equal(body.purgeBacklog.pastes, 5)
+  denied = new Response("Unauthorized", { status: 401 })
+  assert.equal((await GET(new Request("https://app.test/api/metrics"))).status, 401)
+  assert.equal(executions, 2, "unauthorized scrapes must not execute database queries")
 } else {
   throw new Error(`Unknown scenario ${scenario}`)
 }

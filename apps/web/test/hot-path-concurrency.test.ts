@@ -9,6 +9,7 @@ for (const scenario of [
   "settings",
   "list",
   "trash",
+  "metrics",
 ]) {
   test(`${scenario} preserves dependencies while overlapping independent reads`, async () => {
     const child = Bun.spawn(
