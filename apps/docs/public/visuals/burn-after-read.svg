@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 390" role="img">
+<rect width="960" height="390" rx="24" fill="#101b2a"/>
+<circle cx="900" cy="40" r="120" fill="#1d3448" opacity=".6"/>
+<text x="48" y="57" fill="#74d6d0" font-family="system-ui, sans-serif" font-size="14" font-weight="700" letter-spacing="2">BURN AFTER READ</text>
+<text x="48" y="100" fill="#f4f8fc" font-family="system-ui, sans-serif" font-size="30" font-weight="700">One deliberate read</text>
+<text x="48" y="132" fill="#b5c7d7" font-family="system-ui, sans-serif" font-size="16">Opening the link alone does not reveal the code.</text>
+<rect x="48" y="168" width="272" height="174" rx="16" fill="#1d3043" stroke="#35556b"/>
+<circle cx="76" cy="198" r="14" fill="#72d5cf"/>
+<text x="76" y="203" text-anchor="middle" fill="#102530" font-family="system-ui, sans-serif" font-size="13" font-weight="700">1</text>
+<text x="72" y="243" fill="#f4f8fc" font-family="system-ui, sans-serif" font-size="19" font-weight="700">Sealed link</text>
+<text x="72" y="274" fill="#c4d5e1" font-family="system-ui, sans-serif" font-size="15">Readers and previews see</text>
+<text x="72" y="297" fill="#c4d5e1" font-family="system-ui, sans-serif" font-size="15">the sealed page.</text>
+<path d="M314 258h20m-6-6 6 6-6 6" fill="none" stroke="#72d5cf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="344" y="168" width="272" height="174" rx="16" fill="#1d3043" stroke="#35556b"/>
+<circle cx="372" cy="198" r="14" fill="#72d5cf"/>
+<text x="372" y="203" text-anchor="middle" fill="#102530" font-family="system-ui, sans-serif" font-size="13" font-weight="700">2</text>
+<text x="368" y="243" fill="#f4f8fc" font-family="system-ui, sans-serif" font-size="19" font-weight="700">Open and burn</text>
+<text x="368" y="274" fill="#c4d5e1" font-family="system-ui, sans-serif" font-size="15">One reader confirms and</text>
+<text x="368" y="297" fill="#c4d5e1" font-family="system-ui, sans-serif" font-size="15">receives the code.</text>
+<path d="M610 258h20m-6-6 6 6-6 6" fill="none" stroke="#72d5cf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="640" y="168" width="272" height="174" rx="16" fill="#1d3043" stroke="#35556b"/>
+<circle cx="668" cy="198" r="14" fill="#72d5cf"/>
+<text x="668" y="203" text-anchor="middle" fill="#102530" font-family="system-ui, sans-serif" font-size="13" font-weight="700">3</text>
+<text x="664" y="243" fill="#f4f8fc" font-family="system-ui, sans-serif" font-size="19" font-weight="700">Moved to trash</text>
+<text x="664" y="274" fill="#c4d5e1" font-family="system-ui, sans-serif" font-size="15">The link stops working;</text>
+<text x="664" y="297" fill="#c4d5e1" font-family="system-ui, sans-serif" font-size="15">the owner can restore it.</text>
+</svg>
