@@ -110,6 +110,30 @@ export function serializeDotenv(variables: Variable[]): string {
     .join("")
 }
 
+// `env pull` writes this comment as the file's first line, and `env push` sends the revision back
+// so the instance refuses the push once the group changed in between (WRK-472). dotenv and
+// parseDotenv skip it like any comment.
+const HEADER = /^# sniptide env ([a-z0-9][a-z0-9._-]{0,63}) revision (\d{1,15})$/
+
+export function revisionHeader(group: string, revision: number) {
+  return `# sniptide env ${group} revision ${revision}\n`
+}
+
+// The revision a file was pulled at, when its header names this group.
+export function readRevision(text: string, group: string): number | undefined {
+  const first = text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0] ?? ""
+  const match = HEADER.exec(first)
+  return match && match[1] === group ? Number(match[2]) : undefined
+}
+
+// The file's text with its header set to this group and revision, replacing an existing header.
+export function withRevision(text: string, group: string, revision: number) {
+  const body = text.replace(/^\uFEFF/, "")
+  const first = body.split(/\r?\n/, 1)[0] ?? ""
+  const rest = HEADER.test(first) ? body.slice(first.length).replace(/^\r?\n/, "") : body
+  return revisionHeader(group, revision) + rest
+}
+
 function parseGroup(data: Record<string, unknown>) {
   const group = record(data.group)
   if (!Array.isArray(group.variables))
@@ -121,18 +145,26 @@ function parseGroup(data: Record<string, unknown>) {
       throw new CliError("Invalid env group response.", "INVALID_RESPONSE", 1)
     return { name, value: entry.value }
   })
-  return { slug: string(group.slug, "group"), variables }
+  const revision =
+    typeof group.revision === "number" &&
+    Number.isSafeInteger(group.revision) &&
+    group.revision >= 0
+      ? group.revision
+      : undefined
+  return { slug: string(group.slug, "group"), revision, variables }
 }
 
 export async function fetchGroup(api: Api, group: string) {
   return parseGroup(await api.request(`env/${encodeURIComponent(group)}`))
 }
 
-export async function pushGroup(api: Api, group: string, variables: Variable[]) {
-  return parseGroup(await api.request(`env/${encodeURIComponent(group)}`, { variables }, "PUT"))
+// Without a revision the push replaces the group whatever happened to it since.
+export async function pushGroup(api: Api, group: string, variables: Variable[], revision?: number) {
+  const body = revision === undefined ? { variables } : { variables, revision }
+  return parseGroup(await api.request(`env/${encodeURIComponent(group)}`, body, "PUT"))
 }
 
-export async function readEnvFile(filename: string): Promise<Variable[]> {
+export async function readEnvText(filename: string): Promise<string> {
   let handle: Awaited<ReturnType<typeof open>>
   try {
     handle = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW)
@@ -144,7 +176,7 @@ export async function readEnvFile(filename: string): Promise<Variable[]> {
     const info = await handle.stat()
     if (!info.isFile() || info.size > MAX_FILE_BYTES)
       throw new CliError("The env file must be a regular file smaller than 1 MiB.")
-    return parseDotenv(await handle.readFile("utf8"))
+    return await handle.readFile("utf8")
   } finally {
     await handle.close()
   }
@@ -152,7 +184,12 @@ export async function readEnvFile(filename: string): Promise<Variable[]> {
 
 // Writes the .env file owner-only (0600), through a temporary file so a reader never sees half of
 // it. An existing file is only replaced with `force`, and never through a symbolic link.
-export async function writeEnvFile(filename: string, variables: Variable[], force: boolean) {
+export async function writeEnvFile(
+  filename: string,
+  variables: Variable[],
+  force: boolean,
+  header = "",
+) {
   const existing = await lstat(filename).catch((error: unknown) => {
     if (isMissing(error)) return null
     throw error
@@ -162,6 +199,18 @@ export async function writeEnvFile(filename: string, variables: Variable[], forc
       `${path.basename(filename)} already exists. Use --force to replace it.`,
       "PATH_CONFLICT",
     )
+  await replaceFile(filename, header + serializeDotenv(variables))
+}
+
+// After a push, records the group's new revision in the file it came from, so the next push from
+// it isn't refused as stale. Only the header line changes.
+export async function stampRevision(filename: string, group: string, revision: number) {
+  const existing = await lstat(filename)
+  if (!existing.isFile()) return
+  await replaceFile(filename, withRevision(await readEnvText(filename), group, revision))
+}
+
+async function replaceFile(filename: string, text: string) {
   const temporary = path.join(path.dirname(filename), `.${path.basename(filename)}.${randomUUID()}`)
   try {
     const handle = await open(
@@ -170,7 +219,7 @@ export async function writeEnvFile(filename: string, variables: Variable[], forc
       0o600,
     )
     try {
-      await handle.writeFile(serializeDotenv(variables), "utf8")
+      await handle.writeFile(text, "utf8")
     } finally {
       await handle.close()
     }

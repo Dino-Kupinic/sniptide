@@ -29,6 +29,20 @@ export const moderationCommandSchema = z.strictObject({
   caseReference: z.uuid(),
 })
 
+// The moves an operator may make, and why. Any restricted state can be released or tightened, but
+// a removed paste only comes back through an appeal or a correction, and a command that would
+// leave the state as it is is refused instead of writing an empty audit event.
+export function moderationTransitionError(
+  from: ModerationState,
+  to: ModerationState,
+  reason: z.infer<typeof moderationCommandSchema>["reasonCode"],
+): string | null {
+  if (from === to) return `The paste is already ${to}.`
+  if (from === "removed" && reason !== "appeal" && reason !== "correction")
+    return "A removed paste can only change state with the appeal or correction reason."
+  return null
+}
+
 export async function inspectModeration(db: Database, id: unknown) {
   const pasteId = z.uuid().parse(id)
   const [row] = await db
@@ -77,6 +91,12 @@ export async function transitionModeration(db: Database, input: unknown, hostAct
     ) {
       throw new Error("Moderation version conflict. Inspect the paste again.")
     }
+    const invalid = moderationTransitionError(
+      current.moderationState,
+      command.state,
+      command.reasonCode,
+    )
+    if (invalid) throw new Error(invalid)
     await tx
       .update(paste)
       .set({

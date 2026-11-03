@@ -153,8 +153,13 @@ describeDb("sniptide CLI against the app", () => {
     expect((await cli(["env", "push", "shop"], one)).data.variables).toEqual(["API_URL", "SECRET"])
     expect((await cli(["env", "pull", "shop"], two)).code).toBe(0)
     expect(await readFile(path.join(two, ".env"), "utf8")).toBe(
-      'API_URL=https://api.example.com\nSECRET="s3cr3t value"\n',
+      '# sniptide env shop revision 0\nAPI_URL=https://api.example.com\nSECRET="s3cr3t value"\n',
     )
+    // The first push stamped project one's file too, so both copies know revision 0. Once two
+    // pushes, one is stale and is refused until it pulls again or forces.
+    expect((await cli(["env", "push", "shop"], two)).code).toBe(0)
+    expect((await cli(["env", "push", "shop"], one)).code).toBe(1)
+    expect((await cli(["env", "push", "shop", "--force"], one)).code).toBe(0)
     const ran = await cli(
       [
         "env",

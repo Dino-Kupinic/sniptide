@@ -37,8 +37,10 @@ export async function purgeStaleData(now = new Date()) {
         const trashed = await tx.execute(
           sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE deleted_at < ${cutoff} ORDER BY deleted_at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
         )
+        // A paste in the trash keeps its 30 days there even when it expired earlier, so only
+        // untrashed pastes are purged by their expiry (lib/pastes/lifecycle.ts).
         const expired = await tx.execute(
-          sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE expires_at < ${cutoff} ORDER BY expires_at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
+          sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE expires_at < ${cutoff} AND deleted_at IS NULL ORDER BY expires_at, id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING id`,
         )
         const days = await tx.execute(
           sql`DELETE FROM paste_view_day WHERE (paste_id, day) IN (SELECT paste_id, day FROM paste_view_day WHERE day < ${day} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,

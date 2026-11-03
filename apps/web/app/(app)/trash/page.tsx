@@ -12,10 +12,13 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/trash">) {
-  const locale = await getLocale()
   const query = parsePasteListQuery(await searchParams)
-  const data = await listPastePage({ mode: "trash" }, query)
-  const [totals, { host }] = await Promise.all([trashTotals(), getSiteOrigin()])
+  const [data, locale, { host }] = await Promise.all([
+    listPastePage({ mode: "trash" }, query),
+    getLocale(),
+    getSiteOrigin(),
+  ])
+  const totals = await trashTotals()
   return (
     <TrashList
       rows={data.pastes.map((paste) => toTrashRow(paste, locale))}

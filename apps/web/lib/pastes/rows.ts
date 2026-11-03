@@ -118,7 +118,11 @@ export function toTrashRow(paste: PasteSummary, locale: Locale = "en"): TrashRow
     title: paste.title,
     language: paste.language,
     deletedAt,
-    deletedLabel: deletedToday ? t("today") : formatDate(deletedAt, locale),
+    deletedLabel: paste.burnedAt
+      ? t("burnedOn", { date: deletedToday ? t("today") : formatDate(deletedAt, locale) })
+      : deletedToday
+        ? t("today")
+        : formatDate(deletedAt, locale),
     goneLabel: daysLeft <= 1 ? t("tomorrow") : timeUntil(goneAt, now, locale),
     remaining: Math.min(1, Math.max(0, (goneAt - now) / (TRASH_DAYS * DAY))),
     goneSoon: daysLeft <= 1,

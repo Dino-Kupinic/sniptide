@@ -89,15 +89,38 @@ function useSharingControls(state: SharingState, list: boolean) {
   const [burnAfterRead, setBurnAfterRead] = React.useState(state.burnAfterRead)
   const [allowRaw, setAllowRaw] = React.useState(state.allowRaw)
   const [pending, startTransition] = React.useTransition()
+  // The newest save per setting. A failed save only puts its control back while no later change
+  // to the same setting is on its way, so a slow failure can't undo a newer choice.
+  const latestSave = React.useRef<Record<string, number>>({})
+  const saves = React.useRef(0)
+
+  // The page re-renders with the stored values after a save or a change made elsewhere, such as
+  // the editor or another tab. Take them over whenever they differ from what was last stored.
+  const [stored, setStored] = React.useState(state)
+  if (
+    stored.visibility !== state.visibility ||
+    stored.hasPassword !== state.hasPassword ||
+    stored.burnAfterRead !== state.burnAfterRead ||
+    stored.allowRaw !== state.allowRaw
+  ) {
+    setStored(state)
+    setVisibility(state.visibility)
+    setHasPassword(state.hasPassword)
+    setBurnAfterRead(state.burnAfterRead)
+    setAllowRaw(state.allowRaw)
+  }
 
   // Reports every change, and puts the control back where it was when the save fails.
   function save(input: Parameters<typeof updateSharing>[1], restore?: () => void) {
+    const setting = Object.keys(input).join()
+    const id = ++saves.current
+    latestSave.current[setting] = id
     startTransition(async () => {
       const result = await runAction(() => updateSharing(state.slug, input), {
         success: t("sharingUpdated"),
         error: t("couldnTUpdateSharingTryAgain"),
       })
-      if (!result.ok) restore?.()
+      if (!result.ok && latestSave.current[setting] === id) restore?.()
     })
   }
 

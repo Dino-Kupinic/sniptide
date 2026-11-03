@@ -147,6 +147,10 @@ const { group } = await client.readEnvGroup("my-app")
 the values in plain text, so keep their results out of logs. `listEnvGroups` returns names and
 counts without values.
 
+To refuse a write when someone changed the group after you read it, pass the revision you read:
+`writeEnvGroup("my-app", variables, { revision: group.revision })`. A newer group fails with
+status 412 and stays as it was.
+
 ## Self-hosted instances
 
 Pass your instance's address as the second argument, including any path prefix:
@@ -217,7 +221,7 @@ integer.
 | `collectionPastes(slug, cursor?)` | `GET /collections/{slug}/pastes` | read | `Page<Paste>` |
 | `listEnvGroups()` | `GET /env` | read | `{ groups: EnvGroupSummary[] }` |
 | `readEnvGroup(group)` | `GET /env/{group}` | read | `{ group: EnvGroup }` |
-| `writeEnvGroup(group, variables)` | `PUT /env/{group}` | write | `{ group: EnvGroup }` |
+| `writeEnvGroup(group, variables, { revision })` | `PUT /env/{group}` | write | `{ group: EnvGroup }` |
 | `deleteEnvGroup(group)` | `DELETE /env/{group}` | write | `{ ok: true }` |
 
 `id` accepts a paste's id or its slug. Identifiers are URL-encoded for you, and an empty value,

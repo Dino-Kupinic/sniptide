@@ -13,11 +13,11 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/dashboard">) {
-  const locale = await getLocale()
-  const [session, { origin, host }, preferences] = await Promise.all([
+  const [session, { origin, host }, preferences, locale] = await Promise.all([
     requireSession(),
     getSiteOrigin(),
     getPreferences(),
+    getLocale(),
   ])
   // Every sign-up lands here, by email, social sign-in or a verification link, so this is where a
   // new account turns off to the welcome wizard. The social sign-up marker (?auth=) goes along so

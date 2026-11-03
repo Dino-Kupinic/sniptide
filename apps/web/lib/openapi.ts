@@ -147,6 +147,7 @@ const envGroupParameter = {
 const envExample = {
   slug: "my-app",
   updatedAt: "2026-10-13T08:02:11.000Z",
+  revision: 4,
   variables: [
     { name: "DATABASE_URL", value: "postgres://app:secret@db:5432/app" },
     { name: "STRIPE_KEY", value: "replace-with-your-key" },
@@ -1281,6 +1282,9 @@ export const openApiDocument = {
           "Sets the group's variables to exactly these, creating the group if it's new: a",
           "variable left out is removed. Values are encrypted before they're stored. Up to 500",
           "variables, 32 KB per value and 256 KB per group. `sniptide env push` sends this.",
+          "",
+          "Send `revision` to replace the group only while it is still at that revision (0 for a",
+          "group that doesn't exist yet). A newer group answers 412 and nothing changes.",
         ].join("\n"),
         ...tokenAccess("write"),
         parameters: [envGroupParameter],
@@ -1293,9 +1297,14 @@ export const openApiDocument = {
                 required: ["variables"],
                 properties: {
                   variables: { $ref: "#/components/schemas/EnvVariables" },
+                  revision: {
+                    type: "integer",
+                    minimum: 0,
+                    description: "The revision the variables are based on, from a read.",
+                  },
                 },
               },
-              example: { variables: envExample.variables },
+              example: { variables: envExample.variables, revision: envExample.revision - 1 },
             },
           },
         },
@@ -1322,6 +1331,11 @@ export const openApiDocument = {
             409,
             "The account already has the most env groups it can.",
             "You can have up to 100 env groups. Delete one first.",
+          ),
+          "412": tokenJsonError(
+            412,
+            "The group changed after the revision in the request.",
+            "The env group changed since revision 3. Pull it again, or push without a revision to replace it.",
           ),
           ...tokenErrors,
         },
@@ -1654,10 +1668,15 @@ export const openApiDocument = {
       },
       EnvGroup: {
         type: "object",
-        required: ["slug", "updatedAt", "variables"],
+        required: ["slug", "updatedAt", "revision", "variables"],
         properties: {
           slug: { type: "string" },
           updatedAt: { type: "string", format: "date-time" },
+          revision: {
+            type: "integer",
+            minimum: 0,
+            description: "Goes up by one with every change to the group.",
+          },
           variables: { $ref: "#/components/schemas/EnvVariables" },
         },
       },

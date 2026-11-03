@@ -21,6 +21,7 @@
     "viewsIn": "{title} 中 {count} 个代码片段的浏览量",
     "viewsAll": "全部 {count} 个代码片段的浏览量",
     "afterView": "浏览一次后",
+    "burnedOn": "{date} 已读",
     "never": "永不",
     "neverExpires": "永不过期",
     "expires": "到期时间：{time}",

@@ -21,6 +21,7 @@
     "viewsIn": "Views across {count, plural, one {# paste} other {# pastes}} in {title}",
     "viewsAll": "Views across all {count, plural, one {# paste} other {# pastes}}",
     "afterView": "after 1 view",
+    "burnedOn": "Read {date}",
     "never": "Never",
     "neverExpires": "never expires",
     "expires": "Expires {time}",

@@ -27,11 +27,8 @@ function first(value: string | string[] | undefined) {
 }
 
 export default async function Page({ searchParams }: PageProps<"/analytics">) {
-  const locale = await getLocale()
-  const t = await getTranslations("Core")
-  const workspace = await getTranslations("Workspace")
-  const query = await searchParams
-  const [, report, { host }] = await Promise.all([
+  const [locale, query] = await Promise.all([getLocale(), searchParams])
+  const [, report, { host }, t, workspace] = await Promise.all([
     requireSession(),
     getAnalyticsReport(
       {
@@ -43,6 +40,8 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
       locale,
     ),
     getSiteOrigin(),
+    getTranslations("Core"),
+    getTranslations("Workspace"),
   ])
   const views = report.kpis[0]?.value ?? 0
 

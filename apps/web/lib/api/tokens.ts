@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createHash, randomBytes } from "node:crypto"
-import { apiToken } from "@workspace/db/schema"
+import { apiToken, user } from "@workspace/db/schema"
 import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
@@ -87,6 +87,8 @@ export async function createToken(owner: string, input: TokenInput): Promise<Cre
   const token = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`
   const now = Date.now()
   return getDb().transaction(async (tx) => {
+    // Serializes token creation per account, so two at once can't both pass the limit.
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
     const [count] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(apiToken)

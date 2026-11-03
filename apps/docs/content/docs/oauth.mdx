@@ -68,6 +68,8 @@ scope unlocks.
 - The access token lasts one hour.
 - The client renews it with a refresh token. The refresh token changes on every use and expires
   after 30 days without use.
+- A refresh token that was already used ends the connection. Someone else holding a copy can't
+  keep it alive, and the client has to sign in again.
 - **Revoke** on the connection in **Settings** > **API tokens** ends it at once. The client then
   gets `401` and has to start the sign-in again.
 

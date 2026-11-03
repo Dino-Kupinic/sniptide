@@ -23,6 +23,24 @@ connections for email consumers.
 Web test filenames in the table are under `apps/web/test/`. Browser tests are under
 `apps/web/tests/`. See [development](development.md) for the test database and command setup.
 
+## Async request dependencies
+
+Navigation and sidebar reads start own-paste and shared-paste queries while the readable-star
+predicate checks unlock cookies. Star counts and lists share one predicate promise. Analytics
+reports resolve their scope and daily rollup boundary together, while hourly reports skip the
+rollup lookup.
+
+Server loaders overlap independent locale, translation, origin, account and preference reads.
+Only sidebar data waits for sidebar cookies. Paste content still requires authorization, revision
+rows still wait for their count and page clamp, and trash totals still wait for expired trash to
+be purged. CLI capture reads the remote and working-tree status together after finding a commit.
+The authenticated metrics endpoint reads database statistics and purge backlog together.
+
+`apps/web/test/hot-path-concurrency.test.ts` holds dependencies pending to check that independent
+work starts without waiting. It also checks revision paging, anonymous access, the hourly report
+branch, settings output and trash purge ordering. These checks establish scheduling behavior,
+not a production latency improvement.
+
 ## Pagination plans and upgrade cost
 
 The pagination index choice was checked on PostgreSQL 14.20 with 10,000 disposable paste rows.
