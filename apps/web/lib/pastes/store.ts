@@ -1257,13 +1257,15 @@ export async function navCounts(): Promise<NavCounts> {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()
-  const stars = await readableStarsWhere(viewer)
+  const stars = readableStarsWhere(viewer)
   const [[own], [starred], shared] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
       .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+    stars.then((where) =>
+      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+    ),
     sharedCount(viewer),
   ])
   return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared }
@@ -1287,13 +1289,15 @@ export const sidebarData = cache(
     const viewer = await viewerId()
     if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
     const db = getDb()
-    const stars = await readableStarsWhere(viewer)
+    const stars = readableStarsWhere(viewer)
     const [[own], [starCount], recent, starred, shared] = await Promise.all([
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(pasteTable)
         .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+      stars.then((where) =>
+        db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+      ),
       db
         .select()
         .from(pasteTable)
@@ -1307,12 +1311,14 @@ export const sidebarData = cache(
         )
         .orderBy(...sidebarOrder(views.pastes.sort))
         .limit(views.pastes.limit),
-      db
-        .select()
-        .from(pasteTable)
-        .where(and(stars, sidebarVisibility(views.starred.visibility)))
-        .orderBy(...sidebarOrder(views.starred.sort))
-        .limit(views.starred.limit),
+      stars.then((where) =>
+        db
+          .select()
+          .from(pasteTable)
+          .where(and(where, sidebarVisibility(views.starred.visibility)))
+          .orderBy(...sidebarOrder(views.starred.sort))
+          .limit(views.starred.limit),
+      ),
       sharedCount(viewer),
     ])
     const starSlugs = await starredSlugs([...recent, ...starred].map((record) => record.slug))

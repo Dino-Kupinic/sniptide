@@ -49,15 +49,18 @@ export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) 
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/pastes/[slug]">) {
-  const { slug } = await params
-  const [t, locale] = await Promise.all([getTranslations("Core"), getLocale()])
-  const expiresLabel = (paste: Paste) =>
-    paste.expiresAt === null ? t("never") : <LocalDateTime value={paste.expiresAt} />
-  const revisionParam = Number((await searchParams).revisions)
+  const [{ slug }, query] = await Promise.all([params, searchParams])
+  const revisionParam = Number(query.revisions)
   const revisionPage =
     Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1
-  const paste = await getPaste(slug, revisionPage)
+  const [paste, t, locale] = await Promise.all([
+    getPaste(slug, revisionPage),
+    getTranslations("Core"),
+    getLocale(),
+  ])
   if (!paste) notFound()
+  const expiresLabel = (paste: Paste) =>
+    paste.expiresAt === null ? t("never") : <LocalDateTime value={paste.expiresAt} />
 
   const owned = !paste.owner
   const [starred, share, { origin, host }, preferences, collections, people, session, files] =

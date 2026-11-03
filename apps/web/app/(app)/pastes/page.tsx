@@ -14,13 +14,13 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/pastes">) {
-  const locale = await getLocale()
-  const t = await getTranslations("Core")
   const query = parsePasteListQuery(await searchParams)
-  const [data, { origin }, collections] = await Promise.all([
+  const [data, { origin }, collections, locale, t] = await Promise.all([
     listPastePage({ mode: "mine" }, query),
     getSiteOrigin(),
     listCollections(),
+    getLocale(),
+    getTranslations("Core"),
   ])
   const [rows, previews] = await Promise.all([
     toRows(data.pastes, locale),
