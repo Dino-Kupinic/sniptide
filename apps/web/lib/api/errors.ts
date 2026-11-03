@@ -8,6 +8,10 @@ const categories = {
     code: "payload_too_large",
     resolution: "Reduce the request or stored content and try again.",
   },
+  412: {
+    code: "precondition_failed",
+    resolution: "Read the resource again, then retry with its current revision.",
+  },
   422: { code: "unprocessable_entity", resolution: "Check the request and account limits." },
   429: {
     code: "too_many_requests",

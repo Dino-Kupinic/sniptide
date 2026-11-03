@@ -41,7 +41,7 @@ Add the MCP server to Claude Code, which signs you in to Sniptide in the browser
 claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
-For a client without OAuth, create a token in Settings, API tokens, and pass it with `--header "Authorization: Bearer $SNIPTIDE_TOKEN"`.
+For a client without OAuth, create a token in **Settings** > **API tokens** and pass it with `--header "Authorization: Bearer $SNIPTIDE_TOKEN"`.
 
 Use `<your-instance-url>/api/mcp` on a self-hosted instance.
 The [MCP guide](https://docs.sniptide.com/mcp) covers Cursor and a local server, and the [CLI](https://docs.sniptide.com/cli) installs a collection as an agent skill.
@@ -50,7 +50,7 @@ This repository is also an [Agent Plugin](https://agent-plugins.org): `plugin.js
 ## Documentation
 
 - [User guide](https://docs.sniptide.com)
-- [CLI](https://docs.sniptide.com/cli) and [MCP server](https://docs.sniptide.com/mcp)
+- [CLI](https://docs.sniptide.com/cli), [MCP server](https://docs.sniptide.com/mcp) and [SDKs](https://docs.sniptide.com/sdks)
 - [Self-hosting](https://docs.sniptide.com/self-hosting)
 - [Development](docs/development.md) and [contributing](CONTRIBUTING.md)
 - [Operations and scaling](docs/scaling.md)
