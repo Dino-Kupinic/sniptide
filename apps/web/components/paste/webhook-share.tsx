@@ -12,10 +12,12 @@ export function WebhookShare({
   slug,
   targets,
   allowed,
+  unavailableReason,
 }: {
   slug: string
   targets: WebhookTarget[]
   allowed: boolean
+  unavailableReason?: string
 }) {
   const t = useTranslations("Paste")
   const [pending, startTransition] = React.useTransition()
@@ -58,7 +60,9 @@ export function WebhookShare({
           ))}
         </div>
         {!allowed ? (
-          <p className="text-xs text-muted-foreground">{t("useAPublicOrUnlistedPaste")}</p>
+          <p className="text-xs text-muted-foreground">
+            {unavailableReason ?? t("useAPublicOrUnlistedPaste")}
+          </p>
         ) : null}
         <FormError variant="inline" message={error} className="text-xs" />
       </div>

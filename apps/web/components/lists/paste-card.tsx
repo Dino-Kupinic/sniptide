@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import type * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import { renderToken } from "@/components/paste/code-block"
+import { ExpiredBadge } from "@/components/paste/expiry-status"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PasteRow } from "@/lib/pastes/rows"
@@ -48,6 +49,7 @@ export function PasteCard({
             </span>
           </span>
         )}
+        <ExpiredBadge expiresAt={row.expiresAt} />
         <span className="-mr-1.5 ml-auto">
           <RowMenu row={row} origin={origin} shared={shared} />
         </span>

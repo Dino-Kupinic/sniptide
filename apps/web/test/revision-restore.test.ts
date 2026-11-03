@@ -288,7 +288,7 @@ describeDb("restoreRevision", () => {
     const slug = await create()
     await edit(slug, { title: "v2" })
     const created = (await history(slug))[1]
-    expect(await sharePaste(slug, "friend", "view")).toBe(true)
+    expect(await sharePaste(slug, "friend", "view")).toEqual({ status: "ok" })
 
     for (const viewer of ["stranger", "friend", null]) {
       signInAs(viewer)

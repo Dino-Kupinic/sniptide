@@ -219,6 +219,8 @@
     "compareLoading": "Loading snapshots…",
     "compareClose": "Close",
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
-    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
+    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
+    "expiredSharingHelp": "This paste has expired. Set a new expiry or choose Never to share it again.",
+    "manageAccess": "Manage access"
   }
 }

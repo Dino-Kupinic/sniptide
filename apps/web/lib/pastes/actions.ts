@@ -292,8 +292,12 @@ export async function setShareAccess(
   const user = await assertSignedIn()
   const parsed = z.enum(ACCESSES).safeParse(access)
   if (!parsed.success) return { ok: false, error: await actionError("pickAccess") }
-  if (!(await store.sharePaste(slug, userId, parsed.data))) {
-    return { ok: false, error: await actionError("shareMissing") }
+  const outcome = await store.sharePaste(slug, userId, parsed.data)
+  if (outcome.status !== "ok") {
+    return {
+      ok: false,
+      error: await actionError(outcome.status === "expired" ? "shareExpired" : "shareMissing"),
+    }
   }
   await revalidateWorkspace(user, userId)
   return sharesOf(slug)
@@ -320,8 +324,12 @@ export async function restoreRemovedShare(
     .safeParse({ access, sharedAt })
   if (!parsed.success) return { ok: false, error: await actionError("shareRestore") }
   const date = new Date(Math.min(parsed.data.sharedAt, Date.now()))
-  if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
-    return { ok: false, error: await actionError("shareMissing") }
+  const outcome = await store.sharePaste(slug, userId, parsed.data.access, date)
+  if (outcome.status !== "ok") {
+    return {
+      ok: false,
+      error: await actionError(outcome.status === "expired" ? "shareExpired" : "shareMissing"),
+    }
   }
   await revalidateWorkspace(user, userId)
   return sharesOf(slug)

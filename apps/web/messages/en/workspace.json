@@ -364,7 +364,8 @@
     "delete_selected_title": "{count, plural, one {Delete # paste forever?} other {Delete # pastes forever?}}",
     "delete_selected_description": "{count, plural, one {The selected paste will be deleted for good. This can’t be undone.} other {The # selected pastes will be deleted for good. This can’t be undone.}}",
     "delete_collections_title": "{count, plural, one {Delete # collection?} other {Delete # collections?}}",
-    "delete_collections_description": "The pastes in them are kept and just leave the collections."
+    "delete_collections_description": "The pastes in them are kept and just leave the collections.",
+    "expired_sharing_help": "This paste has expired. Set a new expiry or choose Never to share it again."
   },
   "Secrets": {
     "title": "Secrets",

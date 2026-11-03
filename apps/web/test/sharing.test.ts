@@ -1,8 +1,14 @@
-import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { user } from "@workspace/db/schema"
-import { eq } from "drizzle-orm"
+import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import { notification, paste, pasteShare, user } from "@workspace/db/schema"
+import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { removeShare, restoreRemovedShare, restoreShare as undoLeave } from "@/lib/pastes/actions"
+import {
+  invitePerson,
+  removeShare,
+  restoreRemovedShare,
+  setShareAccess,
+  restoreShare as undoLeave,
+} from "@/lib/pastes/actions"
 import { toSharedRows } from "@/lib/pastes/rows"
 import {
   createPaste,
@@ -61,7 +67,7 @@ describeDb("sharing", () => {
 
   async function share(slug: string, to: string, access: "view" | "edit" = "view") {
     signInAs("owner")
-    expect(await sharePaste(slug, to, access)).toBe(true)
+    expect(await sharePaste(slug, to, access)).toEqual({ status: "ok" })
   }
 
   test("an invited person opens a private paste; anyone else still gets a 404", async () => {
@@ -81,6 +87,124 @@ describeDb("sharing", () => {
       expect(await readSharedPaste("priv")).toEqual({ status: "missing" })
       expect(await readRawFile("priv", null)).toEqual({ status: "missing" })
     }
+  })
+
+  test("an expired starred paste refuses invitations until its owner renews the expiry", async () => {
+    signInAs("owner")
+    await setStarred("priv", true)
+    await getDb()
+      .update(paste)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(paste.slug, "priv"))
+    expect((await getPaste("priv"))?.slug).toBe("priv")
+    expect((await listStarred()).map((row) => row.slug)).toEqual(["priv"])
+
+    expect(await invitePerson("priv", "@friend", "view")).toEqual({
+      ok: false,
+      error: "This paste has expired. Set a new expiry or choose Never before sharing it.",
+    })
+    expect(await getDb().select().from(pasteShare)).toEqual([])
+    expect(await getDb().select().from(notification)).toEqual([])
+
+    expect(await updatePaste("priv", edit({ expiry: "never" }), "Renewed expiry")).not.toBeNull()
+    expect(await invitePerson("priv", "@friend", "view")).toMatchObject({ ok: true })
+    expect(await getDb().select().from(notification)).toMatchObject([
+      { userId: "friend", kind: "shared" },
+    ])
+    signInAs("friend")
+    expect((await getPaste("priv"))?.slug).toBe("priv")
+    expect((await readSharedPaste("priv")).status).toBe("ok")
+  })
+
+  test("sharing refuses the exact expiry boundary and accepts a future expiry", async () => {
+    signInAs("owner")
+    const now = Date.now()
+    const clock = spyOn(Date, "now").mockReturnValue(now)
+    try {
+      await getDb()
+        .update(paste)
+        .set({ expiresAt: new Date(now) })
+        .where(eq(paste.slug, "priv"))
+      expect(await sharePaste("priv", "friend", "view")).toEqual({ status: "expired" })
+      expect(await getDb().select().from(pasteShare)).toEqual([])
+      expect(await getDb().select().from(notification)).toEqual([])
+      await getDb()
+        .update(paste)
+        .set({ expiresAt: new Date(now + 60_000) })
+        .where(eq(paste.slug, "priv"))
+      expect(await sharePaste("priv", "friend", "view")).toEqual({ status: "ok" })
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  test("an access change after expiry preserves the share and its notifications", async () => {
+    await share("priv", "friend")
+    signInAs("friend")
+    await markShareSeen("priv")
+    signInAs("owner")
+    await getDb()
+      .update(paste)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(paste.slug, "priv"))
+    const shares = await getDb().select().from(pasteShare)
+    const notifications = await getDb().select().from(notification)
+
+    expect(await setShareAccess("priv", "friend", "edit")).toEqual({
+      ok: false,
+      error: "This paste has expired. Set a new expiry or choose Never before sharing it.",
+    })
+    expect(await getDb().select().from(pasteShare)).toEqual(shares)
+    expect(await getDb().select().from(notification)).toEqual(notifications)
+  })
+
+  test("an invitation checks expiry after waiting for the paste lock", async () => {
+    signInAs("owner")
+    const [pending] = await getDb().transaction(async (gate) => {
+      await gate.select().from(paste).where(eq(paste.slug, "priv")).for("update")
+      const [connection] = await gate.execute<{ pid: number }>(sql`SELECT pg_backend_pid() AS pid`)
+      if (!connection) throw new Error("missing lock connection")
+      const pending = sharePaste("priv", "friend", "view")
+      const deadline = Date.now() + 3000
+      let waiting = false
+      while (Date.now() < deadline) {
+        const blocked = await getDb().execute(
+          sql`SELECT pid FROM pg_stat_activity WHERE datname = current_database() AND ${connection.pid} = ANY(pg_blocking_pids(pid))`,
+        )
+        if (blocked.length) {
+          waiting = true
+          break
+        }
+      }
+      expect(waiting).toBe(true)
+      await gate
+        .update(paste)
+        .set({ expiresAt: new Date(Date.now() - 1000) })
+        .where(eq(paste.slug, "priv"))
+      return [pending] as const
+    })
+    expect(await pending).toEqual({ status: "expired" })
+    expect(await getDb().select().from(pasteShare)).toEqual([])
+    expect(await getDb().select().from(notification)).toEqual([])
+  })
+
+  test("undoing a removed share after expiry refuses access without a new notification", async () => {
+    await share("priv", "friend")
+    const [person] = (await listPasteShares("priv")) ?? []
+    if (!person) throw new Error("friend missing")
+    expect(await removeShare("priv", "friend")).toMatchObject({ ok: true })
+    await getDb()
+      .update(paste)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(paste.slug, "priv"))
+    const notifications = await getDb().select().from(notification)
+
+    expect(await restoreRemovedShare("priv", "friend", person.access, person.sharedAt)).toEqual({
+      ok: false,
+      error: "This paste has expired. Set a new expiry or choose Never before sharing it.",
+    })
+    expect(await getDb().select().from(pasteShare)).toEqual([])
+    expect(await getDb().select().from(notification)).toEqual(notifications)
   })
 
   test("an invite skips the paste's password", async () => {
@@ -140,14 +264,14 @@ describeDb("sharing", () => {
   test("only the owner can share or see who it's shared with", async () => {
     await share("priv", "friend", "edit")
     signInAs("friend")
-    expect(await sharePaste("priv", "stranger", "view")).toBe(false)
+    expect(await sharePaste("priv", "stranger", "view")).toEqual({ status: "missing" })
     expect(await listPasteShares("priv")).toBeNull()
     await unsharePaste("priv", "friend")
     expect(await getShare("priv")).not.toBeNull()
 
     signInAs("owner")
-    expect(await sharePaste("priv", "owner", "view")).toBe(false)
-    expect(await sharePaste("priv", "nobody", "view")).toBe(false)
+    expect(await sharePaste("priv", "owner", "view")).toEqual({ status: "missing" })
+    expect(await sharePaste("priv", "nobody", "view")).toEqual({ status: "missing" })
   })
 
   test("a recipient can leave, and the owner can invite them again", async () => {
@@ -274,18 +398,17 @@ describeDb("sharing", () => {
 
   test("trashed, expired and burn-after-read pastes don't open through a share", async () => {
     await seedPaste({ slug: "burn", owner: "owner", visibility: "private", burnAfterRead: true })
-    await seedPaste({
-      slug: "old",
-      owner: "owner",
-      visibility: "private",
-      expiresAt: new Date(Date.now() - 1000),
-    })
+    await seedPaste({ slug: "old", owner: "owner", visibility: "private" })
     await seedPaste({ slug: "bin", owner: "owner", visibility: "private" })
     for (const slug of ["burn", "old", "bin"]) await share(slug, "friend")
     signInAs("owner")
     await trashPaste("bin")
+    await getDb()
+      .update(paste)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(paste.slug, "old"))
     // Nothing new is shared from the trash, either.
-    expect(await sharePaste("bin", "stranger", "view")).toBe(false)
+    expect(await sharePaste("bin", "stranger", "view")).toEqual({ status: "missing" })
 
     signInAs("friend")
     expect(await listShared()).toEqual([])

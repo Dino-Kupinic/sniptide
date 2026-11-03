@@ -114,9 +114,9 @@ describeDb("notifications", () => {
     await getDb().update(user).set({ name: "Olive Owner" }).where(eq(user.id, "owner"))
     await seedPaste({ slug: "shared", owner: "owner", visibility: "private" })
     signInAs("owner")
-    expect(await sharePaste("shared", "friend", "view")).toBe(true)
+    expect(await sharePaste("shared", "friend", "view")).toEqual({ status: "ok" })
     // Changing the access they have is not a new share.
-    expect(await sharePaste("shared", "friend", "edit")).toBe(true)
+    expect(await sharePaste("shared", "friend", "edit")).toEqual({ status: "ok" })
 
     const feed = await feedFor("friend")
     expect(feed.items).toHaveLength(1)

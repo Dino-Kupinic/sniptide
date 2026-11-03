@@ -84,6 +84,17 @@ describe("localized action errors", () => {
     )
   })
 
+  test("explains how to recover from an expired share in every language", async () => {
+    for (const locale of locales) {
+      request.cookies.set(localeCookie, locale)
+      expect(await actionError("shareExpired")).toBe(catalogs[locale].Errors.shareExpired)
+    }
+    request.cookies.set(localeCookie, "en")
+    expect(await actionError("shareExpired")).toBe(
+      "This paste has expired. Set a new expiry or choose Never before sharing it.",
+    )
+  })
+
   test("does not return unknown provider messages or raw validation failures", async () => {
     request.cookies.set(localeCookie, "es")
     expect(await translateActionError("database password=secret connection failed")).toBe(

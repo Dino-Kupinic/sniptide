@@ -31,6 +31,7 @@ import {
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { usePasteExpired } from "@/components/paste/expiry-status"
 import { withUndo } from "@/components/undo-toast"
 import { copyText, runAction } from "@/lib/feedback"
 import {
@@ -49,12 +50,15 @@ export interface RowAction {
   label: string
   href?: string
   onSelect?: () => void
+  disabled?: boolean
+  reason?: string
   destructive?: boolean
   // Starts a new group below a divider.
   group?: boolean
 }
 
 function useRowActions(row: PasteRow, origin: string, shared: boolean): RowAction[] {
+  const expired = usePasteExpired(row.expiresAt)
   const t = useTranslations("Workspace")
   const feedbackT = useTranslations("Core")
   const actions: RowAction[] = [
@@ -63,7 +67,10 @@ function useRowActions(row: PasteRow, origin: string, shared: boolean): RowActio
       id: "copy",
       icon: LinkIcon,
       label: t("copy_link"),
+      disabled: expired,
+      reason: expired ? t("expired_sharing_help") : undefined,
       onSelect: () =>
+        !expired &&
         copyText(`${origin}/${row.slug}`, {
           success: feedbackT("linkCopied"),
           error: feedbackT("copyError"),
@@ -156,6 +163,8 @@ export function RowMenu({
           <React.Fragment key={action.id}>
             {action.group ? <DropdownMenuSeparator /> : null}
             <DropdownMenuItem
+              disabled={action.disabled}
+              title={action.reason}
               variant={action.destructive ? "destructive" : undefined}
               render={action.href ? <Link href={action.href} /> : undefined}
               onClick={action.onSelect}
@@ -204,6 +213,7 @@ export function ActionSheet({
             {actions.map((action) => {
               const rowClass = cn(
                 sheetRowClass,
+                action.disabled && "opacity-50",
                 action.destructive && "text-destructive [&_svg]:text-destructive",
               )
               const content = (
@@ -224,6 +234,8 @@ export function ActionSheet({
                   ) : (
                     <button
                       type="button"
+                      disabled={action.disabled}
+                      title={action.reason}
                       onClick={() => {
                         setOpen(false)
                         action.onSelect?.()

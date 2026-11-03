@@ -21,7 +21,6 @@ import {
   eq,
   exists,
   getTableColumns,
-  gt,
   gte,
   ilike,
   inArray,
@@ -344,7 +343,7 @@ export function isExpired(paste: Pick<Paste, "expiresAt">) {
   return paste.expiresAt !== null && paste.expiresAt <= Date.now()
 }
 
-function recordExpired(record: PasteRecord) {
+function recordExpired(record: Pick<PasteRecord, "expiresAt">) {
   return isExpired({ expiresAt: ms(record.expiresAt) })
 }
 
@@ -576,20 +575,30 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
 // Gives someone access to one of the viewer's pastes, or changes the access they have. A new
 // invite shows up as unseen in their Shared with me. `sharedAt` backdates a new share, for undoing
 // a revoke.
-export async function sharePaste(slug: string, userId: string, access: Access, sharedAt?: Date) {
+export async function sharePaste(
+  slug: string,
+  userId: string,
+  access: Access,
+  sharedAt?: Date,
+): Promise<{ status: "ok" | "missing" | "expired" }> {
   const record = await findOwned(slug)
-  if (!record || record.deletedAt || userId === record.ownerId) return false
+  if (!record || record.deletedAt || userId === record.ownerId) return { status: "missing" }
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
-  if (!person) return false
+  if (!person) return { status: "missing" }
   return getDb().transaction(async (tx) => {
     const [locked] = await tx
-      .select({ id: pasteTable.id, deletedAt: pasteTable.deletedAt })
+      .select({
+        id: pasteTable.id,
+        deletedAt: pasteTable.deletedAt,
+        expiresAt: pasteTable.expiresAt,
+      })
       .from(pasteTable)
       .where(
         and(allowedPaste(), eq(pasteTable.id, record.id), eq(pasteTable.ownerId, record.ownerId)),
       )
       .for("update")
-    if (!locked || locked.deletedAt) return false
+    if (!locked || locked.deletedAt) return { status: "missing" }
+    if (recordExpired(locked)) return { status: "expired" }
     const [before] = await tx
       .select({ leftAt: pasteShare.leftAt })
       .from(pasteShare)
@@ -616,7 +625,7 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
         { userId, kind: "shared", pasteId: record.id, actorId: record.ownerId },
       ])
     }
-    return true
+    return { status: "ok" }
   })
 }
 
@@ -1328,6 +1337,7 @@ export const sidebarData = cache(
       owned: record.ownerId === viewer,
       starred: starSlugs.has(record.slug),
       collection: record.ownerId === viewer ? record.collection : null,
+      expiresAt: record.expiresAt?.getTime() ?? null,
       updatedAt: record.updatedAt.getTime(),
     })
     return {

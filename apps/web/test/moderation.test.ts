@@ -331,7 +331,7 @@ describeDb("host moderation", () => {
         }),
       ).rejects.toThrow("No paste")
       expect(await updateSharing(target.slug, { visibility: "public" })).toBeNull()
-      expect(await sharePaste(target.slug, "editor", "view")).toBe(false)
+      expect(await sharePaste(target.slug, "editor", "view")).toEqual({ status: "missing" })
       expect(await restorePaste(target.slug)).toBe(false)
       expect(await isSlugAvailable(target.slug)).toBe(false)
       await renamePaste(target.slug, "changed")

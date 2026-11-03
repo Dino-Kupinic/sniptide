@@ -133,6 +133,7 @@ export interface NavCounts {
 
 // A paste as the sidebar lists it: just enough for its row and its ⋯ menu.
 export interface SidebarPaste {
+  expiresAt: number | null
   slug: string
   title: string
   // The viewer's own paste, so it can be renamed, filed and deleted from the sidebar.

@@ -44,6 +44,12 @@ An invited person finds the paste under **Shared with me** at once and gets a no
 can remove their access at any time, and they can remove the paste from their own list. You can
 also invite people while you create a paste.
 
+An expired paste refuses new invitations, access changes, and undoing an access removal. Set a
+new expiry or choose **Never**, then try again. A refused invitation creates no access or
+notification.
+
+If the paste already has recipients, **Manage access** lets you remove their access after expiry.
+
 ## Raw access
 
 Each file is available as plain text at `<domain>/<link>/raw?file=<file name>`, for `curl` and
@@ -85,6 +91,14 @@ Choose **Expires after**: 1 hour, 1 day, 1 week, 1 month, 1 year or never. The t
 when you set it. When it passes, the link stops working for everyone and the paste is removed 30
 days later. Until then it stays in your pastes, and choosing a new expiry brings the link back. Sniptide notifies you when a paste will expire within a day, and the dashboard lists
 links that expire in the next 48 hours.
+
+Starring a paste does not extend its expiry. An expired paste can remain in your **Starred** list
+while its link is unavailable to recipients.
+
+Expired pastes show an **Expired** label in paste lists and beside the title. Sharing and
+copying the link are disabled, including in a Share dialog that was open when the paste expired.
+The owner can still copy the code, edit the paste, and change its expiry. Choose a new expiry
+or **Never** to share it again. Existing access can still be removed.
 
 ## Link previews
 

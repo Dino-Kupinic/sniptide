@@ -364,7 +364,8 @@
     "delete_selected_title": "{count, plural, other {永久删除 # 个粘贴？}}",
     "delete_selected_description": "{count, plural, other {所选的 # 个粘贴将被永久删除。此操作无法撤销。}}",
     "delete_collections_title": "{count, plural, other {删除 # 个集合？}}",
-    "delete_collections_description": "其中的粘贴会保留，只是移出这些集合。"
+    "delete_collections_description": "其中的粘贴会保留，只是移出这些集合。",
+    "expired_sharing_help": "此粘贴已过期。设置新的有效期或选择“永不”，即可再次分享。"
   },
   "Secrets": {
     "title": "密钥",
