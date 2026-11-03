@@ -15,10 +15,16 @@ Pages are MDX files in `content/docs`; a `meta.json` in a folder orders its page
 heading comes from the `title` in the frontmatter, so start the body at `##`. Fumadocs' built-in
 components (`Cards`, `Callout`, `Tabs`, `Steps`, …) are available in every page.
 
-Store diagrams and screenshots in `public/visuals` and reference them from MDX with descriptive
-alternative text. Keep each visual in sync with the page it illustrates. `bun run test:docs` checks
-that local Markdown images have alternative text and exist; the Docker image copies `public` into
-the standalone server.
+Diagrams are React components in `components/visuals.tsx`, registered in `components/mdx.tsx`
+and placed in a page as `<FirstPasteVisual />`. They draw miniature app screens with the tokens and
+components from `@sniptide/ui`, so they follow the theme in light and dark mode and stack into one
+column on phones. The miniature screens are hidden from screen readers, so the text beside them and
+the figure's label carry the meaning. Keep each diagram's wording in step with the app's messages
+and the page it illustrates.
+
+Store screenshots in `public/visuals` and reference them from MDX with descriptive alternative
+text. `bun run test:docs` checks that local Markdown images have alternative text and exist; the
+Docker image copies `public` into the standalone server.
 
 Search is built in (Orama, served from `/api/search`) and needs no setup.
 
