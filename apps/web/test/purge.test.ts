@@ -65,6 +65,24 @@ describeDb("purge", () => {
     expect(await pasteRow("future")).toBeDefined()
   })
 
+  test("keeps an expired paste for its full 30 days in the trash", async () => {
+    await seedPaste({ slug: "trashed-late", owner: "owner", expiresAt: daysAgo(40) })
+    await seedPaste({ slug: "trashed-long-ago", owner: "owner", expiresAt: daysAgo(40) })
+    const db = getDb()
+    await db
+      .update(paste)
+      .set({ deletedAt: daysAgo(5) })
+      .where(eq(paste.slug, "trashed-late"))
+    await db
+      .update(paste)
+      .set({ deletedAt: daysAgo(31) })
+      .where(eq(paste.slug, "trashed-long-ago"))
+
+    expect(await purgeStaleData()).toEqual({ trashed: 1, expired: 0 })
+    expect(await pasteRow("trashed-late")).toBeDefined()
+    expect(await pasteRow("trashed-long-ago")).toBeUndefined()
+  })
+
   test("clears rate limit counters older than a day", async () => {
     const db = getDb()
     await db.insert(rateLimit).values([

@@ -21,6 +21,7 @@
     "viewsIn": "{title}内の{count}件のスニペットの閲覧数",
     "viewsAll": "全{count}件のスニペットの閲覧数",
     "afterView": "1回の閲覧後",
+    "burnedOn": "{date}に閲覧済み",
     "never": "無期限",
     "neverExpires": "無期限",
     "expires": "有効期限：{time}",

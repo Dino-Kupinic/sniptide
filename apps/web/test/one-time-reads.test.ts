@@ -5,7 +5,7 @@ import SharePage from "@/app/[slug]/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { POST as revealRoute } from "@/app/[slug]/reveal/route"
 import { getDb } from "@/lib/db"
-import { readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
+import { readSharedPaste, restorePaste, revealSharedPaste, trashPaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import {
   hasDatabase,
@@ -225,6 +225,33 @@ describeDb("one-time reads", () => {
     expect((await pasteRow("burnraw"))?.deletedAt).toBeNull()
     signInAs(null)
     expect(await reveal("burnraw")).toBe("content")
+  })
+
+  test("a burned paste is marked as burned, and restoring it brings it back private with burn off", async () => {
+    expect(await reveal("burn")).toBe("content")
+    expect((await pasteRow("burn"))?.burnedAt).not.toBeNull()
+
+    signInAs("owner")
+    expect(await restorePaste("burn")).toBe(true)
+    const row = await pasteRow("burn")
+    expect(row).toMatchObject({
+      deletedAt: null,
+      burnedAt: null,
+      burnAfterRead: false,
+      visibility: "private",
+    })
+    // The link stays closed to everyone but the owner, so the one read holds.
+    signInAs("other")
+    expect(await reveal("burn")).toBe("404")
+    expect(await page("burn")).toBe("404")
+  })
+
+  test("a burn-after-read paste trashed by its owner restores unchanged", async () => {
+    signInAs("owner")
+    await trashPaste("burn")
+    expect((await pasteRow("burn"))?.burnedAt).toBeNull()
+    expect(await restorePaste("burn")).toBe(true)
+    expect(await pasteRow("burn")).toMatchObject({ deletedAt: null, burnAfterRead: true })
   })
 
   test("a burned paste has no raw route either", async () => {

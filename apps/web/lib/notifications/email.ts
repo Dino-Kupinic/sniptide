@@ -83,6 +83,7 @@ async function eligible(row: Claimed, now: Date) {
       ownerId: paste.ownerId,
       slug: paste.slug,
       deletedAt: paste.deletedAt,
+      burnedAt: paste.burnedAt,
       expiresAt: paste.expiresAt,
       expiryKey: sql<
         string | null
@@ -117,7 +118,7 @@ async function eligible(row: Claimed, now: Date) {
   if (current.ownerId !== row.userId) return null
   switch (row.kind) {
     case "burned":
-      return current.deletedAt ? current : null
+      return current.burnedAt ? current : null
     case "views":
       return live ? current : null
     case "expiring":
