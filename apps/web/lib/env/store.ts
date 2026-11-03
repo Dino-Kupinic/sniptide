@@ -32,6 +32,9 @@ export interface EnvGroupSummary {
 export interface EnvGroup {
   slug: string
   updatedAt: number
+  // Goes up by one with every change. A push that names the revision it started from is refused
+  // once the group has moved past it, so a stale .env can't silently replace newer variables.
+  revision: number
   variables: Variable[]
 }
 
@@ -72,6 +75,7 @@ export async function readGroup(owner: string, slug: string): Promise<EnvGroup |
   return {
     slug: group.slug,
     updatedAt: group.updatedAt.getTime(),
+    revision: group.revision,
     variables: rows.map((row) => ({
       name: row.name,
       value: decryptValue(row.value, context(group.id, row.name)),
@@ -79,14 +83,19 @@ export async function readGroup(owner: string, slug: string): Promise<EnvGroup |
   }
 }
 
-export type WriteResult = { status: "ok"; group: EnvGroup } | { status: "limit" }
+export type WriteResult =
+  | { status: "ok"; group: EnvGroup }
+  | { status: "limit" }
+  | { status: "conflict"; revision: number }
 
 // Replaces a group's variables with `variables`, creating the group if it's new. A push is the
-// whole .env file, so anything left out of it is removed.
+// whole .env file, so anything left out of it is removed. With `expectedRevision`, the write only
+// happens while the group is still at that revision (a group that doesn't exist yet is at 0).
 export async function writeGroup(
   owner: string,
   slug: string,
   input: unknown,
+  expectedRevision?: number,
 ): Promise<WriteResult> {
   const name = groupSlugSchema.parse(slug)
   const variables = variablesSchema.parse(input)
@@ -99,6 +108,10 @@ export async function writeGroup(
       .from(envGroup)
       .where(and(eq(envGroup.ownerId, owner), eq(envGroup.slug, name)))
       .for("update")
+    const current = group?.revision ?? 0
+    const created = !group
+    if (expectedRevision !== undefined && expectedRevision !== current)
+      return { status: "conflict" as const, revision: current }
     if (!group) {
       const [count] = await tx
         .select({ count: sql<number>`count(*)::int` })
@@ -127,7 +140,15 @@ export async function writeGroup(
           value: encryptValue(variable.value, context(id, variable.name)),
         })),
       )
-    return { status: "ok" as const, group: { slug: name, updatedAt: now.getTime(), variables } }
+    return {
+      status: "ok" as const,
+      group: {
+        slug: name,
+        updatedAt: now.getTime(),
+        revision: created ? 0 : current + 1,
+        variables,
+      },
+    }
   })
 }
 

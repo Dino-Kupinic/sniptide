@@ -8,10 +8,14 @@ import { bundle, type Capture, type Paste, paste, record, string } from "./contr
 import {
   fetchGroup,
   groupName,
+  parseDotenv,
   pushGroup,
-  readEnvFile,
+  readEnvText,
+  readRevision,
+  revisionHeader,
   runWith,
   serializeDotenv,
+  stampRevision,
   writeEnvFile,
 } from "./env"
 import { CliError } from "./errors"
@@ -54,7 +58,7 @@ const allowed: Record<string, string[]> = {
   search: ["tag", "language", "collection", "cursor", "limit"],
   skill: ["agent", "name", "dir", "force", "dry-run"],
   "env list": [],
-  "env push": ["file", "dry-run"],
+  "env push": ["file", "force", "dry-run"],
   "env pull": ["file", "force", "dry-run", "stdout"],
   "env run": [],
   "env delete": [],
@@ -206,7 +210,11 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
       const group = groupName(names[0])
       const filename = path.resolve(ctx.cwd, values.file ?? ".env")
       if (action === "push") {
-        const variables = await readEnvFile(filename)
+        const text = await readEnvText(filename)
+        const variables = parseDotenv(text)
+        // A file pulled from this group names its revision, so a push of a stale copy is refused.
+        // --force replaces the group whatever changed since.
+        const revision = values.force ? undefined : readRevision(text, group)
         const listed = variables.map((variable) => variable.name)
         if (values["dry-run"]) {
           emit(
@@ -215,7 +223,8 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
           )
           return 0
         }
-        const saved = await pushGroup(await api(), group, variables)
+        const saved = await pushGroup(await api(), group, variables, revision)
+        if (saved.revision !== undefined) await stampRevision(filename, group, saved.revision)
         emit(
           { group: saved.slug, variables: saved.variables.map((variable) => variable.name) },
           `Pushed ${saved.variables.length} variables to ${saved.slug}.`,
@@ -227,7 +236,7 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
         emit({ deleted: group }, `Deleted env group ${group}.`)
         return 0
       }
-      const { variables } = await fetchGroup(await api(), group)
+      const { variables, revision } = await fetchGroup(await api(), group)
       if (action === "run") {
         const [program, ...programArgs] = rest
         if (!program) throw new CliError("Usage: sniptide env run <group> -- <command> [args...]")
@@ -240,7 +249,13 @@ export async function run(argv: string[], ctx: Context): Promise<number> {
         return 0
       }
       const listed = variables.map((variable) => variable.name)
-      if (!values["dry-run"]) await writeEnvFile(filename, variables, values.force ?? false)
+      if (!values["dry-run"])
+        await writeEnvFile(
+          filename,
+          variables,
+          values.force ?? false,
+          revision === undefined ? "" : revisionHeader(group, revision),
+        )
       emit(
         { group, file: filename, variables: listed, dryRun: values["dry-run"] ?? false },
         `${values["dry-run"] ? "Would write" : "Wrote"} ${listed.length} variables to ${filename}.`,

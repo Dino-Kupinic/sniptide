@@ -82,7 +82,10 @@ class SniptideClient:
     def trash_paste(self, identifier): return self._request("pastes/" + _segment(identifier), "DELETE")
     def list_env_groups(self): return self._request("env")
     def read_env_group(self, group): return self._request("env/" + _segment(group))
-    def write_env_group(self, group, variables): return self._request("env/" + _segment(group), "PUT", {"variables": variables})
+    def write_env_group(self, group, variables, revision=None):
+        body = {"variables": variables}
+        if revision is not None: body["revision"] = revision
+        return self._request("env/" + _segment(group), "PUT", body)
     def delete_env_group(self, group): return self._request("env/" + _segment(group), "DELETE")
     def list_collections(self): return self._request("collections")
     def create_collection(self, name, idempotency_key=None): return self._request("collections", "POST", {"name": name}, idempotency_key)
