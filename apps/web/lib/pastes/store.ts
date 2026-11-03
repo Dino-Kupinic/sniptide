@@ -275,33 +275,37 @@ async function hydrate(
   requestedRevisionPage = 1,
 ): Promise<Paste | null> {
   const db = getDb()
-  const [revisionTotal] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(pasteRevision)
-    .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
-  const revisionCount = revisionTotal?.count ?? 0
-  const revisionPageCount = Math.max(1, Math.ceil(revisionCount / 20))
-  const revisionPage = Math.min(Math.max(1, requestedRevisionPage), revisionPageCount)
-  const [[summary], files, revisions] = await Promise.all([
-    summarize([record], viewer, true),
-    db
-      .select()
-      .from(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      .orderBy(pasteFile.position),
-    db
-      .select({
-        id: pasteRevision.id,
-        message: pasteRevision.message,
-        createdAt: pasteRevision.createdAt,
-        restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
-      })
-      .from(pasteRevision)
-      .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
-      .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
-      .limit(20)
-      .offset((revisionPage - 1) * 20),
-  ])
+  const [[summary], files, { revisionCount, revisionPageCount, revisionPage, revisions }] =
+    await Promise.all([
+      summarize([record], viewer, true),
+      db
+        .select()
+        .from(pasteFile)
+        .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
+        .orderBy(pasteFile.position),
+      (async () => {
+        const [revisionTotal] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(pasteRevision)
+          .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
+        const revisionCount = revisionTotal?.count ?? 0
+        const revisionPageCount = Math.max(1, Math.ceil(revisionCount / 20))
+        const revisionPage = Math.min(Math.max(1, requestedRevisionPage), revisionPageCount)
+        const revisions = await db
+          .select({
+            id: pasteRevision.id,
+            message: pasteRevision.message,
+            createdAt: pasteRevision.createdAt,
+            restorable: sql<boolean>`${pasteRevision.snapshot} is not null`,
+          })
+          .from(pasteRevision)
+          .where(and(allowedParent(pasteRevision.pasteId), eq(pasteRevision.pasteId, record.id)))
+          .orderBy(desc(pasteRevision.createdAt), desc(pasteRevision.id))
+          .limit(20)
+          .offset((revisionPage - 1) * 20)
+        return { revisionCount, revisionPageCount, revisionPage, revisions }
+      })(),
+    ])
   if (!summary || files.length === 0) return null
 
   return {
@@ -1180,13 +1184,15 @@ export async function navCounts(): Promise<NavCounts> {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()
-  const stars = await readableStarsWhere(viewer)
+  const stars = readableStarsWhere(viewer)
   const [[own], [starred], shared] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
       .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+    stars.then((where) =>
+      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+    ),
     sharedCount(viewer),
   ])
   return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared }
@@ -1210,13 +1216,15 @@ export const sidebarData = cache(
     const viewer = await viewerId()
     if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
     const db = getDb()
-    const stars = await readableStarsWhere(viewer)
+    const stars = readableStarsWhere(viewer)
     const [[own], [starCount], recent, starred, shared] = await Promise.all([
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(pasteTable)
         .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+      stars.then((where) =>
+        db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+      ),
       db
         .select()
         .from(pasteTable)
@@ -1230,12 +1238,14 @@ export const sidebarData = cache(
         )
         .orderBy(...sidebarOrder(views.pastes.sort))
         .limit(views.pastes.limit),
-      db
-        .select()
-        .from(pasteTable)
-        .where(and(stars, sidebarVisibility(views.starred.visibility)))
-        .orderBy(...sidebarOrder(views.starred.sort))
-        .limit(views.starred.limit),
+      stars.then((where) =>
+        db
+          .select()
+          .from(pasteTable)
+          .where(and(where, sidebarVisibility(views.starred.visibility)))
+          .orderBy(...sidebarOrder(views.starred.sort))
+          .limit(views.starred.limit),
+      ),
       sharedCount(viewer),
     ])
     const starSlugs = await starredSlugs([...recent, ...starred].map((record) => record.slug))

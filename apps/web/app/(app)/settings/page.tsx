@@ -28,21 +28,22 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
     searchParams,
   ])
   const viewer = viewerFromUser(session.user)
-  const [tokens, envGroups, site, security, providers, authT] = await Promise.all([
-    listTokens(session.user.id),
-    listGroups(session.user.id),
-    getSiteOrigin(),
-    readAccountSecurity(session.user.id, session.session.id),
-    getSocialProviders(),
-    getTranslations("Auth"),
-  ])
+  const [tokens, envGroups, site, security, providers, authT, [account], preferences] =
+    await Promise.all([
+      listTokens(session.user.id),
+      listGroups(session.user.id),
+      getSiteOrigin(),
+      readAccountSecurity(session.user.id, session.session.id),
+      getSocialProviders(),
+      getTranslations("Auth"),
+      getDb()
+        .select({ email: user.email, emailVerified: user.emailVerified })
+        .from(user)
+        .where(eq(user.id, session.user.id)),
+      readPreferences(session.user.id),
+    ])
   // Connecting GitHub or Google comes back here with ?error=<code> when it fails.
   const linkError = oauthErrorKey(error)
-
-  const [account] = await getDb()
-    .select({ email: user.email, emailVerified: user.emailVerified })
-    .from(user)
-    .where(eq(user.id, session.user.id))
 
   return (
     <SettingsView
@@ -54,7 +55,7 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
         image: session.user.image ?? null,
         initials: viewer.initials,
       }}
-      preferences={await readPreferences(session.user.id)}
+      preferences={preferences}
       emailAvailable={Boolean(getConfig().smtp)}
       security={{
         ...security,

@@ -15,13 +15,13 @@ export async function generateMetadata({ params }: PageProps<"/collections/[slug
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/collections/[slug]">) {
-  const locale = await getLocale()
-  const { slug } = await params
-  const query = parsePasteListQuery(await searchParams)
-  const [collection, data, { origin, host }] = await Promise.all([
+  const [{ slug }, search] = await Promise.all([params, searchParams])
+  const query = parsePasteListQuery(search)
+  const [collection, data, { origin, host }, locale] = await Promise.all([
     getCollection(slug),
     listPastePage({ mode: "collection", collection: slug }, query),
     getSiteOrigin(),
+    getLocale(),
   ])
   if (!collection) notFound()
 

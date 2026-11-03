@@ -231,13 +231,13 @@ export async function collectFiles(
   if (!files.some((file) => file.content.trim()))
     throw new CliError("Capture some nonempty code first.")
   const commit = await git(root, ["rev-parse", "HEAD"])
-  const source = commit
-    ? {
-        repository: repository(await git(root, ["remote", "get-url", "origin"])),
-        commit,
-        dirty: (await git(root, ["status", "--porcelain", "--", ...names])) !== "",
-      }
-    : null
+  const [remote, status] = commit
+    ? await Promise.all([
+        git(root, ["remote", "get-url", "origin"]),
+        git(root, ["status", "--porcelain", "--", ...names]),
+      ])
+    : [null, null]
+  const source = commit ? { repository: repository(remote), commit, dirty: status !== "" } : null
   return { files, source }
 }
 

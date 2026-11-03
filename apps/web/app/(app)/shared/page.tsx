@@ -12,10 +12,11 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<SearchParams> }) {
-  const locale = await getLocale()
-  const [result, { origin, host }] = await Promise.all([
-    listSharedPage(parseSharedListQuery(await searchParams)),
+  const query = parseSharedListQuery(await searchParams)
+  const [result, { origin, host }, locale] = await Promise.all([
+    listSharedPage(query),
     getSiteOrigin(),
+    getLocale(),
   ])
   const rows = await toSharedRows(result.entries, locale)
 

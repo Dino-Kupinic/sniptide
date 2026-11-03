@@ -13,13 +13,13 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/starred">) {
-  const locale = await getLocale()
-  const t = await getTranslations("Core")
   const query = parsePasteListQuery(await searchParams)
-  const [data, { origin, host }, collections] = await Promise.all([
+  const [data, { origin, host }, collections, locale, t] = await Promise.all([
     listPastePage({ mode: "starred" }, query),
     getSiteOrigin(),
     listCollections(),
+    getLocale(),
+    getTranslations("Core"),
   ])
   return (
     <PasteList

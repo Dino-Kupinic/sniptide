@@ -329,9 +329,11 @@ export async function getAnalyticsReport(
   const db = getDb()
   const viewer = (await getSession())?.user.id ?? null
   const { range } = query
-  const { scope, ids } = await resolveScope(viewer, query)
-
   const hourly = range === "24h"
+  const [{ scope, ids }, rawFrom] = await Promise.all([
+    resolveScope(viewer, query),
+    hourly ? 0 : firstUnrolledDay(),
+  ])
   const count = POINT_COUNT[range]
   const step = hourly ? HOUR : DAY
   const last = Math.floor(now / step)
@@ -339,7 +341,6 @@ export async function getAnalyticsReport(
   const previous = first - count
 
   // Which hits and rollups answer for the current period, and for this and the one before it.
-  const rawFrom = hourly ? 0 : await firstUnrolledDay()
   const current = hourly
     ? {
         stats: eventStats(first * HOUR, (last + 1) * HOUR, ids),

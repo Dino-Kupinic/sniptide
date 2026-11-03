@@ -55,14 +55,14 @@ async function gistDraft(
 // `?from=<slug>` starts from a copy of an existing paste (the Duplicate action).
 // `?gist=<id>&file=<name>…` starts from files of a public gist (the import sheet).
 export default async function Page({ searchParams }: PageProps<"/new">) {
-  const t = await getTranslations("Core")
   const { from, gist, file } = await searchParams
-  const [source, preferences, collections, imported, session] = await Promise.all([
+  const [source, preferences, collections, imported, session, t] = await Promise.all([
     typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
     listCollections(),
     typeof gist === "string" ? gistDraft(gist, [file ?? []].flat()) : null,
     getSession(),
+    getTranslations("Core"),
   ])
   const draft = imported && "draft" in imported ? imported.draft : null
   const files =
