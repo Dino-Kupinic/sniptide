@@ -74,13 +74,13 @@ async function rows(query: Query): Promise<unknown[]> {
       return [{ id: 1, message: "Created", createdAt: new Date(0), restorable: true }]
     }
     if (query.table === pasteFile) {
-      const summary = Boolean(query.fields?.pasteId)
-      started.add(summary ? "summary" : "files")
-      return summary
-        ? [{ pasteId: record.id, language: "text", bytes: 4 }]
-        : [{ name: "a.txt", language: "text", content: "code" }]
+      started.add("files")
+      return [{ pasteId: record.id, name: "a.txt", language: "text", content: "code", bytes: 4 }]
     }
-    if (query.table === user) return [{ id: "owner", name: "Owner" }]
+    if (query.table === user) {
+      started.add("author")
+      return [{ id: "owner", name: "Owner" }]
+    }
     return []
   }
   if (scenario === "nav" || scenario === "sidebar") {
@@ -133,7 +133,7 @@ if (scenario === "hydrate") {
   const pending = getPaste("example", 999)
   await tick()
   assert(started.has("revision-count"))
-  assert(started.has("summary"), "summary reads must start while the revision count is pending")
+  assert(started.has("author"), "author reads must start while the revision count is pending")
   assert(started.has("files"), "file reads must start while the revision count is pending")
   assert(!started.has("revisions"), "revision rows must wait for the count to clamp the page")
   gate.resolve()
@@ -176,6 +176,11 @@ if (scenario === "hydrate") {
   assert.equal(result.scope, null)
   assert.equal(result.pasteCount, 0)
 } else if (scenario === "settings") {
+  mock.module("@/components/settings/usage-section", () => ({
+    UsageSection: () => null,
+    UsageSectionSkeleton: () => null,
+  }))
+  mock.module("@/lib/account/usage", () => ({ getAccountTotals: async () => null }))
   mock.module("@/components/settings/settings-view", () => ({ SettingsView: () => null }))
   mock.module("@/lib/api/tokens", () => ({
     listTokens: async () => {
@@ -186,7 +191,7 @@ if (scenario === "hydrate") {
   mock.module("@/lib/account/store", () => ({ readAccountSecurity: async () => ({}) }))
   mock.module("@/lib/env/store", () => ({ listGroups: async () => [] }))
   mock.module("@/lib/pastes/budget", () => ({
-    storageUsage: async () => ({ bytes: 0, limit: { bytes: null } }),
+    accountBudget: () => ({ bytes: null }),
   }))
   mock.module("@/lib/pastes/store", () => ({ navCounts: async () => ({ pastes: 2 }) }))
   mock.module("@/lib/preference-store", () => ({
@@ -215,6 +220,7 @@ if (scenario === "hydrate") {
   mock.module("@/components/lists/trash-list", () => ({ TrashList: () => null }))
   mock.module("@/components/lists/import-gist", () => ({ ImportGistButton: () => null }))
   mock.module("@/lib/collections/store", () => ({ listCollections: async () => [] }))
+  mock.module("@/lib/pastes/card-preview", () => ({ cardPreviews: async () => ({}) }))
   mock.module("@/lib/pastes/rows", () => ({
     toRows: async () => [],
     toTrashRow: () => null,

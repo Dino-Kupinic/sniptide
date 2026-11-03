@@ -5,38 +5,40 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
+  TablePinnedCell,
+  TablePinnedHead,
   TableRow,
+  TableSortHead,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  FlameIcon,
-  GlobeIcon,
-  LinkIcon,
-  LockIcon,
-  StarIcon,
-} from "lucide-react"
-import Link from "next/link"
+import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { useListView } from "@/components/shell/page-header"
 import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
+import type { HighlightedLines } from "@/lib/highlight/types"
 import { setStarred } from "@/lib/pastes/actions"
 import {
+  DEFAULT_SORT_DIRECTION,
   PASTE_PAGE_SIZE,
   type PageInfo,
   type PasteListQuery,
   type PasteSort,
   pasteListSearch,
+  type SortDirection,
+  sortDirection,
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
+import { PasteBulkActions } from "./bulk-actions"
+import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
+import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
 import {
   FilterMenu,
   ListHeader,
@@ -117,21 +119,25 @@ export function PasteList({
   title,
   rows,
   origin,
-  host,
   mode,
   collections,
+  collection,
   actions,
   mobileActions,
   query: serverQuery,
   pagination,
   languageOptions,
+  previews,
 }: {
   title: string
   rows: PasteRow[]
+  // The first highlighted lines of each paste, by slug, for the grid view's cards.
+  previews?: Record<string, HighlightedLines>
   origin: string
-  host: string
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
+  // The collection whose page this is, in collection mode.
+  collection?: string
   actions?: React.ReactNode
   // A compact version of `actions` for the phone's title row.
   mobileActions?: React.ReactNode
@@ -157,10 +163,20 @@ export function PasteList({
 
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
   const { languages, visibility, collections: inCollections, owner, sort } = query
-  const [view, setView] = React.useState<"list" | "grid">("list")
+  const { view, setView } = useListView()
   const filtering = Boolean(
     query.q || languages.length || visibility.length || inCollections.length || owner !== "all",
   )
+  const direction = sortDirection(query)
+  // Each header starts in its sort's natural direction, and a flipped one is kept in the URL.
+  const headProps = (value: Sort) => ({
+    direction: sort === value ? direction : null,
+    firstDirection: DEFAULT_SORT_DIRECTION[value],
+    onSort: (next: SortDirection) =>
+      update({ sort: value, dir: next === DEFAULT_SORT_DIRECTION[value] ? undefined : next }),
+  })
+  const slugs = React.useMemo(() => rows.map((row) => row.slug), [rows])
+  const selection = useRowSelection(view === "grid" ? [] : slugs)
   const start = (pagination.page - 1) * PASTE_PAGE_SIZE
   const range = `${formatNumber(start + 1, locale)}–${formatNumber(start + rows.length, locale)}`
 
@@ -170,7 +186,7 @@ export function PasteList({
         value: sort,
         defaultValue: "updated" as Sort,
         options: sortOptions,
-        onChange: (sort) => update({ sort }),
+        onChange: (sort) => update({ sort, dir: undefined }),
       }}
       filters={[
         {
@@ -201,7 +217,9 @@ export function PasteList({
       ]}
       total={pagination.total}
       pending={pending}
-      onClear={() => update({ sort: "updated", languages: [], visibility: [], collections: [] })}
+      onClear={() =>
+        update({ sort: "updated", dir: undefined, languages: [], visibility: [], collections: [] })
+      }
     />
   )
 
@@ -235,6 +253,7 @@ export function PasteList({
       <ListHeader
         title={title}
         count={pagination.totalAll}
+        headerActions={mode === "collection" ? actions : null}
         actions={
           <>
             <ViewToggle value={view} onChange={setView} />
@@ -245,7 +264,7 @@ export function PasteList({
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+        <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
         {quick}
       </div>
 
@@ -253,7 +272,7 @@ export function PasteList({
       <div className="flex flex-col gap-3">
         <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SearchField value={query.q} onChange={(q) => update({ q }, true)} />
+            <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
             <FilterMenu
               label={t("language")}
               options={languageOptions.map((id) => ({
@@ -281,7 +300,11 @@ export function PasteList({
               />
             )}
           </div>
-          <SortMenu value={sort} options={sortOptions} onChange={(sort) => update({ sort })} />
+          <SortMenu
+            value={sort}
+            options={sortOptions}
+            onChange={(sort) => update({ sort, dir: undefined })}
+          />
         </div>
 
         <div
@@ -293,79 +316,48 @@ export function PasteList({
           {pagination.total === 0 ? (
             <EmptyState filtering={filtering} mode={mode} />
           ) : view === "grid" ? (
-            <ul className="hidden grid-cols-2 gap-3 xl:grid-cols-3 lg:grid">
+            <ul className="hidden grid-cols-2 gap-4 xl:grid-cols-3 lg:grid">
               {rows.map((row) => (
-                <li
-                  key={row.slug}
-                  className="rounded-lg relative flex min-w-0 flex-col gap-3 border border-border p-4 hover:border-foreground/40"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/pastes/${row.slug}`}
-                      title={row.title}
-                      className="min-w-0 flex-1 line-clamp-2 [overflow-wrap:anywhere] text-sm font-medium after:absolute after:inset-0"
-                    >
-                      {row.title}
-                    </Link>
-                    <RowMenu row={row} origin={origin} />
-                  </div>
-                  <span className="[overflow-wrap:anywhere] font-mono text-xs text-muted-foreground">
-                    {host}/{row.slug}
-                  </span>
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[13px] text-foreground/80">
-                    <LanguageLabel language={row.language} />
-                    <RowBadge row={row} />
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="font-mono">{t("views_count", { count: row.views })}</span>
-                    <span>{row.updatedLabel}</span>
-                  </div>
-                </li>
+                <PasteCard key={row.slug} row={row} lines={previews?.[row.slug]} origin={origin} />
               ))}
             </ul>
           ) : (
-            <Table className="hidden min-w-[960px] table-fixed lg:table">
+            <Table className="hidden min-w-[1040px] table-fixed lg:table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <SortHead value="title" sort={sort} onSort={(sort) => update({ sort })}>
+                  <SelectAllHead selection={selection} />
+                  <TableSortHead {...headProps("title")} className="pl-0">
                     {t("paste")}
-                  </SortHead>
-                  <TableHead className="w-[130px]">{t("language")}</TableHead>
-                  <TableHead className="w-[156px]">{t("visibility")}</TableHead>
-                  <SortHead
-                    value="views"
-                    sort={sort}
-                    onSort={(sort) => update({ sort })}
-                    className="w-20 text-right"
-                    alignEnd
-                  >
+                  </TableSortHead>
+                  <TableSortHead {...headProps("language")} className="w-[140px]">
+                    {t("language")}
+                  </TableSortHead>
+                  <TableSortHead {...headProps("visibility")} className="w-[160px]">
+                    {t("visibility")}
+                  </TableSortHead>
+                  <TableSortHead {...headProps("views")} className="w-24" alignEnd>
                     {t("views")}
-                  </SortHead>
-                  <SortHead
-                    value="expires"
-                    sort={sort}
-                    onSort={(sort) => update({ sort })}
-                    className="w-[130px] pl-7"
-                  >
+                  </TableSortHead>
+                  <TableSortHead {...headProps("expires")} className="w-[140px]">
                     {t("expires")}
-                  </SortHead>
-                  <SortHead
-                    value="updated"
-                    sort={sort}
-                    onSort={(sort) => update({ sort })}
-                    className="w-[116px]"
-                  >
+                  </TableSortHead>
+                  <TableSortHead {...headProps("updated")} className="w-[140px]">
                     {t("updated")}
-                  </SortHead>
-                  <TableHead className="w-12">
+                  </TableSortHead>
+                  <TablePinnedHead className="w-16">
                     <span className="sr-only">{t("actions")}</span>
-                  </TableHead>
+                  </TablePinnedHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
-                  <TableRow key={row.slug} className="relative">
-                    <TableCell className="truncate">
+                  <TableRow
+                    key={row.slug}
+                    data-selected={selection.has(row.slug)}
+                    className="relative [&>td]:h-11"
+                  >
+                    <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
+                    <TableCell className="truncate pl-0">
                       <Link
                         href={`/pastes/${row.slug}`}
                         title={row.title}
@@ -373,10 +365,6 @@ export function PasteList({
                       >
                         {row.title}
                       </Link>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {row.owner ? `@${row.owner.username} · ` : ""}
-                        {host}/{row.slug}
-                      </span>
                     </TableCell>
                     <TableCell className="text-[13px] text-foreground/80">
                       <LanguageLabel language={row.language} />
@@ -387,15 +375,13 @@ export function PasteList({
                     <TableCell className="text-right font-mono text-[13px] tabular-nums">
                       {formatNumber(row.views, locale)}
                     </TableCell>
-                    <TableCell
-                      className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}
-                    >
+                    <TableCell className={cn("text-[13px] text-foreground/80", expiryClass(row))}>
                       {row.expiresLabel}
                     </TableCell>
                     <TableCell className="text-[13px] text-muted-foreground">
                       {row.updatedLabel}
                     </TableCell>
-                    <TableCell className="pr-3 text-right">
+                    <TablePinnedCell className="text-center">
                       {mode === "starred" ? (
                         <button
                           type="button"
@@ -415,7 +401,7 @@ export function PasteList({
                       ) : (
                         <RowMenu row={row} origin={origin} />
                       )}
-                    </TableCell>
+                    </TablePinnedCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -464,82 +450,45 @@ export function PasteList({
               ))}
             </ul>
           ) : null}
-
-          {pagination.total > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:border-t lg:border-border lg:px-5">
-              <span className="text-[13px] text-muted-foreground">
-                {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
-                {filtering
-                  ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
-                  : ""}
-              </span>
-              <Pagination
-                page={pagination.page}
-                pageCount={pagination.pageCount}
-                onChange={(page) =>
-                  update({
-                    page,
-                    cursor:
-                      page === pagination.page + 1
-                        ? pagination.nextCursor
-                        : page === pagination.page - 1
-                          ? pagination.previousCursor
-                          : undefined,
-                  })
-                }
-              />
-            </div>
-          ) : null}
         </div>
+
+        {pagination.total > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:py-0">
+            <span className="text-[13px] text-muted-foreground">
+              {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}
+              {filtering
+                ? t("filtered_from", { total: formatNumber(pagination.totalAll, locale) })
+                : ""}
+            </span>
+            <Pagination
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              onChange={(page) =>
+                update({
+                  page,
+                  cursor:
+                    page === pagination.page + 1
+                      ? pagination.nextCursor
+                      : page === pagination.page - 1
+                        ? pagination.previousCursor
+                        : undefined,
+                })
+              }
+            />
+          </div>
+        ) : null}
+
+        <SelectionBar selection={selection}>
+          <PasteBulkActions
+            rows={rows}
+            selection={selection}
+            mode={mode}
+            collections={collections}
+            collection={collection}
+          />
+        </SelectionBar>
       </div>
     </div>
-  )
-}
-
-// A column header that sorts the list by that column. Title and expiry sort ascending (A to Z,
-// soonest first), views and updated descending (most, newest first); the arrow says which.
-function SortHead({
-  value,
-  sort,
-  onSort,
-  className,
-  alignEnd = false,
-  children,
-}: {
-  value: Sort
-  sort: Sort
-  onSort: (sort: Sort) => void
-  className?: string
-  alignEnd?: boolean
-  children: React.ReactNode
-}) {
-  const active = sort === value
-  const ascending = value === "title" || value === "expires"
-  const Arrow = ascending ? ArrowUpIcon : ArrowDownIcon
-  return (
-    <TableHead
-      aria-sort={active ? (ascending ? "ascending" : "descending") : "none"}
-      className={className}
-    >
-      <button
-        type="button"
-        onClick={() => onSort(value)}
-        className={cn(
-          "group/sort -mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
-          active && "text-foreground",
-          alignEnd && "flex-row-reverse",
-        )}
-      >
-        {children}
-        <Arrow
-          aria-hidden="true"
-          className={cn(
-            "size-3 transition-opacity",
-            active ? "opacity-100" : "opacity-0 group-hover/sort:opacity-60",
-          )}
-        />
-      </button>
-    </TableHead>
   )
 }
 

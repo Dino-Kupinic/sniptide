@@ -1,12 +1,13 @@
 import "server-only"
 
 import { randomUUID } from "node:crypto"
+import { envInteger } from "@workspace/db/config"
 import { allowedParent } from "@workspace/db/moderation"
 import { notification, paste, pasteShare, user } from "@workspace/db/schema"
 import { and, eq, isNull, sql } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
-import { sendMail } from "@/lib/mail"
+import { createMailSender } from "@/lib/mail"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { DAY } from "@/lib/time"
 import type { NotificationKind } from "./types"
@@ -15,9 +16,6 @@ import { createUnsubscribeToken } from "./unsubscribe"
 const LEASE_MS = 90_000
 const MAX_ATTEMPTS = 5
 const retryDelays = [60_000, 300_000, 900_000, 3_600_000]
-const globalJobs = globalThis as typeof globalThis & {
-  __sniptideEmailTimer?: ReturnType<typeof setInterval>
-}
 
 const subjects = {
   shared: "A paste was shared with you",
@@ -76,6 +74,7 @@ async function finish(
 }
 
 async function eligible(row: Claimed, now: Date) {
+  if (row.createdAt.getTime() < now.getTime() - DAY || row.emailAttempts > MAX_ATTEMPTS) return null
   const [current] = await getDb()
     .select({
       email: user.email,
@@ -113,7 +112,6 @@ async function eligible(row: Claimed, now: Date) {
     !parsePreferences(current.preferences).notifications[row.kind].email
   )
     return null
-  if (row.createdAt.getTime() < now.getTime() - DAY || row.emailAttempts > MAX_ATTEMPTS) return null
   const live = !current.deletedAt && (!current.expiresAt || current.expiresAt > now)
   if (row.kind === "shared") return live && current.shareId ? current : null
   if (current.ownerId !== row.userId) return null
@@ -132,86 +130,98 @@ async function eligible(row: Claimed, now: Date) {
   }
 }
 
-export async function deliverNotificationEmails() {
-  const config = getConfig()
-  const totals = { sent: 0, skipped: 0, retried: 0, failed: 0 }
-  if (!config.smtp || !config.appUrl) return totals
-  const started = Date.now()
-  for (let index = 0; index < 20 && Date.now() - started < 45_000; index++) {
-    const row = await claim(new Date())
-    if (!row) break
-    const recipient = await eligible(row, new Date())
-    if (!recipient) {
-      await finish(row, { emailStatus: "skipped", emailNextAttemptAt: null })
-      totals.skipped++
-      continue
-    }
-    const unsubscribe = new URL("/api/notifications/unsubscribe", config.appUrl)
-    unsubscribe.searchParams.set(
-      "token",
-      createUnsubscribeToken(row.userId, recipient.email, row.kind),
-    )
-    const href =
-      row.kind === "shared"
-        ? "/shared"
-        : row.kind === "burned"
-          ? "/trash"
-          : row.kind === "views"
-            ? "/analytics"
-            : "/pastes"
-    const destination = new URL(href, config.appUrl).href
-    const settings = new URL("/settings?tab=notifications", config.appUrl).href
-    try {
-      await sendMail(config.smtp, {
-        from: config.smtp.from,
-        to: recipient.email,
-        subject: subjects[row.kind],
-        text: `${subjects[row.kind]}.\n\nSign in to Sniptide to view this activity:\n${destination}\n\nNotification settings:\n${settings}\n\nStop these emails:\n${unsubscribe.href}\n`,
-        messageId: `<notification-${row.id}@${new URL(config.appUrl).hostname}>`,
-        headers: {
-          "List-Unsubscribe": `<${unsubscribe.href}>`,
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-      })
-      await finish(row, { emailStatus: "sent", emailNextAttemptAt: null, emailSentAt: new Date() })
-      totals.sent++
-    } catch {
-      const retry = row.emailAttempts < MAX_ATTEMPTS && Date.now() - row.createdAt.getTime() < DAY
-      await finish(row, {
-        emailStatus: retry ? "pending" : "failed",
-        emailNextAttemptAt: retry
-          ? new Date(Date.now() + (retryDelays[row.emailAttempts - 1] ?? 3_600_000))
-          : null,
-      })
-      totals[retry ? "retried" : "failed"]++
-      console.warn(
-        JSON.stringify({
-          event: "notification_email_delivery_failed",
-          notificationId: row.id,
-          attempt: row.emailAttempts,
-          retry,
-        }),
-      )
-    }
-  }
-  return totals
+// Names who sends the email and where, from OPERATOR_NAME and OPERATOR_ADDRESS, so every email
+// identifies its sender with a postal address next to the unsubscribe link.
+export function senderLine(operator: { name: string; address?: string } | undefined) {
+  if (!operator) return ""
+  const address = operator.address
+    ?.split(/\s*\n\s*/)
+    .filter(Boolean)
+    .join(", ")
+  return `\nSent by ${operator.name}${address ? `, ${address}` : ""}.\n`
 }
 
-export function scheduleNotificationEmails() {
-  if (!getConfig().smtp || globalJobs.__sniptideEmailTimer) return
-  let running = false
-  const run = async () => {
-    if (running) return
-    running = true
-    try {
-      await deliverNotificationEmails()
-    } catch {
-      console.error(JSON.stringify({ event: "notification_email_worker_failed" }))
-    } finally {
-      running = false
-    }
-  }
-  void run()
-  globalJobs.__sniptideEmailTimer = setInterval(run, 60_000)
-  globalJobs.__sniptideEmailTimer.unref()
+export async function deliverNotificationEmails() {
+  const { smtp, appUrl, legal } = getConfig()
+  const footer = senderLine(legal.operator)
+  const totals = { sent: 0, skipped: 0, retried: 0, failed: 0 }
+  if (!smtp || !appUrl) return totals
+  const concurrency = envInteger("NOTIFICATION_EMAIL_CONCURRENCY", 2, 1, 10)
+  const started = Date.now()
+  let attempts = 0
+  const workers = await Promise.allSettled(
+    Array.from({ length: concurrency }, async () => {
+      const sender = createMailSender(smtp)
+      try {
+        while (attempts < 20 && Date.now() - started < 45_000) {
+          attempts++
+          const row = await claim(new Date())
+          if (!row) break
+          const recipient = await eligible(row, new Date())
+          if (!recipient) {
+            await finish(row, { emailStatus: "skipped", emailNextAttemptAt: null })
+            totals.skipped++
+            continue
+          }
+          const unsubscribe = new URL("/api/notifications/unsubscribe", appUrl)
+          unsubscribe.searchParams.set(
+            "token",
+            createUnsubscribeToken(row.userId, recipient.email, row.kind),
+          )
+          const href =
+            row.kind === "shared"
+              ? "/shared"
+              : row.kind === "burned"
+                ? "/trash"
+                : row.kind === "views"
+                  ? "/analytics"
+                  : "/pastes"
+          const destination = new URL(href, appUrl).href
+          const settings = new URL("/settings?tab=notifications", appUrl).href
+          try {
+            await sender.send({
+              from: smtp.from,
+              to: recipient.email,
+              subject: subjects[row.kind],
+              text: `${subjects[row.kind]}.\n\nSign in to Sniptide to view this activity:\n${destination}\n\nNotification settings:\n${settings}\n\nStop these emails:\n${unsubscribe.href}\n${footer}`,
+              messageId: `<notification-${row.id}@${new URL(appUrl).hostname}>`,
+              headers: {
+                "List-Unsubscribe": `<${unsubscribe.href}>`,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+            })
+            await finish(row, {
+              emailStatus: "sent",
+              emailNextAttemptAt: null,
+              emailSentAt: new Date(),
+            })
+            totals.sent++
+          } catch {
+            const retry =
+              row.emailAttempts < MAX_ATTEMPTS && Date.now() - row.createdAt.getTime() < DAY
+            await finish(row, {
+              emailStatus: retry ? "pending" : "failed",
+              emailNextAttemptAt: retry
+                ? new Date(Date.now() + (retryDelays[row.emailAttempts - 1] ?? 3_600_000))
+                : null,
+            })
+            totals[retry ? "retried" : "failed"]++
+            console.warn(
+              JSON.stringify({
+                event: "notification_email_delivery_failed",
+                notificationId: row.id,
+                attempt: row.emailAttempts,
+                retry,
+              }),
+            )
+          }
+        }
+      } finally {
+        sender.close()
+      }
+    }),
+  )
+  const failed = workers.find((worker) => worker.status === "rejected")
+  if (failed) throw failed.reason
+  return totals
 }

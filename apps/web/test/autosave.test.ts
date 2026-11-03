@@ -5,12 +5,13 @@ import { updateCapture } from "@/lib/api/pastes"
 import { deleteCollection, restoreCollection } from "@/lib/collections/store"
 import { getDb } from "@/lib/db"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
+import { REVISION_WINDOW_MS } from "@/lib/pastes/mutations"
 import {
   getPaste,
-  REVISION_WINDOW_MS,
   readSharedPaste,
   renamePaste,
   restorePaste,
+  revealSharedPaste,
   setPasteCollection,
   setStarred,
   trashPaste,
@@ -206,7 +207,7 @@ describeDb("autosavePaste", () => {
   test("burning and restoring a paste invalidates an editor opened before the burn", async () => {
     const { slug, version } = await create({ burnAfterRead: true })
     signInAs(null)
-    expect((await readSharedPaste(slug, { reveal: true })).status).toBe("ok")
+    expect((await revealSharedPaste(slug)).status).toBe("ok")
     signInAs("owner")
     expect((await pasteRow(slug))?.version).toBe(version + 1)
     await restorePaste(slug)

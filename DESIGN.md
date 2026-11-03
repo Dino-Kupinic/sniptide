@@ -29,7 +29,7 @@ When code and Paper differ, the shipped code wins for the app. A change to a tok
 
 Components use the Tailwind classes generated from these variables, such as `bg-primary` and `text-muted-foreground`. Hex values stay in `globals.css`.
 
-Sniptide has two brand colors. Tide Blue is the color of every action: buttons, links, focus, selection and chart bars. Pink is the second color and marks what stands out without being an action: search matches, stars, the peak of a chart and the pink collection icon. Pink never fills a button in the app, never marks an error and never sets running text in light mode.
+Sniptide has two brand colors. Tide Blue is the color of every action: buttons, links, focus, selection and chart bars. Pink is the second color and marks what stands out without being an action: search matches, stars, the peak of a chart, the pink collection icon and the check on a toast. Pink never fills a button in the app, never marks an error and never sets running text in light mode.
 
 ### Light
 
@@ -94,7 +94,7 @@ Keywords share the brand blue and the other hues stay muted, so blue leads. Ever
 | --- | --- | --- |
 | Archivo, weight 700 | `--font-heading` | Page titles, dialog titles, stat numbers, landing headlines |
 | Inter | `--font-sans` | Body text, controls, menus |
-| JetBrains Mono | `--font-mono` | Paste slugs, code, shortcuts, tooltips, stat labels |
+| Paper Mono | `--font-mono` | Paste slugs, code, shortcuts, tooltips, stat labels |
 | Archivo, weight 700 | Paper `--font-display` | Landing hero display type |
 
 ### Type scale
@@ -229,9 +229,16 @@ The checkbox is 16px with a 1px border and fills blue when checked. The switch i
 20px tall, mono 11px, on `--muted`. Inside a button it becomes a translucent white chip.
 
 ### Toast
-**Role:** Confirmations and undo.
+**Role:** Confirmations, errors and undo.
 
-At most 384px wide, 13px text, a leading check or alert icon, an optional text action in the link color and a dismiss button. Errors use a red-tinted border.
+A floating layer with 16px of padding on the left, 10px elsewhere, a hairline border, `--float-shadow` and 13px text. On desktop toasts stack in the bottom-right corner at one 320px width, 24px from the edges. On phones they stack centered under the top bar within the 16px gutter, at most 384px wide. A success toast leads with a check in `--highlight`, and an error toast leads with an alert icon in `--destructive` on a red-tinted border. An action such as Undo is a 24px `--primary` chip with `--primary-foreground` text, and every toast ends in a dismiss button.
+
+Success messages state what happened in a short past-tense phrase with no closing period, such as "Link copied" or "Moved “Notes” to trash". Names the reader chose sit in the locale's quotation marks. Errors say what failed and what to do in full sentences, such as "Couldn't copy. Allow clipboard access and try again." An action that can be taken back ends in a success toast with Undo.
+
+### Row selection
+**Role:** Acting on several rows of a table at once.
+
+Every desktop table starts with a 48px column of checkboxes, and the header box selects the whole page and shows a dash while only some rows are checked. Shift-click checks the range from the last row clicked. A checked row keeps a `bg-muted/70` tint, deeper than hover. While rows are checked, a selection bar floats at the bottom of the list, starting at its left edge so the Undo toast never covers it. It is a floating layer with a hairline border and `--float-shadow`, and it holds the count, the table's actions as `ghost` `sm` buttons (destructive ones in `--destructive` text) and a clear button. Escape clears the selection. Actions that can be taken back end in a success toast with Undo, and deleting for good asks first.
 
 ### Tooltip
 **Role:** Names for icon-only controls.
@@ -252,11 +259,6 @@ A stack of single-line rows (Sharing, Access, Views and Revisions on a paste, an
 **Role:** Brand mark.
 
 Six horizontal stripes that taper from a hairline at the top to a full bar at the bottom. Blue `#2A26EC` on light surfaces and white on dark ones. The wordmark is uppercase, `#0A0A0A` on light and white on dark. Both live in `LogoMark` and `Logo`.
-
-### Stripes
-**Role:** Decorative motif.
-
-The mark repeated as hairlines, ink blocks and a blue accent, used on the sign-in screen and the share-link page.
 
 ## Mobile
 
@@ -305,7 +307,7 @@ Surfaces separate with a 1px `--border` or a background step and carry no shadow
 | --- | --- |
 | Dropdown menu, popover, select | `--float-shadow`: `0 1px 2px` at 6% plus `0 8px 24px -6px` at 14% (40% and 60% black in dark) |
 | Dialog, alert dialog, sign-in and unlock cards | `--dialog-shadow`: `0 2px 4px` at 6% plus `0 24px 48px -12px` at 22% (40% and 70% black in dark) |
-| Toast | `shadow-md` with a plain border |
+| Toast | `--float-shadow` with a plain border, or a red-tinted one on errors |
 | Raised button edge | `0 2px 0 0 var(--depth)`, a darker shade of the button fill |
 | Segmented control thumb | `0 1px 2px rgb(0 0 0 / 0.08)` |
 | Tooltip | None, inverted `bg-foreground` fill |
@@ -341,7 +343,7 @@ These rules apply to the interface, the landing page, the docs, commit messages,
 - Prose lines run 60 to 68 characters. A stranded word in a large heading gets fixed by rewriting the copy or adjusting the measure, never by shrinking that one element.
 - Peers share one type role, size, weight and line height. A longer string or a larger value never resizes a single peer.
 - Numbers that line up in columns use tabular numerals.
-- JetBrains Mono sets identifiers only: paste slugs, code, paths, commands, shortcuts and tokens. The sentence around an identifier stays in Inter.
+- Paper Mono sets identifiers only: paste slugs, code, paths, commands, shortcuts and tokens. The sentence around an identifier stays in Inter.
 - Paragraphs separate with space and carry no first-line indent.
 - Body text keeps a comfortable size and line height, and dense layouts get more room instead of smaller text.
 

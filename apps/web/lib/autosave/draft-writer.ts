@@ -64,20 +64,20 @@ export class DraftBackupWriter<T> {
       }
       return
     }
-    const content = JSON.stringify(snapshot.value)
-    if (content === this.suppressed) return
-    this.suppressed = null
-    const key = JSON.stringify([snapshot.baseVersion, snapshot.value])
-    if (this.lastWrite?.key === key) return
+    if (this.suppressed !== null) {
+      if (JSON.stringify(snapshot.value) === this.suppressed) return
+      this.suppressed = null
+    }
     this.timer = this.timers.set(() => void this.flush(), this.options.delayMs ?? 400)
   }
 
   async flush(): Promise<DraftSaveResult> {
     this.cancel()
     const snapshot = this.snapshot
-    if (snapshot.kind !== "dirty" || JSON.stringify(snapshot.value) === this.suppressed)
-      return { kind: "skipped" }
-    const key = JSON.stringify([snapshot.baseVersion, snapshot.value])
+    if (snapshot.kind !== "dirty") return { kind: "skipped" }
+    const content = JSON.stringify(snapshot.value)
+    if (content === this.suppressed) return { kind: "skipped" }
+    const key = `${snapshot.baseVersion}:${content}`
     if (this.lastWrite?.key !== key) {
       const draft = {
         value: snapshot.value,

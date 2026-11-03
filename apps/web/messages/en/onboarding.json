@@ -1,0 +1,55 @@
+{
+  "Onboarding": {
+    "pageTitle": "Welcome",
+    "progress": "Step {current} of {total}",
+    "skipSetup": "Skip setup",
+    "skip": "Skip",
+    "back": "Back",
+    "continue": "Continue",
+    "saveFailed": "Couldn't save that. Try again.",
+    "source": {
+      "title": "How did you hear about Sniptide?",
+      "subtitle": "Your answer tells us where to find more people like you.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "A friend",
+        "ai_agent": "An AI agent",
+        "search": "Search",
+        "other": "Somewhere else"
+      }
+    },
+    "useCase": {
+      "title": "What will you use Sniptide for?",
+      "subtitle": "Pick the closest one, and we'll use it to decide what to build next.",
+      "options": {
+        "agents": "Giving my agents a place to save and share",
+        "sharing": "Sharing code and logs with people",
+        "team": "Running it for my team",
+        "exploring": "Just looking around"
+      }
+    },
+    "agent": {
+      "title": "Connect an agent",
+      "subtitle": "Your agent signs in to Sniptide once, then saves pastes and reads them back for you.",
+      "clientLabel": "Agent",
+      "clients": {
+        "claude_code": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "other": "Other"
+      },
+      "terminalHint": "Run this in your terminal. {client} opens Sniptide in your browser, where you allow access.",
+      "cursorHint": "Cursor opens with Sniptide filled in. Allow access in the browser tab that follows.",
+      "otherHint": "Add this address as a remote MCP server in your client. It signs in through your browser.",
+      "addToCursor": "Add to Cursor",
+      "yourAgent": "your agent",
+      "waiting": "Waiting for {client} to connect…",
+      "connected": "{client} is connected and can save pastes now.",
+      "connectedOther": "Your agent is connected and can save pastes now.",
+      "skipForNow": "Skip for now",
+      "finish": "Go to dashboard"
+    }
+  }
+}

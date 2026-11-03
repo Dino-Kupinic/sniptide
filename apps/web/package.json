@@ -1,5 +1,6 @@
 {
   "name": "web",
+  "license": "AGPL-3.0-only",
   "version": "0.0.1",
   "type": "module",
   "private": true,
@@ -10,7 +11,10 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "bun test ./test",
+    "test": "bun scripts/test.ts all",
+    "test:unit": "bun scripts/test.ts unit",
+    "test:integration": "bun scripts/test.ts integration",
+    "test:admission": "node ./test/run-admission-node.mjs",
     "test:e2e": "bun tests/run.ts run",
     "test:e2e:mcp": "bun tests/run.ts mcp",
     "test:e2e:install": "e2e-web install chromium"
@@ -32,18 +36,19 @@
     "next": "catalog:runtime",
     "next-intl": "^4.14.9",
     "next-themes": "catalog:runtime",
-    "nodemailer": "^10.1.4",
+    "nodemailer": "^10.3.1",
     "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
     "server-only": "catalog:runtime",
     "shiki": "catalog:runtime",
+    "skullet": "0.0.3",
     "zod": "catalog:runtime"
   },
   "devDependencies": {
-    "@e2e-dev/web": "0.13.0",
+    "@e2e-dev/web": "0.15.3",
     "@formatjs/icu-messageformat-parser": "^3.5.21",
-    "@iconify-json/material-icon-theme": "^1.2.73",
+    "@iconify-json/material-icon-theme": "^1.2.75",
     "@modelcontextprotocol/sdk": "catalog:runtime",
     "@tailwindcss/postcss": "catalog:ui",
     "@types/bun": "catalog:tooling",
@@ -51,7 +56,7 @@
     "@types/react": "catalog:tooling",
     "@types/react-dom": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
-    "e2e": "0.18.0",
+    "e2e": "0.21.3",
     "linguist-languages": "9.5.0",
     "typescript": "catalog:tooling"
   }

@@ -21,7 +21,8 @@ import {
   unsubscribeNotificationEmail,
   verifyUnsubscribeToken,
 } from "@/lib/notifications/unsubscribe"
-import { readSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import { readSharedPaste, revealSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import { drainVisits } from "@/lib/pastes/visits"
 import { readPreferences } from "@/lib/preference-store"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { updateNotificationPreference, updatePreferences } from "@/lib/settings-actions"
@@ -39,16 +40,21 @@ const envKeys = [
   "SMTP_REQUIRE_TLS",
   "BETTER_AUTH_URL",
   "BETTER_AUTH_SECRET",
+  "NOTIFICATION_EMAIL_CONCURRENCY",
 ]
 
 async function smtpSink() {
   const sockets = new Set<Socket>()
   const messages: string[] = []
   const timers = new Set<ReturnType<typeof setInterval>>()
-  let mode: "accept" | "reject" | "stall" = "accept"
+  let mode: "accept" | "reject" | "stall" | "stall-first" = "accept"
   let attempts = 0
+  let opened = 0
+  let peakConnections = 0
   const server = net.createServer((socket) => {
     sockets.add(socket)
+    const connectionNumber = ++opened
+    peakConnections = Math.max(peakConnections, sockets.size)
     socket.on("error", () => {})
     socket.once("close", () => sockets.delete(socket))
     socket.write("220 localhost test SMTP\r\n")
@@ -70,7 +76,7 @@ async function smtpSink() {
         else if (/^MAIL FROM:/i.test(line)) {
           attempts++
           if (mode === "reject") socket.write("451 temporary failure\r\n")
-          else if (mode === "stall") {
+          else if (mode === "stall" || (mode === "stall-first" && connectionNumber === 1)) {
             socket.write("250-waiting\r\n")
             const timer = setInterval(() => socket.write("250-still waiting\r\n"), 2_000)
             timers.add(timer)
@@ -105,6 +111,12 @@ async function smtpSink() {
     },
     get connections() {
       return sockets.size
+    },
+    get opened() {
+      return opened
+    },
+    get peakConnections() {
+      return peakConnections
     },
     async close() {
       for (const timer of timers) clearInterval(timer)
@@ -271,7 +283,7 @@ describeDb("notification channel delivery", () => {
     signInAs("reader")
     await sharePaste("private-secret", "owner", "view")
     await seedPaste({ slug: "burn-secret", owner: "owner", burnAfterRead: true })
-    await readSharedPaste("burn-secret", { reveal: true })
+    await revealSharedPaste("burn-secret")
     await seedPaste({ slug: "popular-secret", owner: "owner", visibility: "public" })
     await getDb().update(paste).set({ views: 9 }).where(eq(paste.slug, "popular-secret"))
     await readSharedPaste("popular-secret", { visit: true })
@@ -285,6 +297,7 @@ describeDb("notification channel delivery", () => {
       .set({ createdAt: new Date(Date.now() - 3 * DAY) })
       .where(eq(paste.id, soon.id))
     expect(await notifyExpiringPastes()).toBe(1)
+    await drainVisits()
     expect((await deliverNotificationEmails()).sent).toBe(4)
     expect((await rows()).map((row) => row.kind).sort()).toEqual([
       "burned",
@@ -313,6 +326,31 @@ describeDb("notification channel delivery", () => {
       emailAttempts: 1,
       emailClaimToken: null,
     })
+  })
+  test("one run shares its twenty-message cap across workers and reuses their SMTP connections", async () => {
+    await enable()
+    process.env.NOTIFICATION_EMAIL_CONCURRENCY = "2"
+    for (let index = 0; index < 25; index++) await queueViews(`batch-${index}`)
+    expect((await deliverNotificationEmails()).sent).toBe(20)
+    expect(sink.messages).toHaveLength(20)
+    expect(sink.peakConnections).toBe(2)
+    expect(sink.opened).toBe(2)
+    expect((await rows()).filter((row) => row.emailStatus === "pending")).toHaveLength(5)
+    expect(
+      (await rows())
+        .filter((row) => row.emailStatus === "sent")
+        .every((row) => row.emailAttempts === 1),
+    ).toBe(true)
+    await Bun.sleep(20)
+    expect(sink.connections).toBe(0)
+  })
+  test("a single configured worker reuses its connection and honors the concurrency limit", async () => {
+    await enable()
+    process.env.NOTIFICATION_EMAIL_CONCURRENCY = "1"
+    for (let index = 0; index < 3; index++) await queueViews(`serial-${index}`)
+    expect((await deliverNotificationEmails()).sent).toBe(3)
+    expect(sink.peakConnections).toBe(1)
+    expect(sink.opened).toBe(1)
   })
   test("temporary SMTP failure persists backoff and succeeds after retry and lease reclaim", async () => {
     await enable()
@@ -586,14 +624,20 @@ describeDb("notification channel delivery", () => {
   test("absolute SMTP deadline destroys the socket before lease expiry", async () => {
     await enable()
     await queueViews()
-    sink.setMode("stall")
+    await queueViews("peer-delivery")
+    sink.setMode("stall-first")
     const started = Date.now()
-    expect((await deliverNotificationEmails()).retried).toBe(1)
+    expect(await deliverNotificationEmails()).toEqual({
+      sent: 1,
+      skipped: 0,
+      retried: 1,
+      failed: 0,
+    })
     expect(Date.now() - started).toBeGreaterThanOrEqual(29_000)
     expect(Date.now() - started).toBeLessThan(40_000)
     await Bun.sleep(30)
     expect(sink.connections).toBe(0)
-    expect((await rows())[0]).toMatchObject({
+    expect((await rows()).find((row) => row.emailStatus === "pending")).toMatchObject({
       emailStatus: "pending",
       emailAttempts: 1,
       emailClaimToken: null,

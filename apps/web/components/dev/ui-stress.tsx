@@ -4,11 +4,14 @@ import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { CollectionsView } from "@/components/collections/collections-view"
+import { Dashboard } from "@/components/dashboard/dashboard"
 import { PasteList } from "@/components/lists/paste-list"
 import { SharedList } from "@/components/lists/shared-list"
 import { TrashList } from "@/components/lists/trash-list"
+import { FileViewer } from "@/components/paste/file-viewer"
 import { InvitePeople } from "@/components/paste/invite-people"
 import { PasteEditor } from "@/components/paste/paste-editor"
+import { SidePanelProvider } from "@/components/paste/side-panel"
 import { AppShell } from "@/components/shell/app-shell"
 import { defaultSidebarState } from "@/components/shell/sidebar-state"
 import { SiteHostProvider } from "@/components/site-host"
@@ -19,6 +22,8 @@ import {
   screens,
   type stressData,
 } from "@/lib/dev/ui-stress-data"
+import { timeAgo } from "@/lib/format"
+import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, PasteListQuery } from "@/lib/pastes/list-query"
 
 export function UiStress({
@@ -28,7 +33,9 @@ export function UiStress({
   pagination,
   data,
   shared,
+  previews,
 }: {
+  previews: Record<string, HighlightedLines>
   dataset: Dataset
   screen: StressScreen
   query: PasteListQuery
@@ -61,37 +68,68 @@ export function UiStress({
             starred: starred.slice(0, 3).map((row) => ({ ...row, owned: true })),
           }}
         >
+          {screen === "dashboard" ? (
+            <Dashboard
+              data={data.dashboard}
+              firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
+              origin={origin}
+              host={host}
+              draftScope={`ui-stress-dashboard-${dataset}`}
+              defaults={{ expiry: "never", visibility: "private", burnAfterRead: false }}
+            />
+          ) : null}
           {screen === "pastes" ? (
             <PasteList
               title={dataset === "demo" ? "My pastes" : "Benachrichtigungseinstellungen"}
               rows={data.pastes.slice(start, start + 10)}
               origin={origin}
-              host={host}
               mode="mine"
               collections={data.collections}
               query={query}
               pagination={pagination}
               languageOptions={["typescript", "objective-c", "text", "python"]}
+              previews={previews}
             />
           ) : null}
           {screen === "shared" ? <SharedList {...shared} origin={origin} host={host} /> : null}
           {screen === "trash" ? (
             <TrashList
               rows={data.trash.slice(start, start + 10)}
-              sizeLabel="12.0 MB"
+              sizeLabel={dataset === "empty" ? "0 B" : dataset === "one" ? "1 B" : "12.0 MB"}
               host={host}
               query={query}
               pagination={pagination}
             />
           ) : null}
-          {screen === "collections" ? <CollectionsView collections={data.collections} /> : null}
+          {screen === "collections" ? (
+            <CollectionsView
+              collections={data.collections}
+              updatedLabels={Object.fromEntries(
+                data.collections.flatMap((item) =>
+                  item.updatedAt === null ? [] : [[item.slug, timeAgo(item.updatedAt)]],
+                ),
+              )}
+            />
+          ) : null}
           {screen === "editor" ? (
             <PasteEditor
               initial={data.editor}
               collections={data.collections}
-              draftScope="ui-stress"
+              draftScope={`ui-stress-${dataset}`}
               secretDetection={false}
             />
+          ) : null}
+          {screen === "viewer" ? (
+            <div className="mx-auto w-full max-w-5xl p-4">
+              <SidePanelProvider>
+                <FileViewer
+                  slug="ui-stress"
+                  files={data.editor.files.map((file) => ({ ...file, language: "typescript" }))}
+                  printable
+                  panelToggle
+                />
+              </SidePanelProvider>
+            </div>
           ) : null}
           {screen === "invites" ? (
             <div className="mx-auto w-full max-w-sm p-4">

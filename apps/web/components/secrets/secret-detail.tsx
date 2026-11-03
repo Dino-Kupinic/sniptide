@@ -38,6 +38,7 @@ import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import { ListHeader, SearchField } from "@/components/lists/toolbar"
 import type { SecretDetail as Detail } from "@/lib/env/web-store"
+import { copyText } from "@/lib/feedback"
 import {
   ENVIRONMENTS,
   type Environment,
@@ -61,6 +62,7 @@ type Change = {
 // inline and deleted after a confirmation.
 export function SecretDetail({ group }: { group: Detail }) {
   const t = useTranslations("Secrets")
+  const coreT = useTranslations("Core")
   const secretRequest = useSecretRequest()
   const router = useRouter()
   const { values, setValues, clear, begin } = useSecretValues()
@@ -126,12 +128,7 @@ export function SecretDetail({ group }: { group: Detail }) {
   async function copy(name: string) {
     const value = Object.hasOwn(values, name) ? values[name] : await fetchValue(name)
     if (value === null || value === undefined) return
-    try {
-      await navigator.clipboard.writeText(value)
-      toast.success(t("copied", { name }))
-    } catch {
-      toast.error(t("copy_error"))
-    }
+    await copyText(value, { success: t("copied", { name }), error: coreT("copyError") })
   }
   async function edit(name: string) {
     setBusy(`edit:${name}`)

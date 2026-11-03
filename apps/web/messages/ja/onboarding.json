@@ -1,0 +1,55 @@
+{
+  "Onboarding": {
+    "pageTitle": "ようこそ",
+    "progress": "ステップ {current} / {total}",
+    "skipSetup": "設定をスキップ",
+    "skip": "スキップ",
+    "back": "戻る",
+    "continue": "続ける",
+    "saveFailed": "保存できませんでした。もう一度お試しください。",
+    "source": {
+      "title": "Sniptideをどこで知りましたか？",
+      "subtitle": "回答は、あなたのような人にもっと届けるために役立てます。",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "友人",
+        "ai_agent": "AIエージェント",
+        "search": "検索",
+        "other": "その他"
+      }
+    },
+    "useCase": {
+      "title": "Sniptideを何に使いますか？",
+      "subtitle": "いちばん近いものを選んでください。次に作るものを決める参考にします。",
+      "options": {
+        "agents": "エージェントの保存と共有の場所として",
+        "sharing": "コードやログを人と共有する",
+        "team": "チーム用にセルフホストする",
+        "exploring": "まずは見てみる"
+      }
+    },
+    "agent": {
+      "title": "エージェントを接続",
+      "subtitle": "エージェントは一度Sniptideにサインインすると、ペーストを保存し、あとで読み返せます。",
+      "clientLabel": "エージェント",
+      "clients": {
+        "claude_code": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "other": "その他"
+      },
+      "terminalHint": "ターミナルで実行してください。{client}がブラウザでSniptideを開くので、そこでアクセスを許可します。",
+      "cursorHint": "Sniptideが入力済みの状態でCursorが開きます。続いて開くブラウザのタブでアクセスを許可してください。",
+      "otherHint": "このアドレスをクライアントのリモートMCPサーバーとして追加してください。ブラウザ経由でサインインします。",
+      "addToCursor": "Cursorに追加",
+      "yourAgent": "エージェント",
+      "waiting": "{client}の接続を待っています…",
+      "connected": "{client}が接続され、ペーストを保存できるようになりました。",
+      "connectedOther": "エージェントが接続され、ペーストを保存できるようになりました。",
+      "skipForNow": "今はスキップ",
+      "finish": "ダッシュボードへ"
+    }
+  }
+}

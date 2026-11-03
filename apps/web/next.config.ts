@@ -42,12 +42,19 @@ const nextConfig: NextConfig = {
   output: "standalone",
   deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
-  // The paste preview card reads its fonts, and the preview video its Game of Life loop, from
-  // assets/ at runtime, which the trace can't see. The paste page warms the video.
+  // Next's tracer cannot infer these runtime asset reads, so include them in the standalone build.
   outputFileTracingIncludes: {
-    "/[slug]": ["./assets/fonts/**/*", "./assets/preview/**/*"],
-    "/[slug]/preview": ["./assets/fonts/**/*"],
-    "/[slug]/preview.mp4": ["./assets/fonts/**/*", "./assets/preview/**/*"],
+    "/[slug]": [
+      "./assets/fonts/**/*",
+      "../../packages/ui/src/fonts/PaperMono-Regular.ttf",
+      "./assets/preview/**/*",
+    ],
+    "/[slug]/preview": ["./assets/fonts/**/*", "../../packages/ui/src/fonts/PaperMono-Regular.ttf"],
+    "/[slug]/preview.mp4": [
+      "./assets/fonts/**/*",
+      "../../packages/ui/src/fonts/PaperMono-Regular.ttf",
+      "./assets/preview/**/*",
+    ],
   },
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },

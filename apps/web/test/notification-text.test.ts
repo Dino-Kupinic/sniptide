@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { describeNotification, viewMilestone } from "@/lib/notifications/describe"
+import { senderLine } from "@/lib/notifications/email"
 
 const HOUR = 3_600_000
 const now = Date.UTC(2026, 9, 15, 12)
@@ -50,5 +51,15 @@ describe("notification text", () => {
     const text = describeNotification({ ...base, kind: "views", count: 1000, slug: "a b" }, now)
     expect(text.title).toBe("“nginx proxy” reached 1,000 views")
     expect(text.href).toBe("/analytics?paste=a%20b")
+  })
+})
+
+describe("notification email sender line", () => {
+  test("names the operator and a one-line postal address", () => {
+    expect(senderLine({ name: "Example GmbH", address: "Ring 1\n 1010 Wien\nAustria" })).toBe(
+      "\nSent by Example GmbH, Ring 1, 1010 Wien, Austria.\n",
+    )
+    expect(senderLine({ name: "Example GmbH" })).toBe("\nSent by Example GmbH.\n")
+    expect(senderLine(undefined)).toBe("")
   })
 })

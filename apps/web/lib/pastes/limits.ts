@@ -6,6 +6,7 @@ import { HOUR_SECONDS } from "@/lib/time"
 // Per-account limits, so one account can't fill the database or spend the server's GitHub quota.
 export const limits = {
   create: (user: string): Limit => ({
+    policy: "paste-create",
     key: `paste:create:${user}`,
     max: 30,
     windowSeconds: HOUR_SECONDS,

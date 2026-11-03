@@ -8,21 +8,25 @@ anonymousTest(
     await app.open("/sign-in")
     await browser.locator('input[name="email"]').fill("reader@example.test")
 
-    for (const [locale, heading] of [
-      ["de", "Willkommen zurück"],
-      ["es", "Te damos la bienvenida de nuevo"],
-      ["zh", "欢迎回来"],
-      ["ja", "おかえりなさい"],
-      ["en", "Welcome back"],
+    // The menu button is named after the language label and the current language, both localized.
+    let current = "Language: English"
+    for (const [locale, name, button, heading] of [
+      ["de", "Deutsch", "Sprache: Deutsch", "Bei Sniptide anmelden"],
+      ["es", "Español", "Idioma: Español", "Inicia sesión en Sniptide"],
+      ["zh", "简体中文", "语言: 简体中文", "登录 Sniptide"],
+      ["ja", "日本語", "言語: 日本語", "Sniptide にサインイン"],
+      ["en", "English", "Language: English", "Sign in to Sniptide"],
     ] as const) {
-      await screen.getByRole("combobox").selectOption({ value: locale })
+      await screen.getByRole("button", current).tap()
+      await screen.getByRole("menuitemradio", name, { exact: true }).tap()
       await expect(screen.getByRole("heading", heading)).toBeVisible()
       await expect(browser.locator("html")).toHaveAttribute("lang", locale)
       await expect(browser.locator('input[name="email"]')).toHaveValue("reader@example.test")
       await browser.reload()
       await expect(screen.getByRole("heading", heading)).toBeVisible()
-      await expect(screen.getByRole("combobox")).toHaveValue(locale)
+      await expect(screen.getByRole("button", button)).toBeVisible()
       await browser.locator('input[name="email"]').fill("reader@example.test")
+      current = button
     }
     await app.screenshot("sign-in-english")
   },
@@ -43,7 +47,7 @@ test("settings language applies to the editor and mobile share pages", async ({
   await browser.setViewport({ width: 390, height: 844 })
   await app.open("/missing-localization-paste")
   await expect(browser.locator("html")).toHaveAttribute("lang", "ja")
-  await expect(screen.getByRole("combobox")).toHaveValue("ja")
+  await expect(screen.getByRole("button", "言語: 日本語")).toBeVisible()
   expect(
     await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBe(true)

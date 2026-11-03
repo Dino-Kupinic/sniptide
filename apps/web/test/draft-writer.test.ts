@@ -75,6 +75,25 @@ describe("local draft lifetime", () => {
     expect((await backup.read())?.value).toBe("a later edit")
   })
 
+  test("editing after discard permits undoing to the discarded value before the debounce", async () => {
+    const backup = writer(memoryDrafts())
+    backup.update(dirty("discarded"))
+    await backup.discard()
+    backup.update(dirty("new edit"))
+    backup.update(dirty("discarded"))
+    expect(await backup.flush()).toEqual({ kind: "saved" })
+    expect((await backup.read())?.value).toBe("discarded")
+  })
+
+  test("changing only the base version persists the new draft version", async () => {
+    const backup = writer(memoryDrafts())
+    backup.update(dirty("same content", 1))
+    await backup.flush()
+    backup.update(dirty("same content", 2))
+    await backup.flush()
+    expect((await backup.read())?.baseVersion).toBe(2)
+  })
+
   test("rejecting an offered old draft still permits the person's current edits", async () => {
     const store = memoryDrafts()
     await store.put("account:paste", { value: "old draft", baseVersion: 0, savedAt: 1 })
@@ -146,6 +165,29 @@ describe("local draft lifetime", () => {
 })
 
 describe("local draft save outcomes", () => {
+  test("ordinary edits serialize only the latest value when flushed", async () => {
+    let serializations = 0
+    const store = memoryDrafts()
+    const backup = new DraftBackupWriter<{ text: string; toJSON(): { text: string } }>({
+      key: "large-draft",
+      store,
+      timers: { set: () => null, clear: () => {} },
+    })
+    const value = (text: string) => ({
+      text,
+      toJSON() {
+        serializations++
+        return { text }
+      },
+    })
+    backup.update({ kind: "dirty", value: value("first"), baseVersion: 1 })
+    backup.update({ kind: "dirty", value: value("latest"), baseVersion: 1 })
+    expect(serializations).toBe(0)
+    await backup.flush()
+    expect(serializations).toBe(1)
+    expect((await store.get<{ text: string }>("large-draft"))?.value.text).toBe("latest")
+  })
+
   test("unavailable writes remain retryable without changing the edit", async () => {
     const memory = memoryDrafts()
     let attempts = 0

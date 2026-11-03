@@ -1,7 +1,8 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { RootProvider } from "fumadocs-ui/provider/next"
 import type { Metadata } from "next"
-import { Archivo, Inter, JetBrains_Mono } from "next/font/google"
+import { Archivo, Inter } from "next/font/google"
+import localFont from "next/font/local"
 import { siteDescription, siteName, siteUrl } from "@/lib/site"
 import "./global.css"
 
@@ -17,8 +18,9 @@ const fontSans = Inter({
   variable: "--font-sans",
 })
 
-const fontMono = JetBrains_Mono({
-  subsets: ["latin"],
+const fontMono = localFont({
+  src: "../../../packages/ui/src/fonts/PaperMono[wght].ttf",
+  weight: "100 800",
   variable: "--font-mono",
 })
 

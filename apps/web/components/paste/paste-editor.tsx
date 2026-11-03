@@ -39,7 +39,6 @@ import {
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
-import { InvitePeople, type PendingInvite } from "@/components/paste/invite-people"
 import { LanguageIcon } from "@/components/paste/language-icon"
 import { LanguagePicker } from "@/components/paste/language-picker"
 import {
@@ -63,8 +62,10 @@ import {
   useSaveBroadcast,
 } from "@/lib/autosave/use-autosave"
 import type { Collection } from "@/lib/collections/types"
+import { editorEdit } from "@/lib/editor-editing"
 import { editKind, type Snapshot } from "@/lib/editor-history"
 import { byteLength, formatBytes, formatDateTime } from "@/lib/format"
+import { editorLineCount, isLargeEditorContent } from "@/lib/highlight/editor-limits"
 import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
@@ -91,6 +92,8 @@ export interface EditorInitial {
 }
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
+// Keep the custom-link section available to restore later; existing paste URLs stay unchanged.
+const CUSTOM_LINKS_ENABLED = false
 
 type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
@@ -119,6 +122,7 @@ function snapshotOf(textarea: HTMLTextAreaElement): Snapshot {
     value: textarea.value,
     selectionStart: textarea.selectionStart,
     selectionEnd: textarea.selectionEnd,
+    selectionDirection: textarea.selectionDirection,
   }
 }
 
@@ -255,7 +259,6 @@ export function PasteEditor({
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
-  const [invites, setInvites] = React.useState<PendingInvite[]>([])
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
@@ -265,10 +268,16 @@ export function PasteEditor({
   const titleRef = useAutoHeight(title)
   const formRef = React.useRef<HTMLFormElement>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const exitOnTab = React.useRef(false)
+  const filePanelId = React.useId()
+  React.useEffect(() => {
+    exitOnTab.current = false
+  }, [activeId])
   // Where the caret goes once the next render has put new text in the textarea (Undo, Redo, Tab).
-  const pendingSelection = React.useRef<Pick<Snapshot, "selectionStart" | "selectionEnd"> | null>(
-    null,
-  )
+  const pendingSelection = React.useRef<Pick<
+    Snapshot,
+    "selectionStart" | "selectionEnd" | "selectionDirection"
+  > | null>(null)
   const removalToasts = React.useRef(new Set<number>())
   const history = useEditorHistory()
   const formId = React.useId()
@@ -289,12 +298,26 @@ export function PasteEditor({
         ? t("neverExpires")
         : t("expiresAt", { date: formatDateTime(savedExpiresAt, locale) })
   const versionRef = React.useRef(initial.version ?? 0)
-  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined)
+  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined, CUSTOM_LINKS_ENABLED)
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
-  const totalBytes = files.reduce((size, file) => size + byteLength(file.content), 0)
-  const lineCount = (active?.content ?? "").split("\n").length
+  const [fileSizes] = React.useState(() => new WeakMap<EditorFile, number>())
+  const totalBytes = React.useMemo(
+    () =>
+      files.reduce((size, file) => {
+        let bytes = fileSizes.get(file)
+        if (bytes === undefined) {
+          bytes = byteLength(file.content)
+          fileSizes.set(file, bytes)
+        }
+        return size + bytes
+      }, 0),
+    [files, fileSizes],
+  )
+  const content = active?.content ?? ""
+  const lineCount = React.useMemo(() => editorLineCount(content), [content])
+  const plainEditor = isLargeEditorContent(content, lineCount)
   const lines = useHighlight(active?.content ?? "", active?.name ?? "")
   // The code view drops one trailing newline; the textarea shows it as an empty last line.
   const previewLines = active?.content.endsWith("\n") ? lines?.slice(0, -1) : lines
@@ -304,11 +327,15 @@ export function PasteEditor({
   )
 
   // The paste as the server would store it. Editing sends this after every pause in typing.
-  const slugForSave = !editing
-    ? slug
-    : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+  const slugForSave = !CUSTOM_LINKS_ENABLED
+    ? editing
+      ? savedSlug
+      : ""
+    : !editing
       ? slug
-      : savedSlug
+      : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
+        ? slug
+        : savedSlug
   const passwordForSave = !passwordOn
     ? null
     : !editing
@@ -593,9 +620,19 @@ export function PasteEditor({
   }, [])
 
   function trackCursor(textarea: HTMLTextAreaElement) {
-    const before = textarea.value.slice(0, textarea.selectionStart)
-    const lines = before.split("\n")
-    setCursor({ line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 })
+    const position = textarea.selectionStart
+    let line = 1
+    let start = 0
+    for (let index = 0; index < position; index++) {
+      if (textarea.value.charCodeAt(index) === 10) {
+        line++
+        start = index + 1
+      }
+    }
+    const column = position - start + 1
+    setCursor((current) =>
+      current.line === line && current.column === column ? current : { line, column },
+    )
   }
 
   // Undo and Redo walk this file's own history (see useEditorHistory), not the browser's, so they
@@ -635,12 +672,39 @@ export function PasteEditor({
     const textarea = textareaRef.current
     if (!selection || !textarea) return
     pendingSelection.current = null
-    textarea.setSelectionRange(selection.selectionStart, selection.selectionEnd)
+    textarea.setSelectionRange(
+      selection.selectionStart,
+      selection.selectionEnd,
+      selection.selectionDirection,
+    )
     trackCursor(textarea)
   })
 
   function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.nativeEvent.isComposing) return
+    if (
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      event.key === "Escape"
+    ) {
+      exitOnTab.current = true
+      event.stopPropagation()
+      return
+    }
+    if (
+      event.key === "Tab" &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      exitOnTab.current
+    ) {
+      exitOnTab.current = false
+      return
+    }
+    if (!["Shift", "Control", "Alt", "Meta"].includes(event.key)) exitOnTab.current = false
 
     // ⌘Z / ⌘⇧Z (and Ctrl+Y off the Mac) go through our own history.
     const undo = matchesCombo(event, shortcut("undo").keys)
@@ -653,23 +717,27 @@ export function PasteEditor({
       return
     }
 
-    // Tab indents (by the Settings indentation) instead of leaving the editor.
-    const key = event.key.toLowerCase()
-    if (key !== "tab" || event.shiftKey || !active) return
-    event.preventDefault()
+    // Option and AltGr produce braces on many keyboard layouts; keep their text keys working.
+    const textKey =
+      event.key.length === 1 &&
+      !event.metaKey &&
+      (!event.ctrlKey || event.getModifierState("AltGraph"))
+    if (!active || (!textKey && (event.altKey || event.ctrlKey || event.metaKey))) return
     const textarea = event.currentTarget
-    const { selectionStart, selectionEnd, value } = textarea
-    const unit = indentUnit(indentation)
-    const next = `${value.slice(0, selectionStart)}${unit}${value.slice(selectionEnd)}`
-    const caret = selectionStart + unit.length
-    history.edit(
-      active.id,
-      value,
-      { value: next, selectionStart: caret, selectionEnd: caret },
-      "other",
-    )
-    pendingSelection.current = { selectionStart: caret, selectionEnd: caret }
-    updateActive({ content: next })
+    const before = snapshotOf(textarea)
+    const next = editorEdit(before, event.key, indentUnit(indentation), event.shiftKey)
+    if (!next) return
+    event.preventDefault()
+    history.moveCaret(active.id, before)
+    if (next.value === before.value) {
+      textarea.setSelectionRange(next.selectionStart, next.selectionEnd, next.selectionDirection)
+      history.moveCaret(active.id, next)
+      trackCursor(textarea)
+      return
+    }
+    history.edit(active.id, before.value, next, "other")
+    pendingSelection.current = next
+    updateActive({ content: next.value })
   }
 
   function submit() {
@@ -686,14 +754,7 @@ export function PasteEditor({
     }
 
     startTransition(async () => {
-      const result = await savePaste(
-        value,
-        undefined,
-        // Only a new private paste invites people; switching away from Private drops them.
-        visibility === "private"
-          ? invites.map((invite) => ({ userId: invite.person.id, access: invite.access }))
-          : [],
-      ).catch(() => null)
+      const result = await savePaste(value).catch(() => null)
 
       if (!result) {
         setError(t("couldnTSaveThePasteCheck"))
@@ -709,8 +770,8 @@ export function PasteEditor({
         expiry,
         burn_after_read: burnAfterRead,
         password: passwordOn,
-        custom_link: Boolean(slug),
-        invites: visibility === "private" ? invites.length : 0,
+        custom_link: Boolean(slugForSave),
+        invites: 0,
       })
       toast.success(t("pasteCreated"))
       autosaver.rebase(value)
@@ -783,12 +844,7 @@ export function PasteEditor({
       </>
     ) : null
 
-    const inviteMenu =
-      !editing && visibility === "private" ? (
-        <InvitePeople invites={invites} onChange={setInvites} large={large} />
-      ) : null
-
-    return [
+    const sections: PanelSection[] = [
       {
         id: "access",
         label: t("visibilityExpiry"),
@@ -811,9 +867,6 @@ export function PasteEditor({
             <p className="text-xs text-muted-foreground">
               {t("visibilityHelp", { value: visibility })}
             </p>
-            {inviteMenu ? (
-              <div className="mt-1 border-t border-border pt-3">{inviteMenu}</div>
-            ) : null}
             <div className="mt-1 flex flex-col gap-2">
               <span className="text-muted-foreground">{t("expiresAfter")}</span>
               <ExpiryChips
@@ -840,6 +893,7 @@ export function PasteEditor({
             onChange={setSlug}
             onCommit={editing ? () => setCommittedSlug(slug) : undefined}
             status={slugStatus}
+            disabled={!CUSTOM_LINKS_ENABLED}
             large={large}
           />
         ),
@@ -884,6 +938,7 @@ export function PasteEditor({
         ),
       },
     ]
+    return sections.filter((section) => CUSTOM_LINKS_ENABLED || section.id !== "slug")
   }
 
   const panelSections = optionSections(false)
@@ -902,10 +957,10 @@ export function PasteEditor({
         event.preventDefault()
         submit()
       }}
-      className="flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7"
+      className="@container/editor flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7"
     >
       {/* Mobile header from the Paper "New paste" artboard */}
-      <div className="sticky top-0 z-20 box-content flex h-[52px] items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
+      <div className="sticky top-0 z-20 box-content flex min-h-[52px] flex-wrap items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
         {editing ? (
           <Button
             type="button"
@@ -928,7 +983,7 @@ export function PasteEditor({
             {t("cancel")}
           </Button>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-center font-heading text-xl leading-7 font-bold tracking-[-0.02em]">
+        <h1 className="order-first min-w-0 flex-1 basis-full truncate text-center font-heading text-xl leading-7 font-bold tracking-[-0.02em] @min-[20rem]/editor:order-none @min-[20rem]/editor:basis-0">
           {heading}
         </h1>
         <Button
@@ -951,7 +1006,7 @@ export function PasteEditor({
       <HeaderActions>
         {editing ? null : (
           <Button
-            variant="ghost"
+            variant="destructive"
             size="lg"
             render={<Link href={cancelHref} />}
             nativeButton={false}
@@ -1066,6 +1121,7 @@ export function PasteEditor({
           <div className="overflow-hidden rounded-lg mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
             <FileTabs
               files={files}
+              panelId={filePanelId}
               activeId={active?.id}
               onSelect={setActiveId}
               onRename={(id, name) => {
@@ -1079,68 +1135,79 @@ export function PasteEditor({
               trailing={sharedEdit ? undefined : <SidePanelToggle />}
             />
 
-            {preview ? (
-              <CodeBlock
-                content={active?.content || " "}
-                highlighted={previewLines}
-                wrap
-                lineNumbers={lineNumbers}
-                className="flex-1 bg-muted dark:bg-sidebar"
-              />
-            ) : (
-              <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
-                {lineNumbers ? (
-                  <div
-                    aria-hidden="true"
-                    style={{ minWidth: `${String(lineCount).length}ch` }}
-                    className="shrink-0 text-right text-muted-foreground tabular-nums select-none"
-                  >
-                    {Array.from({ length: lineCount }, (_, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          index + 1 === cursor.line && "group-focus-within/code:text-foreground",
-                        )}
-                      >
-                        {index + 1}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                <HighlightedTextarea
-                  aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
-                  lines={lines}
-                  activeLine={cursor.line}
-                  value={active?.content ?? ""}
-                  ref={bindTextarea}
-                  onChange={(event) => {
-                    const textarea = event.target
-                    if (active) {
-                      history.edit(
-                        active.id,
-                        active.content,
-                        snapshotOf(textarea),
-                        editKind((event.nativeEvent as InputEvent).inputType),
-                      )
-                    }
-                    updateActive({ content: textarea.value })
-                    trackCursor(textarea)
-                  }}
-                  onSelect={(event) => {
-                    if (active) history.moveCaret(active.id, snapshotOf(event.currentTarget))
-                    trackCursor(event.currentTarget)
-                  }}
-                  onKeyDown={onEditorKeyDown}
-                  spellCheck={false}
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  placeholder={t("pasteOrTypeCode")}
-                  rows={Math.max(lineCount, 12)}
-                  wrap="off"
-                  metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
+            <div
+              id={filePanelId}
+              role="tabpanel"
+              aria-labelledby={`${filePanelId}-tab-${files.findIndex((file) => file.id === active?.id)}`}
+              className="flex flex-1 flex-col"
+            >
+              {preview ? (
+                <CodeBlock
+                  content={active?.content || " "}
+                  highlighted={previewLines}
+                  wrap
+                  lineNumbers={lineNumbers}
+                  className="flex-1 bg-muted dark:bg-sidebar"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
+                  {lineNumbers && !plainEditor ? (
+                    <div
+                      aria-hidden="true"
+                      style={{ minWidth: `${String(lineCount).length}ch` }}
+                      className="shrink-0 text-right text-muted-foreground tabular-nums select-none"
+                    >
+                      {Array.from({ length: lineCount }, (_, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            index + 1 === cursor.line && "group-focus-within/code:text-foreground",
+                          )}
+                        >
+                          {index + 1}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <HighlightedTextarea
+                    aria-label={t("contentsOf", { name: active?.name ?? t("file") })}
+                    onBlur={() => {
+                      exitOnTab.current = false
+                    }}
+                    lines={lines}
+                    plain={plainEditor}
+                    activeLine={cursor.line}
+                    value={active?.content ?? ""}
+                    ref={bindTextarea}
+                    onChange={(event) => {
+                      const textarea = event.target
+                      if (active) {
+                        history.edit(
+                          active.id,
+                          active.content,
+                          snapshotOf(textarea),
+                          editKind((event.nativeEvent as InputEvent).inputType),
+                        )
+                      }
+                      updateActive({ content: textarea.value })
+                      trackCursor(textarea)
+                    }}
+                    onSelect={(event) => {
+                      if (active) history.moveCaret(active.id, snapshotOf(event.currentTarget))
+                      trackCursor(event.currentTarget)
+                    }}
+                    onKeyDown={onEditorKeyDown}
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    placeholder={t("pasteOrTypeCode")}
+                    rows={plainEditor ? 12 : Math.max(lineCount, 12)}
+                    wrap="off"
+                    metricsClassName="text-base leading-[22px] lg:text-[13px] lg:leading-[22px]"
+                  />
+                </div>
+              )}
+            </div>
 
             {secret ? (
               <p
@@ -1184,7 +1251,7 @@ export function PasteEditor({
           while the on-screen keyboard is up, so the code being typed stays in view. */}
       <div
         hidden={keyboardUp}
-        className="sticky bottom-0 z-20 mt-6 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
+        className="sticky bottom-0 z-20 mt-6 box-content flex min-h-14 flex-wrap items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
       >
         {sharedEdit ? null : (
           <Button
@@ -1194,7 +1261,7 @@ export function PasteEditor({
             aria-haspopup="dialog"
             aria-label={`${t("pasteSettings")}: ${settingsSummary}`}
             onClick={() => setSettingsOpen(true)}
-            className="min-w-0 flex-1 justify-start px-3"
+            className="h-auto min-h-[38px] min-w-0 flex-1 basis-[10rem] justify-start px-3 py-2"
           >
             {passwordOn || burnAfterRead ? <LockIcon /> : <EyeIcon />}
             <span className="truncate">{settingsSummary}</span>
@@ -1205,7 +1272,10 @@ export function PasteEditor({
           type="submit"
           size="xl"
           loading={pending}
-          className={cn("shrink-0", sharedEdit && "flex-1")}
+          className={cn(
+            "h-auto min-h-[38px] max-w-full shrink-0 px-4 py-2 whitespace-normal",
+            sharedEdit && "flex-1",
+          )}
         >
           {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>

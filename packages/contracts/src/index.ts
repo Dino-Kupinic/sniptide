@@ -67,10 +67,8 @@ export const apiCaptureSchema = z.object({
     .default(null),
   files: z
     .array(
-      fileSchema.extend({
-        language: fileSchema.shape.language.optional(),
-        lines: lineRangeSchema.optional(),
-      }),
+      // The language always comes from the file name, as in the editor.
+      fileSchema.omit({ language: true }).extend({ lines: lineRangeSchema.optional() }),
     )
     .min(1, "A paste needs at least one file.")
     .max(MAX_FILES, "A paste can hold up to 10 files."),
@@ -90,7 +88,6 @@ const mcpCapture = {
     .array(
       fileSchema.pick({ name: true, content: true }).extend({
         name: z.string().trim().min(1).max(120),
-        language: fileSchema.shape.language.optional(),
         lines: lineRangeFieldsSchema.refine(({ start, end }) => end >= start).optional(),
       }),
     )

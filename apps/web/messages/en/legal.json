@@ -1,0 +1,20 @@
+{
+  "Copyright": {
+    "title": "Copyright notices",
+    "description": "How to ask {operator} to remove a paste that infringes your copyright.",
+    "intro": "{operator} hosts pastes that its users upload. If a paste infringes your copyright, send a notice to the agent below and the paste will be removed or made unavailable.",
+    "agentHeading": "Designated agent",
+    "noticeHeading": "What a notice includes",
+    "noticeIntro": "Under 17 U.S.C. § 512(c)(3), a notice includes each of the following.",
+    "notice1": "Your physical or electronic signature, as the owner or as someone authorized to act for the owner.",
+    "notice2": "The copyrighted work you believe was infringed.",
+    "notice3": "The link to each paste you want removed.",
+    "notice4": "Your name, postal address, telephone number and email address.",
+    "notice5": "A statement that you believe in good faith that the use is not authorized by the owner, its agent or the law.",
+    "notice6": "A statement that the information in the notice is accurate and, under penalty of perjury, that you are the owner or authorized to act for the owner.",
+    "counterHeading": "Counter-notices",
+    "counterBody": "If your paste was removed and you believe that was a mistake or a misidentification, send a counter-notice to the same address. It includes your signature, the link to the removed paste, a statement under penalty of perjury that it was removed by mistake or misidentification, your name, postal address and telephone number, and your consent to the jurisdiction of the federal district court for your address, or of any judicial district where the operator can be found if you live outside the United States. The paste can be restored 10 to 14 business days after the counter-notice reaches the person who sent the notice, unless they take the matter to court.",
+    "repeat": "Accounts that repeatedly infringe copyright are closed.",
+    "falseClaims": "A notice or counter-notice that knowingly misrepresents the facts can make its sender liable for damages under 17 U.S.C. § 512(f)."
+  }
+}

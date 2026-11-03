@@ -1,70 +1,84 @@
 ---
 title: Docker Compose
-description: Run the app and Postgres together with docker-compose.yml, with optional HTTPS.
+description: Look up what Sniptide's docker-compose.yml runs, the settings Compose reads, how to add HTTPS with Caddy, and the commands to operate the stack.
 ---
 
-`docker-compose.yml` in the repository runs the published image next to Postgres. For a first run
-from zero, follow [Run your own Sniptide](/getting-started/self-hosted); this page is the
-reference for what compose does and the options it takes.
+`docker-compose.yml` in the repository runs the published Sniptide image next to Postgres. For a
+first run from zero, follow [Run your own Sniptide](/getting-started/self-hosted). This page
+describes what Compose runs and the options it takes.
 
-## The services
+## Services
 
-| Service | What it is |
+| Service | What it runs |
 | --- | --- |
-| `db` | `postgres:17-alpine`, data in the `postgres` volume. Published only on `127.0.0.1:5432`, so it isn't reachable from outside the host. |
-| `app` | The Sniptide image, on port 3000. Waits for the database to be healthy, and applies migrations on start. |
-| `proxy` | Optional [Caddy](https://caddyserver.com) for HTTPS. Only runs with `--profile proxy`. |
+| `db` | `postgres:17-alpine`, with data in the `postgres` volume. Published only on `127.0.0.1`, so it isn't reachable from outside the host. |
+| `app` | The Sniptide image on port 3000. It waits until the database is healthy and applies migrations when it starts. |
+| `proxy` | Optional [Caddy](https://caddyserver.com) for HTTPS. Runs only with `--profile proxy`. |
 
-Containers log as JSON files capped at 10 MB × 3, so logs don't fill the disk.
+Containers write JSON log files capped at three files of 10 MB each, so logs don't fill the disk.
 
 ## Settings
 
-Compose reads `.env` next to `docker-compose.yml`. Only `BETTER_AUTH_SECRET` is required:
-compose refuses to start without it. Set `BETTER_AUTH_URL` to the exact address you open in the
-browser. Every other setting in [Configuration](/self-hosting/configuration) passes through, with
-the default shown there. `.env.example` in the repository lists them all.
+Compose reads `.env` next to `docker-compose.yml`. It refuses to start without
+`BETTER_AUTH_SECRET`. Set `BETTER_AUTH_URL` to the exact address people open in the browser.
+Every other setting in [Configuration](/self-hosting/configuration) passes through to the app,
+and `.env.example` in the repository lists them all.
 
-These settings belong to compose itself:
+These settings belong to Compose itself:
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SNIPTIDE_IMAGE` | `ghcr.io/dino-kupinic/sniptide:latest` | Which image to run. Pin a release (`…:1.2.3`) for repeatable deployments. |
-| `SNIPTIDE_BIND` | `0.0.0.0` | Address the app's port is published on. Use `127.0.0.1` when a proxy on the same host is the only way in. |
-| `SNIPTIDE_PORT` | `3000` | Host port for the app. |
-| `POSTGRES_PASSWORD` | `sniptide` | Password for the bundled Postgres. Takes effect on the first start only; the database keeps the password it was created with. Use letters and digits, since it goes into a connection URL. |
-| `POSTGRES_PORT` | `5432` | Port Postgres uses on `127.0.0.1`. |
-| `SNIPTIDE_MEMORY` | `768m` | Memory ceiling for the app container. See [Memory](/self-hosting/memory). |
-| `POSTGRES_MEMORY` | `512m` | Memory ceiling for Postgres. |
-| `SNIPTIDE_DOMAIN` | `localhost` | Domain for the HTTPS proxy profile. |
+| `SNIPTIDE_IMAGE` | `ghcr.io/dino-kupinic/sniptide:latest` | The image to run. Pin a release, such as `…:1.2.3`, for repeatable deployments. See [Versions and releases](/self-hosting/versions). |
+| `SNIPTIDE_BIND` | `0.0.0.0` | The address the app's port is published on. Use `127.0.0.1` when a proxy on the same host is the only way in. |
+| `SNIPTIDE_PORT` | `3000` | The host port for the app. |
+| `POSTGRES_PASSWORD` | `sniptide` | The password for the bundled Postgres. It takes effect on the first start only, because the database keeps the password it was created with. Use letters and digits, since it goes into a connection URL. |
+| `POSTGRES_PORT` | `5432` | The port Postgres uses on `127.0.0.1`. |
+| `SNIPTIDE_MEMORY` | `0` (no limit) | A memory ceiling for the app container. See [Memory](/self-hosting/memory). |
+| `POSTGRES_MEMORY` | `0` (no limit) | A memory ceiling for Postgres. |
+| `SNIPTIDE_DOMAIN` | `localhost` | The domain for the HTTPS proxy profile. |
 
-## HTTPS with the bundled proxy
+Settings in `.env` take effect when you run `docker compose up -d` again, which recreates the
+containers whose settings changed.
 
-Point the domain's DNS at the server, open ports 80 and 443, then add this to `.env`:
+## Add HTTPS with the bundled proxy
 
-```dotenv
-SNIPTIDE_DOMAIN=paste.example.com
-BETTER_AUTH_URL=https://paste.example.com
-CLIENT_IP_SOURCE=x-forwarded-for
-TRUSTED_PROXIES=private
-SNIPTIDE_BIND=127.0.0.1   # optional: close port 3000 to the outside
-```
+1. Point the domain's DNS at the server and open ports 80 and 443.
+2. Add these lines to `.env`:
+
+   ```dotenv title=".env"
+   SNIPTIDE_DOMAIN=paste.example.com
+   BETTER_AUTH_URL=https://paste.example.com
+   CLIENT_IP_SOURCE=x-forwarded-for
+   TRUSTED_PROXIES=private
+   SNIPTIDE_BIND=127.0.0.1
+   ```
+
+   `SNIPTIDE_BIND=127.0.0.1` is optional. It closes port 3000 to the outside, so every request
+   goes through Caddy.
+3. Start the stack with the proxy profile:
+
+   ```bash
+   docker compose --profile proxy up -d
+   ```
+
+4. Open `https://paste.example.com/api/health` and confirm it returns `{"ok":true}`.
+
+Caddy gets and renews a Let's Encrypt certificate and keeps it in the `caddy-data` volume.
+`CLIENT_IP_SOURCE` and `TRUSTED_PROXIES` make rate limits see the visitor instead of the proxy.
+See [Reverse proxy and client IP](/self-hosting/reverse-proxy). If you already run nginx,
+Traefik or Coolify, skip the profile and put your proxy in front of port 3000.
+
+## Operate the stack
 
 ```bash
-docker compose --profile proxy up -d
-```
-
-Caddy gets and renews a Let's Encrypt certificate. `CLIENT_IP_SOURCE` and `TRUSTED_PROXIES` make
-rate limits see the visitor and not the proxy; see [Reverse proxy and client IP](/self-hosting/reverse-proxy).
-
-Already running nginx, Traefik or Coolify? Skip the profile and put your proxy in front of port 3000.
-
-## Operating it
-
-```bash
-docker compose ps                  # state and health
+docker compose ps                  # state and health of each service
 docker compose logs -f app         # the app writes one line per request
 docker compose pull && docker compose up -d   # upgrade, see Upgrading
+docker compose down                # stop, keeping the data
 ```
 
+`docker compose down -v` also deletes the `postgres` volume with all data. Take a
+[backup](/self-hosting/backups) first.
+
 To build the image from source instead of pulling it, run `docker compose up -d --build`. A build
-needs 2 GB of memory or more, so on a small server pull the published image.
+needs 2 GB of memory or more, so pull the published image on a small server.

@@ -7,6 +7,8 @@ import {
   sourceSchema,
 } from "@sniptide/contracts"
 import { z } from "zod"
+import { errorBody } from "./api/errors"
+import { SCOPES, type Scope } from "./api/scopes"
 
 function jsonSchema(schema: z.ZodType) {
   const { $schema, ...fields } = z.toJSONSchema(schema, { io: "input" })
@@ -55,6 +57,9 @@ const fileProperties = {
   },
 }
 
+// A capture names its files and nothing else: the language comes from the name.
+const { language: _language, ...captureFileProperties } = fileProperties
+
 const slugParameter = {
   name: "slug",
   in: "path",
@@ -80,17 +85,50 @@ const jsonError = (description: string, example: string) =>
     },
   }) as const
 
+const tokenJsonError = (status: number, description: string, example: string) => ({
+  description,
+  content: {
+    "application/json": {
+      schema: { $ref: "#/components/schemas/TokenFailure" },
+      example: errorBody(status, example),
+    },
+  },
+})
+
+const idempotencyParameter = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: false,
+  description:
+    "Optional on create paste and create collection only. Token-scoped, visible ASCII, 1–128 characters. For 24 hours, the same route and JSON payload replay the original 201 response. A changed route or payload returns 409. Authentication, scope, and rate limits apply to every attempt.",
+  schema: { type: "string", minLength: 1, maxLength: 128, pattern: "^[!-~]+$" },
+} as const
+
+// Either a personal API token, or an OAuth access token granted `scope` (lib/oauth).
+const tokenAccess = (scope: Scope) => ({
+  security: [{ apiToken: [] }, { oauth: [scope] }],
+  "x-required-scopes": [scope],
+})
+
 const tokenErrors = {
-  "401": jsonError(
+  "500": tokenJsonError(
+    500,
+    "An unexpected server error. Check whether a mutation completed before retrying.",
+    "An unexpected error occurred.",
+  ),
+  "401": tokenJsonError(
+    401,
     "The token is missing, wrong, expired or revoked.",
     "The API token is missing, invalid, expired or revoked.",
   ),
-  "403": jsonError(
+  "403": tokenJsonError(
+    403,
     "The token doesn't have the scope this needs.",
     "This token doesn't have the write scope.",
   ),
   "429": {
-    ...jsonError(
+    ...tokenJsonError(
+      429,
       "The token made too many requests. Retry after `Retry-After` seconds.",
       "Too many requests. Slow down.",
     ),
@@ -166,13 +204,14 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "Sniptide HTTP API",
-    version: "1.0.0",
+    version: "1.1.0",
     summary: "The endpoints Sniptide serves to the public.",
     description: [
       "Everything a share link does over HTTP: reading a paste's files as plain text, unlocking a",
       "password-protected paste and revealing a burn-after-read one, plus the health and metrics",
       "endpoints that self-hosters point their monitoring at.",
       "",
+      "The v1 compatibility and deprecation policy is at https://docs.sniptide.com/api-reliability.",
       "With a personal API token (Settings → API tokens) the `/api/v1` endpoints capture code as",
       "pastes, list and pull your pastes and collections, and sync env groups. They are what the",
       "`sniptide` CLI calls, and coding agents can call them directly.",
@@ -228,6 +267,123 @@ export const openApiDocument = {
     },
   ],
   paths: {
+    "/api/v1/batch": {
+      post: {
+        operationId: "batchCreate",
+        tags: ["Token API"],
+        summary: "Create up to 20 pastes or collections",
+        description:
+          "Runs typed create operations sequentially in input order, each in its own transaction. Returns 207 with an ordered result for every item. Earlier successes remain committed when another item fails. Each item requires a token-scoped idempotency key, uses the corresponding single-create route namespace, and consumes one token request plus the paste-create quota when applicable. The batch request itself also consumes one token request. Limits and storage budgets apply before each mutation. Maximum JSON body is 8 MiB.",
+        ...tokenAccess("write"),
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["operations"],
+                properties: {
+                  operations: {
+                    type: "array",
+                    minItems: 1,
+                    maxItems: 20,
+                    items: {
+                      oneOf: [
+                        {
+                          type: "object",
+                          additionalProperties: false,
+                          required: ["operation", "key", "body"],
+                          properties: {
+                            operation: { const: "create_paste" },
+                            key: { type: "string", minLength: 1, maxLength: 128 },
+                            body: { $ref: "#/components/schemas/Capture" },
+                          },
+                        },
+                        {
+                          type: "object",
+                          additionalProperties: false,
+                          required: ["operation", "key", "body"],
+                          properties: {
+                            operation: { const: "create_collection" },
+                            key: { type: "string", minLength: 1, maxLength: 128 },
+                            body: {
+                              type: "object",
+                              required: ["name"],
+                              additionalProperties: false,
+                              properties: { name: { type: "string", minLength: 1, maxLength: 40 } },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              example: {
+                operations: [
+                  {
+                    operation: "create_collection",
+                    key: "import-collection-1",
+                    body: { name: "Imported" },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        responses: {
+          "207": {
+            description: "Ordered independent results, including partial failures.",
+            content: {
+              "application/json": {
+                example: {
+                  results: [
+                    {
+                      index: 0,
+                      key: "import-collection-1",
+                      status: 201,
+                      body: { collection: { slug: "imported", name: "Imported", pasteCount: 0 } },
+                    },
+                  ],
+                },
+                schema: {
+                  type: "object",
+                  required: ["results"],
+                  properties: {
+                    results: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["index", "key", "status", "body"],
+                        properties: {
+                          index: { type: "integer" },
+                          key: { type: "string" },
+                          status: { type: "integer" },
+                          body: { type: "object" },
+                          retryAfterSeconds: { type: "integer" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": tokenJsonError(
+            400,
+            "Invalid batch envelope or unsupported operation.",
+            "The request isn't valid.",
+          ),
+          "413": tokenJsonError(
+            413,
+            "The batch body exceeds 8 MiB.",
+            "The request body is too large.",
+          ),
+          ...tokenErrors,
+        },
+      },
+    },
     "/{slug}/raw": {
       get: {
         operationId: "getRawFile",
@@ -381,8 +537,8 @@ export const openApiDocument = {
           "",
           "**Revealing a burn-after-read paste uses it up:** the first visitor gets the files, and",
           "everyone after them gets 404. Only `POST` reveals, so link previews and scanners that",
-          "fetch the share page with `GET` can't burn the paste. The owner, signed in, can reveal",
-          "their own paste without burning it.",
+          "fetch the share page with `GET` can't burn the paste. This holds for the owner too: their",
+          "own reveal uses the paste up, and they can read it without burning it in the app.",
           "",
           "A password-protected paste answers 401 until it has been unlocked.",
         ].join("\n"),
@@ -427,8 +583,8 @@ export const openApiDocument = {
         tags: ["MCP"],
         summary: "Call the Sniptide MCP server",
         description:
-          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No OAuth discovery or SSE sessions. See packages/mcp/README.md for client configuration.",
-        security: [{ apiToken: [] }],
+          "Stateless Streamable HTTP with JSON responses. Connect your MCP client to this URL with OAuth (the client discovers it from the 401's WWW-Authenticate header) or a personal API token. Tools: search_snippets, read_snippet, fetch_collection, create_snippet and update_snippet. Reads need read scope; writes also need write scope. No SSE sessions. See packages/mcp/README.md for client configuration.",
+        ...tokenAccess("read"),
         requestBody: {
           required: true,
           content: {
@@ -460,7 +616,7 @@ export const openApiDocument = {
         operationId: "mcpStream",
         tags: ["MCP"],
         summary: "Check MCP stream support",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         responses: {
           "405": { description: "No standalone SSE stream; use POST." },
           ...tokenErrors,
@@ -470,8 +626,68 @@ export const openApiDocument = {
         operationId: "mcpDeleteSession",
         tags: ["MCP"],
         summary: "Check MCP session deletion support",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         responses: { "405": { description: "No sessions to delete; use POST." }, ...tokenErrors },
+      },
+    },
+    "/api/v1/usage": {
+      get: {
+        operationId: "getAccountUsage",
+        tags: ["Token API"],
+        summary: "Read your account usage",
+        description:
+          "Current retained paste storage and counts, including trash and expired pastes awaiting permanent deletion. Storage is the sum of UTF-8 current file content bytes recorded on each paste; revisions and env groups are excluded. Daily request counts cover the last 30 UTC days, including this request, valid-token errors, and revoked tokens. Each day is the number of days since the Unix epoch. Each MCP HTTP request counts once. Invalid or expired credentials do not count.",
+        ...tokenAccess("read"),
+        responses: {
+          "200": {
+            description: "The authenticated account's current usage. Never cached.",
+            content: {
+              "application/json": {
+                example: {
+                  storageBytes: 81,
+                  pasteCount: 1,
+                  fileCount: 2,
+                  collectionCount: 1,
+                  reconciledAt: "2026-10-25T00:00:00.000Z",
+                  apiRequests: [
+                    { tokenId: "f83070b0-c0cc-46f7-a501-391d0365eaab", day: 20751, requests: 1 },
+                  ],
+                },
+                schema: {
+                  type: "object",
+                  required: [
+                    "storageBytes",
+                    "pasteCount",
+                    "fileCount",
+                    "collectionCount",
+                    "reconciledAt",
+                    "apiRequests",
+                  ],
+                  properties: {
+                    storageBytes: { type: "integer", minimum: 0 },
+                    pasteCount: { type: "integer", minimum: 0 },
+                    fileCount: { type: "integer", minimum: 0 },
+                    collectionCount: { type: "integer", minimum: 0 },
+                    reconciledAt: { type: "string", format: "date-time" },
+                    apiRequests: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["tokenId", "day", "requests"],
+                        properties: {
+                          tokenId: { type: "string", format: "uuid" },
+                          day: { type: "integer" },
+                          requests: { type: "integer", minimum: 0 },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          ...tokenErrors,
+        },
       },
     },
     "/api/v1/me": {
@@ -481,7 +697,7 @@ export const openApiDocument = {
         summary: "Check a token",
         description:
           "Who the token acts for and its scopes. `sniptide login` calls this before saving a token.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         responses: {
           "200": {
             description: "The token is valid.",
@@ -524,7 +740,7 @@ export const openApiDocument = {
           "expired pastes are left out. Filters combine: every `tag` must be on the paste.",
           "Follow `nextCursor` for the next page; it is `null` on the last one.",
         ].join("\n"),
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         parameters: [
           {
             name: "q",
@@ -590,12 +806,17 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError("A filter or the cursor isn't valid.", "The cursor isn't valid."),
+          "400": tokenJsonError(
+            400,
+            "A filter or the cursor isn't valid.",
+            "The cursor isn't valid.",
+          ),
           ...tokenErrors,
         },
       },
       post: {
         operationId: "createPaste",
+        parameters: [idempotencyParameter],
         tags: ["Token API"],
         summary: "Capture code as a paste",
         description: [
@@ -604,7 +825,7 @@ export const openApiDocument = {
           "otherwise and never expire. A `collection` must already exist. The account's paste,",
           "storage and hourly create limits apply, as in the editor. `sniptide push` sends this.",
         ].join("\n"),
-        security: [{ apiToken: ["write"] }],
+        ...tokenAccess("write"),
         requestBody: {
           required: true,
           content: {
@@ -628,12 +849,19 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError("The capture isn't valid.", "Give the paste a title."),
-          "404": jsonError(
+          "400": tokenJsonError(400, "The capture isn't valid.", "Give the paste a title."),
+          "409": tokenJsonError(
+            409,
+            "An idempotency key was reused with a different route or payload.",
+            "This Idempotency-Key was used for another route or payload.",
+          ),
+          "404": tokenJsonError(
+            404,
             "The collection doesn't exist.",
             "That collection doesn't exist. Create it in Sniptide first.",
           ),
-          "413": jsonError(
+          "413": tokenJsonError(
+            413,
             "The body, the paste, the account's storage or the account's paste count is over its limit.",
             "You've reached your storage limit. Permanently delete some pastes or reduce their size.",
           ),
@@ -647,7 +875,7 @@ export const openApiDocument = {
         tags: ["Token API"],
         summary: "Read one of your pastes",
         description: "A paste with every file, by its id or slug. `sniptide pull <id>` reads this.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         parameters: [
           {
             name: "id",
@@ -671,7 +899,8 @@ export const openApiDocument = {
               },
             },
           },
-          "404": jsonError(
+          "404": tokenJsonError(
+            404,
             "No paste of yours has that id, or it is trashed or expired.",
             "No paste with that id.",
           ),
@@ -684,7 +913,7 @@ export const openApiDocument = {
         summary: "Update one of your pastes",
         description:
           "Replaces title and all files. Omitted metadata is preserved. Explicit null clears collection/source. Link, expiry, password and burn setting stay unchanged. Records an edit in history. Requires write scope.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("write"),
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
@@ -708,12 +937,17 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError("Invalid input.", "Check the paste fields."),
-          "404": jsonError(
+          "400": tokenJsonError(400, "Invalid input.", "Check the paste fields."),
+          "404": tokenJsonError(
+            404,
             "No live paste of yours has that id, or the collection does not exist.",
             "No paste with that id.",
           ),
-          "413": jsonError("Request or storage limit exceeded.", "The request body is too large."),
+          "413": tokenJsonError(
+            413,
+            "Request or storage limit exceeded.",
+            "The request body is too large.",
+          ),
           ...tokenErrors,
         },
       },
@@ -723,7 +957,7 @@ export const openApiDocument = {
         summary: "Change how one of your pastes is shared",
         description:
           "Changes only the fields sent: visibility, expiry counted from now, a password (null removes it) and burn after read. Title, files and the link stay unchanged. The response says whether a password is set and never returns it. Requires write scope.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("write"),
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
@@ -778,8 +1012,12 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError("Invalid or empty settings.", "Check the settings."),
-          "404": jsonError("No live paste of yours has that id.", "No paste with that id."),
+          "400": tokenJsonError(400, "Invalid or empty settings.", "Check the settings."),
+          "404": tokenJsonError(
+            404,
+            "No live paste of yours has that id.",
+            "No paste with that id.",
+          ),
           ...tokenErrors,
         },
       },
@@ -789,7 +1027,7 @@ export const openApiDocument = {
         summary: "Move one of your pastes to the trash",
         description:
           "The link stops working and the paste can be restored from the app until the trash is emptied. The token API never deletes a paste for good. Requires write scope.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("write"),
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           "200": {
@@ -811,7 +1049,11 @@ export const openApiDocument = {
               },
             },
           },
-          "404": jsonError("No live paste of yours has that id.", "No paste with that id."),
+          "404": tokenJsonError(
+            404,
+            "No live paste of yours has that id.",
+            "No paste with that id.",
+          ),
           ...tokenErrors,
         },
       },
@@ -822,7 +1064,7 @@ export const openApiDocument = {
         tags: ["Token API"],
         summary: "List your collections",
         description: "Your collections, oldest first, with how many live pastes each holds.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         responses: {
           "200": {
             description: "Every collection.",
@@ -847,11 +1089,12 @@ export const openApiDocument = {
       },
       post: {
         operationId: "createOwnCollection",
+        parameters: [idempotencyParameter],
         tags: ["Token API"],
         summary: "Create a collection",
         description:
           "Creates an empty collection and returns its slug. Names are unique per account, and an account holds up to 50 collections. Requires write scope.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("write"),
         requestBody: {
           required: true,
           content: {
@@ -882,12 +1125,14 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError("Invalid name.", "Check the name."),
-          "409": jsonError(
+          "400": tokenJsonError(400, "Invalid name.", "Check the name."),
+          "409": tokenJsonError(
+            409,
             "A collection with that name exists.",
             "You already have a collection with that name.",
           ),
-          "422": jsonError(
+          "422": tokenJsonError(
+            422,
             "The account has the most collections it can hold.",
             "You can have up to 50 collections.",
           ),
@@ -905,7 +1150,7 @@ export const openApiDocument = {
           "The order is stable across pages. `sniptide pull collection:<slug>` reads all pages",
           "before writing anything.",
         ].join("\n"),
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         parameters: [
           {
             name: "slug",
@@ -939,8 +1184,12 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError("The cursor isn't valid.", "The cursor isn't valid."),
-          "404": jsonError("You have no collection by that slug.", "No collection with that name."),
+          "400": tokenJsonError(400, "The cursor isn't valid.", "The cursor isn't valid."),
+          "404": tokenJsonError(
+            404,
+            "You have no collection by that slug.",
+            "No collection with that name.",
+          ),
           ...tokenErrors,
         },
       },
@@ -951,7 +1200,7 @@ export const openApiDocument = {
         tags: ["Env"],
         summary: "List your env groups",
         description: "Each group's name and how many variables it holds. No values.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         responses: {
           "200": {
             description: "Your env groups, most recently pushed first.",
@@ -1000,7 +1249,7 @@ export const openApiDocument = {
         summary: "Read an env group",
         description:
           "The group's variables with their values, in the order they were pushed. `sniptide env pull` and `env run` read this.",
-        security: [{ apiToken: [] }],
+        ...tokenAccess("read"),
         parameters: [envGroupParameter],
         responses: {
           "200": {
@@ -1016,7 +1265,11 @@ export const openApiDocument = {
               },
             },
           },
-          "404": jsonError("You have no env group by that name.", "No env group with that name."),
+          "404": tokenJsonError(
+            404,
+            "You have no env group by that name.",
+            "No env group with that name.",
+          ),
           ...tokenErrors,
         },
       },
@@ -1029,7 +1282,7 @@ export const openApiDocument = {
           "variable left out is removed. Values are encrypted before they're stored. Up to 500",
           "variables, 32 KB per value and 256 KB per group. `sniptide env push` sends this.",
         ].join("\n"),
-        security: [{ apiToken: ["write"] }],
+        ...tokenAccess("write"),
         parameters: [envGroupParameter],
         requestBody: {
           required: true,
@@ -1060,11 +1313,13 @@ export const openApiDocument = {
               },
             },
           },
-          "400": jsonError(
+          "400": tokenJsonError(
+            400,
             "A name or value isn't valid, or the group is over its limits.",
             "Each variable can only appear once.",
           ),
-          "409": jsonError(
+          "409": tokenJsonError(
+            409,
             "The account already has the most env groups it can.",
             "You can have up to 100 env groups. Delete one first.",
           ),
@@ -1076,7 +1331,7 @@ export const openApiDocument = {
         tags: ["Env"],
         summary: "Delete an env group",
         description: "Removes the group and all its variables.",
-        security: [{ apiToken: ["write"] }],
+        ...tokenAccess("write"),
         parameters: [envGroupParameter],
         responses: {
           "200": {
@@ -1088,7 +1343,11 @@ export const openApiDocument = {
               },
             },
           },
-          "404": jsonError("You have no env group by that name.", "No env group with that name."),
+          "404": tokenJsonError(
+            404,
+            "You have no env group by that name.",
+            "No env group with that name.",
+          ),
           ...tokenErrors,
         },
       },
@@ -1145,6 +1404,88 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/jobs/{name}": {
+      post: {
+        operationId: "runMaintenanceJob",
+        tags: ["Operations"],
+        summary: "Run one maintenance job",
+        description:
+          "Runs a bounded attempt independently of startup timers, using existing database coordination. Requires METRICS_TOKEN. Completion does not guarantee an empty backlog. Status is local to this process and resets on restart.",
+        security: [{ metricsToken: [] }],
+        parameters: [
+          {
+            name: "name",
+            in: "path",
+            required: true,
+            schema: { type: "string", enum: ["purge", "analytics", "usage", "email"] },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Completed, encountered another worker's lock, or disabled.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/JobReport" },
+                example: {
+                  name: "usage",
+                  runId: "b3e950b7-3c5f-4aeb-bb96-fd2ce606e901",
+                  outcome: "completed",
+                  startedAt: 1793268000000,
+                  finishedAt: 1793268000010,
+                  durationMs: 10,
+                  failureCode: null,
+                },
+              },
+            },
+          },
+          "409": {
+            description: "This process is already running this job.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/JobReport" },
+                example: {
+                  name: "usage",
+                  runId: "b3e950b7-3c5f-4aeb-bb96-fd2ce606e901",
+                  outcome: "busy",
+                  startedAt: 1793268000000,
+                  finishedAt: null,
+                  durationMs: null,
+                  failureCode: null,
+                },
+              },
+            },
+          },
+          "500": {
+            description: "The attempt failed. Job-specific retries remain in effect.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/JobReport" },
+                example: {
+                  name: "usage",
+                  runId: "b3e950b7-3c5f-4aeb-bb96-fd2ce606e901",
+                  outcome: "failed",
+                  startedAt: 1793268000000,
+                  finishedAt: 1793268000010,
+                  durationMs: 10,
+                  failureCode: "execution_failed",
+                },
+              },
+            },
+          },
+          "401": textError("The operator bearer token is missing or wrong.", "Unauthorized"),
+          "404": {
+            description: "METRICS_TOKEN is unset or the job name is unknown.",
+            content: {
+              "text/plain": { schema: { type: "string" }, example: "Not found" },
+              "application/json": {
+                schema: { type: "object", properties: { error: { type: "string" } } },
+                example: { error: "Unknown maintenance job." },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/metrics": {
       get: {
         operationId: "getMetrics",
@@ -1153,6 +1494,7 @@ export const openApiDocument = {
         description: [
           "Request timings, event loop delay, memory, database size and connections, and how many",
           "expired pastes are waiting to be purged.",
+          "Includes maintenance job success/failure timestamps and overdue state for this process; these reset on restart.",
           "",
           "Off until you set `METRICS_TOKEN` on the server: without it the endpoint answers 404.",
           "Authenticate with that value as a bearer token.",
@@ -1216,8 +1558,33 @@ export const openApiDocument = {
       apiToken: {
         type: "http",
         scheme: "bearer",
+        "x-scopes": {
+          read: "Read account resources.",
+          write: "Create and modify account resources; tokens with write also have read.",
+        },
         description:
           "A personal API token (`snpt_…`) from Settings → API tokens. Shown once when created; revoke it there.",
+      },
+      oauth: {
+        type: "oauth2",
+        description: [
+          "OAuth 2.1 for agents and apps that act for a user. Clients register themselves at",
+          "`/api/oauth/register` (RFC 7591), use PKCE with S256, and get an access token that lasts",
+          "an hour plus a rotating refresh token. Discovery: `/.well-known/oauth-authorization-server`",
+          "and `/.well-known/oauth-protected-resource`. The user can disconnect the app in",
+          "Settings → API tokens. Relative URLs resolve against the instance this document came from.",
+        ].join(" "),
+        flows: {
+          authorizationCode: {
+            authorizationUrl: "/oauth/authorize",
+            tokenUrl: "/api/oauth/token",
+            refreshUrl: "/api/oauth/token",
+            scopes: {
+              read: "Search and read your snippets, collections and env groups.",
+              write: "Create, edit and delete snippets, collections and env groups. Includes read.",
+            },
+          },
+        },
       },
       metricsToken: {
         type: "http",
@@ -1228,8 +1595,9 @@ export const openApiDocument = {
     schemas: {
       Scopes: {
         type: "array",
-        items: { enum: ["read", "write"] },
-        description: "What the token may do. Every token can read; write also creates.",
+        items: { enum: SCOPES },
+        description:
+          "What the token may do. Every token can read; write also creates, updates, and deletes account resources.",
       },
       File: {
         ...jsonSchema(responseFileSchema),
@@ -1237,7 +1605,7 @@ export const openApiDocument = {
       },
       CaptureFile: {
         ...jsonSchema(apiCaptureSchema.shape.files.element),
-        properties: fileProperties,
+        properties: captureFileProperties,
       },
       Source: {
         ...jsonSchema(sourceSchema.nullable()),
@@ -1319,6 +1687,17 @@ export const openApiDocument = {
           error: { type: "string", description: "A sentence fit to show to a visitor." },
         },
       },
+      TokenFailure: {
+        type: "object",
+        required: ["ok", "error", "code", "message", "resolution"],
+        properties: {
+          ok: { const: false },
+          error: { type: "string", description: "The original human-readable error." },
+          code: { type: "string", description: "A broad HTTP error category." },
+          message: { type: "string" },
+          resolution: { type: "string" },
+        },
+      },
       RevealedPaste: {
         type: "object",
         required: ["ok", "title", "files"],
@@ -1339,8 +1718,57 @@ export const openApiDocument = {
                   examples: ["bash"],
                 },
                 content: { type: "string" },
+                lines: {
+                  type: "array",
+                  description:
+                    "Syntax tokens for the share page, one array per line. Each token is plain text or a [text, role] pair. Left out for plain text and very large files.",
+                  items: { type: "array" },
+                },
               },
             },
+          },
+          author: {
+            type: "object",
+            required: ["username", "initials"],
+            properties: { username: { type: "string" }, initials: { type: "string" } },
+          },
+          updatedAt: { type: "number", description: "Milliseconds since the epoch." },
+          expiresAt: {
+            type: ["number", "null"],
+            description: "Milliseconds since the epoch, or null when the paste doesn't expire.",
+          },
+          views: { type: "integer" },
+          burned: {
+            type: "boolean",
+            description:
+              "Whether this reveal deleted the paste, which is true for every burn-after-read paste.",
+          },
+        },
+      },
+      JobReport: {
+        type: "object",
+        required: [
+          "name",
+          "runId",
+          "outcome",
+          "startedAt",
+          "finishedAt",
+          "durationMs",
+          "failureCode",
+        ],
+        properties: {
+          name: { type: "string" },
+          runId: { type: ["string", "null"] },
+          outcome: {
+            type: "string",
+            enum: ["completed", "contended", "failed", "busy", "disabled"],
+          },
+          startedAt: { type: ["number", "null"], description: "Unix time in milliseconds." },
+          finishedAt: { type: ["number", "null"], description: "Unix time in milliseconds." },
+          durationMs: { type: ["number", "null"] },
+          failureCode: {
+            type: ["string", "null"],
+            enum: ["execution_failed", "work_failed", null],
           },
         },
       },
@@ -1407,6 +1835,36 @@ export const openApiDocument = {
             description: "Results of the last background maintenance run.",
             additionalProperties: { type: ["number", "boolean"] },
           },
+          maintenanceJobs: {
+            type: "object",
+            description:
+              "Per-process attempts, last success/failure, and overdue state. Resets on restart. Disabled jobs are not overdue; contention does not advance success.",
+            properties: {
+              scope: { const: "process" },
+              resetsOnRestart: { const: true },
+              jobs: {
+                type: "object",
+                additionalProperties: {
+                  type: "object",
+                  properties: {
+                    running: { type: "boolean" },
+                    enabled: { type: "boolean" },
+                    overdue: { type: "boolean" },
+                    lastSucceededAt: { type: ["number", "null"] },
+                    lastFailedAt: { type: ["number", "null"] },
+                    lastStartedAt: { type: ["number", "null"] },
+                    lastFinishedAt: { type: ["number", "null"] },
+                    lastFailureCode: { type: ["string", "null"] },
+                    lastOutcome: { type: ["string", "null"] },
+                    intervalMs: { type: "number" },
+                    nextDueAt: { type: ["number", "null"] },
+                    runId: { type: ["string", "null"] },
+                    durationMs: { type: ["number", "null"] },
+                  },
+                },
+              },
+            },
+          },
           database: {
             type: "object",
             required: ["bytes", "connections", "lock_waiters", "active_connections"],
@@ -1434,17 +1892,25 @@ export const openApiDocument = {
   },
 } as const
 
-// Route handlers that belong to the web app rather than to the public API. They answer only to
-// the signed-in browser session, or are another library's, so the reference leaves them out. A
-// route handler that is in neither this list nor the document fails test/openapi.test.ts.
 export const internalRoutes = [
+  "/.well-known/api-catalog",
+  // OAuth follows its RFCs and is discovered from these metadata documents instead (lib/oauth).
+  "/.well-known/oauth-authorization-server",
+  "/.well-known/oauth-protected-resource/[[...path]]",
+  "/api/oauth/authorize",
+  "/api/oauth/register",
+  "/api/oauth/revoke",
+  "/api/oauth/token",
+  "/api/agent-share/[...path]",
   "/[slug]/copy",
   "/[slug]/preview",
   "/[slug]/preview.mp4",
   "/analytics/export",
+  "/api/[[...path]]",
   "/api/analytics",
   "/api/analytics/[...path]",
   "/api/auth/[...all]",
+  "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",
   "/demo",

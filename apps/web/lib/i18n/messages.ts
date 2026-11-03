@@ -10,6 +10,9 @@ export async function loadMessages(locale: Locale): Promise<AbstractIntlMessages
     import(`../../messages/${locale}/auth.json`),
     import(`../../messages/${locale}/not-found.json`),
     import(`../../messages/${locale}/errors.json`),
+    import(`../../messages/${locale}/legal.json`),
+    import(`../../messages/${locale}/oauth.json`),
+    import(`../../messages/${locale}/onboarding.json`),
   ])
   return Object.assign({}, ...catalogs.map((catalog) => catalog.default))
 }

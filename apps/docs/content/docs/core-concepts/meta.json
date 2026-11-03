@@ -1,4 +1,13 @@
 {
   "title": "Core concepts",
-  "pages": ["index", "pastes", "collections", "sharing", "burn-after-read", "revisions"]
+  "pages": [
+    "index",
+    "pastes",
+    "collections",
+    "sharing",
+    "burn-after-read",
+    "revisions",
+    "secrets",
+    "analytics"
+  ]
 }

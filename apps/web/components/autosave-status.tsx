@@ -2,8 +2,9 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { cn } from "@sniptide/ui/lib/utils"
-import { createTranslator, useTranslations } from "next-intl"
+import { createTranslator, useLocale, useNow, useTranslations } from "next-intl"
 import type { AutosaveState } from "@/lib/autosave/autosaver"
+import { timeAgo } from "@/lib/format"
 import en from "@/messages/en/core.json"
 
 const english = createTranslator({ locale: "en", messages: en, namespace: "Core" })
@@ -19,7 +20,12 @@ type AutosaveKey =
   | "autosaveConflict"
 type StatusTranslator = (key: AutosaveKey, values?: Record<string, string>) => string
 
-export function autosaveLabel(state: AutosaveState, t: StatusTranslator = english) {
+export function autosaveLabel(
+  state: AutosaveState,
+  t: StatusTranslator = english,
+  now = Date.now(),
+  locale = "en",
+) {
   switch (state.kind) {
     case "idle":
       return t("autosaveIdle")
@@ -30,7 +36,7 @@ export function autosaveLabel(state: AutosaveState, t: StatusTranslator = englis
     case "saving":
       return t("autosaveSaving")
     case "saved":
-      return t("autosaveSaved")
+      return t("autosaveSaved", { time: timeAgo(state.at, now, locale) })
     case "retrying":
       return state.offline ? t("autosaveOffline") : t("autosaveRetry")
     case "error":
@@ -43,6 +49,8 @@ export function autosaveLabel(state: AutosaveState, t: StatusTranslator = englis
 // One line in the editor's header that says whether the last edit has reached the server.
 export function AutosaveStatus({ state, className }: { state: AutosaveState; className?: string }) {
   const t = useTranslations("Core")
+  const locale = useLocale()
+  const now = useNow({ updateInterval: state.kind === "saved" ? 10_000 : undefined })
   const problem =
     state.kind === "error" ||
     state.kind === "retrying" ||
@@ -59,7 +67,7 @@ export function AutosaveStatus({ state, className }: { state: AutosaveState; cla
         className,
       )}
     >
-      {autosaveLabel(state, t)}
+      {autosaveLabel(state, t, now.getTime(), locale)}
     </span>
   )
 }

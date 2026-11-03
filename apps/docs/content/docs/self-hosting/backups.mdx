@@ -1,6 +1,6 @@
 ---
 title: Backups and restore
-description: Back up Sniptide's database, schedule it, and restore it into the same or a brand-new server.
+description: Back up a self-hosted Sniptide database by hand or on a schedule, check the backup, and restore it into the same or a new server.
 ---
 
 Everything Sniptide stores (accounts, pastes and revisions, collections, API tokens, analytics)
@@ -11,8 +11,8 @@ backup into the running stack and into a brand-new one, checking that nothing wa
 
 <Callout type="warn">
 **Keep your secrets with the backups.** A backup is useless without `BETTER_AUTH_SECRET` (and
-`ENV_SECRETS_KEY`, if you set it). Lose them and everyone is signed out and every env group pushed
-with the CLI becomes unreadable (the API answers with an error). Pastes, accounts and API tokens
+`ENV_SECRETS_KEY`, if you set it). Lose them and everyone is signed out, and every env group's
+values become unreadable in the app, the CLI and the API. Pastes, accounts and API tokens
 are unaffected. Store the secrets somewhere separate from the backup files: the backups contain
 password hashes.
 </Callout>
@@ -30,6 +30,10 @@ The script dumps the database in `pg_dump`'s compressed custom format, checks th
 read back, and prints its path. The file is readable by you alone. Set `BACKUP_KEEP_DAYS=14` to
 delete older `sniptide-*.dump` files in that folder at the same time. It is safe to run while
 Sniptide is serving traffic: `pg_dump` takes a consistent snapshot.
+
+The script exits with an error and keeps no file when the dump can't be read back, so a printed
+path means the backup passed that check. To prove a backup restores, use the
+[throwaway restore](#check-a-backup-in-a-throwaway-copy) below.
 
 ### Without the script, or with your own Postgres
 
@@ -131,8 +135,10 @@ yours isn't, ask your database operator to create the extension in the empty dat
 the app afterwards. On Coolify, run the same commands inside the Postgres container with
 `docker exec -i`, as the user Coolify generated for the service.
 
-For a second look before you rely on a backup, restore it into a throwaway copy of the stack
-(a different project name and ports), and delete that copy afterwards:
+### Check a backup in a throwaway copy
+
+Before you rely on a backup, restore it into a throwaway copy of the stack with a different
+project name and ports, sign in to it on port 3999, and delete the copy afterwards:
 
 ```bash
 COMPOSE_PROJECT_NAME=sniptide-check SNIPTIDE_PORT=3999 POSTGRES_PORT=55999 \

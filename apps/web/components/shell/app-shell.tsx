@@ -124,6 +124,12 @@ export function AppShell({
                 recent={sidebarProps.data.recent}
                 collections={sidebarProps.collections}
               >
+                <a
+                  href="#main-content"
+                  className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:ring-2 focus:ring-ring"
+                >
+                  {t("skipToMain")}
+                </a>
                 <div className="flex min-h-svh bg-background lg:bg-sidebar">
                   <aside
                     aria-label={t("sidebar")}
@@ -198,9 +204,21 @@ export function AppShell({
                         {t("demoBanner")}
                       </p>
                     ) : null}
-                    <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={!layout.collapsed} />
+                    <TopBar
+                      onToggleSidebar={toggleSidebar}
+                      sidebarOpen={!layout.collapsed}
+                      counts={{
+                        "/pastes": sidebarProps.data.counts.pastes,
+                        "/starred": sidebarProps.data.counts.starred,
+                        "/shared": sidebarProps.data.counts.shared,
+                        "/collections": sidebarProps.collections.length,
+                        "/trash": trashCount,
+                      }}
+                    />
                     {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
                     <main
+                      id="main-content"
+                      tabIndex={-1}
                       className={cn(
                         "flex-1",
                         chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",

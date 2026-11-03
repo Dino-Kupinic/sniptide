@@ -51,19 +51,19 @@ export function InvitePeople({
             large ? "flex items-center gap-2 text-sm font-medium" : "flex items-center gap-2"
           }
         >
-          <UsersIcon className="size-4" />
+          <UsersIcon className="size-4 shrink-0" />
           {t("invitePeople")}
         </span>
         <span className="text-xs text-muted-foreground">{t("optional")}</span>
       </div>
       <InviteField onInvite={add} error={error} pending={pending} compact={!large} />
       {invites.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-border">
+        <ul className="@container flex flex-col divide-y divide-border">
           {invites.map((invite) => (
-            <li key={invite.person.id} className="flex items-center gap-2 py-1.5">
+            <li key={invite.person.id} className="flex flex-wrap items-center gap-2 py-1.5">
               <ShareAvatar person={invite.person} className="size-5" />
               <span
-                className="min-w-0 flex-1 truncate"
+                className="min-w-0 flex-1 basis-[calc(100%-3rem)] truncate @min-[20rem]:basis-0"
                 title={`${invite.person.name || invite.person.handle} · ${invite.person.handle}`}
                 dir="auto"
               >

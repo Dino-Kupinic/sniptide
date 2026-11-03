@@ -1,0 +1,2 @@
+CREATE INDEX "paste_api_updated_idx" ON "paste" ("owner_id","updated_at" DESC,"id") WHERE "deleted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "paste_api_collection_created_idx" ON "paste" ("owner_id","collection","created_at","id") WHERE "deleted_at" IS NULL;

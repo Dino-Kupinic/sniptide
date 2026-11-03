@@ -1,5 +1,6 @@
 import { createApiCollection, listApiCollections } from "@/lib/api/collections"
 import { json, readJson, withToken } from "@/lib/api/http"
+import { parseIdempotencyKey } from "@/lib/api/idempotency"
 
 export const dynamic = "force-dynamic"
 
@@ -9,7 +10,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  return withToken(request, "write", async ({ userId }) =>
-    json(await createApiCollection(userId, await readJson(request, 4 * 1024)), 201),
-  )
+  return withToken(request, "write", async ({ userId, tokenId }) => {
+    const body = await readJson(request, 4 * 1024)
+    const key = parseIdempotencyKey(request.headers.get("idempotency-key"))
+    return json(
+      await createApiCollection(
+        userId,
+        body,
+        key ? { tokenId, key, route: "/api/v1/collections", body } : undefined,
+      ),
+      201,
+    )
+  })
 }

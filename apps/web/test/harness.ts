@@ -17,6 +17,7 @@ import { getDb } from "@/lib/db"
 import { hashPassword } from "@/lib/pastes/passwords"
 import type { Visibility } from "@/lib/pastes/types"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
+import { validateTestDatabaseUrl } from "./database-url"
 import { request } from "./request"
 
 // Tests run the store against a real Postgres (TEST_DATABASE_URL), because the rules they check
@@ -26,12 +27,10 @@ import { request } from "./request"
 //   TEST_DATABASE_URL=postgres://sniptide:sniptide@localhost:5432/sniptide_test bun run test
 
 export const testDatabaseUrl = process.env.TEST_DATABASE_URL
+  ? validateTestDatabaseUrl(process.env.TEST_DATABASE_URL)
+  : undefined
 export const hasDatabase = Boolean(testDatabaseUrl)
 
-// The tests empty the tables, so refuse anything that isn't obviously a throwaway database.
-if (testDatabaseUrl && !/_test(\?|$)/.test(testDatabaseUrl)) {
-  throw new Error("TEST_DATABASE_URL must point at a database whose name ends in _test.")
-}
 if (testDatabaseUrl) process.env.DATABASE_URL = testDatabaseUrl
 
 export { request }
@@ -41,10 +40,12 @@ export function signInAs(id: string | null) {
 }
 
 export async function migrate() {
+  if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required for database setup.")
   await migrateDb(getDb(), path.join(import.meta.dir, "../../../packages/db/migrations"))
 }
 
 export async function resetDatabase() {
+  if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required for database cleanup.")
   // Everything else cascades from the accounts.
   await getDb().delete(moderationEvent)
   await getDb().delete(user)

@@ -1,9 +1,9 @@
 "use client"
 
-import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
 import { useTranslations } from "next-intl"
+import { PasswordInput } from "./password-input"
 import { passwordStrength } from "./password-strength"
 
 const strengthHints = new Map([
@@ -39,10 +39,9 @@ export function NewPasswordField({
       <Label htmlFor={id} className={labelClassName}>
         {label}
       </Label>
-      <Input
+      <PasswordInput
         id={id}
         name={id}
-        type="password"
         autoComplete="new-password"
         required
         minLength={8}

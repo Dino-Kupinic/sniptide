@@ -7,6 +7,7 @@ import { headers as requestHeaders } from "next/headers"
 import { clientAddress } from "@/lib/client-ip"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { runBestEffortWork } from "@/lib/request-admission"
 import { DAY, MINUTE } from "@/lib/time"
 import { countryOf, deviceOf, isAutomated, isHumanVisit, referrerHost } from "./hit"
 
@@ -69,45 +70,47 @@ export async function recordPasteEvent(
   headers?: Headers,
   now = Date.now(),
 ) {
-  try {
-    const request = headers ?? (await requestHeaders())
-    if (kind === "view" ? !isHumanVisit(request) : isAutomated(request)) return
+  return runBestEffortWork(async () => {
+    try {
+      const request = headers ?? (await requestHeaders())
+      if (kind === "view" ? !isHumanVisit(request) : isAutomated(request)) return
 
-    const visitor = await visitorFor(request, now)
-    const db = getDb()
-    if (kind === "copy") {
-      const [recent] = await db
-        .select({ id: pasteEvent.id })
-        .from(pasteEvent)
-        .where(
-          and(
-            eq(pasteEvent.pasteId, pasteId),
-            eq(pasteEvent.kind, "copy"),
-            eq(pasteEvent.visitor, visitor),
-            gt(pasteEvent.at, new Date(now - COPY_WINDOW)),
-          ),
-        )
-        .limit(1)
-      if (recent) return
-    }
+      const visitor = await visitorFor(request, now)
+      const db = getDb()
+      if (kind === "copy") {
+        const [recent] = await db
+          .select({ id: pasteEvent.id })
+          .from(pasteEvent)
+          .where(
+            and(
+              eq(pasteEvent.pasteId, pasteId),
+              eq(pasteEvent.kind, "copy"),
+              eq(pasteEvent.visitor, visitor),
+              gt(pasteEvent.at, new Date(now - COPY_WINDOW)),
+            ),
+          )
+          .limit(1)
+        if (recent) return
+      }
 
-    await db.insert(pasteEvent).values({
-      pasteId,
-      at: new Date(now),
-      kind,
-      visitor,
-      // Where the reader came from matters for views; a raw file or a copy keeps no referrer.
-      referrer: kind === "view" ? referrerHost(request.get("referer"), ownHosts(request)) : null,
-      country: kind === "view" ? countryOf(request) : null,
-      device: deviceOf(request),
-    })
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        event: "analytics_record_failed",
+      await db.insert(pasteEvent).values({
+        pasteId,
+        at: new Date(now),
         kind,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    )
-  }
+        visitor,
+        // Where the reader came from matters for views; a raw file or a copy keeps no referrer.
+        referrer: kind === "view" ? referrerHost(request.get("referer"), ownHosts(request)) : null,
+        country: kind === "view" ? countryOf(request) : null,
+        device: deviceOf(request),
+      })
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "analytics_record_failed",
+          kind,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      )
+    }
+  })
 }

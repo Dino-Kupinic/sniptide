@@ -1,10 +1,13 @@
 # Contributing
 
-Setup and the checks live in the [README](README.md). This page covers how we write commits and
-pull requests.
+Use the [development guide](docs/development.md) for setup, code ownership, and checks.
+This page covers commits, pull requests, releases, and database migration rules.
 
-Use the [development guide](docs/development.md) for code ownership, focused checks, and coding
-agent workflows.
+## License
+
+Contributions are licensed under the license of the package they change. The app and UI use
+[AGPL-3.0-only](LICENSE). The client packages and shared contracts use MIT. See
+[Licensing](LICENSING.md) for the package boundaries and hosted services.
 
 ## Conventional Commits
 
@@ -48,7 +51,12 @@ and open PRs.
 ## Pull requests
 
 - Keep a PR to one change, and say in the description what it does and why.
-- Run the checks from the README before pushing; CI runs the same ones.
+- Update the documentation in the same PR when the change affects readers. See
+  [Update the documentation](docs/development.md#update-the-documentation).
+- Run `bun run verify` and any focused checks from the development guide before pushing. CI runs
+  the same ones.
+- Fill in the template's Documentation and Verification sections, including checks you couldn't
+  run.
 
 ## Releases
 
@@ -75,11 +83,16 @@ If image publishing fails after the GitHub release was created, re-run the faile
 **Publish Docker image** manually with that existing release tag. Coolify continues deploying
 `main` independently; publishing a release does not report a production deployment to GitHub.
 
+The UI, CLI, and MCP npm packages release independently after the same CI gate. Packed contents
+are compared with npm, so unrelated app changes do not release a package. Relevant Conventional
+Commits determine the bump, and CI publishes through trusted publishing without manual version
+commits or stage approvals. See [automatic npm releases](docs/npm-publishing.md) for setup and retries.
+
 ## Database migrations
 
-The schema and how to generate migrations are described in the [README](README.md#database). Beyond
-that, a migration has to follow these rules, because every pending migration runs in one
-transaction at startup and operators upgrade and restore databases with them:
+See the [development guide](docs/development.md#change-the-database-schema) for the schema and migration commands.
+Every pending migration runs in one transaction at startup. Follow these rules so operators can
+upgrade and restore databases safely:
 
 - **Only statements Postgres can roll back.** A failed upgrade must leave the database as it was.
   `CREATE INDEX CONCURRENTLY`, `ALTER TYPE … ADD VALUE`, `VACUUM` and the like can't run in a

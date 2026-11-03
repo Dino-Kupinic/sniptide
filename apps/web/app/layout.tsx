@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from "next"
-import { Archivo, Inter, JetBrains_Mono } from "next/font/google"
+import { Archivo, Inter } from "next/font/google"
+import localFont from "next/font/local"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale, getTranslations } from "next-intl/server"
 
 import "@sniptide/ui/globals.css"
+import "@/components/loading/loading.css"
 import { Toaster } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { Analytics } from "@/components/analytics"
+import { LoadingProvider } from "@/components/loading/provider"
 import { ThemeProvider } from "@/components/theme-provider"
 
 const fontHeading = Archivo({
@@ -20,8 +23,9 @@ const fontSans = Inter({
   variable: "--font-sans",
 })
 
-const fontMono = JetBrains_Mono({
-  subsets: ["latin"],
+const fontMono = localFont({
+  src: "../../../packages/ui/src/fonts/PaperMono[wght].ttf",
+  weight: "100 800",
   variable: "--font-mono",
 })
 
@@ -54,7 +58,9 @@ export default async function RootLayout({
     >
       <body className="overscroll-none">
         <NextIntlClientProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <LoadingProvider>{children}</LoadingProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
         <Toaster dismissLabel={t("dismiss")} />
         <Analytics />

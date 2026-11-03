@@ -1,13 +1,32 @@
 ---
 title: Upgrading
-description: Move to a new Sniptide version safely.
+description: Upgrade a self-hosted Sniptide instance to a new release with Docker Compose, Docker or Coolify, verify it, and recover if it fails.
 ---
 
+This page upgrades a running instance to a newer Sniptide release. Sniptide migrates its database
+when the new version starts, so an upgrade is a backup, an image change and a check.
+
 <Callout type="warn">
-Back up your database before every upgrade. See [Backups](/self-hosting/backups).
+Back up your database before every upgrade. Downgrading isn't supported, so the backup is your way
+back. See [Backups and restore](/self-hosting/backups).
 </Callout>
 
-## What happens on upgrade
+## Before you upgrade
+
+1. **Back up the database**, and keep the file somewhere other than this server:
+   `bash scripts/backup.sh`. See [Backups and restore](/self-hosting/backups).
+2. **Read the release notes** for the versions you are skipping, on the project's GitHub releases
+   page. A release that needs an action from you says so under **BREAKING CHANGES**.
+   See [Versions and releases](/self-hosting/versions).
+3. **Keep the previous image's tag** so you know what you came from.
+4. If the migration role is restricted, make sure the `pg_trgm` extension is installed, because
+   the migrations need it. See [Docker](/self-hosting/docker#before-you-begin).
+5. On a database with many pastes, some migrations create indexes and backfill data inside the
+   migration transaction, which can block writes. Plan the upgrade for a quiet time and watch the
+   database while it runs. A very large instance (on the order of 100,000 pastes) should schedule a
+   window.
+
+## How the upgrade runs
 
 Sniptide applies its own database migrations when it starts, before it serves requests. There is no
 separate migration command. Migrations are written to be additive (new tables and columns) where
@@ -18,7 +37,10 @@ Skipping releases is expected to work, since every migration the database is mis
 order. What CI exercises on every pull request is the step from the latest release to the next one
 (see [Versions and releases](/self-hosting/versions)).
 
-## Docker Compose
+## Upgrade the instance
+
+<Tabs items={["Docker Compose", "Docker", "Coolify"]}>
+<Tab value="Docker Compose">
 
 ```bash
 docker compose pull
@@ -31,10 +53,11 @@ Compose uses `latest` by default. For repeatable deployments, pin a release in `
 SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:1.2.3
 ```
 
-(substitute an actual release), or pin an image digest. Upgrading is then a deliberate edit of that
-line followed by `docker compose up -d`.
+Replace `1.2.3` with a release from the GitHub releases page, or pin an image digest. Upgrading
+is then a deliberate edit of that line followed by `docker compose pull && docker compose up -d`.
 
-## Docker
+</Tab>
+<Tab value="Docker">
 
 Pull the new image, then replace the container with the same options:
 
@@ -44,37 +67,26 @@ docker stop sniptide && docker rm sniptide
 docker run -d --name sniptide … ghcr.io/dino-kupinic/sniptide:<version>
 ```
 
-## Coolify
+</Tab>
+<Tab value="Coolify">
 
 Redeploy the service so it runs the newer image. If you run `latest`, make sure the redeploy pulls
 it; pinning a version tag in the service makes the change explicit.
 
-## Before you upgrade
+</Tab>
+</Tabs>
 
-1. **Back up the database**, and keep the file somewhere other than this server:
-   `bash scripts/backup.sh`. See [Backups and restore](/self-hosting/backups).
-2. **Read the release notes** for the versions you are skipping, on the project's GitHub releases
-   page. A release that needs an action from you says so under **BREAKING CHANGES**.
-   See [Versions and releases](/self-hosting/versions).
-3. **Keep the previous image's tag** so you know what you came from.
-4. If the migration role is restricted, make sure the `pg_trgm` extension is installed; the early
-   growth migration needs it. See [Docker](/self-hosting/docker#about-the-database).
-5. On a database with many pastes, some migrations create indexes and backfill data inside the
-   migration transaction, which can block writes. Plan the upgrade for a quiet time and watch the
-   database while it runs. A very large instance (on the order of 100,000 pastes) should schedule a
-   window.
-
-## Check it worked
+## Verify the upgrade
 
 ```bash
-curl http://<your-address>/api/health
+curl https://<your-address>/api/health
 ```
 
-returns `{"ok":true}` when the server is up and the database answers. Then sign in and open a
-paste. On startup the app logs a `migrations` line listing the migrations it applied, which is
+The response is `{"ok":true}` when the server is up and the database answers. Then sign in and
+open a paste. On startup the app logs a `migrations` line listing the migrations it applied, which is
 empty when the database was already current.
 
-## If something goes wrong
+## Recover from a failed upgrade
 
 **The upgrade fails to start.** Migrations run in a single transaction, so a failed upgrade rolls
 back completely and leaves the database exactly as it was before you started; it is never
@@ -88,7 +100,7 @@ code doesn't know the newer schema. Restore the backup you took before upgrading
 image against a newer database anyway, it runs, but logs a `migrations_ahead` warning naming the
 migrations it doesn't know.
 
-## Replicas
+## Upgrade several replicas
 
 If you run more than one replica, build once and deploy the exact same image to all of them, and
 remember that each process holds its own database pool: replicas × `DATABASE_POOL_SIZE` (twice

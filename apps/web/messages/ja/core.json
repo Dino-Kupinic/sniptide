@@ -54,8 +54,6 @@
     "revisions": "リビジョン",
     "editPermission": "このスニペットを編集できます。共有と削除は{name}のみが行えます。",
     "viewPermission": "このスニペットを閲覧・コピーできます。変更できるのは{name}のみです。",
-    "indentTabs": "タブ",
-    "indentSpaces": "スペース{count}個",
     "gistError": "Gistを開けませんでした。",
     "metricViews": "閲覧数",
     "metricUnique": "ユニーク訪問者",
@@ -75,7 +73,7 @@
     "autosaveDirty": "未保存の変更があります…",
     "autosaveBlocked": "未保存：{reason}",
     "autosaveSaving": "保存中…",
-    "autosaveSaved": "すべての変更を保存しました",
+    "autosaveSaved": "保存済み（{time}）",
     "autosaveOffline": "オフラインです。変更はこのデバイスに保存されています",
     "autosaveRetry": "Sniptideに接続できません。変更をこのデバイスに保存し、再試行しています",
     "autosaveError": "保存できませんでした：{message}",
@@ -93,6 +91,7 @@
     "notificationExpiring": "「{title}」の有効期限：{time}",
     "notificationExpiringDetail": "共有パネルで有効期限を延長できます",
     "notificationViews": "「{title}」の閲覧数が{count, number}回に達しました",
-    "notificationViewsDetail": "アクセス解析で参照元を確認できます"
+    "notificationViewsDetail": "アクセス解析で参照元を確認できます",
+    "snapshotUnavailable": "Snapshot unavailable"
   }
 }

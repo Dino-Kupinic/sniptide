@@ -68,6 +68,7 @@ import {
   restorePaste,
   restoreRevision,
   restoreShare,
+  revealSharedPaste,
   sealRevision,
   searchOwnPastes,
   setPasteCollection,
@@ -264,7 +265,8 @@ describeDb("host moderation", () => {
         signInAs(viewer)
         expect(await getPaste(target.slug)).toBeNull()
         expect(await getPasteMeta(target.slug)).toBeNull()
-        expect(await readSharedPaste(target.slug, { reveal: true, visit: true })).toEqual({
+        expect(await readSharedPaste(target.slug, { visit: true })).toEqual({ status: "missing" })
+        expect(await revealSharedPaste(target.slug)).toEqual({
           status: "missing",
         })
         expect(await readRawFile(target.slug, null)).toEqual({ status: "missing" })
@@ -350,7 +352,7 @@ describeDb("host moderation", () => {
           await transition(target.id, state)
           for (const viewer of ["owner", "editor", null]) {
             signInAs(viewer)
-            expect(await readSharedPaste(target.slug, { reveal: true })).toEqual({
+            expect(await revealSharedPaste(target.slug)).toEqual({
               status: "missing",
             })
             expect(await readRawFile(target.slug, null)).toEqual({ status: "missing" })
@@ -481,7 +483,8 @@ describeDb("host moderation", () => {
       Promise<Awaited<ReturnType<typeof collectionCaptures>>>,
       Promise<Awaited<ReturnType<typeof listPastePage>>>,
     ] = await getDb().transaction(async (gate) => {
-      await gate.execute(sql`LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE`)
+      // Lists read author metadata instead of files after the projection migration.
+      await gate.execute(sql`LOCK TABLE paste_file, "user" IN ACCESS EXCLUSIVE MODE`)
       const pending: typeof reads = [
         listCaptures("owner", apiQuery),
         collectionCaptures("owner", "examples", null),

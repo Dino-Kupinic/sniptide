@@ -4,6 +4,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
+import { LocalDateTime } from "@/components/local-date-time"
+import { CompareRevisions } from "@/components/paste/compare-revisions"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
   CopyCodeButton,
@@ -25,7 +27,7 @@ import { TruncatedText } from "@/components/truncated-text"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
-import { formatDateTime, formatNumber, lineCount, timeAgo } from "@/lib/format"
+import { formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { embedCode } from "@/lib/pastes/embed"
 import {
@@ -58,7 +60,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   ])
   if (!paste) notFound()
   const expiresLabel = (paste: Paste) =>
-    paste.expiresAt ? formatDateTime(paste.expiresAt, locale) : t("never")
+    paste.expiresAt === null ? t("never") : <LocalDateTime value={paste.expiresAt} />
 
   const owned = !paste.owner
   const [starred, share, { origin, host }, preferences, collections, people, session, files] =
@@ -119,8 +121,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     slug,
     url,
     visibility: paste.visibility,
-    expiresLabel: expiresLabel(paste),
-    neverExpires: !paste.expiresAt,
+    expiresAt: paste.expiresAt,
     hasPassword: Boolean(paste.password),
     burnAfterRead: paste.burnAfterRead,
     allowRaw: paste.allowRaw,
@@ -152,6 +153,10 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   )
   const revisions = (
     <div>
+      <CompareRevisions
+        slug={slug}
+        current={{ title: paste.title, description: paste.description, files: paste.files }}
+      />
       <ol className="flex flex-col divide-y divide-border">
         {paste.revisions.map((entry, index) => {
           // Counted from the oldest, the way "Restored revision 3" names them.
@@ -180,6 +185,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                   #{number} · {timeAgo(entry.createdAt, Date.now(), locale)}
                 </span>
               </span>
+              {!entry.restorable ? (
+                <span className="text-xs text-muted-foreground">{t("snapshotUnavailable")}</span>
+              ) : null}
               {canEdit && !current && entry.restorable ? (
                 <RestoreRevision slug={slug} revisionId={entry.id} number={number} />
               ) : null}
@@ -226,13 +234,22 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 
   return (
     <ActiveFileProvider>
-      <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-6 lg:p-7 lg:pb-7">
+      <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-5 lg:p-7 lg:pb-7">
         {/* The page's own heading carries the visibility badge, so the bar keeps only the title. */}
         <HeaderTitle>
           <TruncatedText className="max-w-80">{paste.title}</TruncatedText>
         </HeaderTitle>
         <HeaderActions>
           <StarButton slug={slug} starred={starred} />
+          <Button
+            variant="outline"
+            size="lg"
+            render={<Link href={`/new?from=${slug}`} />}
+            nativeButton={false}
+          >
+            <CopyIcon />
+            {t("duplicate")}
+          </Button>
           {canEdit ? (
             <Button
               variant="outline"
@@ -245,15 +262,6 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             </Button>
           ) : null}
           {shareDialog("button")}
-          <Button
-            variant="outline"
-            size="lg"
-            render={<Link href={`/new?from=${slug}`} />}
-            nativeButton={false}
-          >
-            <CopyIcon />
-            {t("duplicate")}
-          </Button>
           <CopyLinkButton url={url} />
         </HeaderActions>
 
@@ -270,9 +278,6 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <span className="truncate">{parent.label}</span>
           </Button>
           <div className="flex shrink-0 items-center">
-            {shareDialog("icon") ?? (
-              <ShareButton url={url} title={paste.title} className="size-10" />
-            )}
             <StarButton slug={slug} starred={starred} variant="ghost" className="size-10" />
             <PasteOverflowMenu
               slug={slug}
@@ -282,21 +287,25 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               rawAllowed={paste.allowRaw}
               url={url}
             />
+            {shareDialog("icon") ?? (
+              <ShareButton url={url} title={paste.title} className="size-10" />
+            )}
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 px-4 lg:px-0">
+        {/* Title, description and code card sit where the editor puts them, so Edit doesn't jump. */}
+        <div className="flex min-w-0 flex-col gap-1.5 px-4 lg:px-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em]">
+            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-[32px] lg:leading-[38px]">
               {paste.title}
             </h1>
             {/* The owner's Sharing row below already shows the visibility. */}
             {owned ? null : <VisibilityBadge paste={paste} />}
           </div>
           {paste.description ? (
-            <p className="text-sm text-muted-foreground">{paste.description}</p>
+            <p className="text-base leading-6 lg:text-sm lg:leading-5">{paste.description}</p>
           ) : null}
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
             <a
               href={`/${paste.slug}`}
               className="hidden font-mono text-link hover:underline lg:inline"
@@ -346,20 +355,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               collapseAt={6}
               panelToggle
               printable
-              className="mx-4 lg:mx-0 lg:min-h-[612px] lg:flex-1"
-              bodyClassName="max-lg:bg-sidebar"
-              footerClassName="hidden lg:flex"
-              footer={
-                <>
-                  <span>
-                    UTF-8 · LF ·{" "}
-                    {preferences.indentation === "tab"
-                      ? t("indentTabs")
-                      : t("indentSpaces", { count: Number(preferences.indentation) })}
-                  </span>
-                  <span>{t("revision", { number: revision, total: revision })}</span>
-                </>
-              }
+              className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
+              bodyClassName="bg-muted dark:bg-sidebar"
+              footer={t("revision", { number: revision, total: revision })}
             />
 
             <PasteDetailPanel
@@ -478,7 +476,7 @@ async function SharedWithYou({
   )
 }
 
-function MobileRow({ label, value }: { label: string; value: string }) {
+function MobileRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex h-12 items-center justify-between px-4">
       <dt>{label}</dt>

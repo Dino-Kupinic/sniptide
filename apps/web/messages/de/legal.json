@@ -1,0 +1,20 @@
+{
+  "Copyright": {
+    "title": "Urheberrechtsmeldungen",
+    "description": "So bittest du {operator}, eine Paste zu entfernen, die dein Urheberrecht verletzt.",
+    "intro": "{operator} speichert Pastes, die Nutzer hochladen. Wenn eine Paste dein Urheberrecht verletzt, schick eine Meldung an die unten genannte Kontaktstelle, und die Paste wird entfernt oder gesperrt.",
+    "agentHeading": "Kontaktstelle für Urheberrechtsmeldungen",
+    "noticeHeading": "Was eine Meldung enthält",
+    "noticeIntro": "Nach 17 U.S.C. § 512(c)(3) enthält eine Meldung alle folgenden Angaben.",
+    "notice1": "Deine eigenhändige oder elektronische Unterschrift als Rechteinhaber oder als dazu bevollmächtigte Person.",
+    "notice2": "Das urheberrechtlich geschützte Werk, das deiner Ansicht nach verletzt wurde.",
+    "notice3": "Den Link zu jeder Paste, die entfernt werden soll.",
+    "notice4": "Deinen Namen, deine Postanschrift, Telefonnummer und E-Mail-Adresse.",
+    "notice5": "Die Erklärung, dass du in gutem Glauben annimmst, dass die Nutzung weder vom Rechteinhaber, seinem Vertreter noch vom Gesetz erlaubt ist.",
+    "notice6": "Die Erklärung, dass die Angaben in der Meldung zutreffen und du, unter Strafandrohung wegen Meineids, der Rechteinhaber oder zur Vertretung bevollmächtigt bist.",
+    "counterHeading": "Gegendarstellungen",
+    "counterBody": "Wenn deine Paste entfernt wurde und du das für einen Irrtum oder eine Verwechslung hältst, schick eine Gegendarstellung an dieselbe Adresse. Sie enthält deine Unterschrift, den Link zur entfernten Paste, die Erklärung unter Strafandrohung wegen Meineids, dass sie irrtümlich oder durch Verwechslung entfernt wurde, deinen Namen, deine Postanschrift und Telefonnummer sowie deine Zustimmung zur Zuständigkeit des US-Bundesbezirksgerichts für deine Adresse oder, wenn du außerhalb der USA wohnst, jedes Gerichtsbezirks, in dem der Betreiber zu finden ist. Die Paste kann 10 bis 14 Werktage, nachdem die Gegendarstellung die meldende Person erreicht hat, wiederhergestellt werden, sofern diese nicht vor Gericht geht.",
+    "repeat": "Konten, die wiederholt Urheberrechte verletzen, werden geschlossen.",
+    "falseClaims": "Wer in einer Meldung oder Gegendarstellung wissentlich falsche Angaben macht, kann nach 17 U.S.C. § 512(f) schadenersatzpflichtig werden."
+  }
+}

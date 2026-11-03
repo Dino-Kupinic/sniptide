@@ -122,6 +122,61 @@ describe("Sniptide MCP tools", () => {
     })
     expect(calls[0]).toEqual({ slug: "ui", cursor: "page1" })
   })
+  test("prompts start the main jobs and complete collection slugs", async () => {
+    const client = await connected({
+      ...backend,
+      collections: async () => ({
+        collections: [
+          { slug: "ui", name: "UI", pasteCount: 2 },
+          { slug: "utils", name: "Utils", pasteCount: 1 },
+          { slug: "auth", name: "Auth", pasteCount: 3 },
+        ],
+      }),
+    })
+    const { prompts } = await client.listPrompts()
+    expect(prompts.map(({ name }) => name)).toEqual([
+      "use_snippet",
+      "save_snippet",
+      "apply_collection",
+    ])
+    const use = await client.getPrompt({
+      name: "use_snippet",
+      arguments: { task: "a retry helper" },
+    })
+    const text = (message: (typeof use.messages)[number]) =>
+      message.content.type === "text" ? message.content.text : ""
+    expect(use.messages).toHaveLength(1)
+    expect(text(use.messages[0] as never)).toContain("helps with this task: a retry helper")
+    expect(text(use.messages[0] as never)).toContain("search_snippets")
+    const save = await client.getPrompt({
+      name: "save_snippet",
+      arguments: { code: "src/lib/retry.ts", collection: "utils" },
+    })
+    expect(text(save.messages[0] as never)).toContain('collection "utils"')
+    expect(text(save.messages[0] as never)).toContain("After I confirm")
+    const apply = await client.getPrompt({
+      name: "apply_collection",
+      arguments: { collection: "auth" },
+    })
+    expect(text(apply.messages[0] as never)).toContain('collection "auth" to this project.')
+    const completion = await client.complete({
+      ref: { type: "ref/prompt", name: "apply_collection" },
+      argument: { name: "collection", value: "u" },
+    })
+    expect(completion.completion.values).toEqual(["ui", "utils"])
+    // A failing account lookup completes nothing instead of erroring.
+    const offline = await connected({
+      ...backend,
+      collections: async () => {
+        throw new ToolError("offline")
+      },
+    })
+    const none = await offline.complete({
+      ref: { type: "ref/prompt", name: "save_snippet" },
+      argument: { name: "collection", value: "" },
+    })
+    expect(none.completion.values).toEqual([])
+  })
   test("creates and updates forward only declared fields", async () => {
     const client = await connected()
     const input = { title: "A", files: [{ name: "a.ts", content: "1" }] }

@@ -1,15 +1,17 @@
 ---
 title: Configuration
-description: Every setting Sniptide reads from the environment, with its default.
+description: Look up every environment variable a self-hosted Sniptide instance reads, with its default, allowed values and effect.
 ---
 
-Sniptide is configured with environment variables, read when the server starts (not baked into the
-image). They are checked together at startup: a value the app can't understand stops the server
-with the variable's name, instead of silently using a default. A variable that is set but empty
+Sniptide reads its configuration from environment variables when the server starts. They aren't
+built into the image, so a change takes effect when you restart the container, for example with
+`docker compose up -d`. The server checks every value at startup and stops with the variable's
+name when one is invalid, instead of falling back to a default. A variable that is set but empty
 counts as unset.
 
-The reference file is `apps/web/.env.example` in the repository, and a test fails when the app
-reads a variable that file doesn't list. Compose and the Coolify template pass these through.
+The repository's `apps/web/.env.example` lists every variable, and a test fails when the app reads
+one that file doesn't list. Docker Compose passes all of them through. The Coolify template passes
+only some, as [Coolify](/self-hosting/coolify#change-settings) explains.
 
 ## Required
 
@@ -25,7 +27,6 @@ reads a variable that file doesn't list. Compose and the Coolify template pass t
 | --- | --- | --- |
 | `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone; existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. |
 | `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). New password accounts need SMTP email verification before signing in; without SMTP, only verified OAuth identities can join. Existing accounts keep signing in. |
-| `WAITLIST_URL` | unset | With `ALLOWED_EMAILS`, the sign-up page links here so visitors can apply for an invite. |
 | `HOME_URL` | unset | The logo on the sign-in screens links here, for example to your landing page. Unset, the logo is not a link. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in. Until both are set the button shows as disabled. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
@@ -37,10 +38,21 @@ reads a variable that file doesn't list. Compose and the Coolify template pass t
 
 Existing email and password accounts keep signing in. Pending invitations remain blocked until
 their email is verified, even if the invite list or SMTP is later disabled. See also
-[closing sign-up](/getting-started/self-hosted).
+[closing sign-up](/getting-started/self-hosted#close-sign-up-for-a-private-instance).
 
 GitHub and Google sign-in require your own OAuth app credentials and the callback URLs listed
 above.
+
+## Links and legal pages
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` | The Sniptide project's site, docs and issue tracker | Where the **Homepage**, **Documentation** and **Help** links in the account menu go. They open in a new tab. |
+| `TERMS_URL`, `PRIVACY_URL` | unset | Turn "Terms" and "Privacy Policy" under the sign-in and sign-up forms into links. Without them that line is left out. |
+| `OPERATOR_NAME`, `OPERATOR_ADDRESS` | unset | Sign the foot of notification emails with who sends them and a postal address. |
+| `COPYRIGHT_EMAIL` | unset | Publishes `/copyright`, which explains how to send a copyright takedown notice or counter-notice to this address, with `OPERATOR_NAME` and `OPERATOR_ADDRESS` as the agent. |
+
+A private server can leave all of these unset.
 
 ## Pastes and sharing
 
@@ -50,12 +62,25 @@ above.
 | `SHARE_URL` | unset | Domain share links use when it differs from the app's. Leave unset to serve everything on one domain. |
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
-| `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks for Share → Share to Slack/Discord. One channel per provider; every signed-in paste owner can post to it (20 shares an hour per account). Keep the URLs secret. |
+| `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
 | `ENV_SECRETS_KEY` | derived from `BETTER_AUTH_SECRET` | Key (at least 32 characters) that encrypts env group values. Set it before rotating the auth secret; changing whichever key is in use makes stored env values unreadable until they're pushed again. |
+
+### Separate share domain
+
+To serve share links on their own domain, such as `paste.example` next to `app.paste.example`:
+
+1. Point the share domain at the same container as the app.
+2. Set `SHARE_URL` to the share domain's HTTPS address and restart the app.
+3. If another site proxies the share domain, route `/secret-share/*` to the app as well as paste
+   links.
+
+Copied links then use the share domain. Share pages and raw files stay on it, and app pages
+opened there redirect to `BETTER_AUTH_URL`. Open a copied link to check that it loads the paste.
 
 ### Link preview videos
 
-Discord, Telegram and Facebook play an og:video in a public paste's link preview: the preview
+Discord, Telegram and Facebook play an `og:video` in the link preview of a public or unlisted paste
+without a password or burn after read: the preview
 card with the Game of Life moving at its sides. Other apps show the still card. The server
 renders a paste's video with ffmpeg the first time its page opens, which takes about four
 seconds of one core, and keeps it on disk until the paste changes. The Docker image includes
@@ -73,7 +98,7 @@ ffmpeg; without it pages leave out og:video and nothing else changes.
 Notification emails are off until you configure SMTP. In-app notifications and password sign-in
 work without it. Set the host, port and sender together, plus `BETTER_AUTH_URL` and a
 `BETTER_AUTH_SECRET` of at least 32 characters. Users verify their address and opt in per event in
-**Settings → Notifications**.
+**Settings** > **Notifications**.
 
 The same SMTP settings enable password reset emails. Without SMTP, the forgot-password page asks
 people to contact the administrator.
@@ -84,6 +109,17 @@ people to contact the administrator.
 | `SMTP_USER`, `SMTP_PASSWORD` | unset | Credentials; supply both or neither. |
 | `SMTP_SECURE` | `false` | `true` for implicit TLS (port 465). |
 | `SMTP_REQUIRE_TLS` | `true` | Require STARTTLS otherwise. Only set `false` for a trusted local test server. |
+| `NOTIFICATION_EMAIL_CONCURRENCY` | `2` | How many notification emails are sent at once, 1 to 10. |
+
+### Email delivery
+
+Email runs independently once a minute and uses a durable queue with bounded retries. Events older
+than 24 hours are skipped, including events queued while SMTP was unavailable. Delivery rechecks
+consent and access, and messages contain generic activity text with links to the signed-in app.
+Each email includes a confirmation link that stops only that event's emails. Opening it does not
+change preferences. Email is delivered at least once when retries succeed; a crash after SMTP
+acceptance and before recording success can cause a duplicate. A concurrent access change can
+still allow an already sending generic email to arrive.
 
 ## Client IP
 
@@ -97,12 +133,22 @@ Pick these to match what sits in front of the app: see [Reverse proxy and client
 
 ## Database and capacity
 
-Pool size is per process: replicas × pool size, plus migration and admin connections, must fit
-Postgres' connection budget. Invalid values stop the server with the allowed range.
+Each process uses its configured pool and can open one dedicated live-update listener. Budget for
+replicas × (pool size + 1), plus migration and admin connections, within Postgres' connection limit.
+Invalid values stop the server with the allowed range.
 
 | Variable | Default | Range | What it does |
 | --- | --- | --- | --- |
 | `DATABASE_POOL_SIZE` | `10` | 1 to 100 | Connections per process. |
+| `HTTP_ADMISSION_LIMIT` | `64` | 1 to 1024 | Active ordinary dynamic requests per process. Excess requests receive 503. |
+| `PROBE_ADMISSION_LIMIT` | `2` | 1 to 16 | Active health and metrics requests. |
+| `LIVE_ADMISSION_LIMIT` | `128` | 1 to 4096 | Active live-update streams, separate from ordinary requests. |
+| `DATABASE_PROBE_RESERVE` | `1` | 1 to 16 | Reserved database execution capacity for probes. |
+| `DATABASE_MAINTENANCE_RESERVE` | `1` | 1 to 16 | Reserved database execution capacity for background jobs. |
+| `DATABASE_ADMISSION_QUEUE_LIMIT` | `64` | 0 to 4096 | Maximum waiting database submissions per process. |
+| `VISIT_DRAIN_BATCH_SIZE` | `500` | 1 to 5000 | Maximum ordinary visits applied per drain batch. |
+| `VISIT_QUEUE_MAX_LAG_MS` | `30000` | 1000 to 3600000 | Pending-visit age that triggers temporary backpressure. |
+| `VISIT_QUEUE_MAX_BACKLOG` | `10000` | 1 to 1000000 | Sampled pending-visit count that triggers temporary backpressure. |
 | `DATABASE_CONNECT_TIMEOUT_SECONDS` | `10` | 1 to 120 | Opening a database connection. |
 | `DATABASE_IDLE_TIMEOUT_SECONDS` | `20` | 1 to 3600 | Retire idle connections. |
 | `DATABASE_MAX_LIFETIME_SECONDS` | `1800` | 60 to 86400 | Recycle connections. |
@@ -115,6 +161,7 @@ Postgres' connection budget. Invalid values stop the server with the allowed ran
 | `ANALYTICS_RETENTION_DAYS` | `180` | 180 to 3650 | Daily analytics rollups kept. |
 | `PURGE_BATCH_SIZE` | `500` | 1 to 5000 | Most rows deleted per batch by the hourly cleanup. |
 | `PURGE_TIME_BUDGET_MS` | `2000` | 100 to 60000 | How long one cleanup run may keep starting new batches. |
+| `ANALYTICS_ROLLUP_TIME_BUDGET_MS` | `2000` | 100 to 60000 | How long one analytics rollup run may keep starting new batches. |
 | `HIGHLIGHT_CACHE_BYTES` | `33554432` | 0 to 256 MiB | Syntax-highlight cache per process; `0` turns it off. |
 | `SLOW_QUERY_MS` | `500` | 1 to 60000 | Threshold for slow-query log events. |
 | `MIGRATIONS_DIR` | set by the image | n/a | Where migrations are read from at startup. Leave unset outside the image. |
@@ -125,7 +172,7 @@ Trash and expired pastes are removed after 30 days by a cleanup that runs at sta
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `METRICS_TOKEN` | unset | A long random bearer token enables `GET /api/metrics` (latency histograms, query counts, memory, event-loop delay, cleanup progress, database size and locks). Without it the endpoint returns 404. Keep it behind your normal access controls, and scrape every replica. |
+| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, and `email`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
 | `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set, so a self-hosted instance sends nothing. Cookieless, no session replay, events never include paste content or links' slugs. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing

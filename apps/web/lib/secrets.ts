@@ -19,13 +19,31 @@ export interface SecretMatch {
   line: number
 }
 
+const matches = new WeakMap<object, { content: string; match: Omit<SecretMatch, "file"> | null }>()
+
 export function findSecrets(files: { name: string; content: string }[]): SecretMatch | null {
   for (const file of files) {
-    const lines = file.content.split("\n")
-    for (const [index, line] of lines.entries()) {
-      const hit = patterns.find(({ pattern }) => pattern.test(line))
-      if (hit) return { name: hit.name, file: file.name, line: index + 1 }
+    let cached = matches.get(file)
+    if (!cached || cached.content !== file.content) {
+      let match: Omit<SecretMatch, "file"> | null = null
+      let start = 0
+      let lineNumber = 1
+      while (start <= file.content.length) {
+        const end = file.content.indexOf("\n", start)
+        const line = file.content.slice(start, end === -1 ? undefined : end)
+        const hit = patterns.find(({ pattern }) => pattern.test(line))
+        if (hit) {
+          match = { name: hit.name, line: lineNumber }
+          break
+        }
+        if (end === -1) break
+        start = end + 1
+        lineNumber++
+      }
+      cached = { content: file.content, match }
+      matches.set(file, cached)
     }
+    if (cached.match) return { ...cached.match, file: file.name }
   }
   return null
 }

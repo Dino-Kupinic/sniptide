@@ -10,8 +10,9 @@ Lists return ten summaries without file bodies. Adjacent navigation uses a curso
 sort value and UUID; numbered jumps still use OFFSET. Access filters are applied on every query.
 Malformed or mismatched cursors fall back to numbered pagination. Counts remain exact; unfiltered
 requests reuse the same count query. Counts and language facets still scan the authorized scope,
-and language filtering still looks up the first file. Monitor these before denormalizing language
-or caching counts across requests. Substring title/slug search uses ILIKE with literal wildcards
+while language filtering uses the database-maintained first-language projection. List summaries
+and trash totals use stored byte totals without reading file contents. The file trigger maintains
+both fields for every writer, including older app versions. Substring title/slug search uses ILIKE with literal wildcards
 escaped and pg_trgm GIN indexes. Very short search terms may still scan many rows.
 
 Sidebar, collection, and owned-detail reads use React request memoization. Detail metadata reads
@@ -37,21 +38,44 @@ including writes from an older container during rollout. Existing accounts above
 access and can delete or shrink content; new or growing content is rejected. Older app versions
 maintain byte accounting but do not enforce quotas, so complete the rolling deployment promptly.
 
-Ordinary views still synchronously update the lifetime and daily rows. Burn-after-read claims
-remain synchronous and atomic. Use lock-wait and query-latency measurements for a popular paste
-before deciding to batch ordinary analytics. Do not batch burn claims with analytics.
+Ordinary views commit an immutable pending visit before returning content. A worker drains up to
+500 visits once per second under an advisory lock. Lifetime and UTC daily increments, every crossed
+milestone notification and pending-row deletion commit together; a failed transaction leaves the
+visits available for retry. Counts and milestone notifications are eventually applied, including
+accepted visits whose paste is subsequently trashed or moderated. Permanent deletion cascades.
+Burn-after-read claims, counters and notifications remain synchronous and atomic.
+
+The worker samples capped backlog and oldest age after every pass, even when another replica holds
+the drain lock. Drain failure, backlog at 10,000 or oldest age above 30 seconds causes early dynamic
+HTTP admission to return 503 until recovery. These per-process samples permit overshoot between
+samples and do not impose a hard global disk limit. Queue rows survive app restarts.
 
 ## Connection and execution budgets
+
+Node HTTP admission bounds dynamic requests before Next renders them. Defaults admit 64 normal
+requests, two health/metrics requests, and 128 live-update streams in a separate finite lane.
+Live streams use normal DB capacity. Only exact existing immutable static asset paths bypass
+this gate. Exhaustion returns a small private/no-store 503 with Retry-After: 1. Unknown routes,
+prefetches, Server Actions and RSC requests count toward admission.
+
+Database admission caps actual executions at pool capacity and retains a transaction permit through
+commit or rollback. The default pool of ten reserves one execution each for probes and maintenance;
+pools of one or two share the total cap. A bounded FIFO holds up to 64 additional submissions.
+Disconnected requests lose queued work, while already-running driver work keeps its permit until
+settlement. Responses that have already streamed headers cannot change their status; late refusals
+are separately measured. Observe lateDatabaseRejected when tuning limits for real traffic.
 
 All settings below are runtime environment variables except the deployment build settings.
 Invalid integer settings fail explicitly. The account limits count only current paste content, so
 older revisions (the newest 20 per paste keep a copy) add to the real database size. Size the pool from the database's usable connection
 budget, not from traffic alone:
 
-`maximum app connections = app processes (including overlapping releases) × DATABASE_POOL_SIZE`
+`maximum app connections = app processes (including overlapping releases) × (DATABASE_POOL_SIZE + 1)`
 
-Reserve connections for migrations, backups, monitoring, and administration. For example, two
-replicas with ten connections each need twenty normally and forty while both releases overlap.
+The extra connection is the dedicated live-update listener, opened when live updates are used.
+Probes and maintenance share the configured pool. Reserve additional connections for migrations,
+backups, monitoring, and administration. Two replicas with ten pool connections and one listener
+each need twenty-two normally and forty-four while both releases overlap.
 Transaction-acquisition duration includes pool queueing and BEGIN; individual query durations
 include queueing, SQL execution, and result mapping. PostgreSQL deadlines limit SQL execution and
 lock waits, not the entire HTTP request or pool queue. Configure the reverse proxy's request
@@ -60,6 +84,15 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | DATABASE_POOL_SIZE | 10 | Connections per process |
+| HTTP_ADMISSION_LIMIT | 64 | Active normal dynamic HTTP requests |
+| PROBE_ADMISSION_LIMIT | 2 | Active health/metrics HTTP requests |
+| LIVE_ADMISSION_LIMIT | 128 | Active live-update streams |
+| DATABASE_PROBE_RESERVE | 1 | Probe execution capacity |
+| DATABASE_MAINTENANCE_RESERVE | 1 | Maintenance execution capacity |
+| DATABASE_ADMISSION_QUEUE_LIMIT | 64 | Waiting DB submissions; zero disables waiting |
+| VISIT_DRAIN_BATCH_SIZE | 500 | Maximum ordinary visits consumed per tick |
+| VISIT_QUEUE_MAX_LAG_MS | 30000 | Oldest pending age before pressure |
+| VISIT_QUEUE_MAX_BACKLOG | 10000 | Sampled backlog threshold |
 | DATABASE_CONNECT_TIMEOUT_SECONDS | 10 | Opening a database connection |
 | DATABASE_IDLE_TIMEOUT_SECONDS | 20 | Retire idle connections |
 | DATABASE_MAX_LIFETIME_SECONDS | 1800 | Recycle connections |
@@ -72,9 +105,11 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | ANALYTICS_RETENTION_DAYS | 180 | Retained daily analytics rollups (at least 180) |
 | PURGE_BATCH_SIZE | 500 | Maximum deletions per table in each transaction |
 | PURGE_TIME_BUDGET_MS | 2000 | Time between batches before ending a cleanup run |
+| ANALYTICS_ROLLUP_TIME_BUDGET_MS | 2000 | Time between committed analytics days or pruning batches before ending a run |
+| NOTIFICATION_EMAIL_CONCURRENCY | 2 | Concurrent notification deliveries per process, from 1 to 10 |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
 | SLOW_QUERY_MS | 500 | Threshold for slow-query log events |
-| METRICS_TOKEN | unset | Bearer token enabling the metrics endpoint |
+| METRICS_TOKEN | unset | Operator bearer token for metrics and explicit maintenance execution |
 
 Cleanup runs at startup and hourly. Transactions commit between batches and use a shared advisory
 lock and SKIP LOCKED. One batch can exceed the run budget up to SQL deadlines; cascaded child rows
@@ -93,7 +128,7 @@ replacing their rows, so a repeated or interrupted run is safe. Rows are deleted
 finalized and more than two days old; the Analytics page reads days that aren't finalized yet
 straight from `paste_event`, so its figures never wait for the job. Expect `paste_event` to hold
 about three days of traffic, one row per hit; if it grows past that the job is failing (look for
-`Analytics rollup failed` in the logs or `rollupLastRunAt` in the metrics). Rollup rows are removed
+`maintenance_job` with `name: analytics` and `outcome: failed` in the logs or job status in the metrics). Rollup rows are removed
 after `ANALYTICS_RETENTION_DAYS` by the cleanup run.
 
 ## Telemetry
@@ -110,8 +145,9 @@ from deltas. Event-loop delay percentiles cover process lifetime.
 Structured request logs include normalized routes (no slugs or query strings), status, duration,
 observed query count/time, and Content-Length when provided. Streaming responses often lack that
 header; use proxy response-byte metrics for complete payload measurements. Slow-query logs omit
-SQL and bound values. Drizzle fluent queries and execute calls are observed; raw driver calls and
-auth adapter relational queries are not included in request query counts. Route instrumentation
+SQL and bound values. Drizzle fluent, prepared and relational queries, plus raw tagged/unsafe queries and transactions,
+are observed and admitted. Raw connection reservation and raw stream/cursor methods are refused;
+LISTEN keeps its pre-existing dedicated connection behavior. Route instrumentation
 uses Node HTTP request events, as does trusted-peer capture; an alternate server requires its own
 request hook. Protect logs and metrics like operational data.
 
@@ -120,6 +156,42 @@ rates, event-loop delay, heap pressure, and purge backlog that grows across hour
 with `exhausted: false` means the cleanup budget ended or another process held the lock; use
 fleet-wide progress when diagnosing it. Request/query histograms and proxy metrics should supply
 p95/p99 latency and traffic volume.
+
+## Run and observe maintenance
+
+Web startup schedules purge hourly, analytics every 15 minutes, and usage reconciliation and
+notification email every minute. All run immediately on startup; email is disabled without
+SMTP and an app URL. Each job retains its database locks, leases, batching, and retries.
+Purge also attempts expiry notifications even when cleanup fails.
+
+To run one bounded attempt independently of startup timers, send an authenticated POST:
+
+```sh
+curl --fail-with-body -X POST \
+  -H "Authorization: Bearer $METRICS_TOKEN" \
+  https://your-instance.example/api/jobs/purge
+```
+
+The job names are `purge`, `analytics`, `usage`, and `email`. Treat `METRICS_TOKEN` as an operator
+credential that permits maintenance writes. An unset token disables both operations endpoints;
+a wrong token returns 401. GET never starts a job. The response returns a run ID and outcome.
+`completed` means that attempt finished, `contended` means another worker held the task's lock,
+and `disabled` means email is not configured. A second invocation of the same job in this process
+returns `busy` with HTTP 409. Failed attempts return HTTP 500 with a safe failure code. Email
+retry or permanent-delivery failures count as a failed attempt, while retaining existing retries.
+
+`GET /api/metrics` includes `maintenanceJobs` with last success, last failure, current running
+state, and the latest attempt outcome for each job. Contention and failure do not advance the
+success timestamp. A job is overdue when no successful attempt completes for two intervals,
+counted from process observation if it has never succeeded. Disabled jobs are not overdue.
+Successful batches can leave backlog, so continue checking task-specific progress and counters.
+
+Status is per process and resets on restart. Scrape every replica and retain metrics and
+structured `maintenance_job` logs in your monitoring system for history across restarts. A
+restart resumes normal scheduling; existing coordination and resumable batches handle
+interrupted work. Email retains its at-least-once delivery and claim-lease behavior.
+A stopped web process cannot run timers; an external scheduler can POST to a live instance.
+No separate worker service or additional runtime is required.
 
 ## Migration and rollout
 

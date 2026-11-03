@@ -15,7 +15,7 @@ import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
 import { NewPasswordField } from "./password-field"
-import { EmailDivider, SocialButtons } from "./social-buttons"
+import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
 type Availability = "idle" | "invalid" | "checking" | "available" | "taken"
@@ -43,7 +43,14 @@ function useUsernameAvailability(username: string) {
   return status
 }
 
-export function SignUpForm({ socialProviders }: { socialProviders: SocialProvider[] | null }) {
+// `redirectTo` is where the new account goes next (lib/auth-redirect.ts).
+export function SignUpForm({
+  socialProviders,
+  redirectTo = "/dashboard",
+}: {
+  socialProviders: SocialProvider[]
+  redirectTo?: string
+}) {
   const t = useTranslations("Auth")
   const host = useSiteHost()
   const router = useRouter()
@@ -72,13 +79,21 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
         username,
         email,
         password,
-        callbackURL: "/dashboard",
+        callbackURL: redirectTo,
       })
-      .catch(() => ({ error: { status: 0 } }))
+      .catch(() => ({ error: { status: 0, code: "NETWORK_ERROR" } }))
 
     if (result.error) {
       setPending(false)
-      setError(t(result.error.status === 0 ? "errors.network" : "errors.signUp"))
+      setError(
+        t(
+          result.error.status === 0
+            ? "errors.network"
+            : result.error.code === "invite_only"
+              ? "errors.inviteOnly"
+              : "errors.signUp",
+        ),
+      )
       return
     }
 
@@ -89,7 +104,8 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
     }
 
     track("signed_up", { method: "email" })
-    router.replace("/dashboard")
+    rememberSignInMethod("email")
+    router.replace(redirectTo)
     router.refresh()
   }
 
@@ -102,15 +118,15 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
           <SocialButtons
             enabled={socialProviders}
             verb="Sign up"
-            callbackURL="/dashboard"
+            callbackURL={redirectTo}
             onError={setError}
           />
           <EmailDivider />
         </>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
-        <div className="flex flex-col gap-3.5">
+      <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="username">{t("username")}</Label>
             <div
@@ -146,7 +162,7 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
               id="username-status"
               aria-live="polite"
               className={cn(
-                "text-xs font-medium",
+                "text-xs font-medium empty:hidden",
                 availability === "available" && "text-link",
                 (availability === "taken" || availability === "invalid") && "text-destructive",
                 availability === "checking" && "text-muted-foreground",
@@ -188,7 +204,14 @@ export function SignUpForm({ socialProviders }: { socialProviders: SocialProvide
         <SwitchPrompt>
           {t.rich("existingAccountPrompt", {
             link: (children) => (
-              <Link href="/sign-in" className={inlineLinkClass}>
+              <Link
+                href={
+                  redirectTo === "/dashboard"
+                    ? "/sign-in"
+                    : `/sign-in?next=${encodeURIComponent(redirectTo)}`
+                }
+                className={inlineLinkClass}
+              >
                 {children}
               </Link>
             ),

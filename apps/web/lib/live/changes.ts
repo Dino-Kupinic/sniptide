@@ -2,6 +2,7 @@ import "server-only"
 
 import { revalidatePath } from "next/cache"
 import { getDb } from "@/lib/db"
+import { runBestEffortWork } from "@/lib/request-admission"
 
 // Tells open tabs that an account's data changed, wherever the write came from: the app, the
 // REST API, the MCP server, the CLI or another tab. Writers NOTIFY a Postgres channel with the
@@ -25,11 +26,13 @@ function registry() {
 // Announces that `userId`'s pastes or collections changed. Best effort: a write never fails
 // because the announcement did.
 export async function announceChange(userId: string) {
-  try {
-    await getDb().$client.notify(CHANNEL, userId)
-  } catch (error) {
-    console.warn("[live] could not announce a change", error)
-  }
+  return runBestEffortWork(async () => {
+    try {
+      await getDb().$client.notify(CHANNEL, userId)
+    } catch (error) {
+      console.warn("[live] could not announce a change", error)
+    }
+  })
 }
 
 // What server actions run after a write: re-render this tab and tell the open tabs of every

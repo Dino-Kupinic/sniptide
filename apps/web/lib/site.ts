@@ -14,6 +14,11 @@ export async function getSiteOrigin() {
     return { origin: url.origin, host: url.host }
   }
 
+  return getRequestOrigin()
+}
+
+// Origin of the current request, whatever SHARE_URL says.
+export async function getRequestOrigin() {
   const requestHeaders = await headers()
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000"

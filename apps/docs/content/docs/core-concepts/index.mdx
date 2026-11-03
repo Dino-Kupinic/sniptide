@@ -1,26 +1,31 @@
 ---
 title: Core concepts
-description: The few ideas Sniptide is built on, and where each setting lives.
+description: Learn how pastes, collections, sharing settings, revisions, the trash, encrypted secrets and analytics fit together in Sniptide.
 ---
 
-Sniptide has one main object, the **paste**, and a handful of ways to organize and share it.
+Sniptide has one main object, the **paste**, and a few ways to organize, share and track it. This
+section explains each one and where its setting lives.
+
+## How the pieces relate
+
+- A **paste** is a title, an optional description and 1 to 10 files, reached through its own link.
+- You file pastes in **collections** to find them again. A collection belongs to you alone.
+- Each paste has its own **sharing** settings: who can open the link, an optional password, the
+  people you invited, and when it expires. **Burn after read** makes a paste readable once.
+- Editing a paste records **revisions** that you can compare and restore.
+- A deleted paste stays in the **trash** for 30 days before it is removed for good.
+- **Encrypted secrets** hold a project's environment variables, separate from pastes.
+- **Analytics** counts views, copies and referrers for your pastes in your own database.
+
+Everything belongs to one account. Other people only see a paste you shared with them, and a token
+or agent connection only reaches the pastes of the account that created it.
 
 <Cards>
-  <Card title="Pastes" href="/core-concepts/pastes" description="Files, links, limits, drafts, starring and the trash." />
-  <Card title="Collections" href="/core-concepts/collections" description="Your own folders for pastes." />
-  <Card title="Sharing" href="/core-concepts/sharing" description="Visibility, passwords, people, raw access and expiry." />
-  <Card title="Burn after read" href="/core-concepts/burn-after-read" description="A paste that deletes itself on its first read." />
-  <Card title="Revisions" href="/core-concepts/revisions" description="The history of a paste, and rolling back." />
+  <Card title="Pastes" href="/core-concepts/pastes" description="Files, links, limits, drafts, bulk actions and the trash." />
+  <Card title="Collections" href="/core-concepts/collections" description="Group your pastes and reuse them as an ordered set." />
+  <Card title="Sharing" href="/core-concepts/sharing" description="Visibility, passwords, invitations, raw access, embeds and expiry." />
+  <Card title="Burn after read" href="/core-concepts/burn-after-read" description="A paste that deletes itself after one read." />
+  <Card title="Revisions" href="/core-concepts/revisions" description="Compare earlier versions of a paste and restore one." />
+  <Card title="Encrypted secrets" href="/core-concepts/secrets" description="Edit env groups, reveal values and create expiring links." />
+  <Card title="Analytics" href="/core-concepts/analytics" description="Views, visitors, copies and referrers, without cookies." />
 </Cards>
-
-## How it fits together
-
-- A **paste** is a title, an optional description and up to 10 files, with a link of its own.
-- You file pastes in **collections** to find them again. Collections belong to you alone.
-- Each paste has its own **sharing** settings: who can open the link, whether it needs a password,
-  which accounts you invited, and when it expires.
-- Editing a paste keeps a history of **revisions** you can roll back to.
-- A deleted paste goes to the **trash** for 30 days before it is gone for good.
-
-Everything is per account. Your pastes, collections, starred pastes and settings are yours; other
-people only ever see a paste you shared with them.

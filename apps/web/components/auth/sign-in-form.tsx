@@ -11,23 +11,26 @@ import { track } from "@/lib/analytics"
 import type { SocialProvider } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
 import { authInputClass, authSubmitClass, FormError, inlineLinkClass, SwitchPrompt } from "./fields"
-import { EmailDivider, SocialButtons } from "./social-buttons"
+import { PasswordInput } from "./password-input"
+import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-buttons"
 import { VerificationNotice } from "./verification-notice"
 
-// `socialProviders` is null while sign-up is invite-only, which hides GitHub and Google and points
-// newcomers to the request-access page.
+// `socialProviders` lists the configured GitHub and Google logins.
 // `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
 // `initialError` explains a failed GitHub or Google sign-in, `notice` confirms a password reset.
+// `redirectTo` is where a signed-in visitor goes next (lib/auth-redirect.ts).
 export function SignInForm({
   socialProviders,
   signUpClosed = false,
   initialError = null,
   notice = null,
+  redirectTo = "/dashboard",
 }: {
-  socialProviders: SocialProvider[] | null
+  socialProviders: SocialProvider[]
   signUpClosed?: boolean
   initialError?: string | null
   notice?: string | null
+  redirectTo?: string
 }) {
   const t = useTranslations("Auth")
   const router = useRouter()
@@ -64,7 +67,8 @@ export function SignInForm({
     }
 
     track("signed_in", { method: "email" })
-    router.replace("/dashboard")
+    rememberSignInMethod("email")
+    router.replace(redirectTo)
     router.refresh()
   }
 
@@ -83,15 +87,15 @@ export function SignInForm({
           <SocialButtons
             enabled={socialProviders}
             verb="Continue"
-            callbackURL="/dashboard"
+            callbackURL={redirectTo}
             onError={setError}
           />
           <EmailDivider />
         </>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-5 lg:gap-6">
-        <div className="flex flex-col gap-3.5">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">{t("email")}</Label>
             <Input
@@ -116,10 +120,9 @@ export function SignInForm({
                 {t("forgotPassword")}
               </Link>
             </div>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
               className={authInputClass}
@@ -136,9 +139,16 @@ export function SignInForm({
 
         {signUpClosed ? null : (
           <SwitchPrompt>
-            {t.rich(socialProviders ? "newAccountPrompt" : "requestAccessPrompt", {
+            {t.rich("newAccountPrompt", {
               link: (children) => (
-                <Link href="/sign-up" className={inlineLinkClass}>
+                <Link
+                  href={
+                    redirectTo === "/dashboard"
+                      ? "/sign-up"
+                      : `/sign-up?next=${encodeURIComponent(redirectTo)}`
+                  }
+                  className={inlineLinkClass}
+                >
                   {children}
                 </Link>
               ),

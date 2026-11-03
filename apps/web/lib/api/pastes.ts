@@ -21,12 +21,7 @@ export {
   type CodeFile as ApiFile,
 } from "@sniptide/contracts"
 
-import {
-  collection as collectionTable,
-  pasteFile,
-  pasteRevision,
-  paste as pasteTable,
-} from "@workspace/db/schema"
+import { collection as collectionTable, pasteFile, paste as pasteTable } from "@workspace/db/schema"
 import {
   and,
   arrayContains,
@@ -34,11 +29,14 @@ import {
   desc,
   eq,
   exists,
+  getTableColumns,
   gt,
+  gte,
   ilike,
   inArray,
   isNull,
   lt,
+  lte,
   or,
   type SQL,
   sql,
@@ -46,16 +44,22 @@ import {
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
-import { enforceBudget, PasteBudgetError } from "@/lib/pastes/budget"
-import { insertPaste } from "@/lib/pastes/insert"
-import { limited, limits } from "@/lib/pastes/limits"
-import { hashPassword } from "@/lib/pastes/passwords"
+import { PasteBudgetError } from "@/lib/pastes/budget"
+import { limits } from "@/lib/pastes/limits"
+import {
+  type CaptureReplacement,
+  changePasteSharing,
+  createPasteRecord,
+  PasteCollectionError,
+  replacePaste,
+  trashPasteRecord,
+} from "@/lib/pastes/mutations"
 import { parsePasteInput } from "@/lib/pastes/schema"
-import { pruneSnapshots, snapshotOf } from "@/lib/pastes/snapshot"
-import { expiresAtFor, randomSlug } from "@/lib/pastes/store"
-import { EXPIRIES, type Expiry, type Visibility } from "@/lib/pastes/types"
+import { EXPIRIES, type Visibility } from "@/lib/pastes/types"
+import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
+import { type CreateReceipt, createWithReceipt } from "./idempotency"
 
 // Pastes over the token API: what `sniptide push`, `pull`, `list` and `search` read and write.
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
@@ -69,6 +73,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 type PasteRecord = typeof pasteTable.$inferSelect
 type FileRecord = typeof pasteFile.$inferSelect
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 
 async function shareOrigin() {
   return (await getSiteOrigin()).origin
@@ -105,31 +110,33 @@ function toSummaryFields(record: PasteRecord, origin: string): Omit<ApiPaste, "f
 // Full pastes for `records`, files in their saved order, in one query.
 async function withFiles(
   records: PasteRecord[],
-  db: Pick<Database, "select"> = getDb(),
+  db: Transaction,
+  origin: string,
 ): Promise<ApiPaste[]> {
   if (records.length === 0) return []
-  const [files, origin] = await Promise.all([
-    db
-      .select()
-      .from(pasteFile)
-      .where(
-        and(
-          allowedParent(pasteFile.pasteId),
-          inArray(
-            pasteFile.pasteId,
-            records.map((record) => record.id),
-          ),
+  const files = await db
+    .select()
+    .from(pasteFile)
+    .where(
+      and(
+        allowedParent(pasteFile.pasteId),
+        inArray(
+          pasteFile.pasteId,
+          records.map((record) => record.id),
         ),
-      )
-      .orderBy(asc(pasteFile.position), asc(pasteFile.id)),
-    shareOrigin(),
-  ])
-  return records
-    .filter((record) => files.some((file) => file.pasteId === record.id))
-    .map((record) => ({
-      ...toSummaryFields(record, origin),
-      files: files.filter((file) => file.pasteId === record.id).map(toApiFile),
-    }))
+      ),
+    )
+    .orderBy(asc(pasteFile.position), asc(pasteFile.id))
+  const byPaste = new Map<string, ApiFile[]>()
+  for (const file of files) {
+    const group = byPaste.get(file.pasteId)
+    if (group) group.push(toApiFile(file))
+    else byPaste.set(file.pasteId, [toApiFile(file)])
+  }
+  return records.flatMap((record) => {
+    const files = byPaste.get(record.id)
+    return files ? [{ ...toSummaryFields(record, origin), files }] : []
+  })
 }
 
 // The owner's live pastes: not trashed and not expired.
@@ -142,8 +149,8 @@ function liveOwned(owner: string): SQL {
   ) as SQL
 }
 
-async function ownsCollection(owner: string, slug: string) {
-  const [row] = await getDb()
+async function ownsCollection(db: Transaction, owner: string, slug: string) {
+  const [row] = await db
     .select({ id: collectionTable.id })
     .from(collectionTable)
     .where(and(eq(collectionTable.ownerId, owner), eq(collectionTable.slug, slug)))
@@ -152,66 +159,60 @@ async function ownsCollection(owner: string, slug: string) {
 
 // Saves a capture as a new paste. Validation, size limits, the account's storage budget and the
 // per-account create limit are the same ones the editor goes through.
-export async function createCapture(owner: string, input: unknown): Promise<ApiPaste> {
-  const capture = captureSchema.parse(input)
-  const data = parsePasteInput({
-    title: capture.title,
-    description: capture.description,
-    files: capture.files.map(({ name, content }) => ({ name, content, language: "text" })),
-    visibility: capture.visibility,
-    expiry: "never",
-    slug: "",
-    collection: capture.collection,
-    password: null,
-    burnAfterRead: false,
-  })
-  if (data.collection && !(await ownsCollection(owner, data.collection)))
-    throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
-  const tooOften = await limited(limits.create(owner))
-  if (tooOften) throw new ApiError(429, tooOften, 60)
+export async function createCapture(
+  owner: string,
+  input: unknown,
+  receipt?: CreateReceipt,
+): Promise<ApiPaste> {
+  const quota = await hit([limits.create(owner)])
+  if (!quota.allowed)
+    throw new ApiError(429, "Too many paste creates. Slow down.", quota.retryAfterSeconds)
 
-  let slug: string
-  do slug = randomSlug()
-  while (
-    (await getDb().select({ id: pasteTable.id }).from(pasteTable).where(eq(pasteTable.slug, slug)))
-      .length
-  )
-
-  const id = crypto.randomUUID()
-  const now = new Date()
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
+  const origin = await shareOrigin()
   try {
-    await getDb().transaction(async (tx) => {
-      await enforceBudget(tx, owner, bytes)
-      await insertPaste(tx, {
-        id,
-        slug,
-        ownerId: owner,
-        title: data.title,
-        description: data.description,
-        bytes,
-        visibility: data.visibility,
-        collection: data.collection,
-        tags: capture.tags,
-        source: capture.source,
-        files: data.files.map((file, position) => ({
-          name: file.name,
-          language: file.language,
-          content: file.content,
-          startLine: capture.files[position]?.lines?.start ?? null,
-          endLine: capture.files[position]?.lines?.end ?? null,
-        })),
-        createdAt: now,
+    const response = await createWithReceipt(receipt, async (tx) => {
+      const capture = captureSchema.parse(input)
+      const data = parsePasteInput({
+        title: capture.title,
+        description: capture.description,
+        files: capture.files.map(({ name, content }) => ({ name, content, language: "text" })),
+        visibility: capture.visibility,
+        expiry: "never",
+        slug: "",
+        collection: capture.collection,
+        password: null,
+        burnAfterRead: false,
       })
+      const { id } = await createPasteRecord(tx, {
+        kind: "capture",
+        actor: { kind: "token", userId: owner },
+        input: {
+          title: data.title,
+          description: data.description,
+          visibility: data.visibility,
+          collection: data.collection,
+          tags: capture.tags,
+          source: capture.source,
+          files: data.files.map((file, position) => ({
+            ...file,
+            startLine: capture.files[position]?.lines?.start ?? null,
+            endLine: capture.files[position]?.lines?.end ?? null,
+          })),
+        },
+      })
+      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, id))
+      if (!record) throw new Error("The created paste wasn't returned.")
+      const [created] = await withFiles([record], tx, origin)
+      if (!created) throw new Error("The created paste files weren't returned.")
+      return { paste: created }
     })
+    await announceChange(owner)
+    return response.paste
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
+    if (error instanceof PasteCollectionError) throw new ApiError(404, error.message)
     throw error
   }
-  await announceChange(owner)
-  const created = await getCapture(owner, id)
-  if (!created) throw new Error("A paste that was just created can't be read back.")
-  return created
 }
 
 // One of the owner's pastes by its id or its slug.
@@ -219,13 +220,19 @@ export async function getCapture(owner: string, idOrSlug: string): Promise<ApiPa
   const key = UUID.test(idOrSlug)
     ? and(allowedPaste(), eq(pasteTable.id, idOrSlug))
     : and(allowedPaste(), eq(pasteTable.slug, idOrSlug))
-  const [record] = await getDb()
-    .select()
-    .from(pasteTable)
-    .where(and(key, liveOwned(owner)))
-  if (!record) return null
-  const [paste] = await withFiles([record])
-  return paste ?? null
+  const origin = await shareOrigin()
+  return getDb().transaction(
+    async (tx) => {
+      const [record] = await tx
+        .select()
+        .from(pasteTable)
+        .where(and(key, liveOwned(owner)))
+      if (!record) return null
+      const [paste] = await withFiles([record], tx, origin)
+      return paste ?? null
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  )
 }
 
 // Replaces title/files, preserving omitted metadata and all sharing controls. Token callers
@@ -258,79 +265,44 @@ export async function updateCapture(
     password: "",
     burnAfterRead: false,
   })
-  const existing = await getCapture(owner, idOrSlug)
-  if (!existing) throw new ApiError(404, "No paste with that id.")
-  const bytes = data.files.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0)
+  const parsed = captureSchema.parse(replacement)
+  const update: CaptureReplacement = {
+    title: data.title,
+    files: data.files.map((file, position) => ({
+      ...file,
+      startLine: parsed.files[position]?.lines?.start ?? null,
+      endLine: parsed.files[position]?.lines?.end ?? null,
+    })),
+    ...(Object.hasOwn(replacement, "description")
+      ? { description: z.string().trim().max(280).parse(parsed.description) }
+      : {}),
+    ...(Object.hasOwn(replacement, "visibility") ? { visibility: parsed.visibility } : {}),
+    ...(Object.hasOwn(replacement, "collection") ? { collection: parsed.collection } : {}),
+    ...(Object.hasOwn(replacement, "tags") ? { tags: parsed.tags } : {}),
+    ...(Object.hasOwn(replacement, "source") ? { source: parsed.source } : {}),
+  }
+  const origin = await shareOrigin()
+  let updated: ApiPaste
   try {
-    await getDb().transaction(async (tx) => {
-      await enforceBudget(tx, owner, bytes, existing.id)
-      const [record] = await tx
-        .select()
-        .from(pasteTable)
-        .where(and(allowedPaste(), eq(pasteTable.id, existing.id), liveOwned(owner)))
-        .for("update")
+    updated = await getDb().transaction(async (tx) => {
+      const saved = await replacePaste(tx, pasteKey(idOrSlug), {
+        kind: "capture",
+        actor: { kind: "token", userId: owner },
+        input: update,
+      })
+      if (!saved || "conflict" in saved) throw new ApiError(404, "No paste with that id.")
+      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, saved.id))
       if (!record) throw new ApiError(404, "No paste with that id.")
-      const capture = captureSchema.parse({
-        description: record.description,
-        visibility: record.visibility,
-        collection: record.collection,
-        tags: record.tags,
-        source: record.source,
-        ...replacement,
-      })
-      const description = z.string().trim().max(280).parse(capture.description)
-      if (capture.collection && !(await ownsCollection(owner, capture.collection)))
-        throw new ApiError(404, "That collection doesn't exist. Create it in Sniptide first.")
-      const now = new Date()
-      await tx
-        .update(pasteTable)
-        .set({
-          title: data.title,
-          description,
-          bytes,
-          visibility: capture.visibility,
-          collection: capture.collection,
-          tags: capture.tags,
-          source: capture.source,
-          updatedAt: now,
-          version: sql`${pasteTable.version} + 1`,
-        })
-        .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
-      await tx
-        .delete(pasteFile)
-        .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      await tx.insert(pasteFile).values(
-        data.files.map((file, position) => ({
-          pasteId: record.id,
-          position,
-          name: file.name,
-          language: file.language,
-          content: file.content,
-          startLine: capture.files[position]?.lines?.start ?? null,
-          endLine: capture.files[position]?.lines?.end ?? null,
-        })),
-      )
-      await tx.insert(pasteRevision).values({
-        pasteId: record.id,
-        message: "Edited via API",
-        snapshot: snapshotOf({ title: data.title, description }, [
-          ...data.files.map((file, position) => ({
-            ...file,
-            startLine: capture.files[position]?.lines?.start ?? null,
-            endLine: capture.files[position]?.lines?.end ?? null,
-          })),
-        ]),
-        createdAt: now,
-      })
-      await pruneSnapshots(tx, record.id)
+      const [paste] = await withFiles([record], tx, origin)
+      if (!paste) throw new ApiError(404, "No paste with that id.")
+      return paste
     })
   } catch (error) {
     if (error instanceof PasteBudgetError) throw new ApiError(413, error.message)
+    if (error instanceof PasteCollectionError) throw new ApiError(404, error.message)
     throw error
   }
   await announceChange(owner)
-  const updated = await getCapture(owner, existing.id)
-  if (!updated) throw new ApiError(404, "No paste with that id.")
   return updated
 }
 
@@ -364,18 +336,8 @@ function settingsOf(record: PasteRecord): ApiSettings {
   }
 }
 
-async function findLive(owner: string, idOrSlug: string) {
-  const key = UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug)
-  const [record] = await getDb()
-    .select()
-    .from(pasteTable)
-    .where(and(key, liveOwned(owner)))
-  return record ?? null
-}
-
-function expiresAtOrNull(expiry: Expiry) {
-  const at = expiresAtFor(expiry)
-  return at === null ? null : new Date(at)
+function pasteKey(idOrSlug: string) {
+  return UUID.test(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
 }
 
 // Changes how a live paste is shared, the same fields as the editor's sharing panel. The
@@ -385,24 +347,22 @@ export async function updateSettings(
   idOrSlug: string,
   input: unknown,
 ): Promise<{ paste: Omit<ApiPaste, "files">; settings: ApiSettings }> {
-  const { expiry, password, ...rest } = settingsSchema.parse(input)
-  const existing = await findLive(owner, idOrSlug)
-  if (!existing) throw new ApiError(404, "No paste with that id.")
-  const [record] = await getDb()
-    .update(pasteTable)
-    .set({
-      ...rest,
-      version: sql`${pasteTable.version} + 1`,
-      ...(password !== undefined
-        ? { passwordHash: password ? await hashPassword(password) : null }
-        : {}),
-      ...(expiry ? { expiresAt: expiresAtOrNull(expiry) } : {}),
-    })
-    .where(eq(pasteTable.id, existing.id))
-    .returning()
-  if (!record) throw new ApiError(404, "No paste with that id.")
+  const settings = settingsSchema.parse(input)
+  const origin = await shareOrigin()
+  const result = await getDb().transaction(async (tx) => {
+    const saved = await changePasteSharing(
+      tx,
+      { kind: "token", userId: owner },
+      pasteKey(idOrSlug),
+      settings,
+    )
+    if (!saved) throw new ApiError(404, "No paste with that id.")
+    const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, saved.id))
+    if (!record) throw new ApiError(404, "No paste with that id.")
+    return { paste: toSummaryFields(record, origin), settings: settingsOf(record) }
+  })
   await announceChange(owner)
-  return { paste: toSummaryFields(record, await shareOrigin()), settings: settingsOf(record) }
+  return result
 }
 
 // Moves a live paste to the trash, where its owner can restore it until the trash is emptied.
@@ -411,30 +371,42 @@ export async function trashCapture(
   owner: string,
   idOrSlug: string,
 ): Promise<{ trashed: { id: string; slug: string } }> {
-  const existing = await findLive(owner, idOrSlug)
-  if (!existing) throw new ApiError(404, "No paste with that id.")
-  await getDb()
-    .update(pasteTable)
-    .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })
-    .where(eq(pasteTable.id, existing.id))
+  const trashed = await getDb().transaction((tx) =>
+    trashPasteRecord(tx, { kind: "token", userId: owner }, pasteKey(idOrSlug)),
+  )
+  if (!trashed) throw new ApiError(404, "No paste with that id.")
   await announceChange(owner)
-  return { trashed: { id: existing.id, slug: existing.slug } }
+  return { trashed }
 }
 
-// Postgres keeps microseconds and JavaScript milliseconds, so cursors compare and order on
-// timestamps truncated to the millisecond; the id breaks ties.
-const ms = (column: typeof pasteTable.updatedAt | typeof pasteTable.createdAt) =>
-  sql`date_trunc('milliseconds', ${column})`
+type TimestampColumn = typeof pasteTable.updatedAt | typeof pasteTable.createdAt
+
+function cursorColumn(column: TimestampColumn, cursor: Cursor | null) {
+  // Existing tokens retain their original ordering until that traversal finishes.
+  return cursor && cursor.v !== 2 ? sql`date_trunc('milliseconds', ${column})` : sql`${column}`
+}
+
+function preciseTimestamp(column: TimestampColumn) {
+  return sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`
+}
 
 const stamp = (iso: string) => sql`${iso}::timestamptz`
 
 interface Cursor {
   at: string
   id: string
+  v?: 2
 }
 
-function encodeCursor(record: PasteRecord, field: "updatedAt" | "createdAt") {
-  const cursor: Cursor = { at: record[field].toISOString(), id: record.id }
+function encodeCursor(
+  record: PasteRecord & { cursorAt: string },
+  field: "updatedAt" | "createdAt",
+  previous: Cursor | null,
+) {
+  const cursor: Cursor =
+    previous && previous.v !== 2
+      ? { at: record[field].toISOString(), id: record.id }
+      : { v: 2, at: record.cursorAt, id: record.id }
   return Buffer.from(JSON.stringify(cursor)).toString("base64url")
 }
 
@@ -446,6 +418,8 @@ function decodeCursor(value: string | null): Cursor | null {
     if (
       typeof cursor.at !== "string" ||
       Number.isNaN(Date.parse(cursor.at)) ||
+      (cursor.v !== undefined && cursor.v !== 2) ||
+      (cursor.v === 2 && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(cursor.at)) ||
       typeof cursor.id !== "string" ||
       !UUID.test(cursor.id)
     )
@@ -514,9 +488,11 @@ export async function listCaptures(
   owner: string,
   query: z.infer<typeof listQuerySchema>,
 ): Promise<{ pastes: ApiPasteSummary[]; nextCursor: string | null }> {
+  const origin = await shareOrigin()
   return getDb().transaction(
     async (db) => {
       const cursor = decodeCursor(query.cursor)
+      const updatedAt = cursorColumn(pasteTable.updatedAt, cursor)
       const conditions: (SQL | undefined)[] = [liveOwned(owner)]
       if (query.q) conditions.push(matchesQuery(query.q))
       if (query.tags.length) conditions.push(arrayContains(pasteTable.tags, query.tags))
@@ -539,52 +515,56 @@ export async function listCaptures(
       if (cursor) {
         const at = stamp(cursor.at)
         conditions.push(
-          or(
-            lt(ms(pasteTable.updatedAt), at),
-            and(eq(ms(pasteTable.updatedAt), at), gt(pasteTable.id, cursor.id)),
+          and(
+            lte(updatedAt, at),
+            or(lt(updatedAt, at), and(eq(updatedAt, at), gt(pasteTable.id, cursor.id))),
           ),
         )
       }
       const records = await db
-        .select()
+        .select({
+          ...getTableColumns(pasteTable),
+          cursorAt: preciseTimestamp(pasteTable.updatedAt),
+        })
         .from(pasteTable)
         .where(and(...conditions))
-        .orderBy(desc(ms(pasteTable.updatedAt)), asc(pasteTable.id))
+        .orderBy(desc(updatedAt), asc(pasteTable.id))
         .limit(query.limit + 1)
       const page = records.slice(0, query.limit)
-      const [files, origin] = await Promise.all([
-        page.length
-          ? db
-              .select({
-                pasteId: pasteFile.pasteId,
-                language: pasteFile.language,
-              })
-              .from(pasteFile)
-              .where(
-                and(
-                  allowedParent(pasteFile.pasteId),
-                  inArray(
-                    pasteFile.pasteId,
-                    page.map((record) => record.id),
-                  ),
+      const files = await (page.length
+        ? db
+            .select({
+              pasteId: pasteFile.pasteId,
+              language: pasteFile.language,
+            })
+            .from(pasteFile)
+            .where(
+              and(
+                allowedParent(pasteFile.pasteId),
+                inArray(
+                  pasteFile.pasteId,
+                  page.map((record) => record.id),
                 ),
-              )
-              .orderBy(asc(pasteFile.position))
-          : [],
-        shareOrigin(),
-      ])
-      const visible = page.filter((record) => files.some((file) => file.pasteId === record.id))
+              ),
+            )
+            .orderBy(asc(pasteFile.position))
+        : [])
+      const languages = new Map<string, Set<string>>()
+      for (const file of files) {
+        const group = languages.get(file.pasteId)
+        if (group) group.add(file.language)
+        else languages.set(file.pasteId, new Set([file.language]))
+      }
+      const visible = page.filter((record) => languages.has(record.id))
       const last = visible.at(-1)
       return {
-        pastes: visible.map((record) => {
-          const own = files.filter((file) => file.pasteId === record.id)
-          return {
-            ...toSummaryFields(record, origin),
-            languages: [...new Set(own.map((file) => file.language))],
-            bytes: record.bytes,
-          }
-        }),
-        nextCursor: records.length > query.limit && last ? encodeCursor(last, "updatedAt") : null,
+        pastes: visible.map((record) => ({
+          ...toSummaryFields(record, origin),
+          languages: [...(languages.get(record.id) ?? [])],
+          bytes: record.bytes,
+        })),
+        nextCursor:
+          records.length > query.limit && last ? encodeCursor(last, "updatedAt", cursor) : null,
       }
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
@@ -598,35 +578,45 @@ export async function collectionCaptures(
   slug: string,
   cursorValue: string | null,
 ): Promise<{ pastes: ApiPaste[]; nextCursor: string | null } | null> {
-  if (!(await ownsCollection(owner, slug))) return null
+  const origin = await shareOrigin()
   return getDb().transaction(
     async (db) => {
+      if (!(await ownsCollection(db, owner, slug))) return null
       const cursor = decodeCursor(cursorValue)
+      const createdAt = cursorColumn(pasteTable.createdAt, cursor)
       const records = await db
-        .select()
+        .select({
+          ...getTableColumns(pasteTable),
+          cursorAt: preciseTimestamp(pasteTable.createdAt),
+        })
         .from(pasteTable)
         .where(
           and(
             liveOwned(owner),
             eq(pasteTable.collection, slug),
             cursor
-              ? or(
-                  gt(ms(pasteTable.createdAt), stamp(cursor.at)),
-                  and(eq(ms(pasteTable.createdAt), stamp(cursor.at)), gt(pasteTable.id, cursor.id)),
+              ? and(
+                  gte(createdAt, stamp(cursor.at)),
+                  or(
+                    gt(createdAt, stamp(cursor.at)),
+                    and(eq(createdAt, stamp(cursor.at)), gt(pasteTable.id, cursor.id)),
+                  ),
                 )
               : undefined,
           ),
         )
-        .orderBy(asc(ms(pasteTable.createdAt)), asc(pasteTable.id))
+        .orderBy(asc(createdAt), asc(pasteTable.id))
         .limit(COLLECTION_PAGE_SIZE + 1)
       const page = records.slice(0, COLLECTION_PAGE_SIZE)
-      const pastes = await withFiles(page, db)
-      const visibleIds = new Set(pastes.map((paste) => paste.id))
-      const last = page.filter((record) => visibleIds.has(record.id)).at(-1)
+      const pastes = await withFiles(page, db, origin)
+      const lastId = pastes.at(-1)?.id
+      const last = page.find((record) => record.id === lastId)
       return {
         pastes,
         nextCursor:
-          records.length > COLLECTION_PAGE_SIZE && last ? encodeCursor(last, "createdAt") : null,
+          records.length > COLLECTION_PAGE_SIZE && last
+            ? encodeCursor(last, "createdAt", cursor)
+            : null,
       }
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },

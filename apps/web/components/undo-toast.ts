@@ -5,7 +5,7 @@ import { runAction } from "@/lib/feedback"
 // moved), so Undo only has to reverse it.
 const UNDO_DURATION = 8000
 
-// Shows a neutral toast with an Undo button. Undo runs `undo`, reports a failure as an error
+// Shows a success toast with an Undo button, since the action already happened. Undo runs `undo`, reports a failure as an error
 // toast, and calls `onUndone` after it works. Returns the toast's id.
 export function showUndo({
   message,
@@ -18,7 +18,7 @@ export function showUndo({
   onUndone?: () => void
   labels: { undo: string; error: string }
 }) {
-  return toast.info(message, {
+  return toast.success(message, {
     duration: UNDO_DURATION,
     action: {
       label: labels.undo,

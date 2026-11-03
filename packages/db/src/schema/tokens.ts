@@ -3,6 +3,7 @@
 // made.
 import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 import { user } from "./auth"
+import { oauthClient } from "./oauth"
 
 const time = (name: string) => timestamp(name, { withTimezone: true })
 
@@ -23,9 +24,15 @@ export const apiToken = pgTable(
     createdAt: time("created_at").notNull().defaultNow(),
     lastUsedAt: time("last_used_at"),
     expiresAt: time("expires_at"),
+    // Set when an OAuth client holds the token (apps/web/lib/oauth). The access token then lives
+    // an hour and the client renews it with the refresh token, whose hash is kept here.
+    clientId: text("client_id").references(() => oauthClient.id, { onDelete: "cascade" }),
+    refreshHash: text("refresh_hash"),
+    refreshExpiresAt: time("refresh_expires_at"),
   },
   (table) => [
     uniqueIndex("api_token_hash_unique").on(table.hash),
+    uniqueIndex("api_token_refresh_hash_unique").on(table.refreshHash),
     index("api_token_owner_idx").on(table.ownerId, table.createdAt),
   ],
 )

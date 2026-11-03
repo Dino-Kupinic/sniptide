@@ -1,9 +1,10 @@
 import "server-only"
 
+import type { Database } from "@workspace/db"
 import { allowedPaste } from "@workspace/db/moderation"
 
 import { collection as collectionTable, paste as pasteTable, user } from "@workspace/db/schema"
-import { and, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, eq, inArray, isNull, max, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
@@ -50,13 +51,22 @@ function toCollection(row: {
   icon: string
   hue: string
   pasteCount: number
+  updatedAt?: Date | null
 }): Collection {
   const icon = ICONS.find((candidate) => candidate === row.icon) ?? ICONS[0]
   const hue = HUES.find((candidate) => candidate === row.hue) ?? "blue"
-  return { slug: row.slug, name: row.name, icon, hue, pasteCount: row.pasteCount }
+  return {
+    slug: row.slug,
+    name: row.name,
+    icon,
+    hue,
+    pasteCount: row.pasteCount,
+    updatedAt: row.updatedAt?.getTime() ?? null,
+  }
 }
 
-// The viewer's collections, oldest first, with how many live pastes each holds.
+// The viewer's collections, oldest first, with how many live pastes each holds and when the
+// newest of them last changed.
 export const listCollections = cache(async (): Promise<Collection[]> => {
   const viewer = await viewerId()
   return viewer ? collectionsOf(viewer) : []
@@ -71,6 +81,7 @@ export async function collectionsOf(owner: string): Promise<Collection[]> {
       icon: collectionTable.icon,
       hue: collectionTable.hue,
       pasteCount: sql<number>`count(${pasteTable.id})::int`,
+      updatedAt: max(pasteTable.updatedAt),
     })
     .from(collectionTable)
     .leftJoin(
@@ -126,8 +137,11 @@ export async function createCollectionFor(
   owner: string,
   name: string,
   look?: { icon: CollectionIcon; hue: Hue },
+  transaction?: Parameters<Parameters<Database["transaction"]>[0]>[0],
 ): Promise<CollectionResult> {
-  return getDb().transaction(async (tx) => {
+  const create = async (
+    tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  ): Promise<CollectionResult> => {
     await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
     const existing = await tx
       .select({ slug: collectionTable.slug, name: collectionTable.name })
@@ -150,7 +164,8 @@ export async function createCollectionFor(
       if (row) return { status: "ok", collection: toCollection({ ...row, pasteCount: 0 }) }
     }
     return { status: "duplicate" }
-  })
+  }
+  return transaction ? create(transaction) : getDb().transaction(create)
 }
 
 export async function renameCollection(

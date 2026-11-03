@@ -68,9 +68,10 @@ export class Autosaver<T> {
   private readonly retryDelaysMs: number[]
 
   private current: T
+  private currentKey: string
   private savedKey: string
   private lastState: AutosaveState = { kind: "idle" }
-  private everSaved = false
+  private lastSavedAt: number | null = null
   private conflicted = false
   private disposed = false
   private attempt = 0
@@ -87,7 +88,8 @@ export class Autosaver<T> {
     this.maxWaitMs = options.maxWaitMs ?? 15_000
     this.retryDelaysMs = options.retryDelaysMs ?? [2000, 4000, 8000, 16_000, 30_000]
     this.current = options.initial
-    this.savedKey = JSON.stringify(options.initial)
+    this.currentKey = JSON.stringify(options.initial)
+    this.savedKey = this.currentKey
   }
 
   get state() {
@@ -96,19 +98,22 @@ export class Autosaver<T> {
 
   // Whether the latest edit has reached the server.
   hasUnsavedChanges() {
-    return JSON.stringify(this.current) !== this.savedKey
+    return this.currentKey !== this.savedKey
   }
 
   // Call with the whole value every time it may have changed.
   update(value: T) {
     if (this.disposed) return
     this.current = value
+    this.currentKey = JSON.stringify(value)
 
     if (!this.hasUnsavedChanges()) {
       this.cancelTimers()
       // Edits that came back to what the server has need no save.
       if (this.lastState.kind !== "saving" && this.lastState.kind !== "conflict") {
-        this.set(this.everSaved ? { kind: "saved", at: this.now() } : { kind: "idle" })
+        this.set(
+          this.lastSavedAt === null ? { kind: "idle" } : { kind: "saved", at: this.lastSavedAt },
+        )
       }
       return
     }
@@ -168,7 +173,9 @@ export class Autosaver<T> {
     this.conflicted = false
     this.attempt = 0
     this.current = value
-    this.savedKey = JSON.stringify(value)
+    this.currentKey = JSON.stringify(value)
+    this.savedKey = this.currentKey
+    this.lastSavedAt = null
     this.set({ kind: "idle" })
   }
 
@@ -240,6 +247,7 @@ export class Autosaver<T> {
     }
 
     const sent = this.current
+    const sentKey = this.currentKey
     this.set({ kind: "saving" })
     this.inflight = (async () => {
       let outcome: SaveOutcome<T>
@@ -263,8 +271,11 @@ export class Autosaver<T> {
 
       this.attempt = 0
       if (outcome.ok) {
-        this.everSaved = true
-        this.savedKey = JSON.stringify(outcome.saved ?? sent)
+        this.lastSavedAt = this.now()
+        this.savedKey =
+          outcome.saved === undefined || outcome.saved === null
+            ? sentKey
+            : JSON.stringify(outcome.saved)
         if (this.hasUnsavedChanges()) {
           // More edits arrived while saving: save them next, after the usual quiet moment.
           const next = this.options.validate?.(this.current) ?? null
@@ -274,7 +285,7 @@ export class Autosaver<T> {
             this.schedule()
           }
         } else {
-          this.set({ kind: "saved", at: this.now() })
+          this.set({ kind: "saved", at: this.lastSavedAt })
         }
       } else if ("conflict" in outcome) {
         this.conflicted = true

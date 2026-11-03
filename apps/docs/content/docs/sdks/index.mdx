@@ -1,0 +1,126 @@
+---
+title: SDKs
+description: Official JavaScript, TypeScript and Python clients for the Sniptide token API, for scripts, developer tools and server applications.
+---
+
+The official SDKs wrap the [token API](/api-tokens) so your own code can save and read pastes,
+organize collections, sync env groups and check account usage. Both are small, MIT-licensed and
+cover the same operations, so pick the one that matches your runtime.
+
+<Cards>
+  <Card title="JavaScript and TypeScript" href="/sdks/javascript" description="@sniptide/sdk for Node.js 18 or newer, with bundled types." />
+  <Card title="Python" href="/sdks/python" description="The sniptide package for Python 3.9 or newer, with no dependencies." />
+</Cards>
+
+## Quick start
+
+Create a token in **Settings** > **API tokens** (see [API tokens](/api-tokens)) and export it as
+`SNIPTIDE_TOKEN`. Then check that it works with `me`, which reads your account and changes nothing:
+
+<Tabs items={["TypeScript", "Python"]}>
+<Tab value="TypeScript">
+
+```bash
+npm install @sniptide/sdk
+```
+
+```ts
+import { SniptideClient } from "@sniptide/sdk"
+
+const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!)
+const { user, scopes } = await client.me()
+console.log(user.name, scopes)
+```
+
+</Tab>
+<Tab value="Python">
+
+```bash
+python -m pip install sniptide
+```
+
+```python
+import os
+from sniptide import SniptideClient
+
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+account = client.me()
+print(account["user"]["name"], account["scopes"])
+```
+
+</Tab>
+</Tabs>
+
+The script prints your display name and the token's access, such as `Ada [ "read", "write" ]` in
+Node.js or `Ada ['read', 'write']` in Python. A `SniptideError` with the code `unauthorized` means
+the token is missing, wrong, expired or revoked.
+
+## How the SDKs behave
+
+Both clients follow the same rules, so code ports between them with only the naming changed.
+
+- **One method per endpoint.** Each method sends one request to `/api/v1` and returns the API's
+  JSON envelope unchanged, such as `{ paste }` or `{ pastes, nextCursor }`. The
+  [API reference](/api-tokens#endpoints) served at `/docs/api` on every instance describes each body.
+- **Your token, your data.** A token reaches only your own live pastes, collections and env groups.
+  Read methods need **read** access, and methods that create or change data need **write**.
+- **Server side only.** A token acts as you. Load it from server configuration and keep it out of
+  browser bundles, source control and logs.
+- **No automatic retries.** A failed request raises `SniptideError` and is never sent twice. Create
+  methods take an idempotency key so that you can retry them safely, as
+  [API reliability](/api-reliability#retry-a-create-safely) explains.
+- **Safe transport.** The base URL must use HTTPS, except on `localhost`, `127.0.0.1` and `::1`.
+  Redirects are refused, so a token never leaves the instance you chose. Requests time out after
+  30 seconds, and responses over 64 MiB are rejected.
+
+The SDKs don't wrap batch creates, OAuth sign-in or the browser session API. Use the
+[batch endpoint](/api-reliability#create-in-batches) directly when you need it.
+
+## Self-hosted instances
+
+Point the client at your instance's address, including any path prefix it is served under. The
+default is `https://app.sniptide.com`.
+
+<Tabs items={["TypeScript", "Python"]}>
+<Tab value="TypeScript">
+
+```ts
+const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
+```
+
+</Tab>
+<Tab value="Python">
+
+```python
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
+```
+
+</Tab>
+</Tabs>
+
+For integration tests that write data, use a [separate test instance](/agent-sandbox) instead of
+your real account.
+
+## Errors
+
+Every failure raises `SniptideError` with a message, the HTTP status, a machine-readable code and,
+on `429` and `503`, the `Retry-After` value.
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `bad_request` | 400 | The input is invalid. The message names the field. |
+| `unauthorized` | 401 | The token is missing, invalid, expired or revoked. |
+| `forbidden` | 403 | The token doesn't have the access the method needs. |
+| `not_found` | 404 | The paste, collection or env group doesn't exist or isn't yours. |
+| `conflict` | 409 | An idempotency key was reused with another payload, a collection with that name exists, or the account has 100 env groups. |
+| `unprocessable_entity` | 422 | The account already has 50 collections. |
+| `payload_too_large` | 413 | The paste is too large or the account is out of storage. |
+| `too_many_requests` | 429 | The token used its hourly quota. Wait for `Retry-After`. |
+| `service_unavailable` | 503 | The instance is busy. Wait for `Retry-After`. |
+| `internal_error` | 500 | The server failed. Check whether the change happened before retrying. |
+| `network_error` | none | The instance couldn't be reached, or the connection dropped. |
+| `redirect` | 3xx | The instance answered with a redirect, which the SDK refuses to follow. |
+| `invalid_response` | any | The response wasn't a JSON object or was larger than the limit. |
+
+A token can make 3,600 requests an hour. See [API tokens](/api-tokens#limits) for the
+other limits.

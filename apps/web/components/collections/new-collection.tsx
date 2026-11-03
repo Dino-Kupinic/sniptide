@@ -1,5 +1,7 @@
 "use client"
 
+import { Button } from "@sniptide/ui/components/button"
+import { PlusIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
@@ -7,6 +9,20 @@ import { createCollection } from "@/lib/collections/actions"
 import { type Collection, defaultHue } from "@/lib/collections/types"
 import { CollectionLookPicker } from "./icon-picker"
 import { CollectionNameDialog } from "./name-dialog"
+
+export function NewCollectionButton({ existing }: { existing: number }) {
+  const t = useTranslations("Workspace")
+  const [open, setOpen] = React.useState(false)
+  return (
+    <>
+      <Button size="lg" onClick={() => setOpen(true)}>
+        <PlusIcon />
+        {t("new_collection")}
+      </Button>
+      <NewCollectionDialog open={open} onOpenChange={setOpen} existing={existing} />
+    </>
+  )
+}
 
 // The "New collection" dialog. Its trigger lives with the caller (the sidebar's + button, the
 // Collections page, a paste's "Add to collection" menu), so this only takes the open state. By
@@ -21,7 +37,7 @@ export function NewCollectionDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   existing: number
-  onCreated?: (slug: string) => void
+  onCreated?: (slug: string, name: string) => void
 }) {
   const t = useTranslations("Workspace")
   const router = useRouter()
@@ -55,7 +71,7 @@ export function NewCollectionDialog({
       onSubmit={async (name) => {
         const result = await createCollection(name, look)
         if (result.ok) {
-          if (onCreated) onCreated(result.slug)
+          if (onCreated) onCreated(result.slug, name)
           else router.push(`/collections/${result.slug}`)
         }
         return result

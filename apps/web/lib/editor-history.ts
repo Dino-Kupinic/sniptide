@@ -9,6 +9,7 @@ export interface Snapshot {
   value: string
   selectionStart: number
   selectionEnd: number
+  selectionDirection?: "forward" | "backward" | "none"
 }
 
 // How an edit happened, which decides whether it joins the one before it. Typing and deleting

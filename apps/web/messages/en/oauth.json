@@ -1,0 +1,21 @@
+{
+  "OAuth": {
+    "metaTitle": "Authorize an app · Sniptide",
+    "title": "Connect {client}",
+    "subtitle": "{client} wants to use your Sniptide account.",
+    "read": "Search and read your snippets, collections and env groups",
+    "write": "Create, edit and delete snippets, collections and env groups",
+    "redirectNotice": "After you allow access, Sniptide sends you back to {host}. Only continue if you started this from {client}.",
+    "revokeNotice": "You can disconnect it at any time in Settings, API tokens.",
+    "signedInAs": "Signed in as {email}.",
+    "allow": "Allow access",
+    "deny": "Cancel",
+    "invalidTitle": "This link doesn't work",
+    "invalidClient": "The app that sent you here isn't registered with Sniptide. Start the connection again from the app.",
+    "invalidRedirect": "The app that sent you here asked to return to an address it didn't register. Start the connection again from the app.",
+    "pitchTitle1": "Your snippets,",
+    "pitchTitle2": "in your agent.",
+    "pitchBody": "A connected app acts for you with the access you allow here and nothing more.",
+    "pitchNote": "MCP server"
+  }
+}

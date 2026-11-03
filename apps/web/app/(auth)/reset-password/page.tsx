@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server"
 import { AuthScreen } from "@/components/auth/auth-screen"
+import { LegalNotice } from "@/components/auth/legal-notice"
 import { ResetLinkExpired, ResetPasswordForm } from "@/components/auth/reset-password-form"
 import { getSiteOrigin } from "@/lib/site"
 
@@ -21,7 +22,7 @@ export default async function Page({ searchParams }: PageProps<"/reset-password"
     <AuthScreen
       title={t("chooseNewPassword")}
       subtitle={t("chooseNewPasswordSubtitle")}
-      legal={t("signInLegal")}
+      legal={<LegalNotice action="continue" />}
       pitch={{
         title: [t("signInPitchTitle1"), t("signInPitchTitle2")],
         body: t("signInPitchBody"),

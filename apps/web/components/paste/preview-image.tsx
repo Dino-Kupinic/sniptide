@@ -41,12 +41,10 @@ const syntax: Record<HighlightRole, string> = {
 }
 
 const fontDir = path.join(process.cwd(), "assets/fonts")
+const monoFontPath = path.join(process.cwd(), "../../packages/ui/src/fonts/PaperMono-Regular.ttf")
 let fonts: Promise<[Buffer, Buffer]> | undefined
 function loadFonts() {
-  fonts ??= Promise.all([
-    readFile(path.join(fontDir, "Archivo-500.woff")),
-    readFile(path.join(fontDir, "JetBrainsMono-Regular.ttf")),
-  ])
+  fonts ??= Promise.all([readFile(path.join(fontDir, "Archivo-500.woff")), readFile(monoFontPath)])
   return fonts
 }
 
@@ -105,7 +103,7 @@ export async function pastePreviewImage(preview: PastePreview) {
         background: colors.background,
         color: colors.foreground,
         padding: "52px 168px 0",
-        fontFamily: "JetBrains Mono",
+        fontFamily: "Paper Mono",
       }}
     >
       <svg
@@ -204,7 +202,7 @@ export async function pastePreviewImage(preview: PastePreview) {
       ...previewSize,
       fonts: [
         { name: "Archivo", data: heading, style: "normal", weight: 500 },
-        { name: "JetBrains Mono", data: mono, style: "normal", weight: 400 },
+        { name: "Paper Mono", data: mono, style: "normal", weight: 400 },
       ],
       headers: { "Cache-Control": "no-store" },
     },

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "sniptide": {
+      "type": "streamable-http",
+      "url": "https://app.sniptide.com/api/mcp",
+      "headers": { "Authorization": "Bearer ${SNIPTIDE_TOKEN}" }
+    },
+    "sniptide-docs": {
+      "type": "streamable-http",
+      "url": "https://sniptide.com/api/mcp"
+    }
+  }
+}

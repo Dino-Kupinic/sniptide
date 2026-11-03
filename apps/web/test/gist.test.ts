@@ -131,6 +131,126 @@ describe("readGistFiles", () => {
       error: "big.txt: Over the 1 KB limit.",
     })
   })
+
+  test("cancels an oversized raw stream before reading its remaining chunks", async () => {
+    process.env.MAX_PASTE_SIZE = "1KB"
+    const gist = await load({
+      "log.txt": { filename: "log.txt", size: 1, raw_url: RAW, truncated: true },
+    })
+    let pulled = 0
+    let cancelled = false
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          new ReadableStream(
+            {
+              pull(controller) {
+                if (pulled === 8) return controller.close()
+                pulled++
+                controller.enqueue(new Uint8Array(512).fill(65))
+              },
+              cancel() {
+                cancelled = true
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+          { headers: { "content-length": "1" } },
+        ),
+    ) as unknown as typeof fetch
+    expect(await readGistFiles(gist, ["log.txt"])).toEqual({
+      ok: false,
+      error: "log.txt couldn't be read from GitHub.",
+    })
+    expect(cancelled).toBe(true)
+    expect(pulled).toBe(3)
+  })
+
+  test("preserves UTF-8 characters split across raw chunks", async () => {
+    const gist = await load({
+      "log.txt": { filename: "log.txt", size: 8, raw_url: RAW, truncated: true },
+    })
+    const bytes = new TextEncoder().encode("A😀éB")
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              for (const byte of bytes) controller.enqueue(Uint8Array.of(byte))
+              controller.close()
+            },
+          }),
+        ),
+    ) as unknown as typeof fetch
+    expect(await readGistFiles(gist, ["log.txt"])).toEqual({
+      ok: true,
+      files: [{ name: "log.txt", content: "A😀éB" }],
+    })
+  })
+
+  test("charges inline contents before raw downloads and cancels at the aggregate limit", async () => {
+    process.env.MAX_PASTE_SIZE = "1KB"
+    const gist = await load({
+      "inline.ts": { filename: "inline.ts", content: "i".repeat(700) },
+      "log.txt": { filename: "log.txt", size: 700, raw_url: RAW, truncated: true },
+    })
+    let cancelled = false
+    globalThis.fetch = mock(
+      async () =>
+        new Response(
+          new ReadableStream(
+            {
+              pull(controller) {
+                controller.enqueue(new Uint8Array(200).fill(65))
+              },
+              cancel() {
+                cancelled = true
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+        ),
+    ) as unknown as typeof fetch
+    expect(await readGistFiles(gist, ["log.txt", "inline.ts"])).toEqual({
+      ok: false,
+      error: "Pastes are limited to 1 KB.",
+    })
+    expect(cancelled).toBe(true)
+  })
+
+  test("bounds simultaneous raw downloads while preserving selection order", async () => {
+    const gist = await load(
+      Object.fromEntries(
+        Array.from({ length: 4 }, (_, i) => [
+          `${i}.txt`,
+          { filename: `${i}.txt`, size: 1, raw_url: `${RAW}?${i}`, truncated: true },
+        ]),
+      ),
+    )
+    let release = () => {}
+    let started = () => {}
+    const ready = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const calls: string[] = []
+    globalThis.fetch = mock(async (url: string | URL | Request) => {
+      calls.push(String(url))
+      if (calls.length === 2) started()
+      await gate
+      return new Response("x")
+    }) as unknown as typeof fetch
+    const result = readGistFiles(gist, ["3.txt", "2.txt", "1.txt", "0.txt"])
+    await ready
+    expect(calls).toHaveLength(2)
+    release()
+    expect(await result).toEqual({
+      ok: true,
+      files: ["3.txt", "2.txt", "1.txt", "0.txt"].map((name) => ({ name, content: "x" })),
+    })
+  })
 })
 
 describe("gistTitle", () => {
