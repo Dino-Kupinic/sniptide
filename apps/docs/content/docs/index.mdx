@@ -1,19 +1,39 @@
 ---
 title: Overview
-description: Everything you need to run, use and extend Sniptide, the self-hostable pastebin.
+description: Use Sniptide to save code, share it with a link you control, and let coding agents reuse it, on sniptide.com or your own server.
 ---
 
-Sniptide is a pastebin you can host yourself, with a hosted version at sniptide.com. You write or
-import code, choose who can open it and for how long, and share a link. These docs cover both the
-hosted app and your own instance.
+Sniptide saves code as pastes, shares each one with a link whose visibility, password and expiry
+you choose, and lets the CLI, the SDKs and coding agents read and save the same pastes. The hosted
+app runs at `app.sniptide.com`, and you can run the same app on your own server with Docker.
+
+## Start here
 
 <Cards>
-  <Card title="Getting started" href="/getting-started" description="Create an account, make a paste and share it, or run your own instance." />
-  <Card title="Core concepts" href="/core-concepts" description="Pastes, collections, sharing, burn after read and revisions." />
-  <Card title="Account settings" href="/settings" description="Manage sign-in methods, devices, notifications, and language." />
-  <Card title="API tokens" href="/api-tokens" description="Personal tokens for the CLI, agents and scripts." />
-  <Card title="CLI" href="/cli" description="Capture and restore code, and sync .env files, from the terminal." />
-  <Card title="SDKs" href="/sdks" description="Use Sniptide from your own JavaScript, TypeScript or Python code." />
-  <Card title="MCP server" href="/mcp" description="Let an AI assistant search, read and save your snippets." />
-  <Card title="Self-hosting" href="/self-hosting" description="Run Sniptide with Docker or Coolify." />
+  <Card title="Make your first paste" href="/getting-started/first-paste" description="Create an account, save a paste, file it in a collection and share the link." />
+  <Card title="Connect a coding agent" href="/mcp" description="Add the MCP server to Claude Code, Codex or Cursor and sign in through the browser." />
+  <Card title="Run your own Sniptide" href="/getting-started/self-hosted" description="Start the app and Postgres with Docker Compose and create your account." />
 </Cards>
+
+## Choose how you work with Sniptide
+
+| You want to | Use | Authenticates with |
+| --- | --- | --- |
+| Write, organize and share pastes by hand | The web app | Your account |
+| Let a coding agent search, read and save snippets | The [MCP server](/mcp) | [OAuth](/oauth) or an [API token](/api-tokens) |
+| Capture files from a project and restore them elsewhere | The [CLI](/cli) | An API token |
+| Call Sniptide from your own code | The [SDKs](/sdks) or the [token API](/api-tokens) | An API token |
+
+Every route reaches the same pastes, collections and env groups. A token or an agent connection
+only reaches the pastes of the account that created it.
+
+## Learn the concepts
+
+[Core concepts](/core-concepts) explains pastes, collections, sharing, burn after read, revisions,
+encrypted secrets and analytics. Read it when a setting in the editor isn't clear.
+
+## Operate your own instance
+
+[Self-hosting](/self-hosting) covers Docker Compose, Docker and Coolify installs, every
+configuration setting, reverse proxies, backups and upgrades. If something fails, start with
+[Troubleshooting](/troubleshooting).

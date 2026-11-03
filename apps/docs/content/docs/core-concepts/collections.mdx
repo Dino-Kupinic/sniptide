@@ -1,37 +1,49 @@
 ---
 title: Collections
-description: Group your pastes into named collections with an icon and a colour.
+description: Group your Sniptide pastes into private collections, and reuse a collection as an ordered set of snippets from the CLI or an agent.
 ---
 
-A collection is a named group of your pastes, shown in the sidebar. It is how you keep, say, all
-your API snippets or one project's scripts together.
+A collection is a named group of your pastes that appears in the sidebar. Use one to keep related
+snippets together, such as your API helpers or one project's setup scripts.
 
-## Using collections
+## Create and fill a collection
 
-- **New collection** in the sidebar asks for a name. Names can be up to 40 characters, and an
-  account can have up to 50 collections.
-- File a paste by choosing a collection in its **Collection** field, or from its **⋯** menu with
-  **Add to collection**. A paste belongs to at most one collection. Choose **No collection** to
-  take it out.
-- Each collection gets an icon and a colour, which you can change. Drag collections in the sidebar
-  to reorder them.
-- The collection's page (`/collections/<name>`) lists its pastes. `G` then `C` opens the list of
-  all your collections.
+1. Select **New collection** in the sidebar and enter a name of up to 40 characters.
+2. File a paste in it from the paste's menu in the sidebar with **Add to collection**, or pick the
+   collection in the paste's **Collection** setting while you edit it. To file several pastes at
+   once, select them in the **Pastes** list and choose **Move to collection**.
+3. Open the collection from the sidebar to see its pastes at `/collections/<slug>`.
 
-Renaming a collection changes only its name. Its link stays as it was made, and its pastes stay
-in it. **Delete collection** removes the collection, not its pastes: they are kept and simply leave
-the collection.
+A paste belongs to at most one collection. Choose **No collection** to take it out. An account can
+have up to 50 collections.
 
-## Collections are private
+## Change a collection
 
-A collection is an organizer for **you**. Other people can't open it, and sharing a collection
-isn't something Sniptide does: you share the **pastes** in it, each with its own
-[sharing settings](/core-concepts/sharing). To hand someone several related snippets at once,
-put them in one paste as separate files (up to 10), or invite them to each paste.
+- Each collection has an icon and a color, which you can change.
+- Drag collections in the sidebar to reorder them.
+- Press `G` then `C` to open the list of all your collections.
 
-## Collections as ordered sets of snippets
+Renaming a collection changes only its name. Its slug, and so its address and the name the CLI and
+agents use, stays the same. **Delete collection** removes the collection and keeps its pastes,
+which leave it.
 
-Because a collection is just the pastes filed under it, the [CLI](/cli) and the
-[MCP server](/mcp) can work with it as a whole: they can list a collection, and pull it down as
-one ordered set of pastes, oldest capture first. That is useful for a repeatable workflow, such as
-a set of setup snippets you restore in order into a new project.
+## Who can see a collection
+
+Only you. Other people can't open your collections, and Sniptide has no way to share a collection
+itself. You share the pastes in it, each with its own [sharing settings](/core-concepts/sharing).
+To hand someone several related snippets at once, put them in one paste as separate files, up to
+10, or invite them to each paste.
+
+## Reuse a collection as an ordered set
+
+The [CLI](/cli) and the [MCP server](/mcp) treat a collection as an ordered set of pastes, oldest
+capture first. That fits a repeatable workflow, such as setup snippets you restore in the same
+order in every new project.
+
+- `sniptide pull collection:<slug>` restores every paste in the collection.
+- `sniptide skill <slug>` installs the collection as a skill for Claude Code, Cursor or Codex.
+- The MCP tool `fetch_collection` and the `apply_collection` prompt give an agent the collection's
+  pastes as numbered steps.
+
+Refer to a collection by its slug, the last part of its address. The MCP tool `list_collections`
+lists every slug.

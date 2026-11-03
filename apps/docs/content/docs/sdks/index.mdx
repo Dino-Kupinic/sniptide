@@ -14,7 +14,7 @@ cover the same operations, so pick the one that matches your runtime.
 
 ## Quick start
 
-Create a token in **Settings → API tokens** (see [API tokens](/api-tokens)) and export it as
+Create a token in **Settings** > **API tokens** (see [API tokens](/api-tokens)) and export it as
 `SNIPTIDE_TOKEN`. Then check that it works with `me`, which reads your account and changes nothing:
 
 <Tabs items={["TypeScript", "Python"]}>
@@ -51,26 +51,30 @@ print(account["user"]["name"], account["scopes"])
 </Tab>
 </Tabs>
 
+The script prints your display name and the token's access, such as `Ada [ "read", "write" ]` in
+Node.js or `Ada ['read', 'write']` in Python. A `SniptideError` with the code `unauthorized` means
+the token is missing, wrong, expired or revoked.
+
 ## How the SDKs behave
 
 Both clients follow the same rules, so code ports between them with only the naming changed.
 
 - **One method per endpoint.** Each method sends one request to `/api/v1` and returns the API's
   JSON envelope unchanged, such as `{ paste }` or `{ pastes, nextCursor }`. The
-  [API reference](/api-tokens#use-it) served at `/docs/api` on every instance describes each body.
+  [API reference](/api-tokens#endpoints) served at `/docs/api` on every instance describes each body.
 - **Your token, your data.** A token reaches only your own live pastes, collections and env groups.
   Read methods need **read** access, and methods that create or change data need **write**.
 - **Server side only.** A token acts as you. Load it from server configuration and keep it out of
   browser bundles, source control and logs.
 - **No automatic retries.** A failed request raises `SniptideError` and is never sent twice. Create
   methods take an idempotency key so that you can retry them safely, as
-  [API reliability](/api-reliability#create-retries) explains.
+  [API reliability](/api-reliability#retry-a-create-safely) explains.
 - **Safe transport.** The base URL must use HTTPS, except on `localhost`, `127.0.0.1` and `::1`.
   Redirects are refused, so a token never leaves the instance you chose. Requests time out after
   30 seconds, and responses over 64 MiB are rejected.
 
 The SDKs don't wrap batch creates, OAuth sign-in or the browser session API. Use the
-[batch endpoint](/api-reliability#batch-creates) directly when you need it.
+[batch endpoint](/api-reliability#create-in-batches) directly when you need it.
 
 ## Self-hosted instances
 
@@ -108,7 +112,8 @@ on `429` and `503`, the `Retry-After` value.
 | `unauthorized` | 401 | The token is missing, invalid, expired or revoked. |
 | `forbidden` | 403 | The token doesn't have the access the method needs. |
 | `not_found` | 404 | The paste, collection or env group doesn't exist or isn't yours. |
-| `conflict` | 409 | An idempotency key was reused with another payload, or an account limit was reached. |
+| `conflict` | 409 | An idempotency key was reused with another payload, a collection with that name exists, or the account has 100 env groups. |
+| `unprocessable_entity` | 422 | The account already has 50 collections. |
 | `payload_too_large` | 413 | The paste is too large or the account is out of storage. |
 | `too_many_requests` | 429 | The token used its hourly quota. Wait for `Retry-After`. |
 | `service_unavailable` | 503 | The instance is busy. Wait for `Retry-After`. |
@@ -117,5 +122,5 @@ on `429` and `503`, the `Retry-After` value.
 | `redirect` | 3xx | The instance answered with a redirect, which the SDK refuses to follow. |
 | `invalid_response` | any | The response wasn't a JSON object or was larger than the limit. |
 
-A token can make 3,600 requests an hour. See [API tokens](/api-tokens#limits-and-errors) for the
+A token can make 3,600 requests an hour. See [API tokens](/api-tokens#limits) for the
 other limits.

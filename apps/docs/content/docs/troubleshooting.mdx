@@ -1,0 +1,65 @@
+---
+title: Troubleshooting
+description: Find the cause of common Sniptide problems with sign-in, sharing, the API, the CLI, MCP clients and self-hosted instances, and fix them.
+---
+
+Find the symptom you see, run the check, and apply the fix. Each section links to the page with
+the full details.
+
+## Sign-in and accounts
+
+| Symptom | Check | Fix |
+| --- | --- | --- |
+| Sign-in or sign-up fails with "Invalid origin" | Compare the address in the browser with `BETTER_AUTH_URL`. They must match exactly, including `https://` and the port. | Set `BETTER_AUTH_URL` to the address people open and restart the app. See [Configuration](/self-hosting/configuration#required). |
+| Everyone was signed out at once | Check whether `BETTER_AUTH_SECRET` or `COOKIE_PREFIX` changed. | Restore the previous value. If you rotated the secret on purpose, people sign in again. |
+| The forgot-password page says to contact the administrator | The instance has no SMTP settings. | The administrator configures [email](/self-hosting/configuration#email), or sets a new password for you. |
+| You can't turn on notification emails | Check that your email shows as verified in **Settings** > **Account**. | Select **Send verification email** in **Settings** > **Notifications** and open the link. |
+
+## Sharing and reading pastes
+
+| Symptom | Check | Fix |
+| --- | --- | --- |
+| A link shows "not found" | The paste may be private, expired, in the trash, or its link may have changed. | Make it unlisted or public, invite the reader, restore it from **Trash**, or send the new link. See [Sharing](/core-concepts/sharing). |
+| You're asked for your own paste's password | You opened the share link, which shows readers' view. | Open the paste from your pastes in the app instead. |
+| Copy buttons or password unlocks don't work | Check whether the address starts with `http://` on something other than `localhost`. | Serve the instance over HTTPS. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). |
+| **Share via…** or **Embed** isn't offered | The paste must be public or unlisted, without a password or burn after read. Slack and Discord also need a webhook set by the administrator. | Change the paste's settings, or ask the administrator. |
+
+## API, SDKs and CLI
+
+| Symptom | Check | Fix |
+| --- | --- | --- |
+| `401` or CLI exit code `3` | Run `curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" <instance>/api/v1/me`. | Create a new token if this fails. Check that `SNIPTIDE_BASE_URL` points at the instance that issued the token. |
+| `403` on a write | `GET /api/v1/me` returns `"scopes": ["read"]`. | Create a token with **Write access**. |
+| `404` for a paste you own | Check that it isn't in the trash or expired, and that you used its current id or link. | Tokens reach only your own live pastes. Restore it, or use the current link. |
+| `409` on a create | The response says whether an `Idempotency-Key` was reused or a collection name exists. | Use a new key for a new resource, or pick another collection name. |
+| `429` | Read `Retry-After` and the `RateLimit` header. | Wait that many seconds. See [API reliability](/api-reliability#read-the-quota-headers). |
+| The CLI refuses an `http://` address | The CLI and SDKs allow HTTP only on `localhost`. | Use the instance's HTTPS address. |
+| `push` stops with a file limit error | A paste holds 10 text files and 1 MiB. | Narrow the paths or globs, or split the capture. |
+
+## MCP clients
+
+| Symptom | Check | Fix |
+| --- | --- | --- |
+| The client keeps asking you to sign in, or gets `401` | Look for the connection in **Settings** > **API tokens**. | Remove the server from the client and add it again, then allow access. See [OAuth for agents](/oauth). |
+| A write tool says the token "doesn't have the write scope" | The connection or token is read-only. | Connect again with write access, or use a token with **Write access**. |
+| `invalid_grant` during sign-in | The client retried an authorization code, which works once. | Start the connection again from the client. |
+| `405` from `/api/mcp` | The client uses the older SSE transport. | Configure the server as Streamable HTTP. |
+
+## Self-hosted instances
+
+| Symptom | Check | Fix |
+| --- | --- | --- |
+| `/api/health` returns `503` with `{"ok":false}` | Run `docker compose logs app` and look for database errors. | Check `DATABASE_URL`, and that Postgres is running and reachable from the container. |
+| The container exits at startup | The log names the invalid setting or the failed migration. | Fix that value. A failed migration rolls back completely, so start again after fixing the cause. See [Upgrading](/self-hosting/upgrading#recover-from-a-failed-upgrade). |
+| A migration fails on `pg_trgm` | The database user can't create extensions. | Have the database operator run `CREATE EXTENSION pg_trgm;` first. |
+| The log warns `migrations_ahead` | The image is older than the database. | Run the newer image, or restore the backup taken before the upgrade. |
+| Env group values are unreadable | `BETTER_AUTH_SECRET` or `ENV_SECRETS_KEY` changed. | Restore the previous key, or push the groups again. |
+| Many visitors are rate-limited together | The app sees the proxy's address for every visitor. | Set `CLIENT_IP_SOURCE` for your proxy. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). |
+| Gist imports fail with a GitHub rate limit | The server shares GitHub's quota of 60 requests an hour. | Set `GITHUB_TOKEN`. |
+
+## Get help
+
+If none of these fit, open an issue on the
+[Sniptide GitHub repository](https://github.com/Dino-Kupinic/sniptide/issues). Include the
+Sniptide version or image tag, what you did, the response status and message, and the relevant
+log lines with tokens, passwords and email addresses removed.

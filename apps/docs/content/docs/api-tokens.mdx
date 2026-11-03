@@ -1,64 +1,35 @@
 ---
 title: API tokens
-description: Personal tokens let the CLI, coding agents and scripts act for your account.
+description: Create a personal Sniptide API token, choose read or write access, call the /api/v1 endpoints, and handle limits and errors.
 ---
 
-An API token lets a program act as you without a browser session. The [CLI](/cli), the
-[MCP server](/mcp), the [SDKs](/sdks) and your own scripts all authenticate with one.
+A personal API token lets a program act as you without a browser session. The [CLI](/cli), the
+[SDKs](/sdks), MCP clients without OAuth and your own scripts send it as a bearer token to the API
+under `/api/v1`. An agent that supports OAuth can connect without a token, as
+[OAuth for agents](/oauth) describes.
 
 ## Create a token
 
-<Steps>
-<Step>
+1. Open **Settings** and select **API tokens**.
+2. Enter a token name you'll recognize, such as "laptop CLI", of up to 60 characters.
+3. Turn on **Write access** if the program must create or change data. Off means read-only.
+4. Choose **Expires**: 30 days, 90 days (the default), 1 year or never.
+5. Select **Create token** and copy the token. It is shown only once.
 
-Open **Settings → API tokens**.
-
-</Step>
-<Step>
-
-Give the token a name you'll recognize, like "laptop CLI" (up to 60 characters).
-
-</Step>
-<Step>
-
-Choose its access. **Write access** off means read-only. Write always includes read.
-
-</Step>
-<Step>
-
-Choose when it expires: 30 days, 90 days (the default), 1 year or never.
-
-</Step>
-<Step>
-
-Select **Create token** and copy it right away. It is shown once.
-
-</Step>
-</Steps>
-
-Tokens start with `snpt_`. Sniptide stores only a hash, so a lost token can't be shown again:
-delete it and make a new one. An account can have up to 25 tokens, and the list shows when each was
-last used.
+Tokens start with `snpt_`. Sniptide stores only a hash, so a lost token can't be shown again.
+Revoke it and create a new one. An account can have up to 25 tokens, and the list shows when each
+one was last used.
 
 <Callout type="warn">
-A token acts as you, within its access. Keep it out of source control, shell history and logs, and
-prefer a read-only token unless the tool needs to save things. To stop a token working immediately,
-delete it in Settings.
+A token acts as you within its access. Keep it out of source control, shell history, browser code
+and logs, and prefer a read-only token unless the program saves data. **Revoke** stops a token at
+once, and scripts using it start getting `401`.
 </Callout>
 
-## Access
+## Check the token
 
-| Access | What the token can do |
-| --- | --- |
-| **Read** (every token) | List and search your pastes, read a paste, pull a collection, list and read env groups. |
-| **Write** | Everything above, plus create and update pastes, and push or delete env groups. |
-
-A token only ever reaches **your own** live pastes: not other people's, not pastes shared with
-you, not trash, and not expired pastes.
-
-## Use it
-
-Send the token as a bearer token. The API lives under `/api/v1` on your instance:
+Send the token in the `Authorization` header. Use your own instance's address instead of
+`app.sniptide.com` when you self-host.
 
 ```bash
 curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" https://app.sniptide.com/api/v1/me
@@ -68,35 +39,98 @@ curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" https://app.sniptide.com/api/v1/
 { "user": { "id": "…", "name": "Ada", "username": "ada" }, "scopes": ["read", "write"] }
 ```
 
-On a self-hosted instance use its address (and any path prefix it is served under). Session cookies
-are not accepted on these endpoints.
+`scopes` is `["read"]` for a read-only token. A `401` means the token is missing, wrong, expired
+or revoked. The endpoints under `/api/v1` don't accept session cookies.
 
-| Operation | Request | Needs |
+## Access
+
+| Access | What the token can do |
+| --- | --- |
+| **Read** (every token) | Read your account and usage, list and search your pastes, read a paste, list collections and their pastes, list and read env groups. |
+| **Write** | Everything above, plus create and update pastes, change their sharing settings, move them to the trash, create collections, and replace or delete env groups. |
+
+A token reaches only **your own** live pastes. It can't read other people's pastes, pastes shared
+with you, the trash or expired pastes, and it never deletes a paste for good.
+
+## Endpoints
+
+Paths are relative to `/api/v1`. `{id}` accepts a paste's id or its link.
+
+| Operation | Request | Access |
 | --- | --- | --- |
-| Check a token | `GET /me` | read |
-| Create a collection | `POST /collections` | write |
-| Batch creates | `POST /batch` | write |
+| Check the token | `GET /me` | read |
+| Read account usage | `GET /usage` | read |
+| List or search pastes | `GET /pastes?q&tag&language&collection&limit&cursor` | read |
+| Read a paste with its files | `GET /pastes/{id}` | read |
 | Create a paste | `POST /pastes` | write |
-| Update a paste | `PUT /pastes/{id or slug}` | write |
-| Read a paste | `GET /pastes/{id or slug}` | read |
-| List and search | `GET /pastes?q&tag&language&collection&limit&cursor` | read |
-| A collection's pastes | `GET /collections/{slug}/pastes` | read |
-| Env groups | `GET /env`, `GET /env/{group}` | read |
+| Replace a paste's title and files | `PUT /pastes/{id}` | write |
+| Change visibility, expiry, password or burn after read | `PATCH /pastes/{id}` | write |
+| Move a paste to the trash | `DELETE /pastes/{id}` | write |
+| List collections | `GET /collections` | read |
+| Create a collection | `POST /collections` | write |
+| A collection's pastes, oldest first | `GET /collections/{slug}/pastes` | read |
+| Create several pastes or collections | `POST /batch` | write |
+| List env groups | `GET /env` | read |
+| Read an env group's values | `GET /env/{group}` | read |
 | Replace or delete an env group | `PUT /env/{group}`, `DELETE /env/{group}` | write |
 
-New pastes made through the API are **private** and never expire unless you say otherwise. A
-collection must already exist; the API never creates one for you. The full request and response
-schemas are in the API reference, served by every instance at `/docs/api` (for the hosted app,
-`app.sniptide.com/docs/api`; the link is in this site's top navigation).
+Every instance serves the full request and response schemas at `/docs/api`, and the OpenAPI
+document at `/api/openapi.json`. For the hosted app, that is `app.sniptide.com/docs/api`, also
+linked in this site's top navigation.
 
-## Limits and errors
+Behavior to know before you write data:
 
-- A token can make **3,600 requests an hour**. Creating pastes is also limited by the same
-  per-account limits and storage budget the editor applies.
-- Responses are never cached (`Cache-Control: private, no-store`).
-- Errors are `{ "ok": false, "error": "…" }` with a status: `400` invalid input, `401` missing,
-  invalid, expired or revoked token, `403` missing access, `404` not found (or not yours), `409` too
-  many env groups, `413` too large or out of storage, `429` rate limited (with `Retry-After`).
+- A new paste is **private** and never expires unless you set `visibility` or change its settings
+  afterwards with `PATCH`.
+- The collection you name must already exist. Create it first with `POST /collections`.
+- `PUT` replaces the title and the whole file list. Read the paste first and send every file you
+  want to keep. The previous version stays in the paste's [revisions](/core-concepts/revisions).
+- `PUT /env/{group}` replaces every variable in the group.
+- `GET /pastes` returns summaries without file contents, newest first. `limit` is 1 to 100 and
+  defaults to 20. Pass `nextCursor` back as `cursor` for the next page, and stop when it is `null`.
+- `q` matches when every word appears in the title, link, description, tags, a file path or the
+  code.
 
-See [API reliability](/api-reliability) for quota headers, idempotent create retries, batch results,
-and the v1 deprecation policy. For isolated integration tests, use a [separate test instance](/agent-sandbox).
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| Requests per token | 3,600 an hour |
+| Requests with a missing or invalid token | 60 per 10 minutes for each client address |
+| New pastes | 30 an hour per account, shared with the app |
+| Storage and paste count | Your account's limits, shared with the app. See [Pastes](/core-concepts/pastes#what-a-paste-holds). |
+| Request body | 8 MiB for pastes and batches, 1 MiB for an env group, 4 KiB for settings and collections |
+
+Responses report the remaining quota in `RateLimit` and `RateLimit-Policy` headers, and a `429`
+carries `Retry-After`. Responses are never cached (`Cache-Control: private, no-store`).
+[API reliability](/api-reliability) explains the quota headers, safe retries with
+`Idempotency-Key` and batch requests.
+
+## Errors
+
+Every error returns JSON with a status code:
+
+```json
+{
+  "ok": false,
+  "error": "No paste with that id.",
+  "code": "not_found",
+  "message": "No paste with that id.",
+  "resolution": "Check the route or resource and try again."
+}
+```
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| `400` | `bad_request` | The input is invalid. The message names the problem. |
+| `401` | `unauthorized` | The token is missing, invalid, expired or revoked. |
+| `403` | `forbidden` | The token lacks the access the request needs, usually write. |
+| `404` | `not_found` | The paste, collection or env group doesn't exist or isn't yours. |
+| `409` | `conflict` | An `Idempotency-Key` was reused with another route or payload, a collection with that name exists, or the account has 100 env groups. |
+| `422` | `unprocessable_entity` | The account already has 50 collections. |
+| `413` | `payload_too_large` | The request or paste is too large, or the account is out of storage. |
+| `429` | `too_many_requests` | A rate limit was reached. Wait for `Retry-After`. |
+| `503` | `service_unavailable` | The instance is busy. Wait for `Retry-After`. |
+| `500` | `internal_error` | The server failed. Check whether the change happened before you retry. |
+
+For integration tests that write data, use a [separate test instance](/agent-sandbox).

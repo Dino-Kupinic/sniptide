@@ -1,16 +1,22 @@
 ---
 title: Run your own Sniptide
-description: Start Sniptide with Docker Compose and create your account.
+description: Start Sniptide and Postgres with Docker Compose, check that the server answers, create your account and add HTTPS.
 ---
 
-Sniptide runs as one container plus Postgres. You need a server with Docker (and the Compose
-plugin) installed. This page gets you from nothing to a running instance; the
-[self-hosting guide](/self-hosting) covers the rest.
+This guide starts Sniptide and its Postgres database on one server with Docker Compose, then
+creates your account. The [self-hosting guide](/self-hosting) covers every option after that.
 
-The initial HTTP address lets you check startup. Before sharing pastes, complete
-[HTTPS and a domain](#https-and-a-domain) below. Copy buttons, password-protected paste unlocks,
-and CLI and local MCP clients need HTTPS outside localhost. Serve the app at the domain's root,
-not under a path such as `/sniptide`.
+## Before you begin
+
+- A Linux server with Docker and the Docker Compose plugin. The image runs on AMD64 and ARM64.
+- About 768 MB of memory for the app and a few hundred megabytes for Postgres. See
+  [Memory and resources](/self-hosting/memory).
+- For the HTTPS step, a domain whose DNS points at the server, and ports 80 and 443 open.
+
+The first start uses plain HTTP on the server's address so you can check that it works. Add
+[HTTPS and a domain](#add-https-and-a-domain) before you share pastes, because copy buttons,
+password unlocks, the CLI and the local MCP server need HTTPS outside `localhost`. Serve the app at
+the root of its domain. A path such as `/sniptide` isn't supported.
 
 <Steps>
 <Step>
@@ -21,71 +27,88 @@ not under a path such as `/sniptide`.
 git clone https://github.com/Dino-Kupinic/sniptide.git && cd sniptide
 ```
 
-You only need `docker-compose.yml` and `.env.example`, so downloading those two works too.
+Compose needs only `docker-compose.yml` and `.env.example`, so downloading those two files from
+the repository also works. Run the remaining commands in the folder that holds them.
 
 </Step>
 <Step>
 
 ### Create the settings file
 
+Replace `<your-server-ip>` with the address you will open in the browser:
+
 ```bash
 printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<your-server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
 ```
 
-- `BETTER_AUTH_SECRET` signs sessions. Keep it: changing it signs everyone out and makes stored
-  env values unreadable.
-- `BETTER_AUTH_URL` must be exactly the address you open in the browser. Sign-in is rejected from
-  any other origin ("Invalid origin").
+- `BETTER_AUTH_SECRET` signs sessions and encrypts env group values. Keep it and back it up.
+  Changing it signs everyone out and makes stored env values unreadable.
+- `BETTER_AUTH_URL` must be exactly the address you open in the browser. Sign-in from any other
+  address fails with "Invalid origin".
 
-Set `POSTGRES_PASSWORD` in `.env` now too if you want your own database password: Postgres keeps
-the password it was created with, so it can't be changed by editing `.env` later.
+To choose your own database password, add `POSTGRES_PASSWORD` to `.env` now, using letters and
+digits. Postgres keeps the password it was created with, so editing it later has no effect.
 
 </Step>
 <Step>
 
-### Start it
+### Start the stack
 
 ```bash
 docker compose up -d
 ```
 
-This pulls the published image and starts it next to a Postgres database. The app applies its
-database migrations itself when it starts, so there is nothing to set up by hand.
+Compose pulls `ghcr.io/dino-kupinic/sniptide:latest` and `postgres:17-alpine` and starts both.
+The app applies its database migrations before it serves requests, so there is no separate setup
+step.
+
+</Step>
+<Step>
+
+### Check that the server answers
+
+```bash
+curl http://<your-server-ip>:3000/api/health
+```
+
+```json
+{"ok":true}
+```
+
+A `503` with `{"ok":false}` means the app is up but can't reach the database. Run
+`docker compose logs app` to see why.
 
 </Step>
 <Step>
 
 ### Create your account
 
-Open the address you set as `BETTER_AUTH_URL` and create your account, the same way as in
-[Your first paste](/getting-started/first-paste).
+Open the address you set as `BETTER_AUTH_URL` and select **Create account**, as in
+[Make your first paste](/getting-started/first-paste).
 
 </Step>
 <Step>
 
-### Close sign-up (for a private instance)
+### Close sign-up for a private instance
 
-Once your account exists, add `ALLOW_SIGN_UP=false` to `.env` and run `docker compose up -d`
-again. Existing accounts keep signing in; nobody else can create one. To allow only certain people,
+After your account exists, add this line to `.env` and run `docker compose up -d` again:
+
+```dotenv
+ALLOW_SIGN_UP=false
+```
+
+Existing accounts keep signing in, and nobody else can create one. To admit only certain people,
 set `ALLOWED_EMAILS=ada@example.com,linus@example.com` instead. New password accounts on an
-invite-only instance also need [SMTP email verification](/self-hosting/configuration#email);
-without SMTP, only verified OAuth identities can join.
+invite-only instance need [SMTP email verification](/self-hosting/configuration#email). Without
+SMTP, only people signing in with a verified GitHub or Google identity can join.
 
 </Step>
 </Steps>
 
-## Check that it works
+## Add HTTPS and a domain
 
-`GET /api/health` reports the server and the database:
-
-```bash
-curl http://<your-server-ip>:3000/api/health
-```
-
-## HTTPS and a domain
-
-Add the bundled [Caddy](https://caddyserver.com) proxy to get a certificate for your own domain.
-Point the domain's DNS at the server, open ports 80 and 443, and add this to `.env`:
+The bundled [Caddy](https://caddyserver.com) proxy gets and renews a certificate for your domain.
+Point the domain's DNS at the server, open ports 80 and 443, and add these lines to `.env`:
 
 ```dotenv
 SNIPTIDE_DOMAIN=paste.example.com
@@ -94,22 +117,25 @@ CLIENT_IP_SOURCE=x-forwarded-for
 TRUSTED_PROXIES=private
 ```
 
-Then start with the profile:
+Then start the stack with the proxy profile:
 
 ```bash
 docker compose --profile proxy up -d
 ```
 
-Already run nginx, Traefik or Coolify? Skip the profile and put your proxy in front of port 3000.
+Open `https://paste.example.com/api/health` and confirm it returns `{"ok":true}`. The
+`CLIENT_IP_SOURCE` and `TRUSTED_PROXIES` lines make rate limits see each visitor instead of the
+proxy. If you already run nginx, Traefik or Coolify, skip the profile and put your proxy in front
+of port 3000, as [Reverse proxy and client IP](/self-hosting/reverse-proxy) describes.
 
-## Updating and backups
+## Stop or remove the instance
 
-```bash
-docker compose pull && docker compose up -d
-```
+`docker compose down` stops the containers and keeps your data in the `postgres` volume.
+`docker compose down -v` also deletes that volume, with every account and paste in it, so take a
+[backup](/self-hosting/backups) first if you might need the data.
 
-Back up the `postgres` volume first (for example with `pg_dump`). To stay on a known release,
-set `SNIPTIDE_IMAGE=ghcr.io/dino-kupinic/sniptide:<version>` in `.env`.
+## Next steps
 
-Every setting, with its default, is in [Configuration](/self-hosting/configuration). Memory limits,
-backups and upgrades have their own pages under [Self-hosting](/self-hosting).
+- [Back up the database](/self-hosting/backups) on a schedule, and keep `.env` with the backups.
+- Pin a release and read [Upgrading](/self-hosting/upgrading) before you pull a new image.
+- Look up every setting and its default in [Configuration](/self-hosting/configuration).
