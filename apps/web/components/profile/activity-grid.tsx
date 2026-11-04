@@ -64,11 +64,10 @@ export function ActivityGrid({
     days.slice(index * 7, index * 7 + 7),
   )
   const summary = t("activitySummary", { count: total })
-  const peakText = peak ? t("activityPeak", { count: peak.count, date: date(peak.time) }) : null
 
   return (
     <figure className="flex min-w-0 flex-col gap-3">
-      <div role="img" aria-label={peakText ? `${summary} ${peakText}` : summary}>
+      <div role="img" aria-label={summary}>
         <div aria-hidden="true" className="flex gap-[3px]">
           {weeks.map((week, index) => {
             const start = week[0]?.time ?? first
@@ -107,7 +106,6 @@ export function ActivityGrid({
       </div>
       <figcaption className="text-[13px] text-muted-foreground">
         {summary}
-        {peakText ? ` ${peakText}` : null}
       </figcaption>
     </figure>
   )
