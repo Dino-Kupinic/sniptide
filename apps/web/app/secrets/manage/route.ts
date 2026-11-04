@@ -10,9 +10,9 @@ import {
   revokeSecretShare,
   saveSecret,
 } from "@/lib/env/web-store"
+import { limits } from "@/lib/pastes/limits"
 import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
-import { seconds } from "@/lib/time"
 
 const id = z.string().uuid()
 const commandSchema = z.discriminatedUnion("operation", [
@@ -63,9 +63,7 @@ export async function POST(request: Request) {
       case "revoke":
         return secretJson({ ok: await revokeSecretShare(owner, command.id, command.shareId) })
       case "share": {
-        const limit = await hit([
-          { key: `secret-share-create:${owner}`, max: 20, windowSeconds: seconds(3600) },
-        ])
+        const limit = await hit([limits.secretShare(owner)])
         if (!limit.allowed) return secretJson({ error: t("retry_error") }, 429)
         const token = await createSecretShare(owner, command.id, command.input)
         return token

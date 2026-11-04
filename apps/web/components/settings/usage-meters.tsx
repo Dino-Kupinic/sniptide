@@ -8,6 +8,8 @@ export type UsageMetric = {
   used: number
   limit: number | null
   format: (value: number) => string
+  // A line under the meter, such as when the allowance refills.
+  note?: string
 }
 
 // One panel of counts, with a meter under each count that has a limit.
@@ -46,6 +48,9 @@ export function UsageMeters({ metrics }: { metrics: UsageMetric[] }) {
                   </p>
                 )}
               </>
+            ) : null}
+            {metric.note ? (
+              <p className="text-[13px] text-muted-foreground">{metric.note}</p>
             ) : null}
           </li>
         )

@@ -2,8 +2,9 @@ import { Skeleton } from "@sniptide/ui/components/skeleton"
 import Link from "next/link"
 import { getLocale, getTranslations } from "next-intl/server"
 import { ViewsBarChart } from "@/components/dashboard/views-chart"
+import type { Allowance } from "@/lib/account/allowances"
 import { getAccountUsage, USAGE_HISTORY_DAYS } from "@/lib/account/usage"
-import { usageHistory } from "@/lib/account/usage-display"
+import { type AllowanceId, usageHistory } from "@/lib/account/usage-display"
 import { formatBytes } from "@/lib/format"
 import { accountBudget } from "@/lib/pastes/budget"
 import { DAY } from "@/lib/time"
@@ -11,7 +12,8 @@ import { SettingsSection } from "./section"
 import { UsageMeters, type UsageMetric } from "./usage-meters"
 
 // Usage from the account reader: one panel of counts, with a meter under each count that has a
-// quota, and the last 30 UTC days of API requests as a bar chart over a table of daily values.
+// quota, one panel of the allowances that refill each hour or day, and the last 30 UTC days of API
+// requests as a bar chart over a table of daily values.
 export async function UsageSection({ ownerId }: { ownerId: string }) {
   const [t, locale] = await Promise.all([getTranslations("Settings"), getLocale()])
   const now = new Date()
@@ -80,11 +82,61 @@ export async function UsageSection({ ownerId }: { ownerId: string }) {
       limit: null,
       format: (value: number) => number.format(value),
     },
+    {
+      label: t("usageApiTokens"),
+      used: usage.apiTokenCount,
+      limit: null,
+      format: (value: number) => number.format(value),
+    },
+    {
+      label: t("usageConnectedAgents"),
+      used: usage.connectedAgentCount,
+      limit: null,
+      format: (value: number) => number.format(value),
+    },
+    {
+      label: t("envGroups"),
+      used: usage.envGroupCount,
+      limit: null,
+      format: (value: number) => number.format(value),
+    },
   ]
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always" })
+  const refill = (allowance: Allowance) => {
+    const window = t(allowance.windowSeconds >= 86_400 ? "usagePerDay" : "usagePerHour")
+    if (allowance.resetSeconds === null) return window
+    const minutes = Math.ceil(allowance.resetSeconds / 60)
+    const when =
+      minutes < 60
+        ? relative.format(minutes, "minute")
+        : relative.format(Math.ceil(minutes / 60), "hour")
+    return t("usageRefills", { window, when })
+  }
+  const allowanceLabels: Record<AllowanceId, string> = {
+    pasteCreates: t("usagePasteCreates"),
+    pasteEdits: t("usagePasteEdits"),
+    gistImports: t("usageGistImports"),
+    webhookShares: t("usageWebhookShares"),
+    secretLinks: t("usageSecretLinks"),
+    tokenCreates: t("usageTokenCreates"),
+    apiRequests: t("usageApiRequestsPerToken"),
+    assistantQuestions: t("usageAssistantQuestions"),
+    reports: t("usageReports"),
+  }
+  const allowances: UsageMetric[] = usage.allowances.map((allowance) => ({
+    label: allowanceLabels[allowance.id],
+    used: allowance.used,
+    limit: allowance.limit,
+    format: (value: number) => number.format(value),
+    note: refill(allowance),
+  }))
   return (
     <>
       <SettingsSection title={t("usage")} description={t("usageDescription")} repeatsHeading>
         <UsageMeters metrics={metrics} />
+      </SettingsSection>
+      <SettingsSection title={t("usageRateLimits")} description={t("usageRateLimitsDescription")}>
+        <UsageMeters metrics={allowances} />
       </SettingsSection>
       <SettingsSection title={t("usageApiRequests")} description={t("usageHistoryDescription")}>
         {history.total === 0 ? (
@@ -152,7 +204,10 @@ export async function UsageSectionSkeleton() {
   return (
     <div role="status" aria-busy="true">
       <SettingsSection title={t("usage")} description={t("usageDescription")} repeatsHeading>
-        <Skeleton className="h-[214px] rounded-lg" />
+        <Skeleton className="h-[373px] rounded-lg" />
+      </SettingsSection>
+      <SettingsSection title={t("usageRateLimits")} description={t("usageRateLimitsDescription")}>
+        <Skeleton className="h-[611px] rounded-lg" />
       </SettingsSection>
       <SettingsSection title={t("usageApiRequests")} description={t("usageHistoryDescription")}>
         <Skeleton className="h-[248px] rounded-lg" />

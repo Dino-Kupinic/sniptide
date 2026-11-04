@@ -316,6 +316,17 @@ interface Usage {
   fileCount: number
   collectionCount: number
   reconciledAt: string
+  apiTokenCount: number
+  connectedAgentCount: number
+  envGroupCount: number
+  // Per-account rate limits in their current window. resetSeconds is null before the first use.
+  allowances: Array<{
+    id: string
+    used: number
+    limit: number
+    windowSeconds: number
+    resetSeconds: number | null
+  }>
   apiRequests: Array<{ tokenId: string; day: number; requests: number }>
 }
 

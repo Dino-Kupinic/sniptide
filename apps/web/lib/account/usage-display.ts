@@ -1,5 +1,20 @@
 import { DAY } from "@/lib/time"
 
+// The per-account allowances the Usage tab and GET /api/v1/usage report (lib/account/allowances.ts).
+export const ALLOWANCE_IDS = [
+  "pasteCreates",
+  "pasteEdits",
+  "gistImports",
+  "webhookShares",
+  "secretLinks",
+  "tokenCreates",
+  "apiRequests",
+  "assistantQuestions",
+  "reports",
+] as const
+
+export type AllowanceId = (typeof ALLOWANCE_IDS)[number]
+
 export type UsageLimitState =
   | { kind: "unlimited" }
   | { kind: "limited"; percent: number; status: "normal" | "warning" | "full" }

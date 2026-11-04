@@ -198,6 +198,22 @@
     "usageUnavailable": "使用状況を表示できません。",
     "usageReload": "再読み込み",
     "usageCreateToken": "APIトークンを作成",
-    "usageChartLabel": "1日ごとのAPIリクエスト: {values}"
+    "usageChartLabel": "1日ごとのAPIリクエスト: {values}",
+    "usageApiTokens": "API トークン",
+    "usageConnectedAgents": "接続済みエージェント",
+    "usageRateLimits": "レート制限",
+    "usageRateLimitsDescription": "各枠は、期間内の最初の利用から 1 時間または 1 日後に回復します。",
+    "usagePerHour": "1 時間あたり",
+    "usagePerDay": "1 日あたり",
+    "usageRefills": "{window}、{when}に回復",
+    "usagePasteCreates": "作成したペースト",
+    "usagePasteEdits": "ペーストの編集",
+    "usageGistImports": "Gist のインポート",
+    "usageWebhookShares": "Slack と Discord への共有",
+    "usageSecretLinks": "シークレットのリンク",
+    "usageTokenCreates": "作成した API トークン",
+    "usageApiRequestsPerToken": "トークンごとの API リクエスト",
+    "usageAssistantQuestions": "アシスタントへの質問",
+    "usageReports": "報告"
   }
 }

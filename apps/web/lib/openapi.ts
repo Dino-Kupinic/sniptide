@@ -7,6 +7,7 @@ import {
   sourceSchema,
 } from "@sniptide/contracts"
 import { z } from "zod"
+import { ALLOWANCE_IDS } from "./account/usage-display"
 import { errorBody } from "./api/errors"
 import { SCOPES, type Scope } from "./api/scopes"
 
@@ -637,7 +638,7 @@ export const openApiDocument = {
         tags: ["Token API"],
         summary: "Read your account usage",
         description:
-          "Current retained paste storage and counts, including trash and expired pastes awaiting permanent deletion. Storage is the sum of UTF-8 current file content bytes recorded on each paste; revisions and env groups are excluded. Daily request counts cover the last 30 UTC days, including this request, valid-token errors, and revoked tokens. Each day is the number of days since the Unix epoch. Each MCP HTTP request counts once. Invalid or expired credentials do not count.",
+          "Current retained paste storage and counts, including trash and expired pastes awaiting permanent deletion. Storage is the sum of UTF-8 current file content bytes recorded on each paste; revisions and env groups are excluded. Daily request counts cover the last 30 UTC days, including this request, valid-token errors, and revoked tokens. Each day is the number of days since the Unix epoch. Each MCP HTTP request counts once. Invalid or expired credentials do not count. `apiTokenCount` counts personal tokens that have not expired, `connectedAgentCount` counts OAuth agents by name while their grant can still renew, and `envGroupCount` counts env groups. `allowances` lists the per-account rate limits in their current window, read without counting a hit: `used` of `limit` in a window of `windowSeconds`, refilling after `resetSeconds`, which is null when nothing was used yet. `apiRequests` in it is the busiest token's hourly allowance. Assistant questions, reports and Slack and Discord shares appear only when the server enables them.",
         ...tokenAccess("read"),
         responses: {
           "200": {
@@ -650,6 +651,25 @@ export const openApiDocument = {
                   fileCount: 2,
                   collectionCount: 1,
                   reconciledAt: "2026-10-25T00:00:00.000Z",
+                  apiTokenCount: 1,
+                  connectedAgentCount: 0,
+                  envGroupCount: 0,
+                  allowances: [
+                    {
+                      id: "pasteCreates",
+                      used: 1,
+                      limit: 30,
+                      windowSeconds: 3600,
+                      resetSeconds: 3540,
+                    },
+                    {
+                      id: "apiRequests",
+                      used: 1,
+                      limit: 3600,
+                      windowSeconds: 3600,
+                      resetSeconds: 3599,
+                    },
+                  ],
                   apiRequests: [
                     { tokenId: "f83070b0-c0cc-46f7-a501-391d0365eaab", day: 20751, requests: 1 },
                   ],
@@ -662,6 +682,10 @@ export const openApiDocument = {
                     "fileCount",
                     "collectionCount",
                     "reconciledAt",
+                    "apiTokenCount",
+                    "connectedAgentCount",
+                    "envGroupCount",
+                    "allowances",
                     "apiRequests",
                   ],
                   properties: {
@@ -670,6 +694,23 @@ export const openApiDocument = {
                     fileCount: { type: "integer", minimum: 0 },
                     collectionCount: { type: "integer", minimum: 0 },
                     reconciledAt: { type: "string", format: "date-time" },
+                    apiTokenCount: { type: "integer", minimum: 0 },
+                    connectedAgentCount: { type: "integer", minimum: 0 },
+                    envGroupCount: { type: "integer", minimum: 0 },
+                    allowances: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        required: ["id", "used", "limit", "windowSeconds", "resetSeconds"],
+                        properties: {
+                          id: { type: "string", enum: [...ALLOWANCE_IDS] },
+                          used: { type: "integer", minimum: 0 },
+                          limit: { type: "integer", minimum: 1 },
+                          windowSeconds: { type: "integer", minimum: 1 },
+                          resetSeconds: { type: ["integer", "null"], minimum: 1 },
+                        },
+                      },
+                    },
                     apiRequests: {
                       type: "array",
                       items: {

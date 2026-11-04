@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 import { z } from "zod"
 import { getConfig } from "@/lib/config"
-import { hit } from "@/lib/rate-limit"
+import { hit, type Limit } from "@/lib/rate-limit"
 import { seconds } from "@/lib/time"
 import { docsText, loadDocs } from "./docs"
 import { submitReport } from "./intake"
@@ -20,6 +20,15 @@ export const MAX_REPLY_LENGTH = 20_000
 // There is no billing, so every account gets a fixed number of questions per day. The window
 // starts at the account's first question of the period and the counter resets 24 hours later.
 export const QUESTIONS_PER_DAY = 10
+
+export function questionLimit(userId: string): Limit {
+  return {
+    policy: "day",
+    key: `support-chat:day:${userId}`,
+    max: QUESTIONS_PER_DAY,
+    windowSeconds: seconds(24 * 60 * 60),
+  }
+}
 
 export const conversationSchema = z
   .array(
@@ -256,14 +265,7 @@ export async function answer(input: {
   if (!settings) return { ok: false, reason: "not_configured" }
 
   const limiter = input.limiter ?? hit
-  const quota = await limiter([
-    {
-      policy: "day",
-      key: `support-chat:day:${input.context.userId}`,
-      max: QUESTIONS_PER_DAY,
-      windowSeconds: seconds(24 * 60 * 60),
-    },
-  ])
+  const quota = await limiter([questionLimit(input.context.userId)])
   if (!quota.allowed)
     return { ok: false, reason: "rate_limited", retryAfterSeconds: quota.retryAfterSeconds }
 

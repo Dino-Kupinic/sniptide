@@ -44,6 +44,17 @@ export const limits = {
     max: 600,
     windowSeconds: HOUR_SECONDS,
   }),
+  tokenCreate: (user: string): Limit => ({
+    key: `api:token-create:${user}`,
+    max: 20,
+    windowSeconds: HOUR_SECONDS,
+  }),
+  // Password-protected links to an env group (app/secrets/manage/route.ts).
+  secretShare: (user: string): Limit => ({
+    key: `secret-share-create:${user}`,
+    max: 20,
+    windowSeconds: HOUR_SECONDS,
+  }),
 }
 
 // An error message when any of the checks is used up, otherwise null.
