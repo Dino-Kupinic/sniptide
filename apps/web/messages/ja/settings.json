@@ -58,7 +58,7 @@
     "1Week": "1 週間",
     "1Month": "1 か月",
     "newPastes": "新規 Paste",
-    "whereNewPasteAndQuickPaste": "「新しい Paste」と「クイック Paste」の初期設定です。各 Paste で変更できます。",
+    "whereNewPastesStart": "「新しい Paste」と Gist のインポートの初期設定です。各 Paste で変更できます。",
     "visibility": "公開範囲",
     "private": "非公開",
     "unlisted": "限定公開",

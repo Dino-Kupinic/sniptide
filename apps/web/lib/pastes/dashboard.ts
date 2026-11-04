@@ -1,83 +1,44 @@
 import "server-only"
 
-import { allowedParent, allowedPaste } from "@workspace/db/moderation"
+import { allowedPaste } from "@workspace/db/moderation"
 
-import { paste as pasteTable, pasteViewDay } from "@workspace/db/schema"
-import { and, desc, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm"
+import { paste as pasteTable } from "@workspace/db/schema"
+import { and, desc, eq, gt, isNull, lte, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import type { Locale } from "@/lib/i18n/config"
 import { DAY } from "@/lib/time"
 import { type PasteRow, toRows } from "./rows"
-import { summarizePastes, VIEW_HISTORY_DAYS } from "./store"
+import { summarizePastes } from "./store"
 
 const RECENT_ROWS = 5
+// How far ahead the dashboard warns about an expiry, matching the expiring-paste notification.
+export const EXPIRING_WINDOW_MS = 2 * DAY
+
 export interface DashboardData {
-  dailyViews: number[]
-  dayNames: string[]
-  dayDates: string[]
-  newPastes: Record<"1" | "7" | "30", number>
-  totalPastes: number
-  activeLinks: number
-  passwordProtected: number
+  // Live pastes whose links stop working within EXPIRING_WINDOW_MS.
   expiringSoon: number
+  // Pastes whose expiry passed and that wait for the purge job (lib/pastes/lifecycle.ts).
+  expired: number
   // At most five rows for each recent tab.
   recent: PasteRow[]
 }
 
 export async function getDashboardData(locale: Locale = "en"): Promise<DashboardData> {
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" })
-  const shortDate = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+  const empty: DashboardData = { expiringSoon: 0, expired: 0, recent: [] }
   const viewer = (await getSession())?.user.id
-  const now = Date.now()
-  const today = Math.floor(now / DAY)
-  const firstDay = today - VIEW_HISTORY_DAYS + 1
-  const dailyViews = Array<number>(VIEW_HISTORY_DAYS).fill(0)
-  const days = dailyViews.map((_, index) => (firstDay + index) * DAY)
-  const empty: DashboardData = {
-    dailyViews,
-    dayNames: days.map((day) => weekday.format(day)),
-    dayDates: days.map((day) => shortDate.format(day)),
-    newPastes: { "1": 0, "7": 0, "30": 0 },
-    totalPastes: 0,
-    activeLinks: 0,
-    passwordProtected: 0,
-    expiringSoon: 0,
-    recent: [],
-  }
   if (!viewer) return empty
   const db = getDb()
+  const now = new Date()
   const own = and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))
-  const live = and(
-    ne(pasteTable.visibility, "private"),
-    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date(now))),
-  )
-  const [[totals], views, recentTabs] = await Promise.all([
+  const [[counts], recentTabs] = await Promise.all([
     db
       .select({
-        totalPastes: sql<number>`count(*)::int`,
-        activeLinks: sql<number>`count(*) filter (where ${live})::int`,
-        passwordProtected: sql<number>`count(*) filter (where ${and(live, isNotNull(pasteTable.passwordHash))})::int`,
-        expiringSoon: sql<number>`count(*) filter (where ${and(gt(pasteTable.expiresAt, new Date(now)), lt(pasteTable.expiresAt, new Date(now + 2 * DAY)))})::int`,
-        day: sql<number>`count(*) filter (where ${gt(pasteTable.createdAt, new Date(now - DAY))})::int`,
-        week: sql<number>`count(*) filter (where ${gt(pasteTable.createdAt, new Date(now - 7 * DAY))})::int`,
-        month: sql<number>`count(*) filter (where ${gt(pasteTable.createdAt, new Date(now - 30 * DAY))})::int`,
+        expiringSoon: sql<number>`count(*) filter (where ${and(gt(pasteTable.expiresAt, now), lte(pasteTable.expiresAt, new Date(now.getTime() + EXPIRING_WINDOW_MS)))})::int`,
+        expired: sql<number>`count(*) filter (where ${lte(pasteTable.expiresAt, now)})::int`,
       })
       .from(pasteTable)
       .where(own),
-    db
-      .select({ day: pasteViewDay.day, views: sql<number>`sum(${pasteViewDay.views})::int` })
-      .from(pasteViewDay)
-      .innerJoin(
-        pasteTable,
-        and(allowedParent(pasteViewDay.pasteId), eq(pasteViewDay.pasteId, pasteTable.id)),
-      )
-      .where(and(own, gte(pasteViewDay.day, firstDay), lt(pasteViewDay.day, today + 1)))
-      .groupBy(pasteViewDay.day),
     Promise.all(
       [undefined, ...(["public", "unlisted", "private"] as const)].map((visibility) =>
         db
@@ -96,19 +57,13 @@ export async function getDashboardData(locale: Locale = "en"): Promise<Dashboard
       ),
     ),
   ])
-  for (const day of views) dailyViews[day.day - firstDay] = day.views
   const records = [
     ...new Map(recentTabs.flat().map((record) => [record.id, record])).values(),
   ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.id.localeCompare(b.id))
   const recent = await toRows(await summarizePastes(records, viewer), locale)
   return {
-    ...empty,
-    dailyViews,
-    totalPastes: totals?.totalPastes ?? 0,
-    activeLinks: totals?.activeLinks ?? 0,
-    passwordProtected: totals?.passwordProtected ?? 0,
-    expiringSoon: totals?.expiringSoon ?? 0,
-    newPastes: { "1": totals?.day ?? 0, "7": totals?.week ?? 0, "30": totals?.month ?? 0 },
+    expiringSoon: counts?.expiringSoon ?? 0,
+    expired: counts?.expired ?? 0,
     recent,
   }
 }

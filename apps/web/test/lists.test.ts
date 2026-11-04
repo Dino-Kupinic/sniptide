@@ -66,7 +66,6 @@ describeDb("paste lists", () => {
     await seedPaste({ slug: "priv", owner: "owner", visibility: "private" })
 
     const data = await getDashboardData()
-    expect(data.totalPastes).toBe(9)
     const slugs = data.recent.map((row) => row.slug)
     expect(slugs).toHaveLength(6)
     expect(slugs).toContain("priv")

@@ -197,7 +197,7 @@ export function AgentStep({
 
 // A command or address in mono with its copy button. The text wraps at spaces, so the whole
 // command stays readable on a phone.
-function SetupCode({ code, onCopy }: { code: string; onCopy: () => void }) {
+export function SetupCode({ code, onCopy }: { code: string; onCopy: () => void }) {
   return (
     <div className="rounded-lg flex min-w-0 flex-col gap-3 border border-border bg-muted p-3 sm:flex-row sm:items-center sm:py-2 sm:pr-2">
       <code className="min-w-0 flex-1 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">

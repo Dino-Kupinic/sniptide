@@ -32,10 +32,15 @@ codex mcp add sniptide --url https://app.sniptide.com/api/mcp
 <Tab value="Cursor">
 
 Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no headers, or use
-**Add to Cursor** in the app's welcome setup.
+**Add to Cursor** in the app's welcome setup or on the dashboard.
 
 </Tab>
 </Tabs>
+
+The dashboard shows the same commands with your instance's address filled in, until an agent
+connects. After that it lists each connected agent and when it last called Sniptide, to the
+minute. Select **Manage in Settings** to revoke one. A dashboard that doesn't need the setup can
+fold it into a **Connect an agent** link with the close button, and this browser remembers it.
 
 To check the connection, ask the agent to list your Sniptide collections. It calls
 `list_collections` and answers with your collections, or with an empty list on a new account.

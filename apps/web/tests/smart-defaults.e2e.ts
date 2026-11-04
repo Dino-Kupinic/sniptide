@@ -41,11 +41,7 @@ test("manual title and plain text language survive content changes and draft res
   await expect(screen.getByLabel("Title")).toHaveValue("My chosen title")
 })
 
-test("successful choices become defaults in the editor and dashboard", async ({
-  app,
-  screen,
-  browser,
-}) => {
+test("successful choices become defaults in the editor", async ({ app, screen, browser }) => {
   await app.open("/new")
   await screen.getByLabel("Contents of untitled.txt").fill(python)
   await screen.getByRole("radio", "Public", { visible: true }).check()
@@ -58,13 +54,6 @@ test("successful choices become defaults in the editor and dashboard", async ({
     "aria-valuetext",
     "1h",
   )
-  await app.open("/dashboard")
-  await expect(screen.getByRole("button", /^Visibility.*Public/)).toBeVisible()
-  await expect(screen.getByRole("button", /^Expires after.*1 hour/)).toBeVisible()
-  await screen.getByLabel("Code").fill(python)
-  await expect(screen.getByLabel("Title")).toHaveValue("def greet(name):")
-  await screen.getByRole("button", /^Create paste/).tap()
-  await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
 })
 
 test("environment content defaults to private and a deliberate override stays selected", async ({
@@ -80,16 +69,6 @@ test("environment content defaults to private and a deliberate override stays se
   await expect(screen.getByRole("radio", "Unlisted", { visible: true })).toBeChecked()
 })
 
-test("an empty dashboard draft keeps suggestions on the next visit", async ({ app, screen }) => {
-  await app.open("/dashboard")
-  await expect(screen.getByLabel("Title")).toHaveValue("")
-  await screen.getByLabel("Code").press("Meta+s")
-  await app.open("/dashboard")
-  await screen.getByLabel("Code").fill("EXAMPLE_TOKEN=fixture-value")
-  await expect(screen.getByLabel("Title")).toHaveValue("untitled.sh")
-  await expect(screen.getByRole("button", /^Visibility.*Private/)).toBeVisible()
-})
-
 test("new files keep automatic language when their default name is left unchanged", async ({
   app,
   screen,
@@ -98,21 +77,6 @@ test("new files keep automatic language when their default name is left unchange
   await screen.getByRole("button", "Add file").tap()
   await screen.getByLabel("Contents of untitled-2.txt").fill(python)
   await expect(screen.getByLabel("Contents of untitled-2.py")).toHaveValue(python)
-})
-
-test("a title-only dashboard draft preserves automatic language and private defaults", async ({
-  app,
-  screen,
-}) => {
-  await app.open("/dashboard")
-  await screen.getByLabel("Title").fill("My saved title")
-  await screen.getByLabel("Code").press("Meta+s")
-  await app.open("/dashboard")
-  await expect(screen.getByLabel("Title")).toHaveValue("My saved title")
-  await screen.getByLabel("Code").fill("EXAMPLE_TOKEN=fixture-value")
-  await expect(screen.getByRole("button", /^Visibility.*Private/)).toBeVisible()
-  await expect(screen.getByRole("combobox", "Language")).toContainText("Shell")
-  await expect(screen.getByLabel("Title")).toHaveValue("My saved title")
 })
 
 test("a title-only editor draft preserves automatic language and private defaults", async ({

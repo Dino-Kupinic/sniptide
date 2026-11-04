@@ -1,5 +1,6 @@
 import type { PendingInvite } from "@/components/paste/invite-people"
 import type { EditorInitial } from "@/components/paste/paste-editor"
+import type { ConnectedAgent } from "@/lib/agents"
 import { type Collection, HUES, ICONS } from "@/lib/collections/types"
 import { initials } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
@@ -123,35 +124,26 @@ export function stressData(dataset: Dataset) {
     canEdit: true,
     collection: index % 2 === 0 ? (collections[index % collections.length]?.slug ?? null) : null,
   }))
-  const dailyViews = Array.from({ length: 60 }, (_, index) =>
-    length === 0
-      ? 0
-      : length === 1
-        ? index === 59
-          ? 1
-          : 0
-        : worst
-          ? ([0, 1, 1284, 1000000][index % 4] ?? 0)
-          : 12,
-  )
-  const days = dailyViews.map((_, index) => new Date(now - (59 - index) * 86_400_000))
   const dashboard: DashboardData = {
-    dailyViews,
-    dayNames: days.map((day) =>
-      new Intl.DateTimeFormat("en", { weekday: "short", timeZone: "UTC" }).format(day),
-    ),
-    dayDates: days.map((day) =>
-      new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(
-        day,
-      ),
-    ),
-    newPastes: { "1": Math.min(length, 1), "7": Math.min(length, 7), "30": Math.min(length, 30) },
-    totalPastes: length,
-    activeLinks: rows.filter((row) => row.visibility !== "private").length,
-    passwordProtected: length === 1 ? 1 : Math.floor(length / 4),
     expiringSoon: rows.filter((row) => row.expiresSoon).length,
+    expired: worst ? 1284 : 0,
     recent: pastes.slice(0, 15),
   }
+  // The longest name an OAuth client might register, next to a client that never called yet.
+  const agents: ConnectedAgent[] =
+    length === 0
+      ? []
+      : [
+          {
+            name: worst
+              ? "Claude Code (platform-infrastructure-team build agent on a very long host name)"
+              : "Claude Code",
+            client: "claude_code",
+            lastActiveAt: now - 5 * 60_000,
+            connectedAt: now - 86_400_000,
+          },
+          { name: "Cursor", client: "cursor", lastActiveAt: null, connectedAt: now },
+        ]
   const viewer: ViewerSummary = {
     name: worst ? "👩🏽‍💻 Aleksandra Wiśniewska-Kowalczyk" : "Jane Doe",
     email: worst
@@ -199,5 +191,5 @@ export function stressData(dataset: Dataset) {
     },
     access: row.access,
   }))
-  return { rows, pastes, trash, collections, viewer, editor, invites, dashboard }
+  return { rows, pastes, trash, collections, viewer, editor, invites, dashboard, agents }
 }

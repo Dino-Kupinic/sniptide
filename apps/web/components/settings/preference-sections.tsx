@@ -158,7 +158,7 @@ export function DefaultsSection({ initial }: { initial: Preferences }) {
   const { preferences, change, status } = usePreferences(initial)
 
   return (
-    <SettingsSection title={t("newPastes")} description={t("whereNewPasteAndQuickPaste")}>
+    <SettingsSection title={t("newPastes")} description={t("whereNewPastesStart")}>
       <SettingRow id="default-visibility-label" wide label={t("visibility")}>
         <SegmentedControl
           aria-labelledby="default-visibility-label"

@@ -71,11 +71,12 @@ export function UiStress({
           {screen === "dashboard" ? (
             <Dashboard
               data={data.dashboard}
+              agents={data.agents}
+              agentCardHidden={false}
               firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
               origin={origin}
+              appOrigin={origin}
               host={host}
-              draftScope={`ui-stress-dashboard-${dataset}`}
-              defaults={{ expiry: "never", visibility: "private", burnAfterRead: false }}
             />
           ) : null}
           {screen === "pastes" ? (
