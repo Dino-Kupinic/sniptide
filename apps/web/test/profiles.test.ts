@@ -120,6 +120,31 @@ describeDb("public profiles", () => {
     expect(anon.status === "ok" && anon.paste.author.handle).toBeNull()
   })
 
+  test("searches titles and links, filters by language, and counts a year of activity", async () => {
+    await seedPaste({ slug: "hook", owner: "dino", visibility: "public", title: "React 100% hook" })
+    await seedPaste({ slug: "rusty", owner: "dino", visibility: "public", language: "rust" })
+    await seedPaste({ slug: "ancient", owner: "dino", visibility: "public" })
+    await age("ancient", 60 * 24 * 400)
+
+    const search = await readProfile("dino", { q: "100%" })
+    expect(search?.pastes.map((row) => row.slug)).toEqual(["hook"])
+    expect(search).toMatchObject({ total: 1, totalAll: 5, q: "100%" })
+    expect((await readProfile("dino", { q: "PUB-" }))?.pastes.map((row) => row.slug)).toEqual([
+      "pub-new",
+      "pub-old",
+    ])
+    // A bare wildcard is literal text, not "everything".
+    expect((await readProfile("dino", { q: "_" }))?.total).toBe(0)
+
+    const rust = await readProfile("dino", { language: "rust" })
+    expect(rust?.pastes.map((row) => row.slug)).toEqual(["rusty"])
+    expect(rust?.languages).toEqual(["rust", "text"])
+
+    // Withheld, private and other hidden pastes never reach the grid either.
+    const activity = (await readProfile("dino"))?.activity ?? {}
+    expect(Object.values(activity).reduce((sum, value) => sum + value, 0)).toBe(4)
+  })
+
   test("matches handles without regard to case", async () => {
     expect((await readProfile("DINO"))?.username).toBe("dino")
     expect((await readProfile("Dino"))?.username).toBe("dino")
@@ -138,13 +163,13 @@ describeDb("public profiles", () => {
       await seedPaste({ slug: `bulk-${index}`, owner: "dino", visibility: "public" })
       await age(`bulk-${index}`, 120 + index)
     }
-    const first = await readProfile("dino", 1)
-    const second = await readProfile("dino", 2)
+    const first = await readProfile("dino", { page: 1 })
+    const second = await readProfile("dino", { page: 2 })
     expect(first?.pastes).toHaveLength(PROFILE_PAGE_SIZE)
     expect(first?.pageCount).toBe(2)
     expect(second?.pastes.map((row) => row.slug)).toEqual(["bulk-18", "bulk-19"])
-    expect(await readProfile("dino", 3)).toBeNull()
-    expect(await readProfile("dino", 0)).toBeNull()
+    expect(await readProfile("dino", { page: 3 })).toBeNull()
+    expect(await readProfile("dino", { page: 0 })).toBeNull()
   })
 
   test("the page 404s for unknown handles and redirects other spellings to the canonical one", async () => {

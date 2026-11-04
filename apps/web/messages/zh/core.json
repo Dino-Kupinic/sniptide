@@ -105,6 +105,15 @@
     "pagination": "分页",
     "newer": "较新",
     "older": "较早",
-    "pageOf": "第 {page} 页，共 {count} 页"
+    "pageOf": "第 {page} 页，共 {count} 页",
+    "activity": "动态",
+    "activitySummary": "过去一年共有 {count} 个公开代码片段。",
+    "activityPeak": "最活跃的一天是 {date}，共 {count} 个。",
+    "activityDay": "{date}：{count} 个公开代码片段",
+    "search": "搜索代码片段",
+    "clearSearch": "清除搜索",
+    "language": "语言",
+    "allLanguages": "所有语言",
+    "noMatches": "没有与该搜索匹配的公开代码片段。"
   }
 }

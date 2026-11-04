@@ -105,6 +105,15 @@
     "pagination": "Pages",
     "newer": "Newer",
     "older": "Older",
-    "pageOf": "Page {page} of {count}"
+    "pageOf": "Page {page} of {count}",
+    "activity": "Activity",
+    "activitySummary": "{count, plural, one {# public paste} other {# public pastes}} in the last year.",
+    "activityPeak": "The busiest day was {date}, with {count}.",
+    "activityDay": "{count, plural, =0 {No public pastes} one {# public paste} other {# public pastes}} on {date}",
+    "search": "Search pastes",
+    "clearSearch": "Clear search",
+    "language": "Language",
+    "allLanguages": "All languages",
+    "noMatches": "No public pastes match that search."
   }
 }

@@ -105,6 +105,15 @@
     "pagination": "ページ",
     "newer": "新しい順",
     "older": "古い順",
-    "pageOf": "{page} / {count} ページ"
+    "pageOf": "{page} / {count} ページ",
+    "activity": "アクティビティ",
+    "activitySummary": "過去1年間の公開スニペットは{count}件です。",
+    "activityPeak": "最も多かった日は{date}で、{count}件でした。",
+    "activityDay": "{date}の公開スニペット: {count}件",
+    "search": "スニペットを検索",
+    "clearSearch": "検索をクリア",
+    "language": "言語",
+    "allLanguages": "すべての言語",
+    "noMatches": "検索に一致する公開スニペットはありません。"
   }
 }
