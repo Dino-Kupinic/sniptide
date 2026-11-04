@@ -90,6 +90,9 @@ Behavior to know before you write data:
   defaults to 20. Pass `nextCursor` back as `cursor` for the next page, and stop when it is `null`.
 - `q` matches when every word appears in the title, link, description, tags, a file path or the
   code.
+- A new paste records that it came from the API. The CLI sends `X-Sniptide-Client: cli` and the
+  stdio MCP server sends `X-Sniptide-Client: mcp`, so their pastes are marked as theirs on the
+  [dashboard](/getting-started/dashboard#where-a-paste-came-from). Other values count as the API.
 
 ## Limits
 

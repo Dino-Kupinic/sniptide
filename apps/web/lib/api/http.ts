@@ -4,6 +4,7 @@ import { ZodError } from "zod"
 import { recordApiRequest } from "@/lib/account/usage"
 import { clientAddress } from "@/lib/client-ip"
 import { bearerChallenge } from "@/lib/oauth/metadata"
+import type { PasteOrigin } from "@/lib/pastes/mutations"
 import { hit, type Limit, quotaHeaders, requestQuotas } from "@/lib/rate-limit"
 import { isAdmissionError } from "@/lib/request-admission"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
@@ -63,6 +64,16 @@ export async function readJson(request: Request, maxBytes: number): Promise<unkn
 }
 
 // Runs `handler` for a request whose token has `scope`, turning thrown errors into responses.
+// Where a token request comes from. The CLI and the stdio MCP server send x-sniptide-client;
+// anything else on /api/v1 is a plain API call.
+export function requestOrigin(request: Request, owner: TokenOwner): PasteOrigin {
+  const client = request.headers.get("x-sniptide-client")
+  return {
+    via: client === "cli" ? "cli" : client === "mcp" ? "mcp" : "api",
+    agent: owner.agent ?? null,
+  }
+}
+
 export async function withToken(
   request: Request,
   scope: Scope,

@@ -3,34 +3,6 @@ import { expect } from "e2e"
 import { databaseUrl } from "./environment"
 import { test } from "./fixtures"
 
-test("dashboard streams its data regions without interrupting Quick Paste", async ({
-  account,
-  app,
-  browser,
-  screen,
-}) => {
-  void account
-  const db = createDb(databaseUrl())
-  let navigation: ReturnType<typeof browser.reload> | undefined
-  try {
-    await app.open("/dashboard")
-    await db.$client.begin(async (tx) => {
-      await tx.unsafe("LOCK TABLE paste_view_day IN ACCESS EXCLUSIVE MODE")
-      navigation = browser.reload()
-      await expect(browser.locator("main > div > [aria-busy=true]").first()).toBeVisible()
-      await expect(screen.getByLabel("Code", { exact: true })).toBeVisible()
-      await screen.getByLabel("Code", { exact: true }).fill("const draft = 'keep me'")
-      await app.screenshot("dashboard-loading-quick-paste")
-    })
-    await navigation
-    await expect(screen.getByLabel("Code", { exact: true })).toHaveValue("const draft = 'keep me'")
-    await expect(browser.locator("main [aria-busy=true]")).toHaveCount(0)
-  } finally {
-    await navigation
-    await db.$client.end()
-  }
-})
-
 test("slow page navigation keeps the outgoing screen and its header stable", async ({
   account,
   app,
@@ -44,7 +16,7 @@ test("slow page navigation keeps the outgoing screen and its header stable", asy
   await screen.getByRole("button", /^Create paste/).tap()
   await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
   await app.open("/dashboard")
-  await expect(screen.getByLabel("Code", { exact: true })).toBeVisible()
+  await expect(screen.getByRole("heading", "Connect an agent")).toBeVisible()
   await expect(browser.locator("main [aria-busy=true]")).toHaveCount(0)
   const before = await browser.evaluate(
     () => document.querySelector("main")?.getBoundingClientRect().top ?? null,
@@ -53,7 +25,10 @@ test("slow page navigation keeps the outgoing screen and its header stable", asy
   try {
     await db.$client.begin(async (tx) => {
       await tx.unsafe("LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE")
-      await screen.getByRole("link", "View all", { exact: true }).tap()
+      await screen
+        .getByRole("region", "Recent pastes")
+        .getByRole("link", "View all", { exact: true })
+        .tap()
       await expect(browser.locator(".navigation-feedback")).toBeVisible()
       await expect
         .poll(() =>
@@ -63,7 +38,7 @@ test("slow page navigation keeps the outgoing screen and its header stable", asy
           }),
         )
         .toBe("1")
-      await expect(screen.getByLabel("Code", { exact: true })).toBeVisible()
+      await expect(screen.getByRole("heading", "Connect an agent")).toBeVisible()
       await expect(
         browser.locator("main [data-slot=skeleton], main [skullet-loading]"),
       ).toHaveCount(0)

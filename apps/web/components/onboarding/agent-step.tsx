@@ -4,21 +4,14 @@ import { Button } from "@sniptide/ui/components/button"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ArrowLeftIcon, PlugIcon } from "lucide-react"
+import { ArrowLeftIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CopyButton } from "@/components/paste/copy-button"
 import { track } from "@/lib/analytics"
 import { AGENT_CLIENTS, type AgentClient, agentSetup } from "@/lib/onboarding"
 import { getAgentConnection } from "@/lib/onboarding-actions"
-import { ClaudeCodeLogo, CodexLogo, CursorLogo } from "./agent-logos"
-
-const LOGOS: Record<AgentClient, React.ComponentType<{ className?: string }>> = {
-  claude_code: ClaudeCodeLogo,
-  codex: CodexLogo,
-  cursor: CursorLogo,
-  other: PlugIcon,
-}
+import { AgentLogo, CursorLogo } from "./agent-logos"
 
 // How often the step asks whether an agent has connected, and for how long.
 const POLL_MS = 2500
@@ -97,7 +90,6 @@ export function AgentStep({
 
       <fieldset aria-label={t("clientLabel")} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {AGENT_CLIENTS.map((value) => {
-          const Logo = LOGOS[value]
           return (
             <label
               key={value}
@@ -115,7 +107,7 @@ export function AgentStep({
                 onChange={() => onClientChange(value)}
                 className="sr-only"
               />
-              <Logo className="size-5" />
+              <AgentLogo client={value} className="size-5" />
               <span className="max-w-full truncate">{label(value)}</span>
             </label>
           )
@@ -197,7 +189,7 @@ export function AgentStep({
 
 // A command or address in mono with its copy button. The text wraps at spaces, so the whole
 // command stays readable on a phone.
-function SetupCode({ code, onCopy }: { code: string; onCopy: () => void }) {
+export function SetupCode({ code, onCopy }: { code: string; onCopy: () => void }) {
   return (
     <div className="rounded-lg flex min-w-0 flex-col gap-3 border border-border bg-muted p-3 sm:flex-row sm:items-center sm:py-2 sm:pr-2">
       <code className="min-w-0 flex-1 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">

@@ -58,7 +58,7 @@
     "1Week": "1 周",
     "1Month": "1 个月",
     "newPastes": "新建 Paste",
-    "whereNewPasteAndQuickPaste": "“新建 Paste”和“快速 Paste”的默认设置。仍可单独更改每个 Paste。",
+    "whereNewPastesStart": "“新建 Paste”和 Gist 导入的默认设置。仍可单独更改每个 Paste。",
     "visibility": "可见性",
     "private": "私密",
     "unlisted": "不公开列出",

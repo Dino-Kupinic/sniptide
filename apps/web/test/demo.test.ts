@@ -1,8 +1,17 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { createAuth } from "@workspace/auth"
 import { DEMO_LOCKED_MESSAGE } from "@workspace/auth/demo"
-import { collection, paste, pasteFile, pasteStar, session, user } from "@workspace/db/schema"
-import { eq } from "drizzle-orm"
+import {
+  apiToken,
+  collection,
+  paste,
+  pasteFile,
+  pasteStar,
+  session,
+  user,
+} from "@workspace/db/schema"
+import { eq, ne } from "drizzle-orm"
+import { agentActivity, listConnectedAgents } from "@/lib/agents"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { DEMO_EMAIL, DEMO_USER_ID, demoPassword } from "@/lib/demo/guest"
@@ -78,6 +87,18 @@ describeDb("demo reset", () => {
     expect(await db.select().from(pasteStar)).toHaveLength(
       DEMO_PASTES.filter((example) => example.starred).length,
     )
+    const agents = await listConnectedAgents(DEMO_USER_ID)
+    expect(agents.map((agent) => agent.client)).toEqual(["claude_code", "codex"])
+    const agentPastes = await db.select().from(paste).where(ne(paste.createdVia, "web"))
+    expect(agentPastes).toHaveLength(DEMO_PASTES.filter((example) => example.agent).length)
+  })
+
+  test("resets the demo agents without piling up their tokens", async () => {
+    await resetDemo(getDb(), SECRET)
+    await resetDemo(getDb(), SECRET)
+    expect(await getDb().select().from(apiToken)).toHaveLength(2)
+    const activity = await agentActivity(DEMO_USER_ID)
+    expect(activity.agents.map((agent) => agent.client)).toEqual(["claude_code", "codex"])
   })
 
   test("puts edited, added and deleted pastes back, and keeps visitors signed in", async () => {

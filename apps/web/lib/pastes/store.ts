@@ -43,6 +43,7 @@ import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { recordNotifications } from "@/lib/notifications/record"
+import { agentClientOf } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
 import { SLUG_PATTERN } from "./links"
 import {
@@ -228,6 +229,10 @@ function summariesOf(
         views: record.views,
         uniqueViews: record.uniqueViews,
         agentReads: record.agentReads,
+        createdBy:
+          record.createdVia === "web"
+            ? null
+            : { via: record.createdVia, agent: agentClientOf(record.createdByAgent) },
         viewsByDay,
         createdAt: ms(record.createdAt),
         updatedAt: ms(record.updatedAt),

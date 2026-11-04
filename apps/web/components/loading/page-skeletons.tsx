@@ -1,8 +1,6 @@
 "use client"
 
 import { Skeleton } from "@sniptide/ui/components/skeleton"
-import { cn } from "@sniptide/ui/lib/utils"
-import { useTranslations } from "next-intl"
 import { LoadingRegion } from "./region"
 
 export function CodeSkeleton({ lines = 9 }: { lines?: number }) {
@@ -19,50 +17,6 @@ export function CodeSkeleton({ lines = 9 }: { lines?: number }) {
         </div>
       ))}
     </div>
-  )
-}
-
-export function ChartSkeleton({ className }: { className?: string }) {
-  const t = useTranslations("Workspace")
-  return (
-    <LoadingRegion
-      className={cn("rounded-lg border border-border p-4 lg:p-5", className)}
-      label={t("loading")}
-    >
-      <Skeleton className="h-4 w-24" />
-      <div className="mt-5 flex h-44 items-end gap-2 border-b border-l border-border px-3 pb-2 sm:h-52">
-        {[40, 65, 50, 85, 60, 75, 95].map((height, index) => (
-          <Skeleton key={index} className="flex-1 rounded-sm" style={{ height: `${height}%` }} />
-        ))}
-      </div>
-      <div className="mt-3 flex justify-between">
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="h-3 w-12" />
-      </div>
-    </LoadingRegion>
-  )
-}
-
-export function StatsSkeleton() {
-  const t = useTranslations("Workspace")
-  return (
-    <LoadingRegion>
-      <div className="@container overflow-hidden rounded-lg border border-border">
-        <div className="grid grid-cols-1 @min-[24rem]:grid-cols-2 @min-[48rem]:grid-cols-4">
-          {[t("total_pastes"), t("views"), t("active_share_links"), t("expiring_in_48h")].map(
-            (label) => (
-              <div
-                key={label}
-                className="flex flex-col gap-1.5 border-border px-4 py-4 lg:px-5 [&:not(:last-child)]:border-b @min-[24rem]:[&:nth-child(odd)]:border-r @min-[24rem]:[&:nth-last-child(-n+2)]:border-b-0 @min-[48rem]:[&:not(:last-child)]:border-r @min-[48rem]:[&:not(:last-child)]:border-b-0"
-              >
-                <span className="text-[13px] text-muted-foreground">{label}</span>
-                <Skeleton className="h-9 w-20" />
-              </div>
-            ),
-          )}
-        </div>
-      </div>
-    </LoadingRegion>
   )
 }
 

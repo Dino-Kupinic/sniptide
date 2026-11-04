@@ -28,6 +28,10 @@ export const moderationState = pgEnum("moderation_state", [
 
 export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
 
+// Where a paste was created: the web editor, the REST API, the MCP server or the CLI. Pastes made
+// before this was recorded count as web.
+export const pasteCreatedVia = pgEnum("paste_created_via", ["web", "api", "mcp", "cli"])
+
 const time = (name: string) => timestamp(name, { withTimezone: true })
 
 // Where captured code came from, recorded by the CLI (`sniptide push`). `dirty` marks code that
@@ -81,6 +85,10 @@ export const paste = pgTable(
     // Reads with a personal API token (MCP read_snippet and fetch_collection, `sniptide pull`),
     // so the owner can see which snippets their agents actually use. Views don't include these.
     agentReads: integer("agent_reads").notNull().default(0),
+    createdVia: pasteCreatedVia("created_via").notNull().default("web"),
+    // The agent client that created it through an OAuth connection (claude_code, codex, cursor or
+    // other), judged once from the client's name. Null for the web and for personal tokens.
+    createdByAgent: text("created_by_agent"),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
     version: bigint("version", { mode: "number" })
@@ -109,6 +117,9 @@ export const paste = pgTable(
       .on(table.ownerId, table.collection, table.createdAt, table.id)
       .where(sql`${table.deletedAt} IS NULL`),
     index("paste_deleted_idx").on(table.deletedAt),
+    index("paste_created_via_idx")
+      .on(table.ownerId, table.createdAt)
+      .where(sql`${table.createdVia} <> 'web'`),
     index("paste_expired_idx").on(table.expiresAt),
     index("paste_title_search_idx").using("gin", table.title.op("gin_trgm_ops")),
     index("paste_slug_search_idx").using("gin", table.slug.op("gin_trgm_ops")),

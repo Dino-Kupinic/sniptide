@@ -1,0 +1,87 @@
+---
+title: Arrange your dashboard
+description: Choose the widgets on your dashboard, reorder them, or start from a template.
+---
+
+The dashboard is the first screen after you sign in. It holds the widgets you choose, and the
+layout is saved to your account, so it looks the same on every device.
+
+## Widgets
+
+| Widget | Shows |
+| --- | --- |
+| Agents | The setup for a coding agent until one connects, then each connected agent and when it last called Sniptide |
+| Agent activity | API and MCP requests from your connected agents per day over the last 14 days, and how many each agent made |
+| Agent pastes | The five newest pastes that an agent, the CLI or the API created, each marked with the agent's logo |
+| Recent pastes | Your five newest pastes, with tabs for each visibility |
+| Starred | Five pastes you starred |
+| Expiring soon | The five links that stop working next |
+| Most viewed | Your five pastes with the most views |
+| Secrets | Your five most recently changed secret groups |
+| Collections | Your collections and how many pastes each holds |
+
+Each widget links to its full page. The line under the greeting still says how many pastes expire
+in the next 48 hours or have expired, whatever the layout holds.
+
+## Start from a template
+
+A new account starts from the **Agents** template: Agents, Agent activity, Agent pastes and Recent
+pastes. Select
+**Customize**, then **Templates**, to switch to another one.
+
+| Template | Widgets |
+| --- | --- |
+| Agents | Agents, Agent activity, Agent pastes and Recent pastes |
+| Sharing | Recent pastes, Most viewed and Expiring soon |
+| Secrets | Agents, Secrets, Collections and Recent pastes |
+| Blank | None, so you add each widget yourself |
+
+A template replaces the whole layout. Select **Undo** on the confirmation to get the previous one
+back.
+
+## Customize the layout
+
+<Steps>
+<Step>
+
+Select **Customize** next to **New paste**. Each widget gets a bar with a drag handle and a remove
+button.
+
+</Step>
+<Step>
+
+Select **Add widget** and choose a widget. It joins the end of the layout. The menu lists only the
+widgets that aren't on the dashboard yet.
+
+</Step>
+<Step>
+
+Drag a widget by its handle to move it. With a keyboard, focus the handle, press `Space` to pick
+it up, use the arrow keys to move it and press `Space` again to drop it.
+
+</Step>
+<Step>
+
+Select **Done**. Every change is saved as you make it.
+
+</Step>
+</Steps>
+
+To remove a widget, select its remove button while customizing. The Agents setup card also has a
+close button that removes the widget without opening **Customize**. Both end in a confirmation
+with **Undo**.
+
+On a phone the widgets stack in one column in the same order. Agents, Agent activity, Agent
+pastes, Recent pastes and Starred span both columns on a wide screen, and the other widgets sit
+side by side.
+
+## Where a paste came from
+
+Sniptide records how each paste was created. Paste tables show a small mark after the title of a
+paste that didn't come from the web editor: the agent's logo for Claude Code, Codex or Cursor, a
+plug for another agent or the API, and a terminal for the CLI. Hover over the mark, or use a screen
+reader, to hear its name. Pastes created before Sniptide recorded this count as web pastes.
+
+Agent activity counts requests from agents you connected with [OAuth](/oauth). Requests with a
+personal API token from Settings are left out, and they still appear under **Settings** >
+**Usage**.

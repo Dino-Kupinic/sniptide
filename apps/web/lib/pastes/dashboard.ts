@@ -1,84 +1,71 @@
 import "server-only"
 
-import { allowedParent, allowedPaste } from "@workspace/db/moderation"
+import { allowedPaste } from "@workspace/db/moderation"
 
-import { paste as pasteTable, pasteViewDay } from "@workspace/db/schema"
-import { and, desc, eq, gt, gte, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm"
+import { paste as pasteTable } from "@workspace/db/schema"
+import { and, asc, desc, eq, gt, isNull, lte, ne, type SQL, sql } from "drizzle-orm"
+import { type AgentActivity, agentActivity } from "@/lib/agents"
 import { getSession } from "@/lib/auth"
+import { listCollections } from "@/lib/collections/store"
+import type { Collection } from "@/lib/collections/types"
+import { DEFAULT_LAYOUT, type WidgetId } from "@/lib/dashboard/widgets"
 import { getDb } from "@/lib/db"
+import { listSecrets, type SecretSummary } from "@/lib/env/web-store"
 import type { Locale } from "@/lib/i18n/config"
 import { DAY } from "@/lib/time"
+import { parsePasteListQuery } from "./list-query"
+import { listPastePage } from "./lists"
 import { type PasteRow, toRows } from "./rows"
-import { summarizePastes, VIEW_HISTORY_DAYS } from "./store"
+import { summarizePastes } from "./store"
 
-const RECENT_ROWS = 5
+// Each list widget shows this many rows and links to the full page for the rest.
+export const WIDGET_ROWS = 5
+// How far ahead the dashboard warns about an expiry, matching the expiring-paste notification.
+export const EXPIRING_WINDOW_MS = 2 * DAY
+
+export type DashboardSecret = Pick<SecretSummary, "id" | "slug" | "environment" | "count">
+
 export interface DashboardData {
-  dailyViews: number[]
-  dayNames: string[]
-  dayDates: string[]
-  newPastes: Record<"1" | "7" | "30", number>
-  totalPastes: number
-  activeLinks: number
-  passwordProtected: number
+  // Live pastes whose links stop working within EXPIRING_WINDOW_MS.
   expiringSoon: number
-  // At most five rows for each recent tab.
-  recent: PasteRow[]
+  // Pastes whose expiry passed and that wait for the purge job (lib/pastes/lifecycle.ts).
+  expired: number
+  // The rows of each widget on the layout. A widget that isn't on it is left out.
+  // Recent pastes holds at most five rows for each of its tabs.
+  recent?: PasteRow[]
+  starred?: PasteRow[]
+  // The newest pastes an agent, the CLI or the API created.
+  agentPastes?: PasteRow[]
+  expiring?: PasteRow[]
+  popular?: PasteRow[]
+  secrets?: DashboardSecret[]
+  collections?: Collection[]
+  agentActivity?: AgentActivity
 }
 
-export async function getDashboardData(locale: Locale = "en"): Promise<DashboardData> {
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" })
-  const shortDate = new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  })
+export async function getDashboardData(
+  locale: Locale = "en",
+  layout: readonly WidgetId[] = DEFAULT_LAYOUT,
+): Promise<DashboardData> {
   const viewer = (await getSession())?.user.id
-  const now = Date.now()
-  const today = Math.floor(now / DAY)
-  const firstDay = today - VIEW_HISTORY_DAYS + 1
-  const dailyViews = Array<number>(VIEW_HISTORY_DAYS).fill(0)
-  const days = dailyViews.map((_, index) => (firstDay + index) * DAY)
-  const empty: DashboardData = {
-    dailyViews,
-    dayNames: days.map((day) => weekday.format(day)),
-    dayDates: days.map((day) => shortDate.format(day)),
-    newPastes: { "1": 0, "7": 0, "30": 0 },
-    totalPastes: 0,
-    activeLinks: 0,
-    passwordProtected: 0,
-    expiringSoon: 0,
-    recent: [],
-  }
-  if (!viewer) return empty
+  if (!viewer) return { expiringSoon: 0, expired: 0 }
   const db = getDb()
+  const now = new Date()
   const own = and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))
-  const live = and(
-    ne(pasteTable.visibility, "private"),
-    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date(now))),
-  )
-  const [[totals], views, recentTabs] = await Promise.all([
-    db
-      .select({
-        totalPastes: sql<number>`count(*)::int`,
-        activeLinks: sql<number>`count(*) filter (where ${live})::int`,
-        passwordProtected: sql<number>`count(*) filter (where ${and(live, isNotNull(pasteTable.passwordHash))})::int`,
-        expiringSoon: sql<number>`count(*) filter (where ${and(gt(pasteTable.expiresAt, new Date(now)), lt(pasteTable.expiresAt, new Date(now + 2 * DAY)))})::int`,
-        day: sql<number>`count(*) filter (where ${gt(pasteTable.createdAt, new Date(now - DAY))})::int`,
-        week: sql<number>`count(*) filter (where ${gt(pasteTable.createdAt, new Date(now - 7 * DAY))})::int`,
-        month: sql<number>`count(*) filter (where ${gt(pasteTable.createdAt, new Date(now - 30 * DAY))})::int`,
-      })
+  const has = (widget: WidgetId) => layout.includes(widget)
+
+  const ownRows = async (where: SQL | undefined, order: SQL[]) => {
+    const records = await db
+      .select()
       .from(pasteTable)
-      .where(own),
-    db
-      .select({ day: pasteViewDay.day, views: sql<number>`sum(${pasteViewDay.views})::int` })
-      .from(pasteViewDay)
-      .innerJoin(
-        pasteTable,
-        and(allowedParent(pasteViewDay.pasteId), eq(pasteViewDay.pasteId, pasteTable.id)),
-      )
-      .where(and(own, gte(pasteViewDay.day, firstDay), lt(pasteViewDay.day, today + 1)))
-      .groupBy(pasteViewDay.day),
-    Promise.all(
+      .where(and(own, where))
+      .orderBy(...order, pasteTable.id)
+      .limit(WIDGET_ROWS)
+    return toRows(await summarizePastes(records, viewer), locale)
+  }
+
+  const recent = async () => {
+    const tabs = await Promise.all(
       [undefined, ...(["public", "unlisted", "private"] as const)].map((visibility) =>
         db
           .select()
@@ -92,23 +79,71 @@ export async function getDashboardData(locale: Locale = "en"): Promise<Dashboard
             ),
           )
           .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
-          .limit(RECENT_ROWS),
+          .limit(WIDGET_ROWS),
       ),
-    ),
+    )
+    const records = [...new Map(tabs.flat().map((record) => [record.id, record])).values()].sort(
+      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.id.localeCompare(b.id),
+    )
+    return toRows(await summarizePastes(records, viewer), locale)
+  }
+
+  const starred = async () => {
+    const page = await listPastePage({ mode: "starred" }, parsePasteListQuery({}))
+    return toRows(page.pastes.slice(0, WIDGET_ROWS), locale)
+  }
+
+  const secrets = async (): Promise<DashboardSecret[]> =>
+    (await listSecrets(viewer))
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, WIDGET_ROWS)
+      .map(({ id, slug, environment, count }) => ({ id, slug, environment, count }))
+
+  const [[counts], widgets] = await Promise.all([
+    db
+      .select({
+        expiringSoon: sql<number>`count(*) filter (where ${and(gt(pasteTable.expiresAt, now), lte(pasteTable.expiresAt, new Date(now.getTime() + EXPIRING_WINDOW_MS)))})::int`,
+        expired: sql<number>`count(*) filter (where ${lte(pasteTable.expiresAt, now)})::int`,
+      })
+      .from(pasteTable)
+      .where(own),
+    Promise.all([
+      has("recent_pastes") ? recent() : undefined,
+      has("starred") ? starred() : undefined,
+      has("expiring")
+        ? ownRows(gt(pasteTable.expiresAt, now), [asc(pasteTable.expiresAt)])
+        : undefined,
+      has("popular")
+        ? ownRows(gt(pasteTable.views, 0), [desc(pasteTable.views), desc(pasteTable.updatedAt)])
+        : undefined,
+      has("secrets") ? secrets() : undefined,
+      has("collections") ? listCollections() : undefined,
+      has("agent_activity") ? agentActivity(viewer) : undefined,
+      has("agent_pastes")
+        ? ownRows(ne(pasteTable.createdVia, "web"), [desc(pasteTable.createdAt)])
+        : undefined,
+    ]),
   ])
-  for (const day of views) dailyViews[day.day - firstDay] = day.views
-  const records = [
-    ...new Map(recentTabs.flat().map((record) => [record.id, record])).values(),
-  ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || a.id.localeCompare(b.id))
-  const recent = await toRows(await summarizePastes(records, viewer), locale)
+  const [
+    recentRows,
+    starredRows,
+    expiring,
+    popular,
+    secretRows,
+    collections,
+    activity,
+    agentPastes,
+  ] = widgets
   return {
-    ...empty,
-    dailyViews,
-    totalPastes: totals?.totalPastes ?? 0,
-    activeLinks: totals?.activeLinks ?? 0,
-    passwordProtected: totals?.passwordProtected ?? 0,
-    expiringSoon: totals?.expiringSoon ?? 0,
-    newPastes: { "1": totals?.day ?? 0, "7": totals?.week ?? 0, "30": totals?.month ?? 0 },
-    recent,
+    expiringSoon: counts?.expiringSoon ?? 0,
+    expired: counts?.expired ?? 0,
+    recent: recentRows,
+    starred: starredRows,
+    expiring,
+    popular,
+    secrets: secretRows,
+    collections,
+    agentActivity: activity,
+    agentPastes,
   }
 }
