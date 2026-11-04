@@ -349,6 +349,7 @@
     "your_profile": "我的主页",
     "agents_connected": "已连接的智能体",
     "agents_manage": "在设置中管理",
+    "agents_connect_another": "连接另一个代理",
     "agent_active": "最近使用：{time}",
     "agent_not_used_yet": "尚未使用",
     "attention_expiring": "{count, number} 个粘贴将在未来 48 小时内过期。",
