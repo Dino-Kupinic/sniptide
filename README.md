@@ -18,7 +18,14 @@ Organize reusable snippets in collections, sync `.env` files, and connect coding
 
 ## Self-host
 
-Run Sniptide and Postgres with Docker Compose:
+Run Sniptide and Postgres on your server with one command:
+
+```bash
+curl -fsSL https://sniptide.com/install.sh | sh
+```
+
+The script asks for your domain, generates the secrets, starts Docker Compose with HTTPS, and closes sign-up once your account exists.
+To set it up by hand instead:
 
 ```bash
 git clone https://github.com/Dino-Kupinic/sniptide.git
@@ -28,7 +35,7 @@ docker compose up -d
 ```
 
 Open [localhost:3000](http://localhost:3000) and create an account.
-Use your public HTTPS URL for `BETTER_AUTH_URL` when deploying to a server.
+On a server, replace `BETTER_AUTH_URL` with `SNIPTIDE_DOMAIN=<your-domain>` and `COMPOSE_PROFILES=proxy` for HTTPS.
 See the [self-hosting guide](https://docs.sniptide.com/self-hosting) for HTTPS, configuration, backups, and upgrades.
 
 The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/sniptide`.

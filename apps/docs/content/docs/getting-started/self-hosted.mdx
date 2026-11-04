@@ -6,6 +6,16 @@ description: Start Sniptide and Postgres with Docker Compose, check that the ser
 This guide starts Sniptide and its Postgres database on one server with Docker Compose, then
 creates your account. The [self-hosting guide](/self-hosting) covers every option after that.
 
+To do every step below with one command, run the [install script](/self-hosting/install-script)
+on the server instead:
+
+```bash
+curl -fsSL https://sniptide.com/install.sh | sh
+```
+
+It asks for your domain, writes the settings file with a generated secret and database password,
+starts the stack with HTTPS, and closes sign-up once your account exists.
+
 ## Before you begin
 
 - A Linux server with Docker and the Docker Compose plugin. The image runs on AMD64 and ARM64.
@@ -91,13 +101,14 @@ Open the address you set as `BETTER_AUTH_URL` and select **Create account**, as 
 
 ### Close sign-up for a private instance
 
-After your account exists, add this line to `.env` and run `docker compose up -d` again:
+Add this line to `.env` and run `docker compose up -d` again:
 
 ```dotenv
-ALLOW_SIGN_UP=false
+ALLOW_SIGN_UP=first
 ```
 
-Existing accounts keep signing in, and nobody else can create one. To admit only certain people,
+Sign-up then closes as soon as one account exists, so set it before you share the address.
+`ALLOW_SIGN_UP=false` closes it right away. Either way, existing accounts keep signing in. To admit only certain people,
 set `ALLOWED_EMAILS=ada@example.com,linus@example.com` instead. New password accounts on an
 invite-only instance need [SMTP email verification](/self-hosting/configuration#email). Without
 SMTP, only people signing in with a verified GitHub or Google identity can join.
@@ -108,24 +119,24 @@ SMTP, only people signing in with a verified GitHub or Google identity can join.
 ## Add HTTPS and a domain
 
 The bundled [Caddy](https://caddyserver.com) proxy gets and renews a certificate for your domain.
-Point the domain's DNS at the server, open ports 80 and 443, and add these lines to `.env`:
+Point the domain's DNS at the server and open ports 80 and 443. In `.env`, remove the
+`BETTER_AUTH_URL` line and add these two:
 
 ```dotenv
 SNIPTIDE_DOMAIN=paste.example.com
-BETTER_AUTH_URL=https://paste.example.com
-CLIENT_IP_SOURCE=x-forwarded-for
-TRUSTED_PROXIES=private
+COMPOSE_PROFILES=proxy
 ```
 
-Then start the stack with the proxy profile:
+Then apply the change:
 
 ```bash
-docker compose --profile proxy up -d
+docker compose up -d
 ```
 
-Open `https://paste.example.com/api/health` and confirm it returns `{"ok":true}`. The
-`CLIENT_IP_SOURCE` and `TRUSTED_PROXIES` lines make rate limits see each visitor instead of the
-proxy. If you already run nginx, Traefik or Coolify, skip the profile and put your proxy in front
+Open `https://paste.example.com/api/health` and confirm it returns `{"ok":true}`.
+`COMPOSE_PROFILES=proxy` starts the proxy. With `SNIPTIDE_DOMAIN` set, the public address becomes
+`https://paste.example.com`, and rate limits read each visitor's address from the proxy's
+`X-Forwarded-For` header. If you already run nginx, Traefik or Coolify, skip the profile and put your proxy in front
 of port 3000, as [Reverse proxy and client IP](/self-hosting/reverse-proxy) describes.
 
 ## Stop or remove the instance

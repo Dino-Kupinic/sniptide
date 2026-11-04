@@ -25,7 +25,7 @@ only some, as [Coolify](/self-hosting/coolify#change-settings) explains.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone; existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. |
+| `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone, and `first` closes it once the first account exists. Existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. The install script and the Coolify template set `first`. |
 | `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). New password accounts need SMTP email verification before signing in; without SMTP, only verified OAuth identities can join. Existing accounts keep signing in. |
 | `HOME_URL` | unset | The logo on the sign-in screens links here, for example to your landing page. Unset, the logo is not a link. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in. Until both are set the button shows as disabled. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. |

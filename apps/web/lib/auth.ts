@@ -1,7 +1,7 @@
 import "server-only"
 
 import { createAuth } from "@workspace/auth"
-import { parseAllowlist } from "@workspace/auth/allowlist"
+import { isSignUpClosedFor, parseAllowlist } from "@workspace/auth/allowlist"
 import { nextCookies } from "better-auth/next-js"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
@@ -58,9 +58,12 @@ export function isEmailAvailable() {
   return Boolean(getConfig().smtp)
 }
 
-// True while ALLOW_SIGN_UP=false: nobody can create an account; existing accounts sign in as usual.
-export function isSignUpClosed() {
-  return !getConfig().allowSignUp
+// True while nobody can create an account: ALLOW_SIGN_UP=false, or ALLOW_SIGN_UP=first once an
+// account exists. Existing accounts sign in as usual.
+export async function isSignUpClosed() {
+  return isSignUpClosedFor(getConfig().allowSignUp, async () =>
+    Boolean(await getDb().query.user.findFirst({ columns: { id: true } })),
+  )
 }
 
 // True on a public demo instance (DEMO_MODE=true): visitors are signed in to a shared guest account

@@ -74,7 +74,10 @@ describe("getConfig", () => {
     for (const value of ["true", "1", "yes", "on", ""]) {
       expect(getConfig({ ALLOW_SIGN_UP: value }).allowSignUp).toBe(true)
     }
-    expect(() => getConfig({ ALLOW_SIGN_UP: "maybe" })).toThrow(/ALLOW_SIGN_UP must be "true"/)
+    expect(getConfig({ ALLOW_SIGN_UP: " First " }).allowSignUp).toBe("first")
+    expect(() => getConfig({ ALLOW_SIGN_UP: "maybe" })).toThrow(
+      /ALLOW_SIGN_UP must be "true", "false" or "first"/,
+    )
   })
 
   test("boots with only the database and auth secret", () => {
