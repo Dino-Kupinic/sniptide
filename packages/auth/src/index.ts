@@ -4,7 +4,7 @@ import * as schema from "@workspace/db/schema"
 import { type BetterAuthOptions, type BetterAuthPlugin, betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { username } from "better-auth/plugins/username"
-import { assertAllowed, assertSignUpOpen, parseAllowlist } from "./allowlist"
+import { assertAllowed, assertSignUpOpen, parseAllowlist, type SignUpMode } from "./allowlist"
 import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_PATHS } from "./demo"
 import { boundUserFields } from "./user-fields"
 import { USERNAME_PATTERN } from "./username"
@@ -30,9 +30,9 @@ export interface AuthConfig {
   ipAddressHeaders?: string[]
   // Better Auth turns its rate limits on in production only unless told otherwise.
   rateLimitEnabled?: boolean
-  // False closes sign-up for everyone, whatever allowedEmails says. Existing accounts keep
-  // signing in. Defaults to open.
-  allowSignUp?: boolean
+  // False closes sign-up for everyone, whatever allowedEmails says, and "first" closes it once
+  // one account exists. Existing accounts keep signing in. Defaults to open.
+  allowSignUp?: SignUpMode
   // Comma-separated emails that may create an account. Unset or empty leaves sign-up open.
   allowedEmails?: string
   // True on a public demo instance (DEMO_MODE): everyone shares one guest account, so the calls
@@ -78,6 +78,7 @@ export function createAuth({
   plugins = [],
 }: AuthConfig) {
   const allowlist = parseAllowlist(allowedEmails)
+  const hasAccounts = async () => Boolean(await db.query.user.findFirst({ columns: { id: true } }))
 
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
@@ -139,7 +140,7 @@ export function createAuth({
         if (demo && DEMO_LOCKED_PATHS.has(ctx.path))
           throw new APIError("FORBIDDEN", { message: DEMO_LOCKED_MESSAGE })
         if (ctx.path === "/sign-up/email") {
-          assertSignUpOpen(allowSignUp)
+          await assertSignUpOpen(allowSignUp, hasAccounts)
           assertAllowed(allowlist, ctx.body?.email)
           if (allowlist && !emailVerification?.sendVerificationEmail)
             throw new APIError("FORBIDDEN", {
@@ -154,7 +155,7 @@ export function createAuth({
         // Covers email sign-up and the first GitHub or Google sign-in alike.
         create: {
           before: async (user) => {
-            assertSignUpOpen(allowSignUp)
+            await assertSignUpOpen(allowSignUp, hasAccounts)
             assertAllowed(allowlist, user.email)
             const pendingInvitation = Boolean(allowlist && user.emailVerified !== true)
             if (pendingInvitation && !emailVerification?.sendVerificationEmail)

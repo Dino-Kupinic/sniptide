@@ -88,6 +88,16 @@ const flag = z.string().transform((value, ctx) => {
   return z.NEVER
 })
 
+// ALLOW_SIGN_UP: a flag, or "first" to close sign-up once the first account exists.
+const signUpMode = z.string().transform((value, ctx): boolean | "first" => {
+  const normalized = value.trim().toLowerCase()
+  if (normalized === "first") return "first"
+  if (["true", "1", "yes", "on"].includes(normalized)) return true
+  if (["false", "0", "no", "off"].includes(normalized)) return false
+  ctx.addIssue({ code: "custom", message: 'must be "true", "false" or "first".' })
+  return z.NEVER
+})
+
 const origin = z.url({ message: "must be a full URL like https://sniptide.com." })
 
 // What one account can keep before it has to delete something, so open sign-up can't fill the
@@ -122,7 +132,7 @@ const schema = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]+$/, { message: "may only contain letters, digits, - and _." })
     .optional(),
-  ALLOW_SIGN_UP: flag.default(true),
+  ALLOW_SIGN_UP: signUpMode.default(true),
   ALLOWED_EMAILS: z.string().optional(),
   SHARE_URL: origin.optional(),
   HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),

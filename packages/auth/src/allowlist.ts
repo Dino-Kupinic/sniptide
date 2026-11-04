@@ -18,10 +18,22 @@ export function parseAllowlist(value?: string): Set<string> | undefined {
 
 export const SIGN_UP_CLOSED_MESSAGE = "Sign-up is closed on this instance."
 
-// ALLOW_SIGN_UP=false: nobody can create an account, listed or not. Covers email and OAuth.
+// ALLOW_SIGN_UP: true lets anyone create an account, false lets nobody, and "first" lets only the
+// first account be created, so a fresh self-hosted server isn't open to strangers once its owner
+// has signed up.
+export type SignUpMode = boolean | "first"
+
+// True while a new account can't be created: always under false, and once any account exists
+// under "first". `hasAccounts` is only called for "first".
+export async function isSignUpClosedFor(mode: SignUpMode, hasAccounts: () => Promise<boolean>) {
+  if (mode === "first") return hasAccounts()
+  return !mode
+}
+
+// Refuses a new account while sign-up is closed, listed or not. Covers email and OAuth.
 // The codes reach the sign-in page as ?error=<code> when a GitHub or Google sign-up is refused.
-export function assertSignUpOpen(allowSignUp: boolean) {
-  if (!allowSignUp)
+export async function assertSignUpOpen(mode: SignUpMode, hasAccounts: () => Promise<boolean>) {
+  if (await isSignUpClosedFor(mode, hasAccounts))
     throw new APIError("FORBIDDEN", { message: SIGN_UP_CLOSED_MESSAGE, code: "sign_up_closed" })
 }
 

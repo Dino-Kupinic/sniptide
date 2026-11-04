@@ -16,8 +16,9 @@ export default async function Page({ searchParams }: PageProps<"/sign-up">) {
   const [{ host }, t] = await Promise.all([getSiteOrigin(), getTranslations("Auth")])
   const legal = <LegalNotice action="signUp" />
 
-  // ALLOW_SIGN_UP=false: no accounts can be created, not even for invited emails.
-  if (isSignUpClosed()) {
+  // ALLOW_SIGN_UP=false, or "first" once an account exists: no accounts can be created, not even
+  // for invited emails.
+  if (await isSignUpClosed()) {
     return (
       <AuthScreen
         subtitle={t("signUpClosedSubtitle")}
