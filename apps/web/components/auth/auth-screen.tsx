@@ -17,17 +17,24 @@ export interface Pitch {
 // surface. Below lg the card is gone and the pitch body moves under the subtitle.
 // `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
 // Without a subtitle the heading stands alone and centers over the form, as on sign-up.
+// `mark` sits above the heading, such as the client and Sniptide logos on the consent screen, and
+// takes the place of the phone logo. `mobilePitch={false}` keeps the pitch body off phones when the
+// screen already says the same.
 export function AuthScreen({
   title,
   subtitle,
+  mark,
   legal,
   pitch,
   centered = false,
+  mobilePitch = true,
   children,
 }: {
   title?: string
   subtitle?: string
+  mark?: React.ReactNode
   centered?: boolean
+  mobilePitch?: boolean
   legal: React.ReactNode
   pitch: Pitch
   children: React.ReactNode
@@ -48,7 +55,8 @@ export function AuthScreen({
           )}
         >
           <div className="flex w-full flex-col gap-5 lg:max-w-[360px] lg:gap-6">
-            {centered ? null : <HomeLogo className="lg:hidden" />}
+            {centered || mark ? null : <HomeLogo className="lg:hidden" />}
+            {mark}
             {subtitle ? (
               <div className="flex flex-col gap-1.5 lg:gap-2">
                 {title ? (
@@ -64,7 +72,7 @@ export function AuthScreen({
                 >
                   {subtitle}
                 </p>
-                {centered ? null : (
+                {centered || !mobilePitch ? null : (
                   <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
                 )}
               </div>
