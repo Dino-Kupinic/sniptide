@@ -104,9 +104,7 @@ export function ActivityGrid({
           })}
         </div>
       </div>
-      <figcaption className="text-[13px] text-muted-foreground">
-        {summary}
-      </figcaption>
+      <figcaption className="text-[13px] text-muted-foreground">{summary}</figcaption>
     </figure>
   )
 }
