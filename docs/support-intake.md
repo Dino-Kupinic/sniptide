@@ -10,7 +10,7 @@ the weekly triage pass works. Readers of the public docs see the user side in
 | Channel | How it reaches Linear | Setup |
 | --- | --- | --- |
 | **Help and feedback** dialog in the app | The server files the report through the Linear API (`apps/web/lib/support`) | `LINEAR_API_KEY`, `LINEAR_TEAM_ID=WRK` and `LINEAR_PROJECT_ID` on the production app |
-| Support assistant in the same dialog | The assistant calls the same filing code, with the conversation attached | `ANTHROPIC_API_KEY`, plus the Linear settings |
+| Support assistant in the same dialog | The assistant calls the same filing code, with the conversation attached | `ANTHROPIC_API_KEY`, or `OPENAI_API_KEY` with `SUPPORT_MODEL`, plus the Linear settings |
 | GitHub issues | Linear's GitHub integration syncs new issues in `Dino-Kupinic/sniptide` into Work | Linear settings, **Integrations**, **GitHub**, then turn on **Issues sync** for the repository and Work |
 | Support email | Linear's email intake turns each email into a Work issue | Linear team settings for Work, **Email intake**, then forward the support address to the address Linear shows |
 
@@ -54,5 +54,6 @@ Keep the pass on the calendar with a recurring Linear issue in Work, such as "We
 
 Each account can send 10 reports and ask the assistant 30 questions an hour, counted in Postgres
 (`lib/rate-limit.ts`). The assistant sends the whole docs corpus, about 170 KB of text, as a cached
-system prompt, so most questions read it from the prompt cache. Check the Anthropic console after
-launch to confirm the cache hit rate and the cost per question before raising the limits.
+prompt prefix, so most questions read it from the provider's prompt cache. Check the Anthropic or
+OpenAI usage dashboard after launch to confirm the cache hit rate and the cost per question before
+raising the limits.

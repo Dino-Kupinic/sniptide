@@ -182,8 +182,27 @@ const schema = z.object({
   LINEAR_TEAM_ID: z.string().optional(),
   LINEAR_PROJECT_ID: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  SUPPORT_MODEL: z.string().default("claude-haiku-5-5"),
+  OPENAI_API_KEY: z.string().optional(),
+  SUPPORT_PROVIDER: z.enum(["anthropic", "openai"]).optional(),
+  SUPPORT_MODEL: z.string().optional(),
 })
+
+// The support assistant's provider: SUPPORT_PROVIDER when set, otherwise whichever key is set,
+// Anthropic first. OpenAI has no default model here, so it needs SUPPORT_MODEL.
+function supportAssistant(value: z.infer<typeof schema>) {
+  const provider =
+    value.SUPPORT_PROVIDER ??
+    (value.ANTHROPIC_API_KEY ? "anthropic" : value.OPENAI_API_KEY ? "openai" : undefined)
+  if (!provider) return undefined
+  const apiKey = provider === "anthropic" ? value.ANTHROPIC_API_KEY : value.OPENAI_API_KEY
+  if (!apiKey)
+    throw new Error(
+      `Invalid configuration: SUPPORT_PROVIDER=${provider} needs ${provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"}.`,
+    )
+  if (provider === "openai" && !value.SUPPORT_MODEL)
+    throw new Error("Invalid configuration: OPENAI_API_KEY needs SUPPORT_MODEL, the model to use.")
+  return { provider, apiKey, model: value.SUPPORT_MODEL ?? "claude-haiku-5-5" }
+}
 
 function oauth(clientId?: string, clientSecret?: string) {
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
@@ -304,9 +323,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
               project: value.LINEAR_PROJECT_ID,
             }
           : undefined,
-      assistant: value.ANTHROPIC_API_KEY
-        ? { apiKey: value.ANTHROPIC_API_KEY, model: value.SUPPORT_MODEL }
-        : undefined,
+      assistant: supportAssistant(value),
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

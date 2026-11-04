@@ -40,6 +40,7 @@
     "next-intl": "^4.14.9",
     "next-themes": "catalog:runtime",
     "nodemailer": "^10.3.1",
+    "openai": "^7.50.0",
     "posthog-js": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import type Anthropic from "@anthropic-ai/sdk"
+import type OpenAI from "openai"
+import { getConfig } from "@/lib/config"
 import { answer, conversationSchema, refusalFallback, transcript } from "@/lib/support/assistant"
 import { docsText, loadDocs, pageUrl, parsePage } from "@/lib/support/docs"
 import { submitReport } from "@/lib/support/intake"
@@ -294,6 +296,8 @@ describe("support assistant", () => {
 
   test("is off without a key", async () => {
     delete process.env.ANTHROPIC_API_KEY
+    delete process.env.OPENAI_API_KEY
+    delete process.env.SUPPORT_PROVIDER
     const result = await answer({ conversation: question, context, limiter: allow })
     expect(result).toEqual({ ok: false, reason: "not_configured" })
   })
@@ -307,7 +311,12 @@ describe("support assistant", () => {
         content: [{ type: "text", text: "Turn on Burn after read.", citations: null }],
       },
     ])
-    const result = await answer({ conversation: question, context, api, limiter: allow })
+    const result = await answer({
+      conversation: question,
+      context,
+      api: { anthropic: api },
+      limiter: allow,
+    })
     expect(result).toEqual({ ok: true, reply: "Turn on Burn after read.", issue: undefined })
     const body = requests[0] as {
       model: string
@@ -349,7 +358,12 @@ describe("support assistant", () => {
           content: [{ type: "text", text: "Filed as WRK-2.", citations: null }],
         },
       ])
-      const result = await answer({ conversation: question, context, api, limiter: allow })
+      const result = await answer({
+        conversation: question,
+        context,
+        api: { anthropic: api },
+        limiter: allow,
+      })
       expect(result).toEqual({ ok: true, reply: "Filed as WRK-2.", issue: "WRK-2" })
       const create = linear.calls.find((call) => call.query.includes("issueCreate"))
       const input = create?.variables.input as Record<string, unknown>
@@ -368,7 +382,12 @@ describe("support assistant", () => {
   test("returns an empty reply on a refusal", async () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-test"
     const { api } = fakeClaude([{ stop_reason: "refusal", content: [] }])
-    const result = await answer({ conversation: question, context, api, limiter: allow })
+    const result = await answer({
+      conversation: question,
+      context,
+      api: { anthropic: api },
+      limiter: allow,
+    })
     expect(result).toEqual({ ok: true, reply: "", issue: undefined })
   })
 
@@ -378,6 +397,129 @@ describe("support assistant", () => {
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
     })
+  })
+
+  // Replies in order; records each request.
+  function fakeOpenAI(messages: Partial<OpenAI.Chat.ChatCompletionMessage>[]) {
+    const requests: Record<string, unknown>[] = []
+    const api = {
+      chat: {
+        completions: {
+          create: async (body: Record<string, unknown>) => {
+            requests.push(structuredClone(body))
+            const message = messages.shift()
+            return { choices: [{ message: { refusal: null, content: null, ...message } }] }
+          },
+        },
+      },
+    } as unknown as Pick<OpenAI, "chat">
+    return { api, requests }
+  }
+
+  function useOpenAI(model?: string) {
+    delete process.env.ANTHROPIC_API_KEY
+    delete process.env.SUPPORT_PROVIDER
+    process.env.OPENAI_API_KEY = "sk-test"
+    if (model) process.env.SUPPORT_MODEL = model
+    else delete process.env.SUPPORT_MODEL
+  }
+
+  test("picks the provider from the key, or SUPPORT_PROVIDER when both are set", () => {
+    useOpenAI("gpt-test")
+    expect(getConfig().support.assistant).toEqual({
+      provider: "openai",
+      apiKey: "sk-test",
+      model: "gpt-test",
+    })
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test"
+    delete process.env.SUPPORT_MODEL
+    expect(getConfig().support.assistant?.provider).toBe("anthropic")
+    process.env.SUPPORT_PROVIDER = "openai"
+    process.env.SUPPORT_MODEL = "gpt-test"
+    expect(getConfig().support.assistant?.provider).toBe("openai")
+  })
+
+  test("needs SUPPORT_MODEL with an OpenAI key", () => {
+    useOpenAI()
+    expect(() => getConfig()).toThrow("SUPPORT_MODEL")
+  })
+
+  test("answers through OpenAI with the docs first", async () => {
+    useOpenAI("gpt-test")
+    delete process.env.LINEAR_API_KEY
+    const { api, requests } = fakeOpenAI([{ content: "Turn on Burn after read." }])
+    const result = await answer({
+      conversation: question,
+      context,
+      api: { openai: api },
+      limiter: allow,
+    })
+    expect(result).toEqual({ ok: true, reply: "Turn on Burn after read.", issue: undefined })
+    const body = requests[0] as {
+      model: string
+      tools?: unknown[]
+      messages: { role: string; content: string }[]
+    }
+    expect(body.model).toBe("gpt-test")
+    expect(body.tools).toBeUndefined()
+    expect(body.messages[0]?.content).toContain("<documentation>")
+    expect(body.messages[0]?.content).not.toContain("user_1")
+    expect(body.messages[1]?.content).toContain("User ID: user_1")
+    expect(body.messages.at(-1)).toEqual({ role: "user", content: "How do I burn a paste?" })
+  })
+
+  test("files a report through an OpenAI tool call", async () => {
+    useOpenAI("gpt-test")
+    process.env.LINEAR_API_KEY = "lin_api_test"
+    process.env.LINEAR_TEAM_ID = "team-uuid"
+    resetLinearCache()
+    const linear = fakeLinear()
+    try {
+      const { api, requests } = fakeOpenAI([
+        {
+          tool_calls: [
+            {
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "report_to_team",
+                arguments: JSON.stringify({ kind: "bug", summary: "Burning fails on save." }),
+              },
+            },
+          ],
+        },
+        { content: "Filed as WRK-2." },
+      ])
+      const result = await answer({
+        conversation: question,
+        context,
+        api: { openai: api },
+        limiter: allow,
+      })
+      expect(result).toEqual({ ok: true, reply: "Filed as WRK-2.", issue: "WRK-2" })
+      const first = requests[0] as { tools: { function: { name: string; strict: boolean } }[] }
+      expect(first.tools[0]?.function).toMatchObject({ name: "report_to_team", strict: true })
+      const second = requests[1] as { messages: Record<string, unknown>[] }
+      expect(second.messages.at(-1)).toEqual({
+        role: "tool",
+        tool_call_id: "call_1",
+        content: "Filed as WRK-2.",
+      })
+    } finally {
+      linear.restore()
+    }
+  })
+
+  test("returns an empty reply on an OpenAI refusal", async () => {
+    useOpenAI("gpt-test")
+    const { api } = fakeOpenAI([{ refusal: "I can't help with that." }])
+    const result = await answer({
+      conversation: question,
+      context,
+      api: { openai: api },
+      limiter: allow,
+    })
+    expect(result).toEqual({ ok: true, reply: "", issue: undefined })
   })
 
   test("transcripts keep each message on one line", () => {

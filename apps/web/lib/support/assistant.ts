@@ -1,6 +1,7 @@
 import "server-only"
 
 import Anthropic from "@anthropic-ai/sdk"
+import OpenAI from "openai"
 import { z } from "zod"
 import { getConfig } from "@/lib/config"
 import { hit } from "@/lib/rate-limit"
@@ -9,9 +10,9 @@ import { docsText, loadDocs } from "./docs"
 import { submitReport } from "./intake"
 import { contextLines, type ReportContext } from "./report"
 
-// The support assistant: Claude answers from the Sniptide docs and, when the docs can't solve the
+// The support assistant: Claude or an OpenAI model answers from the Sniptide docs and, when the docs can't solve the
 // problem or it looks like a bug, files it in Linear with the conversation attached. Off unless
-// ANTHROPIC_API_KEY is set.
+// ANTHROPIC_API_KEY or OPENAI_API_KEY is set.
 
 export const MAX_TURNS = 20
 export const MAX_MESSAGE_LENGTH = 4000
@@ -107,18 +108,137 @@ export function refusalFallback(model: string) {
     : {}
 }
 
-let client: { key: string; value: Anthropic } | undefined
+const clients = new Map<string, Anthropic | OpenAI>()
 
 function anthropic(apiKey: string) {
-  if (client?.key !== apiKey) client = { key: apiKey, value: new Anthropic({ apiKey }) }
-  return client.value
+  const key = `anthropic:${apiKey}`
+  if (!clients.has(key)) clients.set(key, new Anthropic({ apiKey }))
+  return clients.get(key) as Anthropic
+}
+
+function openai(apiKey: string) {
+  const key = `openai:${apiKey}`
+  if (!clients.has(key)) clients.set(key, new OpenAI({ apiKey }))
+  return clients.get(key) as OpenAI
+}
+
+// Runs one report_to_team call and returns what to tell the model. Only the first report of a
+// conversation turn is filed.
+type ToolOutcome = { content: string; isError: boolean }
+type ToolRunner = (name: string, input: unknown) => Promise<ToolOutcome>
+
+// Each provider runs the same loop: one answer, plus at most two rounds of filing a report.
+const MAX_ROUNDS = 3
+
+async function answerWithClaude(
+  api: Pick<Anthropic, "beta">,
+  model: string,
+  system: { stable: string; context: string },
+  conversation: Conversation,
+  tools: boolean,
+  runTool: ToolRunner,
+): Promise<string> {
+  // The instructions and docs stay byte-identical between requests so they are read from the
+  // prompt cache; the per-request context follows the cache breakpoint.
+  const blocks: Anthropic.Beta.BetaTextBlockParam[] = [
+    { type: "text", text: system.stable, cache_control: { type: "ephemeral" } },
+    { type: "text", text: system.context },
+  ]
+  const messages: Anthropic.Beta.BetaMessageParam[] = conversation.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }))
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    const response = await api.beta.messages.create({
+      model,
+      max_tokens: 4000,
+      output_config: { effort: "low" },
+      ...refusalFallback(model),
+      system: blocks,
+      tools: tools ? [reportTool] : [],
+      messages,
+    })
+    if (response.stop_reason === "refusal") return ""
+    const toolUses = response.content.filter(
+      (block): block is Anthropic.Beta.BetaToolUseBlock => block.type === "tool_use",
+    )
+    if (response.stop_reason !== "tool_use" || toolUses.length === 0 || round === MAX_ROUNDS - 1)
+      return replyText(response.content)
+
+    messages.push({ role: "assistant", content: response.content })
+    const results: Anthropic.Beta.BetaToolResultBlockParam[] = []
+    for (const use of toolUses) {
+      const outcome = await runTool(use.name, use.input)
+      results.push({
+        type: "tool_result",
+        tool_use_id: use.id,
+        is_error: outcome.isError,
+        content: outcome.content,
+      })
+    }
+    messages.push({ role: "user", content: results })
+  }
+  return ""
+}
+
+const openaiReportTool: OpenAI.Chat.ChatCompletionFunctionTool = {
+  type: "function",
+  function: {
+    name: reportTool.name,
+    description: reportTool.description,
+    strict: true,
+    parameters: reportTool.input_schema as Record<string, unknown>,
+  },
+}
+
+async function answerWithOpenAI(
+  api: Pick<OpenAI, "chat">,
+  model: string,
+  system: { stable: string; context: string },
+  conversation: Conversation,
+  tools: boolean,
+  runTool: ToolRunner,
+): Promise<string> {
+  // OpenAI caches a repeated prompt prefix on its own, so the docs come first and stay identical.
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: "system", content: system.stable },
+    { role: "system", content: system.context },
+    ...conversation.map((message) => ({ role: message.role, content: message.content })),
+  ]
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    const response = await api.chat.completions.create({
+      model,
+      max_completion_tokens: 4000,
+      messages,
+      ...(tools ? { tools: [openaiReportTool] } : {}),
+    })
+    const message = response.choices[0]?.message
+    if (!message || message.refusal) return ""
+    const calls = (message.tool_calls ?? []).filter(
+      (call): call is OpenAI.Chat.ChatCompletionMessageFunctionToolCall => call.type === "function",
+    )
+    if (calls.length === 0 || round === MAX_ROUNDS - 1) return message.content?.trim() ?? ""
+
+    messages.push({ role: "assistant", content: message.content, tool_calls: calls })
+    for (const call of calls) {
+      let input: unknown
+      try {
+        input = JSON.parse(call.function.arguments)
+      } catch {
+        input = null
+      }
+      const outcome = await runTool(call.function.name, input)
+      messages.push({ role: "tool", tool_call_id: call.id, content: outcome.content })
+    }
+  }
+  return ""
 }
 
 export async function answer(input: {
   conversation: Conversation
   context: ReportContext
-  // Tests replace the API client and the Postgres-backed limiter.
-  api?: Pick<Anthropic, "beta">
+  // Tests replace the API clients and the Postgres-backed limiter.
+  api?: { anthropic?: Pick<Anthropic, "beta">; openai?: Pick<OpenAI, "chat"> }
   limiter?: typeof hit
 }): Promise<AssistantResult> {
   const config = getConfig()
@@ -136,91 +256,69 @@ export async function answer(input: {
   if (!quota.allowed)
     return { ok: false, reason: "rate_limited", retryAfterSeconds: quota.retryAfterSeconds }
 
-  const api = input.api ?? anthropic(settings.apiKey)
   const canReport = Boolean(config.support.linear)
   const docs = docsText(await loadDocs(config.resourceLinks.documentation))
-
-  // The instructions and docs stay byte-identical between requests so they are read from the
-  // prompt cache; the per-request context follows the cache breakpoint.
-  const system: Anthropic.Beta.BetaTextBlockParam[] = [
-    {
-      type: "text",
-      text: `${INSTRUCTIONS}\n\n<documentation>\n${docs}\n</documentation>`,
-      cache_control: { type: "ephemeral" },
-    },
-    {
-      type: "text",
-      text: [
-        "The person's context:",
-        ...contextLines(input.context),
-        canReport
-          ? "Filing reports is available."
-          : "Filing reports is not available on this instance: point the person to the Report a bug tab instead.",
-      ].join("\n"),
-    },
-  ]
-  const messages: Anthropic.Beta.BetaMessageParam[] = input.conversation.map((message) => ({
-    role: message.role,
-    content: message.content,
-  }))
+  const system = {
+    stable: `${INSTRUCTIONS}\n\n<documentation>\n${docs}\n</documentation>`,
+    context: [
+      "The person's context:",
+      ...contextLines(input.context),
+      canReport
+        ? "Filing reports is available."
+        : "Filing reports is not available on this instance: point the person to the Report a bug tab instead.",
+    ].join("\n"),
+  }
 
   let issue: string | undefined
-  try {
-    // One answer, plus at most two rounds of filing a report.
-    for (let round = 0; round < 3; round++) {
-      const response = await api.beta.messages.create({
-        model: settings.model,
-        max_tokens: 4000,
-        output_config: { effort: "low" },
-        ...refusalFallback(settings.model),
-        system,
-        tools: canReport ? [reportTool] : [],
-        messages,
-      })
-      if (response.stop_reason === "refusal") return { ok: true, reply: "", issue }
-      const toolUses = response.content.filter(
-        (block): block is Anthropic.Beta.BetaToolUseBlock => block.type === "tool_use",
-      )
-      if (response.stop_reason !== "tool_use" || toolUses.length === 0 || round === 2)
-        return { ok: true, reply: replyText(response.content), issue }
-
-      messages.push({ role: "assistant", content: response.content })
-      const results: Anthropic.Beta.BetaToolResultBlockParam[] = []
-      for (const use of toolUses) {
-        const parsed = reportInput.safeParse(use.input)
-        if (use.name !== reportTool.name || !parsed.success || issue) {
-          results.push({
-            type: "tool_result",
-            tool_use_id: use.id,
-            is_error: true,
-            content: issue ? `Already filed as ${issue}.` : "Invalid report.",
-          })
-          continue
-        }
-        const filed = await submitReport({
-          kind: parsed.data.kind,
-          description: parsed.data.summary,
-          context: input.context,
-          appendix: transcript(input.conversation),
-          limiter,
-        })
-        if (filed.ok) issue = filed.issue.identifier
-        results.push({
-          type: "tool_result",
-          tool_use_id: use.id,
-          is_error: !filed.ok,
-          content: filed.ok
-            ? `Filed as ${filed.issue.identifier}${filed.duplicate ? ", added to an issue that already tracks this" : ""}.`
-            : filed.reason === "rate_limited"
-              ? "Not filed: too many reports from this account in the last hour. Ask the person to try again later."
-              : "Not filed: the tracker is unavailable. Ask the person to use the Report a bug tab.",
-        })
+  const runTool: ToolRunner = async (name, toolInput) => {
+    const parsed = reportInput.safeParse(toolInput)
+    if (name !== reportTool.name || !parsed.success || issue)
+      return { isError: true, content: issue ? `Already filed as ${issue}.` : "Invalid report." }
+    const filed = await submitReport({
+      kind: parsed.data.kind,
+      description: parsed.data.summary,
+      context: input.context,
+      appendix: transcript(input.conversation),
+      limiter,
+    })
+    if (filed.ok) {
+      issue = filed.issue.identifier
+      return {
+        isError: false,
+        content: `Filed as ${filed.issue.identifier}${filed.duplicate ? ", added to an issue that already tracks this" : ""}.`,
       }
-      messages.push({ role: "user", content: results })
     }
+    return {
+      isError: true,
+      content:
+        filed.reason === "rate_limited"
+          ? "Not filed: too many reports from this account in the last hour. Ask the person to try again later."
+          : "Not filed: the tracker is unavailable. Ask the person to use the Report a bug tab.",
+    }
+  }
+
+  try {
+    const reply =
+      settings.provider === "openai"
+        ? await answerWithOpenAI(
+            input.api?.openai ?? openai(settings.apiKey),
+            settings.model,
+            system,
+            input.conversation,
+            canReport,
+            runTool,
+          )
+        : await answerWithClaude(
+            input.api?.anthropic ?? anthropic(settings.apiKey),
+            settings.model,
+            system,
+            input.conversation,
+            canReport,
+            runTool,
+          )
+    return { ok: true, reply, issue }
   } catch (error) {
     console.error("support: the assistant request failed", error)
     return { ok: false, reason: "failed" }
   }
-  return { ok: false, reason: "failed" }
 }

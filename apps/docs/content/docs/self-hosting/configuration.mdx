@@ -201,8 +201,10 @@ receive reports in your own tracker, and an Anthropic key to add the support ass
 | `LINEAR_API_KEY` | unset | A Linear API key that can create issues and upload files. With `LINEAR_TEAM_ID`, reports are sent from the server and filed as Linear issues. |
 | `LINEAR_TEAM_ID` | unset | The team to file in, by key (`WRK`) or ID. Reports land in the team's Triage state when triage is on, with its `Bug` or `Feedback` label when one exists. Bugs start at Medium priority and feedback without one. |
 | `LINEAR_PROJECT_ID` | unset | The ID of a project to add every report to. |
-| `ANTHROPIC_API_KEY` | unset | Turns on the **Ask** tab. Each question sends the docs, the conversation and the report details to Anthropic's API, billed to this key. With the Linear settings, the assistant can also file reports. |
-| `SUPPORT_MODEL` | `claude-haiku-5-5` | The Claude model the assistant uses. It answers at low effort, and the docs are sent as a cached prompt, so repeat questions within a few minutes reuse the cache instead of paying for the docs again. |
+| `ANTHROPIC_API_KEY` | unset | Turns on the **Ask** tab with Claude. Each question sends the docs, the conversation and the report details to Anthropic's API, billed to this key. With the Linear settings, the assistant can also file reports. |
+| `OPENAI_API_KEY` | unset | Turns on the **Ask** tab with an OpenAI model instead. It sends the same data to OpenAI's API, billed to this key, and needs `SUPPORT_MODEL`. |
+| `SUPPORT_PROVIDER` | the provider whose key is set | `anthropic` or `openai`. Needed only when both keys are set, because Anthropic is used otherwise. |
+| `SUPPORT_MODEL` | `claude-haiku-5-5` with Anthropic, none with OpenAI | The model the assistant uses, such as a Claude model ID or an OpenAI model ID. The docs come first in every request, so both providers can reuse their prompt cache for repeat questions instead of paying full price for the docs again. |
 
 Each account can send 10 reports and ask 30 questions an hour. A report that repeats an open issue,
 the same kind of report from the same page with the same opening words, becomes a comment on that
