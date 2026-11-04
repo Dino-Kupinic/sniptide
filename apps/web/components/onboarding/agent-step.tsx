@@ -4,7 +4,7 @@ import { Button } from "@sniptide/ui/components/button"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, GlobeIcon, PlugIcon, SquareSlashIcon, TerminalIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CopyButton } from "@/components/paste/copy-button"
@@ -68,7 +68,6 @@ export function AgentStep({
 }) {
   const t = useTranslations("Onboarding.agent")
   const tWizard = useTranslations("Onboarding")
-  const setup = agentSetup(origin)
   // The client whose setup was copied or opened last, which is the one the step waits for.
   const [used, setUsed] = React.useState<AgentClient | null>(null)
   const connected = useAgentConnection()
@@ -114,38 +113,7 @@ export function AgentStep({
         })}
       </fieldset>
 
-      <div key={client} className="flex flex-col gap-3">
-        {client === "cursor" ? (
-          <>
-            <Button
-              size="lg"
-              className="self-start"
-              nativeButton={false}
-              render={<a href={setup.cursorLink} onClick={() => use("cursor")} />}
-            >
-              <CursorLogo />
-              {t("addToCursor")}
-            </Button>
-            <p className="text-sm leading-5 text-muted-foreground">{t("cursorHint")}</p>
-          </>
-        ) : (
-          <>
-            <p className="text-sm leading-5 text-muted-foreground">
-              {t(client === "other" ? "otherHint" : "terminalHint", { client: label(client) })}
-            </p>
-            <SetupCode
-              code={
-                client === "claude_code"
-                  ? setup.claudeCode
-                  : client === "codex"
-                    ? setup.codex
-                    : setup.url
-              }
-              onCopy={() => use(client)}
-            />
-          </>
-        )}
-      </div>
+      <AgentSetupSteps key={client} client={client} origin={origin} onUse={use} />
 
       <p
         aria-live="polite"
@@ -184,6 +152,82 @@ export function AgentStep({
         </Button>
       </div>
     </section>
+  )
+}
+
+// The steps for one client, each a line with an icon. The command or address to copy sits under
+// the step that uses it.
+export function AgentSetupSteps({
+  client,
+  origin,
+  onUse,
+}: {
+  client: AgentClient
+  origin: string
+  onUse: (client: AgentClient) => void
+}) {
+  const t = useTranslations("Onboarding.agent.steps")
+  const setup = agentSetup(origin)
+  const code = (chunks: React.ReactNode) => (
+    <code className="rounded-sm bg-muted px-1 py-0.5 font-mono text-[13px]">{chunks}</code>
+  )
+  const allow = <Step icon={GlobeIcon} label={t("allow")} />
+
+  return (
+    <ol className="flex flex-col gap-3">
+      {client === "cursor" ? (
+        <li>
+          <Button
+            size="lg"
+            nativeButton={false}
+            render={<a href={setup.cursorLink} onClick={() => onUse("cursor")} />}
+          >
+            <CursorLogo />
+            {t("addToCursor")}
+          </Button>
+        </li>
+      ) : (
+        <Step
+          icon={client === "other" ? PlugIcon : TerminalIcon}
+          label={t(client === "other" ? "addServer" : "run")}
+        >
+          <SetupCode
+            code={
+              client === "claude_code"
+                ? setup.claudeCode
+                : client === "codex"
+                  ? setup.codex
+                  : setup.url
+            }
+            onCopy={() => onUse(client)}
+          />
+        </Step>
+      )}
+      {client === "claude_code" ? (
+        <Step icon={SquareSlashIcon} label={t.rich("authenticate", { code })} />
+      ) : null}
+      {allow}
+    </ol>
+  )
+}
+
+function Step({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+  label: React.ReactNode
+  children?: React.ReactNode
+}) {
+  return (
+    <li className="flex min-w-0 gap-3 text-sm leading-5">
+      <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <span>{label}</span>
+        {children}
+      </div>
+    </li>
   )
 }
 

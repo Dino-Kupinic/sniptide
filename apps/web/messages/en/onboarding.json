@@ -32,7 +32,7 @@
     },
     "agent": {
       "title": "Connect an agent",
-      "subtitle": "Your agent signs in to Sniptide once, then saves pastes and reads them back for you.",
+      "subtitle": "Your agent saves pastes and reads them back for you.",
       "clientLabel": "Agent",
       "clients": {
         "claude_code": "Claude Code",
@@ -40,10 +40,13 @@
         "cursor": "Cursor",
         "other": "Other"
       },
-      "terminalHint": "Run this in your terminal. {client} opens Sniptide in your browser, where you allow access.",
-      "cursorHint": "Cursor opens with Sniptide filled in. Allow access in the browser tab that follows.",
-      "otherHint": "Add this address as a remote MCP server in your client. It signs in through your browser.",
-      "addToCursor": "Add to Cursor",
+      "steps": {
+        "run": "Run in your terminal",
+        "authenticate": "In Claude Code, run <code>/mcp</code> and choose Authenticate",
+        "addServer": "Add as a remote MCP server",
+        "addToCursor": "Add to Cursor",
+        "allow": "Allow access in your browser"
+      },
       "yourAgent": "your agent",
       "waiting": "Waiting for {client} to connect…",
       "connected": "{client} is connected and can save pastes now.",

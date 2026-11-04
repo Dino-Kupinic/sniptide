@@ -4,17 +4,18 @@ import { Button } from "@sniptide/ui/components/button"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
-import { ArrowRightIcon, XIcon } from "lucide-react"
+import { cn } from "@sniptide/ui/lib/utils"
+import { ArrowRightIcon, PlusIcon, XIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
-import { AgentLogo, CursorLogo } from "@/components/onboarding/agent-logos"
-import { SetupCode } from "@/components/onboarding/agent-step"
+import { AgentLogo } from "@/components/onboarding/agent-logos"
+import { AgentSetupSteps } from "@/components/onboarding/agent-step"
 import { getConnectedAgents } from "@/lib/agent-actions"
 import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
 import { timeAgo } from "@/lib/format"
-import { AGENT_CLIENTS, type AgentClient, agentSetup } from "@/lib/onboarding"
+import { AGENT_CLIENTS, type AgentClient } from "@/lib/onboarding"
 
 // While the connect card waits for a first connection it asks every few seconds, for at most a
 // quarter of an hour. Once agents are connected, their last activity refreshes once a minute and
@@ -33,10 +34,11 @@ function useAgents(initial: ConnectedAgent[], waiting: boolean) {
     const started = Date.now()
     let timer: ReturnType<typeof setTimeout>
     let running = false
+    const fast = () => waiting && Date.now() - started < WAIT_FOR_MS
 
     async function refresh() {
       if (stopped || running) return
-      if (!connected && Date.now() - started > WAIT_FOR_MS) return
+      if (!connected && !fast()) return
       clearTimeout(timer)
       if (document.visibilityState === "visible") {
         running = true
@@ -44,17 +46,15 @@ function useAgents(initial: ConnectedAgent[], waiting: boolean) {
         running = false
         if (stopped) return
         if (next && (connected || next.length > 0)) setAgents(next)
-        // The first connection swaps the card, and the effect starts again for activity.
-        if (!connected && next && next.length > 0) return
       }
-      timer = setTimeout(refresh, connected ? ACTIVITY_POLL_MS : WAIT_POLL_MS)
+      timer = setTimeout(refresh, fast() ? WAIT_POLL_MS : ACTIVITY_POLL_MS)
     }
 
     function onVisible() {
       if (document.visibilityState === "visible") refresh()
     }
 
-    timer = setTimeout(refresh, connected ? ACTIVITY_POLL_MS : 0)
+    timer = setTimeout(refresh, waiting ? 0 : ACTIVITY_POLL_MS)
     document.addEventListener("visibilitychange", onVisible)
     return () => {
       stopped = true
@@ -67,7 +67,7 @@ function useAgents(initial: ConnectedAgent[], waiting: boolean) {
 }
 
 // The dashboard's agent widget: a setup card until an agent connects, then the connected agents
-// and when each last did something. Someone who doesn't use agents removes the widget.
+// and when each last did something, with the setup one click away for the next agent. Someone who doesn't use agents removes the widget.
 export function AgentArea({
   agents: initial,
   origin,
@@ -77,39 +77,50 @@ export function AgentArea({
   origin: string
   onRemove?: () => void
 }) {
-  // Polling starts once a setup was copied or opened, since only then can a connection appear.
+  // Polling speeds up once a setup was copied or opened, since only then can a connection appear.
   const [used, setUsed] = React.useState<AgentClient | null>(null)
   const agents = useAgents(initial, used !== null)
-  const [justConnected, setJustConnected] = React.useState(false)
+  // The agents known when the setup was used, so a new one stands out from the rest.
+  const known = React.useRef(new Set(initial.map((agent) => agent.name)))
+  const [justConnected, setJustConnected] = React.useState<ConnectedAgent | null>(null)
+  const [adding, setAdding] = React.useState(false)
 
   React.useEffect(() => {
-    if (used && agents.length > 0 && !justConnected) {
-      setJustConnected(true)
-      track("dashboard_agent_connected", { client: agents[0]?.client ?? "other" })
-    }
-  }, [agents, used, justConnected])
+    if (!used) return
+    const added = agents.find((agent) => !known.current.has(agent.name))
+    if (!added) return
+    known.current = new Set(agents.map((agent) => agent.name))
+    setJustConnected(added)
+    setUsed(null)
+    setAdding(false)
+    track("dashboard_agent_connected", { client: added.client })
+  }, [agents, used])
 
   const connectedMessage = useConnectedMessage()
-  const first = agents[0]
+
+  function onUse(client: AgentClient) {
+    known.current = new Set(agents.map((agent) => agent.name))
+    setUsed(client)
+    track("agent_snippet_copied", { client, surface: "dashboard" })
+  }
 
   return (
     <>
       {/* Present from the start, so the confirmation is announced when the card swaps. */}
       <p aria-live="polite" className="sr-only">
-        {justConnected && first ? connectedMessage(first.client) : null}
+        {justConnected ? connectedMessage(justConnected.client) : null}
       </p>
-      {first ? (
-        <AgentStatus agents={agents} justConnected={justConnected ? first : undefined} />
+      {agents.length > 0 ? (
+        <AgentStatus
+          agents={agents}
+          justConnected={justConnected ?? undefined}
+          adding={adding}
+          onAddingChange={setAdding}
+        >
+          <ConnectSteps origin={origin} used={used} onUse={onUse} />
+        </AgentStatus>
       ) : (
-        <ConnectCard
-          origin={origin}
-          used={used}
-          onUse={(client) => {
-            setUsed(client)
-            track("agent_snippet_copied", { client, surface: "dashboard" })
-          }}
-          onRemove={onRemove}
-        />
+        <ConnectCard origin={origin} used={used} onUse={onUse} onRemove={onRemove} />
       )}
     </>
   )
@@ -134,9 +145,6 @@ function ConnectCard({
 }) {
   const t = useTranslations("Onboarding.agent")
   const tWorkspace = useTranslations("Workspace")
-  const [client, setClient] = React.useState<AgentClient>("claude_code")
-  const setup = agentSetup(origin)
-  const label = (value: AgentClient) => t(`clients.${value}`)
 
   return (
     <section
@@ -162,7 +170,27 @@ function ConnectCard({
           </Button>
         ) : null}
       </div>
+      <ConnectSteps origin={origin} used={used} onUse={onUse} />
+    </section>
+  )
+}
 
+// The client picker and its setup steps, shared by the first connection and "Connect another".
+function ConnectSteps({
+  origin,
+  used,
+  onUse,
+}: {
+  origin: string
+  used: AgentClient | null
+  onUse: (client: AgentClient) => void
+}) {
+  const t = useTranslations("Onboarding.agent")
+  const [client, setClient] = React.useState<AgentClient>("claude_code")
+  const label = (value: AgentClient) => t(`clients.${value}`)
+
+  return (
+    <div className="flex flex-col gap-4">
       <SegmentedControl
         aria-label={t("clientLabel")}
         value={client}
@@ -181,38 +209,7 @@ function ConnectCard({
         itemClassName="whitespace-nowrap px-2 py-[9px] sm:px-3 lg:py-[5px]"
       />
 
-      <div key={client} className="flex flex-col gap-3">
-        {client === "cursor" ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button
-              size="lg"
-              className="self-start"
-              nativeButton={false}
-              render={<a href={setup.cursorLink} onClick={() => onUse("cursor")} />}
-            >
-              <CursorLogo />
-              {t("addToCursor")}
-            </Button>
-            <p className="text-sm leading-5 text-muted-foreground">{t("cursorHint")}</p>
-          </div>
-        ) : (
-          <>
-            <p className="text-sm leading-5 text-muted-foreground">
-              {t(client === "other" ? "otherHint" : "terminalHint", { client: label(client) })}
-            </p>
-            <SetupCode
-              code={
-                client === "claude_code"
-                  ? setup.claudeCode
-                  : client === "codex"
-                    ? setup.codex
-                    : setup.url
-              }
-              onCopy={() => onUse(client)}
-            />
-          </>
-        )}
-      </div>
+      <AgentSetupSteps key={client} client={client} origin={origin} onUse={onUse} />
 
       {used ? (
         <p
@@ -223,16 +220,22 @@ function ConnectCard({
           {t("waiting", { client: used === "other" ? t("yourAgent") : label(used) })}
         </p>
       ) : null}
-    </section>
+    </div>
   )
 }
 
 function AgentStatus({
   agents,
   justConnected,
+  adding,
+  onAddingChange,
+  children,
 }: {
   agents: ConnectedAgent[]
   justConnected?: ConnectedAgent
+  adding: boolean
+  onAddingChange: (adding: boolean) => void
+  children: React.ReactNode
 }) {
   const t = useTranslations("Workspace")
   const connectedMessage = useConnectedMessage()
@@ -281,6 +284,27 @@ function AgentStatus({
           )
         })}
       </ul>
+      {adding ? (
+        <div id="agents-connect" className="border-t border-border p-4">
+          {children}
+        </div>
+      ) : null}
+      <button
+        type="button"
+        aria-expanded={adding}
+        aria-controls="agents-connect"
+        onClick={() => onAddingChange(!adding)}
+        className="flex min-h-12 items-center gap-3 border-t border-border px-4 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none lg:min-h-11"
+      >
+        <PlusIcon
+          aria-hidden
+          className={cn(
+            "size-4 transition-transform motion-reduce:transition-none",
+            adding && "rotate-45",
+          )}
+        />
+        {t("agents_connect_another")}
+      </button>
     </section>
   )
 }

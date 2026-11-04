@@ -349,6 +349,7 @@
     "your_profile": "Dein Profil",
     "agents_connected": "Verbundene Agenten",
     "agents_manage": "In den Einstellungen verwalten",
+    "agents_connect_another": "Weiteren Agent verbinden",
     "agent_active": "Aktiv {time}",
     "agent_not_used_yet": "Noch nicht verwendet",
     "attention_expiring": "{count, plural, one {# Paste läuft} other {# Pastes laufen}} in den nächsten 48 Stunden ab.",
