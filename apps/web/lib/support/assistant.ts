@@ -99,6 +99,14 @@ function replyText(content: Anthropic.Beta.BetaContentBlock[]) {
     .trim()
 }
 
+// Opus, Sonnet and Fable models can hand a declined request to another model on the server. Haiku
+// has no server-side fallback and rejects the parameter, so it answers alone.
+export function refusalFallback(model: string) {
+  return /^claude-(opus|sonnet|fable)-/.test(model)
+    ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+    : {}
+}
+
 let client: { key: string; value: Anthropic } | undefined
 
 function anthropic(apiKey: string) {
@@ -164,8 +172,7 @@ export async function answer(input: {
         model: settings.model,
         max_tokens: 4000,
         output_config: { effort: "low" },
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
+        ...refusalFallback(settings.model),
         system,
         tools: canReport ? [reportTool] : [],
         messages,

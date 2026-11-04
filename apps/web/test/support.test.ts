@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import type Anthropic from "@anthropic-ai/sdk"
-import { answer, conversationSchema, transcript } from "@/lib/support/assistant"
+import { answer, conversationSchema, refusalFallback, transcript } from "@/lib/support/assistant"
 import { docsText, loadDocs, pageUrl, parsePage } from "@/lib/support/docs"
 import { submitReport } from "@/lib/support/intake"
 import { resetLinearCache } from "@/lib/support/linear"
@@ -315,9 +315,9 @@ describe("support assistant", () => {
       system: { text: string; cache_control?: unknown }[]
       fallbacks: string
     }
-    expect(body.model).toBe("claude-opus-5-5")
+    expect(body.model).toBe("claude-haiku-5-5")
     expect(body.tools).toEqual([])
-    expect(body.fallbacks).toBe("default")
+    expect(body.fallbacks).toBeUndefined()
     expect(body.system[0]?.cache_control).toEqual({ type: "ephemeral" })
     expect(body.system[0]?.text).toContain("<documentation>")
     // The per-request context sits after the cache breakpoint, so the cached prefix never changes.
@@ -370,6 +370,14 @@ describe("support assistant", () => {
     const { api } = fakeClaude([{ stop_reason: "refusal", content: [] }])
     const result = await answer({ conversation: question, context, api, limiter: allow })
     expect(result).toEqual({ ok: true, reply: "", issue: undefined })
+  })
+
+  test("asks for a refusal fallback only where the model has one", () => {
+    expect(refusalFallback("claude-haiku-5-5")).toEqual({})
+    expect(refusalFallback("claude-opus-5-5")).toEqual({
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+    })
   })
 
   test("transcripts keep each message on one line", () => {

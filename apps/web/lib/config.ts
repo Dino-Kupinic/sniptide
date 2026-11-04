@@ -182,7 +182,7 @@ const schema = z.object({
   LINEAR_TEAM_ID: z.string().optional(),
   LINEAR_PROJECT_ID: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
-  SUPPORT_MODEL: z.string().default("claude-opus-5-5"),
+  SUPPORT_MODEL: z.string().default("claude-haiku-5-5"),
 })
 
 function oauth(clientId?: string, clientSecret?: string) {
