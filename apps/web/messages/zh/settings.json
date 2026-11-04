@@ -198,6 +198,22 @@
     "usageUnavailable": "无法获取使用情况。",
     "usageReload": "重新加载",
     "usageCreateToken": "创建 API 令牌",
-    "usageChartLabel": "每日 API 请求：{values}"
+    "usageChartLabel": "每日 API 请求：{values}",
+    "usageApiTokens": "API 令牌",
+    "usageConnectedAgents": "已连接的代理",
+    "usageRateLimits": "速率限制",
+    "usageRateLimitsDescription": "每项额度在周期内首次使用后的一小时或一天恢复。",
+    "usagePerHour": "每小时",
+    "usagePerDay": "每天",
+    "usageRefills": "{window}，{when}恢复",
+    "usagePasteCreates": "已创建的粘贴",
+    "usagePasteEdits": "粘贴编辑",
+    "usageGistImports": "Gist 导入",
+    "usageWebhookShares": "分享到 Slack 和 Discord",
+    "usageSecretLinks": "密钥链接",
+    "usageTokenCreates": "已创建的 API 令牌",
+    "usageApiRequestsPerToken": "每个令牌的 API 请求",
+    "usageAssistantQuestions": "向助手提问",
+    "usageReports": "报告"
   }
 }

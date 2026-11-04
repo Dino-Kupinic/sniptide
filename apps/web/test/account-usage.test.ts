@@ -4,11 +4,13 @@ import {
   apiToken,
   apiTokenUsageDay,
   collection,
+  envGroup,
+  oauthClient,
   paste,
   pasteFile,
   user,
 } from "@workspace/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { POST as createRoute } from "@/app/api/v1/pastes/route"
 import { GET as usageRoute } from "@/app/api/v1/usage/route"
 import {
@@ -20,7 +22,9 @@ import {
 import { createToken, revokeToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { restoreRevision, savePaste, trashPaste } from "@/lib/pastes/actions"
+import { limits } from "@/lib/pastes/limits"
 import { getPaste } from "@/lib/pastes/store"
+import { hit } from "@/lib/rate-limit"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
@@ -241,5 +245,72 @@ describeDb("account usage", () => {
     expect((await getAccountUsage("ada")).apiRequests[0]?.requests).toBe(2)
     await getDb().delete(user).where(eq(user.id, "ada"))
     expect(await getDb().select().from(apiTokenUsageDay)).toEqual([])
+  })
+
+  test("counts tokens, agents and env groups, and reads allowances without spending them", async () => {
+    const before = await getAccountUsage("ada")
+    expect(before).toMatchObject({ apiTokenCount: 0, connectedAgentCount: 0, envGroupCount: 0 })
+    expect(before.allowances.every((allowance) => allowance.used === 0)).toBe(true)
+    expect(before.allowances.map((allowance) => allowance.id)).toEqual([
+      "pasteCreates",
+      "pasteEdits",
+      "gistImports",
+      "secretLinks",
+      "tokenCreates",
+      "apiRequests",
+    ])
+
+    const kept = await createToken("ada", { name: "Kept", write: false, expiry: "never" })
+    const expired = await createToken("ada", { name: "Expired", write: false, expiry: "never" })
+    if (!kept.ok || !expired.ok) throw new Error("Token wasn't created.")
+    await getDb()
+      .update(apiToken)
+      .set({ expiresAt: new Date(0) })
+      .where(eq(apiToken.id, expired.summary.id))
+    // The reset keeps registered clients, so earlier runs may have left these behind.
+    await getDb()
+      .delete(oauthClient)
+      .where(inArray(oauthClient.id, ["sntc_a", "sntc_b", "sntc_c"]))
+    await getDb()
+      .insert(oauthClient)
+      .values([
+        { id: "sntc_a", name: "Claude Code", redirectUris: [] },
+        { id: "sntc_b", name: "Claude Code", redirectUris: [] },
+        { id: "sntc_c", name: "Cursor", redirectUris: [] },
+      ])
+    await getDb()
+      .insert(apiToken)
+      .values([
+        { ownerId: "ada", name: "a", prefix: "a", hash: "a", scopes: ["read"], clientId: "sntc_a" },
+        { ownerId: "ada", name: "b", prefix: "b", hash: "b", scopes: ["read"], clientId: "sntc_b" },
+        {
+          ownerId: "ada",
+          name: "c",
+          prefix: "c",
+          hash: "c",
+          scopes: ["read"],
+          clientId: "sntc_c",
+          refreshExpiresAt: new Date(0),
+        },
+      ])
+    await getDb().insert(envGroup).values({ ownerId: "ada", slug: "app" })
+    await hit([limits.create("ada"), limits.create("ada")])
+    await hit([limits.create("ada")])
+    await hit([limits.create("grace")])
+
+    const usage = await getAccountUsage("ada")
+    expect(usage).toMatchObject({ apiTokenCount: 1, connectedAgentCount: 1, envGroupCount: 1 })
+    const creates = usage.allowances.find((allowance) => allowance.id === "pasteCreates")
+    expect(creates).toMatchObject({ used: 3, limit: 30, windowSeconds: 3600 })
+    expect(creates?.resetSeconds).toBeGreaterThan(3500)
+    expect(
+      (await getAccountUsage("ada")).allowances.find((a) => a.id === "pasteCreates")?.used,
+    ).toBe(3)
+
+    const response = await usageRoute(request(kept.token))
+    const requests = (await response.json()).allowances.find(
+      (allowance: { id: string }) => allowance.id === "apiRequests",
+    )
+    expect(requests).toMatchObject({ used: 1, limit: 3600 })
   })
 })

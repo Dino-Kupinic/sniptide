@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto"
 import { createDb } from "@workspace/db"
-import { accountUsage, apiTokenUsageDay, user } from "@workspace/db/schema"
+import { accountUsage, apiTokenUsageDay, rateLimit, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { expect } from "e2e"
 import { DAY } from "@/lib/time"
 import { databaseUrl } from "./environment"
 import { test } from "./fixtures"
 
-test("usage shows account totals, daily API history and settings navigation", async ({
+test("usage shows account totals, rate limits, daily API history and settings navigation", async ({
   account,
   app,
   browser,
@@ -35,8 +35,15 @@ test("usage shows account totals, daily API history and settings navigation", as
         { ownerId: owner.id, tokenId: randomUUID(), day, requests: 5 },
         { ownerId: owner.id, tokenId: randomUUID(), day, requests: 7 },
       ])
+    await db.insert(rateLimit).values({ key: `paste:create:${owner.id}`, count: 5 })
     await app.open("/settings?tab=usage")
     await expect(screen.getByRole("tab", "Usage")).toHaveAttribute("aria-selected", "true")
+    await expect(screen.getByRole("heading", "Rate limits")).toBeVisible()
+    await expect(screen.getByText("5 of 30", { exact: true, visible: true })).toBeVisible()
+    await expect(screen.getByRole("progressbar", "Pastes created")).toBeVisible()
+    await expect(
+      screen.getByText(/^Per hour, refills in (59|60) minutes$/, { visible: true }),
+    ).toBeVisible()
     await expect(
       screen.getByText("80.0 MB of 100.0 MB", { exact: true, visible: true }),
     ).toBeVisible()

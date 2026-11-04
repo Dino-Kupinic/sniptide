@@ -198,6 +198,22 @@
     "usageUnavailable": "El uso no está disponible.",
     "usageReload": "Recargar",
     "usageCreateToken": "Crear un token de API",
-    "usageChartLabel": "Solicitudes API por día: {values}"
+    "usageChartLabel": "Solicitudes API por día: {values}",
+    "usageApiTokens": "Tokens de API",
+    "usageConnectedAgents": "Agentes conectados",
+    "usageRateLimits": "Límites de frecuencia",
+    "usageRateLimitsDescription": "Cada cupo se renueva una hora o un día después de su primer uso en el periodo.",
+    "usagePerHour": "Por hora",
+    "usagePerDay": "Por día",
+    "usageRefills": "{window}, se renueva {when}",
+    "usagePasteCreates": "Pastes creados",
+    "usagePasteEdits": "Ediciones de pastes",
+    "usageGistImports": "Importaciones de gists",
+    "usageWebhookShares": "Envíos a Slack y Discord",
+    "usageSecretLinks": "Enlaces de secretos",
+    "usageTokenCreates": "Tokens de API creados",
+    "usageApiRequestsPerToken": "Solicitudes de API por token",
+    "usageAssistantQuestions": "Preguntas al asistente",
+    "usageReports": "Informes"
   }
 }

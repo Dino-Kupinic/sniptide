@@ -3,7 +3,7 @@ import "server-only"
 import { AsyncLocalStorage } from "node:async_hooks"
 
 import { rateLimit } from "@workspace/db/schema"
-import { eq, sql } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import type { Seconds } from "@/lib/time"
 
@@ -95,4 +95,32 @@ export async function refund(limits: Limit[]) {
       .set({ count: sql`GREATEST(${rateLimit.count} - 1, 0)` })
       .where(eq(rateLimit.key, key))
   }
+}
+
+export interface WindowUse {
+  count: number
+  resetSeconds: number
+}
+
+// Reads the counters of the windows still open, without counting a hit, so a page can show how
+// much of each allowance is used. A key whose window has passed or that never had a hit is left
+// out, since its next hit starts a fresh window.
+export async function peek(limits: Pick<Limit, "key" | "windowSeconds">[]) {
+  const uses = new Map<string, WindowUse>()
+  if (!limits.length) return uses
+  const windows = new Map(limits.map((limit) => [limit.key, Number(limit.windowSeconds)]))
+  const rows = await getDb()
+    .select({
+      key: rateLimit.key,
+      count: rateLimit.count,
+      age: sql<number>`extract(epoch from (now() - ${rateLimit.windowStart}))::float8`,
+    })
+    .from(rateLimit)
+    .where(inArray(rateLimit.key, [...windows.keys()]))
+  for (const row of rows) {
+    const window = windows.get(row.key)
+    if (window === undefined || row.age >= window) continue
+    uses.set(row.key, { count: row.count, resetSeconds: Math.max(1, Math.ceil(window - row.age)) })
+  }
+  return uses
 }

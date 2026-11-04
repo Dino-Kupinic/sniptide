@@ -198,6 +198,22 @@
     "usageUnavailable": "Nutzung ist nicht verfügbar.",
     "usageReload": "Neu laden",
     "usageCreateToken": "API-Token erstellen",
-    "usageChartLabel": "API-Anfragen pro Tag: {values}"
+    "usageChartLabel": "API-Anfragen pro Tag: {values}",
+    "usageApiTokens": "API-Tokens",
+    "usageConnectedAgents": "Verbundene Agents",
+    "usageRateLimits": "Ratenlimits",
+    "usageRateLimitsDescription": "Jedes Kontingent füllt sich eine Stunde oder einen Tag nach der ersten Nutzung im Zeitraum wieder auf.",
+    "usagePerHour": "Pro Stunde",
+    "usagePerDay": "Pro Tag",
+    "usageRefills": "{window}, wieder voll {when}",
+    "usagePasteCreates": "Erstellte Pastes",
+    "usagePasteEdits": "Paste-Bearbeitungen",
+    "usageGistImports": "Gist-Importe",
+    "usageWebhookShares": "Freigaben an Slack und Discord",
+    "usageSecretLinks": "Secret-Links",
+    "usageTokenCreates": "Erstellte API-Tokens",
+    "usageApiRequestsPerToken": "API-Anfragen pro Token",
+    "usageAssistantQuestions": "Fragen an den Assistenten",
+    "usageReports": "Meldungen"
   }
 }

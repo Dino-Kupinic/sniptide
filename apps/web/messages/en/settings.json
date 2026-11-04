@@ -198,6 +198,22 @@
     "usageUnavailable": "Usage is unavailable.",
     "usageReload": "Reload",
     "usageCreateToken": "Create an API token",
-    "usageChartLabel": "API requests per day: {values}"
+    "usageChartLabel": "API requests per day: {values}",
+    "usageApiTokens": "API tokens",
+    "usageConnectedAgents": "Connected agents",
+    "usageRateLimits": "Rate limits",
+    "usageRateLimitsDescription": "Each allowance refills an hour or a day after its first use in the window.",
+    "usagePerHour": "Per hour",
+    "usagePerDay": "Per day",
+    "usageRefills": "{window}, refills {when}",
+    "usagePasteCreates": "Pastes created",
+    "usagePasteEdits": "Paste edits",
+    "usageGistImports": "Gist imports",
+    "usageWebhookShares": "Slack and Discord shares",
+    "usageSecretLinks": "Secret links",
+    "usageTokenCreates": "API tokens created",
+    "usageApiRequestsPerToken": "API requests per token",
+    "usageAssistantQuestions": "Assistant questions",
+    "usageReports": "Reports"
   }
 }

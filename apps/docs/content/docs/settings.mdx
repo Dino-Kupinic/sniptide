@@ -13,7 +13,7 @@ a list of the sections below.
 | **Paste defaults** | Visibility, expiry and burn after read for new pastes |
 | **Notifications** | In-app and email notifications per event |
 | **API tokens** | Tokens for the CLI, SDKs and agents, and agent connections |
-| **Usage** | Storage, paste count and API requests |
+| **Usage** | Storage, account counts, rate limits and API requests |
 
 ## Edit your profile and editor
 
@@ -83,6 +83,27 @@ connected with OAuth. See [API tokens](/api-tokens) and [OAuth for agents](/oaut
 ## Check your usage
 
 **Usage** shows your storage and paste count against the account limits, with a warning when you
-approach them. Both include pastes in the trash. It also charts the requests your API tokens made
-each day over the last 30 days, in UTC. The token API returns the same data at
-[`GET /api/v1/usage`](/api-tokens#endpoints).
+approach them. Both include pastes in the trash. The same panel counts your files, collections,
+API tokens, connected agents and env groups, which have no limit.
+
+**Rate limits** shows how much of each per-account allowance you used in its current window, and
+when it refills. Each window starts at the first use and lasts an hour, or a day for assistant
+questions.
+
+| Allowance | Limit |
+| --- | --- |
+| Pastes created, from the app and the API | 30 per hour |
+| Paste edits | 240 per hour |
+| Gist imports | 20 per hour |
+| Slack and Discord shares, when the server sets a webhook | 20 per hour |
+| Secret links | 20 per hour |
+| API tokens created | 20 per hour |
+| API requests, for each token | 3,600 per hour |
+| Assistant questions, when the server runs the support assistant | 10 per day |
+| Reports, when the server files them in Linear | 10 per hour |
+
+The API request row shows your busiest token, since each token has its own allowance. Auto-save
+has a separate, much larger allowance and isn't listed.
+
+**API requests** charts the requests your API tokens made each day over the last 30 days, in UTC.
+The token API returns the same data at [`GET /api/v1/usage`](/api-tokens#endpoints).

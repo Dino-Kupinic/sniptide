@@ -1,11 +1,18 @@
 import "server-only"
 
 import type { Database } from "@workspace/db"
-import { accountUsage, apiTokenUsageDay } from "@workspace/db/schema"
-import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm"
+import {
+  accountUsage,
+  apiToken,
+  apiTokenUsageDay,
+  envGroup,
+  oauthClient,
+} from "@workspace/db/schema"
+import { and, asc, count, countDistinct, eq, gt, gte, isNull, lt, lte, or, sql } from "drizzle-orm"
 import type { TokenOwner } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
+import { getAccountAllowances } from "./allowances"
 
 export const USAGE_HISTORY_DAYS = 30
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
@@ -39,10 +46,46 @@ export async function getAccountTotals(owner: string) {
   }
 }
 
+// What the account keeps besides pastes: personal API tokens that still work, agents connected
+// through OAuth (counted by name, like the dashboard lists them) and env groups.
+async function getAccountResources(owner: string, now: Date) {
+  const db = getDb()
+  const [[tokens], [agents], [groups]] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(apiToken)
+      .where(
+        and(
+          eq(apiToken.ownerId, owner),
+          isNull(apiToken.clientId),
+          or(isNull(apiToken.expiresAt), gt(apiToken.expiresAt, now)),
+        ),
+      ),
+    db
+      .select({ value: countDistinct(oauthClient.name) })
+      .from(apiToken)
+      .innerJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
+      .where(
+        and(
+          eq(apiToken.ownerId, owner),
+          or(isNull(apiToken.refreshExpiresAt), gt(apiToken.refreshExpiresAt, now)),
+        ),
+      ),
+    db.select({ value: count() }).from(envGroup).where(eq(envGroup.ownerId, owner)),
+  ])
+  return {
+    apiTokenCount: tokens?.value ?? 0,
+    connectedAgentCount: agents?.value ?? 0,
+    envGroupCount: groups?.value ?? 0,
+  }
+}
+
 export async function getAccountUsage(owner: string, now = new Date()) {
   const today = Math.floor(now.getTime() / DAY)
-  const [totals, apiRequests] = await Promise.all([
+  const [totals, resources, allowances, apiRequests] = await Promise.all([
     getAccountTotals(owner),
+    getAccountResources(owner, now),
+    getAccountAllowances(owner),
     getDb()
       .select({
         tokenId: apiTokenUsageDay.tokenId,
@@ -59,7 +102,7 @@ export async function getAccountUsage(owner: string, now = new Date()) {
       )
       .orderBy(asc(apiTokenUsageDay.day), asc(apiTokenUsageDay.tokenId)),
   ])
-  return { ...totals, apiRequests }
+  return { ...totals, ...resources, allowances, apiRequests }
 }
 
 async function recount(tx: Transaction, owners: string[]) {
