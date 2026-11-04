@@ -48,6 +48,8 @@ Add the MCP server to Claude Code, which signs you in to Sniptide in the browser
 claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
+Then start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate** to open the browser.
+
 For a client without OAuth, create a token in **Settings** > **API tokens** and pass it with `--header "Authorization: Bearer $SNIPTIDE_TOKEN"`.
 
 Use `<your-instance-url>/api/mcp` on a self-hosted instance.

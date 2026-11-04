@@ -40,6 +40,7 @@
         "cursor": "Cursor",
         "other": "その他"
       },
+      "claudeCodeHint": "ターミナルで実行したら、Claude Codeを起動して/mcpと入力し、sniptideを選んでAuthenticateを選択してください。Claude CodeがブラウザでSniptideを開くので、そこでアクセスを許可します。",
       "terminalHint": "ターミナルで実行してください。{client}がブラウザでSniptideを開くので、そこでアクセスを許可します。",
       "cursorHint": "Sniptideが入力済みの状態でCursorが開きます。続いて開くブラウザのタブでアクセスを許可してください。",
       "otherHint": "このアドレスをクライアントのリモートMCPサーバーとして追加してください。ブラウザ経由でサインインします。",

@@ -20,6 +20,9 @@ instance's address.
 claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
+In Claude Code, adding the server doesn't open the browser. Start Claude Code, type `/mcp`, choose
+`sniptide` and pick **Authenticate**.
+
 Codex uses `codex mcp add sniptide --url https://app.sniptide.com/api/mcp`. In Cursor, add a
 remote server with the same URL and no headers. The client receives a `401`, finds the sign-in
 through the app's OAuth metadata and opens Sniptide in your browser, where you allow access.

@@ -131,7 +131,14 @@ export function AgentStep({
         ) : (
           <>
             <p className="text-sm leading-5 text-muted-foreground">
-              {t(client === "other" ? "otherHint" : "terminalHint", { client: label(client) })}
+              {t(
+                client === "other"
+                  ? "otherHint"
+                  : client === "claude_code"
+                    ? "claudeCodeHint"
+                    : "terminalHint",
+                { client: label(client) },
+              )}
             </p>
             <SetupCode
               code={

@@ -40,6 +40,7 @@
         "cursor": "Cursor",
         "other": "Otro"
       },
+      "claudeCodeHint": "Ejecuta esto en tu terminal, luego abre Claude Code, escribe /mcp, elige sniptide y selecciona Authenticate. Claude Code abre Sniptide en tu navegador, donde permites el acceso.",
       "terminalHint": "Ejecuta esto en tu terminal. {client} abre Sniptide en tu navegador, donde permites el acceso.",
       "cursorHint": "Cursor se abre con Sniptide ya configurado. Permite el acceso en la pestaña del navegador que aparece después.",
       "otherHint": "Añade esta dirección como servidor MCP remoto en tu cliente. Inicia sesión a través de tu navegador.",

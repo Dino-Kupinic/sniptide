@@ -40,6 +40,7 @@
         "cursor": "Cursor",
         "other": "其他"
       },
+      "claudeCodeHint": "在终端中运行此命令，然后启动 Claude Code，输入 /mcp，选择 sniptide 并点击 Authenticate。Claude Code 会在浏览器中打开 Sniptide，你在那里允许访问。",
       "terminalHint": "在终端中运行此命令。{client} 会在浏览器中打开 Sniptide，你在那里允许访问。",
       "cursorHint": "Cursor 会打开并预填好 Sniptide。在随后打开的浏览器标签页中允许访问。",
       "otherHint": "在客户端中将此地址添加为远程 MCP 服务器。它会通过浏览器登录。",

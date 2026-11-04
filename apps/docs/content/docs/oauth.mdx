@@ -22,6 +22,9 @@ instance, replace `https://app.sniptide.com` with your instance's address.
 claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
+This command only adds the server, so no browser opens yet. Start Claude Code, type `/mcp`, choose
+`sniptide` and pick **Authenticate** to open the consent screen.
+
 </Tab>
 <Tab value="Codex">
 
@@ -83,7 +86,9 @@ WWW-Authenticate: Bearer resource_metadata="https://app.sniptide.com/.well-known
 ```
 
 The client reads that metadata, registers itself, sends you to the consent screen, and exchanges
-the returned code for a token.
+the returned code for a token. The redirect back to the client carries the authorization code, the
+`state` and an `iss` parameter with the instance's address (RFC 9207), so a client that talks to
+several servers can check which one answered.
 
 ## Endpoints
 
@@ -110,6 +115,8 @@ Errors follow RFC 6749: a JSON body with `error` and `error_description`.
 
 | Symptom | Cause | Action |
 | --- | --- | --- |
+| Claude Code adds the server but no browser opens | `claude mcp add` only saves the server. Sign-in starts from the `/mcp` menu. | Start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**. |
+| Codex reports "Authorization server response missing required issuer" | Sniptide sends `iss` on every redirect. An older Codex version, or one that kept an earlier registration of the server, can still fail this check, while Codex 0.166 signs in. | Update Codex, run `codex mcp remove sniptide`, then add the server again. |
 | `invalid_grant` on the token request | An authorization code works once and for ten minutes, so the client probably retried an exchange. | Start the connection again from the client. |
 | `429` from registration | Registration allows 20 requests an hour per client address. | Wait for `Retry-After`. |
 | `429` from the token endpoint | The token endpoint allows 60 requests a minute per client address. | Wait for `Retry-After`. |
