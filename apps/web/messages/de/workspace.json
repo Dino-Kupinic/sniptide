@@ -365,7 +365,8 @@
     "delete_selected_description": "{count, plural, one {Das ausgewählte Paste wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.} other {Die # ausgewählten Pastes werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.}}",
     "delete_collections_title": "{count, plural, one {# Sammlung löschen?} other {# Sammlungen löschen?}}",
     "delete_collections_description": "Die Pastes darin bleiben erhalten und verlassen nur die Sammlungen.",
-    "expired_sharing_help": "Dieser Paste ist abgelaufen. Lege ein neues Ablaufdatum fest oder wähle „Nie“, um ihn wieder zu teilen."
+    "expired_sharing_help": "Dieser Paste ist abgelaufen. Lege ein neues Ablaufdatum fest oder wähle „Nie“, um ihn wieder zu teilen.",
+    "your_profile": "Dein Profil"
   },
   "Secrets": {
     "title": "Geheimnisse",

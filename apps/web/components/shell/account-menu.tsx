@@ -25,6 +25,7 @@ import {
   MoonIcon,
   SettingsIcon,
   SunIcon,
+  UserIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -34,9 +35,11 @@ import * as React from "react"
 import { useResourceLinks } from "@/components/shell/resource-links"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
+import { useSiteOrigin } from "@/components/site-host"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeNames, locales } from "@/lib/i18n/config"
+import { profilePath } from "@/lib/profile-path"
 
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
 // as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
@@ -45,12 +48,16 @@ import { localeNames, locales } from "@/lib/i18n/config"
 export function AccountMenuItems({
   name,
   email,
+  username = null,
   inlineLanguage = false,
 }: {
   name: string
   email: string
+  // Links the public profile; accounts without a username have none.
+  username?: string | null
   inlineLanguage?: boolean
 }) {
+  const origin = useSiteOrigin()
   const t = useTranslations("Workspace")
   const router = useRouter()
   const locale = useLocale()
@@ -101,6 +108,13 @@ export function AccountMenuItems({
         </span>
       </div>
       <DropdownMenuSeparator />
+      {username ? (
+        // A plain <a>: the profile can live on the share domain, outside the app's router.
+        <DropdownMenuItem render={<a href={`${origin}${profilePath(username)}`} />}>
+          <UserIcon />
+          {t("your_profile")}
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuItem render={<Link href="/settings" />}>
         <SettingsIcon />
         {t("settings")}

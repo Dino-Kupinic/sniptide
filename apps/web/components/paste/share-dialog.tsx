@@ -14,6 +14,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { useSiteOrigin } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import {
@@ -253,13 +254,14 @@ export function ShareDialog({
 }
 
 function PersonName({ name, handle }: { name: string; handle: string }) {
+  const origin = useSiteOrigin()
   return (
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="truncate text-sm font-medium">{name}</span>
       {/* A handle links to its profile; people without one show their email instead. */}
       {handle.startsWith("@") ? (
         <a
-          href={profilePath(handle)}
+          href={`${origin}${profilePath(handle)}`}
           className="truncate text-xs text-muted-foreground outline-none hover:underline focus-visible:underline"
         >
           {handle}

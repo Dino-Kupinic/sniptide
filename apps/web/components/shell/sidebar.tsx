@@ -393,7 +393,7 @@ export function Sidebar({
             <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" className="w-(--anchor-width) min-w-60">
-            <AccountMenuItems name={viewer.name} email={viewer.email} />
+            <AccountMenuItems name={viewer.name} email={viewer.email} username={viewer.username} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

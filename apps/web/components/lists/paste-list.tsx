@@ -446,7 +446,7 @@ export function PasteList({
                       {row.owner?.handle ? (
                         // Above the row's stretched link, so it opens the owner's profile.
                         <a
-                          href={profilePath(row.owner.handle)}
+                          href={`${origin}${profilePath(row.owner.handle)}`}
                           className="relative z-10 min-w-0 truncate font-mono hover:underline"
                         >
                           @{row.owner.username}
