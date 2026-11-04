@@ -10,6 +10,7 @@ import {
   dedupeSource,
   githubDraftUrl,
   isHostedInstance,
+  MAX_QUESTION_LENGTH,
   type ReportContext,
   redactUrl,
   reportMarkdown,
@@ -290,8 +291,16 @@ describe("support assistant", () => {
       ]).success,
     ).toBe(false)
     expect(
-      conversationSchema.safeParse([{ role: "user", content: "x".repeat(5000) }]).success,
+      conversationSchema.safeParse([{ role: "user", content: "x".repeat(MAX_QUESTION_LENGTH + 1) }])
+        .success,
     ).toBe(false)
+    expect(
+      conversationSchema.safeParse([
+        { role: "user", content: "a" },
+        { role: "assistant", content: "x".repeat(5000) },
+        { role: "user", content: "b" },
+      ]).success,
+    ).toBe(true)
   })
 
   test("is off without a key", async () => {
@@ -377,6 +386,20 @@ describe("support assistant", () => {
     } finally {
       linear.restore()
     }
+  })
+
+  test("gives each account 10 questions a day", async () => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test"
+    const seen: unknown[] = []
+    const limiter = (async (limits: unknown[]) => {
+      seen.push(...limits)
+      return { allowed: false, retryAfterSeconds: 30, quotas: [] }
+    }) as never
+    const result = await answer({ conversation: question, context, limiter })
+    expect(result).toEqual({ ok: false, reason: "rate_limited", retryAfterSeconds: 30 })
+    expect(seen).toEqual([
+      { policy: "day", key: "support-chat:day:user_1", max: 10, windowSeconds: 86400 },
+    ])
   })
 
   test("returns an empty reply on a refusal", async () => {

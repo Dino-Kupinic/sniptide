@@ -206,7 +206,9 @@ receive reports in your own tracker, and an Anthropic key to add the support ass
 | `SUPPORT_PROVIDER` | the provider whose key is set | `anthropic` or `openai`. Needed only when both keys are set, because Anthropic is used otherwise. |
 | `SUPPORT_MODEL` | `claude-haiku-5-5` with Anthropic, none with OpenAI | The model the assistant uses, such as a Claude model ID or an OpenAI model ID. The docs come first in every request, so both providers can reuse their prompt cache for repeat questions instead of paying full price for the docs again. |
 
-Each account can send 10 reports and ask 30 questions an hour. A report that repeats an open issue,
+Each account can send 10 reports an hour and ask 10 questions a day,
+with each question limited to 300 characters. The daily count resets 24 hours after the account's
+first question of the period. A report that repeats an open issue,
 the same kind of report from the same page with the same opening words, becomes a comment on that
 issue. Failures are logged as `support:` lines in the server log.
 

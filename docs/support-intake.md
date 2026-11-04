@@ -52,7 +52,7 @@ Keep the pass on the calendar with a recurring Linear issue in Work, such as "We
 
 ## Rate limits and costs
 
-Each account can send 10 reports and ask the assistant 30 questions an hour, counted in Postgres
+Each account can send 10 reports an hour and ask the assistant 10 questions a day, counted in Postgres
 (`lib/rate-limit.ts`). The assistant sends the whole docs corpus, about 170 KB of text, as a cached
 prompt prefix, so most questions read it from the provider's prompt cache. Check the Anthropic or
 OpenAI usage dashboard after launch to confirm the cache hit rate and the cost per question before

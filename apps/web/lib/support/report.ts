@@ -16,6 +16,8 @@ export interface SupportSettings {
   userId: string
 }
 
+// A question to the assistant is one line, so 300 characters is generous.
+export const MAX_QUESTION_LENGTH = 300
 export const MAX_DESCRIPTION_LENGTH = 4000
 export const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024
 export const SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const

@@ -5,28 +5,38 @@ import OpenAI from "openai"
 import { z } from "zod"
 import { getConfig } from "@/lib/config"
 import { hit } from "@/lib/rate-limit"
-import { HOUR_SECONDS } from "@/lib/time"
+import { seconds } from "@/lib/time"
 import { docsText, loadDocs } from "./docs"
 import { submitReport } from "./intake"
-import { contextLines, type ReportContext } from "./report"
+import { contextLines, MAX_QUESTION_LENGTH, type ReportContext } from "./report"
 
 // The support assistant: Claude or an OpenAI model answers from the Sniptide docs and, when the docs can't solve the
 // problem or it looks like a bug, files it in Linear with the conversation attached. Off unless
 // ANTHROPIC_API_KEY or OPENAI_API_KEY is set.
 
 export const MAX_TURNS = 20
-export const MAX_MESSAGE_LENGTH = 4000
-export const MESSAGES_PER_HOUR = 30
+// Replies are the assistant's own text, so they get far more room than a one-line question.
+export const MAX_REPLY_LENGTH = 20_000
+// There is no billing, so every account gets a fixed number of questions per day. The window
+// starts at the account's first question of the period and the counter resets 24 hours later.
+export const QUESTIONS_PER_DAY = 10
 
 export const conversationSchema = z
   .array(
     z.object({
       role: z.enum(["user", "assistant"]),
-      content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+      content: z.string().trim().min(1).max(MAX_REPLY_LENGTH),
     }),
   )
   .min(1)
   .max(MAX_TURNS)
+  .refine(
+    (messages) =>
+      messages.every(
+        (message) => message.role === "assistant" || message.content.length <= MAX_QUESTION_LENGTH,
+      ),
+    { message: "A question is too long." },
+  )
   .refine(
     (messages) =>
       messages.every(
@@ -248,9 +258,10 @@ export async function answer(input: {
   const limiter = input.limiter ?? hit
   const quota = await limiter([
     {
-      key: `support-chat:${input.context.userId}`,
-      max: MESSAGES_PER_HOUR,
-      windowSeconds: HOUR_SECONDS,
+      policy: "day",
+      key: `support-chat:day:${input.context.userId}`,
+      max: QUESTIONS_PER_DAY,
+      windowSeconds: seconds(24 * 60 * 60),
     },
   ])
   if (!quota.allowed)

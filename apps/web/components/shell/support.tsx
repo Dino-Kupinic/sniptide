@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@sniptide/ui/components/dialog"
 import { FormError } from "@sniptide/ui/components/form-error"
+import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@sniptide/ui/components/tabs"
@@ -21,6 +22,7 @@ import {
   contextLines,
   githubDraftUrl,
   MAX_DESCRIPTION_LENGTH,
+  MAX_QUESTION_LENGTH,
   MAX_SCREENSHOT_BYTES,
   type ReportContext,
   type ReportKind,
@@ -233,28 +235,23 @@ function AskPanel({ context, onReport }: { context: ReportContext; onReport: () 
         <Label htmlFor={`${id}-question`} className="sr-only">
           {t("ask_label")}
         </Label>
-        <div className="relative">
-          <Textarea
+        <div className="flex items-center gap-2">
+          <Input
             id={`${id}-question`}
             value={draft}
-            maxLength={MAX_DESCRIPTION_LENGTH}
+            maxLength={MAX_QUESTION_LENGTH}
             placeholder={t("ask_placeholder")}
+            autoComplete="off"
+            enterKeyHint="send"
             onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-                event.preventDefault()
-                void send()
-              }
-            }}
-            className="min-h-20 resize-none pr-12"
           />
           <Button
             type="submit"
-            size="icon"
+            size="icon-lg"
             aria-label={t("send")}
             disabled={!draft.trim() || pending}
             loading={pending}
-            className="absolute right-2 bottom-2"
+            className="shrink-0"
           >
             <ArrowUpIcon />
           </Button>
@@ -356,7 +353,7 @@ function ReportPanel({
       if (!response.ok || !body?.ok) {
         setError(
           body?.error === "rate_limited"
-            ? t("rate_limited")
+            ? t("report_rate_limited")
             : body?.error === "too_large"
               ? t("screenshot_too_large")
               : t("report_failed"),

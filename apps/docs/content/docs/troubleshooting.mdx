@@ -64,7 +64,7 @@ the full details.
 | --- | --- | --- |
 | **Couldn't send the report** | Look for `support: filing the report in Linear failed` in the server log. | Check that `LINEAR_API_KEY` can create issues and that `LINEAR_TEAM_ID` names an existing team. See [Configuration](/self-hosting/configuration#support-and-feedback). |
 | **The assistant couldn't answer** | Look for `support: the assistant request failed` in the server log. | Check `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` and `SUPPORT_MODEL`, and that the server can reach `api.anthropic.com` or `api.openai.com`. |
-| **You've sent a lot in the last hour** | Each account can send 10 reports and ask 30 questions an hour. | Wait for the hour to pass, or open an issue on GitHub directly. |
+| **You've sent a lot recently** | Each account can send 10 reports an hour and ask 10 questions a day. | Wait for the limit to reset, or open an issue on GitHub directly. |
 | The **Ask** tab is missing | The instance has neither `ANTHROPIC_API_KEY` nor `OPENAI_API_KEY`. | Use **Report a problem**, or ask the administrator to set the key. |
 
 ## Get help
