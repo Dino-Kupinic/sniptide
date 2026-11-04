@@ -248,7 +248,7 @@ Mono 12px on an inverted fill with 8px by 4px padding.
 ### App shell
 **Role:** Navigation frame for every signed-in screen.
 
-A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and Collections as collapsible sections, with Shared with me and Trash in a "More" menu below the Dashboard link. Dragging below 200px collapses it, like the header button does. Its width and folded sections persist in the `sidebar` cookie, so the server renders it without a jump. Below 1024px the sidebar becomes a sheet and a bottom tab bar appears, with the new-paste action as a 48px by 40px blue block.
+A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and Collections as collapsible sections, with Shared with me and Trash in a "More" menu below the Dashboard link. Help and feedback sits just above the account menu and opens the support dialog. Dragging below 200px collapses it, like the header button does. Its width and folded sections persist in the `sidebar` cookie, so the server renders it without a jump. Below 1024px the sidebar becomes a sheet and a bottom tab bar appears, with the new-paste action as a 48px by 40px blue block.
 
 ### Paste side panel
 **Role:** Settings and history next to a paste.
@@ -265,7 +265,7 @@ Six horizontal stripes that taper from a hairline at the top to a full bar at th
 Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.
 
 - The mobile top bar holds the wordmark, search, notifications and the account avatar.
-- The tab bar holds Home, Pastes, the new-paste block, Starred and More. More opens a bottom sheet with Analytics, Collections, Secrets, Shared with me, Trash, Import gist, Settings and the account.
+- The tab bar holds Home, Pastes, the new-paste block, Starred and More. More opens a bottom sheet with Analytics, Collections, Secrets, Shared with me, Trash, Import gist, Help and feedback, Settings and the account.
 - Page actions that sit in the desktop header render next to the page title on phones.
 - List rows end in a 40px menu button with the same actions as the desktop row menu. Sort and filters open in a bottom sheet next to the search field.
 - Screens with their own primary action (the editor, paste detail, secrets) replace the tab bar with a 56px bottom bar: one `xl` primary button and at most one secondary control. The editor hides this bar while the on-screen keyboard is open.

@@ -21,6 +21,7 @@
     "test:e2e:install": "e2e-web install chromium"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
     "@dnd-kit/helpers": "^0.5.0",
     "@dnd-kit/react": "^0.5.0",
     "@react-email/render": "2.1.1",

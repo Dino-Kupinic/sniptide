@@ -177,6 +177,12 @@ const schema = z.object({
 
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
+
+  LINEAR_API_KEY: z.string().optional(),
+  LINEAR_TEAM_ID: z.string().optional(),
+  LINEAR_PROJECT_ID: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  SUPPORT_MODEL: z.string().default("claude-opus-5-5"),
 })
 
 function oauth(clientId?: string, clientSecret?: string) {
@@ -286,6 +292,21 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
         ? { name: value.OPERATOR_NAME, address: value.OPERATOR_ADDRESS }
         : undefined,
       copyrightEmail: value.COPYRIGHT_EMAIL,
+    },
+    // Where in-app reports go and whether the support assistant runs. Both are off unless their
+    // keys are set, so a self-hosted instance sends nothing anywhere.
+    support: {
+      linear:
+        value.LINEAR_API_KEY && value.LINEAR_TEAM_ID
+          ? {
+              apiKey: value.LINEAR_API_KEY,
+              team: value.LINEAR_TEAM_ID,
+              project: value.LINEAR_PROJECT_ID,
+            }
+          : undefined,
+      assistant: value.ANTHROPIC_API_KEY
+        ? { apiKey: value.ANTHROPIC_API_KEY, model: value.SUPPORT_MODEL }
+        : undefined,
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }
