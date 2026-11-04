@@ -15,7 +15,6 @@ import {
   DownloadIcon,
   FolderIcon,
   KeyRoundIcon,
-  LifeBuoyIcon,
   type LucideIcon,
   SettingsIcon,
   Trash2Icon,
@@ -33,7 +32,6 @@ import { signOut as signOutAccount } from "@/lib/auth-client"
 import { profilePath } from "@/lib/profile-path"
 import type { ViewerSummary } from "@/lib/viewer"
 import { isActivePath } from "./nav-config"
-import { useSupport } from "./support"
 
 export interface MoreCounts {
   collections: number
@@ -60,8 +58,6 @@ export function MoreSheet({
   const pathname = usePathname()
   const router = useRouter()
   const { importGist } = useCommandMenu()
-  const support = useSupport()
-  const tSupport = useTranslations("Support")
   const format = new Intl.NumberFormat(locale)
   const close = () => onOpenChange(false)
 
@@ -117,19 +113,6 @@ export function MoreSheet({
               >
                 <DownloadIcon />
                 {t("import_gist")}
-              </button>
-            ) : null}
-            {support ? (
-              <button
-                type="button"
-                className={sheetRowClass}
-                onClick={() => {
-                  close()
-                  support.open()
-                }}
-              >
-                <LifeBuoyIcon />
-                {tSupport("open")}
               </button>
             ) : null}
             <hr className="my-1 border-border" />

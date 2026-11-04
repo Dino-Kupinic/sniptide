@@ -30,7 +30,6 @@ import {
   GripVerticalIcon,
   KeyRoundIcon,
   LayoutGridIcon,
-  LifeBuoyIcon,
   ListFilterIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -68,7 +67,6 @@ import {
   SIDEBAR_VISIBILITIES,
   type SidebarViews,
 } from "./sidebar-state"
-import { useSupport } from "./support"
 import { SidebarToggle } from "./top-bar"
 
 export interface SidebarProps {
@@ -383,8 +381,6 @@ export function Sidebar({
         onOpenChange={setCreating}
       />
 
-      <HelpRow />
-
       {/* A hairline across the full sidebar width separates the account menu from the lists. */}
       <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
         <DropdownMenu>
@@ -402,27 +398,6 @@ export function Sidebar({
         </DropdownMenu>
       </div>
     </div>
-  )
-}
-
-// Help and feedback sits just above the account menu and opens the support dialog.
-function HelpRow() {
-  const t = useTranslations("Support")
-  const support = useSupport()
-  if (!support) return null
-  return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
-      onClick={() => support.open()}
-      className={cn(
-        rowClass,
-        "mb-1 gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4",
-      )}
-    >
-      <LifeBuoyIcon />
-      {t("open")}
-    </button>
   )
 }
 
