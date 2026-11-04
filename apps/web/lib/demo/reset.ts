@@ -1,14 +1,16 @@
 import "server-only"
 
-import { randomUUID } from "node:crypto"
+import { randomBytes, randomUUID } from "node:crypto"
 import type { Database } from "@workspace/db"
 import { envInteger } from "@workspace/db/config"
 import {
   account,
   apiToken,
+  apiTokenUsageDay,
   collection,
   envGroup,
   notification,
+  oauthClient,
   paste,
   pasteStar,
   pasteViewDay,
@@ -19,11 +21,25 @@ import { eq, sql } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { insertPaste } from "@/lib/pastes/insert"
-import { DAY, HOUR } from "@/lib/time"
+import { DAY, HOUR, MINUTE } from "@/lib/time"
 import { DEMO_EMAIL, DEMO_NAME, DEMO_USER_ID, DEMO_USERNAME, demoPassword } from "./guest"
 import { DEMO_COLLECTIONS, DEMO_PASTES } from "./seed"
 
 const DEMO_LOCK = 0x5e1d_de30
+// Two connected agents, so the agent widgets have something to show. Requests per day over the
+// last two weeks, oldest first.
+const DEMO_AGENTS = [
+  {
+    id: "sntc_demo_claude_code",
+    name: "Claude Code",
+    requests: [12, 30, 22, 0, 0, 41, 56, 38, 47, 25, 0, 63, 71, 34],
+  },
+  {
+    id: "sntc_demo_codex",
+    name: "Codex",
+    requests: [0, 8, 14, 0, 0, 9, 0, 17, 21, 6, 0, 12, 18, 9],
+  },
+] as const
 // The views chart shows this many days at most.
 const HISTORY_DAYS = 30
 const globalJobs = globalThis as typeof globalThis & {
@@ -87,6 +103,7 @@ export async function resetDemo(db: Database, secret: string, now = new Date()) 
     await tx.delete(pasteStar).where(eq(pasteStar.userId, DEMO_USER_ID))
     await tx.delete(collection).where(eq(collection.ownerId, DEMO_USER_ID))
     await tx.delete(apiToken).where(eq(apiToken.ownerId, DEMO_USER_ID))
+    await tx.delete(apiTokenUsageDay).where(eq(apiTokenUsageDay.ownerId, DEMO_USER_ID))
     await tx.delete(envGroup).where(eq(envGroup.ownerId, DEMO_USER_ID))
 
     await tx.insert(collection).values(
@@ -120,6 +137,7 @@ export async function resetDemo(db: Database, secret: string, now = new Date()) 
           : null,
         files: example.files,
         createdAt,
+        ...(example.agent ? { createdVia: "mcp" as const, createdByAgent: example.agent } : {}),
       })
       await tx
         .update(paste)
@@ -135,6 +153,38 @@ export async function resetDemo(db: Database, secret: string, now = new Date()) 
             .filter((row) => row.views > 0),
         )
       if (example.starred) await tx.insert(pasteStar).values({ userId: DEMO_USER_ID, pasteId: id })
+    }
+
+    for (const [index, agent] of DEMO_AGENTS.entries()) {
+      await tx
+        .insert(oauthClient)
+        .values({ id: agent.id, name: agent.name, redirectUris: ["http://127.0.0.1/callback"] })
+        .onConflictDoNothing()
+      // A random hash nobody holds the token for, so the grant shows up but can't be used.
+      const [token] = await tx
+        .insert(apiToken)
+        .values({
+          ownerId: DEMO_USER_ID,
+          name: agent.name,
+          prefix: "snpt_demo",
+          hash: randomBytes(32).toString("hex"),
+          scopes: ["read", "write"],
+          clientId: agent.id,
+          createdAt: new Date(now.getTime() - 20 * DAY),
+          lastUsedAt: new Date(now.getTime() - (index * 90 + 12) * MINUTE),
+        })
+        .returning({ id: apiToken.id })
+      if (!token) continue
+      await tx.insert(apiTokenUsageDay).values(
+        agent.requests
+          .map((requests, offset) => ({
+            ownerId: DEMO_USER_ID,
+            tokenId: token.id,
+            day: today - (agent.requests.length - 1 - offset),
+            requests,
+          }))
+          .filter((row) => row.requests > 0),
+      )
     }
     return true
   })

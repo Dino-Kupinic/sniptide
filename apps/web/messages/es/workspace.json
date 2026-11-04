@@ -372,7 +372,19 @@
     "widget_expiring_empty": "Ninguno de tus enlaces caduca pronto.",
     "widget_popular_empty": "Las visitas aparecen aquí cuando alguien abre uno de tus enlaces.",
     "dashboard_blank": "Tu panel está vacío. Añade los widgets que quieras o empieza con una plantilla.",
-    "couldnt_save_the_dashboard": "No se pudo guardar el panel. Inténtalo de nuevo."
+    "couldnt_save_the_dashboard": "No se pudo guardar el panel. Inténtalo de nuevo.",
+    "widget_agent_activity": "Actividad de agentes",
+    "agent_requests_total": "Tus agentes hicieron {count, plural, one {# solicitud} other {# solicitudes}} en los últimos 14 días.",
+    "agent_requests_per_day": "Solicitudes de agentes por día: {values}",
+    "agent_requests_count": "{count, plural, one {# solicitud} other {# solicitudes}}",
+    "widget_agent_activity_empty": "Las solicitudes de tus agentes aparecen aquí cuando uno se conecta y empieza a trabajar.",
+    "widget_agent_pastes": "Fragmentos de agentes",
+    "widget_agent_pastes_empty": "Aquí aparecen los fragmentos que crean tus agentes, la CLI y la API.",
+    "created_by_agent": "Creado por {name}",
+    "an_agent": "un agente",
+    "created_with_cli": "Creado con la CLI",
+    "created_with_mcp": "Creado mediante el servidor MCP",
+    "created_with_api": "Creado con la API"
   },
   "Secrets": {
     "title": "Secretos",

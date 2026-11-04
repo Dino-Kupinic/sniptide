@@ -372,7 +372,19 @@
     "widget_expiring_empty": "None of your links expire soon.",
     "widget_popular_empty": "Views show up here once someone opens one of your links.",
     "dashboard_blank": "Your dashboard is empty. Add the widgets you want, or start from a template.",
-    "couldnt_save_the_dashboard": "Couldn't save the dashboard. Try again."
+    "couldnt_save_the_dashboard": "Couldn't save the dashboard. Try again.",
+    "widget_agent_activity": "Agent activity",
+    "agent_requests_total": "Your agents made {count, plural, one {# request} other {# requests}} in the last 14 days.",
+    "agent_requests_per_day": "Agent requests per day: {values}",
+    "agent_requests_count": "{count, plural, one {# request} other {# requests}}",
+    "widget_agent_activity_empty": "Requests from your agents show up here once one connects and starts working.",
+    "widget_agent_pastes": "Agent pastes",
+    "widget_agent_pastes_empty": "Pastes your agents, the CLI and the API create show up here.",
+    "created_by_agent": "Created by {name}",
+    "an_agent": "an agent",
+    "created_with_cli": "Created with the CLI",
+    "created_with_mcp": "Created through the MCP server",
+    "created_with_api": "Created with the API"
   },
   "Secrets": {
     "title": "Secrets",

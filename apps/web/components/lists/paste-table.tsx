@@ -13,9 +13,18 @@ import {
   TableSortHead,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
+import {
+  FlameIcon,
+  GlobeIcon,
+  LinkIcon,
+  LockIcon,
+  PlugIcon,
+  StarIcon,
+  TerminalIcon,
+} from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { usePasteExpired } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
 import { showUndo } from "@/components/undo-toast"
@@ -97,6 +106,42 @@ export function ExpiryLabel({ row, mobile = false }: { row: PasteRow; mobile?: b
     : t("views_count", { count: row.views })
 }
 
+// The logo of the agent that created a paste, or a terminal or plug for the CLI and the API, named
+// for screen readers and on hover. Pastes from the web editor show nothing.
+export function CreatorMark({
+  createdBy,
+  className,
+}: {
+  createdBy: PasteRow["createdBy"]
+  className?: string
+}) {
+  const t = useTranslations("Workspace")
+  const clients = useTranslations("Onboarding.agent.clients")
+  if (!createdBy) return null
+  const label = createdBy.agent
+    ? t("created_by_agent", {
+        name: createdBy.agent === "other" ? t("an_agent") : clients(createdBy.agent),
+      })
+    : createdBy.via === "cli"
+      ? t("created_with_cli")
+      : createdBy.via === "mcp"
+        ? t("created_with_mcp")
+        : t("created_with_api")
+  const mark = cn("size-3.5 shrink-0 text-muted-foreground", className)
+  return (
+    <span title={label} className="relative z-10 inline-flex shrink-0">
+      {createdBy.agent ? (
+        <AgentLogo client={createdBy.agent} className={mark} />
+      ) : createdBy.via === "cli" ? (
+        <TerminalIcon aria-hidden="true" className={mark} />
+      ) : (
+        <PlugIcon aria-hidden="true" className={mark} />
+      )}
+      <span className="sr-only">{label}</span>
+    </span>
+  )
+}
+
 export interface SortHeadProps {
   direction: SortDirection | null
   firstDirection: SortDirection
@@ -164,13 +209,16 @@ export function PasteTable({
               <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
             ) : null}
             <TableCell className={cn("truncate", first)}>
-              <Link
-                href={`/pastes/${row.slug}`}
-                title={row.title}
-                className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-              >
-                {row.title}
-              </Link>
+              <span className="flex min-w-0 items-center gap-2">
+                <Link
+                  href={`/pastes/${row.slug}`}
+                  title={row.title}
+                  className="block min-w-0 truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
+                >
+                  {row.title}
+                </Link>
+                <CreatorMark createdBy={row.createdBy} />
+              </span>
             </TableCell>
             <TableCell className="text-[13px] text-foreground/80">
               <LanguageLabel language={row.language} />
@@ -243,6 +291,7 @@ export function PasteMobileList({ rows, origin }: { rows: PasteRow[]; origin: st
               )}
             >
               <VisibilityIcon row={row} />
+              <CreatorMark createdBy={row.createdBy} className="size-3" />
               {row.owner?.handle ? (
                 // Above the row's stretched link, so it opens the owner's profile.
                 <a

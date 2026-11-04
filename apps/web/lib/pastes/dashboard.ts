@@ -3,7 +3,8 @@ import "server-only"
 import { allowedPaste } from "@workspace/db/moderation"
 
 import { paste as pasteTable } from "@workspace/db/schema"
-import { and, asc, desc, eq, gt, isNull, lte, type SQL, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, isNull, lte, ne, type SQL, sql } from "drizzle-orm"
+import { type AgentActivity, agentActivity } from "@/lib/agents"
 import { getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import type { Collection } from "@/lib/collections/types"
@@ -33,10 +34,13 @@ export interface DashboardData {
   // Recent pastes holds at most five rows for each of its tabs.
   recent?: PasteRow[]
   starred?: PasteRow[]
+  // The newest pastes an agent, the CLI or the API created.
+  agentPastes?: PasteRow[]
   expiring?: PasteRow[]
   popular?: PasteRow[]
   secrets?: DashboardSecret[]
   collections?: Collection[]
+  agentActivity?: AgentActivity
 }
 
 export async function getDashboardData(
@@ -114,9 +118,22 @@ export async function getDashboardData(
         : undefined,
       has("secrets") ? secrets() : undefined,
       has("collections") ? listCollections() : undefined,
+      has("agent_activity") ? agentActivity(viewer) : undefined,
+      has("agent_pastes")
+        ? ownRows(ne(pasteTable.createdVia, "web"), [desc(pasteTable.createdAt)])
+        : undefined,
     ]),
   ])
-  const [recentRows, starredRows, expiring, popular, secretRows, collections] = widgets
+  const [
+    recentRows,
+    starredRows,
+    expiring,
+    popular,
+    secretRows,
+    collections,
+    activity,
+    agentPastes,
+  ] = widgets
   return {
     expiringSoon: counts?.expiringSoon ?? 0,
     expired: counts?.expired ?? 0,
@@ -126,5 +143,7 @@ export async function getDashboardData(
     popular,
     secrets: secretRows,
     collections,
+    agentActivity: activity,
+    agentPastes,
   }
 }

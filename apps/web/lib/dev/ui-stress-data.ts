@@ -84,6 +84,14 @@ export function stressData(dataset: Dataset) {
         tone: "primary",
       },
       canEdit: index % 2 === 0,
+      createdBy:
+        index % 3 === 0
+          ? {
+              via: "mcp" as const,
+              agent:
+                (["claude_code", "codex", "cursor"] as const)[Math.floor(index / 3) % 3] ?? null,
+            }
+          : null,
       access: index % 2 === 0 ? "edit" : "view",
       sharedAt: now - index * 86400000,
       sharedLabel: index === 0 ? "just now" : "1 week ago",
@@ -138,6 +146,25 @@ export function stressData(dataset: Dataset) {
       count: index * 7,
     })),
     collections,
+    agentActivity: {
+      days: Array.from({ length: 14 }, (_, index) => ({
+        day: Math.floor(now / 86_400_000) - 13 + index,
+        requests: length === 0 ? 0 : (index * 37) % 120,
+      })),
+      agents:
+        length === 0
+          ? []
+          : [
+              {
+                name: worst
+                  ? "Claude Code (platform-infrastructure-team build agent)"
+                  : "Claude Code",
+                client: "claude_code",
+                requests: 812,
+              },
+              { name: "Cursor", client: "cursor", requests: 64 },
+            ],
+    },
   }
   // The longest name an OAuth client might register, next to a client that never called yet.
   const agents: ConnectedAgent[] =

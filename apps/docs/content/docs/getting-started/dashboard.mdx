@@ -11,6 +11,8 @@ layout is saved to your account, so it looks the same on every device.
 | Widget | Shows |
 | --- | --- |
 | Agents | The setup for a coding agent until one connects, then each connected agent and when it last called Sniptide |
+| Agent activity | API and MCP requests from your connected agents per day over the last 14 days, and how many each agent made |
+| Agent pastes | The five newest pastes that an agent, the CLI or the API created, each marked with the agent's logo |
 | Recent pastes | Your five newest pastes, with tabs for each visibility |
 | Starred | Five pastes you starred |
 | Expiring soon | The five links that stop working next |
@@ -23,12 +25,13 @@ in the next 48 hours or have expired, whatever the layout holds.
 
 ## Start from a template
 
-A new account starts from the **Agents** template: Agents, Recent pastes and Starred. Select
+A new account starts from the **Agents** template: Agents, Agent activity, Agent pastes and Recent
+pastes. Select
 **Customize**, then **Templates**, to switch to another one.
 
 | Template | Widgets |
 | --- | --- |
-| Agents | Agents, Recent pastes and Starred |
+| Agents | Agents, Agent activity, Agent pastes and Recent pastes |
 | Sharing | Recent pastes, Most viewed and Expiring soon |
 | Secrets | Agents, Secrets, Collections and Recent pastes |
 | Blank | None, so you add each widget yourself |
@@ -68,5 +71,17 @@ To remove a widget, select its remove button while customizing. The Agents setup
 close button that removes the widget without opening **Customize**. Both end in a confirmation
 with **Undo**.
 
-On a phone the widgets stack in one column in the same order. Recent pastes, Starred and Agents
-span both columns on a wide screen, and the other widgets sit side by side.
+On a phone the widgets stack in one column in the same order. Agents, Agent activity, Agent
+pastes, Recent pastes and Starred span both columns on a wide screen, and the other widgets sit
+side by side.
+
+## Where a paste came from
+
+Sniptide records how each paste was created. Paste tables show a small mark after the title of a
+paste that didn't come from the web editor: the agent's logo for Claude Code, Codex or Cursor, a
+plug for another agent or the API, and a terminal for the CLI. Hover over the mark, or use a screen
+reader, to hear its name. Pastes created before Sniptide recorded this count as web pastes.
+
+Agent activity counts requests from agents you connected with [OAuth](/oauth). Requests with a
+personal API token from Settings are left out, and they still appear under **Settings** >
+**Usage**.

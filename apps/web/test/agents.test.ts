@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, expect, test } from "bun:test"
-import { apiToken, oauthClient } from "@workspace/db/schema"
+import { apiToken, apiTokenUsageDay, oauthClient } from "@workspace/db/schema"
 import { getConnectedAgents } from "@/lib/agent-actions"
-import { listConnectedAgents } from "@/lib/agents"
+import { AGENT_ACTIVITY_DAYS, agentActivity, listConnectedAgents } from "@/lib/agents"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
@@ -86,4 +86,41 @@ testDb("the polling action only answers for the signed-in account", async () => 
   expect(await getConnectedAgents()).toEqual([])
   signInAs(null)
   expect(await getConnectedAgents()).toEqual([])
+})
+
+testDb("counts agent requests per day and per agent over the last two weeks", async () => {
+  const now = new Date("2026-11-04T12:00:00Z")
+  const today = Math.floor(now.getTime() / DAY)
+  await connect("ada", { id: "sntc_claude", name: "Claude Code" })
+  await connect("ada", { id: "sntc_cursor", name: "Cursor" })
+  await connect("bob", { id: "sntc_bob", name: "Codex" })
+  await getDb()
+    .insert(apiToken)
+    .values({ ownerId: "ada", name: "CLI", prefix: "snpt_cli", hash: "cli", scopes: ["read"] })
+  const tokens = await getDb()
+    .select({ id: apiToken.id, name: apiToken.name, owner: apiToken.ownerId })
+    .from(apiToken)
+  const id = (name: string) => tokens.find((token) => token.name === name)?.id ?? ""
+  const usage = (owner: string, name: string, day: number, requests: number) =>
+    getDb()
+      .insert(apiTokenUsageDay)
+      .values({ ownerId: owner, tokenId: id(name), day, requests })
+  await usage("ada", "Claude Code", today, 30)
+  await usage("ada", "Claude Code", today - 3, 5)
+  await usage("ada", "Cursor", today, 7)
+  // Outside the window, a personal token and another account's agent stay out.
+  await usage("ada", "Claude Code", today - AGENT_ACTIVITY_DAYS, 100)
+  await usage("ada", "CLI", today, 50)
+  await usage("bob", "Codex", today, 9)
+
+  const activity = await agentActivity("ada", now)
+  expect(activity.days).toHaveLength(AGENT_ACTIVITY_DAYS)
+  expect(activity.days.at(-1)).toEqual({ day: today, requests: 37 })
+  expect(activity.days.at(-4)).toEqual({ day: today - 3, requests: 5 })
+  expect(activity.days.reduce((sum, day) => sum + day.requests, 0)).toBe(42)
+  expect(activity.agents).toEqual([
+    { name: "Claude Code", client: "claude_code", requests: 35 },
+    { name: "Cursor", client: "cursor", requests: 7 },
+  ])
+  expect((await agentActivity("ada", new Date(now.getTime() + 30 * DAY))).agents).toEqual([])
 })

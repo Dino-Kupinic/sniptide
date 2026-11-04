@@ -2,7 +2,7 @@
 
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, KeyRoundIcon } from "lucide-react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import {
@@ -13,11 +13,16 @@ import {
 } from "@/components/lists/paste-table"
 import { LoadingRegion } from "@/components/loading/region"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { LanguageIcon } from "@/components/paste/language-icon"
 import { navigateTabs } from "@/components/tab-navigation"
+import type { AgentActivity } from "@/lib/agents"
 import type { WidgetId } from "@/lib/dashboard/widgets"
+import { formatNumber } from "@/lib/format"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import type { PasteRow } from "@/lib/pastes/rows"
+import { DAY } from "@/lib/time"
+import { ViewsBarChart } from "./views-chart"
 
 export type DashboardSource = DashboardData | Promise<DashboardData>
 
@@ -31,6 +36,8 @@ export function useWidgetName() {
   return (widget: WidgetId) =>
     ({
       agents: t("widget_agents"),
+      agent_activity: t("widget_agent_activity"),
+      agent_pastes: t("widget_agent_pastes"),
       recent_pastes: t("recent_pastes"),
       starred: t("starred"),
       expiring: t("widget_expiring"),
@@ -131,6 +138,20 @@ export function DataWidget({
   const secretsT = useTranslations("Secrets")
 
   switch (id) {
+    case "agent_activity":
+      return data.agentActivity ? (
+        <AgentActivityWidget activity={data.agentActivity} />
+      ) : (
+        <WidgetLoading id={id} />
+      )
+    case "agent_pastes":
+      return data.agentPastes ? (
+        <TableWidget id={id} href="/pastes" rows={data.agentPastes} origin={origin}>
+          {t("widget_agent_pastes_empty")}
+        </TableWidget>
+      ) : (
+        <WidgetLoading id={id} />
+      )
     case "recent_pastes":
       return data.recent ? (
         <RecentPastes rows={data.recent} origin={origin} />
@@ -374,4 +395,50 @@ function RecentPastes({ rows: all, origin }: { rows: PasteRow[]; origin: string 
 
 export function WidgetFallback({ id }: { id: WidgetId }) {
   return <WidgetLoading id={id} />
+}
+
+// Requests from connected agents per UTC day, with each agent's share of them beside the chart.
+function AgentActivityWidget({ activity }: { activity: AgentActivity }) {
+  const t = useTranslations("Workspace")
+  const locale = useLocale()
+  const total = activity.days.reduce((sum, day) => sum + day.requests, 0)
+  const date = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" })
+  const labels = activity.days.map((day) => date.format(new Date(day.day * DAY)))
+  const values = activity.days.map((day) => day.requests)
+  return (
+    <ListWidget id="agent_activity" href="/settings?tab=usage">
+      {total === 0 ? (
+        <ListEmpty>{t("widget_agent_activity_empty")}</ListEmpty>
+      ) : (
+        <div className="flex flex-col gap-5 p-4 lg:flex-row lg:gap-8 lg:p-5">
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            <p className="text-sm leading-5 text-muted-foreground">
+              {t("agent_requests_total", { count: total })}
+            </p>
+            <ViewsBarChart
+              values={values}
+              labels={labels}
+              label={t("agent_requests_per_day", {
+                values: values
+                  .map((value, index) => `${labels[index]} ${formatNumber(value, locale)}`)
+                  .join(", "),
+              })}
+              className="h-48 lg:h-44"
+            />
+          </div>
+          <ul className="flex flex-col divide-y divide-border lg:w-64 lg:shrink-0">
+            {activity.agents.map((agent) => (
+              <li key={agent.name} className="flex min-h-10 items-center gap-3 py-2">
+                <AgentLogo client={agent.client} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{agent.name}</span>
+                <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
+                  {t("agent_requests_count", { count: agent.requests })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </ListWidget>
+  )
 }

@@ -5,7 +5,7 @@ import type { Locale } from "@/lib/i18n/config"
 import { coreTranslator } from "@/lib/i18n/core"
 import { DAY, HOUR } from "@/lib/time"
 import { starredSlugs, TRASH_DAYS } from "./store"
-import type { Access, PasteSummary, Person, Share } from "./types"
+import type { Access, PasteCreator, PasteSummary, Person, Share } from "./types"
 
 // Serializable rows for the paste tables. Labels are computed here on the server so the client
 // tables receive only the fields they render.
@@ -27,6 +27,8 @@ export interface PasteRow {
   starred: boolean
   owner: Person | null
   canEdit: boolean
+  // Set when an agent, the CLI or the API created it, so the tables can show the agent's logo.
+  createdBy: PasteCreator | null
 }
 
 export interface SharedRow extends PasteRow {
@@ -83,6 +85,7 @@ function toRow(
     starred: starred.has(paste.slug),
     owner: paste.owner,
     canEdit,
+    createdBy: paste.createdBy,
   } satisfies PasteRow
 }
 

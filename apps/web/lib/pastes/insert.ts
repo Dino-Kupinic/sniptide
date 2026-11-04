@@ -37,6 +37,9 @@ export interface InsertedPaste {
   source?: PasteSource | null
   files: InsertedFile[]
   createdAt: Date
+  // Where it was created; the web editor unless an API, MCP or CLI capture says otherwise.
+  createdVia?: "web" | "api" | "mcp" | "cli"
+  createdByAgent?: string | null
 }
 
 export async function insertPaste(tx: Transaction, paste: InsertedPaste) {
@@ -53,6 +56,8 @@ export async function insertPaste(tx: Transaction, paste: InsertedPaste) {
     collection: paste.collection,
     tags: paste.tags ?? [],
     source: paste.source ?? null,
+    createdVia: paste.createdVia ?? "web",
+    createdByAgent: paste.createdByAgent ?? null,
     createdAt: paste.createdAt,
     updatedAt: paste.createdAt,
     expiresAt: paste.expiresAt ?? null,

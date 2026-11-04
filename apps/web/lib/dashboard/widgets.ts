@@ -3,6 +3,8 @@
 
 export const WIDGETS = [
   "agents",
+  "agent_activity",
+  "agent_pastes",
   "recent_pastes",
   "starred",
   "expiring",
@@ -13,11 +15,18 @@ export const WIDGETS = [
 
 export type WidgetId = (typeof WIDGETS)[number]
 
-// Widgets that hold a full paste table span both columns on desktop; lists take one.
-export const WIDE_WIDGETS: ReadonlySet<WidgetId> = new Set(["agents", "recent_pastes", "starred"])
+// Widgets that hold a full paste table, the agent setup or a chart span both columns on desktop;
+// lists take one.
+export const WIDE_WIDGETS: ReadonlySet<WidgetId> = new Set([
+  "agents",
+  "agent_activity",
+  "agent_pastes",
+  "recent_pastes",
+  "starred",
+])
 
 export const TEMPLATES = {
-  agents: ["agents", "recent_pastes", "starred"],
+  agents: ["agents", "agent_activity", "agent_pastes", "recent_pastes"],
   sharing: ["recent_pastes", "popular", "expiring"],
   secrets: ["agents", "secrets", "collections", "recent_pastes"],
   blank: [],

@@ -55,7 +55,12 @@ export function mcpBackend(owner: TokenOwner): SniptideBackend {
     create: (input) =>
       safe(async () => {
         write()
-        return { paste: await createCapture(owner.userId, input) }
+        return {
+          paste: await createCapture(owner.userId, input, undefined, {
+            via: "mcp",
+            agent: owner.agent ?? null,
+          }),
+        }
       }),
     update: (id, input) =>
       safe(async () => {

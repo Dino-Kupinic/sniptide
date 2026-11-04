@@ -8,7 +8,11 @@ test("a new account starts from the Agents template", async ({ app, browser, scr
   await expect(screen.getByRole("heading", "Recent pastes")).toBeVisible()
   await expect(screen.getByText(/^Pastes you and your agents create show up here\./)).toBeVisible()
   await expect(screen.getByRole("tablist", "Filter recent pastes")).toHaveCount(0)
-  await expect(screen.getByRole("heading", "Starred")).toBeVisible()
+  await expect(screen.getByRole("heading", "Agent activity")).toBeVisible()
+  await expect(
+    screen.getByText(/^Requests from your agents show up here once one connects/),
+  ).toBeVisible()
+  await expect(screen.getByRole("heading", "Agent pastes")).toBeVisible()
   // Figures and the chart moved to Analytics.
   await expect(screen.getByRole("radio", "7 days")).toHaveCount(0)
   await app.screenshot("dashboard-new-account")
@@ -53,14 +57,18 @@ test("customizing adds, reorders and clears widgets, and templates fill it again
         (node) => node.dataset.widget ?? "",
       ),
     )
-  await expect.poll(order).toEqual(["agents", "recent_pastes", "starred", "secrets"])
+  await expect
+    .poll(order)
+    .toEqual(["agents", "agent_activity", "agent_pastes", "recent_pastes", "secrets"])
   // The drag handle works from the keyboard: pick up, move one place up, drop.
   const handle = screen.getByRole("button", "Move Secrets")
   await handle.focus()
   await handle.press("Space")
   await handle.press("ArrowUp")
   await handle.press("Space")
-  await expect.poll(order).toEqual(["agents", "recent_pastes", "secrets", "starred"])
+  await expect
+    .poll(order)
+    .toEqual(["agents", "agent_activity", "agent_pastes", "secrets", "recent_pastes"])
   await app.screenshot("dashboard-customize")
 
   await screen.getByRole("button", "Templates").tap()

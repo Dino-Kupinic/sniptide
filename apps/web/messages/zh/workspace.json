@@ -372,7 +372,19 @@
     "widget_expiring_empty": "你的链接都不会很快过期。",
     "widget_popular_empty": "有人打开你的链接后，浏览量会显示在这里。",
     "dashboard_blank": "你的概览是空的。添加你想要的小组件，或从模板开始。",
-    "couldnt_save_the_dashboard": "无法保存概览。请重试。"
+    "couldnt_save_the_dashboard": "无法保存概览。请重试。",
+    "widget_agent_activity": "智能体活动",
+    "agent_requests_total": "你的智能体在过去 14 天内发出了 {count, number} 个请求。",
+    "agent_requests_per_day": "智能体每日请求数：{values}",
+    "agent_requests_count": "{count, number} 个请求",
+    "widget_agent_activity_empty": "智能体连接并开始工作后，它的请求会显示在这里。",
+    "widget_agent_pastes": "智能体粘贴",
+    "widget_agent_pastes_empty": "你的智能体、CLI 和 API 创建的粘贴会显示在这里。",
+    "created_by_agent": "由{name}创建",
+    "an_agent": "智能体",
+    "created_with_cli": "通过 CLI 创建",
+    "created_with_mcp": "通过 MCP 服务器创建",
+    "created_with_api": "通过 API 创建"
   },
   "Secrets": {
     "title": "密钥",

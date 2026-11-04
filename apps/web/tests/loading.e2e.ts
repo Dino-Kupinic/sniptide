@@ -25,7 +25,10 @@ test("slow page navigation keeps the outgoing screen and its header stable", asy
   try {
     await db.$client.begin(async (tx) => {
       await tx.unsafe("LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE")
-      await screen.getByRole("link", "View all", { exact: true }).first().tap()
+      await screen
+        .getByRole("region", "Recent pastes")
+        .getByRole("link", "View all", { exact: true })
+        .tap()
       await expect(browser.locator(".navigation-feedback")).toBeVisible()
       await expect
         .poll(() =>

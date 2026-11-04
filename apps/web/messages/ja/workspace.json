@@ -372,7 +372,19 @@
     "widget_expiring_empty": "まもなく期限切れになるリンクはありません。",
     "widget_popular_empty": "誰かがあなたのリンクを開くと、ここに閲覧数が表示されます。",
     "dashboard_blank": "ダッシュボードは空です。必要なウィジェットを追加するか、テンプレートから始めてください。",
-    "couldnt_save_the_dashboard": "ダッシュボードを保存できませんでした。もう一度お試しください。"
+    "couldnt_save_the_dashboard": "ダッシュボードを保存できませんでした。もう一度お試しください。",
+    "widget_agent_activity": "エージェントのアクティビティ",
+    "agent_requests_total": "過去14日間にエージェントが{count, number} 件のリクエストを送信しました。",
+    "agent_requests_per_day": "1日あたりのエージェントのリクエスト: {values}",
+    "agent_requests_count": "{count, number} 件のリクエスト",
+    "widget_agent_activity_empty": "エージェントが接続して作業を始めると、リクエストがここに表示されます。",
+    "widget_agent_pastes": "エージェントのペースト",
+    "widget_agent_pastes_empty": "エージェント、CLI、API が作成したペーストがここに表示されます。",
+    "created_by_agent": "{name}が作成",
+    "an_agent": "エージェント",
+    "created_with_cli": "CLI で作成",
+    "created_with_mcp": "MCP サーバー経由で作成",
+    "created_with_api": "API で作成"
   },
   "Secrets": {
     "title": "シークレット",

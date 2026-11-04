@@ -372,7 +372,19 @@
     "widget_expiring_empty": "Keiner deiner Links läuft bald ab.",
     "widget_popular_empty": "Aufrufe erscheinen hier, sobald jemand einen deiner Links öffnet.",
     "dashboard_blank": "Deine Übersicht ist leer. Füge die Widgets hinzu, die du möchtest, oder starte mit einer Vorlage.",
-    "couldnt_save_the_dashboard": "Die Übersicht konnte nicht gespeichert werden. Versuche es erneut."
+    "couldnt_save_the_dashboard": "Die Übersicht konnte nicht gespeichert werden. Versuche es erneut.",
+    "widget_agent_activity": "Agenten-Aktivität",
+    "agent_requests_total": "Deine Agenten haben in den letzten 14 Tagen {count, plural, one {# Anfrage} other {# Anfragen}} gestellt.",
+    "agent_requests_per_day": "Agenten-Anfragen pro Tag: {values}",
+    "agent_requests_count": "{count, plural, one {# Anfrage} other {# Anfragen}}",
+    "widget_agent_activity_empty": "Anfragen deiner Agenten erscheinen hier, sobald einer verbunden ist und arbeitet.",
+    "widget_agent_pastes": "Agenten-Pastes",
+    "widget_agent_pastes_empty": "Pastes, die deine Agenten, die CLI und die API erstellen, erscheinen hier.",
+    "created_by_agent": "Erstellt von {name}",
+    "an_agent": "einem Agenten",
+    "created_with_cli": "Mit der CLI erstellt",
+    "created_with_mcp": "Über den MCP-Server erstellt",
+    "created_with_api": "Mit der API erstellt"
   },
   "Secrets": {
     "title": "Geheimnisse",
