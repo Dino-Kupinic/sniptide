@@ -15,7 +15,6 @@ import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   ArrowUpRightIcon,
   BookIcon,
-  ChartColumnIcon,
   CircleHelpIcon,
   GlobeIcon,
   HouseIcon,
@@ -42,7 +41,8 @@ import { localeNames, locales } from "@/lib/i18n/config"
 import { profilePath } from "@/lib/profile-path"
 
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
-// as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
+// as in the Paper "Account menu open" artboard: account, preferences, resources, log out. The
+// account row opens the public profile, and Usage lives in Settings.
 // A phone has no room for a submenu beside the menu, so `inlineLanguage` lists the languages
 // in the menu itself.
 export function AccountMenuItems({
@@ -91,6 +91,32 @@ export function AccountMenuItems({
     </DropdownMenuRadioGroup>
   )
 
+  const account = (
+    <span className="flex min-w-0 flex-col">
+      <span title={name} className="truncate text-[13px] font-medium">
+        {name}
+      </span>
+      <span title={email} className="truncate text-xs text-muted-foreground">
+        {email}
+      </span>
+    </span>
+  )
+
+  // A phone has no room for a submenu, so it lists these inline like the languages.
+  const resources = (
+    <>
+      <ExternalItem href={links.homepage} icon={<HouseIcon />}>
+        {t("homepage")}
+      </ExternalItem>
+      <ExternalItem href={links.documentation} icon={<BookIcon />}>
+        {t("documentation")}
+      </ExternalItem>
+      <ExternalItem href={links.help} icon={<CircleHelpIcon />} arrow={false}>
+        {t("help")}
+      </ExternalItem>
+    </>
+  )
+
   async function signOut() {
     await signOutAccount()
     router.replace("/sign-in")
@@ -99,30 +125,25 @@ export function AccountMenuItems({
 
   return (
     <>
-      <div className="flex min-w-0 flex-col px-3 pt-1.5 pb-2">
-        <span title={name} className="truncate text-[13px] font-medium">
-          {name}
-        </span>
-        <span title={email} className="truncate text-xs text-muted-foreground">
-          {email}
-        </span>
-      </div>
-      <DropdownMenuSeparator />
       {username ? (
-        // A plain <a>: the profile can live on the share domain, outside the app's router.
-        <DropdownMenuItem render={<a href={`${origin}${profilePath(username)}`} />}>
-          <UserIcon />
-          {t("your_profile")}
+        // The account row opens the public profile. A plain <a>: the profile can live on the share
+        // domain, outside the app's router.
+        <DropdownMenuItem
+          render={<a href={`${origin}${profilePath(username)}`} />}
+          aria-label={`${name}, ${t("your_profile")}`}
+          className="h-auto py-1.5"
+        >
+          {account}
+          <UserIcon className="ml-auto" />
         </DropdownMenuItem>
-      ) : null}
+      ) : (
+        <div className="flex min-w-0 px-3 pt-1.5 pb-2">{account}</div>
+      )}
+      <DropdownMenuSeparator />
       <DropdownMenuItem render={<Link href="/settings" />}>
         <SettingsIcon />
         {t("settings")}
         <ShortcutKeys id="settings" className="ml-auto bg-transparent text-muted-foreground" />
-      </DropdownMenuItem>
-      <DropdownMenuItem render={<Link href="/settings?tab=usage" />}>
-        <ChartColumnIcon />
-        {t("usage")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={shortcuts.open} className="max-lg:hidden">
         <KeyboardIcon />
@@ -153,16 +174,22 @@ export function AccountMenuItems({
           </DropdownMenuContent>
         </DropdownMenuSub>
       )}
-      <DropdownMenuSeparator />
-      <ExternalItem href={links.homepage} icon={<HouseIcon />}>
-        {t("homepage")}
-      </ExternalItem>
-      <ExternalItem href={links.documentation} icon={<BookIcon />}>
-        {t("documentation")}
-      </ExternalItem>
-      <ExternalItem href={links.help} icon={<CircleHelpIcon />} arrow={false}>
-        {t("help")}
-      </ExternalItem>
+      {inlineLanguage ? (
+        <>
+          <DropdownMenuSeparator />
+          {resources}
+        </>
+      ) : (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <BookIcon />
+            {t("resources")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuContent side="right" align="start" sideOffset={4}>
+            {resources}
+          </DropdownMenuContent>
+        </DropdownMenuSub>
+      )}
       <DropdownMenuSeparator />
       <DropdownMenuItem
         variant="destructive"
