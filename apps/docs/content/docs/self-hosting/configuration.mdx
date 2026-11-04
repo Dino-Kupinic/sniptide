@@ -33,7 +33,7 @@ only some, as [Coolify](/self-hosting/coolify#change-settings) explains.
 | `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
 | `COOKIE_DOMAIN` | unset | Share the session cookie with other subdomains. Leave unset on one domain. |
 | `COOKIE_PREFIX` | `better-auth` | Prefix for the auth cookies' names (letters, digits, `-`, `_`). Set a different one on a deployment that shares a parent domain with another one (a preview next to production). Changing it signs everyone out. |
-| `DEMO_MODE` | `false` | A public demo: every visitor is signed in to one shared guest account with example data, reset on a schedule. Pastes made in the demo are visible to every visitor and deleted at the next reset. Use it with `ALLOW_SIGN_UP=false` so the guest is the only account. |
+| `DEMO_MODE` | `false` | A public demo: every visitor is signed in to one shared guest account with example data, reset on a schedule. The workspace uses the regular app layout without a demo banner. The welcome paste explains the shared account and resets. Pastes made in the demo are visible to every visitor and deleted at the next reset. Use it with `ALLOW_SIGN_UP=false` so the guest is the only account. |
 | `DEMO_RESET_MINUTES` | `60` | With `DEMO_MODE`, minutes between resets (5 to 1440). The guest is also reset at server start. |
 
 Existing email and password accounts keep signing in. Pending invitations remain blocked until
