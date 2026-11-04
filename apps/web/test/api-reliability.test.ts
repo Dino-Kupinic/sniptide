@@ -161,6 +161,7 @@ describeDb("API create reliability", () => {
     const original = await (
       await createPaste(call("/api/v1/pastes", input, "collection-paste"))
     ).json()
+    await getDb().update(paste).set({ collection: null }).where(eq(paste.id, original.paste.id))
     await getDb().delete(collection).where(eq(collection.slug, "ephemeral"))
     const replay = await createPaste(call("/api/v1/pastes", input, "collection-paste"))
     expect(replay.status).toBe(201)

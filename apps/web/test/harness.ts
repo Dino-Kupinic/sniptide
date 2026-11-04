@@ -4,6 +4,7 @@ import {
   analyticsRollup,
   analyticsSalt,
   authRateLimit,
+  collection,
   moderationEvent,
   paste,
   pasteFile,
@@ -85,6 +86,12 @@ export const marker = (slug: string) => `secret-body-of-${slug}`
 
 export async function seedPaste(input: SeedPaste) {
   const db = getDb()
+  if (input.collection) {
+    await db
+      .insert(collection)
+      .values({ ownerId: input.owner, slug: input.collection, name: input.collection })
+      .onConflictDoNothing()
+  }
   const id = crypto.randomUUID()
   await db.insert(paste).values({
     id,

@@ -106,7 +106,9 @@ describeDb("sharing", () => {
     expect(await getDb().select().from(pasteShare)).toEqual([])
     expect(await getDb().select().from(notification)).toEqual([])
 
-    expect(await updatePaste("priv", edit({ expiry: "never" }), "Renewed expiry")).not.toBeNull()
+    expect(
+      await updatePaste("priv", edit({ expiry: "never", collection: "mine" }), "Renewed expiry"),
+    ).not.toBeNull()
     expect(await invitePerson("priv", "@friend", "view")).toMatchObject({ ok: true })
     expect(await getDb().select().from(notification)).toMatchObject([
       { userId: "friend", kind: "shared" },

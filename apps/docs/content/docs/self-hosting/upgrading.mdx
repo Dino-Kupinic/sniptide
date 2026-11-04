@@ -88,6 +88,35 @@ empty when the database was already current.
 
 ## Recover from a failed upgrade
 
+### Duplicate provider account identities
+
+The ownership integrity migration adds a unique index on `account(provider_id, account_id)` and
+a foreign key that keeps each paste in one of its owner's collections. It locks the account,
+paste and collection tables while it checks existing data and adds the constraints, so schedule
+this upgrade for a quiet time.
+
+Pastes pointing at collections that no longer exist are taken out of those collections. Their
+contents and revisions are kept, and their edit versions advance so an older editor cannot
+overwrite the change.
+
+If startup reports `Duplicate provider account identities`, the migration rolls back without
+changing any data. Connect to the database with your SQL client and inspect the duplicate keys:
+
+```sql
+SELECT provider_id, account_id, count(*)
+FROM account
+GROUP BY provider_id, account_id
+HAVING count(*) > 1;
+```
+
+Review the matching account rows and their `user_id` values before repairing them. Different
+users must stay separate: do not automatically merge users or delete their account records.
+Once each provider identity belongs to exactly one account row, retry the upgrade. The query
+above should return no rows, and startup should report the migration as applied. See
+[Better Auth's account identity guidance](https://www.better-auth.com/docs/guides/1-7-upgrade-guide#check-for-duplicate-account-keys).
+
+### Other upgrade failures
+
 **The upgrade fails to start.** Migrations run in a single transaction, so a failed upgrade rolls
 back completely and leaves the database exactly as it was before you started; it is never
 half-migrated. The new container doesn't become ready, and the log says which migration failed.

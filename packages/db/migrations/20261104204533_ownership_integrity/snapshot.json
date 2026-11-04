@@ -1,0 +1,114 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b937ef97-4215-4660-a91f-f6ee0367340f",
+  "prevIds": [
+    "6b044f79-8647-44a1-b802-a3f0c0b25ab9",
+    "92ad1b59-352e-4b02-9b8c-25ed281e069b",
+    "a8de7e9e-cadf-485c-871c-9b601081eda7"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "account",
+        "account_provider_identity_unique"
+      ],
+      "writes": [
+        "s|idx|public.account_provider_identity_unique",
+        "n|idx|public.account_provider_identity_unique",
+        "e|idx|public.account_provider_identity_unique",
+        "n|rel|public.account_provider_identity_unique"
+      ],
+      "reads": [
+        "n|tbl|public.account",
+        "n|sch|public",
+        "n|col|public.account.provider_id",
+        "n|col|public.account.account_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste"
+      ],
+      "writes": [
+        "s|fk|public.paste.paste_owner_collection_fkey",
+        "n|fk|public.paste.paste_owner_collection_fkey",
+        "e|fk|public.paste.paste_owner_collection_fkey",
+        "n|con|public.paste.paste_owner_collection_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.paste",
+        "n|sch|public",
+        "n|tbl|public.collection",
+        "n|sch|public",
+        "n|col|public.paste.owner_id",
+        "n|col|public.paste.collection",
+        "n|col|public.collection.owner_id",
+        "n|col|public.collection.slug",
+        "e|uniqueness|public.collection.owner_id.slug"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "account",
+        "name": "account_provider_identity_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "provider_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "account_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste",
+        "name": "paste_owner_collection_fkey",
+        "nameExplicit": true,
+        "columns": [
+          "owner_id",
+          "collection"
+        ],
+        "schemaTo": "public",
+        "tableTo": "collection",
+        "columnsTo": [
+          "owner_id",
+          "slug"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    }
+  ]
+}

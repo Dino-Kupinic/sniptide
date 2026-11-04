@@ -152,7 +152,6 @@ async function lockEditable(tx: PasteTransaction, actor: PasteActor, key: PasteK
 export async function createPasteRecord(tx: PasteTransaction, request: CreateRequest) {
   const owner = request.actor.userId
   const input = request.input
-  if (request.kind === "capture") await checkCollection(tx, owner, input.collection)
   let slug = request.kind === "editor" ? request.input.slug : ""
   if (!slug) {
     do slug = randomSlug()
@@ -165,6 +164,7 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
   const id = crypto.randomUUID()
   const bytes = input.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   await enforceBudget(tx, owner, bytes)
+  await checkCollection(tx, owner, input.collection)
   await insertPaste(tx, {
     id,
     slug,
@@ -224,6 +224,7 @@ export async function replacePaste(
   const now = new Date()
   const editor = request.kind === "editor" ? request : null
   const capture = request.kind === "capture" ? request.input : null
+  if (editor && owned) await checkCollection(tx, record.ownerId, editor.input.collection)
   if (capture?.collection !== undefined)
     await checkCollection(tx, record.ownerId, capture.collection)
   const input = request.input
@@ -325,6 +326,22 @@ export async function replacePaste(
     expiresAt: expiresAt?.getTime() ?? null,
     hasPassword: passwordHash !== null,
   }
+}
+
+export async function setPasteCollectionRecord(
+  tx: PasteTransaction,
+  actor: PasteActor,
+  key: PasteKey,
+  collection: string | null,
+) {
+  await lockAccount(tx, actor.userId)
+  const record = await lockOwnedPasteRow(tx, actor, key)
+  if (!record || record.deletedAt) return
+  await checkCollection(tx, actor.userId, collection)
+  await tx
+    .update(pasteTable)
+    .set({ collection, version: sql`${pasteTable.version} + 1` })
+    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
 }
 
 async function lockOwnedPasteRow(

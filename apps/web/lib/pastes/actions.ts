@@ -131,6 +131,8 @@ export async function savePaste(
     await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false, error: await actionError("collectionMissing") }
     if (error instanceof store.PasteBudgetError)
       return { ok: false, error: await translateActionError(error.message) }
     throw error
@@ -191,6 +193,8 @@ export async function autosavePaste(
     if (result.slug === editing) await revalidateWorkspace(user)
     return { ok: true, ...result }
   } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false, error: await actionError("collectionMissing") }
     if (error instanceof store.PasteBudgetError)
       return { ok: false, error: await translateActionError(error.message) }
     throw error
@@ -377,7 +381,13 @@ export async function setPasteCollection(slug: string, collection: string | null
   if (collection !== null && !(await collectionExists(collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
-  await store.setPasteCollection(slug, collection)
+  try {
+    await store.setPasteCollection(slug, collection)
+  } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false as const, error: await actionError("collectionMissing") }
+    throw error
+  }
   await revalidateWorkspace(user)
   return { ok: true as const }
 }
@@ -582,7 +592,13 @@ export async function setPastesCollection(slugs: string[], collection: string | 
   if (collection !== null && !(await collectionExists(collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
-  await forEachSlug(slugs, (slug) => store.setPasteCollection(slug, collection))
+  try {
+    await forEachSlug(slugs, (slug) => store.setPasteCollection(slug, collection))
+  } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false as const, error: await actionError("collectionMissing") }
+    throw error
+  }
   return { ok: true as const }
 }
 
