@@ -366,7 +366,14 @@
     "delete_collections_title": "{count, plural, other {# 件のコレクションを削除しますか？}}",
     "delete_collections_description": "中のペーストは残り、コレクションから外れるだけです。",
     "expired_sharing_help": "このペーストは期限切れです。有効期限を変更するか「無期限」を選ぶと、再び共有できます。",
-    "your_profile": "プロフィール"
+    "your_profile": "プロフィール",
+    "report_bug": "不具合の報告・フィードバック",
+    "report_notice": "実際に起きたことと期待した動作を説明してください。新しいタブで公開のGitHub下書きを開きます。そこでログインして送信してください。続ける前に個人情報を確認して削除してください。",
+    "report_description": "説明",
+    "report_context": "診断情報（編集可能・非公開情報は削除してください）",
+    "report_screenshot": "スクリーンショットは任意です。GitHubの下書きに画像を添付または貼り付けてください。事前に非公開情報がないか確認してください。",
+    "report_continue": "GitHubで続ける",
+    "report_too_long": "GitHubの下書きリンクには長すぎます。説明や診断情報を短くしてください。"
   },
   "Secrets": {
     "title": "シークレット",

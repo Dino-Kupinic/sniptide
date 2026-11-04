@@ -366,7 +366,14 @@
     "delete_collections_title": "{count, plural, other {删除 # 个集合？}}",
     "delete_collections_description": "其中的粘贴会保留，只是移出这些集合。",
     "expired_sharing_help": "此粘贴已过期。设置新的有效期或选择“永不”，即可再次分享。",
-    "your_profile": "我的主页"
+    "your_profile": "我的主页",
+    "report_bug": "报告问题 / 反馈",
+    "report_notice": "请描述实际情况和预期结果。将在新标签页中打开公开的 GitHub 草稿；请在那里登录并提交。继续前请检查并删除隐私信息。",
+    "report_description": "描述",
+    "report_context": "诊断信息（可编辑；请删除隐私信息）",
+    "report_screenshot": "截图可选：在 GitHub 草稿中附加或粘贴图片。请先检查是否包含隐私信息。",
+    "report_continue": "在 GitHub 上继续",
+    "report_too_long": "报告过长，无法生成 GitHub 草稿链接。请缩短描述或诊断信息。"
   },
   "Secrets": {
     "title": "密钥",

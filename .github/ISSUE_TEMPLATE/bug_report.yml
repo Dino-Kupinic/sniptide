@@ -1,0 +1,52 @@
+name: Bug report or feedback
+description: Report a Sniptide problem or suggest an improvement, including self-hosted instances.
+title: "[Feedback]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports are public. Remove tokens, passwords, email addresses and private paste contents from text, URLs and screenshots before submitting.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, what did you expect, and how can we reproduce it? For feedback, describe the improvement you need.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot (optional)
+      description: Attach or paste an image. Remove private information first.
+  - type: input
+    id: url
+    attributes:
+      label: URL (optional)
+      description: Affected page URL, without private query strings, fragments or paste contents.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sniptide version
+      description: Image tag, release version or deployment commit.
+    validations:
+      required: true
+  - type: input
+    id: user
+    attributes:
+      label: User ID (optional)
+      description: Account ID, if known. Do not include an email address or credentials.
+  - type: dropdown
+    id: instance
+    attributes:
+      label: Instance type
+      options:
+        - Hosted (app.sniptide.com)
+        - Self-hosted
+    validations:
+      required: true

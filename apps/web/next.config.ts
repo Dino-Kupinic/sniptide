@@ -40,6 +40,8 @@ const nextConfig: NextConfig = {
   // Self-contained server for the Docker image (apps/web/.next/standalone). Tracing from the
   // repo root so the workspace packages are included.
   output: "standalone",
+  // Embed the release in server code too: the runtime image has no build-stage environment.
+  env: { DEPLOYMENT_VERSION: process.env.DEPLOYMENT_VERSION || "development" },
   deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   // Next's tracer cannot infer these runtime asset reads, so include them in the standalone build.

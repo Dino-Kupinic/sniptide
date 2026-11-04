@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { PasteExpiryClock } from "@/components/paste/expiry-status"
 import { AppShell } from "@/components/shell/app-shell"
+import { BugReportProvider } from "@/components/shell/bug-report"
 import { ResourceLinksProvider } from "@/components/shell/resource-links"
 import { parseSidebarState, SIDEBAR_COOKIE } from "@/components/shell/sidebar-state"
 import { SiteHostProvider } from "@/components/site-host"
@@ -25,20 +26,33 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     trashTotals(),
   ])
 
+  const { appUrl } = getConfig()
+
   return (
     <SiteHostProvider host={host} origin={origin}>
       <ResourceLinksProvider links={getConfig().resourceLinks}>
         <PasteExpiryClock>
-          <AppShell
-            demo={isDemoMode()}
-            viewer={viewerFromUser(session.user)}
-            data={data}
-            collections={collections}
-            initialSidebar={sidebar}
-            trashCount={trash.count}
+          <BugReportProvider
+            context={{
+              userId: session.user.id,
+              version: process.env.DEPLOYMENT_VERSION || "development",
+              instance:
+                appUrl && new URL(appUrl).hostname === "app.sniptide.com"
+                  ? "hosted"
+                  : "self-hosted",
+            }}
           >
-            {children}
-          </AppShell>
+            <AppShell
+              demo={isDemoMode()}
+              viewer={viewerFromUser(session.user)}
+              data={data}
+              collections={collections}
+              initialSidebar={sidebar}
+              trashCount={trash.count}
+            >
+              {children}
+            </AppShell>
+          </BugReportProvider>
         </PasteExpiryClock>
       </ResourceLinksProvider>
     </SiteHostProvider>

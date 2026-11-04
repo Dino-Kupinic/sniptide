@@ -366,7 +366,14 @@
     "delete_collections_title": "{count, plural, one {# Sammlung löschen?} other {# Sammlungen löschen?}}",
     "delete_collections_description": "Die Pastes darin bleiben erhalten und verlassen nur die Sammlungen.",
     "expired_sharing_help": "Dieser Paste ist abgelaufen. Lege ein neues Ablaufdatum fest oder wähle „Nie“, um ihn wieder zu teilen.",
-    "your_profile": "Dein Profil"
+    "your_profile": "Dein Profil",
+    "report_bug": "Fehler melden / Feedback",
+    "report_notice": "Beschreibe, was passiert ist und was du erwartet hast. Ein öffentlicher GitHub-Entwurf öffnet sich in einem neuen Tab. Melde dich dort an und sende ihn ab. Entferne vorher private Angaben.",
+    "report_description": "Beschreibung",
+    "report_context": "Diagnosedaten (bearbeitbar; private Angaben entfernen)",
+    "report_screenshot": "Optionaler Screenshot: Füge im GitHub-Entwurf ein Bild ein oder hänge es an. Prüfe es vorher auf private Daten.",
+    "report_continue": "Weiter auf GitHub",
+    "report_too_long": "Der Bericht ist zu lang für einen GitHub-Entwurfslink. Kürze die Beschreibung oder die Diagnosedaten."
   },
   "Secrets": {
     "title": "Geheimnisse",

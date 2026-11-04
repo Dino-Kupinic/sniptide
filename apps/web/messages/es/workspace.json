@@ -366,7 +366,14 @@
     "delete_collections_title": "{count, plural, one {¿Eliminar # colección?} other {¿Eliminar # colecciones?}}",
     "delete_collections_description": "Los fragmentos que contienen se conservan y solo salen de las colecciones.",
     "expired_sharing_help": "Este paste ha caducado. Establece una nueva caducidad o elige Nunca para volver a compartirlo.",
-    "your_profile": "Tu perfil"
+    "your_profile": "Tu perfil",
+    "report_bug": "Informar de un error / comentarios",
+    "report_notice": "Describe lo que pasó y lo que esperabas. Se abrirá un borrador público en GitHub en otra pestaña; inicia sesión y envíalo allí. Revisa y elimina los datos privados antes de continuar.",
+    "report_description": "Descripción",
+    "report_context": "Diagnóstico (editable; elimina los datos privados)",
+    "report_screenshot": "Captura opcional: adjunta o pega una imagen en el borrador de GitHub. Comprueba antes que no incluya datos privados.",
+    "report_continue": "Continuar en GitHub",
+    "report_too_long": "El informe es demasiado largo para un enlace de borrador de GitHub. Acorta la descripción o el diagnóstico."
   },
   "Secrets": {
     "title": "Secretos",

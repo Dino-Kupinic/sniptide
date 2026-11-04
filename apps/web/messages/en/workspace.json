@@ -366,7 +366,14 @@
     "delete_collections_title": "{count, plural, one {Delete # collection?} other {Delete # collections?}}",
     "delete_collections_description": "The pastes in them are kept and just leave the collections.",
     "expired_sharing_help": "This paste has expired. Set a new expiry or choose Never to share it again.",
-    "your_profile": "Your profile"
+    "your_profile": "Your profile",
+    "report_bug": "Report a bug / feedback",
+    "report_notice": "Describe what happened and what you expected. This opens a public GitHub draft in a new tab; sign in and submit it there. Review and remove private details before continuing.",
+    "report_description": "Description",
+    "report_context": "Diagnostics (editable; remove anything private)",
+    "report_screenshot": "Optional screenshot: attach or paste an image in the GitHub draft. Check it for private data first.",
+    "report_continue": "Continue on GitHub",
+    "report_too_long": "The report is too long for a GitHub draft link. Shorten the description or diagnostics."
   },
   "Secrets": {
     "title": "Secrets",

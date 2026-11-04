@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
+import { BugReportButton } from "./bug-report"
 import { NotificationsSheet } from "./notifications-menu"
 
 // Top bar below lg: wordmark, search, account, then notifications at the far right.
@@ -33,6 +34,10 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
         <Button variant="outline" size="icon-lg" aria-label={t("search")} onClick={openCommandMenu}>
           <SearchIcon />
         </Button>
+        <BugReportButton
+          iconOnly
+          className="flex size-9 items-center justify-center rounded-lg border border-border hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label={t("account")}

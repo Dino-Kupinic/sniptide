@@ -54,6 +54,7 @@ import { setStarred } from "@/lib/pastes/actions"
 import type { SidebarData, SidebarPaste } from "@/lib/pastes/types"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
+import { BugReportButton } from "./bug-report"
 import { isActivePath } from "./nav-config"
 import { PasteMenu } from "./paste-menu"
 import {
@@ -380,6 +381,8 @@ export function Sidebar({
         open={creating}
         onOpenChange={setCreating}
       />
+
+      <BugReportButton className={`${rowClass} gap-2 text-left`} />
 
       {/* A hairline across the full sidebar width separates the account menu from the lists. */}
       <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
