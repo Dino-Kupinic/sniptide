@@ -122,6 +122,9 @@ export function PasteTable({
   const locale = useLocale()
   const t = useTranslations("Workspace")
   const first = selection ? "pl-0" : undefined
+  // Without sorting the headers need less room, so a dashboard widget fits without scrolling on a
+  // laptop screen.
+  const compact = !sortHead
 
   const head = (sort: PasteSort, label: string, className?: string, alignEnd = false) =>
     sortHead ? (
@@ -133,16 +136,18 @@ export function PasteTable({
     )
 
   return (
-    <Table className="hidden min-w-[1040px] table-fixed lg:table">
+    <Table
+      className={cn("hidden table-fixed lg:table", compact ? "min-w-[880px]" : "min-w-[1040px]")}
+    >
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           {selection ? <SelectAllHead selection={selection} /> : null}
           {head("title", t("paste"), first)}
-          {head("language", t("language"), "w-[140px]")}
-          {head("visibility", t("visibility"), "w-[160px]")}
-          {head("views", t("views"), "w-24", true)}
-          {head("expires", t("expires"), "w-[140px]")}
-          {head("updated", t("updated"), "w-[140px]")}
+          {head("language", t("language"), compact ? "w-[130px]" : "w-[140px]")}
+          {head("visibility", t("visibility"), compact ? "w-[140px]" : "w-[160px]")}
+          {head("views", t("views"), compact ? "w-20" : "w-24", true)}
+          {head("expires", t("expires"), compact ? "w-[120px]" : "w-[140px]")}
+          {head("updated", t("updated"), compact ? "w-[116px]" : "w-[140px]")}
           <TablePinnedHead className="w-16">
             <span className="sr-only">{t("actions")}</span>
           </TablePinnedHead>
