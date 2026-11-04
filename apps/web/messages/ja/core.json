@@ -95,5 +95,16 @@
     "notificationViewsDetail": "アクセス解析で参照元を確認できます",
     "snapshotUnavailable": "Snapshot unavailable",
     "expired": "期限切れ"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "{name} (@{handle}) が Sniptide で公開したスニペット。",
+    "joined": "{date}に参加",
+    "pastes": "公開スニペット {count}件",
+    "empty": "@{handle} はまだスニペットを公開していません。",
+    "pagination": "ページ",
+    "newer": "新しい順",
+    "older": "古い順",
+    "pageOf": "{page} / {count} ページ"
   }
 }

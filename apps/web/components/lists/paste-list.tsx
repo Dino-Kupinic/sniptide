@@ -36,6 +36,7 @@ import {
   type VisibilityFilter,
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
+import { profilePath } from "@/lib/profile-path"
 import { PasteBulkActions } from "./bulk-actions"
 import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
@@ -442,9 +443,19 @@ export function PasteList({
                       )}
                     >
                       <VisibilityIcon row={row} />
-                      <span className="min-w-0 truncate font-mono">
-                        {row.owner ? `@${row.owner.username}` : row.slug}
-                      </span>
+                      {row.owner?.handle ? (
+                        // Above the row's stretched link, so it opens the owner's profile.
+                        <a
+                          href={profilePath(row.owner.handle)}
+                          className="relative z-10 min-w-0 truncate font-mono hover:underline"
+                        >
+                          @{row.owner.username}
+                        </a>
+                      ) : (
+                        <span className="min-w-0 truncate font-mono">
+                          {row.owner ? `@${row.owner.username}` : row.slug}
+                        </span>
+                      )}
                       <span aria-hidden="true">·</span>
                       <span className="shrink-0">
                         <ExpiryLabel row={row} mobile />

@@ -17,7 +17,11 @@ export interface PasteFile {
 }
 
 export interface Person {
+  // What the screens show after "@": the chosen spelling of the handle, or the name when the
+  // account has none.
   username: string
+  // The normalized handle behind the profile link (/@<handle>), or null when there is no profile.
+  handle: string | null
   name: string
   initials: string
   // Avatar fill from the Shared with me design: primary, ink or muted.

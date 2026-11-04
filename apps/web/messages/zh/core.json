@@ -95,5 +95,16 @@
     "notificationViewsDetail": "在统计分析中查看访问来源",
     "snapshotUnavailable": "Snapshot unavailable",
     "expired": "已过期"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "{name} (@{handle}) 在 Sniptide 上公开分享的代码片段。",
+    "joined": "{date}加入",
+    "pastes": "{count} 个公开代码片段",
+    "empty": "@{handle} 还没有公开任何代码片段。",
+    "pagination": "分页",
+    "newer": "较新",
+    "older": "较早",
+    "pageOf": "第 {page} 页，共 {count} 页"
   }
 }

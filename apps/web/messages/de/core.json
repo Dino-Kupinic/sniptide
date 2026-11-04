@@ -95,5 +95,16 @@
     "notificationViewsDetail": "Sieh dir die Herkunft unter Statistiken an",
     "snapshotUnavailable": "Snapshot unavailable",
     "expired": "Abgelaufen"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "Öffentliche Snippets von {name} (@{handle}) auf Sniptide.",
+    "joined": "Dabei seit {date}",
+    "pastes": "{count, plural, one {# öffentliches Snippet} other {# öffentliche Snippets}}",
+    "empty": "@{handle} hat noch keine Snippets veröffentlicht.",
+    "pagination": "Seiten",
+    "newer": "Neuer",
+    "older": "Älter",
+    "pageOf": "Seite {page} von {count}"
   }
 }

@@ -95,5 +95,16 @@
     "notificationViewsDetail": "Consulta su origen en Estadísticas",
     "snapshotUnavailable": "Snapshot unavailable",
     "expired": "Caducado"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "Fragmentos públicos compartidos por {name} (@{handle}) en Sniptide.",
+    "joined": "Se unió en {date}",
+    "pastes": "{count, plural, one {# fragmento público} other {# fragmentos públicos}}",
+    "empty": "@{handle} aún no ha hecho público ningún fragmento.",
+    "pagination": "Páginas",
+    "newer": "Más recientes",
+    "older": "Más antiguos",
+    "pageOf": "Página {page} de {count}"
   }
 }

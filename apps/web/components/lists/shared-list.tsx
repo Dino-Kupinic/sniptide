@@ -51,7 +51,13 @@ const toneClass: Record<Person["tone"], string> = {
   muted: "bg-muted text-foreground",
 }
 
-export function PersonAvatar({ person, className }: { person: Person; className?: string }) {
+export function PersonAvatar({
+  person,
+  className,
+}: {
+  person: Pick<Person, "initials" | "tone">
+  className?: string
+}) {
   return (
     <span
       aria-hidden="true"
