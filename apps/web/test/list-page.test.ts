@@ -216,9 +216,9 @@ describeDb("bounded paste reads", () => {
     const data = await getDashboardData()
     expect(data.expiringSoon).toBe(1)
     expect(data.expired).toBe(1)
-    expect(data.recent.length).toBeLessThanOrEqual(20)
+    expect((data.recent ?? []).length).toBeLessThanOrEqual(20)
     for (const visibility of ["public", "unlisted", "private"]) {
-      expect(data.recent.filter((p) => p.visibility === visibility)).toHaveLength(5)
+      expect((data.recent ?? []).filter((p) => p.visibility === visibility)).toHaveLength(5)
     }
     expect(data).not.toHaveProperty("pasteCreatedAt")
   })

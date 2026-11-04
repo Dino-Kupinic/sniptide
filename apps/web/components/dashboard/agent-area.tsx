@@ -4,25 +4,17 @@ import { Button } from "@sniptide/ui/components/button"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
-import { ArrowRightIcon, PlugIcon, XIcon } from "lucide-react"
+import { ArrowRightIcon, XIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
-import { ClaudeCodeLogo, CodexLogo, CursorLogo } from "@/components/onboarding/agent-logos"
+import { AgentLogo, CursorLogo } from "@/components/onboarding/agent-logos"
 import { SetupCode } from "@/components/onboarding/agent-step"
 import { getConnectedAgents } from "@/lib/agent-actions"
 import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
 import { timeAgo } from "@/lib/format"
 import { AGENT_CLIENTS, type AgentClient, agentSetup } from "@/lib/onboarding"
-import { writeAgentCardHidden } from "./agent-state"
-
-const LOGOS: Record<AgentClient, React.ComponentType<{ className?: string }>> = {
-  claude_code: ClaudeCodeLogo,
-  codex: CodexLogo,
-  cursor: CursorLogo,
-  other: PlugIcon,
-}
 
 // While the connect card waits for a first connection it asks every few seconds, for at most a
 // quarter of an hour. Once agents are connected, their last activity refreshes once a minute and
@@ -74,18 +66,17 @@ function useAgents(initial: ConnectedAgent[], waiting: boolean) {
   return agents
 }
 
-// The dashboard's agent area: a setup card until an agent connects, then the connected agents and
-// when each last did something. Someone who doesn't use agents can fold the card into a link.
+// The dashboard's agent widget: a setup card until an agent connects, then the connected agents
+// and when each last did something. Someone who doesn't use agents removes the widget.
 export function AgentArea({
   agents: initial,
   origin,
-  hidden: initialHidden,
+  onRemove,
 }: {
   agents: ConnectedAgent[]
   origin: string
-  hidden: boolean
+  onRemove?: () => void
 }) {
-  const [hidden, setHidden] = React.useState(initialHidden)
   // Polling starts once a setup was copied or opened, since only then can a connection appear.
   const [used, setUsed] = React.useState<AgentClient | null>(null)
   const agents = useAgents(initial, used !== null)
@@ -109,13 +100,6 @@ export function AgentArea({
       </p>
       {first ? (
         <AgentStatus agents={agents} justConnected={justConnected ? first : undefined} />
-      ) : hidden ? (
-        <ConnectLink
-          onShow={() => {
-            writeAgentCardHidden(false)
-            setHidden(false)
-          }}
-        />
       ) : (
         <ConnectCard
           origin={origin}
@@ -124,10 +108,7 @@ export function AgentArea({
             setUsed(client)
             track("agent_snippet_copied", { client, surface: "dashboard" })
           }}
-          onHide={() => {
-            writeAgentCardHidden(true)
-            setHidden(true)
-          }}
+          onRemove={onRemove}
         />
       )}
     </>
@@ -140,30 +121,16 @@ function useConnectedMessage() {
     client === "other" ? t("connectedOther") : t("connected", { client: t(`clients.${client}`) })
 }
 
-function ConnectLink({ onShow }: { onShow: () => void }) {
-  const t = useTranslations("Workspace")
-  return (
-    <button
-      type="button"
-      onClick={onShow}
-      className="flex min-h-10 items-center gap-2 self-start text-sm font-medium text-link outline-none hover:underline focus-visible:underline lg:min-h-0"
-    >
-      <PlugIcon className="size-4" />
-      {t("agent_connect_link")}
-    </button>
-  )
-}
-
 function ConnectCard({
   origin,
   used,
   onUse,
-  onHide,
+  onRemove,
 }: {
   origin: string
   used: AgentClient | null
   onUse: (client: AgentClient) => void
-  onHide: () => void
+  onRemove?: () => void
 }) {
   const t = useTranslations("Onboarding.agent")
   const tWorkspace = useTranslations("Workspace")
@@ -183,23 +150,34 @@ function ConnectCard({
           </h2>
           <p className="text-sm leading-5 text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={tWorkspace("agent_hide")}
-          className="-mt-1 -mr-1 shrink-0 max-lg:size-10"
-          onClick={onHide}
-        >
-          <XIcon />
-        </Button>
+        {onRemove ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={tWorkspace("widget_remove_named", { name: tWorkspace("widget_agents") })}
+            className="-mt-1 -mr-1 shrink-0 max-lg:size-10"
+            onClick={onRemove}
+          >
+            <XIcon />
+          </Button>
+        ) : null}
       </div>
 
       <SegmentedControl
         aria-label={t("clientLabel")}
         value={client}
         onValueChange={setClient}
-        options={AGENT_CLIENTS.map((value) => ({ value, label: label(value) }))}
-        className="w-full sm:w-auto sm:self-start"
+        options={AGENT_CLIENTS.map((value) => ({
+          value,
+          label: (
+            <span className="flex items-center justify-center gap-1.5">
+              <AgentLogo client={value} className="size-3.5" />
+              {label(value)}
+            </span>
+          ),
+        }))}
+        // Two rows on phones, so every client keeps its logo and full name.
+        className="grid w-full grid-cols-2 sm:flex sm:w-auto sm:self-start"
         itemClassName="whitespace-nowrap px-2 py-[9px] sm:px-3 lg:py-[5px]"
       />
 
@@ -284,13 +262,12 @@ function AgentStatus({
       ) : null}
       <ul className="flex flex-col">
         {agents.map((agent) => {
-          const Logo = LOGOS[agent.client]
           return (
             <li
               key={agent.name}
               className="flex min-h-12 items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
             >
-              <Logo className="size-4 shrink-0 text-muted-foreground" />
+              <AgentLogo client={agent.client} />
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{agent.name}</span>
               <span
                 className="shrink-0 text-[13px] text-muted-foreground tabular-nums"

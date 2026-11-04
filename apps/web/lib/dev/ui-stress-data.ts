@@ -128,6 +128,16 @@ export function stressData(dataset: Dataset) {
     expiringSoon: rows.filter((row) => row.expiresSoon).length,
     expired: worst ? 1284 : 0,
     recent: pastes.slice(0, 15),
+    starred: pastes.slice(0, 5),
+    expiring: pastes.filter((row) => row.expiresAt).slice(0, 5),
+    popular: [...pastes].sort((a, b) => b.views - a.views).slice(0, 5),
+    secrets: pastes.slice(0, length === 0 ? 0 : 3).map((row, index) => ({
+      id: row.slug,
+      slug: row.slug,
+      environment: index === 0 ? "prod" : null,
+      count: index * 7,
+    })),
+    collections,
   }
   // The longest name an OAuth client might register, next to a client that never called yet.
   const agents: ConnectedAgent[] =

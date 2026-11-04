@@ -2,6 +2,7 @@
 // imported by client components, so it stays free of zod; parsing and validation live in
 // ./preferences-schema.ts, which only runs on the server.
 
+import type { WidgetId } from "@/lib/dashboard/widgets"
 import type { Locale } from "@/lib/i18n/config"
 import type { NotificationKind } from "@/lib/notifications/types"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
@@ -27,6 +28,9 @@ export interface Preferences {
   // The language for emails sent without a request, such as notifications. Saved when the person
   // picks a language or turns on a notification email; unset until then, which means English.
   locale?: Locale
+  // The dashboard's widgets in order. Unset until the person arranges it, which means the default
+  // template; an empty list is a dashboard they cleared on purpose.
+  dashboard?: WidgetId[]
 }
 
 export const defaultPreferences: Preferences = {

@@ -1,12 +1,12 @@
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
-import { AGENT_CARD_COOKIE, isAgentCardHidden } from "@/components/dashboard/agent-state"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { listConnectedAgents } from "@/lib/agents"
 import { requireSession } from "@/lib/auth"
+import { DEFAULT_LAYOUT } from "@/lib/dashboard/widgets"
 import { shouldOnboard } from "@/lib/onboarding-server"
 import { getDashboardData } from "@/lib/pastes/dashboard"
+import { readPreferences } from "@/lib/preference-store"
 import { getAppOrigin, getRequestOrigin, getSiteOrigin } from "@/lib/site"
 import { viewerFromUser } from "@/lib/viewer"
 
@@ -16,11 +16,10 @@ export async function generateMetadata() {
 }
 
 export default async function Page({ searchParams }: PageProps<"/dashboard">) {
-  const [session, { origin, host }, locale, jar] = await Promise.all([
+  const [session, { origin }, locale] = await Promise.all([
     requireSession(),
     getSiteOrigin(),
     getLocale(),
-    cookies(),
   ])
   // Every sign-up lands here, by email, social sign-in or a verification link, so this is where a
   // new account turns off to the welcome wizard. The social sign-up marker (?auth=) goes along so
@@ -33,8 +32,11 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
         : ""
     redirect(`/welcome${marker}`)
   }
-  const data = getDashboardData(locale)
+  const preferences = await readPreferences(session.user.id)
+  const layout = preferences.dashboard ?? [...DEFAULT_LAYOUT]
+  const data = getDashboardData(locale, layout)
   const [agents, appOrigin] = await Promise.all([
+    // Loaded even without the agent widget, since one added later starts from this list.
     listConnectedAgents(session.user.id),
     // The MCP server lives with the app, not on the share-link domain.
     getAppOrigin() || getRequestOrigin().then((request) => request.origin),
@@ -44,12 +46,11 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Dashboard
       data={data}
+      layout={layout}
       agents={agents}
-      agentCardHidden={isAgentCardHidden(jar.get(AGENT_CARD_COOKIE)?.value)}
       firstName={firstName}
       origin={origin}
       appOrigin={appOrigin}
-      host={host}
     />
   )
 }
