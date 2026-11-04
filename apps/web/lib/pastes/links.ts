@@ -25,6 +25,18 @@ export function resolveExpiry(expiry: Expiry | "keep", current: Date | null, fro
 
 export function randomSlug() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
-  const bytes = crypto.getRandomValues(new Uint8Array(6))
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
+  const length = 8
+  const bytes = new Uint8Array(length * 2)
+  // Each character gets the same number of possible bytes; discard the uneven tail.
+  const ceiling = 256 - (256 % alphabet.length)
+  let slug = ""
+  while (slug.length < length) {
+    crypto.getRandomValues(bytes)
+    for (const byte of bytes) {
+      if (byte >= ceiling) continue
+      slug += alphabet[byte % alphabet.length]
+      if (slug.length === length) break
+    }
+  }
+  return slug
 }
