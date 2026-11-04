@@ -179,6 +179,7 @@ function summariesOf(
       author.id,
       {
         username: author.displayUsername ?? author.username ?? author.name,
+        handle: author.username,
         name: author.name,
         initials: initials(author.name),
         tone: "foreground",
@@ -203,6 +204,7 @@ function summariesOf(
         : []
       const author = people.get(record.ownerId) ?? {
         username: "unknown",
+        handle: null,
         name: "Unknown",
         initials: "?",
         tone: "muted",
@@ -1105,10 +1107,11 @@ function pasteAuthor(
     ? {
         name: author.name,
         username: author.displayUsername ?? author.username ?? author.name,
+        handle: author.username,
         initials: initials(author.name),
         tone: "foreground",
       }
-    : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" }
+    : { name: "Unknown", username: "unknown", handle: null, initials: "?", tone: "muted" }
 }
 
 const sharedAccess = cache(async (slug: string) => {

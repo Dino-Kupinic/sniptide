@@ -95,5 +95,24 @@
     "notificationViewsDetail": "Consulta su origen en Estadísticas",
     "snapshotUnavailable": "Snapshot unavailable",
     "expired": "Caducado"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "Fragmentos públicos compartidos por {name} (@{handle}) en Sniptide.",
+    "joined": "Se unió en {date}",
+    "pastes": "{count, plural, one {# fragmento público} other {# fragmentos públicos}}",
+    "empty": "@{handle} aún no ha hecho público ningún fragmento.",
+    "pagination": "Páginas",
+    "newer": "Más recientes",
+    "older": "Más antiguos",
+    "pageOf": "Página {page} de {count}",
+    "activity": "Actividad",
+    "activitySummary": "{count, plural, one {# fragmento público} other {# fragmentos públicos}} en el último año",
+    "activityDay": "{count, plural, =0 {Ningún fragmento público} one {# fragmento público} other {# fragmentos públicos}} el {date}",
+    "search": "Buscar fragmentos",
+    "clearSearch": "Borrar búsqueda",
+    "language": "Lenguaje",
+    "allLanguages": "Todos los lenguajes",
+    "noMatches": "Ningún fragmento público coincide con esa búsqueda."
   }
 }

@@ -95,5 +95,24 @@
     "notificationViewsDetail": "See where they came from in Analytics",
     "snapshotUnavailable": "Snapshot unavailable",
     "expired": "Expired"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "Public pastes shared by {name} (@{handle}) on Sniptide.",
+    "joined": "Joined {date}",
+    "pastes": "{count, plural, one {# public paste} other {# public pastes}}",
+    "empty": "@{handle} hasn't made any pastes public yet.",
+    "pagination": "Pages",
+    "newer": "Newer",
+    "older": "Older",
+    "pageOf": "Page {page} of {count}",
+    "activity": "Activity",
+    "activitySummary": "{count, plural, one {# public paste} other {# public pastes}} in the last year",
+    "activityDay": "{count, plural, =0 {No public pastes} one {# public paste} other {# public pastes}} on {date}",
+    "search": "Search pastes",
+    "clearSearch": "Clear search",
+    "language": "Language",
+    "allLanguages": "All languages",
+    "noMatches": "No public pastes match that search."
   }
 }

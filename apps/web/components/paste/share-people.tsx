@@ -34,8 +34,6 @@ export function ShareAvatar({
   return (
     <PersonAvatar
       person={{
-        name: person.name,
-        username: person.handle,
         initials: person.initials,
         tone: toneFor(person.id),
       }}

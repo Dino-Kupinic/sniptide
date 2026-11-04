@@ -6,6 +6,7 @@ import { byteLength, formatBytes, formatDateTime, lineCount } from "@/lib/format
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { getLanguage } from "@/lib/pastes/languages"
 import { readSharedPaste } from "@/lib/pastes/store"
+import { profilePath } from "@/lib/profile-path"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/[slug]/print">) {
@@ -43,7 +44,13 @@ export default async function Page({ params }: PageProps<"/[slug]/print">) {
           {paste.title}
         </h1>
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-          <span className="text-foreground">@{paste.author.username}</span>
+          {paste.author.handle ? (
+            <a href={profilePath(paste.author.handle)} className="text-foreground">
+              @{paste.author.username}
+            </a>
+          ) : (
+            <span className="text-foreground">@{paste.author.username}</span>
+          )}
           <span>{t("edited", { time: formatDateTime(paste.updatedAt, locale) })}</span>
           <span className="font-mono">
             {host}/{paste.slug}

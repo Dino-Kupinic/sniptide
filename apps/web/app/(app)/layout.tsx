@@ -14,7 +14,7 @@ import { viewerFromUser } from "@/lib/viewer"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // The sidebar cookie also holds each section's filter, which picks what sidebarData lists.
-  const [session, { sidebar, data }, { host }, collections, trash] = await Promise.all([
+  const [session, { sidebar, data }, { host, origin }, collections, trash] = await Promise.all([
     requireSession(),
     cookies().then(async (jar) => {
       const sidebar = parseSidebarState(jar.get(SIDEBAR_COOKIE)?.value)
@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ])
 
   return (
-    <SiteHostProvider host={host}>
+    <SiteHostProvider host={host} origin={origin}>
       <ResourceLinksProvider links={getConfig().resourceLinks}>
         <PasteExpiryClock>
           <AppShell

@@ -44,7 +44,12 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
-            <AccountMenuItems name={viewer.name} email={viewer.email} inlineLanguage />
+            <AccountMenuItems
+              name={viewer.name}
+              email={viewer.email}
+              username={viewer.username}
+              inlineLanguage
+            />
           </DropdownMenuContent>
         </DropdownMenu>
         <NotificationsSheet />

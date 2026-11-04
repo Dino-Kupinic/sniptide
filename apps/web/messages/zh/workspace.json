@@ -29,11 +29,11 @@
     "red": "红色",
     "pink": "粉色",
     "violet": "紫色",
-    "usage": "用量",
     "language": "语言",
     "homepage": "主页",
     "documentation": "文档",
     "help": "帮助",
+    "resources": "资源",
     "log_out": "退出登录",
     "system": "跟随系统",
     "light": "浅色",
@@ -365,7 +365,8 @@
     "delete_selected_description": "{count, plural, other {所选的 # 个粘贴将被永久删除。此操作无法撤销。}}",
     "delete_collections_title": "{count, plural, other {删除 # 个集合？}}",
     "delete_collections_description": "其中的粘贴会保留，只是移出这些集合。",
-    "expired_sharing_help": "此粘贴已过期。设置新的有效期或选择“永不”，即可再次分享。"
+    "expired_sharing_help": "此粘贴已过期。设置新的有效期或选择“永不”，即可再次分享。",
+    "your_profile": "我的主页"
   },
   "Secrets": {
     "title": "密钥",

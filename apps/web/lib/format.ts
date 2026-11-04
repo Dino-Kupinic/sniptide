@@ -70,6 +70,15 @@ export function formatDate(time: number, locale: string = "en") {
   }).format(time)
 }
 
+// "November 2026", for when an account joined.
+export function formatMonthYear(time: number, locale: string = "en") {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(time)
+}
+
 export function formatDateTime(
   time: number,
   locale: string = "en",

@@ -78,6 +78,7 @@ export function stressData(dataset: Dataset) {
       owner: {
         name,
         username: worst ? `platform-team-${index + 1}` : "jane",
+        handle: worst ? `platform-team-${index + 1}` : "jane",
         initials: initials(name),
         tone: "primary",
       },

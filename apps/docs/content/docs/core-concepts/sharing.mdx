@@ -17,6 +17,25 @@ the paste's **Sharing** and **Access** rows and its **Share** button.
 New pastes are unlisted until you change your [paste defaults](/settings#set-paste-defaults). With
 an unlisted paste the link itself is the secret, so don't rely on it to protect anything sensitive.
 
+## Your public profile
+
+Your username has a profile page at `/@username` on your instance, such as
+`sniptide.com/@username` on the hosted service. Every `@username` on a share page, in **Shared
+with me** and in the **Share** dialog links to it. Open your own by selecting your name at the top
+of the account menu, or from **Your profile** under **More** on a phone. Handles match in any case, so `/@Dino` opens the same
+page as `/@dino`. When share links live on their own domain (`SHARE_URL`), profiles do too.
+
+The profile shows your display name, avatar and join month, a grid of how many public pastes you
+made each day over the last year, and your public pastes, newest first, 20 to a page. Visitors can
+search the list by title or link and filter it by language.
+
+The profile lists only pastes that anyone could already open from their link: public, with no
+password and no burn after read. Unlisted and private pastes never appear, and neither do pastes
+in the trash, expired pastes or pastes withheld by moderation. To take a paste off your profile,
+make it unlisted or private. The activity grid counts the same pastes, so it shows nothing the
+list doesn't. Profiles are told not to be indexed by search engines, while the public pastes they
+list can still be indexed on their own pages.
+
 ## Protect a paste with a password
 
 Set **Paste password** on a public or unlisted paste, and anyone who opens its link must enter the

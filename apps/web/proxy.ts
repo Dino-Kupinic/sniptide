@@ -5,6 +5,19 @@ import { type NextRequest, NextResponse } from "next/server"
 // (BETTER_AUTH_URL). Without SHARE_URL, or when both are the same domain, nothing changes.
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
+  // Public profiles live at /@<handle>. A folder named @handle would be a parallel route slot, so
+  // the page sits at the internal /_profile/<handle> and only the /@ address is served.
+  const profile = /^\/(?:@|%40)([^/]+)$/i.exec(path)
+  if (profile) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/_profile/${profile[1]}`
+    return NextResponse.rewrite(url)
+  }
+  if (/^\/_profile(?:\/|$)/.test(path)) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/@${path.split("/")[2] ?? ""}`
+    return NextResponse.redirect(url, 308)
+  }
   const appPath =
     /^\/(?:api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|oauth|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|trash|welcome)(?:\/|$)/.test(
       path,

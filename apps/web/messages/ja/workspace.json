@@ -29,11 +29,11 @@
     "red": "赤",
     "pink": "ピンク",
     "violet": "紫",
-    "usage": "使用状況",
     "language": "言語",
     "homepage": "ホームページ",
     "documentation": "ドキュメント",
     "help": "ヘルプ",
+    "resources": "リソース",
     "log_out": "ログアウト",
     "system": "システム",
     "light": "ライト",
@@ -365,7 +365,8 @@
     "delete_selected_description": "{count, plural, other {選択した # 件のペーストは完全に削除されます。この操作は取り消せません。}}",
     "delete_collections_title": "{count, plural, other {# 件のコレクションを削除しますか？}}",
     "delete_collections_description": "中のペーストは残り、コレクションから外れるだけです。",
-    "expired_sharing_help": "このペーストは期限切れです。有効期限を変更するか「無期限」を選ぶと、再び共有できます。"
+    "expired_sharing_help": "このペーストは期限切れです。有効期限を変更するか「無期限」を選ぶと、再び共有できます。",
+    "your_profile": "プロフィール"
   },
   "Secrets": {
     "title": "シークレット",

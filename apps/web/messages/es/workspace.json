@@ -29,11 +29,11 @@
     "red": "Rojo",
     "pink": "Rosa",
     "violet": "Violeta",
-    "usage": "Uso",
     "language": "Idioma",
     "homepage": "Página de inicio",
     "documentation": "Documentación",
     "help": "Ayuda",
+    "resources": "Recursos",
     "log_out": "Cerrar sesión",
     "system": "Sistema",
     "light": "Claro",
@@ -365,7 +365,8 @@
     "delete_selected_description": "{count, plural, one {El fragmento seleccionado se eliminará para siempre. Esto no se puede deshacer.} other {Los # fragmentos seleccionados se eliminarán para siempre. Esto no se puede deshacer.}}",
     "delete_collections_title": "{count, plural, one {¿Eliminar # colección?} other {¿Eliminar # colecciones?}}",
     "delete_collections_description": "Los fragmentos que contienen se conservan y solo salen de las colecciones.",
-    "expired_sharing_help": "Este paste ha caducado. Establece una nueva caducidad o elige Nunca para volver a compartirlo."
+    "expired_sharing_help": "Este paste ha caducado. Establece una nueva caducidad o elige Nunca para volver a compartirlo.",
+    "your_profile": "Tu perfil"
   },
   "Secrets": {
     "title": "Secretos",

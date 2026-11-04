@@ -29,11 +29,11 @@
     "red": "Red",
     "pink": "Pink",
     "violet": "Violet",
-    "usage": "Usage",
     "language": "Language",
     "homepage": "Homepage",
     "documentation": "Documentation",
     "help": "Help",
+    "resources": "Resources",
     "log_out": "Sign out",
     "system": "System",
     "light": "Light",
@@ -365,7 +365,8 @@
     "delete_selected_description": "{count, plural, one {The selected paste will be deleted for good. This can’t be undone.} other {The # selected pastes will be deleted for good. This can’t be undone.}}",
     "delete_collections_title": "{count, plural, one {Delete # collection?} other {Delete # collections?}}",
     "delete_collections_description": "The pastes in them are kept and just leave the collections.",
-    "expired_sharing_help": "This paste has expired. Set a new expiry or choose Never to share it again."
+    "expired_sharing_help": "This paste has expired. Set a new expiry or choose Never to share it again.",
+    "your_profile": "Your profile"
   },
   "Secrets": {
     "title": "Secrets",
