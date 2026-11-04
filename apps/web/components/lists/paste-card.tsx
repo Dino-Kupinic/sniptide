@@ -9,7 +9,7 @@ import { ExpiredBadge } from "@/components/paste/expiry-status"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PasteRow } from "@/lib/pastes/rows"
-import { VisibilityIcon } from "./paste-list"
+import { VisibilityIcon } from "./paste-table"
 import { RowMenu } from "./row-menu"
 
 // A paste in the grid view, drawn like its link preview image: the title large, and a panel with

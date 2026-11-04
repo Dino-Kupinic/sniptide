@@ -58,7 +58,7 @@
     "1Week": "1 week",
     "1Month": "1 month",
     "newPastes": "New pastes",
-    "whereNewPasteAndQuickPaste": "Where New paste and Quick paste start. You can still change each paste.",
+    "whereNewPastesStart": "Where New paste and gist imports start. You can still change each paste.",
     "visibility": "Visibility",
     "private": "Private",
     "unlisted": "Unlisted",

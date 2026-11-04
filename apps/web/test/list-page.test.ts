@@ -185,7 +185,7 @@ describeDb("bounded paste reads", () => {
     ).toBe(0)
   })
 
-  test("dashboard totals and views aggregate all pastes but recent rows stay bounded", async () => {
+  test("dashboard counts expiring and expired pastes but recent rows stay bounded", async () => {
     const now = Date.now()
     for (let i = 0; i < 36; i++) {
       const row = await seedPaste({
@@ -203,14 +203,22 @@ describeDb("bounded paste reads", () => {
     }
     await seedPaste({ slug: "foreign", owner: "other" })
     await seedPaste({ slug: "deleted", owner: "owner", deletedAt: new Date() })
+    await seedPaste({ slug: "soon", owner: "owner", expiresAt: new Date(now + DAY) })
+    await seedPaste({ slug: "later", owner: "owner", expiresAt: new Date(now + 3 * DAY) })
+    await seedPaste({ slug: "gone", owner: "owner", expiresAt: new Date(now - DAY) })
+    await seedPaste({ slug: "foreign-soon", owner: "other", expiresAt: new Date(now + DAY) })
+    await seedPaste({
+      slug: "trashed-soon",
+      owner: "owner",
+      expiresAt: new Date(now + DAY),
+      deletedAt: new Date(),
+    })
     const data = await getDashboardData()
-    expect(data.totalPastes).toBe(36)
-    expect(data.activeLinks).toBe(24)
-    expect(data.dailyViews.at(-1)).toBe(72)
-    expect(data.newPastes).toEqual({ "1": 0, "7": 36, "30": 36 })
-    expect(data.recent.length).toBeLessThanOrEqual(20)
+    expect(data.expiringSoon).toBe(1)
+    expect(data.expired).toBe(1)
+    expect((data.recent ?? []).length).toBeLessThanOrEqual(20)
     for (const visibility of ["public", "unlisted", "private"]) {
-      expect(data.recent.filter((p) => p.visibility === visibility)).toHaveLength(5)
+      expect((data.recent ?? []).filter((p) => p.visibility === visibility)).toHaveLength(5)
     }
     expect(data).not.toHaveProperty("pasteCreatedAt")
   })

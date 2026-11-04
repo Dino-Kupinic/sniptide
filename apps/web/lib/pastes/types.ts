@@ -1,5 +1,7 @@
 // Shapes the paste screens read, built from the Postgres tables in ./store.ts.
 
+import type { AgentClient } from "@/lib/onboarding"
+
 // The values themselves, for the schemas that check input. The database's visibility enum
 // (packages/db/src/schema/pastes.ts) holds the same three.
 export const VISIBILITIES = ["public", "unlisted", "private"] as const
@@ -37,6 +39,11 @@ export interface Revision {
 }
 
 // What the lists read: a paste without its file contents or revision history.
+export interface PasteCreator {
+  via: "api" | "mcp" | "cli"
+  agent: AgentClient | null
+}
+
 export interface PasteSummary {
   slug: string
   title: string
@@ -58,6 +65,8 @@ export interface PasteSummary {
   uniqueViews: number
   // Reads with an API token (MCP or the CLI), counted apart from views.
   agentReads: number
+  // How it was created when not in the web editor, and by which connected agent if one made it.
+  createdBy: PasteCreator | null
   // Oldest first, today last.
   viewsByDay: number[]
   createdAt: number

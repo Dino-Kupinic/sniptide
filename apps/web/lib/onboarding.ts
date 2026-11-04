@@ -52,6 +52,11 @@ export function agentSetup(origin: string) {
 
 // Which client an OAuth connection came from, judged by the name it registered with. The name is
 // chosen by the client, so it only picks one of the fixed values and is never shown or sent as is.
+// A stored client value, or null for anything that isn't one.
+export function agentClientOf(value: string | null | undefined): AgentClient | null {
+  return AGENT_CLIENTS.find((client) => client === value) ?? null
+}
+
 export function agentClientFromName(name: string): AgentClient {
   const value = name.toLowerCase()
   if (value.includes("claude")) return "claude_code"

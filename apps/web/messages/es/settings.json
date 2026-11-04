@@ -58,7 +58,7 @@
     "1Week": "1 semana",
     "1Month": "1 mes",
     "newPastes": "Nuevos pastes",
-    "whereNewPasteAndQuickPaste": "Valores iniciales de «Nuevo paste» y «Paste rápido». Puedes cambiarlos en cada paste.",
+    "whereNewPastesStart": "Valores iniciales de «Nuevo paste» y de las importaciones de gists. Puedes cambiarlos en cada paste.",
     "visibility": "Visibilidad",
     "private": "Privado",
     "unlisted": "No listado",

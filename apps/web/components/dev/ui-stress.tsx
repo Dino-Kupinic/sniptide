@@ -15,6 +15,7 @@ import { SidePanelProvider } from "@/components/paste/side-panel"
 import { AppShell } from "@/components/shell/app-shell"
 import { defaultSidebarState } from "@/components/shell/sidebar-state"
 import { SiteHostProvider } from "@/components/site-host"
+import { WIDGETS } from "@/lib/dashboard/widgets"
 import {
   type Dataset,
   datasets,
@@ -71,11 +72,11 @@ export function UiStress({
           {screen === "dashboard" ? (
             <Dashboard
               data={data.dashboard}
+              layout={[...WIDGETS]}
+              agents={data.agents}
               firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
               origin={origin}
-              host={host}
-              draftScope={`ui-stress-dashboard-${dataset}`}
-              defaults={{ expiry: "never", visibility: "private", burnAfterRead: false }}
+              appOrigin={origin}
             />
           ) : null}
           {screen === "pastes" ? (

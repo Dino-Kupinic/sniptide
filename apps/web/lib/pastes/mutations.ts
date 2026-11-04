@@ -12,6 +12,7 @@ import {
   user,
 } from "@workspace/db/schema"
 import { and, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import type { AgentClient } from "@/lib/onboarding"
 import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
 import { type InsertedFile, insertPaste } from "./insert"
@@ -27,6 +28,12 @@ type PasteRecord = typeof pasteTable.$inferSelect
 type SessionActor = { kind: "session"; userId: string }
 type TokenActor = { kind: "token"; userId: string }
 export type PasteActor = SessionActor | TokenActor
+
+// How a capture reached Sniptide, recorded on the paste it creates.
+export interface PasteOrigin {
+  via: "api" | "mcp" | "cli"
+  agent: AgentClient | null
+}
 
 export interface CaptureData {
   title: string
@@ -74,7 +81,7 @@ type CreateRequest =
       passwordHash: string | null
       invites: ShareInvite[]
     }
-  | { kind: "capture"; actor: TokenActor; input: CaptureData }
+  | { kind: "capture"; actor: TokenActor; input: CaptureData; origin?: PasteOrigin }
 
 type ReplaceRequest =
   | {
@@ -175,7 +182,12 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
           burnAfterRead: request.input.burnAfterRead,
           expiresAt: resolveExpiry(request.input.expiry, null, now.getTime()),
         }
-      : { tags: request.input.tags, source: request.input.source }),
+      : {
+          tags: request.input.tags,
+          source: request.input.source,
+          createdVia: request.origin?.via ?? "api",
+          createdByAgent: request.origin?.agent ?? null,
+        }),
   })
   if (request.kind === "editor") {
     const wanted = new Map(

@@ -51,6 +51,7 @@ import {
   changePasteSharing,
   createPasteRecord,
   PasteCollectionError,
+  type PasteOrigin,
   replacePaste,
   trashPasteRecord,
 } from "@/lib/pastes/mutations"
@@ -163,6 +164,7 @@ export async function createCapture(
   owner: string,
   input: unknown,
   receipt?: CreateReceipt,
+  createdFrom?: PasteOrigin,
 ): Promise<ApiPaste> {
   const quota = await hit([limits.create(owner)])
   if (!quota.allowed)
@@ -186,6 +188,7 @@ export async function createCapture(
       const { id } = await createPasteRecord(tx, {
         kind: "capture",
         actor: { kind: "token", userId: owner },
+        origin: createdFrom,
         input: {
           title: data.title,
           description: data.description,

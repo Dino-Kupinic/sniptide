@@ -93,12 +93,12 @@ export async function updateAvatar(image: string | null): Promise<Result> {
 
 // The email language is saved by the server from the request, never patched from the client.
 const generalPatchSchema = preferencesSchema
-  .omit({ notifications: true, locale: true })
+  .omit({ notifications: true, locale: true, dashboard: true })
   .partial()
   .strict()
 
 export async function updatePreferences(
-  patch: Partial<Omit<Preferences, "notifications" | "locale">>,
+  patch: Partial<Omit<Preferences, "notifications" | "locale" | "dashboard">>,
 ): Promise<Result> {
   const session = await getSession()
   if (!session) return { ok: false, error: await actionError("signInSettings") }

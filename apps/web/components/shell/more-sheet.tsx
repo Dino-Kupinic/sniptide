@@ -9,7 +9,6 @@ import {
   SheetHeader,
   sheetRowClass,
 } from "@sniptide/ui/components/sheet"
-import { cn } from "@sniptide/ui/lib/utils"
 import {
   ChartColumnIcon,
   DownloadIcon,
@@ -20,11 +19,9 @@ import {
   Trash2Icon,
   UserIcon,
   UsersIcon,
-  WorkflowIcon,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
-import * as React from "react"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import { useSiteOrigin } from "@/components/site-host"
@@ -83,24 +80,13 @@ export function MoreSheet({
         <SheetBody>
           <nav aria-label={t("more")} className="flex flex-col">
             {pages.map((page) => (
-              <React.Fragment key={page.href}>
-                <PageRow
-                  {...page}
-                  count={page.count ? format.format(page.count) : undefined}
-                  pathname={pathname}
-                  onNavigate={close}
-                />
-                {/* Workflows follows Analytics, as in the sidebar, and isn't a page yet. */}
-                {page.href === "/analytics" ? (
-                  <div className={cn(sheetRowClass, "pointer-events-none text-muted-foreground")}>
-                    <WorkflowIcon />
-                    <span className="min-w-0 flex-1 truncate">{t("workflows")}</span>
-                    <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] leading-none font-normal">
-                      {t("coming_soon")}
-                    </span>
-                  </div>
-                ) : null}
-              </React.Fragment>
+              <PageRow
+                key={page.href}
+                {...page}
+                count={page.count ? format.format(page.count) : undefined}
+                pathname={pathname}
+                onNavigate={close}
+              />
             ))}
             {importGist ? (
               <button

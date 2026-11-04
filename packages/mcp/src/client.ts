@@ -50,6 +50,8 @@ export class TokenApiBackend implements SniptideBackend {
         headers: {
           authorization: `Bearer ${this.token}`,
           accept: "application/json",
+          // Lets the server record that a paste came through the MCP server.
+          "x-sniptide-client": "mcp",
           ...(body ? { "content-type": "application/json" } : {}),
         },
         body: body ? JSON.stringify(body) : undefined,

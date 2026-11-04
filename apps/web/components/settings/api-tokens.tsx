@@ -17,6 +17,7 @@ import { KeyRoundIcon, TerminalIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { CopyButton } from "@/components/paste/copy-button"
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
 import type { TokenExpiry, TokenSummary } from "@/lib/api/tokens"
@@ -24,6 +25,7 @@ import type { EnvGroupSummary } from "@/lib/env/store"
 import { runAction } from "@/lib/feedback"
 import { formatDate, timeAgo } from "@/lib/format"
 import type { Locale } from "@/lib/i18n/config"
+import { agentClientFromName } from "@/lib/onboarding"
 import { SaveStatus, SettingRow, SettingsSection } from "./section"
 
 // Below sm the action moves under the name and meta line, so the meta line keeps the width.
@@ -195,7 +197,12 @@ export function ApiTokensSection({ tokens, origin }: { tokens: TokenSummary[]; o
           {tokens.map((token) => (
             <li key={token.id} className={rowClass}>
               <div className="flex min-w-0 max-w-full flex-col gap-0.5">
-                <span className="truncate text-sm font-medium">{token.name}</span>
+                <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  {token.connectedApp ? (
+                    <AgentLogo client={agentClientFromName(token.name)} />
+                  ) : null}
+                  <span className="truncate">{token.name}</span>
+                </span>
                 {token.connectedApp ? (
                   <span className="text-[12px] text-muted-foreground">
                     {t("connectedApp")} ·{" "}

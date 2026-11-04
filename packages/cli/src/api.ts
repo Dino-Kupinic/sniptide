@@ -24,6 +24,8 @@ export class Api {
         headers: {
           Authorization: `Bearer ${this.config.token}`,
           Accept: "application/json",
+          // Lets the server record that a paste came from the CLI.
+          "X-Sniptide-Client": "cli",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),

@@ -314,7 +314,7 @@ describeDb("host moderation", () => {
       expect(await listTrash()).toEqual([])
       expect(await trashTotals()).toEqual({ count: 0, bytes: 0 })
       expect((await storageUsage()).pastes).toBe(0)
-      expect((await getDashboardData()).totalPastes).toBe(0)
+      expect((await getDashboardData()).recent).toEqual([])
       const analytics = await getAnalyticsReport({ range: "30d", paste: target.slug })
       expect(analytics.pasteCount).toBe(0)
       expect(JSON.stringify(analytics)).not.toContain(synthetic)
