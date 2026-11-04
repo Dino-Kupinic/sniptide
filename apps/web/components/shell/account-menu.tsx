@@ -20,6 +20,7 @@ import {
   HouseIcon,
   KeyboardIcon,
   LogOutIcon,
+  MessageSquareIcon,
   MonitorIcon,
   MoonIcon,
   SettingsIcon,
@@ -32,6 +33,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
 import { useResourceLinks } from "@/components/shell/resource-links"
+import { useSupport } from "@/components/shell/support"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import { useSiteOrigin } from "@/components/site-host"
@@ -41,7 +43,7 @@ import { localeNames, locales } from "@/lib/i18n/config"
 import { profilePath } from "@/lib/profile-path"
 
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
-// as in the Paper "Account menu open" artboard: account, preferences, resources, log out. The
+// as in the Paper "Account menu open" artboard: account, preferences (with Feedback), resources, log out. The
 // account row opens the public profile, and Usage lives in Settings.
 // A phone has no room for a submenu beside the menu, so `inlineLanguage` lists the languages
 // in the menu itself.
@@ -64,6 +66,8 @@ export function AccountMenuItems({
   const [changingLocale, startLocaleTransition] = React.useTransition()
   const shortcuts = useShortcutsHelp()
   const links = useResourceLinks()
+  const support = useSupport()
+  const tSupport = useTranslations("Support")
 
   const languageChoices = (
     <DropdownMenuRadioGroup
@@ -150,6 +154,12 @@ export function AccountMenuItems({
         {t("keyboard_shortcuts")}
         <ShortcutKeys id="help" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
+      {support ? (
+        <DropdownMenuItem onClick={() => support.open()}>
+          <MessageSquareIcon />
+          {tSupport("open")}
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuSeparator />
       <ThemeRow />
       {inlineLanguage ? (

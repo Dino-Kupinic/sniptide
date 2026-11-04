@@ -1937,6 +1937,8 @@ export const internalRoutes = [
   "/api/locale",
   "/api/search",
   "/api/stats",
+  "/api/support/chat",
+  "/api/support/report",
   "/secrets/manage",
   "/secret-share/[token]/reveal",
 ] as const
