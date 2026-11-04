@@ -497,7 +497,6 @@ describeDb("undoing paste actions", () => {
   })
 
   test("a move or removal is undone by filing it back where it was", async () => {
-    await seedPaste({ slug: "p", owner: "owner", collection: "old" })
     // Moving needs a real collection; the undo target here is the previous one or none.
     await getDb()
       .insert(collection)
@@ -505,6 +504,7 @@ describeDb("undoing paste actions", () => {
         { ownerId: "owner", slug: "old", name: "old" },
         { ownerId: "owner", slug: "new", name: "new" },
       ])
+    await seedPaste({ slug: "p", owner: "owner", collection: "old" })
 
     expect(await setPasteCollection("p", "new")).toEqual({ ok: true })
     expect((await pasteRow("p"))?.collection).toBe("new")

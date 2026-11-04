@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 import {
   bigint,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -16,6 +17,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { user } from "./auth"
+import { collection } from "./collections"
 
 export const moderationState = pgEnum("moderation_state", [
   "pending",
@@ -92,6 +94,11 @@ export const paste = pgTable(
     burnedAt: time("burned_at"),
   },
   (table) => [
+    foreignKey({
+      name: "paste_owner_collection_fkey",
+      columns: [table.ownerId, table.collection],
+      foreignColumns: [collection.ownerId, collection.slug],
+    }),
     uniqueIndex("paste_slug_unique").on(table.slug),
     index("paste_owner_idx").on(table.ownerId, table.updatedAt),
     index("paste_collection_idx").on(table.ownerId, table.collection, table.updatedAt, table.id),

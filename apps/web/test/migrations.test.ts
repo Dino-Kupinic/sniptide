@@ -119,6 +119,62 @@ async function onFreshDatabase(run: (db: ReturnType<typeof createDb>) => Promise
 }
 
 describeDb("upgrading a database", () => {
+  for (const duplicates of [false, true]) {
+    test(`ownership integrity ${duplicates ? "refuses duplicate identities without changing data" : "unfiles dangling collections and preserves valid memberships"}`, async () => {
+      const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-integrity-"))
+      try {
+        for (const entry of fs.readdirSync(folder)) {
+          if (!entry.endsWith("_ownership_integrity"))
+            fs.cpSync(path.join(folder, entry), path.join(previous, entry), { recursive: true })
+        }
+        await onFreshDatabase(async (db) => {
+          await migrateDb(db, previous)
+          await db.$client`INSERT INTO "user" (id, name, email) VALUES ('owner', 'Owner', 'owner@example.com'), ('other', 'Other', 'other@example.com')`
+          await db.$client`INSERT INTO collection (owner_id, slug, name) VALUES ('owner', 'valid', 'Valid'), ('other', 'theirs', 'Theirs')`
+          await db.$client`INSERT INTO paste (owner_id, slug, title, visibility, collection, version) VALUES ('owner', 'valid', 'Valid', 'private', 'valid', 10), ('owner', 'missing', 'Missing', 'private', 'gone', 20), ('owner', 'wrong-owner', 'Wrong owner', 'private', 'theirs', 30)`
+          await db.$client`INSERT INTO paste_file (paste_id, position, name, language, content) SELECT id, 0, 'a.txt', 'text', 'preserved' FROM paste`
+          await db.$client`INSERT INTO signup_source (user_id, source) VALUES ('owner', 'preserved')`
+          if (duplicates) {
+            await db.$client`INSERT INTO account (id, provider_id, account_id, user_id) VALUES ('a', 'github', 'same', 'owner'), ('b', 'github', 'same', 'other')`
+            await expect(migrateDb(db, folder)).rejects.toThrow(
+              "Duplicate provider account identities",
+            )
+            expect([
+              ...(await db.$client`SELECT collection, version::int AS version FROM paste ORDER BY slug`),
+            ]).toEqual([
+              { collection: "gone", version: 20 },
+              { collection: "valid", version: 10 },
+              { collection: "theirs", version: 30 },
+            ])
+            expect((await db.$client`SELECT count(*)::int AS n FROM account`)[0]?.n).toBe(2)
+            await db.$client`DELETE FROM account WHERE id = 'b'`
+          }
+          expect((await migrateDb(db, folder)).applied).toEqual([
+            "20261104204533_ownership_integrity",
+          ])
+          expect([
+            ...(await db.$client`SELECT collection, version::int AS version FROM paste ORDER BY slug`),
+          ]).toEqual([
+            { collection: null, version: 21 },
+            { collection: "valid", version: 10 },
+            { collection: null, version: 31 },
+          ])
+          expect(
+            (
+              await db.$client`SELECT count(*)::int AS n FROM paste_file WHERE content = 'preserved'`
+            )[0]?.n,
+          ).toBe(3)
+          expect(
+            (await db.$client`SELECT source FROM signup_source WHERE user_id = 'owner'`)[0]?.source,
+          ).toBe("preserved")
+          expect((await migrateDb(db, folder)).applied).toEqual([])
+        })
+      } finally {
+        fs.rmSync(previous, { recursive: true, force: true })
+      }
+    })
+  }
+
   test("a database with main's API receipts applies the pending visit and projection migrations", async () => {
     const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-visits-"))
     const pending = ["20261027210723_lush_archangel", "20261028075842_condemned_stephen_strange"]

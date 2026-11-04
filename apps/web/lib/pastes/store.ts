@@ -52,6 +52,7 @@ import {
   replacePaste,
   restorePasteRevision,
   sealPasteRevision,
+  setPasteCollectionRecord,
   trashPasteRecord,
   type UpdateOptions,
   type UpdateResult,
@@ -67,6 +68,7 @@ import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
 
 export { PasteBudgetError } from "./budget"
+export { PasteCollectionError } from "./mutations"
 
 import { parsePasteInput } from "./schema"
 import type {
@@ -1494,15 +1496,10 @@ export async function renamePaste(slug: string, title: string) {
     .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
 }
 
-// Files the paste in a collection, or takes it out of its collection with null. The caller
-// checks that the collection exists.
+// Validate membership while holding the same account lock as collection deletion.
 export async function setPasteCollection(slug: string, collection: string | null) {
-  const record = await findOwned(slug)
-  if (!record || record.deletedAt) return
-  await getDb()
-    .update(pasteTable)
-    .set({ collection, version: sql`${pasteTable.version} + 1` })
-    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  await getDb().transaction((tx) => setPasteCollectionRecord(tx, actor, { slug }, collection))
 }
 
 export async function trashPaste(slug: string) {

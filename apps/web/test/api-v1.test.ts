@@ -380,7 +380,7 @@ describeDb("token API", () => {
         collection: "kit",
         deletedAt: new Date(),
       })
-      await seedPaste({ slug: "kit-bobs", owner: "bob", collection: "kit" })
+      await seedPaste({ slug: "kit-bobs", owner: "bob", collection: "bobs-kit" })
 
       const slugs: string[] = []
       let cursor: string | null = null

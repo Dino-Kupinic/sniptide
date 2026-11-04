@@ -26,15 +26,15 @@ describeDb("bulk paste actions", () => {
     await seedUser("owner")
     await seedUser("other")
     signInAs("owner")
-    await seedPaste({ slug: "a", owner: "owner", visibility: "public", collection: "old" })
-    await seedPaste({ slug: "b", owner: "owner", visibility: "private" })
-    await seedPaste({ slug: "theirs", owner: "other", visibility: "public" })
     await getDb()
       .insert(collection)
       .values([
         { ownerId: "owner", slug: "old", name: "old" },
         { ownerId: "owner", slug: "new", name: "new" },
       ])
+    await seedPaste({ slug: "a", owner: "owner", visibility: "public", collection: "old" })
+    await seedPaste({ slug: "b", owner: "owner", visibility: "private" })
+    await seedPaste({ slug: "theirs", owner: "other", visibility: "public" })
   })
 
   test("trash and restore move every selected paste, and skip someone else's", async () => {
