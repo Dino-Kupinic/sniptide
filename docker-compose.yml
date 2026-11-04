@@ -63,8 +63,9 @@ services:
       NODE_OPTIONS: ${NODE_OPTIONS:-}
       DATABASE_URL: postgres://sniptide:${POSTGRES_PASSWORD:-sniptide}@db:5432/sniptide
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32) in .env}
-      # The public address: BETTER_AUTH_URL when set, otherwise https://<SNIPTIDE_DOMAIN>.
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${SNIPTIDE_DOMAIN:+https://${SNIPTIDE_DOMAIN}}}
+      # The public address: BETTER_AUTH_URL when set, otherwise https://<SNIPTIDE_DOMAIN>, otherwise
+      # http://localhost:3000.
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${SNIPTIDE_DOMAIN:+https://}${SNIPTIDE_DOMAIN:-http://localhost:3000}}
       # "first" closes sign-up once the first account (yours) exists; the install script sets it.
       ALLOW_SIGN_UP: ${ALLOW_SIGN_UP:-true}
       ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
