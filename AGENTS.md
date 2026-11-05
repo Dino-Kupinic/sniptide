@@ -20,6 +20,21 @@ every change. In short: test the behavior, update the documentation in the same 
 - Report what you verified and what you couldn't, such as database tests without
   `TEST_DATABASE_URL`. State a claim you couldn't verify as unverified rather than guessing.
 
+# Context discipline
+
+- Read the relevant functions and documentation sections first. Expand to whole files when the
+  surrounding context is needed, and reuse unchanged material already read in the chat.
+- Keep tool results compact: select needed fields from API responses and bound search output.
+  Narrow a query when output is truncated so required evidence is still inspected.
+- Capture verbose test and build output in an owned temporary log. Return the exit status,
+  summary, and relevant failures; inspect more of the log when diagnosing a failure.
+- Batch independent reads and checks. Repeat a passing check when changes or unresolved concerns
+  justify it, and use bounded waits for CI instead of frequent polling.
+- Inspect screenshots at the sizes and states needed to verify the change; avoid repeating
+  unchanged captures. Hand off long tasks with a concise record of decisions and remaining work.
+- These rules reduce repeated context; all required tests, documentation, review, CI, and cleanup
+  checks still apply.
+
 # Commits and pull requests
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit message and every
