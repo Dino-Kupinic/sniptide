@@ -6,14 +6,11 @@ import { highlightFiles } from "@/lib/highlight/highlight"
 import type { HighlightRole } from "@/lib/highlight/types"
 import { getLanguage } from "@/lib/pastes/languages"
 import { type PastePreview, previewLines } from "@/lib/pastes/preview"
-import { lifeCell, lifeCells } from "@/lib/pastes/preview-life"
 
 export const previewSize = { width: 1200, height: 630 }
 
-// The Night card from the brand file: the sidebar black with the logo, the paste title and its
-// first lines of code in a panel that runs off the bottom edge, and the Game of Life in both
-// gutters (lib/pastes/preview-life.ts) at its first generation. The preview video
-// (lib/pastes/preview-video.ts) plays the gutters over this card's centre.
+// The Night card from the brand file (Brand, "OG v3 · Paste"): the sidebar black with the logo,
+// the paste title and its first lines of code in a panel that runs off the bottom edge.
 const colors = {
   background: "#0c0b0b",
   foreground: "#f4f4f4",
@@ -21,8 +18,6 @@ const colors = {
   panel: "#121111",
   border: "#2f2c2c",
   lineNumber: "#5c5858",
-  trail: "#2a26ec",
-  live: "#8f8cff",
 }
 
 // The dark --syntax-* colours from packages/ui globals.css.
@@ -48,30 +43,10 @@ function loadFonts() {
   return fonts
 }
 
-// One path per opacity step keeps the SVG small: a few hundred cells share about twenty paths.
-function lifePaths() {
-  const layers = new Map<string, string>()
-  const add = (color: string, alpha: number, d: string) => {
-    const step = Math.round(alpha * 20) / 20
-    if (step <= 0) return
-    const key = `${color} ${step}`
-    layers.set(key, (layers.get(key) ?? "") + d)
-  }
-  for (const cell of lifeCells(0)) {
-    const d = `M${cell.x} ${cell.y}h${lifeCell - 1}v${lifeCell - 1}h-${lifeCell - 1}z`
-    add(colors.trail, cell.trail, d)
-    add(colors.live, cell.live, d)
-  }
-  // Trails first, so live cells sit on top.
-  return [...layers].sort(
-    ([a], [b]) => (a.startsWith(colors.trail) ? -1 : 0) - (b.startsWith(colors.trail) ? -1 : 0),
-  )
-}
-
-// Satori can't ellipsize, so long titles are cut here; about 30 characters fill the line.
+// Satori can't ellipsize, so long titles are cut here; about 44 characters fill the line.
 function oneLine(title: string) {
   const chars = [...title]
-  return chars.length > 30 ? `${chars.slice(0, 29).join("").trimEnd()}…` : title
+  return chars.length > 44 ? `${chars.slice(0, 43).join("").trimEnd()}…` : title
 }
 
 type Run = { text: string; color: string }
@@ -102,23 +77,10 @@ export async function pastePreviewImage(preview: PastePreview) {
         height: "100%",
         background: colors.background,
         color: colors.foreground,
-        padding: "52px 168px 0",
+        padding: "52px 64px 0",
         fontFamily: "Paper Mono",
       }}
     >
-      <svg
-        width={previewSize.width}
-        height={previewSize.height}
-        viewBox={`0 0 ${previewSize.width} ${previewSize.height}`}
-        aria-hidden="true"
-        style={{ position: "absolute", top: 0, left: 0 }}
-      >
-        {lifePaths().map(([key, d]) => {
-          const [color, opacity] = key.split(" ")
-          return <path key={key} d={d} fill={color} fillOpacity={Number(opacity)} />
-        })}
-      </svg>
-
       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
         <svg width={33} height={32} viewBox="2 2 20 19.27" aria-hidden="true">
           <g fill={colors.foreground}>
