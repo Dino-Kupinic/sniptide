@@ -2,6 +2,8 @@
 
 import "@sniptide/ui/globals.css"
 import { Button } from "@sniptide/ui/components/button"
+import { ErrorBackdrop } from "@/components/error/error-backdrop"
+import { ErrorCode } from "@/components/error/error-code"
 
 // Replaces the root layout when it throws, so there are no providers, no translations and no
 // fonts here: English copy, the system font stack and the light theme, because the theme provider
@@ -16,7 +18,9 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body className="bg-background text-foreground">
-        <main className="flex min-h-dvh flex-col items-center justify-center px-6 py-10">
+        <main className="relative isolate flex min-h-dvh flex-col items-center justify-center px-6 py-10">
+          <ErrorBackdrop />
+          <ErrorCode />
           <title>Something went wrong</title>
           <h1 className="text-center text-[30px] leading-[34px] font-bold tracking-[-0.01em]">
             Something went wrong.

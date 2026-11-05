@@ -12,7 +12,6 @@ export function ViewsSparkline({ values, className }: { values: number[]; classN
           key={index}
           style={{ height: `${Math.max(6, (value / max) * 100)}%` }}
           className="min-w-0 flex-1"
-          compact
           highlight={index === values.length - 1}
         />
       ))}

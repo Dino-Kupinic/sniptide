@@ -1,7 +1,8 @@
-import { Progress } from "@sniptide/ui/components/progress"
 import { AlertTriangleIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { ProgressBar } from "@/components/dithercn/progress-bar"
 import { usageLimitState } from "@/lib/account/usage-display"
+import { ditherSettings } from "@/lib/dither/settings"
 
 export type UsageMetric = {
   label: string
@@ -35,7 +36,18 @@ export function UsageMeters({ metrics }: { metrics: UsageMetric[] }) {
             </div>
             {state.kind === "limited" ? (
               <>
-                <Progress value={state.percent} aria-label={metric.label} />
+                <ProgressBar
+                  value={state.percent}
+                  label={metric.label}
+                  hideLabel
+                  size="sm"
+                  color="--primary"
+                  valueText={t("usageOfLimit", {
+                    used: metric.format(metric.used),
+                    limit: metric.format(metric.limit ?? 0),
+                  })}
+                  {...ditherSettings}
+                />
                 {state.status === "normal" ? null : (
                   <p className="flex items-center gap-1.5 text-[13px] font-medium">
                     <AlertTriangleIcon
