@@ -405,3 +405,146 @@ export function HowItFitsVisual() {
     </figure>
   )
 }
+
+/** One line of a terminal session: a prompt, a tool call or a result. */
+function TermLine({
+  kind,
+  children,
+}: {
+  kind: "prompt" | "call" | "result" | "done"
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-2 font-mono text-xs leading-5",
+        kind === "result" && "pl-4 text-muted-foreground",
+        kind === "prompt" && "text-muted-foreground",
+        kind !== "result" && kind !== "prompt" && "text-foreground",
+      )}
+    >
+      {kind === "call" && <span className="mt-1.5 size-2 shrink-0 bg-link" />}
+      {kind === "done" && <span className="mt-1.5 size-2 shrink-0 bg-(--syntax-string)" />}
+      {kind === "prompt" && <span className="text-link">&gt;</span>}
+      <span className="min-w-0">{children}</span>
+    </div>
+  )
+}
+
+export function AgentLoopVisual() {
+  return (
+    <figure
+      aria-label="A coding agent searches Sniptide for a snippet, reads its files and writes code that follows it."
+      className="not-prose my-8 grid gap-6 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] md:items-stretch"
+    >
+      <div
+        aria-hidden
+        inert
+        className="flex flex-col gap-2 rounded-lg border bg-sidebar p-4 select-none"
+      >
+        <div className="mb-1 flex items-center justify-between font-mono text-xs text-muted-foreground">
+          <span>claude</span>
+          <span>~/acme/web</span>
+        </div>
+        <TermLine kind="prompt">
+          Add a confirm dialog to the delete button. Use our usual pattern.
+        </TermLine>
+        <TermLine kind="call">
+          sniptide · search_snippets(
+          <span className="text-(--syntax-string)">"confirm dialog"</span>)
+        </TermLine>
+        <TermLine kind="result">1 match in components</TermLine>
+        <TermLine kind="call">
+          sniptide · read_snippet(<span className="text-(--syntax-string)">"k7Qe2x"</span>)
+        </TermLine>
+        <TermLine kind="result">3 files, 84 lines</TermLine>
+        <TermLine kind="done">
+          Updated src/components/delete-button.tsx with your confirm dialog.
+        </TermLine>
+      </div>
+      <ol className="flex flex-col justify-center gap-4">
+        {[
+          ["Search", "The agent asks for a pattern by name, tag or language."],
+          ["Read", "It opens the files of the paste that matches, as you saved them."],
+          [
+            "Write",
+            "It writes new code that follows your version, and saves back only if you allow it.",
+          ],
+        ].map(([name, text], index) => (
+          <li key={name} className="flex gap-3">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border font-mono text-xs text-muted-foreground tabular-nums">
+              {index + 1}
+            </span>
+            <span className="min-w-0 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{name}.</span> {text}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </figure>
+  )
+}
+
+/** A box in the self-hosting diagram: a name, one line on what it is, and what it listens on. */
+function Node({
+  icon,
+  title,
+  detail,
+  highlight = false,
+}: {
+  icon: ReactNode
+  title: string
+  detail: string
+  highlight?: boolean
+}) {
+  return (
+    <li
+      className={cn(
+        "flex h-full min-w-0 flex-col gap-2 rounded-lg border bg-sidebar p-4",
+        highlight && "border-primary",
+      )}
+    >
+      <span aria-hidden className="text-muted-foreground [&_svg]:size-4">
+        {icon}
+      </span>
+      <span className="text-sm font-medium text-foreground">{title}</span>
+      <span className="font-mono text-xs text-muted-foreground">{detail}</span>
+    </li>
+  )
+}
+
+export function SelfHostVisual() {
+  const nodes = [
+    { icon: <Bot />, title: "Clients", detail: "browser, CLI, agents" },
+    { icon: <Lock />, title: "Reverse proxy", detail: "HTTPS on :443" },
+    {
+      icon: <SquareTerminal />,
+      title: "Sniptide",
+      detail: "one container, :3000",
+      highlight: true,
+    },
+    { icon: <FileText />, title: "Postgres 17", detail: "your data, :5432" },
+  ]
+  return (
+    <figure
+      aria-label="Browsers, the CLI and agents reach your domain over HTTPS. A reverse proxy forwards them to the Sniptide container, which stores everything in Postgres."
+      className="not-prose my-8"
+    >
+      <ol className="grid items-stretch gap-6 md:grid-cols-4 md:gap-8">
+        {nodes.map((node, index) => (
+          <li key={node.title} className="relative min-w-0">
+            {index > 0 && (
+              <ArrowRight
+                aria-hidden
+                className="absolute -top-5 left-1/2 size-4 -translate-x-1/2 rotate-90 text-muted-foreground md:top-1/2 md:-left-5 md:-translate-y-1/2 md:rotate-0"
+              />
+            )}
+            <ul className="h-full">
+              <Node {...node} />
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </figure>
+  )
+}

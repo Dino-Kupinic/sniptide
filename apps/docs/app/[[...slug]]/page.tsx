@@ -1,7 +1,8 @@
-import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page"
+import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/notebook/page"
 import { createRelativeLink } from "fumadocs-ui/mdx"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { DocsHero } from "@/components/docs-hero"
 import { getMDXComponents } from "@/components/mdx"
 import { absoluteUrl, ogImagePath, siteName } from "@/lib/site"
 import { source } from "@/lib/source"
@@ -40,8 +41,14 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
         // Built from the page's own title and description by serializeJsonLd, which escapes "<".
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
       />
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      {page.slugs.length === 0 ? (
+        <DocsHero title={page.data.title} description={page.data.description} />
+      ) : (
+        <>
+          <DocsTitle>{page.data.title}</DocsTitle>
+          <DocsDescription>{page.data.description}</DocsDescription>
+        </>
+      )}
       <DocsBody>
         <MDX components={getMDXComponents({ a: createRelativeLink(source, page) })} />
       </DocsBody>

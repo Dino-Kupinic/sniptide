@@ -2,6 +2,11 @@
 export const docsRoute = "/"
 
 export const gitHubUrl = "https://github.com/Dino-Kupinic/sniptide"
+export const releasesUrl = `${gitHubUrl}/releases`
+
+// The marketing site, which the header logo, the footer and the legal links lead back to.
+export const marketingUrl = "https://sniptide.com"
+export const xUrl = "https://x.com/sniptide"
 
 export const siteName = "Sniptide docs"
 export const siteDescription = "Guides and concepts for Sniptide, the self-hostable pastebin."

@@ -3,7 +3,8 @@ import { RootProvider } from "fumadocs-ui/provider/next"
 import type { Metadata } from "next"
 import { Archivo, Inter } from "next/font/google"
 import localFont from "next/font/local"
-import { siteDescription, siteName, siteUrl } from "@/lib/site"
+import { AppUrlProvider } from "@/components/app-url"
+import { appUrl, siteDescription, siteName, siteUrl } from "@/lib/site"
 import "./global.css"
 
 // The same three faces as the app (apps/web/app/layout.tsx), so the docs read as Sniptide.
@@ -46,7 +47,9 @@ export default function Layout({ children }: LayoutProps<"/">) {
       )}
     >
       <body className="flex min-h-screen flex-col">
-        <RootProvider>{children}</RootProvider>
+        <RootProvider>
+          <AppUrlProvider value={appUrl()}>{children}</AppUrlProvider>
+        </RootProvider>
       </body>
     </html>
   )
