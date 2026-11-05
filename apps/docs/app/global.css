@@ -9,7 +9,18 @@ html {
   scrollbar-gutter: stable;
 }
 
-/* Page titles and section headings use the same display face as the app. */
+/* The header is one 56px row, and from lg up a second 40px row holds the section tabs. */
+#nd-notebook-layout {
+  --fd-header-height: 56px;
+}
+
+@media (width >= 64rem) {
+  #nd-notebook-layout {
+    --fd-header-height: 96px;
+  }
+}
+
+/* Page titles and section headings use the display face of the app and the marketing site. */
 #nd-page :is(h1, h2, h3) {
   font-family: var(--font-heading);
 }
@@ -50,13 +61,30 @@ html {
   --shadow-2xl: var(--dialog-shadow);
 }
 
-/* Large type uses tighter tracking, as the app's page titles do. */
+/* Page titles sit one step above the app's 30px title role, since a docs page has no toolbar
+   beside its title. Large type uses tighter tracking. */
 #nd-page h1 {
-  letter-spacing: -0.02em;
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  letter-spacing: -0.025em;
 }
 
 #nd-page .prose :is(h2, h3) {
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+/* Inline code reads as a chip on --muted, as identifiers do in the app and on sniptide.com. */
+#nd-page .prose :not(pre) > code {
+  border: 0;
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8125em;
+}
+
+/* Code blocks sit one step above the page, on the card surface. */
+#nd-page figure.shiki {
+  background-color: var(--card);
 }
 
 /* Sidebar rows match the app's: 32px tall, rounded-md, and the current page on --sidebar-accent
