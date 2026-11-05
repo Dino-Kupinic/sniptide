@@ -1,5 +1,5 @@
-// The widgets a dashboard can hold and the templates that fill it. The layout is an ordered list
-// of widget ids saved in the account's preferences, so this file stays free of server imports.
+// The widgets, sizes and templates saved in account preferences. Shared by the page and its
+// customization controls, so this file stays free of server imports.
 
 export const WIDGETS = [
   "agents",
@@ -14,16 +14,30 @@ export const WIDGETS = [
 ] as const
 
 export type WidgetId = (typeof WIDGETS)[number]
+export type WidgetSize = "small" | "large"
+export type WidgetSizes = Partial<Record<WidgetId, WidgetSize>>
 
-// Widgets that hold a full paste table, the agent setup or a chart span both columns on desktop;
-// lists take one.
-export const WIDE_WIDGETS: ReadonlySet<WidgetId> = new Set([
+// Default widths preserve existing dashboards; every widget can override its size.
+const WIDE_WIDGETS: ReadonlySet<WidgetId> = new Set([
   "agents",
   "agent_activity",
   "agent_pastes",
   "recent_pastes",
   "starred",
 ])
+
+export function widgetSize(widget: WidgetId, sizes: WidgetSizes): WidgetSize {
+  return sizes[widget] ?? (WIDE_WIDGETS.has(widget) ? "large" : "small")
+}
+
+export function cleanWidgetSizes(value: unknown): WidgetSizes {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([widget, size]) => isWidget(widget) && (size === "small" || size === "large"),
+    ),
+  )
+}
 
 export const TEMPLATES = {
   agents: ["agents", "agent_activity", "agent_pastes", "recent_pastes"],

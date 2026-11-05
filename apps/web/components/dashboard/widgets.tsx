@@ -60,7 +60,7 @@ function ViewAll({ href }: { href: string }) {
   )
 }
 
-// A one-column widget: a bordered panel with its name, a link to the full page and a short list.
+// A list widget: a bordered panel with its name, a link to the full page and a short list.
 function ListWidget({
   id,
   href,
@@ -271,7 +271,7 @@ export function DataWidget({
   }
 }
 
-// A full-width widget that shows the same table as the Pastes page, without sorting or selection.
+// A widget that shows the same table as the Pastes page, without sorting or selection.
 function TableWidget({
   id,
   href,
@@ -299,8 +299,17 @@ function TableWidget({
       <p className="py-6 text-sm leading-5 text-muted-foreground lg:px-4 lg:py-8">{empty}</p>
     ) : (
       <>
-        <PasteTable rows={rows} origin={origin} action={action} />
-        <PasteMobileList rows={rows} origin={origin} />
+        <PasteTable
+          rows={rows}
+          origin={origin}
+          action={action}
+          className="hidden lg:group-data-[widget-size=large]/widget:table"
+        />
+        <PasteMobileList
+          rows={rows}
+          origin={origin}
+          className="flex lg:px-4 lg:[&>li:last-child]:border-b-0 lg:group-data-[widget-size=large]/widget:hidden"
+        />
       </>
     )
   return (
@@ -308,8 +317,8 @@ function TableWidget({
       aria-labelledby={`widget-${id}`}
       className="flex min-w-0 flex-col lg:overflow-hidden lg:rounded-lg lg:border lg:border-border"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-1.5 lg:min-h-12 lg:flex-nowrap lg:border-b lg:border-border lg:px-4">
-        <div className="contents lg:flex lg:items-center lg:gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-1.5 lg:min-h-12 lg:group-data-[widget-size=large]/widget:flex-nowrap lg:border-b lg:border-border lg:px-4">
+        <div className="contents lg:group-data-[widget-size=large]/widget:flex lg:group-data-[widget-size=large]/widget:items-center lg:group-data-[widget-size=large]/widget:gap-4">
           <h2 id={`widget-${id}`} className="text-[15px] font-semibold">
             {name(id)}
           </h2>
@@ -361,7 +370,7 @@ function RecentPastes({ rows: all, origin }: { rows: PasteRow[]; origin: string 
         <div
           role="tablist"
           aria-label={t("filter_recent_pastes")}
-          className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] lg:order-none lg:mx-0 lg:w-auto lg:px-0"
+          className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] lg:group-data-[widget-size=large]/widget:order-none lg:group-data-[widget-size=large]/widget:mx-0 lg:group-data-[widget-size=large]/widget:w-auto lg:group-data-[widget-size=large]/widget:px-0"
         >
           {TABS.map((value) => (
             <button
@@ -410,7 +419,7 @@ function AgentActivityWidget({ activity }: { activity: AgentActivity }) {
       {total === 0 ? (
         <ListEmpty>{t("widget_agent_activity_empty")}</ListEmpty>
       ) : (
-        <div className="flex flex-col gap-5 p-4 lg:flex-row lg:gap-8 lg:p-5">
+        <div className="flex flex-col gap-5 p-4 @3xl/widget:flex-row @3xl/widget:gap-8 lg:p-5">
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             <p className="text-sm leading-5 text-muted-foreground">
               {t("agent_requests_total", { count: total })}
@@ -426,7 +435,7 @@ function AgentActivityWidget({ activity }: { activity: AgentActivity }) {
               className="h-48 lg:h-44"
             />
           </div>
-          <ul className="flex flex-col divide-y divide-border lg:w-64 lg:shrink-0">
+          <ul className="flex flex-col divide-y divide-border @3xl/widget:w-64 @3xl/widget:shrink-0">
             {activity.agents.map((agent) => (
               <li key={agent.name} className="flex min-h-10 items-center gap-3 py-2">
                 <AgentLogo client={agent.client} />

@@ -2,7 +2,13 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { saveDashboardLayout } from "@/lib/dashboard/actions"
-import { cleanLayout, DEFAULT_LAYOUT, TEMPLATES } from "@/lib/dashboard/widgets"
+import {
+  cleanLayout,
+  DEFAULT_LAYOUT,
+  TEMPLATES,
+  WIDGETS,
+  widgetSize,
+} from "@/lib/dashboard/widgets"
 import { getDb } from "@/lib/db"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { readPreferences } from "@/lib/preference-store"
@@ -25,6 +31,32 @@ describe("dashboard layout", () => {
     expect(parsePreferences(JSON.stringify({ dashboard: "agents" })).dashboard).toBeUndefined()
     expect(parsePreferences("{}").dashboard).toBeUndefined()
     expect(DEFAULT_LAYOUT).toEqual(TEMPLATES.agents)
+  })
+
+  test("every widget supports both sizes while existing dashboards keep their widths", () => {
+    expect(widgetSize("agents", {})).toBe("large")
+    expect(widgetSize("secrets", {})).toBe("small")
+    for (const widget of WIDGETS) {
+      expect(widgetSize(widget, { [widget]: "small" })).toBe("small")
+      expect(widgetSize(widget, { [widget]: "large" })).toBe("large")
+    }
+  })
+
+  test("stored sizes keep valid choices and ignore unknown widgets or sizes", () => {
+    expect(
+      parsePreferences(
+        JSON.stringify({
+          dashboardSizes: {
+            agents: "small",
+            secrets: "large",
+            starred: "huge",
+            unknown: "small",
+          },
+        }),
+      ).dashboardSizes,
+    ).toEqual({ agents: "small", secrets: "large" })
+    expect(parsePreferences(JSON.stringify({ dashboardSizes: [] })).dashboardSizes).toBeUndefined()
+    expect(parsePreferences("{}").dashboardSizes).toBeUndefined()
   })
 })
 
@@ -70,6 +102,33 @@ describe("dashboard widgets", () => {
     expect(empty.recent).toBeUndefined()
     expect(empty.expiringSoon).toBe(0)
   })
+
+  testDb(
+    "saves sizes per account, retains them when reordering, and validates changes",
+    async () => {
+      expect(
+        await saveDashboardLayout(["agents", "secrets"], { agents: "small", secrets: "large" }),
+      ).toEqual({ ok: true })
+      expect((await readPreferences("owner")).dashboardSizes).toEqual({
+        agents: "small",
+        secrets: "large",
+      })
+      expect((await readPreferences("other")).dashboardSizes).toBeUndefined()
+      expect(await saveDashboardLayout(["secrets", "agents"])).toEqual({ ok: true })
+      expect((await readPreferences("owner")).dashboardSizes).toEqual({
+        agents: "small",
+        secrets: "large",
+      })
+      for (const invalid of [{ agents: "huge" }, { unknown: "small" }, [], null]) {
+        expect((await saveDashboardLayout(["agents"], invalid)).ok).toBe(false)
+      }
+      expect((await readPreferences("owner")).dashboard).toEqual(["secrets", "agents"])
+      expect(await saveDashboardLayout(["agents"], {})).toEqual({ ok: true })
+      expect((await readPreferences("owner")).dashboardSizes).toEqual({})
+      signInAs(null)
+      expect((await saveDashboardLayout(["agents"], { agents: "small" })).ok).toBe(false)
+    },
+  )
 
   testDb("lists live expiring links soonest first and the most viewed pastes", async () => {
     const now = Date.now()
