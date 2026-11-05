@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
+import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { cn } from "@sniptide/ui/lib/utils"
 import { GripVerticalIcon, LayoutTemplateIcon, PlusIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -22,9 +23,11 @@ import {
   TEMPLATE_IDS,
   TEMPLATES,
   type TemplateId,
-  WIDE_WIDGETS,
   WIDGETS,
   type WidgetId,
+  type WidgetSize,
+  type WidgetSizes,
+  widgetSize,
 } from "@/lib/dashboard/widgets"
 import { runAction } from "@/lib/feedback"
 import { AgentArea } from "./agent-area"
@@ -32,25 +35,25 @@ import { type DashboardSource, DataWidget, useWidgetName, WidgetFallback } from 
 
 // The layout on screen, saved after every change. Removing a widget or switching templates can be
 // taken back from the toast.
-export function useDashboardLayout(initial: WidgetId[]) {
+export function useDashboardLayout(initial: WidgetId[], sizes: WidgetSizes = {}) {
   const t = useTranslations("Workspace")
   const coreT = useTranslations("Core")
   const name = useWidgetName()
-  const [layout, setLayout] = React.useState(initial)
-  const current = React.useRef(layout)
-  current.current = layout
+  const [state, setState] = React.useState({ layout: initial, sizes })
+  const current = React.useRef(state)
+  current.current = state
 
   const save = React.useCallback(
-    async (next: WidgetId[]) => {
+    async (next: typeof state) => {
       const previous = current.current
       current.current = next
-      setLayout(next)
-      const result = await runAction(() => saveDashboardLayout(next), {
+      setState(next)
+      const result = await runAction(() => saveDashboardLayout(next.layout, next.sizes), {
         error: t("couldnt_save_the_dashboard"),
       })
-      if (!result.ok) {
+      if (!result.ok && current.current === next) {
         current.current = previous
-        setLayout(previous)
+        setState(previous)
       }
       return { ok: result.ok, previous }
     },
@@ -58,16 +61,16 @@ export function useDashboardLayout(initial: WidgetId[]) {
   )
 
   const undoable = React.useCallback(
-    async (next: WidgetId[], message: string) => {
+    async (next: typeof state, message: string) => {
       const { ok, previous } = await save(next)
       if (!ok) return
       showUndo({
         message,
         labels: { undo: coreT("undo"), error: coreT("undoError") },
-        undo: () => saveDashboardLayout(previous),
+        undo: () => saveDashboardLayout(previous.layout, previous.sizes),
         onUndone: () => {
           current.current = previous
-          setLayout(previous)
+          setState(previous)
         },
       })
     },
@@ -75,26 +78,30 @@ export function useDashboardLayout(initial: WidgetId[]) {
   )
 
   return {
-    layout,
+    ...state,
+    resize(widget: WidgetId, size: WidgetSize) {
+      track("dashboard_widget_resized", { widget, size })
+      void save({ ...current.current, sizes: { ...current.current.sizes, [widget]: size } })
+    },
     add(widget: WidgetId) {
       track("dashboard_widget_added", { widget })
-      void save([...current.current, widget])
+      void save({ ...current.current, layout: [...current.current.layout, widget] })
     },
     remove(widget: WidgetId) {
       track("dashboard_widget_removed", { widget })
       void undoable(
-        current.current.filter((id) => id !== widget),
+        { ...current.current, layout: current.current.layout.filter((id) => id !== widget) },
         t("widget_removed_named", { name: name(widget) }),
       )
     },
     move(from: number, to: number) {
       track("dashboard_widgets_reordered")
-      void save(arrayMove(current.current, from, to))
+      void save({ ...current.current, layout: arrayMove(current.current.layout, from, to) })
     },
     applyTemplate(template: TemplateId) {
       track("dashboard_template_applied", { template })
       void undoable(
-        [...TEMPLATES[template]],
+        { layout: [...TEMPLATES[template]], sizes: {} },
         t("template_applied", { name: t(`template_${template}`) }),
       )
     },
@@ -162,7 +169,7 @@ export function TemplateMenu({ dashboard }: { dashboard: DashboardLayout }) {
 }
 
 // The widgets in two columns on desktop and one on phones. While customizing, each widget gets a
-// bar with a drag handle and a remove button above it.
+// bar with a drag handle, size options and a remove button above it.
 export function WidgetBoard({
   dashboard,
   editing,
@@ -218,6 +225,8 @@ export function WidgetBoard({
             widget={widget}
             index={index}
             editing={editing}
+            size={widgetSize(widget, dashboard.sizes)}
+            onResize={(size) => dashboard.resize(widget, size)}
             onRemove={() => dashboard.remove(widget)}
           >
             {widget === "agents" ? (
@@ -242,12 +251,16 @@ function SortableWidget({
   widget,
   index,
   editing,
+  size,
+  onResize,
   onRemove,
   children,
 }: {
   widget: WidgetId
   index: number
   editing: boolean
+  size: WidgetSize
+  onResize: (size: WidgetSize) => void
   onRemove: () => void
   children: React.ReactNode
 }) {
@@ -262,9 +275,10 @@ function SortableWidget({
     <div
       ref={ref}
       data-widget={widget}
+      data-widget-size={size}
       className={cn(
-        "flex min-w-0 flex-col gap-2",
-        WIDE_WIDGETS.has(widget) && "lg:col-span-2",
+        "@container/widget flex min-w-0 flex-col gap-2",
+        size === "large" && "lg:col-span-2",
         isDragSource && "relative z-20 rounded-lg bg-background shadow-(--float-shadow)",
       )}
     >
@@ -283,6 +297,17 @@ function SortableWidget({
           <GripVerticalIcon className="size-4" />
         </button>
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{name}</span>
+        <SegmentedControl
+          aria-label={t("widget_size_named", { name })}
+          value={size}
+          onValueChange={onResize}
+          options={[
+            { value: "small", label: t("widget_size_small") },
+            { value: "large", label: t("widget_size_large") },
+          ]}
+          className="shrink-0"
+          itemClassName="px-2 max-lg:py-2"
+        />
         <Button
           variant="ghost"
           size="icon-sm"

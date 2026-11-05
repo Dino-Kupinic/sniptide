@@ -2,7 +2,7 @@
 // imported by client components, so it stays free of zod; parsing and validation live in
 // ./preferences-schema.ts, which only runs on the server.
 
-import type { WidgetId } from "@/lib/dashboard/widgets"
+import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
 import type { Locale } from "@/lib/i18n/config"
 import type { NotificationKind } from "@/lib/notifications/types"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
@@ -31,6 +31,8 @@ export interface Preferences {
   // The dashboard's widgets in order. Unset until the person arranges it, which means the default
   // template; an empty list is a dashboard they cleared on purpose.
   dashboard?: WidgetId[]
+  // Per-widget widths; missing entries use the widget's original size.
+  dashboardSizes?: WidgetSizes
 }
 
 export const defaultPreferences: Preferences = {

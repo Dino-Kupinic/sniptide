@@ -154,11 +154,13 @@ export function PasteTable({
   rows,
   origin,
   sortHead,
+  className,
   selection,
   action = "menu",
 }: {
   rows: PasteRow[]
   origin: string
+  className?: string
   sortHead?: (sort: PasteSort) => SortHeadProps
   selection?: RowSelection
   // Starred lists end each row in a filled star that unstars it.
@@ -182,7 +184,11 @@ export function PasteTable({
 
   return (
     <Table
-      className={cn("hidden table-fixed lg:table", compact ? "min-w-[880px]" : "min-w-[1040px]")}
+      className={cn(
+        "table-fixed",
+        className ?? "hidden lg:table",
+        compact ? "min-w-[880px]" : "min-w-[1040px]",
+      )}
     >
       <TableHeader>
         <TableRow className="hover:bg-transparent">
@@ -270,9 +276,17 @@ function UnstarButton({ row }: { row: PasteRow }) {
 }
 
 // The same rows on phones: a language logo, the title and one meta line, ending in a menu button.
-export function PasteMobileList({ rows, origin }: { rows: PasteRow[]; origin: string }) {
+export function PasteMobileList({
+  rows,
+  origin,
+  className,
+}: {
+  rows: PasteRow[]
+  origin: string
+  className?: string
+}) {
   return (
-    <ul className="flex flex-col lg:hidden">
+    <ul className={cn("flex-col", className ?? "flex lg:hidden")}>
       {rows.map((row) => (
         <li key={row.slug} className="relative flex items-center gap-3 border-b border-border py-3">
           <LanguageIcon language={row.language} />
