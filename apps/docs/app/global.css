@@ -9,45 +9,18 @@ html {
   scrollbar-gutter: stable;
 }
 
-/* The marketing site's grounds (sniptide-web app/globals.css and its header): the docs read as the
-   same site as sniptide.com, so the sidebar shares the page's surface and only a hairline
-   separates them, with pure white by day and near-black ink by night. The app keeps its own,
-   slightly warmer surfaces. */
-:root {
-  --sidebar: var(--background);
-  --sidebar-accent: #f4f4f4;
-}
-
-.dark {
-  --background: #0a0a0a;
-  --sidebar: #0a0a0a;
-  --card: #111111;
-  --popover: #111111;
-  --secondary: #1c1c1c;
-  --muted: #1c1c1c;
-  --accent: #1c1c1c;
-  --sidebar-accent: #1c1c1c;
-  --border: #222222;
-  --input: #262626;
-  --sidebar-border: #222222;
-}
-
-body {
-  background: var(--background);
-}
-
-/* The header is 56px on phones and 64px from md up, as on sniptide.com. */
+/* The header is one 56px row, and from lg up a second 40px row holds the section tabs. */
 #nd-notebook-layout {
   --fd-header-height: 56px;
 }
 
-@media (width >= 48rem) {
+@media (width >= 64rem) {
   #nd-notebook-layout {
-    --fd-header-height: 64px;
+    --fd-header-height: 96px;
   }
 }
 
-/* Page titles and section headings use the same display face as the marketing site. */
+/* Page titles and section headings use the display face of the app and the marketing site. */
 #nd-page :is(h1, h2, h3) {
   font-family: var(--font-heading);
 }
@@ -88,27 +61,16 @@ body {
   --shadow-2xl: var(--dialog-shadow);
 }
 
-/* Large type uses tighter tracking, as the marketing headlines do. */
+/* Page titles sit one step above the app's 30px title role, since a docs page has no toolbar
+   beside its title. Large type uses tighter tracking. */
 #nd-page h1 {
   font-size: 2.25rem;
-  line-height: 2.625rem;
-  letter-spacing: -0.03em;
-}
-
-@media (width >= 48rem) {
-  #nd-page h1 {
-    font-size: 2.75rem;
-    line-height: 3rem;
-  }
+  line-height: 2.5rem;
+  letter-spacing: -0.025em;
 }
 
 #nd-page .prose :is(h2, h3) {
   letter-spacing: -0.02em;
-}
-
-#nd-page .prose h2 {
-  font-size: 1.625rem;
-  line-height: 2rem;
 }
 
 /* Inline code reads as a chip on --muted, as identifiers do in the app and on sniptide.com. */
@@ -146,15 +108,8 @@ body {
   content: none;
 }
 
-/* A page icon in the sidebar takes the link blue on the current page, as the marketing menus
-   fill their icon tiles with blue. */
-#nd-sidebar a[data-active="true"] svg,
-#nd-sidebar-mobile a[data-active="true"] svg {
-  color: var(--link);
-}
-
-/* Cards follow the marketing menus' rows: the icon tile fills with blue while the card is hovered
-   or focused, and the card border darkens one step. */
+/* Cards share the marketing menus' icon tiles, which fill with blue while the card is hovered,
+   and the card's hairline takes the link blue. */
 #nd-page [data-card] {
   transition: border-color 150ms;
 }
@@ -182,8 +137,4 @@ body {
   border-color: var(--primary);
   background-color: var(--primary);
   color: var(--primary-foreground);
-}
-
-.dark #nd-page a[data-card]:hover > div:first-child:has(svg) {
-  color: #fff;
 }

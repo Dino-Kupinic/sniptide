@@ -25,39 +25,16 @@ export function activeSection(pathname: string) {
   return navSections.find((section) => section.match.includes(first)) ?? navSections[0]
 }
 
-export type FooterLink = { label: string; href: string; external?: boolean }
+export type FooterLink = { label: string; href: string }
 
-// The footer's columns: the docs' main pages, then the rest of Sniptide, then its profiles.
-export function footerColumns(): { label: string; links: FooterLink[] }[] {
+// The footer's links out of the docs: the rest of Sniptide and its profiles.
+export function footerLinks(): FooterLink[] {
   return [
-    {
-      label: "Docs",
-      links: [
-        { label: "Make your first paste", href: "/getting-started/first-paste" },
-        { label: "Core concepts", href: "/core-concepts" },
-        { label: "MCP server", href: "/mcp" },
-        { label: "CLI", href: "/cli" },
-        { label: "Self-hosting", href: "/self-hosting" },
-        { label: "Troubleshooting", href: "/troubleshooting" },
-      ],
-    },
-    {
-      label: "Sniptide",
-      links: [
-        { label: "sniptide.com", href: marketingUrl, external: true },
-        { label: "Open the app", href: appUrl(), external: true },
-        { label: "API reference", href: `${appUrl()}/docs/api`, external: true },
-        { label: "Support", href: "/support" },
-      ],
-    },
-    {
-      label: "Community",
-      links: [
-        { label: "GitHub", href: gitHubUrl, external: true },
-        { label: "Releases", href: releasesUrl, external: true },
-        { label: "X", href: xUrl, external: true },
-      ],
-    },
+    { label: "sniptide.com", href: marketingUrl },
+    { label: "Sniptide app", href: appUrl() },
+    { label: "GitHub", href: gitHubUrl },
+    { label: "Releases", href: releasesUrl },
+    { label: "X", href: xUrl },
   ]
 }
 
