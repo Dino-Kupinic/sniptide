@@ -1,25 +1,25 @@
 import { Step, Steps } from "fumadocs-ui/components/steps"
 import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 import defaultMdxComponents from "fumadocs-ui/mdx"
-import type { MDXComponents } from "mdx/types"
 import {
   BookOpen,
   Bot,
   ChartColumn,
+  Download,
+  FileCode,
+  Flame,
   FolderTree,
   GitFork,
   History,
   KeyRound,
+  LayoutDashboard,
   Link2,
   Rocket,
   Server,
   Share2,
-  Flame,
-  FileCode,
-  LayoutDashboard,
-  Download,
   Terminal,
 } from "lucide-react"
+import type { MDXComponents } from "mdx/types"
 import {
   AgentLoopVisual,
   BurnAfterReadVisual,
