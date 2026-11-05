@@ -283,6 +283,8 @@ test("populated small widgets fit tables and agent activity into one column", as
     await screen.getByRole("button", "Customize").tap()
     await screen.getByRole("radiogroup", "Size of Recent pastes").getByRole("radio", "Large").tap()
     await expect(screen.getByRole("table", { visible: true })).toHaveCount(1)
+    await browser.setViewport({ width: 1024, height: 900 })
+    await expect(screen.getByRole("table", { visible: true })).toHaveCount(1)
     await browser.setViewport({ width: 360, height: 780 })
     await expect(screen.getByRole("table", { visible: true })).toHaveCount(0)
     expect(

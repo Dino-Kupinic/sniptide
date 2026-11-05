@@ -277,7 +277,7 @@ function SortableWidget({
       data-widget={widget}
       data-widget-size={size}
       className={cn(
-        "@container/widget flex min-w-0 flex-col gap-2",
+        "group/widget @container/widget flex min-w-0 flex-col gap-2",
         size === "large" && "lg:col-span-2",
         isDragSource && "relative z-20 rounded-lg bg-background shadow-(--float-shadow)",
       )}
