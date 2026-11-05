@@ -32,6 +32,7 @@ describe("dithered charts", () => {
     expect(html.match(/role="progressbar"/g)).toHaveLength(1)
     expect(html).toContain('aria-valuenow="80"')
     expect(html).toContain('aria-valuetext="80 of 100"')
+    expect(html.match(/>80 of 100</g)).toHaveLength(1)
     expect(html).toContain("mask-image:")
     expect(html).toContain("mask-size:calc(1px * 4)")
     expect(html).not.toContain("filter:")

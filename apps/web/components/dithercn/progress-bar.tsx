@@ -388,7 +388,8 @@ export const ProgressBar = ({
   return (
     <div
       role="progressbar"
-      aria-labelledby={labelId}
+      aria-label={hideLabel ? label : undefined}
+      aria-labelledby={hideLabel ? undefined : labelId}
       {...ariaValues({
         current: Math.min(max, Math.max(0, total)),
         determinate,
@@ -399,21 +400,21 @@ export const ProgressBar = ({
       className={cn("flex w-full flex-col gap-2", className)}
       {...props}
     >
-      <div
-        className={cn("flex items-baseline justify-between gap-4 text-sm", hideLabel && "sr-only")}
-      >
-        <span id={labelId} className="text-foreground min-w-0 truncate">
-          {label}
-        </span>
-        {determinate || valueText ? (
-          <span
-            aria-hidden="true"
-            className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums"
-          >
-            {readout}
+      {hideLabel ? null : (
+        <div className="flex items-baseline justify-between gap-4 text-sm">
+          <span id={labelId} className="text-foreground min-w-0 truncate">
+            {label}
           </span>
-        ) : null}
-      </div>
+          {determinate || valueText ? (
+            <span
+              aria-hidden="true"
+              className="text-muted-foreground shrink-0 font-mono text-xs tabular-nums"
+            >
+              {readout}
+            </span>
+          ) : null}
+        </div>
+      )}
       <Track
         ratio={ratio}
         parts={stacked}

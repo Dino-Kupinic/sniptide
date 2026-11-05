@@ -10,7 +10,8 @@ formatted with Biome. Charts keep their layout, labels and HTML controls and use
 Hover previews values, tap/click pins them and arrow keys move keyboard focus.
 
 `components/dithercn/progress-bar.tsx` comes from `progress-bar.json` and is used
-in usage with `size="sm"`. `dither-code.tsx` retains the numeral renderer from
+in usage with `size="sm"`. Hiding its label omits the duplicate DOM readout and
+keeps the accessible name and value on the progressbar itself. `dither-code.tsx` retains the numeral renderer from
 `not-found.json` so 404 and 500 pages keep their own text and actions. Its cell
 floor is one pixel and it retains a text fallback until the first canvas frame.
 Imports use explicit modules and Sniptide utilities. No WebGL or new runtime
