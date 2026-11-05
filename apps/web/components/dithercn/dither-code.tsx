@@ -57,7 +57,7 @@ const rasterise = ({
   }
   const pad = extrude + 1
   // Fit the code into the grid, leaving room for the extruded side.
-  context.font = `800 100px ${font}`
+  context.font = `700 100px ${font}`
   const metrics = context.measureText(code)
   const ascent = metrics.actualBoundingBoxAscent
   const descent = metrics.actualBoundingBoxDescent
@@ -66,7 +66,7 @@ const rasterise = ({
     ((cols - pad - 1) * scale) / (width / 100),
     ((rows - pad - 1) * scale) / ((ascent + descent) / 100),
   )
-  context.font = `800 ${size}px ${font}`
+  context.font = `700 ${size}px ${font}`
   const fitted = context.measureText(code)
   const glyphHeight = fitted.actualBoundingBoxAscent + fitted.actualBoundingBoxDescent
   const glyphWidth = fitted.actualBoundingBoxLeft + fitted.actualBoundingBoxRight
@@ -256,7 +256,7 @@ export const DitherCode = ({ code, color, fill, bloom, cell, extrude, animate }:
   const colors = useDitherColors(rootRef, [color])
   const ink = colors ? colors[0] : null
   // One pixel finer on phones, so the digits keep their detail at a smaller size.
-  const step = Math.max(1, cell)
+  const step = Math.max(1, width > 0 && width < 400 ? cell - 1 : cell)
   const cols = Math.max(24, Math.floor(width / step))
   const rows = Math.max(12, Math.round(cols * 0.4))
 
@@ -303,7 +303,7 @@ export const DitherCode = ({ code, color, fill, bloom, cell, extrude, animate }:
   )
 
   return (
-    <div ref={rootRef} aria-hidden="true" className="relative aspect-[2.5] w-full">
+    <div ref={rootRef} aria-hidden="true" className="relative aspect-[2.5] w-full font-heading">
       {ready ? null : (
         <span
           className="absolute inset-0 flex items-center justify-center text-center font-heading text-[clamp(5rem,20vw,12rem)] leading-none font-bold"

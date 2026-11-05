@@ -16,10 +16,10 @@ export function ShareNotFound() {
       <ErrorBackdrop />
       <div className="relative flex flex-col items-center">
         <Pixel404 className="w-[302px] sm:w-[536px]" />
-        <h1 className="mt-10 text-center font-heading text-[34px] leading-[38px] font-bold tracking-[-0.025em] sm:mt-12 sm:text-[44px] sm:leading-[50px]">
+        <h1 className="mt-6 text-center font-heading text-[34px] leading-[38px] font-bold tracking-[-0.025em] sm:mt-8 sm:text-[44px] sm:leading-[50px]">
           {t("shareHeading")}
         </h1>
-        <p className="mt-3 max-w-[460px] text-center text-[15px] leading-[22px] text-muted-foreground sm:mt-3.5 sm:text-base sm:leading-6">
+        <p className="mt-3 max-w-[460px] text-center text-base leading-[26px] text-balance text-muted-foreground sm:mt-3.5">
           {t("shareDescription")} {t("shareAdvice")}
         </p>
         <div className="mt-7 flex w-full max-w-[440px] flex-col gap-2.5 sm:mt-8 sm:w-auto sm:max-w-none sm:flex-row sm:gap-3">
