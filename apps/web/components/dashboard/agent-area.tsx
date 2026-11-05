@@ -204,9 +204,9 @@ function ConnectSteps({
             </span>
           ),
         }))}
-        // Two rows on phones, so every client keeps its logo and full name.
-        className="grid w-full grid-cols-2 sm:flex sm:w-auto sm:self-start"
-        itemClassName="whitespace-nowrap px-2 py-[9px] sm:px-3 lg:py-[5px]"
+        // Two rows in narrow widgets, so every client keeps its logo and full name.
+        className="grid w-full grid-cols-2 @3xl/widget:flex @3xl/widget:w-auto @3xl/widget:self-start"
+        itemClassName="whitespace-nowrap px-2 py-[9px] @3xl/widget:px-3 lg:py-[5px]"
       />
 
       <AgentSetupSteps key={client} client={client} origin={origin} onUse={onUse} />

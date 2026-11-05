@@ -1,7 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
-import { cleanLayout } from "@/lib/dashboard/widgets"
+import { cleanLayout, cleanWidgetSizes } from "@/lib/dashboard/widgets"
 import { locales } from "@/lib/i18n/config"
 import { EXPIRIES, VISIBILITIES } from "@/lib/pastes/types"
 import { defaultPreferences, type Preferences } from "./preferences"
@@ -29,6 +29,11 @@ export const preferencesSchema = z.object({
   defaultBurnAfterRead: z.boolean().catch(defaultPreferences.defaultBurnAfterRead),
   locale: z.enum(locales).optional().catch(undefined),
   dashboard: z.array(z.unknown()).transform(cleanLayout).optional().catch(undefined),
+  dashboardSizes: z
+    .record(z.string(), z.unknown())
+    .transform(cleanWidgetSizes)
+    .optional()
+    .catch(undefined),
 }) satisfies z.ZodType<Preferences>
 
 export function parsePreferences(json: string | null | undefined): Preferences {
