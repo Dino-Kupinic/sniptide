@@ -47,6 +47,7 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
     <Dashboard
       data={data}
       layout={layout}
+      sizes={preferences.dashboardSizes}
       agents={agents}
       firstName={firstName}
       origin={origin}

@@ -8,7 +8,7 @@ import { ImportGistButton } from "@/components/lists/import-gist"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
-import type { WidgetId } from "@/lib/dashboard/widgets"
+import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import { AddWidgetMenu, TemplateMenu, useDashboardLayout, WidgetBoard } from "./widget-board"
 import { type DashboardSource, useDashboardData } from "./widgets"
@@ -45,6 +45,7 @@ function Greeting({ firstName }: { firstName: string }) {
 export function Dashboard({
   data,
   layout,
+  sizes,
   agents,
   firstName,
   origin,
@@ -52,6 +53,7 @@ export function Dashboard({
 }: {
   data: DashboardData | Promise<DashboardData>
   layout: WidgetId[]
+  sizes?: WidgetSizes
   agents: ConnectedAgent[]
   firstName: string
   // The share-link origin for row links, and the app's own origin for the MCP server address.
@@ -59,7 +61,7 @@ export function Dashboard({
   appOrigin: string
 }) {
   const t = useTranslations("Workspace")
-  const dashboard = useDashboardLayout(layout)
+  const dashboard = useDashboardLayout(layout, sizes)
   const [editing, setEditing] = React.useState(false)
 
   // Once per visit with what the page loaded with; later changes are their own events.
