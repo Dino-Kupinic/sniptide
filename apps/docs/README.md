@@ -12,8 +12,25 @@ bun run --filter docs dev     # http://localhost:3001
 ## Writing
 
 Pages are MDX files in `content/docs`; a `meta.json` in a folder orders its pages. The first
-heading comes from the `title` in the frontmatter, so start the body at `##`. Fumadocs' built-in
-components (`Cards`, `Callout`, `Tabs`, `Steps`, …) are available in every page.
+heading comes from the `title` in the frontmatter, so start the body at `##`.
+
+Every page can use these components without importing them. They are registered in
+`components/mdx.tsx`, and the prose around them is styled in `app/global.css`.
+
+| Component | Use it for |
+| --- | --- |
+| `<Steps>` and `<Step>` | A procedure with distinct stages. Start each step with a `###` heading. |
+| `<Tabs items={[...]}>` and `<Tab value>` | Equivalent choices, such as a language or an agent. Tabs with the same `groupId` switch together, and `persist` remembers the choice. |
+| ` ```npm ` code block | An install command. It renders as npm, pnpm, yarn and bun tabs. |
+| ` ```bash title=".env" ` | A code block with a file name above it. |
+| `<Callout type="warn" title>` | A constraint or warning beside the main flow. `type` is `info` (the default), `tip` or `warn`. |
+| `<Params>` and `<Param name type default required>` | The inputs of a function or command, with a sentence on each. |
+| `<Files>`, `<Folder name>` and `<File name>` | A folder layout, with an optional line on what each file is for. |
+| `<Kbd>` | A keyboard shortcut in running text, such as `<Kbd>Ctrl+K</Kbd>`. |
+| `<Cards>` and `<Card>` | An index of pages, described below. |
+
+`components/prose.tsx` holds the callout, parameter and file tree components, and
+`components/tabs.tsx` gives Fumadocs' tabs the app's look.
 
 Diagrams are React components in `components/visuals.tsx`, registered in `components/mdx.tsx`
 and placed in a page as `<FirstPasteVisual />`. They draw miniature app screens with the tokens and

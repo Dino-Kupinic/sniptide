@@ -197,12 +197,20 @@ for example with `await asyncio.to_thread(client.read_paste, "k3j9xq")`.
 SniptideClient(token, base_url="https://app.sniptide.com", timeout=30, max_response_bytes=64 * 1024 * 1024)
 ```
 
-| Parameter | Type | Default |
-| --- | --- | --- |
-| `token` | `str` | Required. A personal API token. |
-| `base_url` | `str` | `"https://app.sniptide.com"` |
-| `timeout` | `float` | `30` seconds |
-| `max_response_bytes` | `int` | `67108864` (64 MiB) |
+<Params>
+<Param name="token" type="str" required>
+A personal API token from **Settings** > **API tokens**.
+</Param>
+<Param name="base_url" type="str" default='"https://app.sniptide.com"'>
+The instance's address, including any path prefix it is served under.
+</Param>
+<Param name="timeout" type="float" default="30">
+Seconds to wait for each request before it fails with `network_error`.
+</Param>
+<Param name="max_response_bytes" type="int" default="67108864">
+The largest response body the client accepts, 64 MiB by default.
+</Param>
+</Params>
 
 The constructor raises `ValueError` for an empty token, a base URL that isn't HTTPS (outside
 loopback) or that has credentials, a query or a fragment, and a size limit that isn't a positive

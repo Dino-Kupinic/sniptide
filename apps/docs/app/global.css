@@ -74,7 +74,7 @@ html {
 }
 
 /* Inline code reads as a chip on --muted, as identifiers do in the app and on sniptide.com. */
-#nd-page .prose :not(pre) > code {
+#nd-page .prose :not(pre) > code:not(.not-prose code) {
   border: 0;
   border-radius: var(--radius-md);
   background-color: var(--muted);
@@ -106,4 +106,223 @@ html {
 #nd-sidebar a[data-active="true"]::before,
 #nd-sidebar-mobile a[data-active="true"]::before {
   content: none;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Prose. The reading flow of a page: links, lists, quotes, tables, code and steps, tuned to
+   DESIGN.md. Custom components (callouts, parameters, file trees, tabs) are in components/.
+   --------------------------------------------------------------------------------------------- */
+
+/* Section headings get room above them so a long page reads in chapters. */
+#nd-page .prose h2 {
+  margin-top: 3rem;
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+#nd-page .prose h3 {
+  margin-top: 2rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+/* Links are text in the reading colour with a thin link-blue underline that firms up on hover, so a
+   paragraph with several links stays calm. Code inside a link keeps the link's colour. */
+#nd-page .prose a:not([data-card]) {
+  color: var(--foreground);
+  font-weight: 500;
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, var(--link) 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  border-bottom: 0;
+  transition: text-decoration-color 120ms;
+}
+
+#nd-page .prose a:not([data-card]):hover {
+  text-decoration-color: var(--link);
+}
+
+#nd-page .prose a:not([data-card]) code {
+  color: inherit;
+}
+
+/* List markers recede so the items lead. */
+#nd-page .prose :is(ul, ol) > li::marker {
+  color: var(--muted-foreground);
+}
+
+#nd-page .prose ol > li::marker {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Quotes, such as an example prompt, sit on a hairline rule in the reading colour. */
+#nd-page .prose blockquote {
+  border-inline-start: 2px solid var(--border);
+  padding-inline-start: 1rem;
+  color: var(--foreground);
+  font-style: normal;
+  font-weight: 400;
+}
+
+#nd-page .prose blockquote p::before,
+#nd-page .prose blockquote p::after {
+  content: none;
+}
+
+#nd-page .prose hr {
+  border-color: var(--border);
+}
+
+/* Tables: 14px cells with tabular numerals, a header row on the fill, and a hairline between rows.
+   The table scrolls inside its own frame on narrow screens rather than the page. */
+#nd-page .prose table {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#nd-page .prose thead th {
+  background-color: color-mix(in oklab, var(--muted) 60%, transparent);
+  color: var(--foreground);
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  text-align: start;
+}
+
+#nd-page .prose tbody td {
+  padding: 0.625rem 0.75rem;
+  vertical-align: top;
+}
+
+#nd-page .prose tbody td:first-child code {
+  white-space: nowrap;
+}
+
+/* Code blocks: a hairline panel on the card surface. A file name sits in a 36px title row above
+   the code in mono, and the copy button floats top right. */
+#nd-page figure.shiki > div:first-child:has(+ div) {
+  height: 2.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+#nd-page figure.shiki pre {
+  font-size: 0.8125rem;
+  line-height: 1.375rem;
+}
+
+/* Steps: numbered squares in mono on a hairline rail, each step's heading level with its number. */
+#nd-page .fd-steps {
+  margin-block: 1.5rem;
+}
+
+#nd-page .fd-step::before {
+  width: 1.75rem;
+  height: 1.75rem;
+  inset-inline-start: calc(-0.875rem - 0.5px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#nd-page .fd-step > :is(h3, h4):first-child {
+  margin-top: 0;
+  line-height: 1.75rem;
+}
+
+/* Tabs (components/tabs.tsx): the tab row on the fill with a hairline below, and the active tab
+   raised onto the page colour. */
+#nd-page .docs-tabs > [role="tablist"] {
+  gap: 0.25rem;
+  padding: 0.375rem;
+  border-bottom: 1px solid var(--border);
+  background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+  border-start-start-radius: var(--radius);
+  border-start-end-radius: var(--radius);
+}
+
+#nd-page .docs-tabs > [role="tablist"] > [role="tab"] {
+  height: 1.75rem;
+  padding-inline: 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+#nd-page .docs-tabs > [role="tablist"] > [role="tab"]:hover {
+  color: var(--foreground);
+}
+
+#nd-page .docs-tabs > [role="tablist"] > [role="tab"][data-active] {
+  border-color: var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+#nd-page .docs-tabs > [role="tablist"] > [role="tab"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 40%, transparent);
+}
+
+/* Code groups from an ```npm block: the same tab row, and the code fills the panel below it. */
+#nd-page .code-tabs > [role="tablist"] > [role="tab"] > div:first-child {
+  display: none;
+}
+
+#nd-page .code-tabs [role="tabpanel"] > figure.shiki {
+  margin: 0;
+  border-width: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background-color: var(--card);
+}
+
+/* Code inside a tab runs edge to edge as one group, separated by hairlines, rather than as panels
+   nested in the tab's panel. */
+#nd-page .docs-tabs:not(.code-tabs) [role="tabpanel"] > figure.shiki {
+  margin-inline: -1rem;
+  border-width: 1px 0;
+  border-radius: 0;
+}
+
+#nd-page .docs-tabs:not(.code-tabs) [role="tabpanel"] > figure.shiki:first-child {
+  margin-top: -1rem;
+  border-top-width: 0;
+}
+
+#nd-page .docs-tabs:not(.code-tabs) [role="tabpanel"] > figure.shiki:last-child {
+  margin-bottom: -1rem;
+  border-bottom-width: 0;
+  border-end-start-radius: var(--radius);
+  border-end-end-radius: var(--radius);
+}
+
+#nd-page .docs-tabs:not(.code-tabs) [role="tabpanel"] > figure.shiki:has(+ figure.shiki) {
+  margin-bottom: 0;
+}
+
+#nd-page .docs-tabs:not(.code-tabs) [role="tabpanel"] > figure.shiki + figure.shiki {
+  margin-top: 0;
+  border-top-width: 0;
+}
+
+/* Columns separate by space rather than rules, so the eye runs along each row. */
+#nd-page .prose :is(td, th) + :is(td, th) {
+  border-inline-start-width: 0;
+}
+
+/* Keys (<Kbd>) use the app's Kbd chip as it is: Fumadocs' prose would add a blue keycap edge. In
+   running text the key reads in the text colour. */
+#nd-page .prose kbd {
+  box-shadow: none;
+}
+
+#nd-page .prose :is(p, li) > kbd {
+  color: var(--foreground);
 }

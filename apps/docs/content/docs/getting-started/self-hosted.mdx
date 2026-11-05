@@ -103,7 +103,7 @@ Open the address you set as `BETTER_AUTH_URL` and select **Create account**, as 
 
 Add this line to `.env` and run `docker compose up -d` again:
 
-```dotenv
+```dotenv title=".env"
 ALLOW_SIGN_UP=first
 ```
 
@@ -122,7 +122,7 @@ The bundled [Caddy](https://caddyserver.com) proxy gets and renews a certificate
 Point the domain's DNS at the server and open ports 80 and 443. In `.env`, remove the
 `BETTER_AUTH_URL` line and add these two:
 
-```dotenv
+```dotenv title=".env"
 SNIPTIDE_DOMAIN=paste.example.com
 COMPOSE_PROFILES=proxy
 ```

@@ -1,5 +1,5 @@
+import { Kbd } from "@sniptide/ui/components/kbd"
 import { Step, Steps } from "fumadocs-ui/components/steps"
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 import defaultMdxComponents from "fumadocs-ui/mdx"
 import {
   BookOpen,
@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import type { MDXComponents } from "mdx/types"
 import { Card, Cards } from "@/components/cards"
+import { Callout, File, Files, Folder, Param, Params } from "@/components/prose"
+import { CodeBlockTabs, Tab, Tabs } from "@/components/tabs"
 import {
   AgentLoopVisual,
   BurnAfterReadVisual,
@@ -32,8 +34,16 @@ import {
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
+    Callout,
     Card,
+    CodeBlockTabs,
     Cards,
+    File,
+    Files,
+    Folder,
+    Kbd,
+    Param,
+    Params,
     AgentLoopVisual,
     BurnAfterReadVisual,
     SelfHostVisual,

@@ -49,6 +49,17 @@ sh install.sh
    - without a domain, `BETTER_AUTH_URL=http://<server-ip>:3000`.
 4. Pulls the images and runs `docker compose up -d`, then waits until every service is healthy.
 
+The install folder then holds three files. Postgres keeps its data in a Docker volume, not in the
+folder.
+
+<Files>
+<Folder name="sniptide">
+<File name="docker-compose.yml">The services: Sniptide, Postgres and, with a domain, Caddy.</File>
+<File name=".env.example">Every setting with its default, for reference.</File>
+<File name=".env">Your settings, readable only by you.</File>
+</Folder>
+</Files>
+
 Back up `.env` with your database. Changing or losing `BETTER_AUTH_SECRET` signs everyone out and
 makes stored env values unreadable. See [Backups and restore](/self-hosting/backups).
 
