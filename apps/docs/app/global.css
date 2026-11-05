@@ -113,14 +113,22 @@ html {
    DESIGN.md. Custom components (callouts, parameters, file trees, tabs) are in components/.
    --------------------------------------------------------------------------------------------- */
 
+/* The reading column stops at 46rem (about 75 characters of body text) and centres in the space
+   between the sidebar and the table of contents, so lines stay readable on any screen. */
+#nd-page > * {
+  width: 100%;
+  max-width: 46rem;
+  margin-inline: auto;
+}
+
 /* Section headings get room above them so a long page reads in chapters. */
-#nd-page .prose h2 {
+#nd-page .prose h2:not(.not-prose *) {
   margin-top: 3rem;
   font-size: 1.5rem;
   line-height: 2rem;
 }
 
-#nd-page .prose h3 {
+#nd-page .prose h3:not(.not-prose *) {
   margin-top: 2rem;
   font-size: 1.125rem;
   line-height: 1.75rem;
@@ -128,7 +136,7 @@ html {
 
 /* Links are text in the reading colour with a thin link-blue underline that firms up on hover, so a
    paragraph with several links stays calm. Code inside a link keeps the link's colour. */
-#nd-page .prose a:not([data-card]) {
+#nd-page .prose a:not(.not-prose *, [data-card]) {
   color: var(--foreground);
   font-weight: 500;
   text-decoration-line: underline;
@@ -139,20 +147,54 @@ html {
   transition: text-decoration-color 120ms;
 }
 
-#nd-page .prose a:not([data-card]):hover {
+#nd-page .prose a:not(.not-prose *, [data-card]):hover {
   text-decoration-color: var(--link);
 }
 
-#nd-page .prose a:not([data-card]) code {
+#nd-page .prose a:not(.not-prose *, [data-card]) code {
   color: inherit;
 }
 
-/* List markers recede so the items lead. */
-#nd-page .prose :is(ul, ol) > li::marker {
-  color: var(--muted-foreground);
+/* Lists indent a step further than the text. Bullets are small blue squares, like the collection
+   marks in the app, and a nested list uses an outlined square. Numbers are mono and muted, so the
+   items lead. Lists inside custom components (.not-prose) keep their own layout. */
+#nd-page .prose :is(ul, ol):not(.not-prose *) {
+  padding-inline-start: 1.75rem;
 }
 
-#nd-page .prose ol > li::marker {
+#nd-page .prose ul:not(.not-prose *) {
+  list-style: none;
+}
+
+#nd-page .prose ul:not(.not-prose *) > li {
+  position: relative;
+  padding-inline-start: 0.25rem;
+}
+
+#nd-page .prose ul:not(.not-prose *) > li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -1rem;
+  top: 0.7em;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 1px;
+  background-color: var(--link);
+}
+
+#nd-page .prose :is(ul, ol) ul:not(.not-prose *) > li::before {
+  border: 1px solid var(--link);
+  background-color: transparent;
+}
+
+#nd-page .prose ol:not(.not-prose *) > li {
+  padding-inline-start: 0.25rem;
+}
+
+#nd-page .prose ol:not(.not-prose *) > li::marker {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
 }
 

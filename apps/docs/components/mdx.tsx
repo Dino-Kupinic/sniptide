@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import type { MDXComponents } from "mdx/types"
 import { Card, Cards } from "@/components/cards"
+import { FeatureCard, FeatureCards } from "@/components/feature-cards"
 import { Callout, File, Files, Folder, Param, Params } from "@/components/prose"
 import { CodeBlockTabs, Tab, Tabs } from "@/components/tabs"
 import {
@@ -37,6 +38,8 @@ export function getMDXComponents(components?: MDXComponents) {
     Callout,
     Card,
     CodeBlockTabs,
+    FeatureCard,
+    FeatureCards,
     Cards,
     File,
     Files,

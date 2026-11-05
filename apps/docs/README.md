@@ -28,6 +28,7 @@ Every page can use these components without importing them. They are registered 
 | `<Files>`, `<Folder name>` and `<File name>` | A folder layout, with an optional line on what each file is for. |
 | `<Kbd>` | A keyboard shortcut in running text, such as `<Kbd>Ctrl+K</Kbd>`. |
 | `<Cards>` and `<Card>` | An index of pages, described below. |
+| `<FeatureCards>` and `<FeatureCard art title href description>` | The main entry points of an overview, each with a line drawing. `art` is `paste`, `agent`, `server` or `api`; add a drawing in `components/feature-cards.tsx` for a new one. |
 
 `components/prose.tsx` holds the callout, parameter and file tree components, and
 `components/tabs.tsx` gives Fumadocs' tabs the app's look.
@@ -48,6 +49,11 @@ Search is built in (Orama, served from `/api/search`) and needs no setup.
 Index pages list their children with `<Cards>` and `<Card icon={<ServerIcon />} title href
 description />`, the docs' own cards in `components/cards.tsx`. Icons come from `lucide-react` and
 are registered in `components/mdx.tsx`.
+
+Every page title has a **Copy page** button (`components/page-actions.tsx`). It copies the page as
+Markdown, and its menu opens the page in ChatGPT or Claude. The Markdown is served at
+`/llms.mdx/<path>`, such as `/llms.mdx/mcp`, by `app/llms.mdx`, with heading ids removed and links
+made absolute.
 
 Every page ends with "Was this helpful?" (`components/feedback.tsx`). The answers post to
 `/api/feedback`, which forwards them to PostHog when `POSTHOG_KEY` is set.

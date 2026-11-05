@@ -61,6 +61,16 @@ const en = {
   ratingGreat: "Very helpful",
   thanks: "Thanks for letting us know.",
   feedbackFailed: "Couldn't send your answer. Try again in a moment.",
+
+  copyPage: "Copy page",
+  copyPageHint: "Copy this page as Markdown for an LLM",
+  copied: "Copied",
+  copyFailed: "Couldn't copy. Allow clipboard access and try again.",
+  pageOptions: "More ways to use this page",
+  openChatGpt: "Open in ChatGPT",
+  openClaude: "Open in Claude",
+  askHint: "Ask questions about this page",
+  askPrompt: "Read {url} so I can ask questions about it.",
 }
 
 export type Messages = typeof en
@@ -124,6 +134,17 @@ const de: Messages = {
   ratingGreat: "Sehr hilfreich",
   thanks: "Danke für dein Feedback.",
   feedbackFailed: "Deine Antwort konnte nicht gesendet werden. Versuch es gleich noch einmal.",
+
+  copyPage: "Seite kopieren",
+  copyPageHint: "Diese Seite als Markdown für ein LLM kopieren",
+  copied: "Kopiert",
+  copyFailed:
+    "Kopieren fehlgeschlagen. Erlaube den Zugriff auf die Zwischenablage und versuch es noch einmal.",
+  pageOptions: "Weitere Möglichkeiten für diese Seite",
+  openChatGpt: "In ChatGPT öffnen",
+  openClaude: "In Claude öffnen",
+  askHint: "Fragen zu dieser Seite stellen",
+  askPrompt: "Lies {url}, damit ich Fragen dazu stellen kann.",
 }
 
 const es: Messages = {
@@ -185,6 +206,16 @@ const es: Messages = {
   ratingGreat: "Muy útil",
   thanks: "Gracias por contárnoslo.",
   feedbackFailed: "No se pudo enviar tu respuesta. Inténtalo de nuevo en un momento.",
+
+  copyPage: "Copiar página",
+  copyPageHint: "Copiar esta página como Markdown para un LLM",
+  copied: "Copiada",
+  copyFailed: "No se pudo copiar. Permite el acceso al portapapeles e inténtalo de nuevo.",
+  pageOptions: "Más formas de usar esta página",
+  openChatGpt: "Abrir en ChatGPT",
+  openClaude: "Abrir en Claude",
+  askHint: "Haz preguntas sobre esta página",
+  askPrompt: "Lee {url} para que pueda hacerte preguntas sobre ella.",
 }
 
 const ja: Messages = {
@@ -246,6 +277,17 @@ const ja: Messages = {
   ratingGreat: "とても役に立った",
   thanks: "ご意見ありがとうございます。",
   feedbackFailed: "回答を送信できませんでした。しばらくしてからもう一度お試しください。",
+
+  copyPage: "ページをコピー",
+  copyPageHint: "このページを LLM 用の Markdown としてコピー",
+  copied: "コピーしました",
+  copyFailed:
+    "コピーできませんでした。クリップボードへのアクセスを許可して、もう一度お試しください。",
+  pageOptions: "このページのその他の操作",
+  openChatGpt: "ChatGPT で開く",
+  openClaude: "Claude で開く",
+  askHint: "このページについて質問する",
+  askPrompt: "{url} を読んで、内容について質問に答えてください。",
 }
 
 const zh: Messages = {
@@ -306,6 +348,16 @@ const zh: Messages = {
   ratingGreat: "非常有帮助",
   thanks: "感谢你的反馈。",
   feedbackFailed: "无法发送你的反馈,请稍后再试。",
+
+  copyPage: "复制页面",
+  copyPageHint: "将此页面复制为供 LLM 使用的 Markdown",
+  copied: "已复制",
+  copyFailed: "无法复制。请允许访问剪贴板后重试。",
+  pageOptions: "此页面的更多用法",
+  openChatGpt: "在 ChatGPT 中打开",
+  openClaude: "在 Claude 中打开",
+  askHint: "就此页面提问",
+  askPrompt: "请阅读 {url},以便我就其内容提问。",
 }
 
 const messages: Record<Locale, Messages> = { en, de, es, ja, zh }
