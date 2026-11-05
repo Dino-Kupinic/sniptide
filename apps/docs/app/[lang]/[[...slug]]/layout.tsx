@@ -4,12 +4,13 @@ import { DocsHeader } from "@/components/docs-header"
 import { baseOptions } from "@/lib/layout.shared"
 import { source } from "@/lib/source"
 
-export default function Layout({ children }: LayoutProps<"/[[...slug]]">) {
-  const options = baseOptions()
+export default async function Layout({ children, params }: LayoutProps<"/[lang]/[[...slug]]">) {
+  const { lang } = await params
+  const options = baseOptions(lang)
   return (
     <>
       <DocsLayout
-        tree={source.getPageTree()}
+        tree={source.getPageTree(lang)}
         {...options}
         nav={{ ...options.nav, mode: "top" }}
         slots={{ header: DocsHeader }}
@@ -17,7 +18,7 @@ export default function Layout({ children }: LayoutProps<"/[[...slug]]">) {
       >
         {children}
       </DocsLayout>
-      <DocsFooter />
+      <DocsFooter lang={lang} />
     </>
   )
 }

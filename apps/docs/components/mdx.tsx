@@ -20,6 +20,7 @@ import {
   Terminal,
 } from "lucide-react"
 import type { MDXComponents } from "mdx/types"
+import { Card, Cards } from "@/components/cards"
 import {
   AgentLoopVisual,
   BurnAfterReadVisual,
@@ -31,6 +32,8 @@ import {
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
+    Card,
+    Cards,
     AgentLoopVisual,
     BurnAfterReadVisual,
     SelfHostVisual,

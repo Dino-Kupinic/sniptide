@@ -6,16 +6,18 @@ import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 
 const options = [
-  { value: "light", label: "Light", icon: SunIcon },
-  { value: "system", label: "System", icon: MonitorIcon },
-  { value: "dark", label: "Dark", icon: MoonIcon },
+  { value: "light", icon: SunIcon },
+  { value: "system", icon: MonitorIcon },
+  { value: "dark", icon: MoonIcon },
 ] as const
+
+type Labels = { legend: string; light: string; system: string; dark: string }
 
 // The marketing footer's three-stop slider for the colour scheme (sniptide-web
 // components/theme-switch.tsx), driven by next-themes as Fumadocs is. The thumb springs to the
 // chosen stop, and under reduced motion it snaps. Until the stored choice is known on the client,
 // no stop is drawn as chosen.
-export function ThemeSwitch({ className }: { className?: string }) {
+export function ThemeSwitch({ className, labels }: { className?: string; labels: Labels }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -29,7 +31,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
         className,
       )}
     >
-      <legend className="sr-only">Color scheme</legend>
+      <legend className="sr-only">{labels.legend}</legend>
       {index >= 0 && (
         <span
           aria-hidden="true"
@@ -42,7 +44,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
         return (
           <label
             key={option.value}
-            title={option.label}
+            title={labels[option.value]}
             className={cn(
               "relative flex cursor-pointer items-center justify-center rounded-sm has-focus-visible:ring-2 has-focus-visible:ring-ring/40",
               checked ? "text-foreground" : "text-muted-foreground hover:text-foreground",
@@ -56,7 +58,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
               onChange={() => setTheme(option.value)}
               className="sr-only"
             />
-            <span className="sr-only">{option.label}</span>
+            <span className="sr-only">{labels[option.value]}</span>
             <option.icon aria-hidden="true" className="size-3.5" strokeWidth={2} />
           </label>
         )
