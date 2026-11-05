@@ -35,6 +35,14 @@ every change. In short: test the behavior, update the documentation in the same 
 - These rules reduce repeated context; all required tests, documentation, review, CI, and cleanup
   checks still apply.
 
+# Maintainer-facing prose
+
+DO NOT leak our conversation, prompt, or iteration history into code comments, pull request
+descriptions, or other maintainer-facing prose. Write for readers who have not seen our conversation.
+
+- PREFER comments that explain the current behavior and rationale. Avoid past-facing wording like
+  "preserve the existing behavior"; explain the actual backwards-compatibility constraint instead.
+
 # Commits and pull requests
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit message and every
@@ -44,7 +52,7 @@ example `feat(web): add paste collections`). A husky `commit-msg` hook runs comm
 
 # Code graph
 
-Graphify is optional, and these steps apply when `graphify` is on your PATH. If `graphify-out/graph.json` is missing, run `graphify update .` once. It parses the code locally in a few seconds and sends nothing to a model.
+Graphify is recommended, and these steps apply when `graphify` is on your PATH. If `graphify-out/graph.json` is missing, run `graphify update .` once. It parses the code locally in a few seconds and sends nothing to a model.
 
 When the graph exists, run `graphify query "<question>"` before a broad search to find the files that matter, then read those files before you change them. `graphify path "<A>" "<B>"` shows how two symbols connect, and `graphify explain "<symbol>"` describes one. Use grep directly when you are looking for exact text.
 
