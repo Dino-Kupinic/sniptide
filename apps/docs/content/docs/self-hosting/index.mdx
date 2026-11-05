@@ -7,7 +7,37 @@ Sniptide runs as one container next to a Postgres database. A self-hosted instan
 app, API, CLI support and MCP server as the hosted one, and sends nothing to outside services
 until you configure them: no product analytics, no OAuth sign-in providers and no email.
 
-<SelfHostVisual />
+## Architecture
+
+The diagram shows the Docker Compose installation with its optional Caddy HTTPS proxy enabled.
+The browser, CLI, SDKs and MCP clients all reach the same app container.
+
+<div className="dark:hidden">
+
+![Open-source Sniptide architecture: browser and API clients connect through Caddy to a Next.js app containing Better Auth and background jobs. Drizzle connects the app to PostgreSQL 17, which persists data in a Docker volume.](/images/architecture/open-source.png)
+
+</div>
+
+<div className="hidden dark:block">
+
+![Open-source Sniptide architecture in dark mode: browser and API clients connect through Caddy to a Next.js app containing Better Auth and background jobs. Drizzle connects the app to PostgreSQL 17, which persists data in a Docker volume.](/images/architecture/open-source-dark.png)
+
+</div>
+
+- **App container:** Next.js and React serve the dashboard, paste links, HTTP API and remote MCP
+  endpoint. Better Auth handles sessions and agent OAuth. Maintenance jobs run in the same
+  process, so you don't need a separate worker service.
+- **Database:** Drizzle connects the app to Postgres. Paste files, revisions, accounts, tokens,
+  analytics and durable queued work live there. The Compose volume keeps that data across
+  container replacements. Keep a [database backup](/self-hosting/backups) as well.
+- **HTTPS proxy:** Caddy forwards requests to the app on port 3000. You can use
+  [your own reverse proxy](/self-hosting/reverse-proxy), or let
+  [Coolify](/self-hosting/coolify) provide it.
+- **Optional integrations:** OAuth providers, SMTP email, PostHog, webhooks and support providers
+  connect only when configured. See [Configuration](/self-hosting/configuration).
+
+Marketing, the hosted demo and the documentation site run separately from the hosted app. You
+don't need to deploy those sites to run your own instance.
 
 ## Before you begin
 
