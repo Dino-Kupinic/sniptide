@@ -1,14 +1,13 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { DitherBar } from "@/components/charts/dither-bar"
 import { formatNumber } from "@/lib/format"
 import type { SeriesPoint } from "@/lib/pastes/analytics"
 import { formatTick, labelIndexes, niceScale } from "./chart-scale"
 
 // Height of the plot in px; bars are drawn against it, so the y axis labels line up with the grid.
 const PLOT = 240
-// Bars shorter than this lose their striped cap (three ink rules) and draw as one block.
-const CAP_MIN = 20
 // More daily bars than this (the 90 day range) are summed into weeks below lg, where a day would
 // be a 2px sliver.
 const WEEKLY_FROM = 32
@@ -30,8 +29,8 @@ function toWeeks(points: SeriesPoint[]): SeriesPoint[] {
   return weeks
 }
 
-// The Analytics bar chart: Tide Blue bars capped with three thin ink rules, the peak in pink with
-// its value above it. Tapping or arrowing to a bar shows its value in place of the range label.
+// Dithered bars with a solid leading edge and the peak in pink. Tapping or arrowing to a bar
+// shows its value in place of the range label.
 export function ViewsChart({
   className,
   ...props
@@ -241,24 +240,17 @@ function Chart({
                     }}
                     className="flex h-full min-w-0 flex-1 cursor-pointer flex-col justify-end outline-none focus-visible:ring-2 focus-visible:ring-ring/40 aria-pressed:bg-muted"
                   >
-                    <span
-                      className="relative flex flex-col justify-end gap-0.5 hover:opacity-80"
-                      style={{ height }}
-                    >
+                    <span className="relative block w-full hover:opacity-80" style={{ height }}>
                       {isPeak ? (
                         <span className="rounded-sm absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 bg-foreground px-1.5 py-[3px] font-mono text-[11px] leading-[14px] whitespace-nowrap text-background">
                           {formatNumber(value, locale)}
                         </span>
                       ) : null}
-                      {height >= CAP_MIN ? (
-                        <>
-                          <span className="h-px shrink-0 bg-foreground" />
-                          <span className="h-0.5 shrink-0 bg-foreground" />
-                          <span className="h-[3px] shrink-0 bg-foreground" />
-                        </>
-                      ) : null}
-                      <span
-                        className={cn("min-h-0 flex-1", isPeak ? "bg-highlight" : "bg-chart-1")}
+                      <DitherBar
+                        className="h-full"
+                        highlight={isPeak}
+                        active={selected === index}
+                        compact={points.length > 30}
                       />
                     </span>
                   </button>

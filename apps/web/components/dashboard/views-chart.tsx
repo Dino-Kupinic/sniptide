@@ -1,9 +1,9 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { useLocale, useTranslations } from "next-intl"
+import { DitherBar } from "@/components/charts/dither-bar"
 import { formatNumber } from "@/lib/format"
 
-// Bar chart from the dashboard artboard: blue bars capped with three thin ink rules, the
-// peak day in pink with its value above it. Thirty-day ranges drop the caps and most labels.
+// The dashboard and account usage share dithered bars, with the peak in pink.
 export function ViewsBarChart({
   values,
   labels,
@@ -35,8 +35,8 @@ export function ViewsBarChart({
           })
         }
         className={cn(
-          // A definite height on phones (percent bar heights need one); on desktop it fills the card.
-          "flex h-40 items-end border-b border-foreground lg:h-auto lg:min-h-42 lg:flex-1",
+          // Keep a definite height when the parent is auto-sized, including on desktop.
+          "flex h-40 flex-auto items-end border-b border-foreground",
           dense ? "gap-1" : "gap-2.5",
         )}
       >
@@ -50,19 +50,11 @@ export function ViewsBarChart({
                 {formatNumber(value, locale)}
               </span>
             ) : null}
-            <div
-              className="flex w-full flex-col gap-0.5"
+            <DitherBar
+              highlight={index === peak && value > 0}
+              compact={dense}
               style={{ height: `${Math.max(3, (value / max) * 82)}%` }}
-            >
-              {dense ? null : (
-                <>
-                  <span className="h-px shrink-0 bg-foreground" />
-                  <span className="h-0.5 shrink-0 bg-foreground" />
-                  <span className="h-[3px] shrink-0 bg-foreground" />
-                </>
-              )}
-              <span className={cn("flex-1", index === peak ? "bg-highlight" : "bg-chart-1")} />
-            </div>
+            />
           </div>
         ))}
       </div>
