@@ -83,6 +83,10 @@ connected with OAuth. See [API tokens](/api-tokens) and [OAuth for agents](/oaut
 ## Check your usage
 
 **Usage** shows your storage and paste count against the account limits, with a warning when you
-approach them. Both include pastes in the trash. It also charts the requests your API tokens made
+approach them. Small hatched progress bars show the share of each limit in use. Both include pastes in the trash. It also charts the requests your API tokens made
 each day over the last 30 days, in UTC. The token API returns the same data at
 [`GET /api/v1/usage`](/api-tokens#endpoints).
+
+Hover a request bar to preview its date and count, or select it to keep the readout visible.
+Use the arrow keys to move between bars, **Home** and **End** to reach the ends, and **Escape**
+to clear the selection. **Daily values** opens the full table.

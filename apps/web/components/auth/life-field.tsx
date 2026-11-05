@@ -2,6 +2,8 @@
 
 import { cn } from "@sniptide/ui/lib/utils"
 import * as React from "react"
+import { subscribeToTheme } from "@/lib/dither/color"
+import { usePrefersReducedMotion } from "@/lib/dither/motion"
 
 // The Game of Life behind the auth screens' pitch card, from the "Night, pink with blue trails"
 // preview loop: live cells in --pink, and the trails they leave fading through --primary. The
@@ -11,18 +13,25 @@ import * as React from "react"
 const cellSize = 8
 const generationsPerSecond = 4
 const decay = 0.55
-const density = 0.11
 const sparse = 0.012
 
-export function LifeField({ className }: { className?: string }) {
+export function LifeField({
+  className,
+  density = 0.11,
+  fps = 30,
+}: {
+  className?: string
+  density?: number
+  fps?: number
+}) {
   const ref = React.useRef<HTMLCanvasElement>(null)
+  const reduce = usePrefersReducedMotion()
 
   React.useEffect(() => {
     const canvas = ref.current
     const host = canvas?.parentElement
     const context = canvas?.getContext("2d")
     if (!canvas || !host || !context) return
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
 
     let columns = 0
     let rows = 0
@@ -134,6 +143,7 @@ export function LifeField({ className }: { className?: string }) {
     }
 
     resize()
+    const unwatchTheme = subscribeToTheme(resize)
     const observer = new ResizeObserver(resize)
     observer.observe(host)
     window.addEventListener("pointermove", onPointerMove)
@@ -142,6 +152,7 @@ export function LifeField({ className }: { className?: string }) {
     if (!reduce) {
       let elapsed = 0
       let before = performance.now()
+      let painted = 0
       const tick = (now: number) => {
         // A hidden tab pauses requestAnimationFrame, so cap the catch-up after it returns.
         elapsed += Math.min(now - before, 250)
@@ -151,7 +162,10 @@ export function LifeField({ className }: { className?: string }) {
           step()
           elapsed -= interval
         }
-        draw(elapsed / interval)
+        if (now - painted >= 1000 / fps) {
+          draw(elapsed / interval)
+          painted = now
+        }
         frame = requestAnimationFrame(tick)
       }
       frame = requestAnimationFrame(tick)
@@ -160,9 +174,10 @@ export function LifeField({ className }: { className?: string }) {
     return () => {
       cancelAnimationFrame(frame)
       observer.disconnect()
+      unwatchTheme()
       window.removeEventListener("pointermove", onPointerMove)
     }
-  }, [])
+  }, [density, fps, reduce])
 
   return (
     <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0", className)}>

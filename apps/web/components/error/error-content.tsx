@@ -2,6 +2,8 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { useTranslations } from "next-intl"
+import { ErrorBackdrop } from "@/components/error/error-backdrop"
+import { ErrorCode } from "@/components/error/error-code"
 import { NotFoundButton } from "@/components/not-found/not-found-button"
 
 // What an uncaught error shows (app/error.tsx and app/(app)/error.tsx), in the layout of the 404 without its illustration.
@@ -18,7 +20,9 @@ export function ErrorContent({
 }) {
   const t = useTranslations("ServerError")
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
+    <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-10">
+      <ErrorBackdrop />
+      <ErrorCode />
       <title>{t("title")}</title>
       <h1 className="text-center font-heading text-[26px] leading-[30px] font-bold tracking-[-0.01em] sm:text-[30px] sm:leading-[34px]">
         {t("heading")}

@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl"
+import { ErrorBackdrop } from "@/components/error/error-backdrop"
 import type { ViewerSummary } from "@/lib/viewer"
 import { NotFoundButton } from "./not-found-button"
 import { Pixel404 } from "./pixel-404"
@@ -9,7 +10,8 @@ import { SwitchAccount } from "./switch-account"
 export function NotFoundContent({ viewer }: { viewer: ViewerSummary | null }) {
   const t = useTranslations("NotFound")
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
+    <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-10">
+      <ErrorBackdrop />
       <Pixel404 className="w-[302px] sm:w-[536px]" />
       <h1 className="mt-8 text-center font-heading text-[26px] leading-[30px] font-bold tracking-[-0.01em] sm:mt-10 sm:text-[30px] sm:leading-[34px]">
         {t("heading")}
