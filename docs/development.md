@@ -256,6 +256,10 @@ Keep the minimatch override until shadcn's ts-morph dependency accepts a patched
 
 An agent works in a loop that it can check by itself: each step ends in a result the agent can
 observe, and the change isn't done until every check below has run.
+Follow [Context discipline](../AGENTS.md#context-discipline) to keep reads and tool output focused
+throughout the loop.
+Write comments and pull request descriptions with
+[Maintainer-facing prose](../AGENTS.md#maintainer-facing-prose).
 
 1. Read root and directory-specific `AGENTS.md` files. Read the installed Next.js guide under
    `apps/web/node_modules/next/dist/docs/` before changing Next.js code.
