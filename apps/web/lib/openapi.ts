@@ -1923,7 +1923,6 @@ export const internalRoutes = [
   "/api/agent-share/[...path]",
   "/[slug]/copy",
   "/[slug]/preview",
-  "/[slug]/preview.mp4",
   "/analytics/export",
   "/api/[[...path]]",
   "/api/analytics",

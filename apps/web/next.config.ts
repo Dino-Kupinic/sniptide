@@ -49,17 +49,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // The support assistant answers from the docs pages (lib/support/docs.ts).
     "/api/support/chat": ["../docs/content/docs/**/*.mdx"],
-    "/[slug]": [
-      "./assets/fonts/**/*",
-      "../../packages/ui/src/fonts/PaperMono-Regular.ttf",
-      "./assets/preview/**/*",
-    ],
     "/[slug]/preview": ["./assets/fonts/**/*", "../../packages/ui/src/fonts/PaperMono-Regular.ttf"],
-    "/[slug]/preview.mp4": [
-      "./assets/fonts/**/*",
-      "../../packages/ui/src/fonts/PaperMono-Regular.ttf",
-      "./assets/preview/**/*",
-    ],
   },
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },

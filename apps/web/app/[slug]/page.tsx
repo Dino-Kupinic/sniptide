@@ -15,20 +15,13 @@ import { PublicHeader } from "@/components/public-header"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
 import { previewMetadata } from "@/lib/pastes/preview"
-import { previewVideoAvailable, warmPreviewVideo } from "@/lib/pastes/preview-video"
 import { readPublicPreview, readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin, getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">) {
   const { slug } = await params
   const preview = await readPublicPreview(slug)
-  if (preview) {
-    const video = await previewVideoAvailable()
-    // Whoever opens the paste first starts its video, so it is usually ready by the time a link
-    // to it is shared.
-    if (video) warmPreviewVideo(preview)
-    return previewMetadata(preview, (await getSiteOrigin()).origin, { video })
-  }
+  if (preview) return previewMetadata(preview, (await getSiteOrigin()).origin)
   const meta = await readSharedMeta(slug)
   if (!meta) return { title: "Sniptide", robots: { index: false, follow: false } }
 

@@ -52,7 +52,7 @@ jobs:
       - run: bun run test:docs
 
   # The same image Coolify deploys, so a broken Dockerfile shows up in the PR. Layers come from
-  # the GitHub Actions cache, so the dependency install and the ffmpeg layer rarely rebuild.
+  # the GitHub Actions cache, so the dependency install rarely rebuilds.
   docker:
     name: Docker image, upgrade and compose
     runs-on: ubuntu-latest
