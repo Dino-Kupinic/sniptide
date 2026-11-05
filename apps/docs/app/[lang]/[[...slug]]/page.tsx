@@ -5,7 +5,9 @@ import { notFound } from "next/navigation"
 import type { ComponentProps } from "react"
 import { Feedback } from "@/components/feedback"
 import { getMDXComponents } from "@/components/mdx"
+import { PageActions } from "@/components/page-actions"
 import { i18n, localePath } from "@/lib/i18n"
+import { markdownPath } from "@/lib/markdown"
 import { absoluteUrl, ogImagePath, siteName } from "@/lib/site"
 import { isTranslated, pageLanguages, source } from "@/lib/source"
 import { pageStructuredData, serializeJsonLd } from "@/lib/structured-data"
@@ -49,7 +51,14 @@ export default async function Page(props: PageProps<"/[lang]/[[...slug]]">) {
         // Built from the page's own title and description by serializeJsonLd, which escapes "<".
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
       />
-      <DocsTitle>{page.data.title}</DocsTitle>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <DocsTitle>{page.data.title}</DocsTitle>
+        <PageActions
+          lang={lang}
+          markdownPath={markdownPath(page.slugs)}
+          markdownUrl={absoluteUrl(markdownPath(page.slugs))}
+        />
+      </div>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
         <MDX components={getMDXComponents({ a: LocalLink })} />

@@ -16,7 +16,7 @@ Run the command for your client. The client opens Sniptide in your browser, wher
 access. On a self-hosted instance, replace `https://app.sniptide.com` with your instance's
 address.
 
-<Tabs items={["Claude Code", "Codex", "Cursor"]}>
+<Tabs items={["Claude Code", "Codex", "Cursor"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 ```bash
@@ -59,7 +59,7 @@ Use a [personal API token](/api-tokens) when the client doesn't support OAuth, o
 unattended agent. Choose a **read-only** token if the agent should only look things up, and turn
 on **Write access** only if it should save and edit snippets.
 
-<Tabs items={["Claude Code", "Cursor"]}>
+<Tabs items={["Claude Code", "Cursor"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 Put this in the project's `.mcp.json`, and export `SNIPTIDE_TOKEN` before you start Claude Code,

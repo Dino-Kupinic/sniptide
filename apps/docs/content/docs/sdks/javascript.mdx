@@ -8,7 +8,7 @@ applications. It ships as an ES module with TypeScript declarations and has no d
 
 ## Install
 
-```bash
+```npm
 npm install @sniptide/sdk
 ```
 
@@ -193,12 +193,20 @@ key, and read a paste back before you retry an update.
 new SniptideClient(token, baseUrl?, fetcher?, maxResponseBytes?)
 ```
 
-| Parameter | Type | Default |
-| --- | --- | --- |
-| `token` | `string` | Required. A personal API token. |
-| `baseUrl` | `string` | `"https://app.sniptide.com"` |
-| `fetcher` | `typeof fetch` | `globalThis.fetch` |
-| `maxResponseBytes` | `number` | `67108864` (64 MiB) |
+<Params>
+<Param name="token" type="string" required>
+A personal API token from **Settings** > **API tokens**.
+</Param>
+<Param name="baseUrl" type="string" default='"https://app.sniptide.com"'>
+The instance's address, including any path prefix it is served under.
+</Param>
+<Param name="fetcher" type="typeof fetch" default="globalThis.fetch">
+The `fetch` function the client sends every request with.
+</Param>
+<Param name="maxResponseBytes" type="number" default="67108864">
+The largest response body the client accepts, 64 MiB by default.
+</Param>
+</Params>
 
 The constructor throws a `TypeError` for an empty token, a base URL that isn't HTTPS (outside
 loopback) or that has credentials, a query or a fragment, and a size limit that isn't a positive

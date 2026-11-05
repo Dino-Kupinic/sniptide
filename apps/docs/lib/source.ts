@@ -11,6 +11,8 @@ const docs = defineDocs({
   dir: "content/docs",
   docs: {
     schema: pageSchema,
+    // Each page's Markdown, for the "Copy page" menu and /llms.mdx.
+    postprocess: { includeProcessedMarkdown: true },
     // Fumadocs' defaults with the app's code colours in place of GitHub's themes.
     mdxOptions: applyMdxPreset({
       rehypeCodeOptions: { themes: { light: codeTheme, dark: codeTheme } },

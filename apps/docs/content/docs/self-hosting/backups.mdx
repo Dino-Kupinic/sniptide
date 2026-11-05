@@ -9,8 +9,8 @@ into the same server or a new one. The scripts below are in the repository's `sc
 are tested in CI: every pull request backs up a seeded instance, upgrades it, and restores the
 backup into the running stack and into a brand-new one, checking that nothing was lost.
 
-<Callout type="warn">
-**Keep your secrets with the backups.** A backup is useless without `BETTER_AUTH_SECRET` (and
+<Callout type="warn" title="Keep your secrets with the backups">
+A backup is useless without `BETTER_AUTH_SECRET` (and
 `ENV_SECRETS_KEY`, if you set it). Lose them and everyone is signed out, and every env group's
 values become unreadable in the app, the CLI and the API. Pastes, accounts and API tokens
 are unaffected. Store the secrets somewhere separate from the backup files: the backups contain
