@@ -1,6 +1,6 @@
 import { cn } from "@sniptide/ui/lib/utils"
 import { RootProvider } from "fumadocs-ui/provider/next"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Archivo, Inter } from "next/font/google"
 import localFont from "next/font/local"
 import { notFound } from "next/navigation"
@@ -37,6 +37,12 @@ export const metadata: Metadata = {
   applicationName: siteName,
   openGraph: { type: "website", siteName, locale: "en_US" },
   twitter: { card: "summary_large_image" },
+}
+
+// The theme script sets the chosen scheme once it runs. Until then, and before the first paint of a
+// full page load, the browser paints its canvas in the system scheme rather than white.
+export const viewport: Viewport = {
+  colorScheme: "light dark",
 }
 
 // Every language is prerendered, and any other first segment is a page path that the proxy has
