@@ -80,8 +80,8 @@ linked in this site's top navigation.
 
 Behavior to know before you write data:
 
-- A new paste is **private** and never expires unless you set `visibility` or change its settings
-  afterwards with `PATCH`.
+- A new paste is **private** unless you set `visibility` when creating it. It starts without an
+  expiry. Set one afterward with `PATCH /pastes/{id}`.
 - The collection you name must already exist. Create it first with `POST /collections`.
 - `PUT` replaces the title and the whole file list. Read the paste first and send every file you
   want to keep. The previous version stays in the paste's [revisions](/core-concepts/revisions).

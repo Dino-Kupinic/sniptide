@@ -4,8 +4,9 @@ description: Run Sniptide on your own server with Docker Compose, Docker or Cool
 ---
 
 Sniptide runs as one container next to a Postgres database. A self-hosted instance has the same
-app, API, CLI support and MCP server as the hosted one, and sends nothing to outside services
-until you configure them: no product analytics, no OAuth sign-in providers and no email.
+app, API, CLI support and MCP server as the hosted one. Product analytics, external sign-in
+providers and email are off until you configure them. Importing a gist sends a request to GitHub
+even without a GitHub token.
 
 ## Architecture
 
@@ -25,8 +26,8 @@ The browser, CLI, SDKs and MCP clients all reach the same app container.
 </div>
 
 - **App container:** Next.js and React serve the dashboard, paste links, HTTP API and remote MCP
-  endpoint. Better Auth handles sessions and agent OAuth. Maintenance jobs run in the same
-  process, so you don't need a separate worker service.
+  endpoint. Better Auth handles sign-in and browser sessions. Sniptide issues and refreshes agent
+  tokens through its own OAuth endpoints. Maintenance jobs run in the same app process.
 - **Database:** Drizzle connects the app to Postgres. Paste files, revisions, accounts, tokens,
   analytics and durable queued work live there. The Compose volume keeps that data across
   container replacements. Keep a [database backup](/self-hosting/backups) as well.
@@ -45,8 +46,8 @@ don't need to deploy those sites to run your own instance.
   `ghcr.io/dino-kupinic/sniptide`, for Linux AMD64 and ARM64.
 - Postgres 17, which Sniptide is built and tested against. Compose and the Coolify template run
   their own.
-- About 768 MB of memory for the app and a few hundred megabytes for Postgres. See
-  [Memory and resources](/self-hosting/memory) for measured use and limits.
+- Memory for the app and Postgres sized for your workload. See
+  [Memory and resources](/self-hosting/memory) for what to monitor and how to set limits.
 - An HTTPS domain served at its root, such as `https://paste.example.com`. Serving the app under a
   path such as `/sniptide` isn't supported.
 - Two settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL`. See

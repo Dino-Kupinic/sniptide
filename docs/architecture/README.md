@@ -20,7 +20,8 @@ Reviewed on 5 November 2026, against `sniptide` main commit `b93ad88` and the lo
 | Compose services, proxy and persistent volume | `docker-compose.yml` |
 | App runtime and packaged tools | `Dockerfile`, `apps/web/package.json` |
 | Database connection and ORM | `packages/db/src/index.ts` |
-| Authentication | `packages/auth/src/index.ts`, `apps/web/lib/auth.ts` |
+| Browser authentication | `packages/auth/src/index.ts`, `apps/web/lib/auth.ts` |
+| Agent OAuth | `apps/web/app/api/oauth/`, `apps/web/lib/oauth/grants.ts` |
 | Migrations and in-process background jobs | `apps/web/instrumentation-node.ts`, `apps/web/lib/jobs.ts` |
 | Remote and local MCP transports | `packages/mcp/README.md` |
 | Optional integrations | `apps/web/.env.example` |

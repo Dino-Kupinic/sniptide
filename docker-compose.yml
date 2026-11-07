@@ -4,15 +4,15 @@
 #   curl -fsSL https://sniptide.com/install.sh | sh
 #
 # By hand, on a server whose DNS name points at it (ports 80 and 443 open):
-#   printf 'BETTER_AUTH_SECRET=%s\nSNIPTIDE_DOMAIN=paste.example.com\nCOMPOSE_PROFILES=proxy\n' "$(openssl rand -hex 32)" > .env
+#   printf 'BETTER_AUTH_SECRET=%s\nSNIPTIDE_DOMAIN=paste.example.com\nCOMPOSE_PROFILES=proxy\nSNIPTIDE_BIND=127.0.0.1\n' "$(openssl rand -hex 32)" > .env
 #   docker compose up -d
 #
 # SNIPTIDE_DOMAIN alone sets the public https:// address, the bundled Caddy proxy's certificate
 # and the client-IP settings behind it, and COMPOSE_PROFILES=proxy turns that proxy on. Without a
 # domain, set BETTER_AUTH_URL=http://<server-ip>:3000 to check startup; copy buttons, password
 # unlocks and CLI/MCP clients need HTTPS. Keep the secret: sessions depend on it. Add
-# ALLOW_SIGN_UP=first to close sign-up once your own account exists. Every option is in
-# .env.example.
+# ALLOW_SIGN_UP=first to close sign-up once your own account exists. See .env.example for the
+# settings this file forwards to the app.
 #
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db
