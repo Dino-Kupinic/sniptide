@@ -4,15 +4,16 @@ description: Install or upgrade Sniptide on a server with one command that write
 ---
 
 The install script sets up the [Docker Compose](/self-hosting/docker-compose) install on one
-server. It downloads the Compose files, writes `.env` with a generated auth secret and database
-password, and starts Sniptide and Postgres. With a domain, the bundled Caddy proxy serves it over
-HTTPS.
+server. It downloads the Compose file and settings example, writes `.env` with a generated auth
+secret and database password, and starts Sniptide and Postgres. With a domain, the bundled Caddy
+proxy serves it over HTTPS.
 
 ## Before you begin
 
 - A Linux server with Docker and the Docker Compose plugin. To install both, run
   `curl -fsSL https://get.docker.com | sh`.
-- About 1 GB of memory. See [Memory and resources](/self-hosting/memory).
+- Memory for the app and Postgres sized for your workload. See
+  [Memory and resources](/self-hosting/memory).
 - For HTTPS, a domain whose DNS points at the server, with ports 80 and 443 open.
 
 ## Run the script
@@ -55,13 +56,13 @@ folder.
 <Files>
 <Folder name="sniptide">
 <File name="docker-compose.yml">The services: Sniptide, Postgres and, with a domain, Caddy.</File>
-<File name=".env.example">Every setting with its default, for reference.</File>
+<File name=".env.example">Compose settings and the app settings it forwards.</File>
 <File name=".env">Your settings, readable only by you.</File>
 </Folder>
 </Files>
 
-Back up `.env` with your database. Changing or losing `BETTER_AUTH_SECRET` signs everyone out and
-makes stored env values unreadable. See [Backups and restore](/self-hosting/backups).
+Back up `.env` with your database. Get the backup scripts separately using the instructions in
+[Backups and restore](/self-hosting/backups#take-a-backup).
 
 ## Options
 

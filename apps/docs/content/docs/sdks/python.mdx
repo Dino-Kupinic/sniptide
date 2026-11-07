@@ -55,8 +55,9 @@ created = client.create_paste(
 print(created["paste"]["url"])
 ```
 
-New pastes are **private** and never expire unless you say otherwise. Sniptide sets each file's
-language from its name. A collection must already exist, so create it first with
+New pastes are **private** unless you set `visibility` when creating them. To set an expiry,
+call `update_settings` after creation. Sniptide sets each file's language from its name. A
+collection must already exist, so create it first with
 `create_collection`. Send the same `idempotency_key` again after a timeout and the server returns
 the original paste instead of a duplicate.
 

@@ -54,8 +54,9 @@ const { paste } = await client.createPaste(
 console.log(paste.url)
 ```
 
-New pastes are **private** and never expire unless you say otherwise. Sniptide sets each file's
-language from its name. A collection must already exist, so create it first with
+New pastes are **private** unless you set `visibility` when creating them. To set an expiry,
+call `updateSettings` after creation. Sniptide sets each file's language from its name. A
+collection must already exist, so create it first with
 `createCollection`. The second argument is an optional idempotency key: send the same
 key again after a timeout and the server returns the original paste instead of a duplicate.
 

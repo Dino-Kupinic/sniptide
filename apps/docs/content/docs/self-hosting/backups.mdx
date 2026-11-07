@@ -10,16 +10,18 @@ are tested in CI: every pull request backs up a seeded instance, upgrades it, an
 backup into the running stack and into a brand-new one, checking that nothing was lost.
 
 <Callout type="warn" title="Keep your secrets with the backups">
-A backup is useless without `BETTER_AUTH_SECRET` (and
-`ENV_SECRETS_KEY`, if you set it). Lose them and everyone is signed out, and every env group's
-values become unreadable in the app, the CLI and the API. Pastes, accounts and API tokens
-are unaffected. Store the secrets somewhere separate from the backup files: the backups contain
-password hashes.
+Keep `BETTER_AUTH_SECRET` to preserve sessions and keep whichever secret encrypted the env group
+values: `ENV_SECRETS_KEY` if set, otherwise `BETTER_AUTH_SECRET`. A restore without that encryption
+secret still recovers pastes, accounts and API tokens, but the stored env values remain unreadable.
+Store the secrets separately from the backup files, which contain password hashes.
 </Callout>
 
 ## Take a backup
 
-On a Docker Compose install, from the folder with `docker-compose.yml` and `.env`:
+On a Docker Compose install, run the commands from the folder with `docker-compose.yml` and
+`.env`. If you used the installer or downloaded just the Compose file, get `scripts/backup.sh`
+and `scripts/restore.sh` from the repository at the same tag or branch as your Compose file. Put
+them in a `scripts/` folder inside the install directory.
 
 ```bash
 bash scripts/backup.sh            # writes ./backups/sniptide-<UTC time>.dump
@@ -53,8 +55,8 @@ pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" > sniptide.du
 
 ## Back up on a schedule
 
-For Docker Compose, add the backup container from `docker-compose.backup.yml` when you start the
-stack:
+For Docker Compose, get `docker-compose.backup.yml` from the same tag or branch and put it beside
+`docker-compose.yml`. Include it when you start the stack:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
@@ -137,14 +139,32 @@ the app afterwards. On Coolify, run the same commands inside the Postgres contai
 
 ### Check a backup in a throwaway copy
 
-Before you rely on a backup, restore it into a throwaway copy of the stack with a different
-project name and ports, sign in to it on port 3999, and delete the copy afterwards:
+Restore the dump in a new directory with its own `docker-compose.yml` and `scripts/restore.sh`.
+Create a fresh `.env` with the secrets from the backup's original instance and the following
+local settings. Use a project name and ports that are free on your machine. Run these commands
+from a shell without exported settings for another Compose project.
+
+```dotenv title=".env"
+COMPOSE_PROJECT_NAME=sniptide-check
+COMPOSE_FILE=docker-compose.yml
+COMPOSE_PROFILES=
+BETTER_AUTH_URL=http://localhost:3999
+SNIPTIDE_BIND=127.0.0.1
+SNIPTIDE_PORT=3999
+POSTGRES_PORT=55999
+```
+
+From that directory, run `docker compose config --services` and check that it lists only `app`
+and `db`. This check catches an exported `COMPOSE_PROFILES` or an extra Compose file that would
+start other services. Restore the backup:
 
 ```bash
-COMPOSE_PROJECT_NAME=sniptide-check SNIPTIDE_PORT=3999 POSTGRES_PORT=55999 \
-  bash scripts/restore.sh backups/sniptide-….dump --yes
-COMPOSE_PROJECT_NAME=sniptide-check docker compose down -v
+bash scripts/restore.sh /path/to/sniptide-backup.dump --yes
 ```
+
+Sign in at `http://localhost:3999`, open a few pastes, and check an env group if you use them.
+Then, from the test directory, run `docker compose down -v` to remove the test containers and
+database volume for the project named in that directory's `.env`.
 
 ## What a backup doesn't cover
 
