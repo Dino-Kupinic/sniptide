@@ -19,6 +19,7 @@ cleanup() {
   docker compose -p sniptide-compose-test down -v >/dev/null 2>&1 || true
   docker compose -p sniptide-template-test -f "$work/coolify.yaml" down -v >/dev/null 2>&1 || true
   (cd "$work/install" 2>/dev/null && docker compose down -v >/dev/null 2>&1) || true
+  docker volume rm sniptide-install-reuse_postgres >/dev/null 2>&1 || true
   rm -rf "$work"
   exit "$status"
 }
@@ -55,6 +56,19 @@ grep -q '"BETTER_AUTH_URL": "https://paste.example.com"' "$work/derived.json"
 grep -q '"CLIENT_IP_SOURCE": "x-forwarded-for"' "$work/derived.json"
 grep -q '"TRUSTED_PROXIES": "private"' "$work/derived.json"
 echo 'Install script: app came up healthy, and sign-up closed after the first account.'
+
+# A database volume left under the same project name keeps its old password, so a fresh install
+# refuses to start against it and names the volume instead of timing out on an unhealthy app.
+docker volume create sniptide-install-reuse_postgres >/dev/null
+if SNIPTIDE_SOURCE_URL="file://$root" SNIPTIDE_REF=test sh scripts/install.sh --yes \
+  --dir "$work/sniptide-install-reuse" 2>"$work/reuse.err"; then
+  echo 'Install script started over an existing database volume.' >&2
+  exit 1
+fi
+docker volume rm sniptide-install-reuse_postgres >/dev/null
+grep -q 'sniptide-install-reuse_postgres' "$work/reuse.err"
+test ! -e "$work/sniptide-install-reuse/.env"
+echo 'Install script: refused to reuse a database volume it has no password for.'
 
 # 3. The Coolify template, using the image under test and the variables Coolify generates.
 # Coolify creates the named volumes itself, so the template doesn't declare them; plain compose needs them.

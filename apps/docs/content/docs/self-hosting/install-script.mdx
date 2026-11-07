@@ -48,6 +48,8 @@ sh install.sh
      `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`;
    - without a domain, `BETTER_AUTH_URL=http://<server-ip>:3000`.
 4. Pulls the images and runs `docker compose up -d`, then waits until every service is healthy.
+   On a first install, it stops before writing `.env` when a database volume with the stack's name
+   already exists, since that volume keeps its old password.
 
 The install folder then holds three files. Postgres keeps its data in a Docker volume, not in the
 folder.
@@ -104,6 +106,13 @@ SNIPTIDE_BIND=127.0.0.1
   keeps retrying.
 - **"Invalid origin" on sign-in**: open the exact address the script printed. See
   [Configuration](/self-hosting/configuration#required).
+- **"Docker already has a database volume"**: Compose names the stack after the install folder,
+  and a volume from an earlier install or a development checkout in another folder with the same
+  name keeps its old database password. Run the script with `--dir` pointing to a folder with
+  another name, or remove the old volume with the `docker volume rm` command from the message,
+  which deletes its data.
+- **"Sniptide didn't start"**: the script prints the last lines of the app's log, which name the
+  cause. Run `docker compose logs app` in the install folder for the full log.
 
 To start over, run `docker compose down -v` in the install folder, which deletes every account and
 paste, then delete `.env` and run the script again.

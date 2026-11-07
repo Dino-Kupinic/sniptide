@@ -102,10 +102,25 @@ say "Downloading Sniptide's Compose files ($ref) into $(pwd)"
 download "$source/docker-compose.yml" docker-compose.yml
 download "$source/.env.example" .env.example
 
+# Compose names the stack after the folder, so its database volume is <project>_postgres.
+project="$(BETTER_AUTH_SECRET=unused docker compose config --format json 2>/dev/null |
+  sed -n 's/^ *"name": *"\([^"]*\)".*/\1/p' | head -n 1)"
+
 # 3. Settings. An existing .env is kept, so running the installer again upgrades.
 if [ -f .env ]; then
-  say "Keeping the existing .env. Delete it to start over with new settings."
+  say "Keeping the existing .env. To start over, run 'docker compose down -v' here, which deletes"
+  say "every account and paste, then delete .env and run the installer again."
 else
+  # Postgres sets its password only when the volume is first created. A volume left by an earlier
+  # install, or by a development checkout in another folder with the same name, keeps the old
+  # password, and the app could never sign in with the new one.
+  if [ -n "$project" ] && docker volume inspect "${project}_postgres" >/dev/null 2>&1; then
+    fail "Docker already has a database volume named ${project}_postgres, from an earlier install or \
+another Compose project named \"$project\", such as a development checkout. Its password won't match \
+a new .env. Install into a folder with another name, for example --dir ~/sniptide-server, or delete \
+that data with 'docker volume rm ${project}_postgres' if you no longer need it."
+  fi
+
   if [ -z "$domain" ] && can_ask; then
     say ""
     say "Sniptide needs HTTPS for copy buttons, password unlocks and the CLI."
@@ -146,9 +161,16 @@ fi
 
 # 4. Start, or upgrade, the stack.
 say "Starting Sniptide. The first start downloads the images and can take a minute."
-# A failed pull falls back to an image already on this server.
+# A failed pull falls back to an image already on this server. The install folder has no source
+# code, so Compose must never try to build the app image itself.
 docker compose pull --quiet --ignore-pull-failures
-docker compose up -d --wait --wait-timeout 300
+if ! docker compose up -d --no-build --wait --wait-timeout 300; then
+  say "" >&2
+  say "The last lines of the app's log:" >&2
+  docker compose logs --no-log-prefix --tail 30 app >&2 || true
+  fail "Sniptide didn't start. The log above usually names the cause, and \
+https://docs.sniptide.com/self-hosting/install-script#if-something-fails lists the common ones."
+fi
 
 url="$(docker compose exec -T app printenv BETTER_AUTH_URL 2>/dev/null | tr -d '\r')"
 say ""
