@@ -77,22 +77,6 @@ To serve share links on their own domain, such as `paste.example` next to `app.p
 Copied links then use the share domain. Share pages and raw files stay on it, and app pages
 opened there redirect to `BETTER_AUTH_URL`. Open a copied link to check that it loads the paste.
 
-### Link preview videos
-
-Discord, Telegram and Facebook play an `og:video` in the link preview of a public or unlisted paste
-without a password or burn after read: the preview
-card with the Game of Life moving at its sides. Other apps show the still card. The server
-renders a paste's video with ffmpeg the first time its page opens, which takes about four
-seconds of one core, and keeps it on disk until the paste changes. The Docker image includes
-ffmpeg; without it pages leave out og:video and nothing else changes.
-
-| Variable | Default | What it does |
-| --- | --- | --- |
-| `PREVIEW_VIDEO` | on | `off` leaves og:video out even when ffmpeg is installed. |
-| `FFMPEG_PATH` | `ffmpeg` | The ffmpeg binary, when it isn't on the `PATH`. |
-| `PREVIEW_VIDEO_DIR` | the system temp folder | Where rendered videos are cached. Mount a volume here to keep them across restarts. |
-| `PREVIEW_VIDEO_CACHE_FILES` | `500` | The most videos kept (1 to 100000, about 1.6 MB each); the oldest go first. |
-
 ## Email
 
 Notification emails are off until you configure SMTP. In-app notifications and password sign-in
