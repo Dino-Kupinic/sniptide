@@ -21,6 +21,7 @@
     "pasteSize": "El tamaño máximo de los pastes es de {limit}.",
     "passwordRequired": "Introduce una contraseña o desactiva la protección con contraseña.",
     "slugTaken": "{link} ya está en uso o no está permitido.",
+    "handleRequired": "Elige un nombre de usuario en Ajustes para dar a tus pastes un enlace personalizado.",
     "collectionMissing": "Esa colección ya no existe.",
     "pickVersion": "Elige una versión.",
     "versionUnavailable": "No se puede restaurar esa versión.",

@@ -21,6 +21,7 @@
     "pasteSize": "Pastes are limited to {limit}.",
     "passwordRequired": "Enter a password or turn password protection off.",
     "slugTaken": "{link} is taken or not allowed.",
+    "handleRequired": "Set a username in Settings to give pastes a custom link.",
     "collectionMissing": "That collection no longer exists.",
     "pickVersion": "Pick a version.",
     "versionUnavailable": "That version can't be restored.",

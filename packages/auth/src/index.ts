@@ -7,7 +7,7 @@ import { username } from "better-auth/plugins/username"
 import { assertAllowed, assertSignUpOpen, parseAllowlist, type SignUpMode } from "./allowlist"
 import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_PATHS } from "./demo"
 import { boundUserFields } from "./user-fields"
-import { USERNAME_PATTERN } from "./username"
+import { isValidUsername } from "./username"
 
 export interface OAuthCredentials {
   clientId: string
@@ -202,7 +202,7 @@ export function createAuth({
       username({
         minUsernameLength: 3,
         maxUsernameLength: 30,
-        usernameValidator: (value) => USERNAME_PATTERN.test(value),
+        usernameValidator: isValidUsername,
       }),
       ...plugins,
     ],

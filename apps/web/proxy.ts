@@ -1,4 +1,25 @@
+import { RESERVED_USERNAMES } from "@workspace/auth/username"
 import { type NextRequest, NextResponse } from "next/server"
+import { LINK_SUBPATHS, ROUTE_SEPARATOR } from "@/lib/pastes/links"
+
+// Custom links live at /<handle>/<name>, and the paste pages below them at /<handle>/<name>/raw
+// and so on. Next.js routes one segment per dynamic folder, so these are served from the
+// internal segment "<handle>~<name>" that the [slug] routes read back with slugFromRoute.
+// Generated links stay one segment, and /<link>/raw is told apart because no link name can be a
+// paste sub-path.
+function namespacedRoute(path: string, prefix: "" | "/pastes") {
+  const match = new RegExp(`^${prefix}/([a-z0-9_-]{3,30})/([A-Za-z0-9_-]{1,40})(/[^/]+)?/?$`).exec(
+    path,
+  )
+  if (
+    !match?.[1] ||
+    !match[2] ||
+    RESERVED_USERNAMES.has(match[1]) ||
+    LINK_SUBPATHS.has(match[2].toLowerCase())
+  )
+    return null
+  return `${prefix}/${match[1]}${ROUTE_SEPARATOR}${match[2]}${match[3] ?? ""}`
+}
 
 // When SHARE_URL puts share links on their own domain and that domain points at this app too,
 // keep the share domain for share links only: app pages there redirect to the app's domain
@@ -16,6 +37,13 @@ export function proxy(request: NextRequest) {
   if (/^\/_profile(?:\/|$)/.test(path)) {
     const url = request.nextUrl.clone()
     url.pathname = `/@${path.split("/")[2] ?? ""}`
+    return NextResponse.redirect(url, 308)
+  }
+  // The internal segment is never an address of its own.
+  const internal = /^(\/pastes)?\/([a-z0-9_-]{3,30})~([A-Za-z0-9_-]{1,40})(\/.*)?$/.exec(path)
+  if (internal) {
+    const url = request.nextUrl.clone()
+    url.pathname = `${internal[1] ?? ""}/${internal[2]}/${internal[3]}${internal[4] ?? ""}`
     return NextResponse.redirect(url, 308)
   }
   const appPath =
@@ -41,6 +69,20 @@ export function proxy(request: NextRequest) {
     url.pathname = `/api/agent-share${path}`
     return NextResponse.rewrite(url, { headers: { vary: "Accept, Cookie" } })
   }
+  const shareRoute = appPath ? null : namespacedRoute(path, "")
+  if (shareRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = shareRoute
+    return NextResponse.rewrite(url)
+  }
+  // The workspace pages of a custom link: /pastes/<handle>/<name> and its /edit.
+  const next = () => {
+    const pasteRoute = namespacedRoute(path, "/pastes")
+    if (!pasteRoute) return NextResponse.next()
+    const url = request.nextUrl.clone()
+    url.pathname = pasteRoute
+    return NextResponse.rewrite(url)
+  }
   if (
     path !== "/" &&
     !/^\/(?:sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|oauth|pastes|settings|shared|starred|trash|collections|secrets|welcome)(?:\/|$)/.test(
@@ -48,14 +90,14 @@ export function proxy(request: NextRequest) {
     ) &&
     !path.startsWith("/api/auth/")
   )
-    return NextResponse.next()
+    return next()
   const shareUrl = process.env.SHARE_URL
   const appUrl = process.env.BETTER_AUTH_URL
-  if (!shareUrl || !appUrl) return NextResponse.next()
+  if (!shareUrl || !appUrl) return next()
 
   const shareHost = new URL(shareUrl).host
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host")
-  if (host !== shareHost || shareHost === new URL(appUrl).host) return NextResponse.next()
+  if (host !== shareHost || shareHost === new URL(appUrl).host) return next()
 
   const { pathname, search } = request.nextUrl
   return NextResponse.redirect(new URL(`${pathname}${search}`, appUrl), 308)

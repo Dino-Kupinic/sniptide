@@ -5,7 +5,7 @@ import { Button } from "@sniptide/ui/components/button"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
-import { USERNAME_PATTERN } from "@workspace/auth/username"
+import { isValidUsername, USERNAME_PATTERN } from "@workspace/auth/username"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { AutosaveStatus } from "@/components/autosave-status"
@@ -56,6 +56,7 @@ function useUsernameCheck(username: string, current: string) {
   React.useEffect(() => {
     if (!username || username === current) return setStatus("idle")
     if (!USERNAME_PATTERN.test(username)) return setStatus("invalid")
+    if (!isValidUsername(username)) return setStatus("taken")
 
     setStatus("checking")
     let cancelled = false

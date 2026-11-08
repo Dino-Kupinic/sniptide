@@ -1,5 +1,8 @@
+import { routeSegment } from "./links"
+
+// Cookie names can't hold "/", so a custom link uses its route segment ("<handle>~<name>").
 export function unlockCookieName(slug: string) {
-  return `sniptide_unlock_${slug}`
+  return `sniptide_unlock_${routeSegment(slug)}`
 }
 
 // `passwordHash` is the paste's stored hash, so the token changes with the password.

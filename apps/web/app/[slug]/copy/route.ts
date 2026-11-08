@@ -1,3 +1,4 @@
+import { slugFromRoute } from "@/lib/pastes/links"
 import { recordCopy } from "@/lib/pastes/store"
 import { retryAfterSeconds } from "@/lib/public-limits"
 
@@ -14,6 +15,6 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/c
     })
   }
 
-  await recordCopy((await params).slug)
+  await recordCopy(slugFromRoute((await params).slug))
   return new Response(null, { status: 204, headers })
 }

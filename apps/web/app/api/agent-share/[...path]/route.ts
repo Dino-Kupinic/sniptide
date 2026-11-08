@@ -5,8 +5,9 @@ export const dynamic = "force-dynamic"
 export async function GET(_request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params
   const read =
-    path.length === 1 && path[0]
-      ? await readSharedPaste(path[0], { visit: false })
+    // One segment for a generated link, two for a custom link (/<handle>/<name>).
+    path.length >= 1 && path.length <= 2 && path.every(Boolean)
+      ? await readSharedPaste(path.join("/"), { visit: false })
       : { status: "missing" as const }
   let body =
     "# Not found\n\nThis page or paste does not exist, has expired, or is not available to you.\n\nPublic documentation: https://docs.sniptide.com\n"

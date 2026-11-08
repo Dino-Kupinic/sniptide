@@ -12,6 +12,8 @@
     "available": "可用",
     "taken": "已被占用",
     "thatLinkIsTaken": "该链接已被占用。",
+    "linkNameReserved": "此名称已被 Sniptide 自身的页面使用。",
+    "customLinkNeedsUsername": "<link>设置用户名</link>后即可为此粘贴设置自定义链接。",
     "noCollection": "不加入合集",
     "collection": "合集",
     "pastePassword": "Paste 密码",

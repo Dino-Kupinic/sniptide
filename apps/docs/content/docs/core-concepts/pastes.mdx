@@ -34,11 +34,27 @@ Every paste has a link, `<domain>/<link>`. By default the link is eight random c
 57-character alphabet, giving about 111 trillion possible generated links. Existing links keep
 their address when you upgrade.
 
-Set **Custom link** to choose your own: 3 to 40 letters, digits, hyphens or underscores. A link
-another paste already has is refused.
+### Custom links
 
-When you change a paste's link, the old link stops working at once. The paste keeps its history,
-collection and view counts, because those belong to the paste rather than to the link.
+Set **Custom link** to give a paste a readable address under your username:
+`<domain>/<username>/<name>`, such as `sniptide.com/dino/deploy-script`. The name is 1 to 40
+letters, digits, hyphens or underscores, and each name can be used once in your namespace. A
+custom link needs a username, so set one under **Settings** > **General** first.
+
+Some names and usernames are not available for custom links:
+
+- A name can't be a page Sniptide serves below a link: `raw`, `embed`, `copy`, `preview`,
+  `print`, `reveal`, `unlock` or `edit`.
+- A username that matches an app route, such as `dashboard`, `pastes` or `docs`, can't be
+  registered. A few usernames, such as `sniptide`, are kept for Sniptide's own accounts.
+
+Links made before custom links moved under usernames keep their `<domain>/<link>` address. They
+move under your username when you give the paste a new custom link.
+
+When you change a paste's link, the old link stops working at once. Changing your username moves
+all of your custom links to the new username in the same way, so the old addresses stop working
+too. The paste keeps its history, collection and view counts, because those belong to the paste
+rather than to the link.
 
 Each file is also available as plain text at `<domain>/<link>/raw?file=<file name>`. See
 [Raw access](/core-concepts/sharing#raw-access).

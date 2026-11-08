@@ -21,6 +21,7 @@
     "pasteSize": "Pastes sind auf {limit} begrenzt.",
     "passwordRequired": "Gib ein Passwort ein oder schalte den Passwortschutz aus.",
     "slugTaken": "{link} ist bereits vergeben oder nicht erlaubt.",
+    "handleRequired": "Lege in den Einstellungen einen Benutzernamen fest, um Pastes einen eigenen Link zu geben.",
     "collectionMissing": "Diese Sammlung existiert nicht mehr.",
     "pickVersion": "Wähle eine Version.",
     "versionUnavailable": "Diese Version kann nicht wiederhergestellt werden.",

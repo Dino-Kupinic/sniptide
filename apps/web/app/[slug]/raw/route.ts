@@ -1,3 +1,4 @@
+import { slugFromRoute } from "@/lib/pastes/links"
 import { readRawFile } from "@/lib/pastes/store"
 import { retryAfterSeconds } from "@/lib/public-limits"
 
@@ -11,7 +12,7 @@ export async function GET(request: Request, { params }: RouteContext<"/[slug]/ra
     })
   }
 
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   const url = new URL(request.url)
   const read = await readRawFile(slug, url.searchParams.get("file"))
   if (read.status === "missing")

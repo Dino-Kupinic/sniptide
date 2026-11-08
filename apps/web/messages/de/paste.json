@@ -12,6 +12,8 @@
     "available": "Verfügbar",
     "taken": "Vergeben",
     "thatLinkIsTaken": "Dieser Link ist vergeben.",
+    "linkNameReserved": "Dieser Name wird für Seiten von Sniptide verwendet.",
+    "customLinkNeedsUsername": "<link>Lege einen Benutzernamen fest</link>, um diesem Paste einen eigenen Link zu geben.",
     "noCollection": "Keine Sammlung",
     "collection": "Sammlung",
     "pastePassword": "Paste-Passwort",

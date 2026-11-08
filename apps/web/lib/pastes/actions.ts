@@ -48,9 +48,13 @@ async function rememberDefaultsBestEffort(
 }
 
 async function assertSignedIn() {
+  return (await signedInUser()).id
+}
+
+async function signedInUser() {
   const session = await getSession()
   if (!session) throw new Error(await actionError("signInPastes"))
-  return session.user.id
+  return session.user
 }
 
 export type ActionOutcome = { ok: true } | { ok: false; error: string }
@@ -63,8 +67,15 @@ const invitesSchema = z
   .max(50, "Invite up to 50 people at once.")
 
 // The checks creating and editing share, run once the input's own shape is known to be valid.
-async function checkedPayload(data: z.output<typeof pasteSchema>, editing?: string) {
-  if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
+async function checkedPayload(
+  data: z.output<typeof pasteSchema>,
+  handle: string | null | undefined,
+  editing?: string,
+) {
+  if (data.slug && data.slug !== editing && !handle) {
+    return { ok: false as const, error: await actionError("handleRequired") }
+  }
+  if (data.slug && !(await store.isSlugAvailable(data.slug, handle, editing))) {
     return {
       ok: false as const,
       error: await actionError("slugTaken", {
@@ -103,7 +114,8 @@ export async function savePaste(
   editing?: string,
   invites: ShareInvite[] = [],
 ): Promise<SavePasteResult> {
-  const user = await assertSignedIn()
+  const viewer = await signedInUser()
+  const user = viewer.id
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
@@ -117,7 +129,7 @@ export async function savePaste(
   const tooOften = await limited(editing ? limits.edit(user) : limits.create(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const checked = await checkedPayload(parsed.data, editing)
+  const checked = await checkedPayload(parsed.data, viewer.username, editing)
   if (!checked.ok) return checked
 
   try {
@@ -161,7 +173,8 @@ export async function autosavePaste(
   input: SavePasteInput,
   expectedVersion: number,
 ): Promise<AutosavePasteResult> {
-  const user = await assertSignedIn()
+  const viewer = await signedInUser()
+  const user = viewer.id
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
@@ -175,7 +188,7 @@ export async function autosavePaste(
   const tooOften = await limited(limits.autosave(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const checked = await checkedPayload(parsed.data, editing)
+  const checked = await checkedPayload(parsed.data, viewer.username, editing)
   if (!checked.ok) return checked
 
   try {
@@ -224,9 +237,9 @@ export async function restoreRevision(slug: string, revisionId: number) {
 
 // Answers "not available" while limited; saving checks the slug again anyway.
 export async function checkSlug(slug: string, except?: string) {
-  const user = await assertSignedIn()
-  if (await limited(limits.slugCheck(user))) return false
-  return store.isSlugAvailable(slug, except)
+  const viewer = await signedInUser()
+  if (await limited(limits.slugCheck(viewer.id))) return false
+  return store.isSlugAvailable(slug, viewer.username, except)
 }
 
 const sharingSchema = z.object({

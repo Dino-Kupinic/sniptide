@@ -17,6 +17,7 @@ import * as React from "react"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { checkSlug } from "@/lib/pastes/actions"
+import { customLink, customLinkName, isReservedLinkName } from "@/lib/pastes/links"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 
 // The paste editor's options (visibility, expiry, custom link, collection, password, burn after
@@ -112,8 +113,13 @@ export function ExpiryChips({
   )
 }
 
+// The custom link field. Custom links live in the viewer's namespace, so the field edits only the
+// name after "<handle>/" and reports the whole link ("<handle>/<name>") through onChange.
+// A paste whose link is outside the namespace (generated, or made before namespaces) shows an
+// empty field and keeps its link until a name is typed.
 export function SlugInput({
   value,
+  handle,
   onChange,
   onCommit,
   status,
@@ -121,6 +127,7 @@ export function SlugInput({
   disabled = false,
 }: {
   value: string
+  handle: string | null | undefined
   onChange: (value: string) => void
   // The person finished typing (left the field or pressed Enter).
   onCommit?: () => void
@@ -131,6 +138,22 @@ export function SlugInput({
 }) {
   const t = useTranslations("Paste")
   const host = useSiteHost()
+  const name = handle ? customLinkName(value, handle) : ""
+  // Names like "raw" are paste pages, so say so instead of calling them taken.
+  const reserved = isReservedLinkName(name)
+  if (!handle) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {t.rich("customLinkNeedsUsername", {
+          link: (chunks) => (
+            <a href="/settings" className="text-link underline-offset-2 hover:underline">
+              {chunks}
+            </a>
+          ),
+        })}
+      </p>
+    )
+  }
   return (
     <div className="flex flex-col gap-1">
       <div
@@ -141,14 +164,22 @@ export function SlugInput({
           disabled && "opacity-50",
         )}
       >
-        <span className="flex h-full items-center border-r border-input bg-sidebar pr-2 pl-2.5 font-mono text-xs text-muted-foreground">
-          {host}/
+        {/* The side panel is too narrow for the host as well, so the prefix starts at the
+            handle and the full address is its tooltip. */}
+        <span
+          title={`${host}/${handle}/`}
+          className="flex h-full min-w-0 max-w-[50%] items-center border-r border-input bg-sidebar pr-2 pl-2.5 font-mono text-xs text-muted-foreground"
+        >
+          <span className="truncate">{handle}/</span>
         </span>
         <input
           aria-label={t("customLink")}
           disabled={disabled}
-          value={value}
-          onChange={(event) => onChange(event.target.value.replace(/[^A-Za-z0-9_-]/g, ""))}
+          value={name}
+          onChange={(event) => {
+            const name = event.target.value.replace(/[^A-Za-z0-9_-]/g, "")
+            onChange(name ? customLink(handle, name) : "")
+          }}
           onBlur={onCommit}
           onKeyDown={commitOnEnter(onCommit)}
           placeholder={t("random")}
@@ -160,20 +191,22 @@ export function SlugInput({
         {status === "ok" ? (
           <CheckIcon
             aria-label={t("available")}
-            className="mr-2.5 size-[15px] text-link"
+            className="mr-2.5 size-[15px] shrink-0 text-link"
             strokeWidth={2.5}
           />
         ) : null}
         {status === "taken" ? (
           <XIcon
             aria-label={t("taken")}
-            className="mr-2.5 size-[15px] text-destructive"
+            className="mr-2.5 size-[15px] shrink-0 text-destructive"
             strokeWidth={2.5}
           />
         ) : null}
       </div>
       {status === "taken" ? (
-        <p className="text-xs text-destructive">{t("thatLinkIsTaken")}</p>
+        <p className="text-xs text-destructive">
+          {reserved ? t("linkNameReserved") : t("thatLinkIsTaken")}
+        </p>
       ) : null}
     </div>
   )

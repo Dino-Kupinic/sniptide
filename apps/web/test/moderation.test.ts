@@ -333,7 +333,7 @@ describeDb("host moderation", () => {
       expect(await updateSharing(target.slug, { visibility: "public" })).toBeNull()
       expect(await sharePaste(target.slug, "editor", "view")).toEqual({ status: "missing" })
       expect(await restorePaste(target.slug)).toBe(false)
-      expect(await isSlugAvailable(target.slug)).toBe(false)
+      expect(await isSlugAvailable(target.slug, "owner")).toBe(false)
       await renamePaste(target.slug, "changed")
       await setPasteCollection(target.slug, null)
       const snapshot = await deleteCollection("examples")

@@ -1,4 +1,5 @@
 import { pastePreviewImage } from "@/components/paste/preview-image"
+import { slugFromRoute } from "@/lib/pastes/links"
 import { readPublicPreview } from "@/lib/pastes/store"
 import { retryAfterSeconds } from "@/lib/public-limits"
 
@@ -13,7 +14,7 @@ export async function GET(request: Request, { params }: RouteContext<"/[slug]/pr
     })
   }
 
-  const preview = await readPublicPreview((await params).slug)
+  const preview = await readPublicPreview(slugFromRoute((await params).slug))
   if (!preview) return new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } })
   return pastePreviewImage(preview)
 }
