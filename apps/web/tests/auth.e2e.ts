@@ -3,10 +3,10 @@ import { credentials, expect, secrets } from "e2e"
 import { test } from "./fixtures"
 
 anonymousTest(
-  "anonymous visitors must sign in to open the editor",
+  "anonymous visitors sign in first and keep the template they opened",
   async ({ app, browser, screen }) => {
-    await app.open("/new")
-    await expect(browser).toHaveURL("/sign-in")
+    await app.open("/new?template=agents-md")
+    await expect(browser).toHaveURL("/sign-in?next=%2Fnew%3Ftemplate%3Dagents-md")
     await expect(screen.getByRole("button", "Sign in")).toBeVisible()
   },
 )

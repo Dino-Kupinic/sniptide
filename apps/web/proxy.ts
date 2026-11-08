@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { RETURN_TO_HEADER } from "@/lib/auth-redirect"
 import { ROUTE_SEPARATOR } from "@/lib/pastes/links"
 
 // Custom links live at /@<handle>/<name>, and the paste pages below them at /@<handle>/<name>/raw
@@ -70,7 +71,12 @@ export function proxy(request: NextRequest) {
   // The workspace pages of a custom link: /pastes/@<handle>/<name> and its /edit.
   const next = () => {
     const pasteRoute = customLinkRoute(path, "/pastes")
-    if (!pasteRoute) return NextResponse.next()
+    if (!pasteRoute) {
+      // Tells requireSession which page to return to after sign-in, replacing any client value.
+      const headers = new Headers(request.headers)
+      headers.set(RETURN_TO_HEADER, `${path}${request.nextUrl.search}`)
+      return NextResponse.next({ request: { headers } })
+    }
     const url = request.nextUrl.clone()
     url.pathname = pasteRoute
     return NextResponse.rewrite(url)
