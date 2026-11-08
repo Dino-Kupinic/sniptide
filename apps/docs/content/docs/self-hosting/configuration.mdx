@@ -18,7 +18,7 @@ templates pass selected variables through to the container. See
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Postgres 17 is what Sniptide is tested against. Compose sets it for you. |
+| `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Sniptide tests Postgres 17 and 18. Compose runs Postgres 17 and sets this for you. |
 | `BETTER_AUTH_SECRET` | none | Signs sessions and supplies the default key for env group values. Generate with `openssl rand -hex 32` and keep it across restarts. Changing it signs everyone out. See [Rotate the auth secret](#rotate-the-auth-secret) if you store env groups. |
 | `BETTER_AUTH_URL` | none | The exact URL people open in the browser (`https://…` behind a proxy). The app boots without it, but sign-in and sign-up are rejected from any other origin ("Invalid origin"), and OAuth callbacks and printed links use it. |
 

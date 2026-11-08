@@ -136,9 +136,12 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      matrix:
+        postgres: [17, 18]
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:${{ matrix.postgres }}-alpine
         env:
           POSTGRES_USER: sniptide
           POSTGRES_PASSWORD: sniptide
