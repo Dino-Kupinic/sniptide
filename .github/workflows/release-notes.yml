@@ -1,0 +1,58 @@
+name: Release notes
+
+# Rewrites a GitHub release body into a short post for people who use Sniptide, with Claude or
+# an OpenAI model reading the merged pull requests. The commit list stays below the post. The website's
+# changelog (sniptide.com/changelog) shows the post. See scripts/release-notes.mjs.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to rewrite
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to rewrite, or "all" to backfill every release
+        required: true
+        type: string
+      force:
+        description: Rewrite releases that already have a post
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-notes
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Write the release post
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RELEASE_NOTES_MODEL: ${{ vars.RELEASE_NOTES_MODEL }}
+          TAG: ${{ inputs.tag }}
+          FORCE: ${{ inputs.force && '--force' || '' }}
+        run: |
+          if [ "$TAG" = all ]; then
+            node scripts/release-notes.mjs --all $FORCE
+          else
+            node scripts/release-notes.mjs "$TAG" $FORCE
+          fi
