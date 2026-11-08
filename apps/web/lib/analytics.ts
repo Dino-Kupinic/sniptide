@@ -15,42 +15,105 @@ export type AnalyticsConfig = { key: string; uiHost: string }
 
 let client: PostHog | undefined
 let starting: Promise<void> | undefined
+let syncConsent: (() => void) | undefined
+
+const sdkConsentKey = "sniptide.analytics.sdk-consent"
+
+function readMarketingVisitor(key: string) {
+  try {
+    const cookies = document.cookie.split(/;\s*/)
+    const consent = cookies.find((cookie) => cookie.startsWith("sniptide_consent="))
+    if (!/^sniptide_consent=(analytics|analytics\.replay|granted)$/.test(consent ?? "")) return
+
+    // PostHog's cross-subdomain cookie contains the anonymous ID. The app reads it into
+    // memory so app activity never writes properties back to the marketing cookie.
+    const prefix = `ph_${key}_posthog=`
+    const identity = cookies.find((cookie) => cookie.startsWith(prefix))
+    if (!identity) return
+    const { distinct_id: id } = JSON.parse(decodeURIComponent(identity.slice(prefix.length)))
+    if (typeof id === "string" && /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id)) return id
+  } catch {
+    // Blocked storage or an invalid cookie leaves the app cookieless.
+  }
+}
 
 export async function startAnalytics({ key, uiHost }: AnalyticsConfig) {
   if (client || isAnalyticsExcluded()) return
   if (starting) return starting
   starting = import("posthog-js").then(({ default: posthog }) => {
     if (isAnalyticsExcluded()) return
+    let canShareConsent = window.location.origin === "https://app.sniptide.com"
+    let visitorId = canShareConsent ? readMarketingVisitor(key) : undefined
+    if (canShareConsent && !visitorId) {
+      try {
+        window.localStorage.removeItem(sdkConsentKey)
+      } catch {
+        canShareConsent = false
+      }
+    }
     posthog.init(key, {
       api_host: ANALYTICS_PATH,
       ui_host: uiHost,
       defaults: "2026-08-30",
-      // No cookies or browser storage, so no consent banner. Needs cookieless mode on in the
-      // PostHog project.
-      cookieless_mode: "always",
+      cookieless_mode: canShareConsent ? "on_reject" : "always",
+      opt_out_capturing_by_default: true,
+      consent_persistence_name: sdkConsentKey,
+      opt_out_capturing_persistence_type: "localStorage",
+      persistence: "memory",
+      disable_persistence: true,
+      get_device_id: (generated) => visitorId ?? generated,
+      person_profiles: "never",
       // Explicit events only: autocapture and replay would record what's on screen, pastes included.
       autocapture: false,
+      rageclick: false,
+      capture_heatmaps: false,
+      capture_dead_clicks: false,
+      capture_exceptions: false,
+      capture_performance: { web_vitals: false },
       disable_session_recording: true,
       disable_surveys: true,
+      advanced_disable_flags: true,
       mask_all_text: true,
       mask_all_element_attributes: true,
       before_send: (event) => {
         if (
           !event ||
           isAnalyticsExcluded() ||
+          (canShareConsent &&
+            event.properties.$cookieless_mode !== true &&
+            (!visitorId ||
+              visitorId !== readMarketingVisitor(key) ||
+              event.properties.distinct_id !== visitorId)) ||
           shouldDropSecretEvent(
             event,
             typeof window === "undefined" ? "" : window.location.pathname,
           )
         )
           return null
+        event.properties.surface = "app"
         scrubProperties(event.properties)
         scrubProperties(event.$set)
         scrubProperties(event.$set_once)
         return event
       },
     })
-    posthog.register({ surface: "app" })
+    if (canShareConsent) {
+      syncConsent = () => {
+        const next = isAnalyticsExcluded() ? undefined : readMarketingVisitor(key)
+        if (posthog.get_explicit_consent_status() === "granted") {
+          if (next === visitorId) return
+          // The SDK clears the old identity and tears down its session when opting out.
+          visitorId = undefined
+          posthog.opt_out_capturing()
+          posthog.clear_opt_in_out_capturing()
+        }
+        visitorId = next
+        if (next) posthog.opt_in_capturing({ captureEventName: false })
+      }
+      syncConsent()
+      window.addEventListener("focus", syncConsent)
+      window.addEventListener("pageshow", syncConsent)
+    }
     client = posthog
   })
   try {
@@ -61,6 +124,7 @@ export async function startAnalytics({ key, uiHost }: AnalyticsConfig) {
 }
 
 export function track(event: string, properties?: Record<string, string | number | boolean>) {
+  syncConsent?.()
   if (!isAnalyticsExcluded()) client?.capture(event, properties)
 }
 
@@ -116,12 +180,24 @@ const SECTIONS = new Set([
   "welcome",
 ])
 
-// "/k7Qe2x/raw" -> "/[slug]/raw", "/pastes/k7Qe2x/edit" -> "/pastes/[slug]/edit".
+const SHARE_ACTIONS = new Set(["copy", "embed", "preview", "print", "raw", "reveal", "unlock"])
+const isHandle = (segment: string) => /^(?:@|%40)/i.test(segment)
+
+// Keep the route shape while removing generated slugs, handles and custom link names.
 export function scrubPath(pathname: string) {
   const [, first = "", second, ...rest] = pathname.split("/")
   if (first === "secret-share") return second ? "/secret-share/[token]" : "/secret-share"
   if (first === "secrets") return second ? "/secrets/[id]" : "/secrets"
-  if (!SECTIONS.has(first)) return second ? `/[slug]/${second}` : "/[slug]"
+  if (isHandle(first)) {
+    const action = rest[0]
+    if (!second) return "/@[handle]"
+    return action && SHARE_ACTIONS.has(action) ? `/@[handle]/[slug]/${action}` : "/@[handle]/[slug]"
+  }
+  if (first === "pastes" && second && isHandle(second)) {
+    return rest[1] === "edit" ? "/pastes/@[handle]/[slug]/edit" : "/pastes/@[handle]/[slug]"
+  }
+  if (!SECTIONS.has(first))
+    return second && SHARE_ACTIONS.has(second) ? `/[slug]/${second}` : "/[slug]"
   if ((first === "pastes" || first === "collections") && second) {
     return ["", first, "[slug]", ...rest].join("/")
   }

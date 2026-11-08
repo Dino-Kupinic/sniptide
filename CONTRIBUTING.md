@@ -72,8 +72,20 @@ If another PR merges before a release starts, the older run is skipped; the next
 at the tip of `main` releases the accumulated changes together. Direct pushes do not start
 a release. Re-running a successful release does not create another version.
 
-The release notes of each GitHub release are the changelog: they are generated from the commit
-titles, so a clear title is the changelog entry. There is no `CHANGELOG.md`. A change that needs
+The release notes of each GitHub release are the changelog. semantic-release writes the commit
+list, so a clear title is the technical entry. The **Release notes** workflow
+(`.github/workflows/release-notes.yml`) then sends the merged pull requests to a model
+and puts a short post for readers above that list, which collapses under
+**Technical changes**. The PR description is the main source, so describe what changes for people
+who use Sniptide. The post sits between `sniptide-notes` markers that
+[sniptide.com/changelog](https://sniptide.com/changelog) reads, with `kind` set to `feature`, `fix`
+or `internal`. To correct a post, edit the release on GitHub and keep the markers. To rewrite one
+release, or every release with the tag `all`, run **Release notes** manually. The workflow needs an
+`ANTHROPIC_API_KEY` repository secret, which uses `claude-haiku-5-5`, or an `OPENAI_API_KEY`
+secret, which uses `gpt-6-luna`. Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL`
+repository variable picks another model. Without either key the release keeps the commit list
+alone. There is
+no `CHANGELOG.md`. A change that needs
 something from people who run Sniptide (a new required setting, a manual step, a schema change the
 previous version can't run against) is marked breaking, and its `BREAKING CHANGE:` paragraph says
 what to do. Operators read the resulting policy in the docs, under Self-hosting, Versions and
