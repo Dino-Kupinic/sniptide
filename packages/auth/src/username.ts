@@ -5,14 +5,20 @@ export const USERNAME_PATTERN = /^[a-z0-9_-]{3,30}$/
 // A username is also the namespace for its owner's custom links (sniptide.com/dino/<name>), so
 // it can't be a top-level path the app serves itself: its pages, API, internal routes and the
 // folders in apps/web/public. apps/web/test/namespaces.test.ts fails when a new top-level route
-// is missing here.
+// is missing here. On the hosted service the marketing site (sniptide-web) answers sniptide.com
+// first and only passes unknown paths to the app, so its top-level routes are reserved too.
 export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "_next",
   "_profile",
   "_site",
+  "about",
   "analytics",
   "api",
+  "ask",
+  "blog",
+  "brand",
   "collections",
+  "contact",
   "copyright",
   "dashboard",
   "demo",
@@ -20,11 +26,17 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "docs",
   "email",
   "forgot-password",
+  "home",
+  "impressum",
+  "landing",
   "languages",
+  "logos",
   "new",
   "not-found",
   "oauth",
+  "opengraph-image",
   "pastes",
+  "privacy",
   "reset-password",
   "secret-share",
   "secrets",
@@ -32,8 +44,12 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "shared",
   "sign-in",
   "sign-up",
+  "skills",
   "starred",
+  "terms",
   "trash",
+  "twitter-image",
+  "vision",
   "welcome",
 ])
 

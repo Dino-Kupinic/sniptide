@@ -27,7 +27,7 @@ test("custom link names exclude paste sub-paths and handles exclude app routes",
   for (const name of ["raw", "RAW", "embed", "copy", "edit", "unlock", "a".repeat(41)]) {
     expect(isCustomLink(`dino/${name}`, "dino")).toBe(false)
   }
-  for (const handle of ["pastes", "dashboard", "api", "languages", "_next"]) {
+  for (const handle of ["pastes", "dashboard", "api", "languages", "_next", "blog", "terms"]) {
     expect(isCustomLink(`${handle}/deploy`, handle)).toBe(false)
   }
   // Official handles can't be registered, but they still hold links.
