@@ -27,8 +27,8 @@ size and must be monitored. Files over 200,000 UTF-8 bytes or 2,000 lines, and t
 
 ## Storage and write behavior
 
-Defaults: 1 GiB of current UTF-8 file content and 10,000 pastes per account. Trash counts until
-permanent deletion. Settings show these measured bytes rather than a placeholder. The quota does
+The defaults are 100 MiB of current UTF-8 file content and 1,000 pastes per account. Trash counts
+until permanent deletion. Settings show these measured bytes rather than a placeholder. The quota does
 not represent total physical database size: revision messages, indexes, metadata and daily views
 also consume space. Monitor `database.bytes` and provision disk headroom separately.
 

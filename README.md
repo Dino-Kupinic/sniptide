@@ -35,7 +35,8 @@ docker compose up -d
 ```
 
 Open [localhost:3000](http://localhost:3000) and create an account.
-On a server, replace `BETTER_AUTH_URL` with `SNIPTIDE_DOMAIN=<your-domain>` and `COMPOSE_PROFILES=proxy` for HTTPS.
+On a server, replace `BETTER_AUTH_URL` with `SNIPTIDE_DOMAIN=<your-domain>` and add
+`COMPOSE_PROFILES=proxy` and `SNIPTIDE_BIND=127.0.0.1` so public traffic goes through Caddy over HTTPS.
 See the [self-hosting guide](https://docs.sniptide.com/self-hosting) for HTTPS, configuration, backups, and upgrades.
 
 The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/sniptide`.

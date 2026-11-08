@@ -20,8 +20,8 @@ At least one file must contain code before the paste can be saved.
 
 | Account limit | Default | Set by |
 | --- | --- | --- |
-| Pastes | 10,000, trash included | `ACCOUNT_PASTE_LIMIT` |
-| Storage | 1 GiB of paste content, trash included | `ACCOUNT_STORAGE_BYTES` |
+| Pastes | 1,000, trash included | `ACCOUNT_PASTE_LIMIT` |
+| Storage | 100 MiB of paste content, trash included | `ACCOUNT_STORAGE_BYTES` |
 | New pastes | 30 an hour | Fixed |
 | Manual edits | 240 an hour | Fixed |
 | Auto-saves | 1,800 an hour | Fixed |
@@ -58,7 +58,7 @@ When the code looks like a secret, such as an API key or `.env` lines, the edito
 switches a new paste to **Private**, because anyone with the link can read an unlisted or public
 paste. Turn the warning off with **Secret detection** under **Settings** > **General**.
 
-New pastes start with the visibility, expiry and burn setting from
+Pastes you create in the web editor start with the visibility, expiry and burn setting from
 [your paste defaults](/settings#set-paste-defaults), which are **Unlisted**, **1 week** and off
 until you change them.
 

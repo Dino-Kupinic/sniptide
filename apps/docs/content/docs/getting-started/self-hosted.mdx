@@ -19,7 +19,7 @@ starts the stack with HTTPS, and closes sign-up once your account exists.
 ## Before you begin
 
 - A Linux server with Docker and the Docker Compose plugin. The image runs on AMD64 and ARM64.
-- About 768 MB of memory for the app and a few hundred megabytes for Postgres. See
+- Memory for the app and Postgres sized for your workload. See
   [Memory and resources](/self-hosting/memory).
 - For the HTTPS step, a domain whose DNS points at the server, and ports 80 and 443 open.
 
@@ -51,8 +51,8 @@ Replace `<your-server-ip>` with the address you will open in the browser:
 printf 'BETTER_AUTH_SECRET=%s\nBETTER_AUTH_URL=http://<your-server-ip>:3000\n' "$(openssl rand -hex 32)" > .env
 ```
 
-- `BETTER_AUTH_SECRET` signs sessions and encrypts env group values. Keep it and back it up.
-  Changing it signs everyone out and makes stored env values unreadable.
+- `BETTER_AUTH_SECRET` signs sessions and supplies the default key for env group values. Keep it
+  and back it up. See [Rotating keys](/self-hosting/configuration#rotate-the-auth-secret).
 - `BETTER_AUTH_URL` must be exactly the address you open in the browser. Sign-in from any other
   address fails with "Invalid origin".
 
@@ -120,11 +120,12 @@ SMTP, only people signing in with a verified GitHub or Google identity can join.
 
 The bundled [Caddy](https://caddyserver.com) proxy gets and renews a certificate for your domain.
 Point the domain's DNS at the server and open ports 80 and 443. In `.env`, remove the
-`BETTER_AUTH_URL` line and add these two:
+`BETTER_AUTH_URL` line and add these settings:
 
 ```dotenv title=".env"
 SNIPTIDE_DOMAIN=paste.example.com
 COMPOSE_PROFILES=proxy
+SNIPTIDE_BIND=127.0.0.1
 ```
 
 Then apply the change:
@@ -134,7 +135,8 @@ docker compose up -d
 ```
 
 Open `https://paste.example.com/api/health` and confirm it returns `{"ok":true}`.
-`COMPOSE_PROFILES=proxy` starts the proxy. With `SNIPTIDE_DOMAIN` set, the public address becomes
+`COMPOSE_PROFILES=proxy` starts Caddy. `SNIPTIDE_BIND` keeps the app port private to the host so
+public traffic passes through the proxy. With `SNIPTIDE_DOMAIN` set, the public address becomes
 `https://paste.example.com`, and rate limits read each visitor's address from the proxy's
 `X-Forwarded-For` header. If you already run nginx, Traefik or Coolify, skip the profile and put your proxy in front
 of port 3000, as [Reverse proxy and client IP](/self-hosting/reverse-proxy) describes.
