@@ -18,6 +18,12 @@ describe("scrubPath", () => {
     expect(scrubPath("/collections/work")).toBe("/collections/[slug]")
   })
 
+  test("removes both parts of a custom share link from event URLs", () => {
+    expect(scrubPath("/@ada/private-name/raw")).toBe("/@[handle]/[slug]/raw")
+    expect(scrubPath("/%40ada")).toBe("/@[handle]")
+    expect(scrubPath("/pastes/@ada/private-name/edit")).toBe("/pastes/@[handle]/[slug]/edit")
+  })
+
   test("keeps app pages", () => {
     for (const path of ["/", "/dashboard", "/new", "/sign-up", "/settings", "/pastes"]) {
       expect(scrubPath(path)).toBe(path)

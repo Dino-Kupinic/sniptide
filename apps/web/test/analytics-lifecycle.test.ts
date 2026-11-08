@@ -8,10 +8,12 @@ import { mock } from "bun:test"
 let excluded = false
 let blocked = false
 let href = "https://app.test/dashboard?auth=signed_in&method=github"
+let cookie = ""
+let visitorId
+let sdkConsent = "pending"
 let sdkLoads = 0
 let sdkOnLoad = () => {}
 let initCalls = 0
-let registerCalls = 0
 let failInit = false
 let options
 const captures = []
@@ -21,13 +23,16 @@ globalThis.window = {
   location: {
     get href() { return href },
     get pathname() { return new URL(href).pathname },
+    get origin() { return new URL(href).origin },
   },
   localStorage: {
     getItem() {
       if (blocked) throw new Error("Storage blocked")
       return excluded ? "1" : null
     },
+    removeItem() { sdkConsent = "pending" },
   },
+  addEventListener() {},
   history: {
     state: null,
     replaceState(state, title, url) {
@@ -36,6 +41,7 @@ globalThis.window = {
     },
   },
 }
+globalThis.document = { get cookie() { return cookie } }
 mock.module("posthog-js", () => {
   sdkLoads++
   sdkOnLoad()
@@ -45,10 +51,13 @@ mock.module("posthog-js", () => {
       if (failInit) throw new Error("Initialization failed")
       options = config
     },
-    register(properties) {
-      registerCalls++
-      assert.deepEqual(properties, { surface: "app" })
+    get_explicit_consent_status() { return sdkConsent },
+    opt_in_capturing() {
+      visitorId = options.get_device_id("generated")
+      sdkConsent = "granted"
     },
+    opt_out_capturing() { visitorId = undefined; sdkConsent = "denied" },
+    clear_opt_in_out_capturing() { sdkConsent = "pending" },
     capture(event, properties) { captures.push({ event, properties }) },
   } }
 })
@@ -102,7 +111,6 @@ analytics.track("during_start")
 await Promise.all([first, second])
 assert.equal(sdkLoads, 1)
 assert.equal(initCalls, 1)
-assert.equal(registerCalls, 1)
 assert.deepEqual(captures, [])
 analytics.consumeAuthMarker()
 analytics.consumeAuthMarker()
@@ -125,6 +133,43 @@ assert.equal(initCalls, 1)
 `)
 })
 
+test("app signup shares the marketing visitor ID only while analytics consent is active", async () => {
+  await scenario(`
+href = "https://app.sniptide.com/dashboard?auth=signed_up&method=github"
+const id = "019a3c3f-5472-7f2e-bc9d-bb7dbc9f412f"
+const identity = "ph_phc_test_posthog=" + encodeURIComponent(JSON.stringify({ distinct_id: id }))
+cookie = "sniptide_consent=analytics.replay; " + identity
+await analytics.startAnalytics(config)
+assert.equal(visitorId, id)
+assert.equal(options.persistence, "memory")
+assert.equal(options.disable_session_recording, true)
+assert.equal(options.capture_heatmaps, false)
+analytics.consumeAuthMarker()
+assert.deepEqual(captures, [{ event: "signed_up", properties: { method: "github" } }])
+assert.ok(options.before_send({ properties: { distinct_id: id } }))
+cookie = "sniptide_consent=none; " + identity
+assert.equal(options.before_send({ properties: { distinct_id: id } }), null)
+analytics.track("paste_created")
+assert.equal(visitorId, undefined)
+assert.ok(options.before_send({ properties: { $cookieless_mode: true } }))
+`)
+})
+
+test("a shared identity cookie is ignored without consent or on another origin", async () => {
+  for (const [origin, choice] of [
+    ["https://app.sniptide.com", "none"],
+    ["https://app.test", "analytics"],
+  ]) {
+    await scenario(`
+href = ${JSON.stringify(origin)} + "/dashboard"
+cookie = "sniptide_consent=" + ${JSON.stringify(choice)} + "; ph_phc_test_posthog=" +
+  encodeURIComponent(JSON.stringify({ distinct_id: "019a3c3f-5472-7f2e-bc9d-bb7dbc9f412f" }))
+await analytics.startAnalytics(config)
+assert.equal(visitorId, undefined)
+`)
+  }
+})
+
 test("failed initialization clears pending state and allows a later retry", async () => {
   await scenario(`
 failInit = true
@@ -135,7 +180,6 @@ failInit = false
 await analytics.startAnalytics(config)
 analytics.track("after_retry")
 assert.equal(initCalls, 2)
-assert.equal(registerCalls, 1)
 assert.deepEqual(captures, [{ event: "after_retry", properties: undefined }])
 `)
 })
@@ -155,7 +199,7 @@ const event = {
   $set_once: { $initial_referrer: "https://app.test/private?content=secret" },
 }
 assert.deepEqual(options.before_send(event), {
-  properties: { $current_url: "https://app.test/pastes/[slug]" },
+  properties: { $current_url: "https://app.test/pastes/[slug]", surface: "app" },
   $set: { pathname: "/pastes/[slug]" },
   $set_once: { $initial_referrer: "https://app.test/[slug]" },
 })
