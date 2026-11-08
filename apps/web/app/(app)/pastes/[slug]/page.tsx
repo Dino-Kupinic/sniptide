@@ -31,6 +31,7 @@ import { getConfig } from "@/lib/config"
 import { formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { embedCode } from "@/lib/pastes/embed"
+import { slugFromRoute } from "@/lib/pastes/links"
 import {
   getPaste,
   getPasteMeta,
@@ -44,13 +45,14 @@ import { WEBHOOK_TARGETS } from "@/lib/pastes/webhook-url"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
-  const paste = await getPasteMeta((await params).slug)
+  const paste = await getPasteMeta(slugFromRoute((await params).slug))
   const t = await getTranslations("Core")
   return { title: paste ? `${paste.title} · Sniptide` : `${t("pasteNotFound")} · Sniptide` }
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/pastes/[slug]">) {
-  const [{ slug }, query] = await Promise.all([params, searchParams])
+  const [{ slug: segment }, query] = await Promise.all([params, searchParams])
+  const slug = slugFromRoute(segment)
   const revisionParam = Number(query.revisions)
   const revisionPage =
     Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1

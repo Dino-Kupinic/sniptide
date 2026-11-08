@@ -26,6 +26,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  like,
   lt,
   ne,
   or,
@@ -45,7 +46,7 @@ import { initials } from "@/lib/format"
 import { recordNotifications } from "@/lib/notifications/record"
 import { agentClientOf } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
-import { SLUG_PATTERN } from "./links"
+import { isCustomLink } from "./links"
 import {
   changePasteSharing,
   createPasteRecord,
@@ -1399,9 +1400,35 @@ export async function summarizePastes(
   return summarize(records, viewer, false, db)
 }
 
-export async function isSlugAvailable(slug: string, except?: string) {
-  if (!SLUG_PATTERN.test(slug)) return false
-  return slug === except || !(await findRecord(slug, true))
+// Custom links live under their owner's handle (<handle>/<name>), so a new handle moves them with
+// it and the old addresses stop working, like renaming a single link does. The new handle was
+// unclaimed until now, so no other paste can already hold one of the new links.
+export async function moveCustomLinks(ownerId: string, from: string, to: string) {
+  const prefix = `${from}/`
+  const moved = await getDb()
+    .update(pasteTable)
+    .set({ slug: sql`${to} || substr(${pasteTable.slug}, ${prefix.length})` })
+    .where(
+      and(
+        eq(pasteTable.ownerId, ownerId),
+        like(pasteTable.slug, `${prefix.replace(/[\\%_]/g, "\\$&")}%`),
+      ),
+    )
+    .returning({ slug: pasteTable.slug })
+  return moved.length
+}
+
+// Whether `handle` can give a paste the link `slug`. Keeping the paste's current link (`except`)
+// is always allowed, including a top-level link made before namespaces. A new link has to be a
+// custom link in `handle`'s namespace.
+export async function isSlugAvailable(
+  slug: string,
+  handle: string | null | undefined,
+  except?: string,
+) {
+  if (slug === except) return true
+  if (!isCustomLink(slug, handle)) return false
+  return !(await findRecord(slug, true))
 }
 
 // The hash a save stores for its password field. Keep and remove both hash nothing: the

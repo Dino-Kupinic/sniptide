@@ -1,6 +1,6 @@
 "use server"
 
-import { USERNAME_PATTERN } from "@workspace/auth/username"
+import { isValidUsername, USERNAME_PATTERN } from "@workspace/auth/username"
 import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db"
 import { requestLocale } from "@/lib/email/locale"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { NOTIFICATION_KINDS } from "@/lib/notifications/types"
+import { moveCustomLinks } from "@/lib/pastes/store"
 import { changePreferences } from "@/lib/preference-store"
 import type { Preferences } from "@/lib/preferences"
 import { preferencesSchema } from "@/lib/preferences-schema"
@@ -54,7 +55,11 @@ export async function updateProfile(input: z.input<typeof profileSchema>): Promi
 
   const { name, username } = parsed.data
   const body: Record<string, unknown> = { name }
-  if (username !== session.user.username) {
+  const previous = session.user.username
+  const renamed = username !== previous
+  if (renamed) {
+    if (!isValidUsername(username))
+      return { ok: false, error: await actionError("usernameTaken", { username }) }
     const auth = await getAuth()
     const { available } = await auth.api.isUsernameAvailable({ body: { username } })
     if (!available) return { ok: false, error: await actionError("usernameTaken", { username }) }
@@ -62,7 +67,9 @@ export async function updateProfile(input: z.input<typeof profileSchema>): Promi
     body.displayUsername = username
   }
 
-  return updateUser(body)
+  const result = await updateUser(body)
+  if (result.ok && renamed && previous) await moveCustomLinks(session.user.id, previous, username)
+  return result
 }
 
 // Avatars are small square JPEGs resized in the browser, kept as data URLs on user.image until

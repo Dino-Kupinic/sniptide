@@ -12,6 +12,7 @@
     "available": "Available",
     "taken": "Taken",
     "thatLinkIsTaken": "That link is taken.",
+    "customLinkNeedsUsername": "<link>Set a username</link> to give this paste a custom link.",
     "noCollection": "No collection",
     "collection": "Collection",
     "pastePassword": "Paste password",

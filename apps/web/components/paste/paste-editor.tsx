@@ -71,6 +71,7 @@ import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
 import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
+import { isCustomLink } from "@/lib/pastes/links"
 import { passwordField, storedPasswordField } from "@/lib/pastes/password-intent"
 import { suggestedFilename, suggestedTitle, suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
@@ -91,10 +92,6 @@ export interface EditorInitial {
   // The paste's version when the page loaded (editing only); see autosavePaste.
   version?: number
 }
-
-const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
-// Keep the custom-link section available to restore later; existing paste URLs stay unchanged.
-const CUSTOM_LINKS_ENABLED = false
 
 type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
@@ -202,6 +199,7 @@ export function PasteEditor({
   secretDetection = true,
   notice,
   sharedEdit,
+  handle,
 }: {
   initial: EditorInitial
   // Slug of the paste being edited; omitted for a new paste.
@@ -222,6 +220,9 @@ export function PasteEditor({
   // Editing a paste someone shared with the viewer: only its title, description and files are
   // theirs to change, so the sharing options stay hidden.
   sharedEdit?: boolean
+  // The viewer's username, the namespace of their custom links (<host>/<handle>/<name>). Null
+  // until they pick one in Settings.
+  handle?: string | null
 }) {
   const t = useTranslations("Paste")
   const feedbackT = useTranslations("Core")
@@ -299,7 +300,7 @@ export function PasteEditor({
         ? t("neverExpires")
         : t("expiresAt", { date: formatDateTime(savedExpiresAt, locale) })
   const versionRef = React.useRef(initial.version ?? 0)
-  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined, CUSTOM_LINKS_ENABLED)
+  const slugStatus = useSlugStatus(slug, editing ? savedSlug : undefined)
 
   const active = files.find((file) => file.id === activeId) ?? files[0]
   const language = detectLanguage(active?.name ?? "")
@@ -328,15 +329,11 @@ export function PasteEditor({
   )
 
   // The paste as the server would store it. Editing sends this after every pause in typing.
-  const slugForSave = !CUSTOM_LINKS_ENABLED
-    ? editing
-      ? savedSlug
-      : ""
-    : !editing
+  const slugForSave = !editing
+    ? slug
+    : committedSlug === slug && slugStatus === "ok" && isCustomLink(slug, handle)
       ? slug
-      : committedSlug === slug && slugStatus === "ok" && SLUG_PATTERN.test(slug)
-        ? slug
-        : savedSlug
+      : savedSlug
   const passwordForSave = !passwordOn
     ? null
     : !editing
@@ -893,10 +890,10 @@ export function PasteEditor({
         content: (
           <SlugInput
             value={slug}
+            handle={handle}
             onChange={setSlug}
             onCommit={editing ? () => setCommittedSlug(slug) : undefined}
             status={slugStatus}
-            disabled={!CUSTOM_LINKS_ENABLED}
             large={large}
           />
         ),
@@ -941,7 +938,7 @@ export function PasteEditor({
         ),
       },
     ]
-    return sections.filter((section) => CUSTOM_LINKS_ENABLED || section.id !== "slug")
+    return sections
   }
 
   const panelSections = optionSections(false)

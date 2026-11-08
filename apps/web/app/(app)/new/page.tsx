@@ -74,6 +74,7 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
   return (
     <PasteEditor
       collections={collections}
+      handle={session?.user.username}
       // A copy or an import starts from other text, so its draft is kept apart from a blank paste.
       draftScope={[
         session?.user.id ?? "",

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 import { clientAddress } from "@/lib/client-ip"
+import { slugFromRoute } from "@/lib/pastes/links"
 import { verifyPassword } from "@/lib/pastes/passwords"
 import { getUnlockHash } from "@/lib/pastes/store"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
@@ -35,7 +36,7 @@ function fail(status: number, error: string, headers?: HeadersInit) {
 // A route handler rather than a server action: on sniptide.com the page is proxied from the app,
 // and Next rejects a server action whose Origin (sniptide.com) differs from the app's host.
 export async function POST(request: Request, { params }: RouteContext<"/[slug]/unlock">) {
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
 
   let text: string
   try {

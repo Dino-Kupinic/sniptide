@@ -12,6 +12,7 @@
     "available": "Disponible",
     "taken": "Ocupado",
     "thatLinkIsTaken": "Ese enlace ya está ocupado.",
+    "customLinkNeedsUsername": "<link>Elige un nombre de usuario</link> para dar a este paste un enlace personalizado.",
     "noCollection": "Sin colección",
     "collection": "Colección",
     "pastePassword": "Contraseña del paste",

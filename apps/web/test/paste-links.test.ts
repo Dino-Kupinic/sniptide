@@ -1,18 +1,41 @@
 import { expect, spyOn, test } from "bun:test"
-import { randomSlug } from "@/lib/pastes/links"
+import { isCustomLink, randomSlug, slugFromRoute } from "@/lib/pastes/links"
 import { isSlugAvailable } from "@/lib/pastes/store"
 
 test("new paste links have eight readable random characters", () => {
   expect(randomSlug()).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789]{8}$/)
 })
 
-test("existing paste links are checked by format without reserving route words", async () => {
-  for (const slug of ["pastes", "PASTES", "settings", "about", "_next", "Ab3xY9", "a".repeat(40)]) {
-    expect(await isSlugAvailable(slug, slug)).toBe(true)
+test("a paste can always keep its current link, including top-level links", async () => {
+  for (const slug of ["pastes", "settings", "Ab3xY9", "dino/deploy"]) {
+    expect(await isSlugAvailable(slug, "dino", slug)).toBe(true)
+    expect(await isSlugAvailable(slug, null, slug)).toBe(true)
   }
-  for (const slug of ["ab", "with spaces", "with/slashes", "a".repeat(41)]) {
-    expect(await isSlugAvailable(slug, slug)).toBe(false)
+})
+
+test("new custom links have to be in the owner's namespace", async () => {
+  for (const slug of ["deploy", "ab", "other/deploy", "dino/ab", "dino/with space", "dino/a/b"]) {
+    expect(await isSlugAvailable(slug, "dino")).toBe(false)
   }
+  expect(await isSlugAvailable("dino/deploy", null)).toBe(false)
+})
+
+test("custom link names exclude paste sub-paths and handles exclude app routes", () => {
+  expect(isCustomLink("dino/deploy-script", "dino")).toBe(true)
+  expect(isCustomLink(`dino/${"a".repeat(40)}`, "dino")).toBe(true)
+  for (const name of ["raw", "RAW", "embed", "copy", "edit", "unlock", "a".repeat(41)]) {
+    expect(isCustomLink(`dino/${name}`, "dino")).toBe(false)
+  }
+  for (const handle of ["pastes", "dashboard", "api", "languages", "_next"]) {
+    expect(isCustomLink(`${handle}/deploy`, handle)).toBe(false)
+  }
+  // Official handles can't be registered, but they still hold links.
+  expect(isCustomLink("sniptide/nextjs-starter", "sniptide")).toBe(true)
+})
+
+test("route segments map back to slugs", () => {
+  expect(slugFromRoute("Ab3xY9qr")).toBe("Ab3xY9qr")
+  expect(slugFromRoute("dino~deploy")).toBe("dino/deploy")
 })
 
 test("generated paste links do not filter route words", () => {

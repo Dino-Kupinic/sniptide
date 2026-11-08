@@ -36,8 +36,9 @@ if (testDatabaseUrl) process.env.DATABASE_URL = testDatabaseUrl
 
 export { request }
 
-export function signInAs(id: string | null) {
+export function signInAs(id: string | null, username: string | null = null) {
   request.viewer = id
+  request.username = username
 }
 
 export async function migrate() {
@@ -56,6 +57,7 @@ export async function resetDatabase() {
   await getDb().delete(analyticsRollup)
   await getDb().delete(analyticsSalt)
   request.viewer = null
+  request.username = null
   request.cookies.clear()
   request.headers = new Headers()
 }

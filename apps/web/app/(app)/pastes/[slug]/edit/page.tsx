@@ -3,10 +3,11 @@ import { getTranslations } from "next-intl/server"
 import { PasteEditor } from "@/components/paste/paste-editor"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
+import { slugFromRoute } from "@/lib/pastes/links"
 import { getPaste, getShare } from "@/lib/pastes/store"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edit">) {
-  const paste = await getPaste((await params).slug)
+  const paste = await getPaste(slugFromRoute((await params).slug))
   const t = await getTranslations("Core")
   return {
     title: `${paste ? t("editTitle", { title: paste.title }) : t("pasteNotFound")} · Sniptide`,
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edi
 }
 
 export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">) {
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   const paste = await getPaste(slug)
   if (!paste) notFound()
 
@@ -31,6 +32,7 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
     <PasteEditor
       editing={slug}
       sharedEdit={shared}
+      handle={session?.user.username}
       collections={collections}
       draftScope={session?.user.id ?? ""}
       indentation={preferences.indentation}

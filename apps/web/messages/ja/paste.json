@@ -12,6 +12,7 @@
     "available": "利用可能",
     "taken": "使用済み",
     "thatLinkIsTaken": "このリンクは使用済みです。",
+    "customLinkNeedsUsername": "このペーストにカスタムリンクを付けるには、<link>ユーザー名を設定</link>してください。",
     "noCollection": "コレクションなし",
     "collection": "コレクション",
     "pastePassword": "Paste のパスワード",

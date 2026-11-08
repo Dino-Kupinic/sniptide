@@ -21,6 +21,7 @@
     "pasteSize": "代码片段的大小上限为 {limit}。",
     "passwordRequired": "请输入密码，或关闭密码保护。",
     "slugTaken": "{link} 已被占用或不允许使用。",
+    "handleRequired": "请先在设置中设置用户名，才能为粘贴设置自定义链接。",
     "collectionMissing": "该集合已不存在。",
     "pickVersion": "请选择一个版本。",
     "versionUnavailable": "无法恢复该版本。",

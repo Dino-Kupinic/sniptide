@@ -1,4 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { user } from "@workspace/db/schema"
+import { eq } from "drizzle-orm"
+import { getDb } from "@/lib/db"
 import { savePaste } from "@/lib/pastes/actions"
 import { maxPasteBytes, parsePasteInput, pasteSchema } from "@/lib/pastes/schema"
 import { createPaste, getPaste, isSlugAvailable, updatePaste } from "@/lib/pastes/store"
@@ -48,20 +51,17 @@ describeDb("persistence validation", () => {
     await seedUser("owner")
     signInAs("owner")
   })
-  test("paste links allow route words but still require uniqueness", async () => {
-    for (const slug of [
-      "analytics",
-      "demo",
-      "dev",
-      "forgot-password",
-      "reset-password",
-      "secrets",
-      "secret-share",
-      "Analytics",
-    ]) {
-      expect(await isSlugAvailable(slug)).toBe(true)
-      expect((await savePaste({ ...input("route word fixture"), slug })).ok).toBe(true)
-      expect(await isSlugAvailable(slug)).toBe(false)
+  test("custom links need a username and live in its namespace", async () => {
+    expect((await savePaste({ ...input("no handle"), slug: "owner/notes" })).ok).toBe(false)
+    await getDb().update(user).set({ username: "owner" }).where(eq(user.id, "owner"))
+    signInAs("owner", "owner")
+    expect((await savePaste({ ...input("top level"), slug: "analytics" })).ok).toBe(false)
+    expect((await savePaste({ ...input("elsewhere"), slug: "other/notes" })).ok).toBe(false)
+    for (const slug of ["owner/analytics", "owner/settings", "owner/Notes"]) {
+      expect(await isSlugAvailable(slug, "owner")).toBe(true)
+      const saved = await savePaste({ ...input("namespaced fixture"), slug })
+      expect(saved).toEqual({ ok: true, slug })
+      expect(await isSlugAvailable(slug, "owner")).toBe(false)
       expect((await savePaste({ ...input("duplicate link fixture"), slug })).ok).toBe(false)
     }
   })

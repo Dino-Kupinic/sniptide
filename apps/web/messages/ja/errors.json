@@ -21,6 +21,7 @@
     "pasteSize": "ペーストのサイズ上限は {limit} です。",
     "passwordRequired": "パスワードを入力するか、パスワード保護をオフにしてください。",
     "slugTaken": "{link} はすでに使われているか、使用できません。",
+    "handleRequired": "ペーストにカスタムリンクを付けるには、設定でユーザー名を設定してください。",
     "collectionMissing": "このコレクションはもう存在しません。",
     "pickVersion": "バージョンを選択してください。",
     "versionUnavailable": "このバージョンは復元できません。",
