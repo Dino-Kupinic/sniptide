@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic"
 export async function GET(_request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params
   const read =
-    // One segment for a generated link, two for a custom link (/<handle>/<name>).
+    // One segment for a generated link, two for a custom link (/@<handle>/<name>).
     path.length >= 1 && path.length <= 2 && path.every(Boolean)
       ? await readSharedPaste(path.join("/"), { visit: false })
       : { status: "missing" as const }

@@ -1,24 +1,16 @@
-import { RESERVED_USERNAMES } from "@workspace/auth/username"
 import { type NextRequest, NextResponse } from "next/server"
-import { LINK_SUBPATHS, ROUTE_SEPARATOR } from "@/lib/pastes/links"
+import { ROUTE_SEPARATOR } from "@/lib/pastes/links"
 
-// Custom links live at /<handle>/<name>, and the paste pages below them at /<handle>/<name>/raw
+// Custom links live at /@<handle>/<name>, and the paste pages below them at /@<handle>/<name>/raw
 // and so on. Next.js routes one segment per dynamic folder, so these are served from the
 // internal segment "<handle>~<name>" that the [slug] routes read back with slugFromRoute.
-// Generated links stay one segment, and /<link>/raw is told apart because no link name can be a
-// paste sub-path.
-function namespacedRoute(path: string, prefix: "" | "/pastes") {
-  const match = new RegExp(`^${prefix}/([a-z0-9_-]{3,30})/([A-Za-z0-9_-]{1,40})(/[^/]+)?/?$`).exec(
-    path,
-  )
-  if (
-    !match?.[1] ||
-    !match[2] ||
-    RESERVED_USERNAMES.has(match[1]) ||
-    LINK_SUBPATHS.has(match[2].toLowerCase())
-  )
-    return null
-  return `${prefix}/${match[1]}${ROUTE_SEPARATOR}${match[2]}${match[3] ?? ""}`
+function customLinkRoute(path: string, prefix: "" | "/pastes") {
+  const match = new RegExp(
+    `^${prefix}/(?:@|%40)([a-z0-9_-]{3,30})/([A-Za-z0-9_-]{1,40})(/[^/]+)?/?$`,
+    "i",
+  ).exec(path)
+  if (!match?.[1] || !match[2]) return null
+  return `${prefix}/${match[1].toLowerCase()}${ROUTE_SEPARATOR}${match[2]}${match[3] ?? ""}`
 }
 
 // When SHARE_URL puts share links on their own domain and that domain points at this app too,
@@ -43,7 +35,7 @@ export function proxy(request: NextRequest) {
   const internal = /^(\/pastes)?\/([a-z0-9_-]{3,30})~([A-Za-z0-9_-]{1,40})(\/.*)?$/.exec(path)
   if (internal) {
     const url = request.nextUrl.clone()
-    url.pathname = `${internal[1] ?? ""}/${internal[2]}/${internal[3]}${internal[4] ?? ""}`
+    url.pathname = `${internal[1] ?? ""}/@${internal[2]}/${internal[3]}${internal[4] ?? ""}`
     return NextResponse.redirect(url, 308)
   }
   const appPath =
@@ -69,15 +61,15 @@ export function proxy(request: NextRequest) {
     url.pathname = `/api/agent-share${path}`
     return NextResponse.rewrite(url, { headers: { vary: "Accept, Cookie" } })
   }
-  const shareRoute = appPath ? null : namespacedRoute(path, "")
+  const shareRoute = customLinkRoute(path, "")
   if (shareRoute) {
     const url = request.nextUrl.clone()
     url.pathname = shareRoute
     return NextResponse.rewrite(url)
   }
-  // The workspace pages of a custom link: /pastes/<handle>/<name> and its /edit.
+  // The workspace pages of a custom link: /pastes/@<handle>/<name> and its /edit.
   const next = () => {
-    const pasteRoute = namespacedRoute(path, "/pastes")
+    const pasteRoute = customLinkRoute(path, "/pastes")
     if (!pasteRoute) return NextResponse.next()
     const url = request.nextUrl.clone()
     url.pathname = pasteRoute

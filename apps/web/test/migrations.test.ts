@@ -247,6 +247,29 @@ describeDb("upgrading a database", () => {
     }
   })
 
+  test("custom links move under the @ prefix and other slugs stay", async () => {
+    const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-link-prefix-"))
+    try {
+      for (const entry of fs.readdirSync(folder)) {
+        if (!entry.endsWith("_custom_link_prefix"))
+          fs.cpSync(path.join(folder, entry), path.join(previous, entry), { recursive: true })
+      }
+      await onFreshDatabase(async (db) => {
+        await migrateDb(db, previous)
+        await db.$client`INSERT INTO "user" (id, name, email) VALUES ('owner', 'Owner', 'owner@example.com')`
+        await db.$client`INSERT INTO paste (owner_id, slug, title, visibility) VALUES ('owner', 'dino/deploy', 'Custom', 'public'), ('owner', 'Ab3xY9qr', 'Generated', 'public'), ('owner', 'legacy-name', 'Top level', 'public')`
+        expect((await migrateDb(db, folder)).applied).toEqual(["20261108120000_custom_link_prefix"])
+        expect([...(await db.$client`SELECT slug FROM paste ORDER BY title`)]).toEqual([
+          { slug: "@dino/deploy" },
+          { slug: "Ab3xY9qr" },
+          { slug: "legacy-name" },
+        ])
+      })
+    } finally {
+      fs.rmSync(previous, { recursive: true, force: true })
+    }
+  })
+
   test("a fresh database gets every migration, and a second run applies none", async () => {
     await onFreshDatabase(async (db) => {
       const first = await migrateDb(db, folder)
