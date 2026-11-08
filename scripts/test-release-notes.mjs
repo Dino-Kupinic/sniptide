@@ -4,6 +4,7 @@ import {
   composeBody,
   hasNotes,
   parseNote,
+  pickProvider,
   pullNumbers,
   technicalBody,
   userPrompt,
@@ -76,5 +77,19 @@ test("the prompt carries the release and each pull request", () => {
   assert.match(
     prompt,
     /### Pull request: feat\(web\): move links\nLabels: web\nChanged paths: apps\/web\n\nMoves links\./,
+  )
+})
+
+test("Anthropic wins when both keys are set, and the model can be overridden", () => {
+  assert.equal(pickProvider({}), null)
+  assert.deepEqual(pickProvider({ OPENAI_API_KEY: "o" }), {
+    provider: "openai",
+    apiKey: "o",
+    model: "gpt-5",
+  })
+  assert.equal(pickProvider({ ANTHROPIC_API_KEY: "a", OPENAI_API_KEY: "o" }).provider, "anthropic")
+  assert.equal(
+    pickProvider({ OPENAI_API_KEY: "o", RELEASE_NOTES_MODEL: "gpt-5-mini" }).model,
+    "gpt-5-mini",
   )
 })

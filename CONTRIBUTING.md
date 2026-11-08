@@ -74,14 +74,17 @@ a release. Re-running a successful release does not create another version.
 
 The release notes of each GitHub release are the changelog. semantic-release writes the commit
 list, so a clear title is the technical entry. The **Release notes** workflow
-(`.github/workflows/release-notes.yml`) then sends the merged pull requests to Claude
-(`claude-sonnet-5-5`) and puts a short post for readers above that list, which collapses under
+(`.github/workflows/release-notes.yml`) then sends the merged pull requests to a model
+and puts a short post for readers above that list, which collapses under
 **Technical changes**. The PR description is the main source, so describe what changes for people
 who use Sniptide. The post sits between `sniptide-notes` markers that
 [sniptide.com/changelog](https://sniptide.com/changelog) reads, with `kind` set to `feature`, `fix`
 or `internal`. To correct a post, edit the release on GitHub and keep the markers. To rewrite one
 release, or every release with the tag `all`, run **Release notes** manually. The workflow needs an
-`ANTHROPIC_API_KEY` repository secret; without it the release keeps the commit list alone. There is
+`ANTHROPIC_API_KEY` repository secret, which uses `claude-sonnet-5-5`, or an `OPENAI_API_KEY`
+secret, which uses `gpt-5`. Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL`
+repository variable picks another model. Without either key the release keeps the commit list
+alone. There is
 no `CHANGELOG.md`. A change that needs
 something from people who run Sniptide (a new required setting, a manual step, a schema change the
 previous version can't run against) is marked breaking, and its `BREAKING CHANGE:` paragraph says

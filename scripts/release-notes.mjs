@@ -1,14 +1,26 @@
 // Rewrites a GitHub release body into a short post for people who use Sniptide. semantic-release
-// writes the commit list; this script asks Claude to explain the merged pull requests behind it,
+// writes the commit list; this script asks a model to explain the merged pull requests behind it,
 // puts that post at the top of the body between sniptide-notes markers, and keeps the commit list
 // below it in a collapsed "Technical changes" block. The website's changelog reads the markers.
 //
 // Usage: node scripts/release-notes.mjs <tag | --all> [--force] [--dry-run]
-// Environment: GITHUB_TOKEN, GITHUB_REPOSITORY (owner/name), ANTHROPIC_API_KEY,
-// RELEASE_NOTES_MODEL (optional, defaults to claude-sonnet-5-5).
+// Environment: GITHUB_TOKEN, GITHUB_REPOSITORY (owner/name), and ANTHROPIC_API_KEY or
+// OPENAI_API_KEY. RELEASE_NOTES_MODEL overrides the provider's default model.
 import { fileURLToPath } from "node:url"
 
-export const model = process.env.RELEASE_NOTES_MODEL || "claude-sonnet-5-5"
+const defaultModels = { anthropic: "claude-sonnet-5-5", openai: "gpt-5" }
+
+// Anthropic when its key is set, otherwise OpenAI, the same order the app's support assistant
+// uses. Null when neither key is set.
+export function pickProvider(env = process.env) {
+  const provider = env.ANTHROPIC_API_KEY ? "anthropic" : env.OPENAI_API_KEY ? "openai" : null
+  if (!provider) return null
+  return {
+    provider,
+    apiKey: provider === "anthropic" ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY,
+    model: env.RELEASE_NOTES_MODEL || defaultModels[provider],
+  }
+}
 const kinds = new Set(["feature", "fix", "internal"])
 const start = /<!--\s*sniptide-notes:start[^>]*-->/
 const end = /<!--\s*sniptide-notes:end\s*-->/
@@ -135,33 +147,59 @@ async function loadPull(repo, number) {
   }
 }
 
-async function writeNote(release, pulls) {
+async function askAnthropic({ apiKey, model }, prompt) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
       model,
       max_tokens: 1200,
       system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt(release, pulls) }],
+      messages: [{ role: "user", content: prompt }],
     }),
   })
   if (!response.ok) {
     throw new Error(`Anthropic returned ${response.status}: ${await response.text()}`)
   }
   const data = await response.json()
-  const text = data.content
+  return data.content
     .filter((block) => block.type === "text")
     .map((block) => block.text)
     .join("")
-  return parseNote(text)
 }
 
-async function rewrite(repo, release, { force, dryRun }) {
+async function askOpenAI({ apiKey, model }, prompt) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      // Reasoning models spend part of this budget thinking before they answer.
+      max_completion_tokens: 4000,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ],
+    }),
+  })
+  if (!response.ok) {
+    throw new Error(`OpenAI returned ${response.status}: ${await response.text()}`)
+  }
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content ?? ""
+}
+
+async function writeNote(settings, release, pulls) {
+  const ask = settings.provider === "anthropic" ? askAnthropic : askOpenAI
+  return parseNote(await ask(settings, userPrompt(release, pulls)))
+}
+
+async function rewrite(repo, release, { force, dryRun, settings }) {
   if (hasNotes(release.body) && !force) {
     console.log(`${release.tag_name}: already has notes, skipped`)
     return
@@ -173,7 +211,7 @@ async function rewrite(repo, release, { force, dryRun }) {
     return
   }
   const pulls = await Promise.all(numbers.map((number) => loadPull(repo, number)))
-  const note = await writeNote(release, pulls)
+  const note = await writeNote(settings, release, pulls)
   const body = composeBody(note, original)
   if (dryRun) {
     console.log(`--- ${release.tag_name}\n${body}`)
@@ -193,11 +231,19 @@ async function main(argv) {
     throw new Error("GITHUB_REPOSITORY and GITHUB_TOKEN are required")
   // A missing key skips the notes instead of failing the release, so forks and new setups
   // keep publishing with the commit list alone.
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.log("::warning::ANTHROPIC_API_KEY is not set, so the release notes were not rewritten.")
+  const settings = pickProvider()
+  if (!settings) {
+    console.log(
+      "::warning::Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set, so the release notes were not rewritten.",
+    )
     return
   }
-  const options = { force: argv.includes("--force"), dryRun: argv.includes("--dry-run") }
+  console.log(`Writing with ${settings.provider} (${settings.model})`)
+  const options = {
+    force: argv.includes("--force"),
+    dryRun: argv.includes("--dry-run"),
+    settings,
+  }
   const target = argv.find((arg) => !arg.startsWith("--"))
   if (argv.includes("--all")) {
     const releases = []
