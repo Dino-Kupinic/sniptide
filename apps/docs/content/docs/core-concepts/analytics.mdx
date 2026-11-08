@@ -63,6 +63,12 @@ This section applies only when the administrator set `POSTHOG_KEY`, which turns 
 product analytics for the app. A self-hosted instance sends nothing to PostHog by default. See
 [Configuration](/self-hosting/configuration#monitoring).
 
+On the hosted app at `app.sniptide.com`, accepting **Analytics** in the website's cookie settings
+lets PostHog connect selected app events, such as signing up, to your visit to the website. The app
+uses the website's anonymous visitor ID in memory. It uses cookieless measurement when that ID
+or your consent is missing. You can change consent from **Cookies** in the footer of `sniptide.com`.
+The app does not record sessions or automatically capture clicks.
+
 1. Open `/_site/analytics` on the instance.
 2. Select **Exclude this browser**.
 
