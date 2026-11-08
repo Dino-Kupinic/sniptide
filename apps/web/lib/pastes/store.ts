@@ -1400,14 +1400,14 @@ export async function summarizePastes(
   return summarize(records, viewer, false, db)
 }
 
-// Custom links live under their owner's handle (<handle>/<name>), so a new handle moves them with
+// Custom links live under their owner's handle (@<handle>/<name>), so a new handle moves them with
 // it and the old addresses stop working, like renaming a single link does. The new handle was
 // unclaimed until now, so no other paste can already hold one of the new links.
 export async function moveCustomLinks(ownerId: string, from: string, to: string) {
-  const prefix = `${from}/`
+  const prefix = `@${from}/`
   const moved = await getDb()
     .update(pasteTable)
-    .set({ slug: sql`${to} || substr(${pasteTable.slug}, ${prefix.length})` })
+    .set({ slug: sql`${`@${to}`} || substr(${pasteTable.slug}, ${prefix.length})` })
     .where(
       and(
         eq(pasteTable.ownerId, ownerId),
@@ -1419,8 +1419,8 @@ export async function moveCustomLinks(ownerId: string, from: string, to: string)
 }
 
 // Whether `handle` can give a paste the link `slug`. Keeping the paste's current link (`except`)
-// is always allowed, including a top-level link made before namespaces. A new link has to be a
-// custom link in `handle`'s namespace.
+// is always allowed, including a top-level link made before links moved under handles. A new link has to be a
+// custom link under `handle`.
 export async function isSlugAvailable(
   slug: string,
   handle: string | null | undefined,

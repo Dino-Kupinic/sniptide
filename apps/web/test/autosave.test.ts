@@ -108,16 +108,16 @@ describeDb("autosavePaste", () => {
 
   test("reports the new link when a newer save moved the paste", async () => {
     const { slug, version } = await create()
-    const moved = await autosavePaste(slug, input({ slug: "owner/moved-link" }), version)
+    const moved = await autosavePaste(slug, input({ slug: "@owner/moved-link" }), version)
     if (!moved.ok) throw new Error("expected a save")
-    expect(moved.slug).toBe("owner/moved-link")
+    expect(moved.slug).toBe("@owner/moved-link")
 
-    const stale = await autosavePaste("owner/moved-link", input({ title: "Late" }), version)
+    const stale = await autosavePaste("@owner/moved-link", input({ title: "Late" }), version)
     expect(stale).toEqual({
       ok: false,
       conflict: true,
       version: moved.version,
-      slug: "owner/moved-link",
+      slug: "@owner/moved-link",
     })
   })
 
@@ -358,9 +358,9 @@ describeDb("autosavePaste", () => {
 
   test("refuses what a normal save refuses", async () => {
     const { slug, version } = await create()
-    await seedPaste({ slug: "owner/taken-link", owner: "owner" })
+    await seedPaste({ slug: "@owner/taken-link", owner: "owner" })
 
-    expect(await autosavePaste(slug, input({ slug: "owner/taken-link" }), version)).toMatchObject({
+    expect(await autosavePaste(slug, input({ slug: "@owner/taken-link" }), version)).toMatchObject({
       ok: false,
       error: expect.stringContaining("taken"),
     })

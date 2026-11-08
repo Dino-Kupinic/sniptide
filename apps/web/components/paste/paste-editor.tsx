@@ -220,7 +220,7 @@ export function PasteEditor({
   // Editing a paste someone shared with the viewer: only its title, description and files are
   // theirs to change, so the sharing options stay hidden.
   sharedEdit?: boolean
-  // The viewer's username, the namespace of their custom links (<host>/<handle>/<name>). Null
+  // The viewer's username, the namespace of their custom links (<host>/@<handle>/<name>). Null
   // until they pick one in Settings.
   handle?: string | null
 }) {

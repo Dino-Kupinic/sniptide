@@ -35,10 +35,10 @@ test("the proxy serves /@handle from the profile page and keeps /_profile intern
   const internal = proxy(new NextRequest("https://sniptide.com/_profile/dino"))
   expect(internal.status).toBe(308)
   expect(new URL(internal.headers.get("location") ?? "").pathname).toBe("/@dino")
-  // Deeper paths are not profiles.
+  // Deeper paths are custom links under the handle, not the profile.
   expect(
-    proxy(new NextRequest("https://sniptide.com/@dino/raw")).headers.has("x-middleware-rewrite"),
-  ).toBe(false)
+    proxy(new NextRequest("https://sniptide.com/@dino/raw")).headers.get("x-middleware-rewrite"),
+  ).toBe("https://sniptide.com/dino~raw")
 })
 
 async function seedAccount(id: string, username: string | null, fields = {}) {

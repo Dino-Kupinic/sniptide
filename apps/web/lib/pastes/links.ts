@@ -1,4 +1,4 @@
-import { isNamespace } from "@workspace/auth/username"
+import { isValidUsername } from "@workspace/auth/username"
 import { DAY } from "@/lib/time"
 import type { Expiry } from "./types"
 
@@ -14,57 +14,36 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
 // one character is enough.
 export const LINK_NAME_PATTERN = /^[A-Za-z0-9_-]{1,40}$/
 
-// Pages served below a link (/<link>/raw) and the editor's /pastes/<link>/edit. A custom link
-// name can't be one of them, so /<generated>/raw and /<handle>/<name> never share an address.
-export const LINK_SUBPATHS: ReadonlySet<string> = new Set([
-  "copy",
-  "edit",
-  "embed",
-  "preview",
-  "print",
-  "raw",
-  "reveal",
-  "unlock",
-])
-
-// Custom links live in their owner's namespace: sniptide.com/<handle>/<name>. The slug column
-// stores "<handle>/<name>", so every `/${slug}` address already points at the right place.
+// Custom links live under their owner's handle: sniptide.com/@<handle>/<name>. The "@" keeps the
+// first path segment free for generated slugs and app routes. The slug column stores
+// "@<handle>/<name>", so every `/${slug}` address already points at the right place.
 export function customLink(handle: string, name: string) {
-  return `${handle}/${name}`
+  return `@${handle}/${name}`
 }
 
-// The name part of `slug` when it is a custom link in `handle`'s namespace, otherwise "".
+// The name part of `slug` when it is a custom link under `handle`, otherwise "".
 export function customLinkName(slug: string, handle: string | null | undefined) {
-  if (!handle || !slug.startsWith(`${handle}/`)) return ""
-  return slug.slice(handle.length + 1)
+  if (!handle || !slug.startsWith(`@${handle}/`)) return ""
+  return slug.slice(handle.length + 2)
 }
 
-export function isLinkName(name: string) {
-  return LINK_NAME_PATTERN.test(name) && !isReservedLinkName(name)
-}
-
-export function isReservedLinkName(name: string) {
-  return LINK_SUBPATHS.has(name.toLowerCase())
-}
-
-// Whether `slug` is a custom link `handle` may claim. Handles that collide with an app route
-// can't hold links, because /<handle>/<name> would reach that route instead.
+// Whether `slug` is a custom link `handle` may claim.
 export function isCustomLink(slug: string, handle: string | null | undefined) {
-  if (!handle || !isNamespace(handle)) return false
-  const name = customLinkName(slug, handle)
-  return isLinkName(name)
+  if (!handle || !isValidUsername(handle)) return false
+  return LINK_NAME_PATTERN.test(customLinkName(slug, handle))
 }
 
-// Next.js matches one segment per dynamic folder, so the proxy serves /<handle>/<name> from the
-// internal route segment "<handle>~<name>". "~" can't appear in a handle or a link name.
+// Next.js matches one segment per dynamic folder, so the proxy serves /@<handle>/<name> from the
+// internal route segment "<handle>~<name>". "~" can't appear in a handle, a link name or a
+// generated slug.
 export const ROUTE_SEPARATOR = "~"
 
 export function slugFromRoute(segment: string) {
-  return segment.replace(ROUTE_SEPARATOR, "/")
+  return segment.includes(ROUTE_SEPARATOR) ? `@${segment.replace(ROUTE_SEPARATOR, "/")}` : segment
 }
 
 export function routeSegment(slug: string) {
-  return slug.replace("/", ROUTE_SEPARATOR)
+  return slug.startsWith("@") ? slug.slice(1).replace("/", ROUTE_SEPARATOR) : slug
 }
 
 export function expiresAtFor(expiry: Expiry, from = Date.now()) {

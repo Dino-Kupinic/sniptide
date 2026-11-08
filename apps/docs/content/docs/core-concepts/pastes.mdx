@@ -37,19 +37,16 @@ their address when you upgrade.
 ### Custom links
 
 Set **Custom link** to give a paste a readable address under your username:
-`<domain>/<username>/<name>`, such as `sniptide.com/dino/deploy-script`. The name is 1 to 40
-letters, digits, hyphens or underscores, and each name can be used once in your namespace. A
-custom link needs a username, so set one under **Settings** > **General** first.
-
-Some names and usernames are not available for custom links:
-
-- A name can't be a page Sniptide serves below a link: `raw`, `embed`, `copy`, `preview`,
-  `print`, `reveal`, `unlock` or `edit`.
-- A username that matches an app route, such as `dashboard`, `pastes` or `docs`, can't be
-  registered. A few usernames, such as `sniptide`, are kept for Sniptide's own accounts.
+`<domain>/@<username>/<name>`, such as `sniptide.com/@dino/deploy-script`. The name is 1 to 40
+letters, digits, hyphens or underscores, and each name can be used once under your username. A
+custom link needs a username, so set one under **Settings** > **General** first. Your profile
+stays at `<domain>/@<username>`, and the pages below a paste follow its link, such as
+`sniptide.com/@dino/deploy-script/raw`.
 
 Links made before custom links moved under usernames keep their `<domain>/<link>` address. They
-move under your username when you give the paste a new custom link.
+move under your username when you give the paste a new custom link. Custom links that used the
+earlier `<domain>/<username>/<name>` form moved to `<domain>/@<username>/<name>`, and the earlier
+address no longer opens the paste.
 
 When you change a paste's link, the old link stops working at once. Changing your username moves
 all of your custom links to the new username in the same way, so the old addresses stop working
