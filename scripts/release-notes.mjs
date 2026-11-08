@@ -8,7 +8,7 @@
 // OPENAI_API_KEY. RELEASE_NOTES_MODEL overrides the provider's default model.
 import { fileURLToPath } from "node:url"
 
-const defaultModels = { anthropic: "claude-sonnet-5-5", openai: "gpt-5" }
+const defaultModels = { anthropic: "claude-haiku-5-5", openai: "gpt-6-luna" }
 
 // Anthropic when its key is set, otherwise OpenAI, the same order the app's support assistant
 // uses. Null when neither key is set.

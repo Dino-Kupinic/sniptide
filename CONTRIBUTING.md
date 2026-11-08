@@ -81,8 +81,8 @@ who use Sniptide. The post sits between `sniptide-notes` markers that
 [sniptide.com/changelog](https://sniptide.com/changelog) reads, with `kind` set to `feature`, `fix`
 or `internal`. To correct a post, edit the release on GitHub and keep the markers. To rewrite one
 release, or every release with the tag `all`, run **Release notes** manually. The workflow needs an
-`ANTHROPIC_API_KEY` repository secret, which uses `claude-sonnet-5-5`, or an `OPENAI_API_KEY`
-secret, which uses `gpt-5`. Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL`
+`ANTHROPIC_API_KEY` repository secret, which uses `claude-haiku-5-5`, or an `OPENAI_API_KEY`
+secret, which uses `gpt-6-luna`. Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL`
 repository variable picks another model. Without either key the release keeps the commit list
 alone. There is
 no `CHANGELOG.md`. A change that needs

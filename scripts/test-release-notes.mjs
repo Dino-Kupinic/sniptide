@@ -85,11 +85,11 @@ test("Anthropic wins when both keys are set, and the model can be overridden", (
   assert.deepEqual(pickProvider({ OPENAI_API_KEY: "o" }), {
     provider: "openai",
     apiKey: "o",
-    model: "gpt-5",
+    model: "gpt-6-luna",
   })
   assert.equal(pickProvider({ ANTHROPIC_API_KEY: "a", OPENAI_API_KEY: "o" }).provider, "anthropic")
   assert.equal(
-    pickProvider({ OPENAI_API_KEY: "o", RELEASE_NOTES_MODEL: "gpt-5-mini" }).model,
-    "gpt-5-mini",
+    pickProvider({ OPENAI_API_KEY: "o", RELEASE_NOTES_MODEL: "gpt-6-luna-fast" }).model,
+    "gpt-6-luna-fast",
   )
 })
