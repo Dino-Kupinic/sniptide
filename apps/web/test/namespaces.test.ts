@@ -34,6 +34,7 @@ test("every top-level route is a reserved username", () => {
 
 test("the proxy serves /<handle>/<name> and its sub-pages from the internal route", () => {
   expect(rewrite("/dino/deploy")).toBe("https://sniptide.com/dino~deploy")
+  expect(rewrite("/dino/x")).toBe("https://sniptide.com/dino~x")
   expect(rewrite("/dino/deploy/raw")).toBe("https://sniptide.com/dino~deploy/raw")
   expect(rewrite("/pastes/dino/deploy")).toBe("https://sniptide.com/pastes/dino~deploy")
   expect(rewrite("/pastes/dino/deploy/edit")).toBe("https://sniptide.com/pastes/dino~deploy/edit")

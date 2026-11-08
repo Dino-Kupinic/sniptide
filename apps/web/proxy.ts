@@ -8,7 +8,7 @@ import { LINK_SUBPATHS, ROUTE_SEPARATOR } from "@/lib/pastes/links"
 // Generated links stay one segment, and /<link>/raw is told apart because no link name can be a
 // paste sub-path.
 function namespacedRoute(path: string, prefix: "" | "/pastes") {
-  const match = new RegExp(`^${prefix}/([a-z0-9_-]{3,30})/([A-Za-z0-9_-]{3,40})(/[^/]+)?/?$`).exec(
+  const match = new RegExp(`^${prefix}/([a-z0-9_-]{3,30})/([A-Za-z0-9_-]{1,40})(/[^/]+)?/?$`).exec(
     path,
   )
   if (
@@ -40,7 +40,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
   // The internal segment is never an address of its own.
-  const internal = /^(\/pastes)?\/([a-z0-9_-]{3,30})~([A-Za-z0-9_-]{3,40})(\/.*)?$/.exec(path)
+  const internal = /^(\/pastes)?\/([a-z0-9_-]{3,30})~([A-Za-z0-9_-]{1,40})(\/.*)?$/.exec(path)
   if (internal) {
     const url = request.nextUrl.clone()
     url.pathname = `${internal[1] ?? ""}/${internal[2]}/${internal[3]}${internal[4] ?? ""}`

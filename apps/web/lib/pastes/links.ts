@@ -10,9 +10,9 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
   "1y": 365 * DAY,
 }
 
-// One link segment: a generated link, a top-level link made before namespaces, or the name part
-// of a custom link.
-export const SLUG_PATTERN = /^[A-Za-z0-9_-]{3,40}$/
+// The name part of a custom link. Names only have to be unique within their owner's handle, so
+// one character is enough.
+export const LINK_NAME_PATTERN = /^[A-Za-z0-9_-]{1,40}$/
 
 // Pages served below a link (/<link>/raw) and the editor's /pastes/<link>/edit. A custom link
 // name can't be one of them, so /<generated>/raw and /<handle>/<name> never share an address.
@@ -40,7 +40,11 @@ export function customLinkName(slug: string, handle: string | null | undefined) 
 }
 
 export function isLinkName(name: string) {
-  return SLUG_PATTERN.test(name) && !LINK_SUBPATHS.has(name.toLowerCase())
+  return LINK_NAME_PATTERN.test(name) && !isReservedLinkName(name)
+}
+
+export function isReservedLinkName(name: string) {
+  return LINK_SUBPATHS.has(name.toLowerCase())
 }
 
 // Whether `slug` is a custom link `handle` may claim. Handles that collide with an app route

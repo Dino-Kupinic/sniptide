@@ -14,7 +14,7 @@ test("a paste can always keep its current link, including top-level links", asyn
 })
 
 test("new custom links have to be in the owner's namespace", async () => {
-  for (const slug of ["deploy", "ab", "other/deploy", "dino/ab", "dino/with space", "dino/a/b"]) {
+  for (const slug of ["deploy", "other/deploy", "dino/", "dino/with space", "dino/a/b"]) {
     expect(await isSlugAvailable(slug, "dino")).toBe(false)
   }
   expect(await isSlugAvailable("dino/deploy", null)).toBe(false)
@@ -23,6 +23,7 @@ test("new custom links have to be in the owner's namespace", async () => {
 test("custom link names exclude paste sub-paths and handles exclude app routes", () => {
   expect(isCustomLink("dino/deploy-script", "dino")).toBe(true)
   expect(isCustomLink(`dino/${"a".repeat(40)}`, "dino")).toBe(true)
+  expect(isCustomLink("dino/x", "dino")).toBe(true)
   for (const name of ["raw", "RAW", "embed", "copy", "edit", "unlock", "a".repeat(41)]) {
     expect(isCustomLink(`dino/${name}`, "dino")).toBe(false)
   }

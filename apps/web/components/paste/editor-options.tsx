@@ -17,7 +17,7 @@ import * as React from "react"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { checkSlug } from "@/lib/pastes/actions"
-import { customLink, customLinkName } from "@/lib/pastes/links"
+import { customLink, customLinkName, isReservedLinkName } from "@/lib/pastes/links"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 
 // The paste editor's options (visibility, expiry, custom link, collection, password, burn after
@@ -138,6 +138,9 @@ export function SlugInput({
 }) {
   const t = useTranslations("Paste")
   const host = useSiteHost()
+  const name = handle ? customLinkName(value, handle) : ""
+  // Names like "raw" are paste pages, so say so instead of calling them taken.
+  const reserved = isReservedLinkName(name)
   if (!handle) {
     return (
       <p className="text-xs text-muted-foreground">
@@ -172,7 +175,7 @@ export function SlugInput({
         <input
           aria-label={t("customLink")}
           disabled={disabled}
-          value={customLinkName(value, handle)}
+          value={name}
           onChange={(event) => {
             const name = event.target.value.replace(/[^A-Za-z0-9_-]/g, "")
             onChange(name ? customLink(handle, name) : "")
@@ -201,7 +204,9 @@ export function SlugInput({
         ) : null}
       </div>
       {status === "taken" ? (
-        <p className="text-xs text-destructive">{t("thatLinkIsTaken")}</p>
+        <p className="text-xs text-destructive">
+          {reserved ? t("linkNameReserved") : t("thatLinkIsTaken")}
+        </p>
       ) : null}
     </div>
   )
