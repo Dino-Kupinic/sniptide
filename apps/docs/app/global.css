@@ -113,12 +113,26 @@ html {
    DESIGN.md. Custom components (callouts, parameters, file trees, tabs) are in components/.
    --------------------------------------------------------------------------------------------- */
 
-/* The reading column stops at 46rem (about 75 characters of body text) and centres in the space
-   between the sidebar and the table of contents, so lines stay readable on any screen. */
+/* The page column stops at 46rem and centres in the space between the sidebar and the table of
+   contents. Code blocks, tables and cards use all of it. */
 #nd-page > * {
   width: 100%;
   max-width: 46rem;
   margin-inline: auto;
+}
+
+/* Running text stops at 35rem, about 70 characters of 16px body text, inside that column. At the
+   full 46rem a line runs to about 90 characters, past the 60 to 75 that reading comfortably needs. */
+#nd-page .prose :is(p, ul, ol, blockquote, h2, h3, h4):not(.not-prose *) {
+  max-width: 35rem;
+}
+
+#nd-page .prose :is(p, li, blockquote):not(.not-prose *) {
+  text-wrap: pretty;
+}
+
+#nd-page :is(h1, .prose h2, .prose h3) {
+  text-wrap: balance;
 }
 
 /* Section headings get room above them so a long page reads in chapters. */

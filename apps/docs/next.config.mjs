@@ -36,6 +36,15 @@ const config = {
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   poweredByHeader: false,
   transpilePackages: ["@sniptide/ui"],
+  experimental: {
+    // Each page carries its CSS in <style> tags instead of <link>ed files. The stylesheet names are
+    // build hashes, so a page from one build whose stylesheet request reaches a server running
+    // another (the old and new containers overlap during a deploy, and a browser can restore an old
+    // page from its cache) gets a 404 and renders unstyled. Inlined, a page always has its styles.
+    // The cost is about 60 kB more gzipped HTML per full page load, since Next also repeats the CSS
+    // in the RSC payload.
+    inlineCss: true,
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }]
   },

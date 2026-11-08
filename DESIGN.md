@@ -11,7 +11,6 @@ Sniptide uses white or near-black surfaces, one saturated blue, slightly rounded
 | Tokens in code | `packages/ui/src/styles/globals.css` (palette and `@theme`) and `shadcn.css` (utilities) |
 | Components in code | `packages/ui/src/components`, built on Base UI and class-variance-authority |
 | Visual design | The Paper file "Sniptide" with the pages Brand, App screens, Landing v2 and Design tokens |
-| Wording and claims | `docs/positioning.md` and `docs/landing-copy.md` |
 
 When code and Paper differ, the shipped code wins for the app. A change to a token goes into `globals.css` first and into the Paper "Design tokens" page afterwards.
 
@@ -333,7 +332,7 @@ These rules apply to the interface, the landing page, the docs, commit messages,
 5. Skip eyebrows, kickers, taglines above headings, extra captions and decorative labels. A heading stands alone.
 6. Add no text that the reader does not need. An empty state gets one sentence and an action.
 7. Write "Sniptide" in sentence case, never "SnipTide".
-8. Use the vocabulary of `docs/positioning.md`: paste, snippet, pattern, link, self-host, agent. Avoid "revolutionary", "seamless", "supercharge" and "AI-powered".
+8. Use the vocabulary paste, snippet, pattern, link, self-host and agent. Avoid "revolutionary", "seamless", "supercharge" and "AI-powered".
 9. State security facts plainly, with no fear language. Jokes belong in empty states and never in errors or security copy.
 10. Name what Sniptide does not do when a claim could be read too broadly.
 

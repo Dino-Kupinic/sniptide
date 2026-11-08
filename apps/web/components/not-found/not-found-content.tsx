@@ -13,14 +13,14 @@ export function NotFoundContent({ viewer }: { viewer: ViewerSummary | null }) {
     <div className="relative isolate flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-10">
       <ErrorBackdrop />
       <Pixel404 className="w-[302px] sm:w-[536px]" />
-      <h1 className="mt-8 text-center font-heading text-[26px] leading-[30px] font-bold tracking-[-0.01em] sm:mt-10 sm:text-[30px] sm:leading-[34px]">
+      <h1 className="mt-6 text-center font-heading text-[26px] leading-8 font-bold tracking-[-0.02em] sm:mt-8 sm:text-3xl sm:leading-9">
         {t("heading")}
       </h1>
-      <p className="mt-2.5 max-w-[440px] text-center text-[15px] leading-[22px] text-muted-foreground">
+      <p className="mt-3 max-w-[460px] text-center text-base leading-[26px] text-balance text-muted-foreground">
         {t("description")}
       </p>
 
-      <div className="mt-6 flex w-full max-w-[440px] flex-col gap-2.5 sm:mt-7 sm:w-auto sm:max-w-none sm:flex-row sm:gap-3">
+      <div className="mt-7 flex w-full max-w-[440px] flex-col gap-2.5 sm:mt-8 sm:w-auto sm:max-w-none sm:flex-row sm:gap-3">
         {viewer ? (
           <>
             <NotFoundButton href="/dashboard">{t("dashboard")}</NotFoundButton>

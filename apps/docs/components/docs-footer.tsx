@@ -1,5 +1,6 @@
 import { ArrowUpRightIcon } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import grid from "@/assets/footer-grid.png"
 import { LogoMark, Wordmark } from "@/components/brand"
 import { ThemeSwitch } from "@/components/theme-switch"
@@ -54,7 +55,7 @@ export function DocsFooter({ lang }: { lang: string }) {
                 <ul className="flex flex-col gap-2.5">
                   {column.links.map((link) => (
                     <li key={link.label}>
-                      <a
+                      <Link
                         href={link.href}
                         {...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                         className="inline-flex items-center gap-1 text-sm leading-5 text-muted-foreground transition-colors hover:text-foreground"
@@ -66,7 +67,7 @@ export function DocsFooter({ lang }: { lang: string }) {
                             <span className="sr-only">{t.newTab}</span>
                           </>
                         )}
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>
