@@ -9,16 +9,17 @@ built into the image, so a change takes effect when you restart the container, f
 name when one is invalid, instead of falling back to a default. A variable that is set but empty
 counts as unset.
 
-The repository's `apps/web/.env.example` lists every variable, and a test fails when the app reads
-one that file doesn't list. Docker Compose passes all of them through. The Coolify template passes
-only some, as [Coolify](/self-hosting/coolify#change-settings) explains.
+The repository's `apps/web/.env.example` lists the app settings. The Docker Compose and Coolify
+templates pass selected variables through to the container. See
+[Docker Compose](/self-hosting/docker-compose#pass-through-an-extra-app-setting) or
+[Coolify](/self-hosting/coolify#change-settings) to add a setting the template doesn't list.
 
 ## Required
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Postgres 17 is what Sniptide is tested against. Compose sets it for you. |
-| `BETTER_AUTH_SECRET` | none | Signs sessions and, unless `ENV_SECRETS_KEY` is set, encrypts env group values. Generate with `openssl rand -hex 32` and keep it across restarts: changing it signs everyone out and makes stored env values unreadable. |
+| `BETTER_AUTH_SECRET` | none | Signs sessions and supplies the default key for env group values. Generate with `openssl rand -hex 32` and keep it across restarts. Changing it signs everyone out. See [Rotate the auth secret](#rotate-the-auth-secret) if you store env groups. |
 | `BETTER_AUTH_URL` | none | The exact URL people open in the browser (`https://…` behind a proxy). The app boots without it, but sign-in and sign-up are rejected from any other origin ("Invalid origin"), and OAuth callbacks and printed links use it. |
 
 ## Sign-in and sign-up
@@ -63,7 +64,20 @@ A private server can leave all of these unset.
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
-| `ENV_SECRETS_KEY` | derived from `BETTER_AUTH_SECRET` | Key (at least 32 characters) that encrypts env group values. Set it before rotating the auth secret; changing whichever key is in use makes stored env values unreadable until they're pushed again. |
+| `ENV_SECRETS_KEY` | unset | Secret of at least 32 characters from which Sniptide derives the encryption key for env group values. When unset, Sniptide derives the key from `BETTER_AUTH_SECRET`. |
+
+### Rotate the auth secret
+
+Keep the secret that protects your existing env groups. If `ENV_SECRETS_KEY` is already set, keep
+its current value when you change `BETTER_AUTH_SECRET`. If it is unset and the old auth secret is
+still safe to keep, set `ENV_SECRETS_KEY` to the **exact old value** of `BETTER_AUTH_SECRET`
+(at least 32 characters) and set the new `BETTER_AUTH_SECRET` in the same deployment. After
+restarting, sign in again and check that an existing env group can still be read.
+
+To retire the old encryption secret, have each group owner save a secure copy of their values
+before changing the key, for example with [the CLI](/cli#sync-env-files). After deploying the
+new key, push the saved groups again and verify that their values can be read. A database dump
+contains encrypted values, so keep the original secret with any backups taken before the change.
 
 ### Separate share domain
 
@@ -150,8 +164,8 @@ Invalid values stop the server with the allowed range.
 | `DATABASE_STATEMENT_TIMEOUT_MS` | `10000` | 100 to 300000 | SQL execution deadline. |
 | `DATABASE_LOCK_TIMEOUT_MS` | `3000` | 100 to 300000 | Lock wait deadline. |
 | `DATABASE_IDLE_TRANSACTION_TIMEOUT_MS` | `15000` | 100 to 300000 | Abandoned-transaction deadline. |
-| `ACCOUNT_STORAGE_BYTES` | `1073741824` | 524288 to 1 TiB | Per-account paste content budget. |
-| `ACCOUNT_PASTE_LIMIT` | `10000` | 1 to 1000000 | Per-account paste count, trash included. |
+| `ACCOUNT_STORAGE_BYTES` | `100MB` (100 MiB) | Positive size in bytes or with a unit, or `unlimited` | Per-account paste content budget, trash included. |
+| `ACCOUNT_PASTE_LIMIT` | `1000` | Positive whole number or `unlimited` | Per-account paste count, trash included. |
 | `VIEW_HISTORY_RETENTION_DAYS` | `90` | 60 to 3650 | Daily view history kept for the charts. |
 | `ANALYTICS_RETENTION_DAYS` | `180` | 180 to 3650 | Daily analytics rollups kept. |
 | `PURGE_BATCH_SIZE` | `500` | 1 to 5000 | Most rows deleted per batch by the hourly cleanup. |
@@ -161,14 +175,15 @@ Invalid values stop the server with the allowed range.
 | `SLOW_QUERY_MS` | `500` | 1 to 60000 | Threshold for slow-query log events. |
 | `MIGRATIONS_DIR` | set by the image | n/a | Where migrations are read from at startup. Leave unset outside the image. |
 
-Trash and expired pastes are removed after 30 days by a cleanup that runs at startup and hourly.
+Set either account limit to `unlimited` or `0` to remove that limit. Trash and expired pastes are
+removed after 30 days by a cleanup that runs at startup and hourly.
 
 ## Monitoring
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, and `email`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
-| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set, so a self-hosted instance sends nothing. Cookieless, no session replay, events never include paste content or links' slugs. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing
 is sent anywhere else.

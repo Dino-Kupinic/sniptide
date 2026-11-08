@@ -30,7 +30,7 @@ How Sniptide compares with the tools people use today to share snippets and secr
 | Agent / MCP support | Built-in MCP endpoint (`/api/mcp`) plus a local stdio server: search, read, fetch collection, create, update | No first-party MCP found | No first-party MCP server found; community servers exist (GistPad) | No | No |
 | Analytics | Views, uniques, copies, raw reads, referrers, devices, countries; no cookies, stored in your own database | View counts | Not documented | No | No |
 | Pricing | Free in early access; no paid plan yet | Free with ads. Pro removes ads and raises limits (paid; the Pro page said "sold out" when we fetched it) | Free | Free (self-hosted) | Free (self-hosted) |
-| Size limits | 1 MiB and 10 files per paste; 1 GiB and 10,000 pastes per account (defaults) | Free: 500 KB per paste, 10 private and 10 unlisted pastes, 20 new pastes per day. Pro: 10 MB | API returns 1 MB per file; clone for larger | Admin-configured | Admin-configured |
+| Size limits | 1 MiB and 10 files per paste; 100 MiB and 1,000 pastes per account (defaults) | Free: 500 KB per paste, 10 private and 10 unlisted pastes, 20 new pastes per day. Pro: 10 MB | API returns 1 MB per file; clone for larger | Admin-configured | Admin-configured |
 
 ## Secrets and environment variables
 
@@ -59,7 +59,7 @@ where the overlap ends.
    self-hosted instances. We found no first-party MCP server from Pastebin, Gist, PrivateBin or
    haste-server.
 3. **Real private pastes.** A Gist "secret" is a link anyone can open, and Pastebin caps free
-   accounts at 10 private pastes. Sniptide private pastes are owner-only and count only toward the account-wide limit (10,000 pastes by default).
+   accounts at 10 private pastes. Sniptide private pastes count toward the account-wide limit of 1,000 pastes by default.
 4. **Sharing controls in one place.** Visibility, per-person view/edit access, password, burn after
    read and expiry on every paste, plus Slack and Discord delivery.
 5. **Privacy-friendly analytics.** Views, uniques, referrers and countries without cookies or an
@@ -99,7 +99,7 @@ where the overlap ends.
 | Token API and OpenAPI | `docs/development.md` (Document the API), `apps/web/lib/openapi.ts` |
 | MCP tools, bearer-token auth, available on npm | `packages/mcp/README.md` |
 | CLI features, available on npm | `packages/cli/README.md` |
-| Limits (1 MiB, 10 files, 1 GiB, 10,000 pastes) | `packages/cli/README.md`, `docs/scaling.md` |
+| Limits (1 MiB, 10 files, 100 MiB, 1,000 pastes) | `packages/cli/README.md`, `docs/scaling.md` |
 | Free during early access | `apps/web/components/settings/settings-view.tsx` (Billing tab) |
 | Analytics | `apps/docs/content/docs/core-concepts/analytics.mdx` |
 

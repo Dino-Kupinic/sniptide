@@ -1,11 +1,13 @@
 ---
 title: Memory and resources
-description: Understand how much memory a self-hosted Sniptide instance uses, set optional container limits, and monitor memory with the metrics endpoint.
+description: Size a self-hosted Sniptide instance for your workload, set optional container limits, and monitor memory with the metrics endpoint.
 ---
 
 The image leaves `NODE_OPTIONS` unset, so Node uses its normal heap sizing. The Compose and
 Coolify templates do not impose fixed RAM ceilings by default. Your hosting platform can still
-apply its own resource limits.
+apply its own resource limits. Measure the app and Postgres separately under your expected
+traffic when sizing a server. Large pastes, syntax highlighting and concurrent requests can
+increase the app's memory use.
 
 ## Optional limits
 

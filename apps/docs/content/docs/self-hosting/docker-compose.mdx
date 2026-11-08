@@ -23,8 +23,9 @@ Compose reads `.env` next to `docker-compose.yml`. It refuses to start without
 `BETTER_AUTH_SECRET`. Set `BETTER_AUTH_URL` to the exact address people open in the browser, or
 set `SNIPTIDE_DOMAIN` and leave it unset. The [install script](/self-hosting/install-script) writes
 `.env` for you.
-Every other setting in [Configuration](/self-hosting/configuration) passes through to the app,
-and `.env.example` in the repository lists them all.
+The root `.env.example` lists settings for the bundled stack. For app settings that the Compose
+file doesn't pass through, such as `NOTIFICATION_EMAIL_CONCURRENCY` or `TERMS_URL`, use an
+override file.
 
 These settings belong to Compose itself:
 
@@ -43,6 +44,23 @@ These settings belong to Compose itself:
 Settings in `.env` take effect when you run `docker compose up -d` again, which recreates the
 containers whose settings changed.
 
+## Pass through an extra app setting
+
+Create `docker-compose.override.yml` beside `docker-compose.yml`, then add the setting under
+`services.app.environment`. For example, to send up to three notification emails at once:
+
+```yaml title="docker-compose.override.yml"
+services:
+  app:
+    environment:
+      NOTIFICATION_EMAIL_CONCURRENCY: "3"
+```
+
+With the default file discovery, Compose loads both files when you run `docker compose up -d`.
+If you select Compose files with `-f` or `COMPOSE_FILE`, include the override in that list.
+For secrets, reference the value from `.env` instead of writing it in the override, for example
+`LINEAR_API_KEY: ${LINEAR_API_KEY:-}`. The install script leaves the override file in place.
+
 ## Add HTTPS with the bundled proxy
 
 1. Point the domain's DNS at the server and open ports 80 and 443.
@@ -54,8 +72,8 @@ containers whose settings changed.
    SNIPTIDE_BIND=127.0.0.1
    ```
 
-   `SNIPTIDE_BIND=127.0.0.1` is optional. It closes port 3000 to the outside, so every request
-   goes through Caddy.
+   Keep `SNIPTIDE_BIND=127.0.0.1` or block direct access with your firewall. Public requests must
+   pass through Caddy so the app can trust the forwarded client address.
 3. Apply the change:
 
    ```bash

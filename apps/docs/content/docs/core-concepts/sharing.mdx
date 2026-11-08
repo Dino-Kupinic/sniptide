@@ -14,8 +14,9 @@ the paste's **Sharing** and **Access** rows and its **Share** button.
 | **Unlisted** | Anyone with the link | Told not to index it | Yes, unless it has a password or burns after read |
 | **Public** | Anyone with the link | May index it | Yes, unless it has a password or burns after read |
 
-New pastes are unlisted until you change your [paste defaults](/settings#set-paste-defaults). With
-an unlisted paste the link itself is the secret, so don't rely on it to protect anything sensitive.
+Pastes you create in the web editor start unlisted until you change your
+[paste defaults](/settings#set-paste-defaults). With an unlisted paste the link itself is the
+secret, so don't rely on it to protect anything sensitive.
 
 ## Your public profile
 
@@ -72,10 +73,11 @@ If the paste already has recipients, **Manage access** lets you remove their acc
 ## Raw access
 
 Each file is available as plain text at `<domain>/<link>/raw?file=<file name>`, for `curl` and
-scripts. Turn off **Allow raw access** to block it for everyone except you. Raw access follows
-the other settings: a private, password-protected or expired paste isn't readable through raw
-either, and a [burn-after-read](/core-concepts/burn-after-read) paste has no raw access for anyone
-but you.
+scripts. Owners and invited users can read raw files from a live paste, including a private one.
+Other readers can access raw files from public or unlisted pastes. If the paste has a password,
+they must first unlock it and send the unlock cookie with the raw request. Turning off **Allow
+raw access** or enabling [burn after read](/core-concepts/burn-after-read) restricts raw access
+to the owner. Expired pastes are unavailable through raw links.
 
 ## Give agents a Markdown copy
 
@@ -87,10 +89,10 @@ get the code without the page around it.
 curl -H "Accept: text/markdown" https://app.sniptide.com/k3j9xq
 ```
 
-The Markdown copy follows the same rules as the share page. A password-protected or
-burn-after-read paste returns a short note asking the reader to open it in a browser, a paste
-with raw access turned off returns its title only, and a paste the request can't open returns
-`404`.
+The Markdown copy follows the same access rules as the share page. If the paste is still locked
+or sealed for burn after read, it returns a note asking the reader to open it in a browser. If
+raw access is off, it returns the title and a note with no file contents. A paste unavailable to
+the reader returns `404`.
 Fetching the Markdown copy doesn't count as a view.
 
 ## Embed or print a paste
@@ -123,11 +125,10 @@ or **Never** to share it again. Existing access can still be removed.
 ## Link previews
 
 Public and unlisted pastes without a password or burn after read get link previews (Open Graph and
-X cards) with the title, the language and the first twelve lines of the first file. Discord,
-Telegram and Facebook also play a short preview video. The app that shows the preview, such as
-Slack or Discord, fetches and keeps its own copy of that card. Make a paste private before you
-post its link if its first lines shouldn't appear in the chat. Previews and other automated
-fetches never count as a view and never use up a burn-after-read paste.
+X cards) with the title, the language and the first twelve lines of the first file. The app that
+shows the preview, such as Slack or Discord, fetches and keeps its own copy of that card. Make a
+paste private before you post its link if its first lines shouldn't appear in the chat. Previews
+and other automated fetches never count as a view and never use up a burn-after-read paste.
 
 ## Post to Slack or Discord
 
