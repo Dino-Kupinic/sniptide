@@ -144,6 +144,9 @@ const schema = z.object({
   HELP_URL: z
     .url({ message: "must be a full URL like https://example.com/support." })
     .default(DEFAULT_RESOURCE_LINKS.help),
+  TEMPLATES_URL: z
+    .url({ message: "must be a full URL like https://sniptide.com/templates." })
+    .optional(),
 
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -287,6 +290,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     shareUrl: value.SHARE_URL,
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
+    templatesUrl: value.TEMPLATES_URL,
     resourceLinks: {
       homepage: value.HOMEPAGE_URL,
       documentation: value.DOCS_URL,
