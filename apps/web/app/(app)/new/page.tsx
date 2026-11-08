@@ -13,6 +13,7 @@ import {
 import { limited, limits } from "@/lib/pastes/limits"
 import { suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import { getPaste } from "@/lib/pastes/store"
+import { templateDraft } from "@/lib/pastes/templates"
 
 export async function generateMetadata() {
   const t = await getTranslations("Core")
@@ -54,17 +55,19 @@ async function gistDraft(
 
 // `?from=<slug>` starts from a copy of an existing paste (the Duplicate action).
 // `?gist=<id>&file=<name>…` starts from files of a public gist (the import sheet).
+// `?template=<name>` starts from a template on the marketing site (Use template on its page).
 export default async function Page({ searchParams }: PageProps<"/new">) {
-  const { from, gist, file } = await searchParams
-  const [source, preferences, collections, imported, session, t] = await Promise.all([
+  const { from, gist, file, template } = await searchParams
+  const [source, preferences, collections, imported, templated, session, t] = await Promise.all([
     typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
     listCollections(),
     typeof gist === "string" ? gistDraft(gist, [file ?? []].flat()) : null,
+    typeof template === "string" ? templateDraft(template) : null,
     getSession(),
     getTranslations("Core"),
   ])
-  const draft = imported && "draft" in imported ? imported.draft : null
+  const draft = (imported && "draft" in imported ? imported.draft : null) ?? templated
   const files =
     draft?.files ??
     (source
@@ -75,11 +78,13 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
     <PasteEditor
       collections={collections}
       handle={session?.user.username}
-      // A copy or an import starts from other text, so its draft is kept apart from a blank paste.
+      // A copy, an import or a template starts from other text, so its draft is kept apart from a
+      // blank paste.
       draftScope={[
         session?.user.id ?? "",
         source ? `from:${source.slug}` : "",
         typeof gist === "string" ? `gist:${gist}` : "",
+        templated && typeof template === "string" ? `template:${template}` : "",
       ].join(":")}
       indentation={preferences.indentation}
       lineNumbers={preferences.lineNumbers}
