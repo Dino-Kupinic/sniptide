@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { readAuthMarker, scrubPath, scrubUrl, withAuthMarker } from "@/lib/analytics"
+import { GET as analyticsConfig } from "@/app/api/analytics/route"
+import { readAuthMarker, scrubPath, scrubUrl, withAuthMarker, withCountry } from "@/lib/analytics"
 import { assetsHost, forwardToPostHog, uiHost, upstreamUrl } from "@/lib/analytics-proxy"
 import { getConfig } from "@/lib/config"
 
@@ -79,6 +80,50 @@ describe("config", () => {
       getConfig({ POSTHOG_KEY: "phc_x", POSTHOG_HOST: "https://eu.i.posthog.com/" }).analytics
         ?.host,
     ).toBe("https://eu.i.posthog.com")
+  })
+})
+
+describe("visitor country", () => {
+  afterEach(() => {
+    delete process.env.POSTHOG_KEY
+  })
+
+  test("the config carries the CDN's country and stays out of shared caches", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = analyticsConfig(
+      new Request("https://app.test/api/analytics", { headers: { "cf-ipcountry": "at" } }),
+    )
+    expect(response.headers.get("cache-control")).toBe("private, max-age=300")
+    expect(await response.json()).toMatchObject({ key: "phc_x", country: "AT" })
+  })
+
+  test("the config has no country without a CDN header", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = analyticsConfig(new Request("https://app.test/api/analytics"))
+    expect((await response.json()).country).toBeNull()
+  })
+
+  test("adds the country to cookieless events only", () => {
+    const cookieless: Record<string, unknown> = { $cookieless_mode: true }
+    withCountry(cookieless, "AT")
+    expect(cookieless).toMatchObject({
+      $geoip_country_code: "AT",
+      $geoip_country_name: "Austria",
+    })
+
+    const consented: Record<string, unknown> = {}
+    withCountry(consented, "AT")
+    expect(consented.$geoip_country_code).toBeUndefined()
+  })
+
+  test("keeps a country PostHog already set and skips a missing one", () => {
+    const located: Record<string, unknown> = { $cookieless_mode: true, $geoip_country_code: "DE" }
+    withCountry(located, "AT")
+    expect(located.$geoip_country_code).toBe("DE")
+
+    const unknown: Record<string, unknown> = { $cookieless_mode: true }
+    withCountry(unknown, null)
+    expect(unknown.$geoip_country_code).toBeUndefined()
   })
 })
 
