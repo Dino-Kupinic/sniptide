@@ -13,9 +13,9 @@ afterEach(() => {
 const robotsTag = (path: string) =>
   proxy(new NextRequest(`https://demo.sniptide.com${path}`)).headers.get("x-robots-tag")
 
-test("robots.txt keeps the API and /cdn-cgi out and leaves /_next crawlable", () => {
+test("robots.txt keeps the API out and leaves /_next crawlable", () => {
   const rules = robots().rules
-  expect(rules).toEqual({ userAgent: "*", allow: "/", disallow: ["/api/", "/cdn-cgi/"] })
+  expect(rules).toEqual({ userAgent: "*", allow: "/", disallow: "/api/" })
 })
 
 test("a demo instance tells search engines not to index any page", () => {
