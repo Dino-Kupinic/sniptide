@@ -1,0 +1,164 @@
+---
+title: Security and threat model
+description: What a Sniptide server operator can see, what is encrypted, how tokens and sessions are stored, what deletion removes, how agents should treat snippets, and how to report a vulnerability.
+---
+
+This page describes what Sniptide protects, what it doesn't, and who can read your data. It covers
+the hosted service at sniptide.com and every self-hosted instance, because both run the same code.
+Read it before you store anything sensitive, or before you decide who should run your instance.
+
+The short version: Sniptide controls who can open a paste through the app, but it doesn't hide
+paste content from whoever runs the server. Treat a paste like a file on a server you don't
+control, unless you run that server yourself.
+
+## Who can see what
+
+| Who | What they can read |
+| --- | --- |
+| Anyone with the link | Public and unlisted pastes without a password or burn after read. Public pastes also appear on your [profile](/core-concepts/sharing#your-public-profile). |
+| Someone with the link and the password | A password-protected paste. |
+| People you invite | Pastes you shared with them, with view or edit access. |
+| Your API tokens and agent connections | Your own live pastes, collections and env groups, as [API tokens](/api-tokens#access) lists. |
+| The server operator | Everything in the database, including private and password-protected pastes and their revisions. Env group values only through the encryption key, which the server holds. |
+
+The server operator is whoever runs the instance: the Sniptide team for sniptide.com, or you for
+your own server. Anyone with access to the database or its backups can read the same data as the
+operator.
+
+Visibility, passwords and burn after read control access through the app. None of them encrypt
+the paste, and none of them hide it from the operator.
+
+## Encryption
+
+| Data | At rest | Notes |
+| --- | --- | --- |
+| Paste titles, descriptions, files and revisions | Not encrypted | Stored as plain text in Postgres, so search and syntax highlighting work on the server. |
+| Env group values | AES-256-GCM | Encrypted with a key the server derives from `ENV_SECRETS_KEY` or `BETTER_AUTH_SECRET`. See [Encrypted secrets](/core-concepts/secrets#how-values-are-encrypted). |
+| Env group names, variable names and labels | Not encrypted | Only values are encrypted. |
+| Traffic | TLS | HTTPS ends at the reverse proxy or CDN in front of the app. On a self-hosted instance, you configure it as [Reverse proxy](/self-hosting/reverse-proxy) describes. |
+
+Sniptide has no end-to-end encryption. The server can decrypt env group values, because it needs
+the key to show them to you, so their encryption protects a stolen database dump or backup but
+not a compromised server.
+
+Paste content has no application-level encryption at rest. Whether the disk under Postgres is
+encrypted depends on where the database runs. On a self-hosted instance, turn on disk or volume
+encryption with your host if you need it, and encrypt your [backups](/self-hosting/backups).
+
+<Callout type="warn">
+Don't store credentials in an ordinary paste. Put them in an [env group](/core-concepts/secrets),
+or share them once with [burn after read](/core-concepts/burn-after-read) and rotate them if the
+link could have leaked.
+</Callout>
+
+## How credentials are stored
+
+| Credential | How Sniptide stores it |
+| --- | --- |
+| Account password | Hashed with scrypt by Better Auth. The password itself is never stored. |
+| Paste password | Hashed with scrypt and a random salt. Changing it invalidates every earlier unlock. |
+| Env group share link and its password | Only hashes are stored, and every reveal checks the password, expiry and revocation. |
+| Personal API token (`snpt_…`) | 32 random bytes, shown once. Only a SHA-256 hash and a short prefix are stored. Tokens can expire after a period you choose, or never. |
+| Agent OAuth connection | Codes and tokens are stored as SHA-256 hashes. Codes expire after 10 minutes, access tokens after one hour, and refresh tokens after 30 days without use. Reusing a refresh token ends the connection. See [Token lifetime and revocation](/oauth#token-lifetime-and-revocation). |
+| Browser session | A random token in a signed, HTTP-only cookie. The database keeps the token itself with the device's IP address and user agent, which **Settings** shows under signed-in devices. A session lasts seven days and is extended while you use it. |
+| GitHub and Google sign-in tokens | Better Auth stores the access and refresh tokens the provider returns. They are **not encrypted** in the database. Sniptide requests sign-in scopes only. |
+
+Because the database holds browser session tokens unhashed, someone who can read the `session`
+table can sign in as any user with an active session. Rotating `BETTER_AUTH_SECRET` invalidates
+every session cookie, as [Rotate the auth secret](/self-hosting/configuration#rotate-the-auth-secret)
+describes.
+
+A read-only token is enough to read your env group values through the API. Give an agent or
+script a token only if you would give it your secrets, and revoke tokens you no longer use under
+**Settings** > **API tokens**.
+
+## What deletion removes
+
+| Action | What happens | When the data is gone from the database |
+| --- | --- | --- |
+| Move to trash | The link stops working. You can restore the paste for 30 days. | 30 days later, when the hourly purge job runs |
+| Delete forever or empty trash | The paste, its files, revisions, stars, shares and view history are deleted. | At once |
+| Expiry passes | The link stops working. You can set a new expiry to bring it back. | 30 days after the expiry |
+| Burn after read | The first reveal moves the paste to your trash, where you can restore it as a private paste. | 30 days after the read |
+| Edit a paste | The old content stays in its [revisions](/core-concepts/revisions#what-is-kept). The 20 newest revisions keep a full copy. | When the paste is deleted |
+| Delete your account | Your pastes, collections, env groups, tokens and sessions are deleted. | At once |
+
+Burn after read prevents a second reader. It doesn't destroy the content at the moment of the
+read: the paste waits in your trash for 30 days, where you and the operator can still read it.
+Select **Delete forever** in **Trash** if you want it gone sooner.
+
+If you pasted a secret by mistake, editing it out isn't enough, because the earlier revision still
+holds it. Delete the paste forever and rotate the secret.
+
+API tokens and agents can move a paste to the trash, but they never delete one for good.
+
+Deletion removes rows from the live database only. Database backups keep deleted pastes until the
+backups themselves are deleted, and the operator decides how long that is. Moderation records keep
+a removed paste's ID and the reason for the decision, but not its content.
+
+## What the server records about readers
+
+- **View analytics.** Each view, raw read and copy is stored with the referrer's host, the
+  country the CDN reports and the device type. The visitor is an HMAC of the IP address and user
+  agent under a salt that changes every day. Each salt is deleted once the following day ends, so
+  after that nobody, the operator included, can link a visitor hash back to an address.
+- **Request logs.** The app logs each request's route pattern, such as `/[slug]`, with its status
+  and duration. It doesn't log paste slugs, content or tokens. Your reverse proxy or CDN keeps its
+  own logs, which usually include full URLs and IP addresses.
+- **Product analytics.** PostHog is off unless the operator sets `POSTHOG_KEY`. When it is on, it
+  runs without cookies or session replay, and its events never include paste content or slugs.
+
+## Treat snippets as untrusted input
+
+A snippet that an agent reads over [MCP](/mcp), the CLI or the API is text, and it can contain
+instructions aimed at the agent. Sniptide doesn't scan or filter content for prompt injection.
+Content can come from more places than you remember writing:
+
+- Code an agent captured from a repository, a web page or a tool result.
+- Gists you imported.
+- Edits by people you invited with **Can edit** access.
+- A paste you saved months ago and no longer remember.
+
+The MCP server tells the agent that snippet content is user-provided data and not instructions,
+and its prompts repeat that. No MCP tool executes code or writes local files. The agent and its
+client still decide what to do with what they read, so set them up defensively:
+
+1. Connect agents that only need to read with the `read` scope. Turn on write access only for
+   agents that save snippets.
+2. Keep your client's approval prompts on for shell commands and file writes, so a snippet can't
+   run code without you seeing it.
+3. Review a snippet before an agent applies it, especially a [collection](/core-concepts/collections)
+   that changes several files.
+4. Don't invite editors to pastes your agents rely on unless you trust them as you trust your
+   own code.
+
+## Run your own instance
+
+Self-hosting moves the operator role to you. Nobody else can read your pastes, but you take on
+what the Sniptide team does for sniptide.com:
+
+- Keep `BETTER_AUTH_SECRET` and `ENV_SECRETS_KEY` secret, and store them apart from database
+  backups. Anyone holding both a backup and the key can read your env groups.
+- Restrict who can reach Postgres and its backups, because they hold every paste in plain text.
+- Serve the app over HTTPS only, and consider a [separate share domain](/self-hosting/configuration#separate-share-domain)
+  so shared pages run on a different origin than the signed-in app.
+- Close sign-up or restrict it to allowed emails with the [sign-in settings](/self-hosting/configuration#sign-in-and-sign-up)
+  if the instance isn't meant for the public.
+- [Upgrade](/self-hosting/upgrading) when a release fixes a security issue.
+
+## Report a vulnerability
+
+Report security issues privately through
+[GitHub's private vulnerability reporting](https://github.com/Dino-Kupinic/sniptide/security/advisories/new).
+Don't open a public issue, discussion or pull request for a vulnerability, and don't use the
+in-app feedback form, which can file public issues.
+
+Include the affected version or URL, the steps to reproduce, and the impact you observed. The
+maintainers aim to acknowledge a report within three business days and to share a fix plan once
+the issue is confirmed. Fixes ship in a release with a GitHub security advisory that credits you,
+unless you prefer to stay anonymous.
+
+Only the latest release receives security fixes. Test against your own account or your own
+instance, and don't access other people's data, degrade the service or run automated scans
+against sniptide.com. [SECURITY.md](https://github.com/Dino-Kupinic/sniptide/blob/main/SECURITY.md)
+in the repository has the same policy.

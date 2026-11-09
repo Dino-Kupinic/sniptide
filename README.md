@@ -86,6 +86,7 @@ This repository is also an [Agent Plugin](https://agent-plugins.org): `plugin.js
 - [User guide](https://docs.sniptide.com)
 - [CLI](https://docs.sniptide.com/cli), [MCP server](https://docs.sniptide.com/mcp) and [SDKs](https://docs.sniptide.com/sdks)
 - [Self-hosting](https://docs.sniptide.com/self-hosting)
+- [Security and threat model](https://docs.sniptide.com/security) and [vulnerability reporting](SECURITY.md)
 - [Development](docs/development.md) and [contributing](CONTRIBUTING.md)
 - [Operations and scaling](docs/scaling.md)
 
