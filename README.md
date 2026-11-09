@@ -12,20 +12,43 @@
 
 # Sniptide
 
-A self-hostable pastebin for code snippets, configs, and secrets.
-Share multi-file pastes with passwords, expiry, or burn-after-read links.
+Sniptide is an open-source, self-hostable pastebin for code snippets, configs and secrets, best for
+developers and small teams who want to share code from their own server and give coding agents
+access to it through a CLI or MCP server.
+
+Share multi-file pastes with passwords, expiry or burn-after-read links.
 Organize reusable snippets in collections, sync `.env` files, and connect coding agents through the CLI or MCP server.
+Use the hosted app at [app.sniptide.com](https://app.sniptide.com) or run your own instance.
 
-## Self-host
+## Self-host Sniptide
 
-Run Sniptide and Postgres on your server with one command:
+### Install with one command
+
+This is the recommended way to self-host Sniptide. On a Linux server with Docker and the Docker
+Compose plugin, run:
 
 ```bash
 curl -fsSL https://sniptide.com/install.sh | sh
 ```
 
-The script asks for your domain, generates the secrets, starts Docker Compose with HTTPS, and closes sign-up once your account exists.
-To set it up by hand instead:
+The script asks for your domain, generates the secrets, starts Sniptide and Postgres with Docker
+Compose, serves your domain over HTTPS through the bundled Caddy proxy, and closes sign-up once
+your account exists. Run it again in the same folder to upgrade.
+To install Docker first, run `curl -fsSL https://get.docker.com | sh`.
+
+To skip the questions, pass the domain:
+
+```bash
+curl -fsSL https://sniptide.com/install.sh | sh -s -- --domain paste.example.com --yes
+```
+
+The [install script guide](https://docs.sniptide.com/self-hosting/install-script) lists every
+option and what the script writes.
+
+### Install by hand
+
+Set up Docker Compose yourself when you want to manage the files directly or try Sniptide on your
+own machine:
 
 ```bash
 git clone https://github.com/Dino-Kupinic/sniptide.git
@@ -37,7 +60,8 @@ docker compose up -d
 Open [localhost:3000](http://localhost:3000) and create an account.
 On a server, replace `BETTER_AUTH_URL` with `SNIPTIDE_DOMAIN=<your-domain>` and add
 `COMPOSE_PROFILES=proxy` and `SNIPTIDE_BIND=127.0.0.1` so public traffic goes through Caddy over HTTPS.
-See the [self-hosting guide](https://docs.sniptide.com/self-hosting) for HTTPS, configuration, backups, and upgrades.
+See the [self-hosting guide](https://docs.sniptide.com/self-hosting) for Docker without Compose,
+Coolify, configuration, backups and upgrades.
 
 The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/sniptide`.
 
