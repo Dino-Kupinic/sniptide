@@ -20,6 +20,10 @@ on:
         description: Rewrite releases that already have a post
         type: boolean
         default: false
+      featured:
+        description: Feature this release in the announcement bar on sniptide.com (one tag only)
+        type: boolean
+        default: false
 
 concurrency:
   group: release-notes
@@ -50,9 +54,10 @@ jobs:
           RELEASE_NOTES_MODEL: ${{ vars.RELEASE_NOTES_MODEL }}
           TAG: ${{ inputs.tag }}
           FORCE: ${{ inputs.force && '--force' || '' }}
+          FEATURED: ${{ inputs.featured && '--featured' || '' }}
         run: |
           if [ "$TAG" = all ]; then
             node scripts/release-notes.mjs --all $FORCE
           else
-            node scripts/release-notes.mjs "$TAG" $FORCE
+            node scripts/release-notes.mjs "$TAG" $FORCE $FEATURED
           fi
