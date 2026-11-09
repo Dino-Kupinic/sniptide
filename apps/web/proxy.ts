@@ -14,10 +14,22 @@ function customLinkRoute(path: string, prefix: "" | "/pastes") {
   return `${prefix}/${match[1].toLowerCase()}${ROUTE_SEPARATOR}${match[2]}${match[3] ?? ""}`
 }
 
+// A demo instance (DEMO_MODE) holds one shared guest account with example data that resets on a
+// schedule, so none of its pages belong in search results. The header is set here because the
+// flag is read when the server starts, after next.config.ts headers were fixed at build time.
+const demoFlag = /^(?:true|1|yes|on)$/i
+
+export function proxy(request: NextRequest) {
+  const response = route(request)
+  if (demoFlag.test(process.env.DEMO_MODE?.trim() ?? ""))
+    response.headers.set("X-Robots-Tag", "noindex, nofollow")
+  return response
+}
+
 // When SHARE_URL puts share links on their own domain and that domain points at this app too,
 // keep the share domain for share links only: app pages there redirect to the app's domain
 // (BETTER_AUTH_URL). Without SHARE_URL, or when both are the same domain, nothing changes.
-export function proxy(request: NextRequest) {
+function route(request: NextRequest) {
   const path = request.nextUrl.pathname
   // Public profiles live at /@<handle>. A folder named @handle would be a parallel route slot, so
   // the page sits at the internal /_profile/<handle> and only the /@ address is served.
