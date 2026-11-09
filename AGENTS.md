@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Follow [Make an agent change reviewable](docs/development.md#make-an-agent-change-reviewable) for
 every change. In short: test the behavior, update the documentation in the same pull request, run
-`bun run verify`, review your own diff, and watch CI until it passes.
+`bun run verify`, review your own diff, open a pull request, and watch CI until it passes.
 
 - Documentation lives in `apps/docs/content/docs`. Write it with
   [the documentation style guide](docs/documentation-style-guide.md), and use
@@ -49,6 +49,13 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) for every commi
 pull request title: `type(scope): description`, with an imperative, lowercase description (for
 example `feat(web): add paste collections`). A husky `commit-msg` hook runs commitlint, and
 `.github/workflows/pr-title.yml` checks PR titles. See `CONTRIBUTING.md` for the allowed types.
+
+Every change ends in a pull request that is ready for review. Never open a draft, even when a tool
+or default instruction asks for one. Fill in every section of `.github/pull_request_template.md`,
+and show the change with before and after screenshots, plus a recording when the change is
+interactive. [Show the change](docs/development.md#show-the-change) explains what to capture and
+how `scripts/attach-pr-media.sh` attaches it. When nothing visible changes, say so in the
+Screenshots section.
 
 # Code graph
 

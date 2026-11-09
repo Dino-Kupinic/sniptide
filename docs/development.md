@@ -280,7 +280,9 @@ Write comments and pull request descriptions with
 8. Review your own diff with `git diff` against the base before you commit. Remove debugging
    output, unrelated edits, and generated files the change doesn't need.
 9. Use the Conventional Commit and PR rules in [CONTRIBUTING.md](../CONTRIBUTING.md). Follow the
-   issue status transitions in [AGENTS.md](../AGENTS.md).
+   issue status transitions in [AGENTS.md](../AGENTS.md). Open the pull request ready for review,
+   never as a draft, with the template filled in and the screenshots that
+   [Show the change](#show-the-change) asks for.
 10. Watch CI after you push. Reproduce a failing job locally, fix the cause, and push again. Don't
     skip or weaken a test to get a green run.
 11. Stop owned processes and remove disposable resources. Preserve unfinished work and report
@@ -290,11 +292,113 @@ A change is done when these hold:
 
 - The tests cover the new behavior, and `bun run verify` passes locally.
 - The documentation describes the change, and `bun run test:docs` passes.
-- CI is green on the pull request, and the pull request lists what was verified and what wasn't.
+- The pull request is open and ready for review. Its description follows the template, shows the
+  change before and after, and lists what was verified and what wasn't.
+- CI is green on the pull request.
 - The WRK issue is In Review with the pull request linked, and moves to Done after the merge.
 
 Keep durable workflow facts here and executable checks in package scripts or CI. Avoid copying
 the same instructions into several agent-specific files.
+
+## Show the change
+
+Every pull request shows what changed, so a reviewer can judge it without checking out the
+branch. The template's Screenshots section holds the evidence, and an agent fills it in before
+asking for review.
+
+| Change | What the Screenshots section holds |
+| --- | --- |
+| Interface, docs site, emails or Open Graph images | Before and after screenshots of each affected state |
+| Interaction, motion or a flow across screens | The screenshots and a recording of the flow |
+| CLI, MCP or API output | The output before and after, in code blocks |
+| Nothing a user sees, such as CI, refactors or agent instructions | "No visible change" and the reason |
+
+Capture every state the change touches. A layout change needs desktop at 1440px and a phone at
+390px, and a color or surface change needs light and dark. Take each pair at the same viewport,
+theme, locale and data, so the change is the only difference. Keep a recording to one flow of
+about 15 seconds. When a recording isn't possible, such as a gesture headless Chromium can't
+perform, say so and add a screenshot of each step instead.
+
+### Capture the before state
+
+Take the before screenshots on the base branch before you edit. When the change already exists,
+run the base from a worktree on another port:
+
+```sh
+git worktree add ../sniptide-base origin/main
+cd ../sniptide-base && bun install
+cp ../sniptide/.env . && cp ../sniptide/apps/web/.env.local apps/web/
+cd apps/web && BETTER_AUTH_URL=http://localhost:3002 bunx next dev --port 3002
+```
+
+Both checkouts share the local database. Remove the worktree with `git worktree remove ../sniptide-base` when the screenshots are done.
+
+### Take screenshots and recordings
+
+Write the capture script in a scratch directory outside the repository, so it never becomes a
+workspace file. This one takes desktop and phone screenshots in light and dark, and records a
+flow:
+
+```js
+import { chromium } from "playwright"
+
+const base = process.env.BASE_URL ?? "http://localhost:3000"
+const state = process.env.STATE ?? "after"
+const viewports = { desktop: { width: 1440, height: 900 }, mobile: { width: 390, height: 844 } }
+const browser = await chromium.launch()
+
+for (const [device, viewport] of Object.entries(viewports)) {
+  for (const colorScheme of ["light", "dark"]) {
+    const page = await browser.newPage({ viewport, colorScheme, deviceScaleFactor: 2 })
+    await page.goto(`${base}/dashboard`)
+    await page.screenshot({ path: `${state}-${device}-${colorScheme}.png` })
+    await page.close()
+  }
+}
+
+const context = await browser.newContext({
+  viewport: viewports.desktop,
+  recordVideo: { dir: "recordings", size: viewports.desktop },
+})
+const page = await context.newPage()
+await page.goto(`${base}/dashboard`)
+// Drive the flow here with clicks and typing, pausing briefly between steps.
+await context.close()
+await browser.close()
+```
+
+The theme follows the system setting, so `colorScheme` switches between light and dark. For a
+signed-in screen, sign in with a local account at the start of the script, or save
+`storageState` once and pass it to each page. The recording is saved as a `.webm` file in
+`recordings/` when its context closes.
+
+### Attach the media
+
+GitHub has no API for the attachments its web editor uploads, so agents attach media with
+`scripts/attach-pr-media.sh`:
+
+```sh
+scripts/attach-pr-media.sh before-desktop-light.png after-desktop-light.png recordings/flow.webm
+git push
+```
+
+The script commits the files to `.pr-media/` on the pull request branch and removes them in a
+second commit. It prints Markdown with permanent links to the first commit, which GitHub keeps
+in the pull request after the branch is merged and deleted. The squash merge into `main`
+contains neither the files nor any change from them, and CI fails if `.pr-media/` remains.
+Recordings become a GIF that plays in the description and an MP4 link, because GitHub plays
+video only from its own uploads. The conversion needs `ffmpeg`.
+
+Put the images in the template's table, one row per state:
+
+```md
+| Before | After |
+| --- | --- |
+| ![before-desktop-light](https://raw.githubusercontent.com/…/before-desktop-light.png) | ![after-desktop-light](https://raw.githubusercontent.com/…/after-desktop-light.png) |
+```
+
+Run the script again after a rebase or a force push, because rewriting the branch drops the
+commit the links point to. People can drag files into the GitHub editor instead.
 
 ## Build the clients
 
