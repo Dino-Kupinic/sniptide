@@ -55,8 +55,10 @@ and open PRs.
   [Update the documentation](docs/development.md#update-the-documentation).
 - Run `bun run verify` and any focused checks from the development guide before pushing. CI runs
   the same ones.
-- Fill in the template's Documentation and Verification sections, including checks you couldn't
-  run.
+- Fill in every section of the template. Screenshots shows the change before and after, with a
+  recording when it is interactive, as [Show the change](docs/development.md#show-the-change)
+  describes. Verification includes checks you couldn't run.
+- Open the pull request ready for review. Agents never open drafts.
 
 ## Releases
 

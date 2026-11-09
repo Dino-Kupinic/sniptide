@@ -67,3 +67,6 @@ data/
 
 /artifacts/npm/
 __pycache__/
+
+# Pull request screenshots, committed only by scripts/attach-pr-media.sh
+.pr-media/
