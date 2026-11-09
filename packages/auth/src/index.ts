@@ -6,6 +6,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api"
 import { username } from "better-auth/plugins/username"
 import { assertAllowed, assertSignUpOpen, parseAllowlist, type SignUpMode } from "./allowlist"
 import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_PATHS } from "./demo"
+import { generateUsername } from "./generate-username"
 import { boundUserFields } from "./user-fields"
 import { isValidUsername } from "./username"
 
@@ -163,7 +164,19 @@ export function createAuth({
                 code: "EMAIL_VERIFICATION_UNAVAILABLE",
                 message: "Invited accounts need email verification. Contact the administrator.",
               })
-            return { data: { ...boundUserFields(user, "create"), pendingInvitation } }
+            // Every account gets a username, so its public profile has an address. GitHub sign-ups
+            // arrive with one picked from the login (see socialProviders below); Google sign-ups
+            // and accounts created without one get one from their display name.
+            const username =
+              typeof user.username === "string" && user.username
+                ? {}
+                : await generateUsername(db, [user.name]).then((value) => ({
+                    username: value,
+                    displayUsername: value,
+                  }))
+            return {
+              data: { ...boundUserFields(user, "create"), ...username, pendingInvitation },
+            }
           },
         },
         update: {
@@ -195,7 +208,18 @@ export function createAuth({
       },
     },
     socialProviders: {
-      ...(github ? { github } : {}),
+      ...(github
+        ? {
+            github: {
+              ...github,
+              // Better Auth applies this to the new account only; later sign-ins leave the
+              // username alone, so a rename in Settings sticks.
+              mapProfileToUser: async (profile) => ({
+                username: await generateUsername(db, [profile.login, profile.name]),
+              }),
+            },
+          }
+        : {}),
       ...(google ? { google } : {}),
     },
     plugins: [

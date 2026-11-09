@@ -270,6 +270,37 @@ describeDb("upgrading a database", () => {
     }
   })
 
+  test("accounts without a username get one from their display name", async () => {
+    const previous = fs.mkdtempSync(path.join(os.tmpdir(), "sniptide-before-username-"))
+    try {
+      for (const entry of fs.readdirSync(folder)) {
+        if (!entry.endsWith("_username_backfill"))
+          fs.cpSync(path.join(folder, entry), path.join(previous, entry), { recursive: true })
+      }
+      await onFreshDatabase(async (db) => {
+        await migrateDb(db, previous)
+        await db.$client`INSERT INTO "user" (id, name, email, username, display_username, created_at) VALUES
+          ('kept', 'Ada', 'ada@example.com', 'ada', 'Ada', now()),
+          ('first', 'Dino Kupinic', 'dino@example.com', NULL, NULL, now() - interval '2 days'),
+          ('second', 'dino.kupinic', 'dino2@example.com', NULL, NULL, now() - interval '1 day'),
+          ('taken', 'ADA', 'ada2@example.com', NULL, NULL, now()),
+          ('script', '李小龍', 'li@example.com', NULL, NULL, now())`
+        expect((await migrateDb(db, folder)).applied).toEqual(["20261109190000_username_backfill"])
+        const rows = await db.$client`SELECT id, username, display_username FROM "user" ORDER BY id`
+        const names = Object.fromEntries(rows.map((row) => [row.id, row.username]))
+        expect(names.kept).toBe("ada")
+        expect(names.first).toBe("dino-kupinic")
+        expect(names.second).toMatch(/^dino-kupinic-[0-9a-f]{8}$/)
+        expect(names.taken).toMatch(/^ada-[0-9a-f]{8}$/)
+        expect(names.script).toBe("user")
+        for (const row of rows)
+          if (row.id !== "kept") expect(row.display_username).toBe(row.username)
+      })
+    } finally {
+      fs.rmSync(previous, { recursive: true, force: true })
+    }
+  })
+
   test("a fresh database gets every migration, and a second run applies none", async () => {
     await onFreshDatabase(async (db) => {
       const first = await migrateDb(db, folder)
