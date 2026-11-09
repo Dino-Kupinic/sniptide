@@ -14,6 +14,11 @@ the paste's **Sharing** and **Access** rows and its **Share** button.
 | **Unlisted** | Anyone with the link | Told not to index it | Yes, unless it has a password or burns after read |
 | **Public** | Anyone with the link | May index it | Yes, unless it has a password or burns after read |
 
+When share links live on their own domain (`SHARE_URL`), a public paste also opens on the app's
+domain. Its page names the share link as the canonical address, so search engines index
+`sniptide.com/k7Qe2x` and not the copy on `app.sniptide.com`. The instance's `robots.txt` keeps
+search engines out of `/api/`, and lets them load the `/_next/` files they need to render a page.
+
 Pastes you create in the web editor start unlisted until you change your
 [paste defaults](/settings#set-paste-defaults). With an unlisted paste the link itself is the
 secret, so don't rely on it to protect anything sensitive.
