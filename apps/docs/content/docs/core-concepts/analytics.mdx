@@ -68,6 +68,8 @@ lets PostHog connect selected app events, such as signing up, to your visit to t
 uses the website's anonymous visitor ID in memory. It uses cookieless measurement when that ID
 or your consent is missing. You can change consent from **Cookies** in the footer of `sniptide.com`.
 The app does not record sessions or automatically capture clicks.
+Cookieless events carry only the country that the CDN in front of the app reports, and never
+your IP address or city.
 
 1. Open `/_site/analytics` on the instance.
 2. Select **Exclude this browser**.
