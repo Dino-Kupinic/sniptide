@@ -109,7 +109,7 @@ export function AccountMenuItems({
   // A phone has no room for a submenu, so it lists these inline like the languages.
   const resources = (
     <>
-      <ExternalItem href={links.homepage} icon={<HouseIcon />}>
+      <ExternalItem href={`${links.homepage}/home`} icon={<HouseIcon />}>
         {t("homepage")}
       </ExternalItem>
       <ExternalItem href={links.documentation} icon={<BookIcon />}>
