@@ -441,6 +441,40 @@ existing release tag.
 After the first publish, a repository owner must set the `sniptide` package's visibility to
 **Public** in [GitHub's package settings](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images) so self-hosters can pull it without signing in.
 
+CI also publishes the tested amd64 web image after the other CI jobs and the container,
+upgrade, and Compose checks pass. A push to `main` publishes its commit; a pull request from a
+branch in this repository publishes its synthetic merge commit. Fork and Dependabot PRs run the checks without
+publishing. The workflow summary reports the registry digest and image name as
+`ghcr.io/<owner>/<repository>:sha-<commit>-<run-id>-<attempt>`. Each build attempt gets a distinct tag. A publish-only rerun uses the original build attempt
+and image; a full rerun builds a new image and tag. The artifact expires after one day; after that,
+rerun the Docker job or the full workflow. Use the registry digest to pin an image independently of
+tag permissions or later registry changes.
+These images do not replace the versioned multi-platform release tags.
+
+Publishing does not deploy an image or configure Coolify. The existing Coolify application keeps
+building from Git until an operator separately configures and verifies an image-based deployment.
+For a preview, select the specific published image and manage its lifecycle separately; publication
+does not create, update, or remove a Coolify preview. Confirm registry access and use an isolated
+preview database and settings before deploying. The CI image is amd64 only.
+
+To stage a transition, create a separate Coolify Docker Image application with a pinned digest,
+its own test database and runtime configuration. Deploy it and check `/api/health`, sign-in, a
+Server Action, and the image digest before routing traffic. Configure production registry access,
+backup and rollback first; then change the production resource to pull a selected tested image.
+A deployment trigger must target that image-based resource, serialize production deployments, and
+select the intended digest rather than a mutable tag. No such trigger is configured here. Coolify
+preview deployments also need their image tag (`docker_tag`) and lifecycle managed explicitly;
+this workflow does not provide that integration.
+
+The build sets `DEPLOYMENT_VERSION` to the checked-out commit SHA, run ID and attempt, so
+independent builds have different deployment IDs. CI supplies no Server Actions
+key: Next generates one during the build, and replicas using the same image share it. A Docker-job rerun is a
+separate build and can have a different key. Because the image can be public, never embed a
+production secret in it. Before moving an existing deployment to these images, plan for old and new
+builds to overlap safely: drain old instances and expect stale browser pages to reload if a Server
+Action fails. Verify the deployment, migrations, rollback procedure, and action behavior in a staged
+environment before changing production. Runtime configuration and secrets remain on the host.
+
 The same container test runs on PRs. To run it locally after building:
 
 ```bash

@@ -58,3 +58,13 @@ The template doesn't schedule backups. Add the backup container from
 
 To upgrade, take a backup, then redeploy the service so it pulls a newer image. See
 [Upgrading](/self-hosting/upgrading#upgrade-the-instance).
+
+## Images from repository CI
+
+Repository CI publishes tested amd64 images for commits on `main` and trusted pull requests.
+A successful publishing job reports its image tag and digest in the workflow summary. These images do not automatically deploy
+to Coolify or create previews. The template above continues to use the latest stable release image.
+Operators who configure a separate image-based application should pin a registry digest, provide
+runtime settings and an isolated database for previews, and manage preview creation and removal.
+See the [container publishing guide](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/development.md#container-publishing)
+for image tags and rollout constraints.
