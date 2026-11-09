@@ -76,17 +76,26 @@ a release. Re-running a successful release does not create another version.
 
 The release notes of each GitHub release are the changelog. semantic-release writes the commit
 list, so a clear title is the technical entry. The **Release notes** workflow
-(`.github/workflows/release-notes.yml`) then sends the merged pull requests to a model
-and puts a short post for readers above that list, which collapses under
-**Technical changes**. The PR description is the main source, so describe what changes for people
-who use Sniptide. The post sits between `sniptide-notes` markers that
-[sniptide.com/changelog](https://sniptide.com/changelog) reads, with `kind` set to `feature`, `fix`
-or `internal`. To correct a post, edit the release on GitHub and keep the markers. To rewrite one
-release, or every release with the tag `all`, run **Release notes** manually. The workflow needs an
-`ANTHROPIC_API_KEY` repository secret, which uses `claude-haiku-5-5`, or an `OPENAI_API_KEY`
-secret, which uses `gpt-6-luna`. Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL`
-repository variable picks another model. Without either key the release keeps the commit list
-alone. There is
+(`.github/workflows/release-notes.yml`) then sends the merged pull requests to a model and puts a
+short post for readers above that list, which collapses under **Technical changes**. The PR
+description is the main source, so describe what changes for people who use Sniptide. The model
+fills fixed fields and the script lays them out the same way every time: a title that names the
+change, one short paragraph, a **What's new** or **What's fixed** list, and a **Self-hosting** list
+when operators have something to do. A maintenance release gets one sentence. The post sits
+between `sniptide-notes` markers that [sniptide.com/changelog](https://sniptide.com/changelog)
+reads, with `kind` set to `feature`, `fix` or `internal`.
+
+Only a featured release appears in the announcement bar on sniptide.com. Add the `featured` label
+to a feature PR before it merges, or run **Release notes** manually with the release tag and
+**featured** checked, which marks an existing post without rewriting it. The marker then reads
+`kind="feature" featured="true"`, and a rerun keeps it. To correct a post, edit the release on
+GitHub and keep the markers. To rewrite one release, or every release with the tag `all`, run
+**Release notes** manually.
+
+The workflow needs an `ANTHROPIC_API_KEY` repository secret, which uses `claude-opus-5-5` at medium
+effort, or an `OPENAI_API_KEY` secret, which uses `gpt-6-luna` at medium reasoning effort.
+Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL` repository variable picks another
+model. Without either key the release keeps the commit list alone. There is
 no `CHANGELOG.md`. A change that needs
 something from people who run Sniptide (a new required setting, a manual step, a schema change the
 previous version can't run against) is marked breaking, and its `BREAKING CHANGE:` paragraph says
