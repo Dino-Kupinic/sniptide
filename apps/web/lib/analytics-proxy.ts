@@ -27,6 +27,20 @@ export function uiHost(host: string) {
   return host.replace(/\.i\.posthog\.com$/, ".posthog.com")
 }
 
+// Which hosts may report to PostHog. Preview deployments (pr-NNN.sniptide.com,
+// NN.sniptide.com) and local development would pollute the production project, so they
+// receive no key and their events are dropped. Everything else keeps working:
+// app.sniptide.com, the sniptide.com share pages, and self-hosted instances on their
+// own domains.
+export function isAnalyticsHost(hostname: string) {
+  const host = hostname
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+  if (["localhost", "127.0.0.1", "::1", "0:0:0:0:0:0:0:1"].includes(host)) return false
+  return !/^(?:pr-\d+|\d{1,3})\.sniptide\.com$/.test(host)
+}
+
 export function upstreamUrl(host: string, path: string[], search: string) {
   const base = path[0] === "static" ? assetsHost(host) : host
   return `${base}/${path.map(encodeURIComponent).join("/")}${search}`
@@ -34,7 +48,8 @@ export function upstreamUrl(host: string, path: string[], search: string) {
 
 export async function forwardToPostHog(request: Request, path: string[]) {
   const analytics = getConfig().analytics
-  if (!analytics) return new Response(null, { status: 404 })
+  const hostname = new URL(request.url).hostname
+  if (!analytics || !isAnalyticsHost(hostname)) return new Response(null, { status: 404 })
 
   // Only what PostHog needs: no cookies or auth headers. The visitor's address goes along so
   // geolocation and cookieless visitor counts see them rather than this server.
