@@ -1,57 +1,73 @@
 ---
 title: Self-hosting
-description: Run Sniptide on your own server, with Docker Compose, Docker or Coolify.
+description: Run Sniptide on your own server with Docker Compose, Docker or Coolify, and find the pages for configuration, proxies, backups and upgrades.
 ---
 
-Sniptide is one container plus a Postgres database. It sends nothing anywhere by default: no
-analytics, no OAuth, no outgoing mail until you configure them.
+Sniptide runs as one container next to a Postgres database. A self-hosted instance has the same
+app, API, CLI support and MCP server as the hosted one. Product analytics, external sign-in
+providers and email are off until you configure them. Importing a gist sends a request to GitHub
+even without a GitHub token.
 
-## What you need
+<SelfHostVisual />
 
-- A server with Docker (and the Compose plugin for the Compose route). The image is
+## Before you begin
+
+- A server with Docker, plus the Compose plugin for the Compose route. The image is
   `ghcr.io/dino-kupinic/sniptide`, for Linux AMD64 and ARM64.
-- Postgres 17, which Sniptide is built and tested against. Compose and the Coolify template bring
+- Postgres 17, which Sniptide is built and tested against. Compose and the Coolify template run
   their own.
-- About 768 MB of memory for the app (see [Memory](/self-hosting/memory)) and a few hundred
-  megabytes for Postgres. One server sits around 100 MB idle and 250 to 300 MB under load.
-- Two settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (see [Configuration](/self-hosting/configuration)).
-- An HTTPS domain at its root, such as `https://paste.example.com`. Hosting the web app under a
-  path such as `/sniptide` is not supported.
+- Memory for the app and Postgres sized for your workload. See
+  [Memory and resources](/self-hosting/memory) for what to monitor and how to set limits.
+- An HTTPS domain served at its root, such as `https://paste.example.com`. Serving the app under a
+  path such as `/sniptide` isn't supported.
+- Two settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL`. See
+  [Configuration](/self-hosting/configuration#required).
 
-Sniptide boots with just `DATABASE_URL` and `BETTER_AUTH_SECRET`. Add `BETTER_AUTH_URL` so browsers
-can sign in.
+## Choose an install
 
-## URLs and HTTPS
+| Install | Use it when | Database |
+| --- | --- | --- |
+| [Install script](/self-hosting/install-script) | You start from an empty server and want one command. It sets up Docker Compose and HTTPS for you. | Runs Postgres for you |
+| [Docker Compose](/self-hosting/docker-compose) | You start from an empty server. Includes an optional HTTPS proxy. | Runs Postgres for you |
+| [Docker](/self-hosting/docker) | You already run Postgres and want only the app container. | Yours |
+| [Coolify](/self-hosting/coolify) | You manage services in Coolify. It fills in the secret and domain. | Runs Postgres for you |
 
-Set `BETTER_AUTH_URL` to your public origin and configure your reverse proxy to forward the public
-host and scheme. On one domain, leave `SHARE_URL` and `COOKIE_DOMAIN` unset.
+For a first run from zero, run the install script, or follow
+[Run your own Sniptide](/getting-started/self-hosted) to do the same steps by hand.
 
-HTTP on a server IP is enough to check startup. Copy buttons and password-protected paste unlocks
-need HTTPS. The CLI and local MCP process reject HTTP except on loopback addresses such as
-`localhost`. Use the [bundled HTTPS proxy](/self-hosting/docker-compose#https-with-the-bundled-proxy)
-or your own reverse proxy before sharing pastes.
-
-Paste links use your instance's domain. Instances with separate domains and databases can use the
-same slug without conflict. Within one database, each slug belongs to one paste. Set
-`SNIPTIDE_BASE_URL` to your instance for the CLI and local MCP process, and create their API tokens
-there. The default client URL points at Sniptide Cloud. Remote MCP clients connect to
-`https://paste.example.com/api/mcp` with a token from that instance.
-
-## Pick an install
-
-<Cards>
-  <Card title="Docker Compose" href="/self-hosting/docker-compose" description="The app and Postgres together, with optional HTTPS. The easiest route." />
-  <Card title="Docker" href="/self-hosting/docker" description="One container against a Postgres you already run." />
-  <Card title="Coolify" href="/self-hosting/coolify" description="A one-file service template: Coolify fills in the secrets and the domain." />
-</Cards>
-
-## Then
-
-- [Configuration](/self-hosting/configuration): every setting, with its default.
-- [Reverse proxy and client IP](/self-hosting/reverse-proxy): put HTTPS in front, and make rate
-  limits see the real visitor.
-- [Upgrading](/self-hosting/upgrading) and [Backups](/self-hosting/backups).
+## How the app starts
 
 On startup Sniptide applies its database migrations before it serves requests, so there is no
-separate setup step. `GET /api/health` reports the server and the database, and the image carries a
-Docker health check against it.
+separate setup step. `GET /api/health` returns `{"ok":true}` when the server and database answer,
+and the image runs a Docker health check against it.
+
+## Addresses and HTTPS
+
+Set `BETTER_AUTH_URL` to the public address people open, and have your reverse proxy forward the
+public host and scheme. On a single domain, leave `SHARE_URL` and `COOKIE_DOMAIN` unset.
+
+Plain HTTP on the server's address is enough to check that it starts. Copy buttons and password
+unlocks need HTTPS in the browser, and the CLI and local MCP server refuse HTTP except on
+`localhost`. Add the [bundled HTTPS proxy](/self-hosting/docker-compose#add-https-with-the-bundled-proxy)
+or your own [reverse proxy](/self-hosting/reverse-proxy) before you share pastes.
+
+## Connect clients to your instance
+
+Clients default to the hosted app, so point them at your instance and create their tokens there:
+
+- Set `SNIPTIDE_BASE_URL=https://paste.example.com` for the CLI and the local MCP server, or pass
+  the address as the base URL to the SDKs.
+- Connect MCP clients to `https://paste.example.com/api/mcp`. OAuth sign-in works without extra
+  setup, as [OAuth for agents](/oauth#self-hosted-instances) describes.
+
+Paste links use your instance's domain. Separate instances with separate databases can use the
+same link without conflict.
+
+## Operate the instance
+
+- [Configuration](/self-hosting/configuration) lists every setting and its default.
+- [Reverse proxy and client IP](/self-hosting/reverse-proxy) puts HTTPS in front and makes rate
+  limits see each visitor.
+- [Memory and resources](/self-hosting/memory) covers memory limits and monitoring.
+- [Backups and restore](/self-hosting/backups) and [Upgrading](/self-hosting/upgrading) keep data
+  safe across releases. [Versions and releases](/self-hosting/versions) explains image tags.

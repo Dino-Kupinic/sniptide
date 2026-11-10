@@ -1,7 +1,7 @@
 import { ZodError, z } from "zod"
 import { createApiCollection } from "@/lib/api/collections"
 import { errorBody } from "@/lib/api/errors"
-import { ApiError, apiLimits, json, readJson, withToken } from "@/lib/api/http"
+import { ApiError, apiLimits, json, readJson, requestOrigin, withToken } from "@/lib/api/http"
 import { parseIdempotencyKey } from "@/lib/api/idempotency"
 import { createCapture } from "@/lib/api/pastes"
 import { hit } from "@/lib/rate-limit"
@@ -30,7 +30,14 @@ export async function POST(request: Request) {
         const receipt = { tokenId: owner.tokenId, key, route, body: item.body }
         const body =
           item.operation === "create_paste"
-            ? { paste: await createCapture(owner.userId, item.body, receipt) }
+            ? {
+                paste: await createCapture(
+                  owner.userId,
+                  item.body,
+                  receipt,
+                  requestOrigin(request, owner),
+                ),
+              }
             : await createApiCollection(owner.userId, item.body, receipt)
         results.push({ index, key: item.key, status: 201, body })
       } catch (error) {

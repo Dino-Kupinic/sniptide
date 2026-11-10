@@ -89,6 +89,19 @@ jobs:
     with:
       tag: ${{ needs.release.outputs.tag }}
 
+  # Turns the commit list into a short post for readers. A failure here leaves the commit list
+  # in place and does not affect the published release or its packages.
+  notes:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: write
+      pull-requests: read
+    uses: ./.github/workflows/release-notes.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    secrets: inherit
+
   packages:
     needs: release
     if: ${{ always() && !cancelled() && needs.release.outputs.eligible == 'true' }}

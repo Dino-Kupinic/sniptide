@@ -12,6 +12,7 @@
     "available": "Verfügbar",
     "taken": "Vergeben",
     "thatLinkIsTaken": "Dieser Link ist vergeben.",
+    "customLinkNeedsUsername": "<link>Lege einen Benutzernamen fest</link>, um diesem Paste einen eigenen Link zu geben.",
     "noCollection": "Keine Sammlung",
     "collection": "Sammlung",
     "pastePassword": "Paste-Passwort",
@@ -219,6 +220,8 @@
     "compareLoading": "Loading snapshots…",
     "compareClose": "Close",
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
-    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
+    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
+    "expiredSharingHelp": "Dieser Paste ist abgelaufen. Lege ein neues Ablaufdatum fest oder wähle „Nie“, um ihn wieder zu teilen.",
+    "manageAccess": "Zugriff verwalten"
   }
 }

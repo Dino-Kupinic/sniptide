@@ -15,16 +15,17 @@ import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   ArrowUpRightIcon,
   BookIcon,
-  ChartColumnIcon,
   CircleHelpIcon,
   GlobeIcon,
   HouseIcon,
   KeyboardIcon,
   LogOutIcon,
+  MessageSquareIcon,
   MonitorIcon,
   MoonIcon,
   SettingsIcon,
   SunIcon,
+  UserIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -32,31 +33,41 @@ import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
 import { useResourceLinks } from "@/components/shell/resource-links"
+import { useSupport } from "@/components/shell/support"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
+import { useSiteOrigin } from "@/components/site-host"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeNames, locales } from "@/lib/i18n/config"
+import { profilePath } from "@/lib/profile-path"
 
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
-// as in the Paper "Account menu open" artboard: account, preferences, resources, log out.
+// as in the Paper "Account menu open" artboard: account, preferences (with Feedback), resources, log out. The
+// account row opens the public profile, and Usage lives in Settings.
 // A phone has no room for a submenu beside the menu, so `inlineLanguage` lists the languages
 // in the menu itself.
 export function AccountMenuItems({
   name,
   email,
+  username = null,
   inlineLanguage = false,
 }: {
   name: string
   email: string
+  // Links the public profile; accounts without a username have none.
+  username?: string | null
   inlineLanguage?: boolean
 }) {
+  const origin = useSiteOrigin()
   const t = useTranslations("Workspace")
   const router = useRouter()
   const locale = useLocale()
   const [changingLocale, startLocaleTransition] = React.useTransition()
   const shortcuts = useShortcutsHelp()
   const links = useResourceLinks()
+  const support = useSupport()
+  const tSupport = useTranslations("Support")
 
   const languageChoices = (
     <DropdownMenuRadioGroup
@@ -84,6 +95,32 @@ export function AccountMenuItems({
     </DropdownMenuRadioGroup>
   )
 
+  const account = (
+    <span className="flex min-w-0 flex-col">
+      <span title={name} className="truncate text-[13px] font-medium">
+        {name}
+      </span>
+      <span title={email} className="truncate text-xs text-muted-foreground">
+        {email}
+      </span>
+    </span>
+  )
+
+  // A phone has no room for a submenu, so it lists these inline like the languages.
+  const resources = (
+    <>
+      <ExternalItem href={`${links.homepage}/home`} icon={<HouseIcon />}>
+        {t("homepage")}
+      </ExternalItem>
+      <ExternalItem href={links.documentation} icon={<BookIcon />}>
+        {t("documentation")}
+      </ExternalItem>
+      <ExternalItem href={links.help} icon={<CircleHelpIcon />} arrow={false}>
+        {t("help")}
+      </ExternalItem>
+    </>
+  )
+
   async function signOut() {
     await signOutAccount()
     router.replace("/sign-in")
@@ -92,29 +129,37 @@ export function AccountMenuItems({
 
   return (
     <>
-      <div className="flex min-w-0 flex-col px-3 pt-1.5 pb-2">
-        <span title={name} className="truncate text-[13px] font-medium">
-          {name}
-        </span>
-        <span title={email} className="truncate text-xs text-muted-foreground">
-          {email}
-        </span>
-      </div>
+      {username ? (
+        // The account row opens the public profile. A plain <a>: the profile can live on the share
+        // domain, outside the app's router.
+        <DropdownMenuItem
+          render={<a href={`${origin}${profilePath(username)}`} />}
+          aria-label={`${name}, ${t("your_profile")}`}
+          className="h-auto py-1.5"
+        >
+          {account}
+          <UserIcon className="ml-auto" />
+        </DropdownMenuItem>
+      ) : (
+        <div className="flex min-w-0 px-3 pt-1.5 pb-2">{account}</div>
+      )}
       <DropdownMenuSeparator />
       <DropdownMenuItem render={<Link href="/settings" />}>
         <SettingsIcon />
         {t("settings")}
         <ShortcutKeys id="settings" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
-      <DropdownMenuItem render={<Link href="/settings?tab=usage" />}>
-        <ChartColumnIcon />
-        {t("usage")}
-      </DropdownMenuItem>
       <DropdownMenuItem onClick={shortcuts.open} className="max-lg:hidden">
         <KeyboardIcon />
         {t("keyboard_shortcuts")}
         <ShortcutKeys id="help" className="ml-auto bg-transparent text-muted-foreground" />
       </DropdownMenuItem>
+      {support ? (
+        <DropdownMenuItem onClick={() => support.open()}>
+          <MessageSquareIcon />
+          {tSupport("open")}
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuSeparator />
       <ThemeRow />
       {inlineLanguage ? (
@@ -139,16 +184,22 @@ export function AccountMenuItems({
           </DropdownMenuContent>
         </DropdownMenuSub>
       )}
-      <DropdownMenuSeparator />
-      <ExternalItem href={links.homepage} icon={<HouseIcon />}>
-        {t("homepage")}
-      </ExternalItem>
-      <ExternalItem href={links.documentation} icon={<BookIcon />}>
-        {t("documentation")}
-      </ExternalItem>
-      <ExternalItem href={links.help} icon={<CircleHelpIcon />} arrow={false}>
-        {t("help")}
-      </ExternalItem>
+      {inlineLanguage ? (
+        <>
+          <DropdownMenuSeparator />
+          {resources}
+        </>
+      ) : (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <BookIcon />
+            {t("resources")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuContent side="right" align="start" sideOffset={4}>
+            {resources}
+          </DropdownMenuContent>
+        </DropdownMenuSub>
+      )}
       <DropdownMenuSeparator />
       <DropdownMenuItem
         variant="destructive"

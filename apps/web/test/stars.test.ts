@@ -147,6 +147,36 @@ describeDb("starring", () => {
     expect(starred).toEqual(["unl"])
   })
 
+  test("expired rows are explicit and excluded from expiring soon, including burn pastes", async () => {
+    signInAs("owner")
+    const deadline = Date.now() - 1_000
+    await seedPaste({
+      slug: "expired-burn",
+      owner: "owner",
+      burnAfterRead: true,
+      expiresAt: new Date(deadline),
+    })
+    await seedPaste({ slug: "soon", owner: "owner", expiresAt: new Date(Date.now() + 60_000) })
+    const rows = await toRows(await listOwnPastes())
+    expect(rows.find((row) => row.slug === "expired-burn")).toMatchObject({
+      expiresAt: deadline,
+      expiresLabel: "Expired",
+      expiresSoon: false,
+    })
+    expect(rows.find((row) => row.slug === "old")).toMatchObject({
+      expiresLabel: "Expired",
+      expiresSoon: false,
+    })
+    expect(rows.find((row) => row.slug === "soon")?.expiresSoon).toBe(true)
+    expect(rows.find((row) => row.slug === "pub")).toMatchObject({
+      expiresAt: null,
+      expiresLabel: "Never",
+      expiresSoon: false,
+    })
+    const translated = await toRows(await listOwnPastes(), "de")
+    expect(translated.find((row) => row.slug === "expired-burn")?.expiresLabel).toBe("Abgelaufen")
+  })
+
   test("a star can always be taken off", async () => {
     signInAs("other")
     await setStarred("pub", true)

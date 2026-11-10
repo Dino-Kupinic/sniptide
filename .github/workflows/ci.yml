@@ -22,6 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # scripts/attach-pr-media.sh adds .pr-media in one commit and removes it in the next, so the
+      # screenshots in a pull request description never reach main.
+      - name: Keep pull request media out of the tree
+        run: test ! -e .pr-media || { echo "::error::Remove .pr-media before merging."; exit 1; }
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -39,6 +44,7 @@ jobs:
         env:
           LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
       - run: node --test scripts/test-package-releases.mjs
+      - run: node --test scripts/test-release-notes.mjs
 
       - run: bun run check
 
@@ -52,7 +58,7 @@ jobs:
       - run: bun run test:docs
 
   # The same image Coolify deploys, so a broken Dockerfile shows up in the PR. Layers come from
-  # the GitHub Actions cache, so the dependency install and the ffmpeg layer rarely rebuild.
+  # the GitHub Actions cache, so the dependency install rarely rebuilds.
   docker:
     name: Docker image, upgrade and compose
     runs-on: ubuntu-latest

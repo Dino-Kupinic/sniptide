@@ -1,13 +1,13 @@
 ---
 title: Reverse proxy and client IP
-description: Put HTTPS in front of Sniptide and make rate limits see the real visitor.
+description: Choose the CLIENT_IP_SOURCE setting that matches the proxy in front of Sniptide, so rate limits see each visitor, and what else to set behind a proxy.
 ---
 
 Sniptide limits how often one visitor can try to sign in or unlock a password-protected paste. A
 limit needs to know who the visitor is, and behind a proxy the TCP connection comes from the
 proxy, not from them. `CLIENT_IP_SOURCE` tells the app where to read the visitor's address.
 
-## Pick the setting
+## Choose the setting
 
 | What's in front of the app | Settings |
 | --- | --- |
@@ -18,7 +18,7 @@ proxy, not from them. `CLIENT_IP_SOURCE` tells the app where to read the visitor
 
 When the chosen header is missing or invalid, the app falls back to the TCP peer.
 
-## Why it matters
+## Keep the header trustworthy
 
 - `direct` can't be fooled by headers, but behind a proxy it sees only the proxy's address, so
   every visitor shares one limit until you pick the matching source.
@@ -34,12 +34,12 @@ address from the right that isn't one of them; `private` covers loopback and the
 Docker networks use), or set `TRUSTED_PROXY_HOPS` to how many proxies append to the header
 (default 1).
 
-## Compose with Caddy
+## Use the bundled Caddy proxy
 
 The bundled `proxy` profile needs `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`.
-See [Docker Compose](/self-hosting/docker-compose#https-with-the-bundled-proxy).
+See [Docker Compose](/self-hosting/docker-compose#add-https-with-the-bundled-proxy).
 
-## Other things to set behind a proxy
+## Set the rest of the proxy configuration
 
 - `BETTER_AUTH_URL` is the public `https://` address.
 - Set the proxy's request and upstream timeouts to suit you: the database deadlines limit SQL
@@ -47,3 +47,11 @@ See [Docker Compose](/self-hosting/docker-compose#https-with-the-bundled-proxy).
 - If you use a second domain for share links, point it at the same app and set `SHARE_URL`.
   Copied links then use that domain, and the app's own pages on it redirect back to
   `BETTER_AUTH_URL`.
+
+## Recognize a wrong setting
+
+| Symptom | Likely cause | Action |
+| --- | --- | --- |
+| Many people get "too many attempts" on sign-in or password unlocks at the same time | The app sees every request as coming from the proxy, so all visitors share one limit. | Set `CLIENT_IP_SOURCE` and `TRUSTED_PROXIES` to match your proxy, then restart the app. |
+| API responses to requests without a valid token carry no `RateLimit` headers | The app can't tell client addresses apart, so it skips the unauthenticated limit. | Set `CLIENT_IP_SOURCE` to match your proxy. |
+| Limits don't apply to someone who reaches port 3000 directly | A header-based source trusts headers the client sends itself. | Bind the app to `127.0.0.1` or firewall port 3000. |

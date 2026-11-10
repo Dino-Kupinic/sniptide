@@ -21,12 +21,12 @@ import {
   eq,
   exists,
   getTableColumns,
-  gt,
   gte,
   ilike,
   inArray,
   isNotNull,
   isNull,
+  like,
   lt,
   ne,
   or,
@@ -44,8 +44,9 @@ import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { recordNotifications } from "@/lib/notifications/record"
+import { agentClientOf } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
-import { SLUG_PATTERN } from "./links"
+import { isCustomLink } from "./links"
 import {
   changePasteSharing,
   createPasteRecord,
@@ -53,6 +54,7 @@ import {
   replacePaste,
   restorePasteRevision,
   sealPasteRevision,
+  setPasteCollectionRecord,
   trashPasteRecord,
   type UpdateOptions,
   type UpdateResult,
@@ -61,11 +63,14 @@ import {
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 
 import { recordPasteEvent } from "./events"
+import { isLive, liveWhere, openToAnyone, restoredFields, unexpiredWhere } from "./lifecycle"
+import { type PasswordField, passwordIntent } from "./password-intent"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
 import { TRASH_DAYS } from "./purge"
 
 export { PasteBudgetError } from "./budget"
+export { PasteCollectionError } from "./mutations"
 
 import { parsePasteInput } from "./schema"
 import type {
@@ -178,6 +183,7 @@ function summariesOf(
       author.id,
       {
         username: author.displayUsername ?? author.username ?? author.name,
+        handle: author.username,
         name: author.name,
         initials: initials(author.name),
         tone: "foreground",
@@ -202,6 +208,7 @@ function summariesOf(
         : []
       const author = people.get(record.ownerId) ?? {
         username: "unknown",
+        handle: null,
         name: "Unknown",
         initials: "?",
         tone: "muted",
@@ -223,11 +230,16 @@ function summariesOf(
         views: record.views,
         uniqueViews: record.uniqueViews,
         agentReads: record.agentReads,
+        createdBy:
+          record.createdVia === "web"
+            ? null
+            : { via: record.createdVia, agent: agentClientOf(record.createdByAgent) },
         viewsByDay,
         createdAt: ms(record.createdAt),
         updatedAt: ms(record.updatedAt),
         expiresAt: ms(record.expiresAt),
         deletedAt: ms(record.deletedAt),
+        burnedAt: ms(record.burnedAt),
       }
     })
 }
@@ -341,8 +353,13 @@ export function isExpired(paste: Pick<Paste, "expiresAt">) {
   return paste.expiresAt !== null && paste.expiresAt <= Date.now()
 }
 
-function recordExpired(record: PasteRecord) {
+function recordExpired(record: Pick<PasteRecord, "expiresAt">) {
   return isExpired({ expiresAt: ms(record.expiresAt) })
+}
+
+// Whether the paste is gone from its link: trashed, burned or expired.
+function notLive(record: PasteRecord | null): record is null {
+  return !record || !isLive(record)
 }
 
 export async function purgeTrash(owner: string) {
@@ -389,9 +406,8 @@ export function sharedWithWhere(viewer: string) {
     isNull(pasteShare.leftAt),
     ne(pasteTable.ownerId, viewer),
     allowedPaste(),
-    isNull(pasteTable.deletedAt),
+    liveWhere(),
     eq(pasteTable.burnAfterRead, false),
-    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
   )
 }
 
@@ -569,20 +585,30 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
 // Gives someone access to one of the viewer's pastes, or changes the access they have. A new
 // invite shows up as unseen in their Shared with me. `sharedAt` backdates a new share, for undoing
 // a revoke.
-export async function sharePaste(slug: string, userId: string, access: Access, sharedAt?: Date) {
+export async function sharePaste(
+  slug: string,
+  userId: string,
+  access: Access,
+  sharedAt?: Date,
+): Promise<{ status: "ok" | "missing" | "expired" }> {
   const record = await findOwned(slug)
-  if (!record || record.deletedAt || userId === record.ownerId) return false
+  if (!record || record.deletedAt || userId === record.ownerId) return { status: "missing" }
   const [person] = await getDb().select({ id: user.id }).from(user).where(eq(user.id, userId))
-  if (!person) return false
+  if (!person) return { status: "missing" }
   return getDb().transaction(async (tx) => {
     const [locked] = await tx
-      .select({ id: pasteTable.id, deletedAt: pasteTable.deletedAt })
+      .select({
+        id: pasteTable.id,
+        deletedAt: pasteTable.deletedAt,
+        expiresAt: pasteTable.expiresAt,
+      })
       .from(pasteTable)
       .where(
         and(allowedPaste(), eq(pasteTable.id, record.id), eq(pasteTable.ownerId, record.ownerId)),
       )
       .for("update")
-    if (!locked || locked.deletedAt) return false
+    if (!locked || locked.deletedAt) return { status: "missing" }
+    if (recordExpired(locked)) return { status: "expired" }
     const [before] = await tx
       .select({ leftAt: pasteShare.leftAt })
       .from(pasteShare)
@@ -609,7 +635,7 @@ export async function sharePaste(slug: string, userId: string, access: Access, s
         { userId, kind: "shared", pasteId: record.id, actorId: record.ownerId },
       ])
     }
-    return true
+    return { status: "ok" }
   })
 }
 
@@ -761,7 +787,7 @@ export async function readableStarsWhere(viewer: string, db: Pick<Database, "sel
       and(allowedPaste(), eq(pasteTable.ownerId, viewer)),
       and(
         eq(pasteTable.burnAfterRead, false),
-        or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
+        unexpiredWhere(),
         exists(
           db
             .select({ id: pasteShare.pasteId })
@@ -778,7 +804,7 @@ export async function readableStarsWhere(viewer: string, db: Pick<Database, "sel
       and(
         eq(pasteTable.burnAfterRead, false),
         ne(pasteTable.visibility, "private"),
-        or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
+        unexpiredWhere(),
         or(
           isNull(pasteTable.passwordHash),
           unlocked.length ? inArray(pasteTable.id, unlocked) : sql`false`,
@@ -912,7 +938,7 @@ export type SharedRead =
 // A live paste (not trashed, not expired) by its link, or null.
 async function findLiveRecord(slug: string) {
   const record = await findRecord(slug)
-  return record && !record.deletedAt && !recordExpired(record) ? record : null
+  return record && isLive(record) ? record : null
 }
 
 // Memoized per server render, so the share page and its generateMetadata share one lookup. Only
@@ -950,6 +976,7 @@ async function claimBurn(tx: Transaction, record: PasteRecord, now: Date, owned:
       views: sql`${pasteTable.views} + 1`,
       uniqueViews: sql`${pasteTable.uniqueViews} + 1`,
       deletedAt: now,
+      burnedAt: now,
     })
     .where(eq(pasteTable.id, record.id))
     .returning()
@@ -1018,7 +1045,7 @@ export async function readSharedPaste(
   const result = await getDb().transaction(
     async (tx): Promise<SharedRead & { countedId?: string }> => {
       const record = await lockSharedRead(tx, slug)
-      if (!record || record.deletedAt || recordExpired(record)) return { status: "missing" }
+      if (notLive(record)) return { status: "missing" }
       const verdict = await canOpenLink(record, viewer, tx, { asVisitor: true })
       const owned = record.ownerId === viewer
       if (verdict === "locked") return { status: verdict, owned, signedIn: viewer !== null }
@@ -1058,7 +1085,7 @@ export async function revealSharedPaste(
   const result = await getDb().transaction(
     async (tx): Promise<Exclude<SharedRead, { status: "sealed" }> & { countedId?: string }> => {
       const record = await lockSharedRead(tx, slug)
-      if (!record || record.deletedAt || recordExpired(record)) return { status: "missing" }
+      if (notLive(record)) return { status: "missing" }
       const verdict = await canOpenLink(record, viewer, tx, { asVisitor: true })
       const owned = record.ownerId === viewer
       if (verdict === "locked") return { status: verdict, owned, signedIn: viewer !== null }
@@ -1088,10 +1115,11 @@ function pasteAuthor(
     ? {
         name: author.name,
         username: author.displayUsername ?? author.username ?? author.name,
+        handle: author.username,
         initials: initials(author.name),
         tone: "foreground",
       }
-    : { name: "Unknown", username: "unknown", initials: "?", tone: "muted" }
+    : { name: "Unknown", username: "unknown", handle: null, initials: "?", tone: "muted" }
 }
 
 const sharedAccess = cache(async (slug: string) => {
@@ -1114,7 +1142,7 @@ export async function readRawFile(slug: string, name: string | null): Promise<Ra
   const viewer = await viewerId()
   const result = await getDb().transaction(async (tx): Promise<RawRead & { eventId?: string }> => {
     const record = await lockSharedRead(tx, slug)
-    if (!record || record.deletedAt || recordExpired(record)) return { status: "missing" }
+    if (notLive(record)) return { status: "missing" }
     const verdict = await canOpenLink(record, viewer, tx)
     if (verdict !== "ok") return { status: verdict }
     const owned = record.ownerId === viewer
@@ -1168,8 +1196,7 @@ export async function readSharedMeta(slug: string) {
 // No views, events or burn claims.
 export async function readPublicPreview(slug: string): Promise<PastePreview | null> {
   const record = await findSharedRecord(slug)
-  if (!record || record.visibility === "private" || record.passwordHash || record.burnAfterRead)
-    return null
+  if (!record || !openToAnyone(record)) return null
   const [file] = await getDb()
     .select({
       name: pasteFile.name,
@@ -1194,8 +1221,7 @@ export async function readPublicPreview(slug: string): Promise<PastePreview | nu
 // Unlisted pastes do, since whoever has the link may already read them. No views or burn claims.
 export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> {
   const record = await findSharedRecord(slug)
-  if (!record || record.visibility === "private" || record.passwordHash || record.burnAfterRead)
-    return null
+  if (!record || !openToAnyone(record)) return null
   const db = getDb()
   const [files, [author]] = await Promise.all([
     db
@@ -1225,15 +1251,7 @@ export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> 
 // useful to a channel, and a bot must never consume a one-time paste.
 export async function readWebhookPaste(slug: string) {
   const record = await findOwned(slug)
-  if (
-    !record ||
-    record.deletedAt ||
-    recordExpired(record) ||
-    record.visibility === "private" ||
-    record.passwordHash ||
-    record.burnAfterRead
-  )
-    return null
+  if (notLive(record) || !openToAnyone(record)) return null
   return { slug: record.slug, title: record.title, visibility: record.visibility }
 }
 
@@ -1259,13 +1277,15 @@ export async function navCounts(): Promise<NavCounts> {
   const viewer = await viewerId()
   if (!viewer) return { pastes: 0, starred: 0, shared: 0 }
   const db = getDb()
-  const stars = await readableStarsWhere(viewer)
+  const stars = readableStarsWhere(viewer)
   const [[own], [starred], shared] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(pasteTable)
       .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-    db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+    stars.then((where) =>
+      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+    ),
     sharedCount(viewer),
   ])
   return { pastes: own?.count ?? 0, starred: starred?.count ?? 0, shared }
@@ -1289,13 +1309,15 @@ export const sidebarData = cache(
     const viewer = await viewerId()
     if (!viewer) return { counts: { pastes: 0, starred: 0, shared: 0 }, recent: [], starred: [] }
     const db = getDb()
-    const stars = await readableStarsWhere(viewer)
+    const stars = readableStarsWhere(viewer)
     const [[own], [starCount], recent, starred, shared] = await Promise.all([
       db
         .select({ count: sql<number>`count(*)::int` })
         .from(pasteTable)
         .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt))),
-      db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(stars),
+      stars.then((where) =>
+        db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
+      ),
       db
         .select()
         .from(pasteTable)
@@ -1309,12 +1331,14 @@ export const sidebarData = cache(
         )
         .orderBy(...sidebarOrder(views.pastes.sort))
         .limit(views.pastes.limit),
-      db
-        .select()
-        .from(pasteTable)
-        .where(and(stars, sidebarVisibility(views.starred.visibility)))
-        .orderBy(...sidebarOrder(views.starred.sort))
-        .limit(views.starred.limit),
+      stars.then((where) =>
+        db
+          .select()
+          .from(pasteTable)
+          .where(and(where, sidebarVisibility(views.starred.visibility)))
+          .orderBy(...sidebarOrder(views.starred.sort))
+          .limit(views.starred.limit),
+      ),
       sharedCount(viewer),
     ])
     const starSlugs = await starredSlugs([...recent, ...starred].map((record) => record.slug))
@@ -1324,6 +1348,7 @@ export const sidebarData = cache(
       owned: record.ownerId === viewer,
       starred: starSlugs.has(record.slug),
       collection: record.ownerId === viewer ? record.collection : null,
+      expiresAt: record.expiresAt?.getTime() ?? null,
       updatedAt: record.updatedAt.getTime(),
     })
     return {
@@ -1375,15 +1400,48 @@ export async function summarizePastes(
   return summarize(records, viewer, false, db)
 }
 
-export async function isSlugAvailable(slug: string, except?: string) {
-  if (!SLUG_PATTERN.test(slug)) return false
-  return slug === except || !(await findRecord(slug, true))
+// Custom links live under their owner's handle (@<handle>/<name>), so a new handle moves them with
+// it and the old addresses stop working, like renaming a single link does. The new handle was
+// unclaimed until now, so no other paste can already hold one of the new links.
+export async function moveCustomLinks(ownerId: string, from: string, to: string) {
+  const prefix = `@${from}/`
+  const moved = await getDb()
+    .update(pasteTable)
+    .set({ slug: sql`${`@${to}`} || substr(${pasteTable.slug}, ${prefix.length})` })
+    .where(
+      and(
+        eq(pasteTable.ownerId, ownerId),
+        like(pasteTable.slug, `${prefix.replace(/[\\%_]/g, "\\$&")}%`),
+      ),
+    )
+    .returning({ slug: pasteTable.slug })
+  return moved.length
+}
+
+// Whether `handle` can give a paste the link `slug`. Keeping the paste's current link (`except`)
+// is always allowed, including a top-level link made before links moved under handles. A new link has to be a
+// custom link under `handle`.
+export async function isSlugAvailable(
+  slug: string,
+  handle: string | null | undefined,
+  except?: string,
+) {
+  if (slug === except) return true
+  if (!isCustomLink(slug, handle)) return false
+  return !(await findRecord(slug, true))
+}
+
+// The hash a save stores for its password field. Keep and remove both hash nothing: the
+// mutation keeps the stored hash for keep (lib/pastes/password-intent.ts).
+async function hashedPassword(field: PasswordField) {
+  const intent = passwordIntent(field)
+  return intent.kind === "set" ? hashPassword(intent.password) : null
 }
 
 export async function createPaste(input: PasteInput, invites: ShareInvite[] = []) {
   const data = parsePasteInput(input)
   const actor = { kind: "session", userId: await requireViewerId() } as const
-  const passwordHash = data.password ? await hashPassword(data.password) : null
+  const passwordHash = await hashedPassword(data.password)
   const saved = await getDb().transaction((tx) =>
     createPasteRecord(tx, { kind: "editor", actor, input: data, passwordHash, invites }),
   )
@@ -1398,7 +1456,7 @@ export async function updatePaste(
 ): Promise<UpdateResult | null> {
   const data = parsePasteInput(input)
   const actor = { kind: "session", userId: await requireViewerId() } as const
-  const passwordHash = data.password ? await hashPassword(data.password) : null
+  const passwordHash = await hashedPassword(data.password)
   const result = await getDb().transaction((tx) =>
     replacePaste(
       tx,
@@ -1470,15 +1528,10 @@ export async function renamePaste(slug: string, title: string) {
     .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
 }
 
-// Files the paste in a collection, or takes it out of its collection with null. The caller
-// checks that the collection exists.
+// Validate membership while holding the same account lock as collection deletion.
 export async function setPasteCollection(slug: string, collection: string | null) {
-  const record = await findOwned(slug)
-  if (!record || record.deletedAt) return
-  await getDb()
-    .update(pasteTable)
-    .set({ collection, version: sql`${pasteTable.version} + 1` })
-    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+  const actor = { kind: "session", userId: await requireViewerId() } as const
+  await getDb().transaction((tx) => setPasteCollectionRecord(tx, actor, { slug }, collection))
 }
 
 export async function trashPaste(slug: string) {
@@ -1486,14 +1539,23 @@ export async function trashPaste(slug: string) {
   await getDb().transaction((tx) => trashPasteRecord(tx, actor, { slug }))
 }
 
-// False when the paste is gone for good (or was never the viewer's), so Undo can say so.
+// False when the paste is gone for good (or was never the viewer's), so Undo can say so. A paste
+// past its time in the trash counts as gone even before the purge job deletes it. A burned paste
+// comes back private with burn after read off (see `restoredFields`).
 export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
   if (!record) return false
+  if (!record.deletedAt) return true
   const changed = await getDb()
     .update(pasteTable)
-    .set({ deletedAt: null, version: sql`${pasteTable.version} + 1` })
-    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+    .set({ ...restoredFields(record), version: sql`${pasteTable.version} + 1` })
+    .where(
+      and(
+        allowedPaste(),
+        eq(pasteTable.id, record.id),
+        sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()}`,
+      ),
+    )
     .returning({ id: pasteTable.id })
   return changed.length > 0
 }

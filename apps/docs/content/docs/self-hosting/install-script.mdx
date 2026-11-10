@@ -1,0 +1,119 @@
+---
+title: Install script
+description: Install or upgrade Sniptide on a server with one command that writes the settings, starts Docker Compose and serves your domain over HTTPS.
+---
+
+The install script sets up the [Docker Compose](/self-hosting/docker-compose) install on one
+server. It downloads the Compose file and settings example, writes `.env` with a generated auth
+secret and database password, and starts Sniptide and Postgres. With a domain, the bundled Caddy
+proxy serves it over HTTPS.
+
+## Before you begin
+
+- A Linux server with Docker and the Docker Compose plugin. To install both, run
+  `curl -fsSL https://get.docker.com | sh`.
+- Memory for the app and Postgres sized for your workload. See
+  [Memory and resources](/self-hosting/memory).
+- For HTTPS, a domain whose DNS points at the server, with ports 80 and 443 open.
+
+## Run the script
+
+Run this on the server:
+
+```bash
+curl -fsSL https://sniptide.com/install.sh | sh
+```
+
+The script asks for your domain. Enter it, such as `paste.example.com`, or leave it empty to try
+Sniptide on plain HTTP at the server's address first. When it finishes, it prints the address to
+open. Open it and create your account.
+
+The script is `scripts/install.sh` in the repository, and
+`https://raw.githubusercontent.com/Dino-Kupinic/sniptide/main/scripts/install.sh` serves the same
+file. Download it and read it first if you prefer:
+
+```bash
+curl -fsSL https://sniptide.com/install.sh -o install.sh
+sh install.sh
+```
+
+## What the script does
+
+1. Checks that Docker, the Compose plugin and the Docker daemon are available.
+2. Downloads `docker-compose.yml` and `.env.example` from the latest release into `./sniptide`.
+3. Writes `.env`, readable only by you, with:
+   - a random `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`;
+   - `ALLOW_SIGN_UP=first`, so sign-up closes once your account exists;
+   - with a domain, `SNIPTIDE_DOMAIN`, `COMPOSE_PROFILES=proxy` to start Caddy,
+     `SNIPTIDE_BIND=127.0.0.1` so port 3000 isn't public, `BETTER_AUTH_URL=https://<domain>`,
+     `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`;
+   - without a domain, `BETTER_AUTH_URL=http://<server-ip>:3000`.
+4. Pulls the images and runs `docker compose up -d`, then waits until every service is healthy.
+   On a first install, it stops before writing `.env` when a database volume with the stack's name
+   already exists, since that volume keeps its old password.
+
+The install folder then holds three files. Postgres keeps its data in a Docker volume, not in the
+folder.
+
+<Files>
+<Folder name="sniptide">
+<File name="docker-compose.yml">The services: Sniptide, Postgres and, with a domain, Caddy.</File>
+<File name=".env.example">Compose settings and the app settings it forwards.</File>
+<File name=".env">Your settings, readable only by you.</File>
+</Folder>
+</Files>
+
+Back up `.env` with your database. Get the backup scripts separately using the instructions in
+[Backups and restore](/self-hosting/backups#take-a-backup).
+
+## Options
+
+Pass options after `sh -s --`, or set the matching environment variable:
+
+```bash
+curl -fsSL https://sniptide.com/install.sh | sh -s -- --domain paste.example.com --yes
+```
+
+| Option | Variable | Default | What it does |
+| --- | --- | --- | --- |
+| `--domain NAME` | `SNIPTIDE_DOMAIN` | asked | The public domain for HTTPS. |
+| `--dir PATH` | `SNIPTIDE_DIR` | `./sniptide` | The folder for the Compose files and `.env`. |
+| `--ref REF` | `SNIPTIDE_REF` | the latest release | The Git tag or branch to download the Compose files from. |
+| `--yes` | `SNIPTIDE_YES=1` | off | Asks nothing, for automation. Without a domain, the instance runs on plain HTTP. |
+
+## Upgrade
+
+Run the script again in the same folder. It keeps `.env`, downloads the Compose files of the
+latest release and pulls the newer image. Take a [backup](/self-hosting/backups) first, and read
+[Upgrading](/self-hosting/upgrading) for releases that need a manual step.
+
+## Add a domain later
+
+If you started without a domain, edit `.env` in the install folder. Remove the `BETTER_AUTH_URL`
+line and add the lines below, then run `docker compose up -d` there:
+
+```dotenv title=".env"
+SNIPTIDE_DOMAIN=paste.example.com
+COMPOSE_PROFILES=proxy
+SNIPTIDE_BIND=127.0.0.1
+```
+
+## If something fails
+
+- **"can't reach the Docker daemon"**: start Docker with `sudo systemctl start docker`, or run the
+  script with `sudo sh`.
+- **The certificate isn't issued**: check that the domain's DNS points at the server and that
+  ports 80 and 443 are open, then run `docker compose logs proxy` in the install folder. Caddy
+  keeps retrying.
+- **"Invalid origin" on sign-in**: open the exact address the script printed. See
+  [Configuration](/self-hosting/configuration#required).
+- **"Docker already has a database volume"**: Compose names the stack after the install folder,
+  and a volume from an earlier install or a development checkout in another folder with the same
+  name keeps its old database password. Run the script with `--dir` pointing to a folder with
+  another name, or remove the old volume with the `docker volume rm` command from the message,
+  which deletes its data.
+- **"Sniptide didn't start"**: the script prints the last lines of the app's log, which name the
+  cause. Run `docker compose logs app` in the install folder for the full log.
+
+To start over, run `docker compose down -v` in the install folder, which deletes every account and
+paste, then delete `.env` and run the script again.

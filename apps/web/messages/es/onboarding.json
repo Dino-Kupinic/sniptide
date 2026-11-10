@@ -1,0 +1,58 @@
+{
+  "Onboarding": {
+    "pageTitle": "Bienvenida",
+    "progress": "Paso {current} de {total}",
+    "skipSetup": "Omitir configuración",
+    "skip": "Omitir",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "saveFailed": "No se ha podido guardar. Inténtalo de nuevo.",
+    "source": {
+      "title": "¿Cómo has conocido Sniptide?",
+      "subtitle": "Tu respuesta nos dice dónde encontrar a más gente como tú.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "Un amigo",
+        "ai_agent": "Un agente de IA",
+        "search": "Buscador",
+        "other": "Otro sitio"
+      }
+    },
+    "useCase": {
+      "title": "¿Para qué vas a usar Sniptide?",
+      "subtitle": "Elige la opción más cercana. La usaremos para decidir qué construir después.",
+      "options": {
+        "agents": "Dar a mis agentes un sitio donde guardar y compartir",
+        "sharing": "Compartir código y logs con otras personas",
+        "team": "Alojarlo para mi equipo",
+        "exploring": "Solo estoy echando un vistazo"
+      }
+    },
+    "agent": {
+      "title": "Conecta un agente",
+      "subtitle": "Tu agente guarda pastes y te los vuelve a leer.",
+      "clientLabel": "Agente",
+      "clients": {
+        "claude_code": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "other": "Otro"
+      },
+      "steps": {
+        "run": "Ejecútalo en tu terminal",
+        "authenticate": "En Claude Code, ejecuta <code>/mcp</code> y elige Authenticate",
+        "addServer": "Añádelo como servidor MCP remoto",
+        "addToCursor": "Añadir a Cursor",
+        "allow": "Permite el acceso en tu navegador"
+      },
+      "yourAgent": "tu agente",
+      "waiting": "Esperando a que {client} se conecte…",
+      "connected": "{client} está conectado y ya puede guardar pastes.",
+      "connectedOther": "Tu agente está conectado y ya puede guardar pastes.",
+      "skipForNow": "Omitir por ahora",
+      "finish": "Ir al panel"
+    }
+  }
+}

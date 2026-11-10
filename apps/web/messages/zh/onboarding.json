@@ -1,0 +1,58 @@
+{
+  "Onboarding": {
+    "pageTitle": "欢迎",
+    "progress": "第 {current} 步，共 {total} 步",
+    "skipSetup": "跳过设置",
+    "skip": "跳过",
+    "back": "返回",
+    "continue": "继续",
+    "saveFailed": "无法保存，请重试。",
+    "source": {
+      "title": "你是怎么知道 Sniptide 的？",
+      "subtitle": "你的回答能帮我们找到更多像你一样的人。",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "朋友",
+        "ai_agent": "AI 智能体",
+        "search": "搜索",
+        "other": "其他"
+      }
+    },
+    "useCase": {
+      "title": "你打算用 Sniptide 做什么？",
+      "subtitle": "选最接近的一项，我们会据此决定接下来做什么。",
+      "options": {
+        "agents": "给我的智能体一个保存和分享的地方",
+        "sharing": "与他人分享代码和日志",
+        "team": "为我的团队自托管",
+        "exploring": "随便看看"
+      }
+    },
+    "agent": {
+      "title": "连接智能体",
+      "subtitle": "你的代理会保存粘贴并为你读回。",
+      "clientLabel": "智能体",
+      "clients": {
+        "claude_code": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "other": "其他"
+      },
+      "steps": {
+        "run": "在终端中运行",
+        "authenticate": "在 Claude Code 中运行 <code>/mcp</code> 并选择 Authenticate",
+        "addServer": "添加为远程 MCP 服务器",
+        "addToCursor": "添加到 Cursor",
+        "allow": "在浏览器中允许访问"
+      },
+      "yourAgent": "你的智能体",
+      "waiting": "正在等待 {client} 连接…",
+      "connected": "{client} 已连接，现在可以保存粘贴了。",
+      "connectedOther": "你的智能体已连接，现在可以保存粘贴了。",
+      "skipForNow": "暂时跳过",
+      "finish": "前往仪表盘"
+    }
+  }
+}

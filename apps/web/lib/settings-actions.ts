@@ -1,6 +1,6 @@
 "use server"
 
-import { USERNAME_PATTERN } from "@workspace/auth/username"
+import { isValidUsername, USERNAME_PATTERN } from "@workspace/auth/username"
 import { user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
@@ -9,8 +9,10 @@ import { z } from "zod"
 import { getAuth, getSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { requestLocale } from "@/lib/email/locale"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { NOTIFICATION_KINDS } from "@/lib/notifications/types"
+import { moveCustomLinks } from "@/lib/pastes/store"
 import { changePreferences } from "@/lib/preference-store"
 import type { Preferences } from "@/lib/preferences"
 import { preferencesSchema } from "@/lib/preferences-schema"
@@ -53,7 +55,11 @@ export async function updateProfile(input: z.input<typeof profileSchema>): Promi
 
   const { name, username } = parsed.data
   const body: Record<string, unknown> = { name }
-  if (username !== session.user.username) {
+  const previous = session.user.username
+  const renamed = username !== previous
+  if (renamed) {
+    if (!isValidUsername(username))
+      return { ok: false, error: await actionError("usernameTaken", { username }) }
     const auth = await getAuth()
     const { available } = await auth.api.isUsernameAvailable({ body: { username } })
     if (!available) return { ok: false, error: await actionError("usernameTaken", { username }) }
@@ -61,7 +67,9 @@ export async function updateProfile(input: z.input<typeof profileSchema>): Promi
     body.displayUsername = username
   }
 
-  return updateUser(body)
+  const result = await updateUser(body)
+  if (result.ok && renamed && previous) await moveCustomLinks(session.user.id, previous, username)
+  return result
 }
 
 // Avatars are small square JPEGs resized in the browser, kept as data URLs on user.image until
@@ -90,10 +98,14 @@ export async function updateAvatar(image: string | null): Promise<Result> {
   return updateUser({ image: parsed.data })
 }
 
-const generalPatchSchema = preferencesSchema.omit({ notifications: true }).partial().strict()
+// The email language is saved by the server from the request, never patched from the client.
+const generalPatchSchema = preferencesSchema
+  .omit({ notifications: true, locale: true, dashboard: true })
+  .partial()
+  .strict()
 
 export async function updatePreferences(
-  patch: Partial<Omit<Preferences, "notifications">>,
+  patch: Partial<Omit<Preferences, "notifications" | "locale" | "dashboard">>,
 ): Promise<Result> {
   const session = await getSession()
   if (!session) return { ok: false, error: await actionError("signInSettings") }
@@ -134,8 +146,11 @@ export async function updateNotificationPreference(
     if (!account?.emailVerified)
       return { ok: false, error: "Verify your email address before enabling notification emails." }
   }
+  // Turning on an email records the language in use now, so background emails can match it.
+  const locale = channel === "email" && enabled ? await requestLocale() : undefined
   const saved = await changePreferences(session.user.id, (current) => ({
     ...current,
+    ...(locale ? { locale } : {}),
     notifications: {
       ...current.notifications,
       [kind]: { ...current.notifications[kind], [channel]: enabled },

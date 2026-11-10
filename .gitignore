@@ -24,6 +24,9 @@ dist
 # turbo
 .turbo
 
+# graphify
+graphify-out/
+
 # misc
 .DS_Store
 *.pem
@@ -63,3 +66,7 @@ data/
 /apps/web/load/artifacts/
 
 /artifacts/npm/
+__pycache__/
+
+# Pull request screenshots, committed only by scripts/attach-pr-media.sh
+.pr-media/

@@ -46,7 +46,7 @@ export default async function Page({ searchParams }: PageProps<"/sign-in">) {
       ) : null}
       <SignInForm
         socialProviders={await getSocialProviders()}
-        signUpClosed={isSignUpClosed()}
+        signUpClosed={await isSignUpClosed()}
         initialError={errorKey ? t(`oauthErrors.${errorKey}`) : null}
         notice={reset === "1" ? t("passwordResetDone") : null}
         redirectTo={afterSignIn(next)}

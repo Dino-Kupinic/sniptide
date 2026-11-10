@@ -12,6 +12,7 @@
     "available": "利用可能",
     "taken": "使用済み",
     "thatLinkIsTaken": "このリンクは使用済みです。",
+    "customLinkNeedsUsername": "このペーストにカスタムリンクを付けるには、<link>ユーザー名を設定</link>してください。",
     "noCollection": "コレクションなし",
     "collection": "コレクション",
     "pastePassword": "Paste のパスワード",
@@ -219,6 +220,8 @@
     "compareLoading": "Loading snapshots…",
     "compareClose": "Close",
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
-    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
+    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
+    "expiredSharingHelp": "このペーストは期限切れです。有効期限を変更するか「無期限」を選ぶと、再び共有できます。",
+    "manageAccess": "アクセスを管理"
   }
 }

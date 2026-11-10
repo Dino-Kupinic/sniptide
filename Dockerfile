@@ -34,11 +34,6 @@ RUN --mount=type=secret,id=server_actions_key \
 
 FROM node:24-slim AS run
 WORKDIR /app
-# ffmpeg renders the og:video of public pastes (apps/web/lib/pastes/preview-video.ts). Without it
-# link previews fall back to the still card.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

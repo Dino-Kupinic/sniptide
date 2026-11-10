@@ -1,4 +1,5 @@
 import { highlightFiles } from "@/lib/highlight/highlight"
+import { slugFromRoute } from "@/lib/pastes/links"
 import { revealSharedPaste } from "@/lib/pastes/store"
 import { retryAfterSeconds } from "@/lib/public-limits"
 
@@ -16,7 +17,7 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/r
     )
   }
 
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   const read = await revealSharedPaste(slug)
 
   if (read.status === "locked")

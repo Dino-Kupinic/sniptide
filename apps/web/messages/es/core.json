@@ -21,6 +21,7 @@
     "viewsIn": "Visitas de {count, plural, one {# fragmento} other {# fragmentos}} en {title}",
     "viewsAll": "Visitas de {count, plural, one {# fragmento} other {los # fragmentos}}",
     "afterView": "tras una visita",
+    "burnedOn": "Leído el {date}",
     "never": "Nunca",
     "neverExpires": "no caduca",
     "expires": "Caduca {time}",
@@ -92,6 +93,26 @@
     "notificationExpiringDetail": "Amplía el plazo en el panel para compartir del fragmento",
     "notificationViews": "«{title}» ha alcanzado {count, number} visitas",
     "notificationViewsDetail": "Consulta su origen en Estadísticas",
-    "snapshotUnavailable": "Snapshot unavailable"
+    "snapshotUnavailable": "Snapshot unavailable",
+    "expired": "Caducado"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "Fragmentos públicos compartidos por {name} (@{handle}) en Sniptide.",
+    "joined": "Se unió en {date}",
+    "pastes": "{count, plural, one {# fragmento público} other {# fragmentos públicos}}",
+    "empty": "@{handle} aún no ha hecho público ningún fragmento.",
+    "pagination": "Páginas",
+    "newer": "Más recientes",
+    "older": "Más antiguos",
+    "pageOf": "Página {page} de {count}",
+    "activity": "Actividad",
+    "activitySummary": "{count, plural, one {# fragmento público} other {# fragmentos públicos}} en el último año",
+    "activityDay": "{count, plural, =0 {Ningún fragmento público} one {# fragmento público} other {# fragmentos públicos}} el {date}",
+    "search": "Buscar fragmentos",
+    "clearSearch": "Borrar búsqueda",
+    "language": "Lenguaje",
+    "allLanguages": "Todos los lenguajes",
+    "noMatches": "Ningún fragmento público coincide con esa búsqueda."
   }
 }

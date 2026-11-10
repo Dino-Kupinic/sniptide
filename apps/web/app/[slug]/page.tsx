@@ -14,21 +14,15 @@ import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
+import { slugFromRoute } from "@/lib/pastes/links"
 import { previewMetadata } from "@/lib/pastes/preview"
-import { previewVideoAvailable, warmPreviewVideo } from "@/lib/pastes/preview-video"
 import { readPublicPreview, readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
 import { getAppOrigin, getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/[slug]">) {
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   const preview = await readPublicPreview(slug)
-  if (preview) {
-    const video = await previewVideoAvailable()
-    // Whoever opens the paste first starts its video, so it is usually ready by the time a link
-    // to it is shared.
-    if (video) warmPreviewVideo(preview)
-    return previewMetadata(preview, (await getSiteOrigin()).origin, { video })
-  }
+  if (preview) return previewMetadata(preview, (await getSiteOrigin()).origin)
   const meta = await readSharedMeta(slug)
   if (!meta) return { title: "Sniptide", robots: { index: false, follow: false } }
 
@@ -42,7 +36,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 // Public page for a paste at sniptide.com/<slug>, from the "Share page (public)" artboards. A
 // password or burn-after-read setting applies to everyone who opens the link, its owner included.
 export default async function Page({ params }: PageProps<"/[slug]">) {
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   // Crawlers, link unfurlers, prefetches and scripts don't count as views.
   const read = await readSharedPaste(slug, { visit: isHumanVisit(await headers()) })
   if (read.status === "missing") notFound()

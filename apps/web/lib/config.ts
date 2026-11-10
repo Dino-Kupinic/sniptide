@@ -88,6 +88,16 @@ const flag = z.string().transform((value, ctx) => {
   return z.NEVER
 })
 
+// ALLOW_SIGN_UP: a flag, or "first" to close sign-up once the first account exists.
+const signUpMode = z.string().transform((value, ctx): boolean | "first" => {
+  const normalized = value.trim().toLowerCase()
+  if (normalized === "first") return "first"
+  if (["true", "1", "yes", "on"].includes(normalized)) return true
+  if (["false", "0", "no", "off"].includes(normalized)) return false
+  ctx.addIssue({ code: "custom", message: 'must be "true", "false" or "first".' })
+  return z.NEVER
+})
+
 const origin = z.url({ message: "must be a full URL like https://sniptide.com." })
 
 // What one account can keep before it has to delete something, so open sign-up can't fill the
@@ -122,7 +132,7 @@ const schema = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]+$/, { message: "may only contain letters, digits, - and _." })
     .optional(),
-  ALLOW_SIGN_UP: flag.default(true),
+  ALLOW_SIGN_UP: signUpMode.default(true),
   ALLOWED_EMAILS: z.string().optional(),
   SHARE_URL: origin.optional(),
   HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),
@@ -134,6 +144,9 @@ const schema = z.object({
   HELP_URL: z
     .url({ message: "must be a full URL like https://example.com/support." })
     .default(DEFAULT_RESOURCE_LINKS.help),
+  TEMPLATES_URL: z
+    .url({ message: "must be a full URL like https://sniptide.com/templates." })
+    .optional(),
 
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -167,7 +180,32 @@ const schema = z.object({
 
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
+
+  LINEAR_API_KEY: z.string().optional(),
+  LINEAR_TEAM_ID: z.string().optional(),
+  LINEAR_PROJECT_ID: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  SUPPORT_PROVIDER: z.enum(["anthropic", "openai"]).optional(),
+  SUPPORT_MODEL: z.string().optional(),
 })
+
+// The support assistant's provider: SUPPORT_PROVIDER when set, otherwise whichever key is set,
+// Anthropic first. OpenAI has no default model here, so it needs SUPPORT_MODEL.
+function supportAssistant(value: z.infer<typeof schema>) {
+  const provider =
+    value.SUPPORT_PROVIDER ??
+    (value.ANTHROPIC_API_KEY ? "anthropic" : value.OPENAI_API_KEY ? "openai" : undefined)
+  if (!provider) return undefined
+  const apiKey = provider === "anthropic" ? value.ANTHROPIC_API_KEY : value.OPENAI_API_KEY
+  if (!apiKey)
+    throw new Error(
+      `Invalid configuration: SUPPORT_PROVIDER=${provider} needs ${provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"}.`,
+    )
+  if (provider === "openai" && !value.SUPPORT_MODEL)
+    throw new Error("Invalid configuration: OPENAI_API_KEY needs SUPPORT_MODEL, the model to use.")
+  return { provider, apiKey, model: value.SUPPORT_MODEL ?? "claude-haiku-5-5" }
+}
 
 function oauth(clientId?: string, clientSecret?: string) {
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
@@ -252,6 +290,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     shareUrl: value.SHARE_URL,
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
+    templatesUrl: value.TEMPLATES_URL,
     resourceLinks: {
       homepage: value.HOMEPAGE_URL,
       documentation: value.DOCS_URL,
@@ -276,6 +315,19 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
         ? { name: value.OPERATOR_NAME, address: value.OPERATOR_ADDRESS }
         : undefined,
       copyrightEmail: value.COPYRIGHT_EMAIL,
+    },
+    // Where in-app reports go and whether the support assistant runs. Both are off unless their
+    // keys are set, so a self-hosted instance sends nothing anywhere.
+    support: {
+      linear:
+        value.LINEAR_API_KEY && value.LINEAR_TEAM_ID
+          ? {
+              apiKey: value.LINEAR_API_KEY,
+              team: value.LINEAR_TEAM_ID,
+              project: value.LINEAR_PROJECT_ID,
+            }
+          : undefined,
+      assistant: supportAssistant(value),
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

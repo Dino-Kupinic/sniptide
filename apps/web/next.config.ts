@@ -40,21 +40,16 @@ const nextConfig: NextConfig = {
   // Self-contained server for the Docker image (apps/web/.next/standalone). Tracing from the
   // repo root so the workspace packages are included.
   output: "standalone",
+  // Embed the release in server code too: the runtime image has no build-stage environment, and
+  // bug reports name the version they came from.
+  env: { DEPLOYMENT_VERSION: process.env.DEPLOYMENT_VERSION || "development" },
   deploymentId: process.env.DEPLOYMENT_VERSION || undefined,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   // Next's tracer cannot infer these runtime asset reads, so include them in the standalone build.
   outputFileTracingIncludes: {
-    "/[slug]": [
-      "./assets/fonts/**/*",
-      "../../packages/ui/src/fonts/PaperMono-Regular.ttf",
-      "./assets/preview/**/*",
-    ],
+    // The support assistant answers from the docs pages (lib/support/docs.ts).
+    "/api/support/chat": ["../docs/content/docs/**/*.mdx"],
     "/[slug]/preview": ["./assets/fonts/**/*", "../../packages/ui/src/fonts/PaperMono-Regular.ttf"],
-    "/[slug]/preview.mp4": [
-      "./assets/fonts/**/*",
-      "../../packages/ui/src/fonts/PaperMono-Regular.ttf",
-      "./assets/preview/**/*",
-    ],
   },
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },

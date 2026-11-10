@@ -1,0 +1,61 @@
+name: Bug report or feedback
+description: Report a problem with Sniptide or suggest an improvement, on sniptide.com or a self-hosted instance.
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are public. Remove tokens, passwords, email addresses and private paste content from the text, addresses and screenshots before you submit.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options:
+        - Bug
+        - Feedback
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, what did you expect, and how can someone reproduce it? For feedback, describe what you'd like to change.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Optional. Attach or paste an image after removing private information.
+  - type: input
+    id: url
+    attributes:
+      label: Page address
+      description: Optional. The address without its query or fragment.
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sniptide version
+      description: The image tag, release version or deployment commit.
+    validations:
+      required: true
+  - type: input
+    id: user
+    attributes:
+      label: User ID
+      description: Optional. Your account ID, never your email address or credentials.
+  - type: dropdown
+    id: instance
+    attributes:
+      label: Instance
+      options:
+        - Hosted (app.sniptide.com)
+        - Self-hosted
+    validations:
+      required: true

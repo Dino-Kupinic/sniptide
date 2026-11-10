@@ -1,28 +1,14 @@
 "use client"
 
-import { Badge } from "@sniptide/ui/components/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TablePinnedCell,
-  TablePinnedHead,
-  TableRow,
-  TableSortHead,
-} from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
-import { FlameIcon, GlobeIcon, LinkIcon, LockIcon, StarIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
-import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { LanguageLabel } from "@/components/paste/language-icon"
 import { useListView } from "@/components/shell/page-header"
-import { showUndo } from "@/components/undo-toast"
 import type { Collection } from "@/lib/collections/types"
 import { formatNumber } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
-import { setStarred } from "@/lib/pastes/actions"
 import {
   DEFAULT_SORT_DIRECTION,
   PASTE_PAGE_SIZE,
@@ -37,8 +23,8 @@ import {
 import type { PasteRow } from "@/lib/pastes/rows"
 import { PasteBulkActions } from "./bulk-actions"
 import { PasteCard } from "./paste-card"
-import { RowMenu } from "./row-menu"
-import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
+import { PasteMobileList, PasteTable } from "./paste-table"
+import { SelectionBar, useRowSelection } from "./selection"
 import {
   FilterMenu,
   ListHeader,
@@ -53,73 +39,11 @@ import { useListQuery } from "./use-list-query"
 
 export type Sort = PasteSort
 
-// Visibility as a quiet outlined label with an icon, so a column of them doesn't shout. Burn after
-// read keeps the blue, since it is the one that changes what happens to the paste.
-export function RowBadge({
-  row,
-  short = false,
-  className,
-}: {
-  row: Pick<PasteRow, "visibility" | "burnAfterRead">
-  // The mobile list has room for "Burn" only.
-  short?: boolean
-  className?: string
-}) {
-  const t = useTranslations("Workspace")
-  const base = cn("h-6 gap-1.5 px-2 text-xs font-normal [&_svg]:size-3", className)
-  if (row.burnAfterRead)
-    return (
-      <Badge variant="muted" className={cn(base, "border-link/40 text-link")}>
-        <FlameIcon aria-hidden="true" />
-        {short ? t("burn") : t("burn_after_read")}
-      </Badge>
-    )
-  const Icon =
-    row.visibility === "public" ? GlobeIcon : row.visibility === "private" ? LockIcon : LinkIcon
-  return (
-    <Badge variant="muted" className={cn(base, "text-foreground/80")}>
-      <Icon aria-hidden="true" className="text-muted-foreground" />
-      {t(row.visibility)}
-    </Badge>
-  )
-}
-
-// Visibility folded into a mobile row's meta line: a 12px icon before the slug, named for screen
-// readers. Burn after read keeps its blue flame.
-export function VisibilityIcon({ row }: { row: Pick<PasteRow, "visibility" | "burnAfterRead"> }) {
-  const t = useTranslations("Workspace")
-  const Icon = row.burnAfterRead
-    ? FlameIcon
-    : row.visibility === "public"
-      ? GlobeIcon
-      : row.visibility === "private"
-        ? LockIcon
-        : LinkIcon
-  return (
-    <>
-      <Icon
-        aria-hidden="true"
-        className={cn("size-3 shrink-0", row.burnAfterRead ? "text-link" : "text-muted-foreground")}
-      />
-      <span className="sr-only">
-        {row.burnAfterRead ? t("burn_after_read") : t(row.visibility)}
-      </span>
-    </>
-  )
-}
-
-// Expiring soon reads in blue; already expired reads muted, since nothing is left to do about it.
-export function expiryClass(row: Pick<PasteRow, "expiresSoon" | "expiresAt">) {
-  if (row.expiresAt !== null && row.expiresAt <= Date.now()) return "text-muted-foreground"
-  return row.expiresSoon ? "text-link" : undefined
-}
-
 // The table renders one authorized page. Filters, sorting and paging are URL-driven server reads.
 export function PasteList({
   title,
   rows,
   origin,
-  host,
   mode,
   collections,
   collection,
@@ -135,7 +59,6 @@ export function PasteList({
   // The first highlighted lines of each paste, by slug, for the grid view's cards.
   previews?: Record<string, HighlightedLines>
   origin: string
-  host: string
   mode: "mine" | "starred" | "collection"
   collections: Collection[]
   // The collection whose page this is, in collection mode.
@@ -149,7 +72,6 @@ export function PasteList({
 }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
-  const feedbackT = useTranslations("Core")
   const sortOptions: { value: Sort; label: string }[] = [
     { value: "updated", label: t("last_updated") },
     { value: "views", label: t("most_viewed") },
@@ -324,138 +246,17 @@ export function PasteList({
               ))}
             </ul>
           ) : (
-            <Table className="hidden min-w-[1040px] table-fixed lg:table">
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <SelectAllHead selection={selection} />
-                  <TableSortHead {...headProps("title")} className="pl-0">
-                    {t("paste")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("language")} className="w-[140px]">
-                    {t("language")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("visibility")} className="w-[160px]">
-                    {t("visibility")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("views")} className="w-24" alignEnd>
-                    {t("views")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("expires")} className="w-[140px]">
-                    {t("expires")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("updated")} className="w-[140px]">
-                    {t("updated")}
-                  </TableSortHead>
-                  <TablePinnedHead className="w-16">
-                    <span className="sr-only">{t("actions")}</span>
-                  </TablePinnedHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow
-                    key={row.slug}
-                    data-selected={selection.has(row.slug)}
-                    className="relative"
-                  >
-                    <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
-                    <TableCell className="truncate pl-0">
-                      <Link
-                        href={`/pastes/${row.slug}`}
-                        title={row.title}
-                        className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-                      >
-                        {row.title}
-                      </Link>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
-                        {row.owner ? `@${row.owner.username} · ` : ""}
-                        {host}/{row.slug}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-[13px] text-foreground/80">
-                      <LanguageLabel language={row.language} />
-                    </TableCell>
-                    <TableCell>
-                      <RowBadge row={row} />
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-[13px] tabular-nums">
-                      {formatNumber(row.views, locale)}
-                    </TableCell>
-                    <TableCell className={cn("text-[13px] text-foreground/80", expiryClass(row))}>
-                      {row.expiresLabel}
-                    </TableCell>
-                    <TableCell className="text-[13px] text-muted-foreground">
-                      {row.updatedLabel}
-                    </TableCell>
-                    <TablePinnedCell className="text-center">
-                      {mode === "starred" ? (
-                        <button
-                          type="button"
-                          aria-label={t("unstar_named", { name: row.title })}
-                          onClick={async () => {
-                            await setStarred(row.slug, false)
-                            showUndo({
-                              labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
-                              message: t("removed_from_starred_named", { name: row.title }),
-                              undo: () => setStarred(row.slug, true),
-                            })
-                          }}
-                          className="rounded-md relative z-10 inline-flex size-7 items-center justify-center text-highlight outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40"
-                        >
-                          <StarIcon className="size-4 fill-current" />
-                        </button>
-                      ) : (
-                        <RowMenu row={row} origin={origin} />
-                      )}
-                    </TablePinnedCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <PasteTable
+              rows={rows}
+              origin={origin}
+              sortHead={headProps}
+              selection={selection}
+              action={mode === "starred" ? "unstar" : "menu"}
+            />
           )}
 
           {/* Mobile list */}
-          {pagination.total > 0 ? (
-            <ul className="flex flex-col lg:hidden">
-              {rows.map((row) => (
-                <li
-                  key={row.slug}
-                  className="relative flex items-center gap-3 border-b border-border py-3"
-                >
-                  <LanguageIcon language={row.language} />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <Link
-                      href={`/pastes/${row.slug}`}
-                      title={row.title}
-                      className="truncate text-[15px] font-medium after:absolute after:inset-0"
-                    >
-                      {row.title}
-                    </Link>
-                    <span
-                      className={cn(
-                        "flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
-                        expiryClass(row),
-                      )}
-                    >
-                      <VisibilityIcon row={row} />
-                      <span className="truncate">
-                        <span className="font-mono">
-                          {row.owner ? `@${row.owner.username}` : row.slug}
-                        </span>
-                        {" · "}
-                        {row.burnAfterRead
-                          ? row.expiresLabel
-                          : row.expiresSoon
-                            ? t("expires_label", { time: row.expiresLabel })
-                            : t("views_count", { count: row.views })}
-                      </span>
-                    </span>
-                  </div>
-                  <RowMenu row={row} origin={origin} variant="sheet" />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          {pagination.total > 0 ? <PasteMobileList rows={rows} origin={origin} /> : null}
         </div>
 
         {pagination.total > 0 ? (

@@ -32,7 +32,7 @@ describeDb("invite-only sign-up", () => {
   afterAll(resetDatabase)
   beforeEach(resetDatabase)
 
-  function makeAuth(allowedEmails?: string, allowSignUp?: boolean) {
+  function makeAuth(allowedEmails?: string, allowSignUp?: boolean | "first") {
     return createAuth({
       db: getDb(),
       secret: "test-secret-that-is-long-enough-for-better-auth",
@@ -89,6 +89,19 @@ describeDb("invite-only sign-up", () => {
     expect((await signUp(makeAuth(), "eve@example.com", "eve")).status).toBe(200)
     const response = await post(makeAuth(undefined, false), "/sign-in/email", {
       email: "eve@example.com",
+      password: PASSWORD,
+    })
+    expect(response.status).toBe(200)
+  })
+
+  test("lets only the first account in while sign-up is set to first", async () => {
+    const auth = makeAuth(undefined, "first")
+    expect((await signUp(auth, "ada@example.com", "ada")).status).toBe(200)
+    const refused = await signUp(auth, "eve@example.com", "eve")
+    expect(refused.status).toBe(403)
+    expect((await refused.json()).code).toBe("sign_up_closed")
+    const response = await post(auth, "/sign-in/email", {
+      email: "ada@example.com",
       password: PASSWORD,
     })
     expect(response.status).toBe(200)

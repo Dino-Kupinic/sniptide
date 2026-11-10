@@ -196,14 +196,6 @@ export function AppShell({
                       layout.collapsed && "lg:ml-2",
                     )}
                   >
-                    {demo ? (
-                      <p
-                        role="note"
-                        className="border-b border-border bg-muted px-4 py-1.5 text-center text-xs text-muted-foreground"
-                      >
-                        {t("demoBanner")}
-                      </p>
-                    ) : null}
                     <TopBar
                       onToggleSidebar={toggleSidebar}
                       sidebarOpen={!layout.collapsed}

@@ -8,6 +8,7 @@ import { and, eq, inArray, isNull, max, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
+import { lockAccount } from "@/lib/pastes/budget"
 import {
   type Collection,
   type CollectionIcon,
@@ -231,6 +232,7 @@ export interface CollectionSnapshot {
 export async function deleteCollection(slug: string): Promise<CollectionSnapshot | null> {
   const owner = await requireViewerId()
   return getDb().transaction(async (tx) => {
+    await lockAccount(tx, owner)
     const [row] = await tx
       .select()
       .from(collectionTable)

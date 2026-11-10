@@ -5,11 +5,13 @@ import { PrintToolbar } from "@/components/paste/print-toolbar"
 import { byteLength, formatBytes, formatDateTime, lineCount } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { getLanguage } from "@/lib/pastes/languages"
+import { slugFromRoute } from "@/lib/pastes/links"
 import { readSharedPaste } from "@/lib/pastes/store"
+import { profilePath } from "@/lib/profile-path"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/[slug]/print">) {
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   const read = await readSharedPaste(slug)
   return {
     title: read.status === "ok" ? `${read.paste.title} · Sniptide` : "Sniptide",
@@ -22,7 +24,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]/print">) {
 // theme (see ThemeProvider). Printing doesn't count a view, and a one-time paste only prints for
 // its owner, since anyone else would burn it here.
 export default async function Page({ params }: PageProps<"/[slug]/print">) {
-  const { slug } = await params
+  const slug = slugFromRoute((await params).slug)
   const read = await readSharedPaste(slug)
   if (read.status === "missing") notFound()
   if (read.status !== "ok") redirect(`/${slug}`)
@@ -43,7 +45,13 @@ export default async function Page({ params }: PageProps<"/[slug]/print">) {
           {paste.title}
         </h1>
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-          <span className="text-foreground">@{paste.author.username}</span>
+          {paste.author.handle ? (
+            <a href={profilePath(paste.author.handle)} className="text-foreground">
+              @{paste.author.username}
+            </a>
+          ) : (
+            <span className="text-foreground">@{paste.author.username}</span>
+          )}
           <span>{t("edited", { time: formatDateTime(paste.updatedAt, locale) })}</span>
           <span className="font-mono">
             {host}/{paste.slug}

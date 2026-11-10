@@ -81,7 +81,13 @@ test("editor preserves indentation and Escape then Tab exits", async ({ app, scr
   await expect(editor).toHaveValue("one  x  ")
 })
 
-test("dashboard and settings tabs navigate with the keyboard", async ({ app, screen }) => {
+test("dashboard and settings tabs navigate with the keyboard", async ({ app, browser, screen }) => {
+  // The recent paste filters show once the account has a paste.
+  await app.open("/new")
+  await screen.getByLabel("Title").fill("Tab fixture")
+  await screen.getByLabel("Contents of untitled.txt").fill("content")
+  await screen.getByRole("button", /^Create paste/).tap()
+  await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
   await app.open("/dashboard")
   const filters = screen.getByRole("tablist", "Filter recent pastes")
   const all = filters.getByRole("tab", "All")

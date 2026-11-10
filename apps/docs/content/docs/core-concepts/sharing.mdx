@@ -1,70 +1,157 @@
 ---
 title: Sharing
-description: Who can open a paste, how to protect it, and when it goes away.
+description: Control who can open a Sniptide paste with visibility, a password, invitations and expiry, and choose how people read, embed or print it.
 ---
 
-Every paste has its own sharing settings. Change them in the editor under **Visibility & expiry**,
-or later with **Share** on the paste.
+Every paste has its own sharing settings. Set them in the editor beside the code, or later from
+the paste's **Sharing** and **Access** rows and its **Share** button.
 
-## Visibility
+## Choose a visibility
 
-| Visibility | Who can open it |
-| --- | --- |
-| **Private** | You and the accounts you invited. Everyone else gets a 404, as if the link didn't exist. |
-| **Unlisted** | Anyone with the link. Search engines are told not to index it. Without a password or burn setting it gets a link preview (see below). |
-| **Public** | Anyone with the link, and search engines may index it. Without a password or burn setting it gets a link preview (see below). |
+| Visibility | Who can open the link | Search engines | Link preview |
+| --- | --- | --- | --- |
+| **Private** | You and the accounts you invited. Everyone else gets a "not found" page, as if the link didn't exist. | Not indexed | None |
+| **Unlisted** | Anyone with the link | Told not to index it | Yes, unless it has a password or burns after read |
+| **Public** | Anyone with the link | May index it | Yes, unless it has a password or burns after read |
 
-Unlisted is the default for new pastes. "Unlisted" means the link is the secret: don't treat it as
-access control for anything sensitive.
+When share links live on their own domain (`SHARE_URL`), a public paste also opens on the app's
+domain. Its page names the share link as the canonical address, so search engines index
+`sniptide.com/k7Qe2x` and not the copy on `app.sniptide.com`. The instance's `robots.txt` keeps
+search engines out of `/api/`, and lets them load the `/_next/` files they need to render a page.
 
-## Password
+Pastes you create in the web editor start unlisted until you change your
+[paste defaults](/settings#set-paste-defaults). With an unlisted paste the link itself is the
+secret, so don't rely on it to protect anything sensitive.
 
-Set a **Paste password** on a public or unlisted paste and visitors must enter it before they can
-see the code. The password is stored only as a salted hash. Change or remove it from **Share**.
-You and the people you invited never see the prompt. Too many wrong guesses from one address are
-rate-limited.
+## Your public profile
+
+Your username has a profile page at `/@username` on your instance, such as
+`sniptide.com/@username` on the hosted service. Every account has one, including accounts created
+through GitHub or Google sign-in. Every `@username` on a share page, in **Shared
+with me** and in the **Share** dialog links to it. Open your own by selecting your name at the top
+of the account menu, or from **Your profile** under **More** on a phone. Handles match in any case, so `/@Dino` opens the same
+page as `/@dino`. Your
+[custom links](/core-concepts/pastes#custom-links) live under the same address, such as
+`sniptide.com/@dino/deploy-script`. When share links live on their own domain (`SHARE_URL`), profiles do too.
+
+The profile shows your display name, avatar and join month, a grid of how many public pastes you
+made each day over the last year, and your public pastes, newest first, 20 to a page. Visitors can
+search the list by title or link and filter it by language.
+
+The profile lists only pastes that anyone could already open from their link: public, with no
+password and no burn after read. Unlisted and private pastes never appear, and neither do pastes
+in the trash, expired pastes or pastes withheld by moderation. To take a paste off your profile,
+make it unlisted or private. The activity grid counts the same pastes, so it shows nothing the
+list doesn't. Profiles are told not to be indexed by search engines, while the public pastes they
+list can still be indexed on their own pages.
+
+## Protect a paste with a password
+
+Set **Paste password** on a public or unlisted paste, and anyone who opens its link must enter the
+password before they see the code. That includes you: opening your own paste's link shows the same
+prompt your readers see, while your pastes in the app open without it. People you invited skip
+the prompt.
+
+Sniptide stores only a salted hash of the password. Change or remove it from the paste's
+**Sharing** row. Repeated wrong guesses from one address are rate-limited.
+
+A private paste keeps its password but never asks for it, because only you and the people you
+invited can open it. If you make it unlisted or public later, the password applies again.
 
 ## Invite people
 
-For a private paste (or any paste), **Invite people** with a Sniptide account, by email or
-username, and choose their access:
+Select **Share** and invite people who have a Sniptide account, by email or username. Choose their
+access:
 
-- **View** lets them read it.
-- **Edit** also lets them change the title, description and files. The link, visibility, expiry,
-  password, collection and burn setting stay yours.
+- **Can view** lets them read the paste.
+- **Can edit** also lets them change the title, description and files, and restore
+  [revisions](/core-concepts/revisions). The link, visibility, expiry, password, collection and
+  burn setting stay under your control.
 
-They find it under **Shared with me** as soon as you invite them, and you can remove access any
-time. They can also remove it from their own list, and you can invite them again. You can invite
-people when you create a paste, too.
+An invited person finds the paste under **Shared with me** at once and gets a notification. You
+can remove their access at any time, and they can remove the paste from their own list. You can
+also invite people while you create a paste.
+
+An expired paste refuses new invitations, access changes, and undoing an access removal. Set a
+new expiry or choose **Never**, then try again. A refused invitation creates no access or
+notification.
+
+If the paste already has recipients, **Manage access** lets you remove their access after expiry.
 
 ## Raw access
 
 Each file is available as plain text at `<domain>/<link>/raw?file=<file name>`, for `curl` and
-scripts. **Allow raw access** turns that off for everyone but you. It follows the other settings:
-a private paste, a locked one and an expired one aren't readable through raw either, and a
-[burn-after-read](/core-concepts/burn-after-read) paste has no raw access for anyone but you.
+scripts. Owners and invited users can read raw files from a live paste, including a private one.
+Other readers can access raw files from public or unlisted pastes. If the paste has a password,
+they must first unlock it and send the unlock cookie with the raw request. Turning off **Allow
+raw access** or enabling [burn after read](/core-concepts/burn-after-read) restricts raw access
+to the owner. Expired pastes are unavailable through raw links.
 
-## Expiry
+## Give agents a Markdown copy
 
-Choose **Expires after**: 1 hour, 1 day, 1 week, 1 month or never. When it passes, the link stops
-working for everyone, and the paste is removed after another 30 days. Sniptide notifies
-you about pastes that are about to expire.
+A request for a paste's link with the header `Accept: text/markdown` returns the paste as Markdown,
+with the title as a heading and each file in a fenced code block. Coding agents that fetch a link
+get the code without the page around it.
 
-## Link previews and channels
+```bash
+curl -H "Accept: text/markdown" https://app.sniptide.com/k3j9xq
+```
 
-Public and unlisted pastes without a password or one-time protection give link previews (Open
-Graph and X cards) with the title, language and the first twelve lines of the first file. The app
-that shows the preview, such as Slack or Discord, fetches and keeps a copy of that card, so make a
-paste private before sharing its link if the first lines shouldn't appear in the chat. Previews
+The Markdown copy follows the same access rules as the share page. If the paste is still locked
+or sealed for burn after read, it returns a note asking the reader to open it in a browser. If
+raw access is off, it returns the title and a note with no file contents. A paste unavailable to
+the reader returns `404`.
+Fetching the Markdown copy doesn't count as a view.
+
+## Embed or print a paste
+
+- **Embed** in the **Share** dialog gives you an `<iframe>` for `<domain>/<link>/embed`, which
+  shows the paste's files inside another site. Only public and unlisted pastes without a password
+  or burn after read can be embedded. The embed ignores sign-in, so a paste you can open yourself
+  may still be refused there.
+- **Print** opens `<domain>/<link>/print`, a light-themed page with every file in full that you can
+  print or save as a PDF. It has the same access as the share page and doesn't count a view. A
+  burn-after-read paste prints only for its owner.
+- **Download** saves a single file to your device.
+
+## Set an expiry
+
+Choose **Expires after**: 1 hour, 1 day, 1 week, 1 month, 1 year or never. The time counts from
+when you set it. When it passes, the link stops working for everyone and the paste is removed 30
+days later. Until then it stays in your pastes, and choosing a new expiry brings the link back. Sniptide notifies you when a paste will expire within a day. The dashboard says how many pastes
+expire in the next 48 hours or have already expired, and **Review** opens your pastes sorted by
+expiry.
+
+Starring a paste does not extend its expiry. An expired paste can remain in your **Starred** list
+while its link is unavailable to recipients.
+
+Expired pastes show an **Expired** label in paste lists and beside the title. Sharing and
+copying the link are disabled, including in a Share dialog that was open when the paste expired.
+The owner can still copy the code, edit the paste, and change its expiry. Choose a new expiry
+or **Never** to share it again. Existing access can still be removed.
+
+## Link previews
+
+Public and unlisted pastes without a password or burn after read get link previews (Open Graph and
+X cards) with the title, the language and the first twelve lines of the first file. The app that
+shows the preview, such as Slack or Discord, fetches and keeps its own copy of that card. Make a
+paste private before you post its link if its first lines shouldn't appear in the chat. Previews
 and other automated fetches never count as a view and never use up a burn-after-read paste.
 
-If the administrator configured Slack or Discord webhooks, **Share → Share to Slack / Discord**
-posts the link to the channel. It is only offered for public or unlisted pastes with no password
-or one-time protection, and everyone in the channel receives the link. Only owners can send a paste.
-Each provider has one destination per instance, with 20 sends per hour per account across both providers.
-Failed or timed-out sends show an error without an automatic retry. Check the channel before retrying.
+## Post to Slack or Discord
+
+When the administrator has configured a Slack or Discord webhook, **Share** offers **Share via…**
+to post the paste's link to that channel. Everyone in the channel receives the link.
+
+- Only the paste's owner can post it.
+- The paste must be public or unlisted, without a password or burn after read.
+- Each provider has one channel per instance, and an account can post 20 times an hour across
+  both providers.
+- A failed or timed-out post shows an error and isn't retried. Check the channel before you try
+  again, because the message may have arrived.
 
 ## Views
 
-A paste's page shows how many times it was opened. Only people opening the share page count:
-you don't, and neither do crawlers, link previews or scripts.
+The paste's **Views** row shows how many times its share page was opened. Your own visits,
+crawlers, link previews and scripts don't count. [Analytics](/core-concepts/analytics) breaks the
+views down by day, referrer, country and device.

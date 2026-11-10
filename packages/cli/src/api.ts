@@ -24,6 +24,8 @@ export class Api {
         headers: {
           Authorization: `Bearer ${this.config.token}`,
           Accept: "application/json",
+          // Lets the server record that a paste came from the CLI.
+          "X-Sniptide-Client": "cli",
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
@@ -59,6 +61,12 @@ export class Api {
       throw new CliError(
         "Sniptide refused the size: the paste or your account's storage is over its limit.",
         "TOO_LARGE",
+        1,
+      )
+    if (response.status === 412)
+      throw new CliError(
+        "The env group changed since this file was pulled. Pull it again with --force, or push with --force to replace it.",
+        "CONFLICT",
         1,
       )
     if (!response.ok) {

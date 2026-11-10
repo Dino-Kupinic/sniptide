@@ -1,70 +1,102 @@
 ---
-title: Your first paste
-description: From sign-up to a shared paste in a collection, step by step.
+title: Make your first paste
+description: Create a Sniptide account, save a paste, file it in a collection and share its link, with a check after each step.
 ---
 
-This walkthrough goes from a new account to code you have filed in a collection and shared. On a
-self-hosted instance, open your own address instead of app.sniptide.com; everything else is the
-same.
+This guide takes you from a new account to a paste that is filed in a collection and shared
+through a link. It takes about five minutes.
+
+<FirstPasteVisual />
+
+## Before you begin
+
+- Open the hosted app at `app.sniptide.com`, or your own instance's address if you
+  [run Sniptide yourself](/getting-started/self-hosted). The steps are the same on both.
+- Have an email address, or a GitHub or Google account if the instance offers those sign-ins.
 
 <Steps>
 <Step>
 
 ### Create an account
 
-Open the app and choose **Create account**. You pick a username (3 to 30 lowercase letters, digits,
-hyphens or underscores), enter an email and set a password of at least 8 characters. If the
-instance has GitHub or Google sign-in turned on you can use those instead.
+Open the app and select **Create account**. Choose a username of 3 to 30 lowercase letters,
+digits, hyphens or underscores, enter your email and set a password of at least 8 characters.
+GitHub and Google sign-in appear when the instance has them turned on. An account created through
+GitHub gets your GitHub login as its username, and one created through Google gets a username
+from your name, with a number added when it's taken. Change it under **Settings** > **General**.
 
-Some instances close or limit sign-up: an invite-only instance only accepts the emails its
-administrator allowed, and a closed one has no sign-up at all. The sign-up page says which.
+An instance can limit sign-up. On an invite-only instance only the email addresses the
+administrator allowed can join, and a closed instance has no sign-up form. The sign-up page tells
+you which applies.
 
-</Step>
-<Step>
-
-### Make a paste
-
-Choose **New paste** in the sidebar, or press `N` anywhere in the app. Give it a title, add one or
-more files (a paste holds up to 10) and type or paste your code. File names matter: the language,
-and so the syntax highlighting, comes from the extension.
-
-Below the editor, **Visibility & expiry** has the settings that decide who can open the paste and
-for how long. A new paste starts as **Unlisted** and expires after **1 week**; you can change those
-defaults under Settings, and change them again per paste. [Sharing](/core-concepts/sharing)
-explains every option.
-
-Press `Ctrl+Enter` (`⌘ Enter` on a Mac) to create the paste.
+After sign-up the app opens a short welcome setup. It asks how you found Sniptide and what you'll
+use it for, then offers to [connect a coding agent](/mcp). Select **Skip setup** to go straight to
+the [dashboard](/getting-started/dashboard), which keeps offering the agent setup until an agent
+connects or you remove that widget.
 
 </Step>
 <Step>
 
-### Create a collection and file the paste
+### Create a paste
 
-Collections are your own folders for pastes. Choose **New collection** in the sidebar, give it a
-name, and create it. Then open the paste's **⋯** menu and choose **Add to collection**, or pick the
-collection in the paste's **Collection** field.
+Select **New paste** in the sidebar, or press <Kbd>N</Kbd> anywhere in the app. Type or paste your code.
+Sniptide suggests a title and a file name from the code, and you can change both. A paste holds
+up to 10 files. Select **Add file** for another one.
 
-The collection appears in the sidebar with its pastes. See [Collections](/core-concepts/collections).
+The settings beside the editor decide who can open the paste and for how long. A new paste starts
+as **Unlisted** and expires after **1 week** until you change your defaults in **Settings**. If
+the code looks like it contains a secret, such as an API key or `.env` lines, the editor switches
+the paste to **Private** and shows a warning. [Sharing](/core-concepts/sharing) explains every
+option.
+
+Press <Kbd>Ctrl+Enter</Kbd> (<Kbd>⌘ Enter</Kbd> on a Mac) to create the paste.
+
+The paste opens on its own page, and its link appears in the address bar as
+`<domain>/<link>`, for example `app.sniptide.com/k3j9xq2m`. The eight random characters differ for
+every paste.
 
 </Step>
 <Step>
 
-### Share it
+### File it in a collection
 
-Open the paste and choose **Share**. **Copy link** gives you the paste's address
-(`<domain>/<link>`), which anyone can open while the paste is public or unlisted. To share with
-specific people instead, set the paste to **Private** and **Invite** them by email or username:
-they get it under **Shared with me**, with view or edit access, and everyone else gets a 404.
+A collection groups your pastes in the sidebar. Select **New collection** in the sidebar, enter a
+name and create it. Then open the paste's menu in the sidebar and select **Add to collection**,
+or pick the collection in the paste's **Collection** setting while you edit it.
 
-A collection is private to you, so you share the pastes in it, not the collection itself.
+The collection appears in the sidebar with the paste under it. See
+[Collections](/core-concepts/collections).
+
+</Step>
+<Step>
+
+### Share the link
+
+Select **Copy link** on the paste. Anyone can open the link while the paste is **Unlisted** or
+**Public**.
+
+To share with specific people instead, set the paste to **Private**, select **Share** and invite
+them by email or username. They find the paste under **Shared with me**, with view or edit
+access, and everyone else gets a "not found" page.
+
+A collection stays private to you, so you share the pastes in it, one at a time.
 
 </Step>
 </Steps>
 
-## What next
+## Check the result
 
-- A paste's share page shows how many times it was opened.
-- Press `?` to see every keyboard shortcut, or `⌘K` / `Ctrl+K` to search pastes and collections.
-- Deleted pastes stay in **Trash** for 30 days, so a slip is recoverable.
-- To capture code from a project, see the [CLI](/cli). To let an AI assistant use your pastes, see
-  the [MCP server](/mcp).
+Open the copied link in a private browser window. You see the paste's code without signing in.
+If you made the paste private, you see a "not found" page instead, which is the expected result.
+
+## Clean up
+
+To remove the test paste, open its **More actions** menu and select **Move to trash**. The link
+stops working at once, and you can restore the paste from **Trash** for 30 days.
+
+## Next steps
+
+- Press <Kbd>?</Kbd> to see every keyboard shortcut, or <Kbd>⌘K</Kbd> (<Kbd>Ctrl+K</Kbd>) to search pastes and collections.
+- [Import a GitHub gist](/getting-started/import-gist) to bring existing snippets in.
+- [Connect a coding agent](/mcp) so it can save and reuse your pastes.
+- Use the [CLI](/cli) to capture files from a project.

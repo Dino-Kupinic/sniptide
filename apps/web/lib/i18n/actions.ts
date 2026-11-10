@@ -1,7 +1,9 @@
 "use server"
 
 import { cookies } from "next/headers"
+import { getSession } from "@/lib/auth"
 import { getConfig } from "@/lib/config"
+import { changePreferences } from "@/lib/preference-store"
 import { isLocale, localeCookie } from "./config"
 
 export async function setLocale(value: unknown) {
@@ -14,4 +16,8 @@ export async function setLocale(value: unknown) {
     httpOnly: true,
     domain: getConfig().cookieDomain,
   })
+  // Signed-in people also get notification emails in this language.
+  const session = await getSession()
+  if (session)
+    await changePreferences(session.user.id, (current) => ({ ...current, locale: value }))
 }

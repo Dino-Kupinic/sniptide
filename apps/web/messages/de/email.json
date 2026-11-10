@@ -1,0 +1,70 @@
+{
+  "Email": {
+    "logoAlt": "Sniptide",
+    "buttonFallback": "Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:",
+    "accountReason": "Wir haben diese E-Mail an {email} gesendet, weil eine Anfrage zu deinem Sniptide-Konto gestellt wurde.",
+    "sentBy": "Gesendet von {name}.",
+    "sentByAddress": "Gesendet von {name}, {address}.",
+    "verify": {
+      "subject": "Bestätige deine E-Mail-Adresse für Sniptide",
+      "preview": "Bestätige diese Adresse, um E-Mail-Benachrichtigungen einzuschalten. Der Link gilt eine Stunde.",
+      "heading": "Bestätige deine E-Mail-Adresse",
+      "body": "Bestätige, dass <b>{email}</b> zu deinem Sniptide-Konto gehört.",
+      "next": "Danach kannst du in den Einstellungen wählen, welche Ereignisse dich auch per E-Mail erreichen.",
+      "action": "E-Mail-Adresse bestätigen",
+      "note": "Wenn du diese E-Mail nicht angefordert hast, kannst du sie ignorieren. Der Link läuft nach einer Stunde ab."
+    },
+    "change": {
+      "subject": "Bestätige die Änderung deiner E-Mail-Adresse bei Sniptide",
+      "preview": "Nach deiner Zustimmung senden wir einen Bestätigungslink an {newEmail}.",
+      "heading": "Bestätige die Änderung deiner E-Mail-Adresse",
+      "body": "Jemand möchte die E-Mail-Adresse deines Sniptide-Kontos von <b>{email}</b> zu <b>{newEmail}</b> ändern.",
+      "action": "Änderung bestätigen",
+      "after": "Nach deiner Zustimmung senden wir einen Bestätigungslink an die neue Adresse. Die Änderung ist abgeschlossen, sobald dieser Link geöffnet wird.",
+      "note": "Wenn du das nicht angefordert hast, ignoriere diese E-Mail und ändere dein Passwort. Der Link läuft nach einer Stunde ab."
+    },
+    "reset": {
+      "subject": "Setze dein Sniptide-Passwort zurück",
+      "preview": "Der Link funktioniert einmal und gilt eine Stunde.",
+      "heading": "Setze dein Passwort zurück",
+      "body": "Mit diesem Link wählst du ein neues Passwort für dein Sniptide-Konto.",
+      "action": "Neues Passwort wählen",
+      "after": "Der Link funktioniert einmal und gilt eine Stunde. Wenn du dein Passwort änderst, wirst du auf allen Geräten abgemeldet.",
+      "note": "Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren. Dein Passwort bleibt unverändert."
+    },
+    "notification": {
+      "privacy": "Damit deine Snippets privat bleiben, enthält diese E-Mail weder ihre Titel noch ihre Links oder Inhalte.",
+      "reason": "Du erhältst diese E-Mail an {email}, weil du in deinen Benachrichtigungseinstellungen E-Mails für {event} eingeschaltet hast.",
+      "settings": "Benachrichtigungseinstellungen",
+      "unsubscribe": "Diese E-Mails abbestellen",
+      "shared": {
+        "subject": "Ein Snippet wurde mit dir geteilt",
+        "preview": "Melde dich an, um zu sehen, wer es geteilt hat, und es zu öffnen.",
+        "body": "Jemand hat ein Snippet mit deinem Sniptide-Konto geteilt. Unter Mit mir geteilt findest du es zusammen mit der Person, die es geteilt hat.",
+        "action": "Mit mir geteilt öffnen",
+        "event": "geteilte Snippets"
+      },
+      "burned": {
+        "subject": "Dein Snippet zum einmaligen Lesen wurde gelesen",
+        "preview": "Es liegt jetzt im Papierkorb, wo du es 30 Tage lang wiederherstellen kannst.",
+        "body": "Eines deiner Snippets mit „Nach dem Lesen löschen“ wurde geöffnet, deshalb funktioniert sein Link nicht mehr. Das Snippet liegt im Papierkorb, und du kannst es dort 30 Tage lang wiederherstellen.",
+        "action": "Papierkorb öffnen",
+        "event": "Snippets mit „Nach dem Lesen löschen“"
+      },
+      "expiring": {
+        "subject": "Dein Snippet läuft bald ab",
+        "preview": "Ändere vorher das Ablaufdatum, damit der Link weiter funktioniert.",
+        "body": "Eines deiner Snippets läuft innerhalb von 24 Stunden ab. Damit sein Link weiter funktioniert, öffne es und ändere das Ablaufdatum.",
+        "action": "Meine Snippets ansehen",
+        "event": "ablaufende Snippets"
+      },
+      "views": {
+        "subject": "Dein Snippet hat einen neuen Meilenstein bei den Aufrufen erreicht",
+        "preview": "Unter Statistiken siehst du, welches Snippet es war und woher die Aufrufe kamen.",
+        "body": "Eines deiner Snippets hat einen neuen Meilenstein bei den Aufrufen erreicht. Unter Statistiken siehst du, welches Snippet es war, wie sich die Aufrufe entwickelt haben und woher sie kamen.",
+        "action": "Statistiken öffnen",
+        "event": "Meilensteine bei Aufrufen"
+      }
+    }
+  }
+}

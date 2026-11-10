@@ -4,10 +4,11 @@ import * as schema from "@workspace/db/schema"
 import { type BetterAuthOptions, type BetterAuthPlugin, betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { username } from "better-auth/plugins/username"
-import { assertAllowed, assertSignUpOpen, parseAllowlist } from "./allowlist"
+import { assertAllowed, assertSignUpOpen, parseAllowlist, type SignUpMode } from "./allowlist"
 import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_PATHS } from "./demo"
+import { generateUsername } from "./generate-username"
 import { boundUserFields } from "./user-fields"
-import { USERNAME_PATTERN } from "./username"
+import { isValidUsername } from "./username"
 
 export interface OAuthCredentials {
   clientId: string
@@ -30,9 +31,9 @@ export interface AuthConfig {
   ipAddressHeaders?: string[]
   // Better Auth turns its rate limits on in production only unless told otherwise.
   rateLimitEnabled?: boolean
-  // False closes sign-up for everyone, whatever allowedEmails says. Existing accounts keep
-  // signing in. Defaults to open.
-  allowSignUp?: boolean
+  // False closes sign-up for everyone, whatever allowedEmails says, and "first" closes it once
+  // one account exists. Existing accounts keep signing in. Defaults to open.
+  allowSignUp?: SignUpMode
   // Comma-separated emails that may create an account. Unset or empty leaves sign-up open.
   allowedEmails?: string
   // True on a public demo instance (DEMO_MODE): everyone shares one guest account, so the calls
@@ -78,6 +79,7 @@ export function createAuth({
   plugins = [],
 }: AuthConfig) {
   const allowlist = parseAllowlist(allowedEmails)
+  const hasAccounts = async () => Boolean(await db.query.user.findFirst({ columns: { id: true } }))
 
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
@@ -139,7 +141,7 @@ export function createAuth({
         if (demo && DEMO_LOCKED_PATHS.has(ctx.path))
           throw new APIError("FORBIDDEN", { message: DEMO_LOCKED_MESSAGE })
         if (ctx.path === "/sign-up/email") {
-          assertSignUpOpen(allowSignUp)
+          await assertSignUpOpen(allowSignUp, hasAccounts)
           assertAllowed(allowlist, ctx.body?.email)
           if (allowlist && !emailVerification?.sendVerificationEmail)
             throw new APIError("FORBIDDEN", {
@@ -154,7 +156,7 @@ export function createAuth({
         // Covers email sign-up and the first GitHub or Google sign-in alike.
         create: {
           before: async (user) => {
-            assertSignUpOpen(allowSignUp)
+            await assertSignUpOpen(allowSignUp, hasAccounts)
             assertAllowed(allowlist, user.email)
             const pendingInvitation = Boolean(allowlist && user.emailVerified !== true)
             if (pendingInvitation && !emailVerification?.sendVerificationEmail)
@@ -162,7 +164,19 @@ export function createAuth({
                 code: "EMAIL_VERIFICATION_UNAVAILABLE",
                 message: "Invited accounts need email verification. Contact the administrator.",
               })
-            return { data: { ...boundUserFields(user, "create"), pendingInvitation } }
+            // Every account gets a username, so its public profile has an address. GitHub sign-ups
+            // arrive with one picked from the login (see socialProviders below); Google sign-ups
+            // and accounts created without one get one from their display name.
+            const username =
+              typeof user.username === "string" && user.username
+                ? {}
+                : await generateUsername(db, [user.name]).then((value) => ({
+                    username: value,
+                    displayUsername: value,
+                  }))
+            return {
+              data: { ...boundUserFields(user, "create"), ...username, pendingInvitation },
+            }
           },
         },
         update: {
@@ -194,14 +208,25 @@ export function createAuth({
       },
     },
     socialProviders: {
-      ...(github ? { github } : {}),
+      ...(github
+        ? {
+            github: {
+              ...github,
+              // Better Auth applies this to the new account only; later sign-ins leave the
+              // username alone, so a rename in Settings sticks.
+              mapProfileToUser: async (profile) => ({
+                username: await generateUsername(db, [profile.login, profile.name]),
+              }),
+            },
+          }
+        : {}),
       ...(google ? { google } : {}),
     },
     plugins: [
       username({
         minUsernameLength: 3,
         maxUsernameLength: 30,
-        usernameValidator: (value) => USERNAME_PATTERN.test(value),
+        usernameValidator: isValidUsername,
       }),
       ...plugins,
     ],

@@ -51,7 +51,14 @@ and open PRs.
 ## Pull requests
 
 - Keep a PR to one change, and say in the description what it does and why.
-- Run the checks from the development guide before pushing; CI runs the same ones.
+- Update the documentation in the same PR when the change affects readers. See
+  [Update the documentation](docs/development.md#update-the-documentation).
+- Run `bun run verify` and any focused checks from the development guide before pushing. CI runs
+  the same ones.
+- Fill in every section of the template. Screenshots shows the change before and after, with a
+  recording when it is interactive, as [Show the change](docs/development.md#show-the-change)
+  describes. Verification includes checks you couldn't run.
+- Open the pull request ready for review. Agents never open drafts.
 
 ## Releases
 
@@ -67,8 +74,29 @@ If another PR merges before a release starts, the older run is skipped; the next
 at the tip of `main` releases the accumulated changes together. Direct pushes do not start
 a release. Re-running a successful release does not create another version.
 
-The release notes of each GitHub release are the changelog: they are generated from the commit
-titles, so a clear title is the changelog entry. There is no `CHANGELOG.md`. A change that needs
+The release notes of each GitHub release are the changelog. semantic-release writes the commit
+list, so a clear title is the technical entry. The **Release notes** workflow
+(`.github/workflows/release-notes.yml`) then sends the merged pull requests to a model and puts a
+short post for readers above that list, which collapses under **Technical changes**. The PR
+description is the main source, so describe what changes for people who use Sniptide. The model
+fills fixed fields and the script lays them out the same way every time: a title that names the
+change, one short paragraph, a **What's new** or **What's fixed** list, and a **Self-hosting** list
+when operators have something to do. A maintenance release gets one sentence. The post sits
+between `sniptide-notes` markers that [sniptide.com/changelog](https://sniptide.com/changelog)
+reads, with `kind` set to `feature`, `fix` or `internal`.
+
+Only a featured release appears in the announcement bar on sniptide.com. Add the `featured` label
+to a feature PR before it merges, or run **Release notes** manually with the release tag and
+**featured** checked, which marks an existing post without rewriting it. The marker then reads
+`kind="feature" featured="true"`, and a rerun keeps it. To correct a post, edit the release on
+GitHub and keep the markers. To rewrite one release, or every release with the tag `all`, run
+**Release notes** manually.
+
+The workflow needs an `ANTHROPIC_API_KEY` repository secret, which uses `claude-opus-5-5` at medium
+effort, or an `OPENAI_API_KEY` secret, which uses `gpt-6-luna` at medium reasoning effort.
+Anthropic wins when both are set, and a `RELEASE_NOTES_MODEL` repository variable picks another
+model. Without either key the release keeps the commit list alone. There is
+no `CHANGELOG.md`. A change that needs
 something from people who run Sniptide (a new required setting, a manual step, a schema change the
 previous version can't run against) is marked breaking, and its `BREAKING CHANGE:` paragraph says
 what to do. Operators read the resulting policy in the docs, under Self-hosting, Versions and

@@ -5,7 +5,7 @@ import type { Locale } from "@/lib/i18n/config"
 import { coreTranslator } from "@/lib/i18n/core"
 import { DAY, HOUR } from "@/lib/time"
 import { starredSlugs, TRASH_DAYS } from "./store"
-import type { Access, PasteSummary, Person, Share } from "./types"
+import type { Access, PasteCreator, PasteSummary, Person, Share } from "./types"
 
 // Serializable rows for the paste tables. Labels are computed here on the server so the client
 // tables receive only the fields they render.
@@ -27,6 +27,8 @@ export interface PasteRow {
   starred: boolean
   owner: Person | null
   canEdit: boolean
+  // Set when an agent, the CLI or the API created it, so the tables can show the agent's logo.
+  createdBy: PasteCreator | null
 }
 
 export interface SharedRow extends PasteRow {
@@ -51,6 +53,7 @@ export interface TrashRow {
 
 function expiresLabel(paste: PasteSummary, now: number, locale: Locale) {
   const t = coreTranslator(locale)
+  if (paste.expiresAt !== null && paste.expiresAt <= now) return t("expired")
   if (paste.burnAfterRead) return t("afterView")
   if (!paste.expiresAt) return t("never")
   return timeUntil(paste.expiresAt, now, locale)
@@ -71,7 +74,9 @@ function toRow(
     burnAfterRead: paste.burnAfterRead,
     views: paste.views,
     expiresLabel: expiresLabel(paste, now, locale),
-    expiresSoon: Boolean(paste.expiresAt && paste.expiresAt - now < 48 * HOUR),
+    expiresSoon: Boolean(
+      paste.expiresAt && paste.expiresAt > now && paste.expiresAt - now < 48 * HOUR,
+    ),
     expiresAt: paste.expiresAt,
     updatedAt: paste.updatedAt,
     updatedLabel: timeAgo(paste.updatedAt, now, locale),
@@ -80,6 +85,7 @@ function toRow(
     starred: starred.has(paste.slug),
     owner: paste.owner,
     canEdit,
+    createdBy: paste.createdBy,
   } satisfies PasteRow
 }
 
@@ -118,7 +124,11 @@ export function toTrashRow(paste: PasteSummary, locale: Locale = "en"): TrashRow
     title: paste.title,
     language: paste.language,
     deletedAt,
-    deletedLabel: deletedToday ? t("today") : formatDate(deletedAt, locale),
+    deletedLabel: paste.burnedAt
+      ? t("burnedOn", { date: deletedToday ? t("today") : formatDate(deletedAt, locale) })
+      : deletedToday
+        ? t("today")
+        : formatDate(deletedAt, locale),
     goneLabel: daysLeft <= 1 ? t("tomorrow") : timeUntil(goneAt, now, locale),
     remaining: Math.min(1, Math.max(0, (goneAt - now) / (TRASH_DAYS * DAY))),
     goneSoon: daysLeft <= 1,

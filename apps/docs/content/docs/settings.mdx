@@ -1,29 +1,92 @@
 ---
 title: Account settings
-description: Manage sign-in methods, devices, notifications, and your preferred language.
+description: Change your Sniptide profile, sign-in methods, paste defaults, notifications, language, API tokens and see your usage.
 ---
 
-## Manage your account
+Open **Settings** from the account menu, or press <Kbd>⌘,</Kbd> (<Kbd>Ctrl+,</Kbd>). On a phone, **Settings** opens
+a list of the sections below.
 
-**Settings > Account** lets you change your email and password, add a password to a GitHub or
-Google account, connect or disconnect GitHub and Google, see your signed-in devices and sign them
-out, and delete your account. With SMTP, a verified email changes only after the old address
-approves it and the new address is verified. Without SMTP no address is ever verified, so a change
-applies at once after the current password is confirmed. Reset links work once, for one hour, at
-most three per account per hour, and using one signs the account out everywhere.
+| Section | What you change there |
+| --- | --- |
+| **General** | Profile, language and editor |
+| **Account** | Email, password, connected GitHub and Google accounts, signed-in devices, account deletion |
+| **Paste defaults** | Visibility, expiry and burn after read for new pastes |
+| **Notifications** | In-app and email notifications per event |
+| **API tokens** | Tokens for the CLI, SDKs and agents, and agent connections |
+| **Usage** | Storage, paste count and API requests |
 
-## Set notification preferences
+## Edit your profile and editor
 
-**Settings > Notifications** controls in-app and email delivery independently for shared pastes, burns,
-expiry warnings and view milestones. Existing accounts keep in-app notifications on and email off.
-Verify your email address from this tab before enabling email delivery. Verification sends are
-limited to three per account per hour. Password sign-in still works without verified email or SMTP.
+**General** holds your display name, username and avatar, which appear on your public pastes,
+share pages and your [public profile](/core-concepts/sharing#your-public-profile) at `/@username`. It also holds the editor's look: indentation (2 spaces, 4 spaces or a tab), line
+numbers and **Secret detection**, which warns when code looks like a key or token.
 
-Email delivery requires the administrator to [configure SMTP](/self-hosting/configuration#email).
+The theme follows your system until you change it, and the choice is saved on this device.
 
 ## Choose a language
 
-The app supports English, German, Spanish, Simplified Chinese, and Japanese. It uses your browser's
-preferred language on the first visit. Choose a language on the sign-in page, in the account menu,
-or in Settings to save a preference for that browser. Public share pages also have a language
-selector. Paste contents, filenames, and programming language names keep their original text.
+The app is available in English, German, Spanish, Japanese and Simplified Chinese. On your first
+visit it uses your browser's preferred language. Choose another one in **General**, on the
+sign-in page or in the account menu. The choice is saved for this browser. Share pages have their
+own language selector. Paste contents, file names and programming language names stay as they
+are.
+
+Emails from Sniptide use your language too. Notification emails use the language you last chose
+while signed in, or the one you were using when you turned on an email.
+
+## Manage sign-in and devices
+
+**Account** lets you:
+
+- Change your email. If the instance sends email and your address is verified, the change takes
+  effect after the old address approves it and you verify the new one. Without email delivery, it
+  takes effect at once after you confirm your current password.
+- Change your password, or add one to an account that signs in with GitHub or Google. Select
+  **Sign out on my other devices** to end every other session at the same time.
+- Connect or disconnect GitHub and Google sign-in.
+- See your signed-in devices and sign out any you don't recognize.
+- Delete your account. This deletes your sessions and pastes for good, and their share links stop
+  working.
+
+If you forget your password, select **Forgot password?** on the sign-in page. A reset link works once,
+for one hour, and an account can request three an hour. Using one signs the account out
+everywhere. Password resets need the instance to send email. Without it, the page asks you to
+contact the administrator.
+
+## Set paste defaults
+
+**Paste defaults** decides how **New paste** and gist imports start. The defaults
+are **Unlisted**, **1 week** and burn after read off. You can still change each paste. See
+[Sharing](/core-concepts/sharing) for what each option does.
+
+## Choose notifications
+
+**Notifications** turns in-app and email delivery on or off for each event:
+
+| Event | When it fires |
+| --- | --- |
+| **Shared with you** | Someone invites you to a paste. |
+| **Burn after read** | Your paste is read and moved to the trash. |
+| **Expiring soon** | Your paste will expire within a day. |
+| **View milestones** | Your paste reaches a view milestone. |
+
+In-app notifications are on and email is off by default. To turn on email, the instance must send
+email and you must verify your address: select **Send verification email** in this section. You
+can request three verification emails an hour. Each notification email has a link that stops
+emails for that event only.
+
+## Create API tokens
+
+**API tokens** creates the tokens that the CLI, the SDKs and agents use, and lists agents you
+connected with OAuth. See [API tokens](/api-tokens) and [OAuth for agents](/oauth).
+
+## Check your usage
+
+**Usage** shows your storage and paste count against the account limits, with a warning when you
+approach them. Small hatched progress bars show the share of each limit in use. Both include pastes in the trash. It also charts the requests your API tokens made
+each day over the last 30 days, in UTC. The token API returns the same data at
+[`GET /api/v1/usage`](/api-tokens#endpoints).
+
+Hover a request bar to preview its date and count, or select it to keep the readout visible.
+Use the arrow keys to move between bars, **Home** and **End** to reach the ends, and **Escape**
+to clear the selection. **Daily values** opens the full table.

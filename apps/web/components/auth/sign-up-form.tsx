@@ -4,7 +4,7 @@ import { Button } from "@sniptide/ui/components/button"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { cn } from "@sniptide/ui/lib/utils"
-import { USERNAME_PATTERN } from "@workspace/auth/username"
+import { isValidUsername, USERNAME_PATTERN } from "@workspace/auth/username"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -26,6 +26,7 @@ function useUsernameAvailability(username: string) {
   React.useEffect(() => {
     if (!username) return setStatus("idle")
     if (!USERNAME_PATTERN.test(username)) return setStatus("invalid")
+    if (!isValidUsername(username)) return setStatus("taken")
 
     setStatus("checking")
     let cancelled = false

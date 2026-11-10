@@ -34,8 +34,6 @@ export function ShareAvatar({
   return (
     <PersonAvatar
       person={{
-        name: person.name,
-        username: person.handle,
         initials: person.initials,
         tone: toneFor(person.id),
       }}
@@ -51,6 +49,7 @@ export function AccessMenu({
   onRemove,
   removeLabel,
   disabled,
+  preventChange,
   className,
   label,
 }: {
@@ -59,6 +58,7 @@ export function AccessMenu({
   onRemove?: () => void
   removeLabel?: string
   disabled?: boolean
+  preventChange?: boolean
   className?: string
   label: string
 }) {
@@ -78,7 +78,7 @@ export function AccessMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44 overflow-hidden rounded-lg">
         {(["view", "edit"] as const).map((access) => (
-          <DropdownMenuItem key={access} onClick={() => onChange(access)}>
+          <DropdownMenuItem key={access} disabled={preventChange} onClick={() => onChange(access)}>
             {t("accessLevel", { value: access })}
             {access === value ? <CheckIcon className="ml-auto text-link" /> : null}
           </DropdownMenuItem>
@@ -104,6 +104,7 @@ export function InviteField({
   error,
   pending,
   compact,
+  disabled = false,
 }: {
   onInvite: (identifier: string, access: Access) => Promise<boolean>
   // Shown as a button; the New paste menu adds on Enter instead.
@@ -111,6 +112,7 @@ export function InviteField({
   error: string | null
   pending: boolean
   compact?: boolean
+  disabled?: boolean
 }) {
   const t = useTranslations("Paste")
   const [identifier, setIdentifier] = React.useState("")
@@ -118,7 +120,7 @@ export function InviteField({
   const errorId = React.useId()
 
   async function submit() {
-    if (!identifier.trim() || pending) return
+    if (!identifier.trim() || pending || disabled) return
     if (await onInvite(identifier, access)) setIdentifier("")
   }
 
@@ -136,6 +138,7 @@ export function InviteField({
           {compact ? null : <UserIcon className="size-4 shrink-0 text-muted-foreground" />}
           <span className="sr-only">{t("emailOrUsername")}</span>
           <input
+            disabled={disabled}
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             onKeyDown={(event) => {
@@ -157,6 +160,7 @@ export function InviteField({
         </label>
         <AccessMenu
           value={access}
+          disabled={disabled}
           onChange={setAccess}
           label={t("accessForThePersonYouInvite")}
           className={cn("rounded-lg border border-input px-3", compact ? "h-9" : "h-10 lg:h-9")}
@@ -166,7 +170,7 @@ export function InviteField({
             type="button"
             size="lg"
             className={cn("shrink-0 max-lg:flex-1", !compact && "max-lg:h-[38px]")}
-            disabled={!identifier.trim()}
+            disabled={disabled || !identifier.trim()}
             loading={pending}
             onClick={() => void submit()}
           >

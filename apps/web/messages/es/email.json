@@ -1,0 +1,70 @@
+{
+  "Email": {
+    "logoAlt": "Sniptide",
+    "buttonFallback": "Si el botón no funciona, copia este enlace en tu navegador:",
+    "accountReason": "Te enviamos este correo a {email} por una solicitud en tu cuenta de Sniptide.",
+    "sentBy": "Enviado por {name}.",
+    "sentByAddress": "Enviado por {name}, {address}.",
+    "verify": {
+      "subject": "Verifica tu correo de Sniptide",
+      "preview": "Confirma esta dirección para activar las notificaciones por correo. El enlace funciona durante una hora.",
+      "heading": "Verifica tu correo",
+      "body": "Confirma que <b>{email}</b> pertenece a tu cuenta de Sniptide.",
+      "next": "Cuando esté verificado, podrás elegir en Ajustes qué eventos te llegan también por correo.",
+      "action": "Verificar correo",
+      "note": "Si no pediste este correo, puedes ignorarlo. El enlace caduca en una hora."
+    },
+    "change": {
+      "subject": "Aprueba el cambio de correo de Sniptide",
+      "preview": "Cuando lo apruebes, enviaremos un enlace de verificación a {newEmail}.",
+      "heading": "Aprueba el cambio de correo",
+      "body": "Alguien pidió cambiar el correo de tu cuenta de Sniptide de <b>{email}</b> a <b>{newEmail}</b>.",
+      "action": "Aprobar el cambio",
+      "after": "Cuando lo apruebes, enviaremos un enlace de verificación a la nueva dirección. El cambio se completa cuando se abra ese enlace.",
+      "note": "Si no lo pediste tú, ignora este correo y cambia tu contraseña. El enlace caduca en una hora."
+    },
+    "reset": {
+      "subject": "Restablece tu contraseña de Sniptide",
+      "preview": "El enlace funciona una sola vez, durante una hora.",
+      "heading": "Restablece tu contraseña",
+      "body": "Usa este enlace para elegir una nueva contraseña para tu cuenta de Sniptide.",
+      "action": "Elegir una nueva contraseña",
+      "after": "El enlace funciona una sola vez, durante una hora. Al cambiar la contraseña se cierra tu sesión en todos los dispositivos.",
+      "note": "Si no lo pediste tú, puedes ignorar este correo. Tu contraseña no cambia."
+    },
+    "notification": {
+      "privacy": "Para que tus fragmentos sigan siendo privados, este correo no incluye sus títulos, enlaces ni contenido.",
+      "reason": "Recibes este correo en {email} porque activaste los correos de {event} en tus ajustes de notificaciones.",
+      "settings": "Ajustes de notificaciones",
+      "unsubscribe": "Dejar de recibir estos correos",
+      "shared": {
+        "subject": "Alguien compartió un fragmento contigo",
+        "preview": "Inicia sesión para ver quién lo compartió y abrirlo.",
+        "body": "Alguien compartió un fragmento con tu cuenta de Sniptide. Compartidos conmigo lo muestra junto con la persona que lo compartió.",
+        "action": "Abrir Compartidos conmigo",
+        "event": "fragmentos compartidos"
+      },
+      "burned": {
+        "subject": "Se leyó tu fragmento de lectura única",
+        "preview": "Se movió a la papelera, donde puedes restaurarlo durante 30 días.",
+        "body": "Se abrió uno de tus fragmentos con «Eliminar después de leer», así que su enlace dejó de funcionar. El fragmento está en la papelera y puedes restaurarlo desde allí durante 30 días.",
+        "action": "Abrir la papelera",
+        "event": "fragmentos con «Eliminar después de leer»"
+      },
+      "expiring": {
+        "subject": "Tu fragmento caduca pronto",
+        "preview": "Cambia su caducidad antes para que el enlace siga funcionando.",
+        "body": "Uno de tus fragmentos caduca en menos de 24 horas. Para que su enlace siga funcionando, ábrelo y cambia cuándo caduca.",
+        "action": "Revisar mis fragmentos",
+        "event": "fragmentos que caducan"
+      },
+      "views": {
+        "subject": "Tu fragmento alcanzó un nuevo hito de visitas",
+        "preview": "Estadísticas muestra qué fragmento fue y de dónde llegaron las visitas.",
+        "body": "Uno de tus fragmentos alcanzó un nuevo hito de visitas. Estadísticas muestra qué fragmento fue, cómo evolucionaron sus visitas y de dónde llegaron.",
+        "action": "Abrir Estadísticas",
+        "event": "hitos de visitas"
+      }
+    }
+  }
+}

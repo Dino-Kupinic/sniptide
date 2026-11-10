@@ -1,5 +1,7 @@
 // Shapes the paste screens read, built from the Postgres tables in ./store.ts.
 
+import type { AgentClient } from "@/lib/onboarding"
+
 // The values themselves, for the schemas that check input. The database's visibility enum
 // (packages/db/src/schema/pastes.ts) holds the same three.
 export const VISIBILITIES = ["public", "unlisted", "private"] as const
@@ -17,7 +19,11 @@ export interface PasteFile {
 }
 
 export interface Person {
+  // What the screens show after "@": the chosen spelling of the handle, or the name when the
+  // account has none.
   username: string
+  // The normalized handle behind the profile link (/@<handle>), or null when there is no profile.
+  handle: string | null
   name: string
   initials: string
   // Avatar fill from the Shared with me design: primary, ink or muted.
@@ -33,6 +39,11 @@ export interface Revision {
 }
 
 // What the lists read: a paste without its file contents or revision history.
+export interface PasteCreator {
+  via: "api" | "mcp" | "cli"
+  agent: AgentClient | null
+}
+
 export interface PasteSummary {
   slug: string
   title: string
@@ -54,12 +65,16 @@ export interface PasteSummary {
   uniqueViews: number
   // Reads with an API token (MCP or the CLI), counted apart from views.
   agentReads: number
+  // How it was created when not in the web editor, and by which connected agent if one made it.
+  createdBy: PasteCreator | null
   // Oldest first, today last.
   viewsByDay: number[]
   createdAt: number
   updatedAt: number
   expiresAt: number | null
   deletedAt: number | null
+  // When its one read burned it. Only set while a burned paste is in the trash.
+  burnedAt: number | null
 }
 
 // One paste in full, for the screens that show or edit its content.
@@ -131,6 +146,7 @@ export interface NavCounts {
 
 // A paste as the sidebar lists it: just enough for its row and its ⋯ menu.
 export interface SidebarPaste {
+  expiresAt: number | null
   slug: string
   title: string
   // The viewer's own paste, so it can be renamed, filed and deleted from the sidebar.

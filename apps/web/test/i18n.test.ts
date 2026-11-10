@@ -126,10 +126,12 @@ test("all five catalogs have the same messages and valid ICU arguments", async (
   expect(files.sort()).toEqual([
     "auth.json",
     "core.json",
+    "email.json",
     "errors.json",
     "legal.json",
     "not-found.json",
     "oauth.json",
+    "onboarding.json",
     "paste.json",
     "settings.json",
     "workspace.json",

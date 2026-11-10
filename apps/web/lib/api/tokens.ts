@@ -1,10 +1,11 @@
 import "server-only"
 
 import { createHash, randomBytes } from "node:crypto"
-import { apiToken } from "@workspace/db/schema"
+import { apiToken, oauthClient, user } from "@workspace/db/schema"
 import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
+import { type AgentClient, agentClientFromName } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
 import { SCOPES, type Scope } from "./scopes"
 
@@ -42,6 +43,8 @@ export interface TokenOwner {
   tokenId: string
   userId: string
   scopes: Scope[]
+  // The agent client behind an OAuth connection, or null for a personal token.
+  agent?: AgentClient | null
 }
 
 export const tokenInputSchema = z.object({
@@ -87,6 +90,8 @@ export async function createToken(owner: string, input: TokenInput): Promise<Cre
   const token = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`
   const now = Date.now()
   return getDb().transaction(async (tx) => {
+    // Serializes token creation per account, so two at once can't both pass the limit.
+    await tx.select({ id: user.id }).from(user).where(eq(user.id, owner)).for("update")
     const [count] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(apiToken)
@@ -147,8 +152,10 @@ export async function authenticate(request: Request): Promise<TokenOwner | null>
       scopes: apiToken.scopes,
       expiresAt: apiToken.expiresAt,
       lastUsedAt: apiToken.lastUsedAt,
+      client: oauthClient.name,
     })
     .from(apiToken)
+    .leftJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
     .where(eq(apiToken.hash, hashToken(match[1])))
   if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
   const now = new Date()
@@ -164,5 +171,10 @@ export async function authenticate(request: Request): Promise<TokenOwner | null>
         ),
       )
   }
-  return { tokenId: row.id, userId: row.ownerId, scopes: scopesOf(row.scopes) }
+  return {
+    tokenId: row.id,
+    userId: row.ownerId,
+    scopes: scopesOf(row.scopes),
+    agent: row.client === null ? null : agentClientFromName(row.client),
+  }
 }

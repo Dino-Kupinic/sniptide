@@ -1,32 +1,41 @@
 ---
 title: Revisions
-description: Every paste keeps a history of its edits, and you can roll back.
+description: See how a Sniptide paste changed, compare two versions line by line, and restore an earlier revision without losing the current one.
 ---
 
-When you edit a paste, Sniptide keeps a **revision**: a saved copy of its title, description and
-files. Open **Revisions** on a paste to see the history.
+When you edit a paste, Sniptide records a **revision**: a copy of its title, description and files
+at that point. Open the paste's **Revisions** row to see the history, 20 entries at a time.
 
-## How revisions are recorded
+## How edits become revisions
 
-Auto-save would fill a history with one entry per pause in typing, so edits are batched. While you
-keep editing, changes fold into the newest revision, as long as it is less than 10 minutes old and
-you haven't closed the editor with **Done**. After **Done**, or after 10 minutes, the next edit
+Auto-save would otherwise record one revision for every pause in typing, so edits are grouped.
+While you keep editing, changes fold into the newest revision as long as it is less than 10
+minutes old and you haven't selected **Done**. After **Done**, or after 10 minutes, the next edit
 starts a new revision. An edit that rewrites most of a paste always gets a revision of its own.
 
-Creating a paste and importing a gist also record a first revision.
+Creating a paste, importing a gist and saving through the API or MCP also record a revision.
 
-## Rolling back
+## Compare two versions
 
-**Restore** on a revision puts the paste's title, description and files back the way that
-revision left them. It does not touch the sharing settings, the link or the collection. The
-rollback is a revision itself ("Restored revision N"), so the version you replaced is still in the
-history and you can restore it in turn. Nothing is lost by restoring.
+Select **Compare revisions**, then choose the versions under **From** and **To**. **Current paste**
+is always available as one side. The comparison shows changes to the title and description,
+added and removed files, language changes, and the lines added and removed in each file.
 
-People you gave **Edit** access to can restore revisions too. The history is shown 20 entries at
-a time.
+Only revisions that still have a stored copy can be compared. See [What is kept](#what-is-kept).
+
+## Restore a revision
+
+1. In **Revisions**, select **Restore** on the revision you want.
+2. Confirm. The paste's title, description and files go back to how that revision left them.
+
+The restore is recorded as a revision of its own, named "Restored revision" with the number you
+restored, so the version you replaced stays in the history and you can restore it in turn. A
+restore doesn't change the link, visibility, expiry, password or collection.
+
+You and people you invited with **Can edit** access can restore revisions.
 
 ## What is kept
 
-Sniptide keeps the full copy for the **20 newest** revisions of a paste. Older ones stay in the
-history as a log entry but can no longer be restored. History from before copies were kept has
-no copy either; those entries are marked as not restorable.
+Sniptide keeps the full copy for the **20 newest** revisions of a paste. Older entries stay in the
+history as a log line but can't be compared or restored. Entries from before Sniptide stored
+copies are marked as not restorable.

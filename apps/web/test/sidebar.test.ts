@@ -92,6 +92,15 @@ describeDb("sidebar", () => {
     expect(starred).toMatchObject({ slug: "bobs", owned: false, starred: true, collection: null })
   })
 
+  test("sidebar rows keep nullable expiry deadlines for live sharing controls", async () => {
+    const expiresAt = new Date(Date.now() - 1_000)
+    await seedPaste({ slug: "expired", owner: "ada", expiresAt })
+    await seedPaste({ slug: "never", owner: "ada" })
+    const data = await sidebarData()
+    expect(data.recent.find((row) => row.slug === "expired")?.expiresAt).toBe(expiresAt.getTime())
+    expect(data.recent.find((row) => row.slug === "never")?.expiresAt).toBeNull()
+  })
+
   test("renaming changes only the title, and only for the owner", async () => {
     await seedPaste({ slug: "p1", owner: "ada" })
     const before = await pasteRow("p1")

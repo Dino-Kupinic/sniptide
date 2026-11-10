@@ -1,0 +1,58 @@
+{
+  "Onboarding": {
+    "pageTitle": "Willkommen",
+    "progress": "Schritt {current} von {total}",
+    "skipSetup": "Einrichtung überspringen",
+    "skip": "Überspringen",
+    "back": "Zurück",
+    "continue": "Weiter",
+    "saveFailed": "Das konnte nicht gespeichert werden. Versuche es erneut.",
+    "source": {
+      "title": "Wie hast du von Sniptide erfahren?",
+      "subtitle": "Deine Antwort zeigt uns, wo wir mehr Leute wie dich finden.",
+      "options": {
+        "hacker_news": "Hacker News",
+        "reddit": "Reddit",
+        "x": "X",
+        "friend": "Von einem Freund",
+        "ai_agent": "Von einem KI-Agenten",
+        "search": "Suche",
+        "other": "Anderswo"
+      }
+    },
+    "useCase": {
+      "title": "Wofür wirst du Sniptide nutzen?",
+      "subtitle": "Wähle, was am besten passt. Wir entscheiden damit, was wir als Nächstes bauen.",
+      "options": {
+        "agents": "Meinen Agenten einen Ort zum Speichern und Teilen geben",
+        "sharing": "Code und Logs mit anderen teilen",
+        "team": "Es für mein Team betreiben",
+        "exploring": "Ich schaue mich nur um"
+      }
+    },
+    "agent": {
+      "title": "Agenten verbinden",
+      "subtitle": "Dein Agent speichert Pastes und liest sie für dich wieder.",
+      "clientLabel": "Agent",
+      "clients": {
+        "claude_code": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "other": "Andere"
+      },
+      "steps": {
+        "run": "Im Terminal ausführen",
+        "authenticate": "In Claude Code <code>/mcp</code> ausführen und Authenticate wählen",
+        "addServer": "Als Remote-MCP-Server hinzufügen",
+        "addToCursor": "Zu Cursor hinzufügen",
+        "allow": "Zugriff im Browser erlauben"
+      },
+      "yourAgent": "deinen Agenten",
+      "waiting": "Warte darauf, dass sich {client} verbindet…",
+      "connected": "{client} ist verbunden und kann jetzt Pastes speichern.",
+      "connectedOther": "Dein Agent ist verbunden und kann jetzt Pastes speichern.",
+      "skipForNow": "Vorerst überspringen",
+      "finish": "Zum Dashboard"
+    }
+  }
+}

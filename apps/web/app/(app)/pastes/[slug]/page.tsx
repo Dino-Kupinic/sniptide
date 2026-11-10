@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
 import { LocalDateTime } from "@/components/local-date-time"
 import { CompareRevisions } from "@/components/paste/compare-revisions"
+import { ExpiredBadge, ExpiredNotice } from "@/components/paste/expiry-status"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
   CopyCodeButton,
@@ -30,6 +31,7 @@ import { getConfig } from "@/lib/config"
 import { formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { embedCode } from "@/lib/pastes/embed"
+import { slugFromRoute } from "@/lib/pastes/links"
 import {
   getPaste,
   getPasteMeta,
@@ -43,21 +45,25 @@ import { WEBHOOK_TARGETS } from "@/lib/pastes/webhook-url"
 import { getSiteOrigin } from "@/lib/site"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]">) {
-  const paste = await getPasteMeta((await params).slug)
+  const paste = await getPasteMeta(slugFromRoute((await params).slug))
   const t = await getTranslations("Core")
   return { title: paste ? `${paste.title} · Sniptide` : `${t("pasteNotFound")} · Sniptide` }
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/pastes/[slug]">) {
-  const { slug } = await params
-  const [t, locale] = await Promise.all([getTranslations("Core"), getLocale()])
-  const expiresLabel = (paste: Paste) =>
-    paste.expiresAt === null ? t("never") : <LocalDateTime value={paste.expiresAt} />
-  const revisionParam = Number((await searchParams).revisions)
+  const [{ slug: segment }, query] = await Promise.all([params, searchParams])
+  const slug = slugFromRoute(segment)
+  const revisionParam = Number(query.revisions)
   const revisionPage =
     Number.isSafeInteger(revisionParam) && revisionParam > 0 ? Math.min(revisionParam, 1000000) : 1
-  const paste = await getPaste(slug, revisionPage)
+  const [paste, t, locale] = await Promise.all([
+    getPaste(slug, revisionPage),
+    getTranslations("Core"),
+    getLocale(),
+  ])
   if (!paste) notFound()
+  const expiresLabel = (paste: Paste) =>
+    paste.expiresAt === null ? t("never") : <LocalDateTime value={paste.expiresAt} />
 
   const owned = !paste.owner
   const [starred, share, { origin, host }, preferences, collections, people, session, files] =
@@ -92,6 +98,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     people ? (
       <ShareDialog
         slug={slug}
+        expiresAt={paste.expiresAt}
         title={paste.title}
         url={url}
         visibility={paste.visibility}
@@ -259,7 +266,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             </Button>
           ) : null}
           {shareDialog("button")}
-          <CopyLinkButton url={url} />
+          <CopyLinkButton url={url} expiresAt={paste.expiresAt} />
         </HeaderActions>
 
         {/* Mobile header */}
@@ -279,13 +286,19 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <PasteOverflowMenu
               slug={slug}
               title={paste.title}
+              expiresAt={paste.expiresAt}
               canTrash={owned}
               canLeave={Boolean(share)}
               rawAllowed={paste.allowRaw}
               url={url}
             />
             {shareDialog("icon") ?? (
-              <ShareButton url={url} title={paste.title} className="size-10" />
+              <ShareButton
+                url={url}
+                title={paste.title}
+                expiresAt={paste.expiresAt}
+                className="size-10"
+              />
             )}
           </div>
         </div>
@@ -296,9 +309,11 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-[32px] lg:leading-[38px]">
               {paste.title}
             </h1>
+            <ExpiredBadge expiresAt={paste.expiresAt} />
             {/* The owner's Sharing row below already shows the visibility. */}
             {owned ? null : <VisibilityBadge paste={paste} />}
           </div>
+          <ExpiredNotice expiresAt={paste.expiresAt} />
           {paste.description ? (
             <p className="text-base leading-6 lg:text-sm lg:leading-5">{paste.description}</p>
           ) : null}

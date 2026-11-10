@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 import {
   bigint,
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -16,6 +17,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core"
 import { user } from "./auth"
+import { collection } from "./collections"
 
 export const moderationState = pgEnum("moderation_state", [
   "pending",
@@ -25,6 +27,10 @@ export const moderationState = pgEnum("moderation_state", [
 ])
 
 export const visibility = pgEnum("visibility", ["public", "unlisted", "private"])
+
+// Where a paste was created: the web editor, the REST API, the MCP server or the CLI. Pastes made
+// before this was recorded count as web.
+export const pasteCreatedVia = pgEnum("paste_created_via", ["web", "api", "mcp", "cli"])
 
 const time = (name: string) => timestamp(name, { withTimezone: true })
 
@@ -79,6 +85,10 @@ export const paste = pgTable(
     // Reads with a personal API token (MCP read_snippet and fetch_collection, `sniptide pull`),
     // so the owner can see which snippets their agents actually use. Views don't include these.
     agentReads: integer("agent_reads").notNull().default(0),
+    createdVia: pasteCreatedVia("created_via").notNull().default("web"),
+    // The agent client that created it through an OAuth connection (claude_code, codex, cursor or
+    // other), judged once from the client's name. Null for the web and for personal tokens.
+    createdByAgent: text("created_by_agent"),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),
     version: bigint("version", { mode: "number" })
@@ -87,8 +97,16 @@ export const paste = pgTable(
     expiresAt: time("expires_at"),
     // Set while the paste is in the trash.
     deletedAt: time("deleted_at"),
+    // Set when a burn-after-read paste was read, which also moves it to the trash. Restoring it
+    // clears both and brings it back private with burn after read off, so the read stays single.
+    burnedAt: time("burned_at"),
   },
   (table) => [
+    foreignKey({
+      name: "paste_owner_collection_fkey",
+      columns: [table.ownerId, table.collection],
+      foreignColumns: [collection.ownerId, collection.slug],
+    }),
     uniqueIndex("paste_slug_unique").on(table.slug),
     index("paste_owner_idx").on(table.ownerId, table.updatedAt),
     index("paste_collection_idx").on(table.ownerId, table.collection, table.updatedAt, table.id),
@@ -99,6 +117,9 @@ export const paste = pgTable(
       .on(table.ownerId, table.collection, table.createdAt, table.id)
       .where(sql`${table.deletedAt} IS NULL`),
     index("paste_deleted_idx").on(table.deletedAt),
+    index("paste_created_via_idx")
+      .on(table.ownerId, table.createdAt)
+      .where(sql`${table.createdVia} <> 'web'`),
     index("paste_expired_idx").on(table.expiresAt),
     index("paste_title_search_idx").using("gin", table.title.op("gin_trgm_ops")),
     index("paste_slug_search_idx").using("gin", table.slug.op("gin_trgm_ops")),

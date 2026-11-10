@@ -7,22 +7,16 @@ import { notification, paste, pasteShare, user } from "@workspace/db/schema"
 import { and, eq, isNull, sql } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { notificationEmail } from "@/lib/email/content"
+import { renderEmail } from "@/lib/email/render"
 import { createMailSender } from "@/lib/mail"
 import { parsePreferences } from "@/lib/preferences-schema"
 import { DAY } from "@/lib/time"
-import type { NotificationKind } from "./types"
 import { createUnsubscribeToken } from "./unsubscribe"
 
 const LEASE_MS = 90_000
 const MAX_ATTEMPTS = 5
 const retryDelays = [60_000, 300_000, 900_000, 3_600_000]
-
-const subjects = {
-  shared: "A paste was shared with you",
-  burned: "Your burn after read paste was read",
-  expiring: "Your paste expires soon",
-  views: "Your paste reached a view milestone",
-} satisfies Record<NotificationKind, string>
 
 async function claim(now: Date) {
   const token = randomUUID()
@@ -83,6 +77,7 @@ async function eligible(row: Claimed, now: Date) {
       ownerId: paste.ownerId,
       slug: paste.slug,
       deletedAt: paste.deletedAt,
+      burnedAt: paste.burnedAt,
       expiresAt: paste.expiresAt,
       expiryKey: sql<
         string | null
@@ -117,7 +112,7 @@ async function eligible(row: Claimed, now: Date) {
   if (current.ownerId !== row.userId) return null
   switch (row.kind) {
     case "burned":
-      return current.deletedAt ? current : null
+      return current.burnedAt ? current : null
     case "views":
       return live ? current : null
     case "expiring":
@@ -130,20 +125,8 @@ async function eligible(row: Claimed, now: Date) {
   }
 }
 
-// Names who sends the email and where, from OPERATOR_NAME and OPERATOR_ADDRESS, so every email
-// identifies its sender with a postal address next to the unsubscribe link.
-export function senderLine(operator: { name: string; address?: string } | undefined) {
-  if (!operator) return ""
-  const address = operator.address
-    ?.split(/\s*\n\s*/)
-    .filter(Boolean)
-    .join(", ")
-  return `\nSent by ${operator.name}${address ? `, ${address}` : ""}.\n`
-}
-
 export async function deliverNotificationEmails() {
   const { smtp, appUrl, legal } = getConfig()
-  const footer = senderLine(legal.operator)
   const totals = { sent: 0, skipped: 0, retried: 0, failed: 0 }
   if (!smtp || !appUrl) return totals
   const concurrency = envInteger("NOTIFICATION_EMAIL_CONCURRENCY", 2, 1, 10)
@@ -179,11 +162,22 @@ export async function deliverNotificationEmails() {
           const destination = new URL(href, appUrl).href
           const settings = new URL("/settings?tab=notifications", appUrl).href
           try {
+            const email = await renderEmail(
+              notificationEmail({
+                kind: row.kind,
+                to: recipient.email,
+                url: destination,
+                settingsUrl: settings,
+                unsubscribeUrl: unsubscribe.href,
+                appUrl,
+                operator: legal.operator,
+                locale: parsePreferences(recipient.preferences).locale,
+              }),
+            )
             await sender.send({
               from: smtp.from,
               to: recipient.email,
-              subject: subjects[row.kind],
-              text: `${subjects[row.kind]}.\n\nSign in to Sniptide to view this activity:\n${destination}\n\nNotification settings:\n${settings}\n\nStop these emails:\n${unsubscribe.href}\n${footer}`,
+              ...email,
               messageId: `<notification-${row.id}@${new URL(appUrl).hostname}>`,
               headers: {
                 "List-Unsubscribe": `<${unsubscribe.href}>`,

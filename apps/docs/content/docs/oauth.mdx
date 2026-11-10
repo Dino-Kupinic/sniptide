@@ -1,42 +1,95 @@
 ---
 title: OAuth for agents
-description: Let an MCP client or app connect to your account with a sign-in instead of a pasted token.
+description: Connect Claude Code, Codex, Cursor or another MCP client to Sniptide by signing in through the browser, and look up the OAuth endpoints and scopes.
 ---
 
 Sniptide is an OAuth 2.1 authorization server for its own API and MCP server. A client that
-supports OAuth, such as Claude Code, Claude, or Cursor, needs only the MCP URL. It discovers the
-rest, opens a Sniptide consent screen in the browser, and receives a token after you allow it.
-Personal [API tokens](/api-tokens) keep working, and a script or CI job should still use one.
+supports OAuth needs only the MCP address. It finds the rest itself, opens a Sniptide consent
+screen in your browser and receives a token after you allow access. No token is pasted anywhere.
+
+Use OAuth for interactive agents. Scripts and CI jobs, which can't open a browser, should keep
+using a personal [API token](/api-tokens).
 
 ## Connect a client
 
-Add the MCP server without an `Authorization` header:
+Run the command for your client, then allow access in the browser tab that opens. On a self-hosted
+instance, replace `https://app.sniptide.com` with your instance's address.
+
+<Tabs items={["Claude Code", "Codex", "Cursor", "Other clients"]} groupId="agent" persist>
+<Tab value="Claude Code">
 
 ```bash
 claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
-The first request gets a `401` with this header, which points the client at the rest:
+This command only adds the server, so no browser opens yet. Start Claude Code, type `/mcp`, choose
+`sniptide` and pick **Authenticate** to open the consent screen.
 
-```http
-WWW-Authenticate: Bearer resource_metadata="https://app.sniptide.com/.well-known/oauth-protected-resource/api/mcp"
+</Tab>
+<Tab value="Codex">
+
+```bash
+codex mcp add sniptide --url https://app.sniptide.com/api/mcp
 ```
 
-The client then registers itself, sends you to the consent screen, and exchanges the code for a
-token. The screen names the client and the address it returns you to. Allow access only when you
-started the connection from that client.
+</Tab>
+<Tab value="Cursor">
+
+Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no headers. The
+welcome setup in the app also offers an **Add to Cursor** button that fills this in.
+
+</Tab>
+<Tab value="Other clients">
+
+Add `https://app.sniptide.com/api/mcp` as a remote MCP server using Streamable HTTP, without an
+`Authorization` header. The client must support MCP authorization with OAuth.
+
+</Tab>
+</Tabs>
+
+The consent screen shows the client's name, with its logo for Claude Code, Codex and Cursor, what
+it can do and the address it returns you to. Allow access only when you started the connection
+from that client yourself.
+
+## Check the connection
+
+Open **Settings** > **API tokens**. The connection is listed under the client's name with
+"Connected with OAuth", next to the client's logo when it is Claude Code, Codex or Cursor. In the client, ask it to list your Sniptide collections. It calls
+`list_collections` and shows your collections, or an empty list on a new account.
 
 ## What a connection can do
 
 | Scope | Allows |
 | --- | --- |
 | `read` | Search and read your snippets, collections and env groups. |
-| `write` | Create, edit and delete them as well. `write` always includes `read`. |
+| `write` | Create, edit and trash them as well. `write` always includes `read`. |
 
-A client that asks for no scope gets `read`. The access token lasts an hour. The client renews it
-with a refresh token, which changes on every use and expires after 30 days without one. The
-connection appears in Settings, API tokens, under the client's name, and revoking it there ends it
-at once.
+A client that asks for no scope gets `read`. The [MCP server](/mcp#tools) lists the tools each
+scope unlocks.
+
+## Token lifetime and revocation
+
+- The access token lasts one hour.
+- The client renews it with a refresh token. The refresh token changes on every use and expires
+  after 30 days without use.
+- A refresh token that was already used ends the connection. Someone else holding a copy can't
+  keep it alive, and the client has to sign in again.
+- **Revoke** on the connection in **Settings** > **API tokens** ends it at once. The client then
+  gets `401` and has to start the sign-in again.
+
+## How discovery works
+
+The first request without a token gets a `401` with a header that points the client at the
+resource metadata:
+
+```http
+WWW-Authenticate: Bearer resource_metadata="https://app.sniptide.com/.well-known/oauth-protected-resource/api/mcp"
+```
+
+The client reads that metadata, registers itself, sends you to the consent screen, and exchanges
+the returned code for a token. The redirect back to the client carries the authorization code, the
+`state` and an `iss` parameter with the instance's address (RFC 9207), so a client that talks to
+several servers can check which one answered.
 
 ## Endpoints
 
@@ -49,17 +102,27 @@ at once.
 | Token | `POST /api/oauth/token` |
 | Revocation (RFC 7009) | `POST /api/oauth/revoke` |
 
-Every client is public and proves itself with PKCE, so registration accepts only
-`token_endpoint_auth_method: "none"` and the code challenge method must be `S256`. Redirect URIs
-use `https`, `http` on `localhost` or `127.0.0.1` with any port, or an app's own scheme such as
-`cursor://`. A `resource` parameter, when sent, must be on the same instance.
+Every client is public and proves itself with PKCE:
 
-## Errors
+- Registration accepts only `token_endpoint_auth_method: "none"`.
+- The code challenge method must be `S256`.
+- Redirect URIs use `https`, `http` on `localhost` or `127.0.0.1` with any port, or an app's own
+  scheme such as `cursor://`.
+- A `resource` parameter, when sent, must point at the same instance.
 
-Errors follow RFC 6749: a JSON body with `error` and `error_description`. A code works once and
-for ten minutes, so `invalid_grant` usually means the client retried an exchange. Start the
-connection again. Registration allows 20 requests an hour and the token endpoint 60 a minute for
-each client address, with `RateLimit` headers and `Retry-After` on a `429`.
+## Limits and errors
+
+Errors follow RFC 6749: a JSON body with `error` and `error_description`.
+
+| Symptom | Cause | Action |
+| --- | --- | --- |
+| Claude Code adds the server but no browser opens | `claude mcp add` only saves the server. Sign-in starts from the `/mcp` menu. | Start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**. |
+| Codex reports "Authorization server response missing required issuer" | Sniptide sends `iss` on every redirect. An older Codex version, or one that kept an earlier registration of the server, can still fail this check, while Codex 0.166 signs in. | Update Codex, run `codex mcp remove sniptide`, then add the server again. |
+| `invalid_grant` on the token request | An authorization code works once and for ten minutes, so the client probably retried an exchange. | Start the connection again from the client. |
+| `429` from registration | Registration allows 20 requests an hour per client address. | Wait for `Retry-After`. |
+| `429` from the token endpoint | The token endpoint allows 60 requests a minute per client address. | Wait for `Retry-After`. |
+
+Rate-limited responses carry `RateLimit` headers and `Retry-After`.
 
 ## Self-hosted instances
 

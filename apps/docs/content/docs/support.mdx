@@ -1,0 +1,67 @@
+---
+title: Get help and report a bug
+description: Ask the Sniptide support assistant a question, or report a bug or send feedback from inside the app, and see what each one sends.
+---
+
+Open the account menu at the bottom of the sidebar and select **Feedback** to ask a question or
+report a problem without leaving the page you're on. On a phone, the account menu opens from your
+avatar in the top bar.
+
+The dialog has two tabs. **Ask** answers questions from these docs. **Report a problem** sends a
+bug report or feedback to the people who run Sniptide. An instance shows only the tabs its
+administrator has turned on, as [Configuration](/self-hosting/configuration#support-and-feedback)
+describes.
+
+## Ask a question
+
+Type your question in one line, up to 300 characters, and press **Enter** or the arrow button.
+The assistant reads this documentation and answers in a few sentences, with links to the pages it
+used.
+
+The answers are written by AI and can be wrong, so follow the links when a detail matters. The
+assistant can't see your pastes, your account or your server, and it can't change anything for you.
+
+When the docs don't solve your problem, or what you describe sounds like a bug, the assistant offers
+to pass it on. It files a report with your conversation attached and tells you the issue number.
+
+Each question sends the conversation, the page address without its query, your browser and your
+account ID to the assistant's model provider, which is Anthropic or OpenAI depending on how the
+instance is set up. You can ask 10 questions a day, and the count resets 24 hours after your first question.
+
+## Report a bug or send feedback
+
+1. Select **Bug** or **Feedback**.
+2. Describe what happened and what you expected, or what you'd like to tell the team.
+3. Optional: select **Attach a screenshot**, or paste an image into the description. Screenshots can
+   be PNG, JPEG, WebP or GIF, up to 5 MB.
+4. Select **Send report**. A **Report sent** message confirms it.
+
+Open **Details sent with your report** to see everything that goes with it:
+
+| Detail | Example |
+| --- | --- |
+| Page address, without its query or fragment | `https://app.sniptide.com/pastes/k3j2h` |
+| Browser | Your browser's user agent |
+| App version | The release the server runs |
+| User ID | Your account's ID, not your email |
+| Instance | `hosted` on sniptide.com, `self-hosted` everywhere else |
+
+Check a screenshot for private content before you attach it. You can send 10 reports an hour,
+counting the ones the assistant files for you.
+
+Sending the same report twice, from the same page, adds it to the open issue instead of creating a
+second one.
+
+## Report from a self-hosted instance
+
+An instance without a tracker shows **Continue on GitHub** instead of **Send report**. It opens a
+prefilled public issue in a new tab, where you sign in to GitHub, attach a screenshot if you want
+one, and submit it. Remove anything private first, because the issue is public. If the
+administrator's help link doesn't point at GitHub issues, the button reads **Continue** and opens
+that link instead.
+
+You can also open an issue directly at
+[github.com/Dino-Kupinic/sniptide/issues](https://github.com/Dino-Kupinic/sniptide/issues/new/choose).
+The form there asks for the same details.
+
+If sending fails, see [Troubleshooting](/troubleshooting#help-and-feedback).

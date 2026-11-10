@@ -380,7 +380,7 @@ describeDb("token API", () => {
         collection: "kit",
         deletedAt: new Date(),
       })
-      await seedPaste({ slug: "kit-bobs", owner: "bob", collection: "kit" })
+      await seedPaste({ slug: "kit-bobs", owner: "bob", collection: "bobs-kit" })
 
       const slugs: string[] = []
       let cursor: string | null = null
@@ -517,6 +517,26 @@ describeDb("token API", () => {
       await put(token, "app", { variables: [{ name: "ONLY", value: "1" }] })
       const read = await body(await getEnv(call("env/app", token), ctx({ group: "app" })))
       expect(read.group.variables).toEqual([{ name: "ONLY", value: "1" }])
+    })
+
+    test("a push with a stale revision is refused and changes nothing", async () => {
+      const token = await tokenFor("ada")
+      const created = await body(await put(token, "app", { variables, revision: 0 }))
+      expect(created.group.revision).toBe(0)
+      const second = await body(
+        await put(token, "app", { variables: [{ name: "NEW", value: "1" }], revision: 0 }),
+      )
+      expect(second.group.revision).toBe(1)
+
+      // Another machine still holds revision 0.
+      const stale = await put(token, "app", { variables, revision: 0 })
+      expect(stale.status).toBe(412)
+      const read = await body(await getEnv(call("env/app", token), ctx({ group: "app" })))
+      expect(read.group).toMatchObject({ revision: 1, variables: [{ name: "NEW", value: "1" }] })
+
+      // Leaving the revision out replaces the group, as older clients expect.
+      expect((await put(token, "app", { variables })).status).toBe(200)
+      expect((await put(token, "app", { variables, revision: -1 })).status).toBe(400)
     })
 
     test("a value moved to another row doesn't decrypt", async () => {

@@ -24,6 +24,8 @@ export interface DemoPaste {
   starred?: boolean
   // Days from the seed until it expires, for pastes that show off expiry.
   expiresInDays?: number
+  // The agent that wrote it over MCP, for pastes that fill the Agent pastes widget.
+  agent?: "claude_code" | "codex"
 }
 
 export const DEMO_COLLECTIONS = [
@@ -116,6 +118,7 @@ LIMIT 20;
     collection: "snippets",
     tags: ["typescript", "network"],
     ageHours: 6 * 24,
+    agent: "claude_code",
     views: 97,
     uniqueViews: 64,
     files: [
@@ -220,6 +223,7 @@ LIMIT 20;
     collection: "incidents",
     tags: ["postmortem"],
     ageHours: 3 * 24,
+    agent: "claude_code",
     views: 8,
     uniqueViews: 2,
     files: [
@@ -250,6 +254,7 @@ LIMIT 20;
     collection: null,
     tags: ["shell"],
     ageHours: 5,
+    agent: "codex",
     views: 4,
     uniqueViews: 1,
     expiresInDays: 7,

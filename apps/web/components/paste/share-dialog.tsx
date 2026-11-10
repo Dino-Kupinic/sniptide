@@ -14,6 +14,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { useSiteOrigin } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
 import {
@@ -25,8 +26,10 @@ import {
 } from "@/lib/pastes/actions"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
+import { profilePath } from "@/lib/profile-path"
 import { LinkCopyContent, useCopyLink } from "./copy-button"
 import { EmbedShare } from "./embed-share"
+import { ExpiredNotice, usePasteExpired } from "./expiry-status"
 import { useNativeShare } from "./paste-actions"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
 import { WebhookShare } from "./webhook-share"
@@ -42,6 +45,7 @@ const visibilityNote: Record<Visibility, { icon: typeof LockIcon; text: string }
 // sits at the bottom of the screen like a sheet and is the page's one Share entry, so it also
 // holds the link with Copy and the system share sheet.
 export function ShareDialog({
+  expiresAt,
   slug,
   title,
   url,
@@ -53,6 +57,7 @@ export function ShareDialog({
   webhookAllowed = false,
   embedCode,
 }: {
+  expiresAt: number | null
   slug: string
   title: string
   url: string
@@ -65,11 +70,13 @@ export function ShareDialog({
   // The iframe code for /<slug>/embed; without it the section says why the paste can't embed.
   embedCode?: string
 }) {
+  const expired = usePasteExpired(expiresAt)
   const t = useTranslations("Paste")
   const feedbackT = useTranslations("Core")
   const [people, setPeople] = React.useState(initialPeople)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
+  const managingExpiredAccess = expired && people.length > 0
 
   React.useEffect(() => setPeople(initialPeople), [initialPeople])
 
@@ -96,6 +103,7 @@ export function ShareDialog({
   }
 
   function invite(identifier: string, access: SharePerson["access"]) {
+    if (expired) return Promise.resolve(false)
     return new Promise<boolean>((resolve) =>
       startTransition(async () => {
         const ok = await run(() => invitePerson(slug, identifier, access), t("invitationSent"))
@@ -106,7 +114,7 @@ export function ShareDialog({
   }
 
   function change(person: SharePerson, access: SharePerson["access"]) {
-    if (access === person.access) return
+    if (access === person.access || expired) return
     startTransition(async () => {
       await run(() => setShareAccess(slug, person.id, access), t("accessUpdated"))
     })
@@ -116,6 +124,10 @@ export function ShareDialog({
     startTransition(async () => {
       const ok = await run(() => removeShare(slug, person.id))
       if (ok) {
+        if (expired) {
+          toast.success(t("removedPerson", { name: person.name }))
+          return
+        }
         showUndo({
           labels: { undo: feedbackT("undo"), error: feedbackT("undoError") },
           message: t("removedPerson", { name: person.name }),
@@ -139,14 +151,25 @@ export function ShareDialog({
   return (
     <Dialog onOpenChange={(open) => (open ? undefined : setError(null))}>
       {trigger === "button" ? (
-        <DialogTrigger render={<Button variant="outline" size="lg" />}>
+        <DialogTrigger
+          disabled={expired && !managingExpiredAccess}
+          title={expired ? t("expiredSharingHelp") : undefined}
+          render={<Button variant="outline" size="lg" />}
+        >
           <UsersIcon />
-          {t("share")}
+          {t(managingExpiredAccess ? "manageAccess" : "share")}
         </DialogTrigger>
       ) : (
         <DialogTrigger
+          disabled={expired && !managingExpiredAccess}
+          title={expired ? t("expiredSharingHelp") : undefined}
           render={
-            <Button variant="ghost" size="icon-lg" aria-label={t("share")} className="size-10" />
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              aria-label={t(managingExpiredAccess ? "manageAccess" : "share")}
+              className="size-10"
+            />
           }
         >
           <ShareIcon className="size-5" />
@@ -172,8 +195,10 @@ export function ShareDialog({
               <XIcon className="size-5 lg:size-4" />
             </DialogClose>
           </div>
-          <ShareLinkRow url={url} title={title} />
+          <ExpiredNotice expiresAt={expiresAt} />
+          <ShareLinkRow url={url} title={title} expired={expired} />
           <InviteField
+            disabled={expired}
             onInvite={invite}
             submitLabel={t("invite")}
             error={error}
@@ -200,14 +225,23 @@ export function ShareDialog({
                 onChange={(access) => change(person, access)}
                 onRemove={() => remove(person)}
                 disabled={pending}
+                preventChange={expired}
                 label={t("accessFor", { name: person.name })}
               />
             </li>
           ))}
         </ul>
 
-        <WebhookShare slug={slug} targets={webhookTargets} allowed={webhookAllowed} />
-        <EmbedShare code={embedCode} />
+        <WebhookShare
+          slug={slug}
+          targets={webhookTargets}
+          allowed={webhookAllowed && !expired}
+          unavailableReason={expired ? t("expiredSharingHelp") : undefined}
+        />
+        <EmbedShare
+          code={expired ? undefined : embedCode}
+          unavailableReason={expired ? t("expiredSharingHelp") : undefined}
+        />
         <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 max-lg:flex-col max-lg:items-stretch lg:px-6">
           <span className="flex items-center gap-2 text-[13px]">
             <note.icon className="size-3.5 shrink-0" />
@@ -220,16 +254,27 @@ export function ShareDialog({
 }
 
 function PersonName({ name, handle }: { name: string; handle: string }) {
+  const origin = useSiteOrigin()
   return (
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="truncate text-sm font-medium">{name}</span>
-      <span className="truncate text-xs text-muted-foreground">{handle}</span>
+      {/* A handle links to its profile; people without one show their email instead. */}
+      {handle.startsWith("@") ? (
+        <a
+          href={`${origin}${profilePath(handle)}`}
+          className="truncate text-xs text-muted-foreground outline-none hover:underline focus-visible:underline"
+        >
+          {handle}
+        </a>
+      ) : (
+        <span className="truncate text-xs text-muted-foreground">{handle}</span>
+      )}
     </span>
   )
 }
 
 // Keep the link visible; offer native sharing on phones where the browser supports it.
-function ShareLinkRow({ url, title }: { url: string; title: string }) {
+function ShareLinkRow({ url, title, expired }: { url: string; title: string; expired: boolean }) {
   const t = useTranslations("Paste")
   const { state, props } = useCopyLink(url, () =>
     track("share_link_copied", { from: "share_dialog" }),
@@ -241,12 +286,19 @@ function ShareLinkRow({ url, title }: { url: string; title: string }) {
     <div className="flex flex-col gap-2">
       <div className="rounded-lg flex h-10 items-center gap-2 border border-border bg-sidebar pr-1 pl-3">
         <span className="min-w-0 flex-1 truncate font-mono text-xs">{url}</span>
-        <Button type="button" variant="inverted" size="sm" {...props}>
+        <Button type="button" variant="inverted" size="sm" {...props} disabled={expired}>
           <LinkCopyContent state={state} label={t("copy")} icon={<LinkIcon />} />
         </Button>
       </div>
       {canShare ? (
-        <Button type="button" variant="outline" size="xl" className="lg:hidden" onClick={share}>
+        <Button
+          type="button"
+          variant="outline"
+          size="xl"
+          className="lg:hidden"
+          onClick={share}
+          disabled={expired}
+        >
           <ShareIcon />
           {t("shareVia")}
         </Button>

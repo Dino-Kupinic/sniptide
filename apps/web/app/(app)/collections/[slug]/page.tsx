@@ -16,14 +16,14 @@ export async function generateMetadata({ params }: PageProps<"/collections/[slug
 }
 
 export default async function Page({ params, searchParams }: PageProps<"/collections/[slug]">) {
-  const locale = await getLocale()
-  const { slug } = await params
-  const query = parsePasteListQuery(await searchParams)
-  const [collection, collections, data, { origin, host }] = await Promise.all([
+  const [{ slug }, search] = await Promise.all([params, searchParams])
+  const query = parsePasteListQuery(search)
+  const [collection, collections, data, { origin }, locale] = await Promise.all([
     getCollection(slug),
     listCollections(),
     listPastePage({ mode: "collection", collection: slug }, query),
     getSiteOrigin(),
+    getLocale(),
   ])
   if (!collection) notFound()
 
@@ -39,7 +39,6 @@ export default async function Page({ params, searchParams }: PageProps<"/collect
       rows={rows}
       previews={previews}
       origin={origin}
-      host={host}
       // For the selection bar's Move to collection.
       collections={collections}
       collection={collection.slug}

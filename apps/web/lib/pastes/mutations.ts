@@ -12,10 +12,12 @@ import {
   user,
 } from "@workspace/db/schema"
 import { and, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import type { AgentClient } from "@/lib/onboarding"
 import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
 import { type InsertedFile, insertPaste } from "./insert"
 import { randomSlug, resolveExpiry } from "./links"
+import { passwordIntent } from "./password-intent"
 import { hashPassword } from "./passwords"
 import { pruneSnapshots, snapshotOf } from "./snapshot"
 import type { PasteInput, ShareInvite, SharingInput, Visibility } from "./types"
@@ -26,6 +28,12 @@ type PasteRecord = typeof pasteTable.$inferSelect
 type SessionActor = { kind: "session"; userId: string }
 type TokenActor = { kind: "token"; userId: string }
 export type PasteActor = SessionActor | TokenActor
+
+// How a capture reached Sniptide, recorded on the paste it creates.
+export interface PasteOrigin {
+  via: "api" | "mcp" | "cli"
+  agent: AgentClient | null
+}
 
 export interface CaptureData {
   title: string
@@ -73,7 +81,7 @@ type CreateRequest =
       passwordHash: string | null
       invites: ShareInvite[]
     }
-  | { kind: "capture"; actor: TokenActor; input: CaptureData }
+  | { kind: "capture"; actor: TokenActor; input: CaptureData; origin?: PasteOrigin }
 
 type ReplaceRequest =
   | {
@@ -144,7 +152,6 @@ async function lockEditable(tx: PasteTransaction, actor: PasteActor, key: PasteK
 export async function createPasteRecord(tx: PasteTransaction, request: CreateRequest) {
   const owner = request.actor.userId
   const input = request.input
-  if (request.kind === "capture") await checkCollection(tx, owner, input.collection)
   let slug = request.kind === "editor" ? request.input.slug : ""
   if (!slug) {
     do slug = randomSlug()
@@ -157,6 +164,7 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
   const id = crypto.randomUUID()
   const bytes = input.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "utf8"), 0)
   await enforceBudget(tx, owner, bytes)
+  await checkCollection(tx, owner, input.collection)
   await insertPaste(tx, {
     id,
     slug,
@@ -174,7 +182,12 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
           burnAfterRead: request.input.burnAfterRead,
           expiresAt: resolveExpiry(request.input.expiry, null, now.getTime()),
         }
-      : { tags: request.input.tags, source: request.input.source }),
+      : {
+          tags: request.input.tags,
+          source: request.input.source,
+          createdVia: request.origin?.via ?? "api",
+          createdByAgent: request.origin?.agent ?? null,
+        }),
   })
   if (request.kind === "editor") {
     const wanted = new Map(
@@ -211,12 +224,15 @@ export async function replacePaste(
   const now = new Date()
   const editor = request.kind === "editor" ? request : null
   const capture = request.kind === "capture" ? request.input : null
+  if (editor && owned) await checkCollection(tx, record.ownerId, editor.input.collection)
   if (capture?.collection !== undefined)
     await checkCollection(tx, record.ownerId, capture.collection)
   const input = request.input
   const description = input.description ?? record.description
   const passwordHash =
-    editor && owned && editor.input.password !== "" ? editor.passwordHash : record.passwordHash
+    editor && owned && passwordIntent(editor.input.password).kind !== "keep"
+      ? editor.passwordHash
+      : record.passwordHash
   const expiresAt =
     editor && owned
       ? resolveExpiry(editor.input.expiry, record.expiresAt, now.getTime())
@@ -312,6 +328,22 @@ export async function replacePaste(
   }
 }
 
+export async function setPasteCollectionRecord(
+  tx: PasteTransaction,
+  actor: PasteActor,
+  key: PasteKey,
+  collection: string | null,
+) {
+  await lockAccount(tx, actor.userId)
+  const record = await lockOwnedPasteRow(tx, actor, key)
+  if (!record || record.deletedAt) return
+  await checkCollection(tx, actor.userId, collection)
+  await tx
+    .update(pasteTable)
+    .set({ collection, version: sql`${pasteTable.version} + 1` })
+    .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
+}
+
 async function lockOwnedPasteRow(
   tx: PasteTransaction,
   actor: PasteActor,
@@ -371,6 +403,8 @@ export async function trashPasteRecord(tx: PasteTransaction, actor: PasteActor, 
     (actor.kind === "token" && (record.deletedAt || expired(record)))
   )
     return null
+  // Trashing again keeps the first trash time, so the paste's 30 days don't start over.
+  if (record.deletedAt) return { id: record.id, slug: record.slug }
   await tx
     .update(pasteTable)
     .set({ deletedAt: new Date(), version: sql`${pasteTable.version} + 1` })

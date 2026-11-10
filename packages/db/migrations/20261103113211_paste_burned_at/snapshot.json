@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "f2c3d13b-44aa-401b-9c4e-3cd11098b2f6",
+  "prevIds": [
+    "0d1e43c0-65c4-4174-8d1a-271f0fa464d3"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "paste",
+        "burned_at"
+      ],
+      "writes": [
+        "s|col|public.paste.burned_at",
+        "n|col|public.paste.burned_at",
+        "e|col|public.paste.burned_at"
+      ],
+      "reads": [
+        "n|tbl|public.paste",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste",
+        "name": "burned_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

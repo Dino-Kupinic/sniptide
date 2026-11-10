@@ -222,6 +222,18 @@ describeDb("host moderation", () => {
     ).rejects.toThrow("version conflict")
   })
 
+  test("refuses a no-op, and releases a removed paste only on appeal or correction", async () => {
+    const target = await fixture()
+    await expect(transition(target.id, "allowed")).rejects.toThrow("already allowed")
+    await transition(target.id, "removed")
+    await expect(transition(target.id, "allowed")).rejects.toThrow("appeal or correction")
+    const appeal = { ...(await command(target.id, "allowed")), reasonCode: "appeal" as const }
+    await transitionModeration(getDb(), appeal, "operator")
+    expect((await inspectModeration(getDb(), target.id))?.state).toBe("allowed")
+    // Refused commands write no audit event.
+    expect(await getDb().select().from(moderationEvent)).toHaveLength(2)
+  })
+
   test("strict input rejects evidence-shaped fields and invalid states or versions", async () => {
     const target = await fixture()
     const input = await command(target.id, "pending")
@@ -302,7 +314,7 @@ describeDb("host moderation", () => {
       expect(await listTrash()).toEqual([])
       expect(await trashTotals()).toEqual({ count: 0, bytes: 0 })
       expect((await storageUsage()).pastes).toBe(0)
-      expect((await getDashboardData()).totalPastes).toBe(0)
+      expect((await getDashboardData()).recent).toEqual([])
       const analytics = await getAnalyticsReport({ range: "30d", paste: target.slug })
       expect(analytics.pasteCount).toBe(0)
       expect(JSON.stringify(analytics)).not.toContain(synthetic)
@@ -319,9 +331,9 @@ describeDb("host moderation", () => {
         }),
       ).rejects.toThrow("No paste")
       expect(await updateSharing(target.slug, { visibility: "public" })).toBeNull()
-      expect(await sharePaste(target.slug, "editor", "view")).toBe(false)
+      expect(await sharePaste(target.slug, "editor", "view")).toEqual({ status: "missing" })
       expect(await restorePaste(target.slug)).toBe(false)
-      expect(await isSlugAvailable(target.slug)).toBe(false)
+      expect(await isSlugAvailable(target.slug, "owner")).toBe(false)
       await renamePaste(target.slug, "changed")
       await setPasteCollection(target.slug, null)
       const snapshot = await deleteCollection("examples")

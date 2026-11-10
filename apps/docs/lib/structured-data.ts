@@ -5,6 +5,8 @@ interface PageInfo {
   description?: string
   url: string
   slugs: string[]
+  // The language of the page's text, which is English until the page is translated.
+  lang?: string
 }
 
 // The home page is the first crumb, and the page's own title is the last.
@@ -23,7 +25,7 @@ export function pageStructuredData(page: PageInfo, crumbs: Crumb[]) {
         description: page.description,
         url: absoluteUrl(page.url),
         image: absoluteUrl(ogImagePath(page.slugs)),
-        inLanguage: "en",
+        inLanguage: page.lang ?? "en",
         isPartOf: { "@type": "WebSite", name: siteName, url: absoluteUrl("/") },
         publisher: organization,
       },

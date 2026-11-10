@@ -1,16 +1,25 @@
 {
   "title": "Sniptide docs",
   "pages": [
+    "---Get started---",
     "index",
     "getting-started",
     "core-concepts",
+    "---Use Sniptide---",
     "settings",
-    "api-tokens",
-    "oauth",
-    "api-reliability",
-    "agent-sandbox",
-    "cli",
+    "---Agents and automation---",
     "mcp",
-    "self-hosting"
+    "oauth",
+    "cli",
+    "sdks",
+    "agent-sandbox",
+    "---API---",
+    "api-tokens",
+    "api-reliability",
+    "---Run your own---",
+    "self-hosting",
+    "---Help---",
+    "support",
+    "troubleshooting"
   ]
 }

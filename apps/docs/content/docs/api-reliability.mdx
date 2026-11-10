@@ -1,50 +1,73 @@
 ---
 title: API reliability
-description: Quotas, safe create retries, batch operations, and the v1 compatibility policy.
+description: Read Sniptide's quota headers, retry creates safely with Idempotency-Key, send batch creates, and rely on the v1 compatibility policy.
 ---
 
-## Quotas
+This page explains how to build a client that stays within its quotas, never creates duplicates
+when it retries, and keeps working as the API changes. It applies to the token API under
+`/api/v1` and to the hosted MCP server.
 
-Authenticated token API and hosted MCP responses report the quota state observed by their requests.
-`RateLimit-Policy` identifies each policy, its quota, and its window in seconds.
-`RateLimit` reports its remaining requests and seconds until reset. For example:
+## Read the quota headers
+
+Authenticated token API and MCP responses report the quota their request used.
+`RateLimit-Policy` names each policy with its quota (`q`) and window in seconds (`w`).
+`RateLimit` reports the remaining requests (`r`) and the seconds until the window resets (`t`):
 
 ```http
 RateLimit-Policy: "api-token";q=3600;w=3600, "paste-create";q=30;w=3600
 RateLimit: "api-token";r=3599;t=3600, "paste-create";r=29;t=3600
 ```
 
-The counters live in Postgres and apply across app instances. Concurrent requests can consume the
-remaining quota after a response is sent. A `429` response includes `Retry-After` for the actual
-remaining window. Refused requests still count.
+| Policy | Quota | Applies to |
+| --- | --- | --- |
+| `api-token` | 3,600 requests an hour | Each token |
+| `paste-create` | 30 new pastes an hour | Each account, shared with the app |
+| `api-unauthenticated` | 60 requests per 10 minutes | Each client address, for requests with a missing, invalid, expired or revoked token |
 
-Requests with a missing, invalid, expired, or revoked token count against the
-`api-unauthenticated` policy instead: 60 requests per 10 minutes for each client address. Their
-`401` responses carry the same headers, and the 61st request in a window returns `429`. An
-instance that can't tell client addresses apart (see `CLIENT_IP_SOURCE`) skips this limit and
-sends no quota headers on a `401`.
+A `429` response includes `Retry-After` with the seconds left in the window. Refused requests
+still count. The counters live in Postgres and apply across all app instances, so concurrent
+requests can use up the remaining quota after a response reports it.
 
-## Create retries
+The 61st request without a valid token in a window returns `429`. An instance that can't tell
+client addresses apart (see `CLIENT_IP_SOURCE` in [Reverse proxy and client
+IP](/self-hosting/reverse-proxy)) skips this limit and sends no quota headers on a `401`.
 
-`POST /api/v1/pastes` and `POST /api/v1/collections` accept an optional `Idempotency-Key` header.
-Other mutations and MCP tools do not support this header. Keys contain 1 to 128 visible ASCII
-characters and belong to one token across both supported routes.
+## Retry a create safely
 
-For 24 hours after a successful create, the same key, route, and JSON payload return the original
-`201` body, even if the resource later changes. JSON object property order does not affect the
-fingerprint. Reusing the key with another route or payload returns `409`. A different token has a
-separate key space. After 24 hours, a key can create another resource. Expired receipts are deleted
-by the hourly maintenance job in bounded batches. Revoking a token deletes its receipts.
+Without a key, retrying a create after a timeout can create a second resource.
+`POST /api/v1/pastes` and `POST /api/v1/collections` accept an optional `Idempotency-Key` header
+that prevents this.
 
-Authentication, scope checks, token quotas, and paste-create quotas apply before replay. Storage
-budgets apply to new mutations. The resource, receipt, and saved response commit in one database
-transaction. A failed transaction saves neither a resource nor a receipt, so retrying can create it.
-Without a key, retrying a create can create a second resource.
+```bash
+curl -X POST https://app.sniptide.com/api/v1/pastes \
+  -H "Authorization: Bearer $SNIPTIDE_TOKEN" \
+  -H "Idempotency-Key: 8f14e45f-ceea-467f-a8f5-1b2c3d4e5f60" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Example","files":[{"name":"example.ts","content":"export const value = 1"}]}'
+```
 
-## Batch creates
+Send the same request with the same key after a timeout. The response is `201` with the same
+paste id both times.
 
-`POST /api/v1/batch` requires write scope and accepts 1 to 20 typed operations in a JSON body of at
-most 8 MiB. Each operation has an idempotency key and either `create_paste` or `create_collection`:
+- A key is 1 to 128 visible ASCII characters. Generate a new random key for each resource you
+  create, such as a UUID.
+- For 24 hours after a successful create, the same key, route and JSON payload return the
+  original `201` body, even if the resource changed since. The order of JSON object properties
+  doesn't matter.
+- Reusing a key with another route or payload returns `409`.
+- Keys belong to one token across both routes. A different token has its own keys.
+- After 24 hours a key can create another resource. The hourly maintenance job deletes expired
+  receipts, and revoking a token deletes its receipts.
+
+Authentication, scope checks, token quotas and the paste-create quota apply before a replay.
+Storage limits apply only to new creates. The resource and its receipt are saved in one
+transaction, so a failed create saves neither and a retry can create it. Other mutations and MCP
+tools don't accept `Idempotency-Key`.
+
+## Create in batches
+
+`POST /api/v1/batch` needs write access and accepts 1 to 20 operations in a JSON body of at most
+8 MiB. Each operation has an idempotency `key` and either `create_paste` or `create_collection`:
 
 ```json
 {
@@ -57,29 +80,37 @@ most 8 MiB. Each operation has an idempotency key and either `create_paste` or `
 }
 ```
 
-Operations run in input order, each in its own transaction. The response has status `207` and a
-`results` array in the same order, with each item's `index`, `key`, `status`, and `body`. A failed
-item does not undo earlier successes or stop later items. A rate-limited item also includes
-`retryAfterSeconds`. Invalid envelopes and unsupported operation names reject the whole batch
-before any mutations.
+The response has status `207` and a `results` array in the same order as the operations. Each
+item has its `index`, `key`, `status` and `body`, and a rate-limited item also has
+`retryAfterSeconds`. Check each item's `status`, because the batch as a whole succeeds even when
+an item fails.
 
-Each item consumes one token request, and creating a paste also consumes its account create quota.
-The batch request itself consumes one token request. Storage budgets and collection limits apply
-per item. Item keys use the corresponding single-create route's namespace, so the same key and
-payload can also be retried through that route. Reusing a key for two different items produces a
-conflict. Replay the original batch with the original keys after a transport failure.
+- Operations run in order, each in its own transaction. A failed item doesn't undo earlier items
+  or stop later ones.
+- An invalid request body or an unknown operation name rejects the whole batch before anything is
+  created.
+- The batch request counts as one token request, and each item counts as one more. Each created
+  paste also counts toward the paste-create quota. Storage and collection limits apply per item.
+- Item keys share the namespace of the single-create routes, so you can retry an item through
+  `POST /pastes` or `POST /collections` with the same key and payload. Two items with the same key
+  conflict.
+
+After a network failure, send the original batch again with the original keys.
 
 ## Version and deprecation policy
 
-The public token API uses the major version in `/api/v1`. Additive fields, optional parameters,
-and new endpoints can ship within v1. Clients must ignore unknown response fields. Breaking
-changes to required fields, field meanings, or supported operations require a new major path.
-Security fixes can restrict unsafe behavior immediately.
+The public token API carries its major version in the path, `/api/v1`.
 
-Hosted API removals receive at least 90 days' notice in the documentation and release notes.
-Affected hosted responses include a `Deprecation` header and a `Sunset` HTTP date during that
-period. No v1 endpoint is currently deprecated. Self-hosted operators control their upgrade
-schedule. The unversioned browser session API is internal and has no compatibility guarantee.
+- New fields, optional parameters and new endpoints can ship within v1. Clients must ignore
+  response fields they don't know.
+- Breaking changes to required fields, field meanings or supported operations need a new major
+  path.
+- Security fixes can restrict unsafe behavior at once.
 
-The OpenAPI document's `info.version` describes the API contract, independently of the app,
-CLI, and MCP package release versions. MCP protocol versions follow the MCP negotiation rules.
+Removals on the hosted API get at least 90 days' notice in the documentation and release notes.
+During that time, affected responses carry a `Deprecation` header and a `Sunset` date. No v1
+endpoint is deprecated today. Self-hosted operators choose when they upgrade.
+
+The OpenAPI document's `info.version` describes the API contract, independently of the app, CLI
+and MCP package versions. MCP protocol versions follow MCP's own negotiation. The unversioned
+session API that the web app uses is internal and has no compatibility guarantee.

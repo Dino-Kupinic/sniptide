@@ -1,53 +1,17 @@
 "use client"
 
-import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
-import { Skeleton } from "@sniptide/ui/components/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TablePinnedCell,
-  TablePinnedHead,
-  TableRow,
-} from "@sniptide/ui/components/table"
-import { cn } from "@sniptide/ui/lib/utils"
-import { ArrowRightIcon } from "lucide-react"
-import { useLocale, useTranslations } from "next-intl"
+import { Button } from "@sniptide/ui/components/button"
+import { CheckIcon, PlusIcon, Settings2Icon } from "lucide-react"
+import { useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
-import { expiryClass, RowBadge, VisibilityIcon } from "@/components/lists/paste-list"
-import { RowMenu } from "@/components/lists/row-menu"
-import { ChartSkeleton, StatsSkeleton } from "@/components/loading/page-skeletons"
-import { LoadingRegion } from "@/components/loading/region"
 import { NavigationLink as Link } from "@/components/navigation-link"
-import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
-import { navigateTabs } from "@/components/tab-navigation"
-import { formatNumber } from "@/lib/format"
+import type { ConnectedAgent } from "@/lib/agents"
+import { track } from "@/lib/analytics"
+import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
 import type { DashboardData } from "@/lib/pastes/dashboard"
-import type { PasteRow } from "@/lib/pastes/rows"
-import { QuickPaste } from "./quick-paste"
-import { ViewsBarChart } from "./views-chart"
-
-type Range = "1" | "7" | "30"
-type Tab = "all" | "public" | "unlisted" | "private"
-
-function sum(values: number[]) {
-  return values.reduce((total, value) => total + value, 0)
-}
-
-function trend(current: number, previous: number, locale: string) {
-  if (previous === 0) return current > 0 ? "new" : null
-  const change = ((current - previous) / previous) * 100
-  const digits = Math.abs(change) < 10 ? 1 : 0
-  return new Intl.NumberFormat(locale, {
-    style: "percent",
-    signDisplay: "always",
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(change / 100)
-}
+import { AddWidgetMenu, TemplateMenu, useDashboardLayout, WidgetBoard } from "./widget-board"
+import { type DashboardSource, useDashboardData } from "./widgets"
 
 // Greets in the viewer's own time of day, which only the browser knows; the server renders a
 // neutral greeting first.
@@ -76,421 +40,116 @@ function Greeting({ firstName }: { firstName: string }) {
   )
 }
 
-function Stat({
-  label,
-  value,
-  note,
-  noteTone = "muted",
-  className,
-}: {
-  label: string
-  value: string
-  note?: React.ReactNode
-  noteTone?: "muted" | "primary"
-  className?: string
-}) {
-  return (
-    <div className={cn("flex flex-col gap-1.5 px-4 py-4 lg:px-5", className)}>
-      <span className="text-[13px] text-muted-foreground">{label}</span>
-      <span className="flex flex-wrap items-baseline gap-x-2">
-        <span className="font-heading text-[26px] leading-9 font-bold tracking-[-0.02em] whitespace-nowrap tabular-nums lg:text-3xl">
-          {value}
-        </span>
-        {note ? (
-          <span
-            className={cn(
-              "text-xs",
-              noteTone === "primary" ? "font-medium text-link" : "text-muted-foreground",
-            )}
-          >
-            {note}
-          </span>
-        ) : null}
-      </span>
-    </div>
-  )
-}
-
+// The signed-in home: what needs attention and the widgets the person chose, starting from the
+// Agents template. Figures and charts live on /analytics.
 export function Dashboard({
   data,
+  layout,
+  sizes,
+  agents,
   firstName,
   origin,
-  host,
-  defaults,
-  draftScope,
+  appOrigin,
 }: {
-  draftScope: string
-  defaults: React.ComponentProps<typeof QuickPaste>["defaults"]
   data: DashboardData | Promise<DashboardData>
+  layout: WidgetId[]
+  sizes?: WidgetSizes
+  agents: ConnectedAgent[]
   firstName: string
+  // The share-link origin for row links, and the app's own origin for the MCP server address.
   origin: string
-  host: string
+  appOrigin: string
 }) {
   const t = useTranslations("Workspace")
-  const [range, setRange] = React.useState<Range>("7")
-  const [tab, setTab] = React.useState<Tab>("all")
-  const panelId = React.useId()
+  const dashboard = useDashboardLayout(layout, sizes)
+  const [editing, setEditing] = React.useState(false)
+
+  // Once per visit with what the page loaded with; later changes are their own events.
+  const onLoad = React.useRef({ agents: agents.length, widgets: layout.join(",") })
+  React.useEffect(() => {
+    track("dashboard_viewed", {
+      agents_connected: onLoad.current.agents,
+      widgets: onLoad.current.widgets,
+    })
+  }, [])
+
   return (
     <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
-      <div className="flex flex-col gap-1.5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Greeting firstName={firstName} />
-          <React.Suspense
-            fallback={
-              <LoadingRegion className="lg:hidden">
-                <Skeleton className="h-5 w-64 max-w-full" />
-              </LoadingRegion>
-            }
-          >
-            <DashboardSummary data={data} range={range} />
+          <React.Suspense fallback={null}>
+            <AttentionLine data={data} />
           </React.Suspense>
         </div>
-        {/* Phones get the range full width under the greeting; Import gist lives in the More sheet. */}
-        <div className="mt-2 flex items-center gap-2 lg:mt-0">
-          <SegmentedControl
-            aria-label={t("range")}
-            value={range}
-            onValueChange={setRange}
-            options={[
-              { value: "1", label: t("24h") },
-              { value: "7", label: t("7_days") },
-              { value: "30", label: t("30_days") },
-            ]}
-            className="w-full lg:w-56"
-            itemClassName="py-[9px] lg:py-[5px]"
-          />
-          <span className="hidden lg:contents">
-            <ImportGistButton />
-          </span>
-        </div>
-      </div>
-
-      <React.Suspense fallback={<StatsSkeleton />}>
-        <DashboardStats data={data} range={range} />
-      </React.Suspense>
-
-      <div className="flex flex-col gap-5 lg:flex-row">
-        <div className="hidden min-w-0 flex-[1.8] lg:flex">
-          <QuickPaste key={draftScope} draftScope={draftScope} defaults={defaults} />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <React.Suspense fallback={<ChartSkeleton className="flex-1" />}>
-            <DashboardChart data={data} range={range} />
-          </React.Suspense>
-        </div>
-      </div>
-
-      <section
-        aria-labelledby="recent-heading"
-        className="flex flex-col lg:overflow-hidden lg:rounded-lg lg:border lg:border-border"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 lg:flex-nowrap lg:border-b lg:border-border lg:px-4">
-          <div className="contents lg:flex lg:items-center lg:gap-4">
-            <h2 id="recent-heading" className="text-[15px] font-semibold lg:text-[15px]">
-              {t("recent_pastes")}
-            </h2>
-            <div
-              role="tablist"
-              aria-label={t("filter_recent_pastes")}
-              className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] lg:order-none lg:mx-0 lg:w-auto lg:px-0"
-            >
-              {(["all", "public", "unlisted", "private"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  id={`${panelId}-tab-${value}`}
-                  aria-selected={tab === value}
-                  aria-controls={panelId}
-                  tabIndex={tab === value ? 0 : -1}
-                  onKeyDown={(event) =>
-                    navigateTabs(
-                      event,
-                      ["all", "public", "unlisted", "private"] as const,
-                      value,
-                      setTab,
-                    )
-                  }
-                  onClick={() => setTab(value)}
-                  className={cn(
-                    "h-10 shrink-0 rounded-md px-3 text-sm text-muted-foreground capitalize lg:h-7 lg:text-[13px] outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
-                    tab === value && "border border-border text-foreground",
-                  )}
-                >
-                  {t(value)}
-                </button>
-              ))}
-            </div>
+        {editing ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <AddWidgetMenu dashboard={dashboard} />
+            <TemplateMenu dashboard={dashboard} />
+            <Button size="lg" className="max-lg:h-10" onClick={() => setEditing(false)}>
+              <CheckIcon />
+              {t("done")}
+            </Button>
           </div>
-          <Link
-            href="/pastes"
-            className="flex items-center gap-1 text-sm font-medium hover:text-link lg:text-[13px]"
-          >
-            {t("view_all")}
-            <ArrowRightIcon className="size-3.5" />
-          </Link>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="lg"
+              className="max-lg:h-10"
+              onClick={() => setEditing(true)}
+            >
+              <Settings2Icon />
+              {t("customize")}
+            </Button>
+            {/* Import gist lives in the More sheet on phones. */}
+            <span className="hidden lg:contents">
+              <ImportGistButton />
+            </span>
+            <Button
+              size="lg"
+              className="max-lg:h-10"
+              render={<Link href="/new" />}
+              nativeButton={false}
+            >
+              <PlusIcon />
+              {t("new_paste")}
+            </Button>
+          </div>
+        )}
+      </div>
 
-        <React.Suspense
-          fallback={
-            <LoadingRegion className="px-4 py-10 text-sm text-muted-foreground">
-              <span>{t("loading")}</span>
-            </LoadingRegion>
-          }
-        >
-          <RecentPastes data={data} tab={tab} panelId={panelId} origin={origin} host={host} />
-        </React.Suspense>
-      </section>
+      <WidgetBoard
+        dashboard={dashboard}
+        editing={editing}
+        data={data}
+        agents={agents}
+        origin={origin}
+        appOrigin={appOrigin}
+      />
     </div>
   )
 }
 
-type DashboardSource = DashboardData | Promise<DashboardData>
-
-function useDashboardData(source: DashboardSource) {
-  return "then" in source ? React.use(source) : source
-}
-
-function DashboardSummary({ data: source, range }: { data: DashboardSource; range: Range }) {
+// One line under the greeting, shown only when a link expires within 48 hours or already has.
+function AttentionLine({ data: source }: { data: DashboardSource }) {
   const data = useDashboardData(source)
   const t = useTranslations("Workspace")
-  const views = sum(data.dailyViews.slice(-Number(range)))
-  const rangeLabels = { "1": t("today"), "7": t("this_week"), "30": t("this_month") }
+  const { expiringSoon: expiring, expired } = data
+  if (expiring === 0 && expired === 0) return null
   return (
-    <p className="text-[15px] leading-5 text-muted-foreground lg:hidden">
-      {t("opens_in_period", { count: views, period: rangeLabels[range] })}{" "}
-      {data.expiringSoon > 0
-        ? t("expiring_links", { count: data.expiringSoon })
-        : t("nothing_expires_in_the_next_48_hours")}
+    <p className="text-[15px] leading-5 text-muted-foreground lg:text-sm">
+      {expiring > 0 && expired > 0
+        ? t("attention_expiring_and_expired", { expiring, expired })
+        : expiring > 0
+          ? t("attention_expiring", { count: expiring })
+          : t("attention_expired", { count: expired })}{" "}
+      <Link
+        href="/pastes?sort=expires"
+        className="font-medium text-link outline-none hover:underline focus-visible:underline"
+      >
+        {t("review")}
+      </Link>
     </p>
-  )
-}
-
-function DashboardStats({ data: source, range }: { data: DashboardSource; range: Range }) {
-  const data = useDashboardData(source)
-  const t = useTranslations("Workspace")
-  const locale = useLocale()
-  const days = Number(range)
-  const views = sum(data.dailyViews.slice(-days))
-  const viewsTrend = trend(views, sum(data.dailyViews.slice(-2 * days, -days)), locale)
-  const created = data.newPastes[range]
-  const rangeLabels = { "1": t("today"), "7": t("this_week"), "30": t("this_month") }
-  return (
-    <div className="@container rounded-lg border border-border">
-      <div className="grid grid-cols-1 @min-[24rem]:grid-cols-2 @min-[48rem]:grid-cols-4">
-        <Stat
-          label={t("total_pastes")}
-          value={formatNumber(data.totalPastes, locale)}
-          note={
-            created > 0
-              ? t("created_in_period", { count: created, period: rangeLabels[range] })
-              : undefined
-          }
-          noteTone="primary"
-          className="border-b border-border @min-[24rem]:border-r @min-[48rem]:border-b-0"
-        />
-        <Stat
-          label={t("views")}
-          value={formatNumber(views, locale)}
-          note={viewsTrend === "new" ? t("new") : (viewsTrend ?? undefined)}
-          noteTone="primary"
-          className="border-b border-border @min-[48rem]:border-r @min-[48rem]:border-b-0"
-        />
-        <Stat
-          label={t("active_share_links")}
-          value={formatNumber(data.activeLinks, locale)}
-          note={
-            data.passwordProtected > 0
-              ? t("password_protected_count", { count: data.passwordProtected })
-              : undefined
-          }
-          className="border-b border-border @min-[24rem]:border-r @min-[24rem]:border-b-0"
-        />
-        <Stat
-          label={t("expiring_in_48h")}
-          value={formatNumber(data.expiringSoon, locale)}
-          note={
-            data.expiringSoon > 0 ? (
-              <Link
-                href="/pastes?sort=expires"
-                className="font-medium text-foreground underline underline-offset-2 hover:text-link"
-              >
-                {t("review")}
-              </Link>
-            ) : undefined
-          }
-        />
-      </div>
-    </div>
-  )
-}
-
-function DashboardChart({ data: source, range }: { data: DashboardSource; range: Range }) {
-  const data = useDashboardData(source)
-  const t = useTranslations("Workspace")
-  const locale = useLocale()
-  const chartDays = Math.max(7, Number(range))
-  const chartValues = data.dailyViews.slice(-chartDays)
-  const chartLabels = (chartDays > 7 ? data.dayDates : data.dayNames).slice(-chartDays)
-  const peakIndex = chartValues.indexOf(Math.max(...chartValues))
-  return (
-    <section
-      aria-labelledby="views-heading"
-      className="flex min-w-0 flex-1 flex-col gap-4 rounded-lg border border-border px-4 py-4 lg:px-5"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <h2 id="views-heading" className="text-sm font-semibold">
-            <span className="lg:hidden">
-              {t("views_in_period", {
-                period: chartDays > 7 ? t("this_month") : t("this_week"),
-              })}
-            </span>
-            <span className="hidden lg:inline">{t("views")}</span>
-          </h2>
-          <p className="hidden text-[13px] text-muted-foreground lg:block">
-            {t("across_all_share_links")}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1.5 pt-0.5">
-          <Link
-            href="/analytics"
-            className="flex items-center gap-1 text-[13px] font-medium text-link outline-none hover:underline focus-visible:underline"
-          >
-            {t("view_analytics")}
-            <ArrowRightIcon className="size-3.5" />
-          </Link>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="hidden size-2 bg-chart-1 lg:block" />
-            <span className="hidden lg:inline">
-              {chartDays > 7 ? t("last_30_days") : t("last_7_days")}
-            </span>
-            <span className="lg:hidden">
-              {t("peak_summary", {
-                day: chartLabels[peakIndex] ?? "",
-                count: formatNumber(chartValues[peakIndex] ?? 0, locale),
-              })}
-            </span>
-          </span>
-        </div>
-      </div>
-      <ViewsBarChart values={chartValues} labels={chartLabels} className="flex-1" />
-    </section>
-  )
-}
-
-function RecentPastes({
-  data: source,
-  tab,
-  panelId,
-  origin,
-  host,
-}: {
-  data: DashboardSource
-  tab: Tab
-  panelId: string
-  origin: string
-  host: string
-}) {
-  const data = useDashboardData(source)
-  const t = useTranslations("Workspace")
-  const recent = data.recent
-    .filter((row) => tab === "all" || (row.visibility === tab && !row.burnAfterRead))
-    .slice(0, 5)
-  return (
-    <div id={panelId} role="tabpanel" aria-labelledby={`${panelId}-tab-${tab}`}>
-      {recent.length === 0 ? (
-        <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-          {t("no_recent_pastes", { visibility: tab })}{" "}
-          <Link href="/new" className="font-medium text-link hover:underline">
-            {t("create_one")}
-          </Link>
-        </p>
-      ) : (
-        <>
-          <RecentTable rows={recent} origin={origin} host={host} />
-          <ul className="flex flex-col lg:hidden">
-            {recent.map((row) => (
-              <li
-                key={row.slug}
-                className="relative flex items-center gap-3 border-b border-border py-3 last:border-b-0"
-              >
-                <LanguageIcon language={row.language} />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <Link
-                    href={`/pastes/${row.slug}`}
-                    className="truncate text-[15px] font-medium after:absolute after:inset-0"
-                  >
-                    {row.title}
-                  </Link>
-                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                    <VisibilityIcon row={row} />
-                    <span className="truncate">
-                      <span className="font-mono">{row.slug}</span> · {row.updatedLabel}
-                    </span>
-                  </span>
-                </div>
-                <RowMenu row={row} origin={origin} variant="sheet" />
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
-  )
-}
-
-function RecentTable({ rows, origin, host }: { rows: PasteRow[]; origin: string; host: string }) {
-  const locale = useLocale()
-  const t = useTranslations("Workspace")
-  return (
-    <Table className="hidden min-w-[900px] table-fixed lg:table">
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead>{t("paste")}</TableHead>
-          <TableHead className="w-[130px]">{t("language")}</TableHead>
-          <TableHead className="w-[156px]">{t("visibility")}</TableHead>
-          <TableHead className="w-20 text-right">{t("views")}</TableHead>
-          <TableHead className="w-[130px] pl-7">{t("expires")}</TableHead>
-          <TableHead className="w-[116px]">{t("updated")}</TableHead>
-          <TablePinnedHead className="w-12">
-            <span className="sr-only">{t("actions")}</span>
-          </TablePinnedHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.slug} className="relative">
-            <TableCell className="truncate">
-              <Link
-                href={`/pastes/${row.slug}`}
-                className="block truncate text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-              >
-                {row.title}
-              </Link>
-              <span className="block truncate font-mono text-xs text-muted-foreground">
-                {host}/{row.slug}
-              </span>
-            </TableCell>
-            <TableCell className="text-[13px] text-foreground/80">
-              <LanguageLabel language={row.language} />
-            </TableCell>
-            <TableCell>
-              <RowBadge row={row} />
-            </TableCell>
-            <TableCell className="text-right font-mono text-[13px] tabular-nums">
-              {formatNumber(row.views, locale)}
-            </TableCell>
-            <TableCell className={cn("pl-7 text-[13px] text-foreground/80", expiryClass(row))}>
-              {row.expiresLabel}
-            </TableCell>
-            <TableCell className="text-[13px] text-muted-foreground">{row.updatedLabel}</TableCell>
-            <TablePinnedCell className="pr-3 text-right">
-              <RowMenu row={row} origin={origin} />
-            </TablePinnedCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
   )
 }

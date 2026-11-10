@@ -21,6 +21,7 @@
     "viewsIn": "{title}内の{count}件のスニペットの閲覧数",
     "viewsAll": "全{count}件のスニペットの閲覧数",
     "afterView": "1回の閲覧後",
+    "burnedOn": "{date}に閲覧済み",
     "never": "無期限",
     "neverExpires": "無期限",
     "expires": "有効期限：{time}",
@@ -92,6 +93,26 @@
     "notificationExpiringDetail": "共有パネルで有効期限を延長できます",
     "notificationViews": "「{title}」の閲覧数が{count, number}回に達しました",
     "notificationViewsDetail": "アクセス解析で参照元を確認できます",
-    "snapshotUnavailable": "Snapshot unavailable"
+    "snapshotUnavailable": "Snapshot unavailable",
+    "expired": "期限切れ"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "{name} (@{handle}) が Sniptide で公開したスニペット。",
+    "joined": "{date}に参加",
+    "pastes": "公開スニペット {count}件",
+    "empty": "@{handle} はまだスニペットを公開していません。",
+    "pagination": "ページ",
+    "newer": "新しい順",
+    "older": "古い順",
+    "pageOf": "{page} / {count} ページ",
+    "activity": "アクティビティ",
+    "activitySummary": "過去1年間の公開スニペットは{count}件です",
+    "activityDay": "{date}の公開スニペット: {count}件",
+    "search": "スニペットを検索",
+    "clearSearch": "検索をクリア",
+    "language": "言語",
+    "allLanguages": "すべての言語",
+    "noMatches": "検索に一致する公開スニペットはありません。"
   }
 }

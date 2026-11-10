@@ -12,6 +12,7 @@ describe("API failures", () => {
       [403, "forbidden"],
       [404, "not_found"],
       [409, "conflict"],
+      [412, "precondition_failed"],
       [413, "payload_too_large"],
       [422, "unprocessable_entity"],
       [429, "too_many_requests"],

@@ -12,7 +12,7 @@ export interface CodeFile {
 }
 export interface CaptureInput {
   title: string
-  files: Array<Omit<CodeFile, "language"> & { language?: string }>
+  files: Array<Omit<CodeFile, "language">>
   description?: string
   visibility?: Visibility
   collection?: string | null
@@ -79,6 +79,8 @@ export interface EnvVariable {
 export interface EnvGroup {
   slug: string
   updatedAt: string
+  // Goes up by one with every change. Pass it to writeEnvGroup to refuse a stale write.
+  revision: number
   variables: EnvVariable[]
 }
 export interface EnvGroupSummary {
@@ -250,8 +252,12 @@ export class SniptideClient {
   readEnvGroup(group: string) {
     return this.request<{ group: EnvGroup }>(`env/${segment(group)}`)
   }
-  writeEnvGroup(group: string, variables: EnvVariable[]) {
-    return this.request<{ group: EnvGroup }>(`env/${segment(group)}`, "PUT", { variables })
+  // With `revision`, the instance answers 412 and changes nothing once the group moved past it.
+  writeEnvGroup(group: string, variables: EnvVariable[], options: { revision?: number } = {}) {
+    return this.request<{ group: EnvGroup }>(`env/${segment(group)}`, "PUT", {
+      variables,
+      ...(options.revision === undefined ? {} : { revision: options.revision }),
+    })
   }
   deleteEnvGroup(group: string) {
     return this.request<{ ok: true }>(`env/${segment(group)}`, "DELETE")

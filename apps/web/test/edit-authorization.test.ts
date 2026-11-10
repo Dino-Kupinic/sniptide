@@ -175,7 +175,7 @@ describeDb("edit authorization under concurrent owner changes", () => {
     } finally {
       await Promise.allSettled(operations)
     }
-    expect(await Promise.all(operations)).toMatchObject([true, { slug: "race" }])
+    expect(await Promise.all(operations)).toMatchObject([{ status: "ok" }, { slug: "race" }])
     expect((await pasteRow("race"))?.title).toBe("After invite")
   })
 })

@@ -108,6 +108,7 @@ function route(path = "/") {
       "/settings",
       "/sign-in",
       "/sign-up",
+      "/welcome",
       "/api/health",
       "/api/metrics",
     ].includes(pathname)

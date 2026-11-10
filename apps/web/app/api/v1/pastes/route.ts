@@ -1,4 +1,4 @@
-import { json, readJson, withToken } from "@/lib/api/http"
+import { json, readJson, requestOrigin, withToken } from "@/lib/api/http"
 import { parseIdempotencyKey } from "@/lib/api/idempotency"
 import { createCapture, listCaptures, parseListQuery } from "@/lib/api/pastes"
 
@@ -13,7 +13,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  return withToken(request, "write", async ({ userId, tokenId }) => {
+  return withToken(request, "write", async (owner) => {
+    const { userId, tokenId } = owner
     // Room for a full-size paste plus its JSON escaping and metadata.
     const body = await readJson(request, 8 * 1024 * 1024)
     const key = parseIdempotencyKey(request.headers.get("idempotency-key"))
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
           userId,
           body,
           key ? { tokenId, key, route: "/api/v1/pastes", body } : undefined,
+          requestOrigin(request, owner),
         ),
       },
       201,

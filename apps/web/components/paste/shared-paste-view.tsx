@@ -4,13 +4,20 @@ import { useLocale, useTranslations } from "next-intl"
 import type * as React from "react"
 import { byteLength, formatBytes, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
+import { profilePath } from "@/lib/profile-path"
 import { ActiveFileProvider, FileViewer } from "./file-viewer"
 import { LanguageLabel } from "./language-icon"
 import { ShareActions } from "./share-actions"
 
 export interface SharedPasteViewData {
   title: string
-  author: { username: string; initials: string; tone?: "primary" | "foreground" | "muted" }
+  author: {
+    username: string
+    // Links the name to the author's profile; null when the account has no handle.
+    handle?: string | null
+    initials: string
+    tone?: "primary" | "foreground" | "muted"
+  }
   files: { name: string; language: string; content: string; lines?: HighlightedLines }[]
   updatedAt: number
   expiresAt: number | null
@@ -76,7 +83,16 @@ export function SharedPasteView({
             >
               {author.initials}
             </span>
-            <span className="text-foreground">@{author.username}</span>
+            {author.handle ? (
+              <a
+                href={profilePath(author.handle)}
+                className="text-foreground outline-none hover:underline focus-visible:underline"
+              >
+                @{author.username}
+              </a>
+            ) : (
+              <span className="text-foreground">@{author.username}</span>
+            )}
             {t("sharedTime", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
           </p>
           <h1 className="font-heading text-[32px] leading-10 font-bold tracking-[-0.03em] break-words lg:text-5xl lg:leading-[56px]">

@@ -75,7 +75,7 @@ try {
 
 The SDK does not retry requests automatically. `createPaste` and `createCollection` accept an optional idempotency key as their second argument. Servers with idempotency support use that key to prevent duplicate creates; older instances may ignore it. Other mutations do not gain an automatic retry guarantee.
 
-See the [API documentation](https://docs.sniptide.com) and [source repository](https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk) for more details.
+See the [SDK documentation](https://docs.sniptide.com/sdks/javascript) and [source repository](https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk) for more details.
 
 ## License
 

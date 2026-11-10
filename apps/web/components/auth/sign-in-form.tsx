@@ -16,7 +16,7 @@ import { EmailDivider, rememberSignInMethod, SocialButtons } from "./social-butt
 import { VerificationNotice } from "./verification-notice"
 
 // `socialProviders` lists the configured GitHub and Google logins.
-// `signUpClosed` hides the link to the sign-up page (ALLOW_SIGN_UP=false).
+// `signUpClosed` hides the link to the sign-up page while sign-up is closed.
 // `initialError` explains a failed GitHub or Google sign-in, `notice` confirms a password reset.
 // `redirectTo` is where a signed-in visitor goes next (lib/auth-redirect.ts).
 export function SignInForm({

@@ -30,7 +30,9 @@ mock.module("@/lib/auth", () => ({
     }
     return auth
   },
-  getSession: async () => (request.viewer ? { user: { id: request.viewer } } : null),
+  getSession: async () =>
+    request.viewer ? { user: { id: request.viewer, username: request.username } } : null,
+
   isDemoMode: () => false,
   isEmailAvailable: () => Boolean(process.env.SMTP_HOST),
   getPreferences: async () => ({

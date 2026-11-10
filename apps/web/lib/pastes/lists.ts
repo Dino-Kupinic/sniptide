@@ -381,6 +381,7 @@ export async function listSharedPage(query: SharedListQuery) {
           id: owner.id,
           name: owner.name,
           username: owner.displayUsername ?? owner.username ?? owner.name,
+          handle: owner.username,
           initials: initials(owner.name),
           tone: "foreground" as const,
         })),

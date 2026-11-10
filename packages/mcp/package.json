@@ -2,7 +2,7 @@
   "name": "@sniptide/mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "Sniptide tools for coding agents over MCP.",
+  "description": "MCP server that lets coding agents search, read and save your Sniptide snippets and collections.",
   "license": "MIT",
   "type": "module",
   "exports": {

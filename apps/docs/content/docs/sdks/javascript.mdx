@@ -1,0 +1,340 @@
+---
+title: JavaScript and TypeScript
+description: Install @sniptide/sdk, authenticate with an API token, and save, list, update and share pastes, collections and env groups from Node.js.
+---
+
+`@sniptide/sdk` is the official client for Node.js scripts, developer tools and server
+applications. It ships as an ES module with TypeScript declarations and has no dependencies.
+
+## Install
+
+```npm
+npm install @sniptide/sdk
+```
+
+It needs Node.js 18 or newer, or any runtime with the standard `fetch`, `URL` and `AbortSignal`,
+such as Bun or Deno. Run it on a server: a token in a browser bundle is readable by anyone who
+loads the page.
+
+## Authenticate
+
+Create a token in **Settings** > **API tokens** with the access your code needs (see
+[API tokens](/api-tokens)), put it in your server's environment, and pass it to the client:
+
+```ts
+import { SniptideClient } from "@sniptide/sdk"
+
+const token = process.env.SNIPTIDE_TOKEN
+if (!token) throw new Error("Set SNIPTIDE_TOKEN in the server environment.")
+
+const client = new SniptideClient(token)
+const { user, scopes } = await client.me()
+```
+
+`me` reads the token's account and access without changing anything, which makes it a good first
+call. `scopes` is `["read"]` for a read-only token and `["read", "write"]` otherwise.
+
+## Save a paste
+
+```ts
+const { paste } = await client.createPaste(
+  {
+    title: "Retry helper",
+    description: "Exponential backoff for fetch.",
+    files: [
+      { name: "retry.ts", content: retrySource },
+      { name: "retry.test.ts", content: testSource },
+    ],
+    tags: ["http", "utils"],
+    collection: "snippets",
+  },
+  crypto.randomUUID(),
+)
+
+console.log(paste.url)
+```
+
+New pastes are **private** unless you set `visibility` when creating them. To set an expiry,
+call `updateSettings` after creation. Sniptide sets each file's language from its name. A
+collection must already exist, so create it first with
+`createCollection`. The second argument is an optional idempotency key: send the same
+key again after a timeout and the server returns the original paste instead of a duplicate.
+
+To record where code came from, add `source` with the repository URL, the commit and whether the
+working tree had changes. To capture part of a file, set `lines` to `{ start, end }`.
+
+## List and search
+
+`listPastes` returns one page of your pastes, newest first. `nextCursor` is `null` on the last
+page.
+
+```ts
+const results = []
+let cursor: string | undefined
+
+do {
+  const page = await client.listPastes({ q: "retry", tag: ["http"], limit: 100, cursor })
+  results.push(...page.pastes)
+  cursor = page.nextCursor ?? undefined
+} while (cursor)
+```
+
+`q` matches every word against the title, description, tags, file paths and code. `limit` is 1 to
+100 and defaults to 20. List results are summaries without file contents, so call `readPaste` with
+an id or slug for the code:
+
+```ts
+const { paste } = await client.readPaste("k3j9xq")
+for (const file of paste.files) console.log(file.name, file.language)
+```
+
+## Update a paste
+
+`updatePaste` replaces the title and the **whole file list**, and the previous version stays in
+the paste's [revisions](/core-concepts/revisions). Read the paste first and send every file you
+want to keep:
+
+```ts
+const { paste } = await client.readPaste("k3j9xq")
+await client.updatePaste(paste.id, {
+  title: paste.title,
+  files: paste.files.map((file) =>
+    file.name === "retry.ts" ? { ...file, content: newSource } : file,
+  ),
+})
+```
+
+Sharing settings change separately with `updateSettings`. Send only the fields you want to
+change:
+
+```ts
+const { settings } = await client.updateSettings("k3j9xq", {
+  visibility: "unlisted",
+  expiry: "1w",
+  password: null,
+})
+```
+
+`expiry` is counted from now and is one of `1h`, `1d`, `1w`, `1m`, `1y` or `never`. A `password`
+string protects the paste and `null` removes protection. `trashPaste` moves a paste to the trash,
+where it stays for 30 days.
+
+## Collections
+
+```ts
+const { collection } = await client.createCollection("UI components")
+const { collections } = await client.listCollections()
+const page = await client.collectionPastes(collection.slug)
+```
+
+`collectionPastes` returns full pastes, files included, oldest first. Pass `page.nextCursor` as the
+second argument for the next page.
+
+## Env groups
+
+Env groups hold a project's environment variables, encrypted at rest. They are the same groups the
+[CLI](/cli#sync-env-files) and the [Secrets editor](/core-concepts/secrets) use.
+
+```ts
+await client.writeEnvGroup("my-app", [
+  { name: "DATABASE_URL", value: process.env.DATABASE_URL! },
+  { name: "LOG_LEVEL", value: "info" },
+])
+
+const { group } = await client.readEnvGroup("my-app")
+```
+
+`writeEnvGroup` **replaces** every variable in the group. `readEnvGroup` and `writeEnvGroup` return
+the values in plain text, so keep their results out of logs. `listEnvGroups` returns names and
+counts without values.
+
+To refuse a write when someone changed the group after you read it, pass the revision you read:
+`writeEnvGroup("my-app", variables, { revision: group.revision })`. A newer group fails with
+status 412 and stays as it was.
+
+## Self-hosted instances
+
+Pass your instance's address as the second argument, including any path prefix:
+
+```ts
+const client = new SniptideClient(token, "https://paste.example.com")
+```
+
+The third argument replaces `fetch`, which helps in tests or behind a proxy. The fourth sets the
+largest response the client accepts, in bytes, and defaults to 64 MiB.
+
+```ts
+const client = new SniptideClient(token, "https://paste.example.com", mockFetch, 8 * 1024 * 1024)
+```
+
+## Handle errors
+
+```ts
+import { SniptideError } from "@sniptide/sdk"
+
+try {
+  await client.createPaste(capture, key)
+} catch (error) {
+  if (error instanceof SniptideError && error.code === "too_many_requests") {
+    console.warn(`Rate limited. Try again in ${error.retryAfter} seconds.`)
+  }
+  throw error
+}
+```
+
+`SniptideError` has `message`, `status`, `code` and `retryAfter`. The [SDK overview](/sdks#errors)
+lists every code. The client never retries for you. Retry a create only with the same idempotency
+key, and read a paste back before you retry an update.
+
+## Reference
+
+### Client
+
+```ts
+new SniptideClient(token, baseUrl?, fetcher?, maxResponseBytes?)
+```
+
+<Params>
+<Param name="token" type="string" required>
+A personal API token from **Settings** > **API tokens**.
+</Param>
+<Param name="baseUrl" type="string" default='"https://app.sniptide.com"'>
+The instance's address, including any path prefix it is served under.
+</Param>
+<Param name="fetcher" type="typeof fetch" default="globalThis.fetch">
+The `fetch` function the client sends every request with.
+</Param>
+<Param name="maxResponseBytes" type="number" default="67108864">
+The largest response body the client accepts, 64 MiB by default.
+</Param>
+</Params>
+
+The constructor throws a `TypeError` for an empty token, a base URL that isn't HTTPS (outside
+loopback) or that has credentials, a query or a fragment, and a size limit that isn't a positive
+integer.
+
+### Methods
+
+| Method | Request | Access | Returns |
+| --- | --- | --- | --- |
+| `me()` | `GET /me` | read | `{ user, scopes }` |
+| `usage()` | `GET /usage` | read | `Usage` |
+| `listPastes(options?)` | `GET /pastes` | read | `Page<PasteSummary>` |
+| `readPaste(id)` | `GET /pastes/{id}` | read | `{ paste: Paste }` |
+| `createPaste(input, idempotencyKey?)` | `POST /pastes` | write | `{ paste: Paste }` |
+| `updatePaste(id, { title, files })` | `PUT /pastes/{id}` | write | `{ paste: Paste }` |
+| `updateSettings(id, input)` | `PATCH /pastes/{id}` | write | `{ paste, settings: Settings }` |
+| `trashPaste(id)` | `DELETE /pastes/{id}` | write | `{ trashed: { id, slug } }` |
+| `listCollections()` | `GET /collections` | read | `{ collections: Collection[] }` |
+| `createCollection(name, idempotencyKey?)` | `POST /collections` | write | `{ collection: Collection }` |
+| `collectionPastes(slug, cursor?)` | `GET /collections/{slug}/pastes` | read | `Page<Paste>` |
+| `listEnvGroups()` | `GET /env` | read | `{ groups: EnvGroupSummary[] }` |
+| `readEnvGroup(group)` | `GET /env/{group}` | read | `{ group: EnvGroup }` |
+| `writeEnvGroup(group, variables, { revision })` | `PUT /env/{group}` | write | `{ group: EnvGroup }` |
+| `deleteEnvGroup(group)` | `DELETE /env/{group}` | write | `{ ok: true }` |
+
+`id` accepts a paste's id or its slug. Identifiers are URL-encoded for you, and an empty value,
+`.` or `..` throws a `TypeError` before any request is sent.
+
+### Types
+
+Every type is exported from the package.
+
+```ts
+type Visibility = "public" | "unlisted" | "private"
+
+interface CaptureInput {
+  title: string
+  files: Array<{ name: string; content: string; lines?: { start: number; end: number } }>
+  description?: string
+  visibility?: Visibility
+  collection?: string | null
+  tags?: string[]
+  source?: { repository: string | null; commit: string | null; dirty: boolean } | null
+}
+
+interface Paste {
+  id: string
+  slug: string
+  url: string
+  title: string
+  description: string
+  visibility: Visibility
+  collection: string | null
+  tags: string[]
+  source: Source | null
+  files: CodeFile[]
+  createdAt: string
+  updatedAt: string
+  expiresAt: string | null
+}
+
+type PasteSummary = Omit<Paste, "files"> & { languages: string[]; bytes: number }
+
+interface Page<T> {
+  pastes: T[]
+  nextCursor: string | null
+}
+
+interface ListOptions {
+  q?: string
+  tag?: string[]
+  language?: string
+  collection?: string
+  limit?: number
+  cursor?: string
+}
+
+interface SettingsInput {
+  visibility?: Visibility
+  expiry?: "1h" | "1d" | "1w" | "1m" | "1y" | "never"
+  password?: string | null
+  burnAfterRead?: boolean
+}
+
+interface Settings {
+  visibility: Visibility
+  expiresAt: string | null
+  passwordProtected: boolean
+  burnAfterRead: boolean
+}
+
+interface Collection {
+  slug: string
+  name: string
+  pasteCount: number
+}
+
+interface EnvGroup {
+  slug: string
+  updatedAt: string
+  revision: number
+  variables: Array<{ name: string; value: string }>
+}
+
+interface EnvGroupSummary {
+  slug: string
+  variables: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface Usage {
+  storageBytes: number
+  pasteCount: number
+  fileCount: number
+  collectionCount: number
+  reconciledAt: string
+  apiRequests: Array<{ tokenId: string; day: number; requests: number }>
+}
+
+class SniptideError extends Error {
+  status?: number
+  code?: string
+  retryAfter?: string | null
+}
+```
+
+Timestamps are ISO 8601 strings. New fields can appear within v1, so ignore fields you don't use,
+as the [version policy](/api-reliability#version-and-deprecation-policy) describes. The source is
+in [`packages/sdk`](https://github.com/Dino-Kupinic/sniptide/tree/main/packages/sdk).

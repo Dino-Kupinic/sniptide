@@ -19,6 +19,7 @@ import {
 } from "./gist"
 import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
+import { passwordIntent } from "./password-intent"
 import { pasteSchema } from "./schema"
 import { hasSensitiveContent, suggestedVisibility } from "./smart-defaults"
 import * as store from "./store"
@@ -47,9 +48,13 @@ async function rememberDefaultsBestEffort(
 }
 
 async function assertSignedIn() {
+  return (await signedInUser()).id
+}
+
+async function signedInUser() {
   const session = await getSession()
   if (!session) throw new Error(await actionError("signInPastes"))
-  return session.user.id
+  return session.user
 }
 
 export type ActionOutcome = { ok: true } | { ok: false; error: string }
@@ -62,8 +67,15 @@ const invitesSchema = z
   .max(50, "Invite up to 50 people at once.")
 
 // The checks creating and editing share, run once the input's own shape is known to be valid.
-async function checkedPayload(data: z.output<typeof pasteSchema>, editing?: string) {
-  if (data.slug && !(await store.isSlugAvailable(data.slug, editing))) {
+async function checkedPayload(
+  data: z.output<typeof pasteSchema>,
+  handle: string | null | undefined,
+  editing?: string,
+) {
+  if (data.slug && data.slug !== editing && !handle) {
+    return { ok: false as const, error: await actionError("handleRequired") }
+  }
+  if (data.slug && !(await store.isSlugAvailable(data.slug, handle, editing))) {
     return {
       ok: false as const,
       error: await actionError("slugTaken", {
@@ -74,9 +86,9 @@ async function checkedPayload(data: z.output<typeof pasteSchema>, editing?: stri
   if (data.collection !== null && !(await collectionExists(data.collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
-  // On edit an empty password means "keep the current one"; a new paste needs a real one.
+  // Keeping a password needs one to keep: a new paste, or one without a password, needs a real one.
   const current = editing ? await store.getPaste(editing) : null
-  if (data.password === "" && !current?.password) {
+  if (passwordIntent(data.password).kind === "keep" && !current?.password) {
     return {
       ok: false as const,
       error: await actionError("passwordRequired"),
@@ -102,7 +114,8 @@ export async function savePaste(
   editing?: string,
   invites: ShareInvite[] = [],
 ): Promise<SavePasteResult> {
-  const user = await assertSignedIn()
+  const viewer = await signedInUser()
+  const user = viewer.id
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
@@ -116,7 +129,7 @@ export async function savePaste(
   const tooOften = await limited(editing ? limits.edit(user) : limits.create(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const checked = await checkedPayload(parsed.data, editing)
+  const checked = await checkedPayload(parsed.data, viewer.username, editing)
   if (!checked.ok) return checked
 
   try {
@@ -130,6 +143,8 @@ export async function savePaste(
     await revalidateWorkspace(user)
     return { ok: true, slug: paste.slug }
   } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false, error: await actionError("collectionMissing") }
     if (error instanceof store.PasteBudgetError)
       return { ok: false, error: await translateActionError(error.message) }
     throw error
@@ -158,7 +173,8 @@ export async function autosavePaste(
   input: SavePasteInput,
   expectedVersion: number,
 ): Promise<AutosavePasteResult> {
-  const user = await assertSignedIn()
+  const viewer = await signedInUser()
+  const user = viewer.id
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
@@ -172,7 +188,7 @@ export async function autosavePaste(
   const tooOften = await limited(limits.autosave(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const checked = await checkedPayload(parsed.data, editing)
+  const checked = await checkedPayload(parsed.data, viewer.username, editing)
   if (!checked.ok) return checked
 
   try {
@@ -190,6 +206,8 @@ export async function autosavePaste(
     if (result.slug === editing) await revalidateWorkspace(user)
     return { ok: true, ...result }
   } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false, error: await actionError("collectionMissing") }
     if (error instanceof store.PasteBudgetError)
       return { ok: false, error: await translateActionError(error.message) }
     throw error
@@ -219,9 +237,9 @@ export async function restoreRevision(slug: string, revisionId: number) {
 
 // Answers "not available" while limited; saving checks the slug again anyway.
 export async function checkSlug(slug: string, except?: string) {
-  const user = await assertSignedIn()
-  if (await limited(limits.slugCheck(user))) return false
-  return store.isSlugAvailable(slug, except)
+  const viewer = await signedInUser()
+  if (await limited(limits.slugCheck(viewer.id))) return false
+  return store.isSlugAvailable(slug, viewer.username, except)
 }
 
 const sharingSchema = z.object({
@@ -291,8 +309,12 @@ export async function setShareAccess(
   const user = await assertSignedIn()
   const parsed = z.enum(ACCESSES).safeParse(access)
   if (!parsed.success) return { ok: false, error: await actionError("pickAccess") }
-  if (!(await store.sharePaste(slug, userId, parsed.data))) {
-    return { ok: false, error: await actionError("shareMissing") }
+  const outcome = await store.sharePaste(slug, userId, parsed.data)
+  if (outcome.status !== "ok") {
+    return {
+      ok: false,
+      error: await actionError(outcome.status === "expired" ? "shareExpired" : "shareMissing"),
+    }
   }
   await revalidateWorkspace(user, userId)
   return sharesOf(slug)
@@ -319,8 +341,12 @@ export async function restoreRemovedShare(
     .safeParse({ access, sharedAt })
   if (!parsed.success) return { ok: false, error: await actionError("shareRestore") }
   const date = new Date(Math.min(parsed.data.sharedAt, Date.now()))
-  if (!(await store.sharePaste(slug, userId, parsed.data.access, date))) {
-    return { ok: false, error: await actionError("shareMissing") }
+  const outcome = await store.sharePaste(slug, userId, parsed.data.access, date)
+  if (outcome.status !== "ok") {
+    return {
+      ok: false,
+      error: await actionError(outcome.status === "expired" ? "shareExpired" : "shareMissing"),
+    }
   }
   await revalidateWorkspace(user, userId)
   return sharesOf(slug)
@@ -368,7 +394,13 @@ export async function setPasteCollection(slug: string, collection: string | null
   if (collection !== null && !(await collectionExists(collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
-  await store.setPasteCollection(slug, collection)
+  try {
+    await store.setPasteCollection(slug, collection)
+  } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false as const, error: await actionError("collectionMissing") }
+    throw error
+  }
   await revalidateWorkspace(user)
   return { ok: true as const }
 }
@@ -573,7 +605,13 @@ export async function setPastesCollection(slugs: string[], collection: string | 
   if (collection !== null && !(await collectionExists(collection))) {
     return { ok: false as const, error: await actionError("collectionMissing") }
   }
-  await forEachSlug(slugs, (slug) => store.setPasteCollection(slug, collection))
+  try {
+    await forEachSlug(slugs, (slug) => store.setPasteCollection(slug, collection))
+  } catch (error) {
+    if (error instanceof store.PasteCollectionError)
+      return { ok: false as const, error: await actionError("collectionMissing") }
+    throw error
+  }
   return { ok: true as const }
 }
 

@@ -36,6 +36,7 @@ import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
+import { usePasteExpired } from "@/components/paste/expiry-status"
 import { useSiteHost } from "@/components/site-host"
 import { withUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
@@ -61,6 +62,7 @@ export function PasteMenu({
   collections: Collection[]
   className?: string
 }) {
+  const expired = usePasteExpired(paste.expiresAt)
   const t = useTranslations("Workspace")
   const feedbackT = useTranslations("Core")
   const router = useRouter()
@@ -117,12 +119,19 @@ export function PasteMenu({
             {paste.starred ? <StarOffIcon /> : <StarIcon />}
             {paste.starred ? t("unstar") : t("star")}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/pastes/${paste.slug}#sharing-heading`)}>
+          <DropdownMenuItem
+            disabled={expired}
+            title={expired ? t("expired_sharing_help") : undefined}
+            onClick={() => router.push(`/pastes/${paste.slug}#sharing-heading`)}
+          >
             <ShareIcon />
             {t("share")}
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={expired}
+            title={expired ? t("expired_sharing_help") : undefined}
             onClick={() => {
+              if (expired) return
               track("share_link_copied", { from: "menu" })
               return copyText(`${window.location.protocol}//${host}/${paste.slug}`, {
                 success: feedbackT("linkCopied"),

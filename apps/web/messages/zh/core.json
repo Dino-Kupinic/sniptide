@@ -21,6 +21,7 @@
     "viewsIn": "{title} 中 {count} 个代码片段的浏览量",
     "viewsAll": "全部 {count} 个代码片段的浏览量",
     "afterView": "浏览一次后",
+    "burnedOn": "{date} 已读",
     "never": "永不",
     "neverExpires": "永不过期",
     "expires": "到期时间：{time}",
@@ -92,6 +93,26 @@
     "notificationExpiringDetail": "可在代码片段的共享面板中延长有效期",
     "notificationViews": "“{title}”已达到 {count, number} 次浏览",
     "notificationViewsDetail": "在统计分析中查看访问来源",
-    "snapshotUnavailable": "Snapshot unavailable"
+    "snapshotUnavailable": "Snapshot unavailable",
+    "expired": "已过期"
+  },
+  "Profile": {
+    "metaTitle": "{name} (@{handle}) · Sniptide",
+    "metaDescription": "{name} (@{handle}) 在 Sniptide 上公开分享的代码片段。",
+    "joined": "{date}加入",
+    "pastes": "{count} 个公开代码片段",
+    "empty": "@{handle} 还没有公开任何代码片段。",
+    "pagination": "分页",
+    "newer": "较新",
+    "older": "较早",
+    "pageOf": "第 {page} 页，共 {count} 页",
+    "activity": "动态",
+    "activitySummary": "过去一年共有 {count} 个公开代码片段",
+    "activityDay": "{date}：{count} 个公开代码片段",
+    "search": "搜索代码片段",
+    "clearSearch": "清除搜索",
+    "language": "语言",
+    "allLanguages": "所有语言",
+    "noMatches": "没有与该搜索匹配的公开代码片段。"
   }
 }

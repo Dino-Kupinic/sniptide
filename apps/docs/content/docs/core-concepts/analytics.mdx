@@ -1,25 +1,80 @@
 ---
 title: Analytics
-description: Understand paste analytics, visitor privacy, and optional PostHog exclusion.
+description: Read views, unique visitors, copies and referrers for your Sniptide pastes, learn how visitors stay anonymous, and export the figures.
 ---
 
-The Analytics page counts views, unique visitors, code copies, raw reads, referrers, devices and
-countries in your own database, with no cookies and nothing sent anywhere else. A visitor is a
-daily hash of the address and browser under a random salt that is deleted after a day, so nobody
-can link it back to a person or follow one across days. Only the referrer's host is kept, never the
-path. Crawlers, link previews, prefetches and scripts aren't counted as views. Countries come from
-the CDN's header (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), so there is
-no country data without one in front. `GET /api/stats?range=7d|30d|90d|24h` returns the same
-figures as JSON for the signed-in account.
+The **Analytics** page shows how people use your pastes: views, unique visitors, code copies, raw
+reads, referrers, countries, devices and languages. Sniptide counts these in its own database,
+without cookies, and sends them nowhere else.
+
+## Read the figures
+
+1. Open **Analytics** in the sidebar.
+2. Choose a period: the last 24 hours, 7 days, 30 days or 90 days. The totals compare against the
+   period before.
+3. Narrow the page to one paste or one collection to see only its figures.
+4. Select **Export CSV** to download the figures for the chosen period.
+
+A paste's own **Views** row shows its view count. Reads through the CLI and MCP are counted apart
+from views. See [MCP server](/mcp#limits-and-errors).
+
+The charts use hatched fills with a fine grain and a solid top edge. Pink marks the peak in Analytics and the
+dashboard. Select a metric tile in Analytics to change the chart. Hover a bar to preview its
+exact value, or select it to pin the readout. The dashboard and usage charts support the same
+hover, touch and keyboard controls. With the chart focused, use the arrow keys to move between bars, **Home** or **End**
+to reach the first or last bar, and **Escape** to clear the selection. Screen readers can also
+read the values in a table. The 90-day chart groups days into weeks on smaller screens.
+
+## What counts as a view
+
+A view is a person opening the paste's share page. These don't count:
+
+- You, opening your own paste.
+- Crawlers, link previews, browser prefetches and scripts.
+- The Markdown copy that agents fetch, embeds and the print page.
+
+## How visitors stay anonymous
+
+A unique visitor is a daily hash of the visitor's address and browser, made with a random salt
+that is deleted after a day. Nobody can link the hash back to a person or follow one visitor
+across days. Only the referrer's host is kept, never its path.
+
+Countries come from a header that a CDN in front of the app adds: `CF-IPCountry`,
+`X-Vercel-IP-Country` or `CloudFront-Viewer-Country`. A self-hosted instance without one of these
+shows no country data.
+
+## Read the figures as JSON
+
+`GET /api/stats?range=30d` returns the same figures as JSON for the signed-in account. `range` is
+`24h`, `7d`, `30d` or `90d`, and any other value means `30d`. Add `&paste=<link>` or
+`&collection=<slug>` to narrow it. The endpoint uses your browser session, not an API token, and
+returns `401` when you aren't signed in.
+
+## How long the data is kept
+
+| Data | Default | Setting |
+| --- | --- | --- |
+| Daily view history for the charts | 90 days | `VIEW_HISTORY_RETENTION_DAYS` |
+| Daily analytics rollups | 180 days | `ANALYTICS_RETENTION_DAYS` |
 
 ## Exclude your browser from PostHog
 
-PostHog is optional and only loads when the administrator sets `POSTHOG_KEY`.
-See [Configuration](/self-hosting/configuration#monitoring).
+This section applies only when the administrator set `POSTHOG_KEY`, which turns on PostHog
+product analytics for the app. A self-hosted instance sends nothing to PostHog by default. See
+[Configuration](/self-hosting/configuration#monitoring).
 
-To exclude your own browser from PostHog, open `/_site/analytics` on your instance and select
-**Exclude this browser**. Repeat on each instance and in each browser you use. The
-choice survives network changes and reloads. **Include this browser** removes the exclusion.
-Only this explicit choice writes an exclusion flag to local storage. Clear site data to remove
-it, and reload other open tabs after a change. This does not remove past events or change paste
-view counts.
+On the hosted app at `app.sniptide.com`, accepting **Analytics** in the website's cookie settings
+lets PostHog connect selected app events, such as signing up, to your visit to the website. The app
+uses the website's anonymous visitor ID in memory. It uses cookieless measurement when that ID
+or your consent is missing. You can change consent from **Cookies** in the footer of `sniptide.com`.
+The app does not record sessions or automatically capture clicks.
+Cookieless events carry only the country that the CDN in front of the app reports, and never
+your IP address or city.
+
+1. Open `/_site/analytics` on the instance.
+2. Select **Exclude this browser**.
+
+The choice is saved in this browser's local storage, so repeat it in each browser and on each
+instance you use. Reload other open tabs after a change. **Include this browser** removes the
+exclusion, and clearing the site's data removes it too. Excluding your browser doesn't delete
+past events or change paste view counts.

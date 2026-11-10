@@ -11,7 +11,7 @@ import { POST as revokeRoute } from "@/app/api/oauth/revoke/route"
 import { POST as token } from "@/app/api/oauth/token/route"
 import { GET as me } from "@/app/api/v1/me/route"
 import { POST as createPaste } from "@/app/api/v1/pastes/route"
-import { listTokens } from "@/lib/api/tokens"
+import { createToken, listTokens } from "@/lib/api/tokens"
 import { afterSignIn } from "@/lib/auth-redirect"
 import { getDb } from "@/lib/db"
 import { isAllowedRedirectUri, matchRedirectUri } from "@/lib/oauth/clients"
@@ -47,7 +47,13 @@ test("redirect URIs allow https, loopback http and app schemes, never scripts or
 
 test("sign-in only returns to the consent screen", () => {
   expect(afterSignIn("/oauth/authorize?client_id=x")).toBe("/oauth/authorize?client_id=x")
-  for (const next of ["//evil.example", "https://evil.example", "/settings", "/oauth/authorizex"])
+  for (const next of [
+    "//evil.example",
+    "https://evil.example",
+    "/settings",
+    "/oauth/authorizex",
+    "/new?next=//evil.example",
+  ])
     expect(afterSignIn(next)).toBe("/dashboard")
 })
 
@@ -214,12 +220,6 @@ describeDb("OAuth for agent clients", () => {
     expect(next.scope).toBe("read")
     expect((await me(bearer("/api/v1/me", tokens.access_token))).status).toBe(401)
     expect((await me(bearer("/api/v1/me", next.access_token))).status).toBe(200)
-    const reused = await tokenRequest({
-      grant_type: "refresh_token",
-      refresh_token: tokens.refresh_token,
-      client_id: clientId,
-    })
-    expect((await reused.json()).error).toBe("invalid_grant")
     const widened = await tokenRequest({
       grant_type: "refresh_token",
       refresh_token: next.refresh_token,
@@ -253,6 +253,32 @@ describeDb("OAuth for agent clients", () => {
     expect(revoked.status).toBe(200)
     expect((await me(bearer("/api/v1/me", next.access_token))).status).toBe(401)
     expect(await listTokens("owner")).toEqual([])
+  })
+
+  test("reusing a replaced refresh token revokes the whole grant", async () => {
+    const { client_id: clientId } = await (await registerClient()).json()
+    const tokens = await (await exchange(clientId, await codeFor(clientId))).json()
+    const refresh = (token: string) =>
+      tokenRequest({ grant_type: "refresh_token", refresh_token: token, client_id: clientId })
+    const next = await (await refresh(tokens.refresh_token)).json()
+    expect((await me(bearer("/api/v1/me", next.access_token))).status).toBe(200)
+
+    // Someone replays the first refresh token: the grant ends for them and for the client.
+    const reused = await (await refresh(tokens.refresh_token)).json()
+    expect(reused.error).toBe("invalid_grant")
+    expect((await me(bearer("/api/v1/me", next.access_token))).status).toBe(401)
+    expect((await (await refresh(next.refresh_token)).json()).error).toBe("invalid_grant")
+    expect(await listTokens("owner")).toEqual([])
+  })
+
+  test("concurrent code exchanges can't pass the token limit", async () => {
+    const { client_id: clientId } = await (await registerClient()).json()
+    for (let i = 0; i < 24; i++)
+      await createToken("owner", { name: `t${i}`, write: false, expiry: "never" })
+    const codes = [await codeFor(clientId), await codeFor(clientId)]
+    const results = await Promise.all(codes.map((code) => exchange(clientId, code)))
+    expect(results.map((response) => response.status).sort()).toEqual([200, 400])
+    expect(await listTokens("owner")).toHaveLength(25)
   })
 
   test("a wrong verifier, client or redirect URI gets no token, and the code is spent", async () => {

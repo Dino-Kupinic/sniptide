@@ -12,6 +12,7 @@
     "available": "可用",
     "taken": "已被占用",
     "thatLinkIsTaken": "该链接已被占用。",
+    "customLinkNeedsUsername": "<link>设置用户名</link>后即可为此粘贴设置自定义链接。",
     "noCollection": "不加入合集",
     "collection": "合集",
     "pastePassword": "Paste 密码",
@@ -219,6 +220,8 @@
     "compareLoading": "Loading snapshots…",
     "compareClose": "Close",
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
-    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}"
+    "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
+    "expiredSharingHelp": "此粘贴已过期。设置新的有效期或选择“永不”，即可再次分享。",
+    "manageAccess": "管理访问权限"
   }
 }

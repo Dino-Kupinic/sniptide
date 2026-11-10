@@ -20,6 +20,7 @@
     "fumadocs-ui": "catalog:docs",
     "lucide-react": "catalog:docs",
     "next": "catalog:runtime",
+    "next-themes": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
     "zod": "catalog:runtime"
