@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { GET as analyticsConfig } from "@/app/api/analytics/route"
 import { readAuthMarker, scrubPath, scrubUrl, withAuthMarker, withCountry } from "@/lib/analytics"
-import { assetsHost, forwardToPostHog, uiHost, upstreamUrl } from "@/lib/analytics-proxy"
+import {
+  assetsHost,
+  forwardToPostHog,
+  isAnalyticsHost,
+  uiHost,
+  upstreamUrl,
+} from "@/lib/analytics-proxy"
 import { getConfig } from "@/lib/config"
 
 // PostHog: events must never carry slugs or query strings, and the proxy only runs with a key.
@@ -62,6 +68,52 @@ describe("PostHog hosts", () => {
     expect(upstreamUrl(host, ["i", "v0", "e"], "?ver=1")).toBe(
       "https://us.i.posthog.com/i/v0/e?ver=1",
     )
+  })
+})
+
+describe("analytics host gate", () => {
+  afterEach(() => {
+    delete process.env.POSTHOG_KEY
+  })
+
+  test("blocks previews, PR builds and local development", () => {
+    for (const host of [
+      "pr-110.sniptide.com",
+      "33.sniptide.com",
+      "PR-7.sniptide.com",
+      "localhost",
+      "127.0.0.1",
+      "::1",
+    ]) {
+      expect(isAnalyticsHost(host)).toBe(false)
+    }
+  })
+
+  test("keeps production and self-hosted hosts", () => {
+    for (const host of [
+      "app.sniptide.com",
+      "sniptide.com",
+      "www.sniptide.com",
+      "pastes.example.com",
+    ]) {
+      expect(isAnalyticsHost(host)).toBe(true)
+    }
+  })
+
+  test("the config route answers no key to a preview host", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = analyticsConfig(new Request("https://pr-10.sniptide.com/api/analytics"))
+    expect(response.status).toBe(204)
+    expect(analyticsConfig(new Request("https://app.sniptide.com/api/analytics")).status).toBe(200)
+  })
+
+  test("the proxy drops events from a preview host", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = await forwardToPostHog(
+      new Request("https://33.sniptide.com/api/analytics/e", { method: "POST", body: "{}" }),
+      ["e"],
+    )
+    expect(response.status).toBe(404)
   })
 })
 
