@@ -37,7 +37,11 @@ function mock(overrides = {}) {
     health_check_command: "node /app/healthcheck.cjs",
     ports_mappings: null,
     custom_docker_run_options: null,
-    settings: { is_consistent_container_name_enabled: false, custom_internal_name: null },
+    settings: {
+      is_consistent_container_name_enabled: false,
+      custom_internal_name: null,
+      rolling_update_drain_seconds: 10,
+    },
     destination_type: "App\\Models\\StandaloneDocker",
     ...overrides.app,
   }
@@ -124,6 +128,33 @@ test("rejects mismatched receipt and untrusted or stale source runs before mutat
 
 test("refuses unsafe resources and active deployments", async () => {
   for (const settings of [
+    {
+      app: {
+        settings: { is_consistent_container_name_enabled: false, rolling_update_drain_seconds: 0 },
+      },
+    },
+    {
+      app: {
+        settings: { is_consistent_container_name_enabled: false, rolling_update_drain_seconds: -1 },
+      },
+    },
+    { app: { settings: { is_consistent_container_name_enabled: false } } },
+    {
+      app: {
+        settings: {
+          is_consistent_container_name_enabled: false,
+          rolling_update_drain_seconds: null,
+        },
+      },
+    },
+    {
+      app: {
+        settings: {
+          is_consistent_container_name_enabled: false,
+          rolling_update_drain_seconds: "10",
+        },
+      },
+    },
     { app: { health_check_enabled: false } },
     { app: { health_check_type: "http" } },
     { app: { health_check_command: "true" } },
@@ -143,6 +174,14 @@ test("fails if Coolify does not report the intended image and rolling completion
   for (const deployment of [
     { logs: JSON.stringify([{ output: "Rolling update completed." }]) },
     { logs: JSON.stringify([{ output: `ghcr.io/owner/repo@${digest}` }]) },
+    {
+      logs: JSON.stringify([
+        { output: `Starting deployment of ghcr.io/owner/repo@${digest}` },
+        { output: "New container is healthy." },
+        { output: "The proxy labels changed, so the old containers stop without waiting." },
+        { output: "Rolling update completed." },
+      ]),
+    },
     { status: "failed" },
     { application_id: "24" },
   ]) {

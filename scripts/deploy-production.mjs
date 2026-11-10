@@ -96,6 +96,8 @@ export async function deployProduction(
     app.health_check_command !== "node /app/healthcheck.cjs" ||
     app.ports_mappings ||
     app.custom_docker_run_options ||
+    !Number.isSafeInteger(app.settings?.rolling_update_drain_seconds) ||
+    app.settings.rolling_update_drain_seconds <= 0 ||
     app.settings?.is_consistent_container_name_enabled !== false ||
     app.settings?.custom_internal_name ||
     !String(app.destination_type ?? "").endsWith("StandaloneDocker")
@@ -144,6 +146,13 @@ export async function deployProduction(
         !logs.some(
           (entry) =>
             typeof entry.output === "string" && entry.output.includes(`${image}@${receipt.digest}`),
+        ) ||
+        logs.some(
+          (entry) =>
+            typeof entry.output === "string" &&
+            entry.output.includes(
+              "The proxy labels changed, so the old containers stop without waiting.",
+            ),
         ) ||
         !logs.some((entry) => entry.output === "New container is healthy.") ||
         !logs.some((entry) => entry.output === "Rolling update completed.")

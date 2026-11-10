@@ -489,8 +489,9 @@ Before enabling the workflow:
    with a tested GHCR digest from a build that includes `/app/healthcheck.cjs`; older published
    images lack this file. Use HTTPS and configure a Coolify CMD health check with exactly
    `node /app/healthcheck.cjs`. Avoid host port mappings, fixed container names, custom Docker
-   options, and Swarm. Deploy the image and confirm the standalone application is healthy. This
-   creates the prior deployment record the workflow requires before it changes the image.
+   options, and Swarm. Configure `rolling_update_drain_seconds` to a positive integer so Coolify
+   waits for the proxy before stopping the old container. Deploy the image and confirm the standalone
+   application is healthy. This creates the prior deployment record the workflow requires before it changes the image.
 2. Create a GitHub environment named `coolify-production` and restrict it to `main`. Configure any
    required reviewers. Set environment variables `COOLIFY_URL` (the HTTPS origin) and
    `COOLIFY_APP_ID` (the Docker Image application's UUID), and the environment secret
@@ -501,7 +502,10 @@ Before enabling the workflow:
    use a root or broader token as a workaround. Keep the token out of PR environments.
 3. Enable the repository variable for staging, then run a main CI build. Verify the reported digest,
    Coolify deployment log and rolling update, health, sign-in and Server Actions. Test with traffic
-   and verify migration and rollback compatibility. No automated check can establish zero downtime.
+   and verify migration and rollback compatibility. Keep proxy label configuration unchanged across
+   the rollout. Coolify v4.7.3 skips the drain if it detects changed proxy labels; the workflow
+   reports that warning as a failure after deployment, but cannot prove labels match beforehand or
+   prevent an interruption that already occurred. No automated check can establish zero downtime.
    Disable the variable and inspect the deployment queue before changing resources.
 4. Back up production, record its previous digest and validate the rollback procedure. Only after
    staging succeeds, bootstrap the replacement production Docker Image resource with a tested digest
