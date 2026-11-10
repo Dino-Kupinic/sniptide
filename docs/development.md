@@ -462,7 +462,7 @@ its own test database and runtime configuration. Deploy it and check `/api/healt
 Server Action, and the image digest before routing traffic. Configure production registry access,
 backup and rollback first; then change the production resource to pull a selected tested image.
 A deployment trigger must target that image-based resource, serialize production deployments, and
-select the intended digest rather than a mutable tag. No such trigger is configured here. Coolify
+select the intended digest rather than a mutable tag. The opt-in production workflow below provides a trigger after a staged cutover. Coolify
 preview deployments also need their image tag (`docker_tag`) and lifecycle managed explicitly;
 this workflow does not provide that integration.
 
@@ -474,6 +474,54 @@ production secret in it. Before moving an existing deployment to these images, p
 builds to overlap safely: drain old instances and expect stale browser pages to reload if a Server
 Action fails. Verify the deployment, migrations, rollback procedure, and action behavior in a staged
 environment before changing production. Runtime configuration and secrets remain on the host.
+
+### Opt in to image-based production deployment
+
+Production deployment is disabled unless repository variable `COOLIFY_PRODUCTION_DEPLOY` is set to
+`true`. It runs separately from CI and the release workflow. It does not configure or migrate the
+existing Coolify application. Preview images remain available for a manual, isolated deployment;
+no PR workflow receives a Coolify token. A future preview integration needs a separate host or a
+restricted broker that does not grant PR code access to the production host.
+
+Before enabling the workflow:
+
+1. Create a separate staging Coolify Docker Image application and database. Bootstrap it manually
+   with a tested GHCR digest from a build that includes `/app/healthcheck.cjs`; older published
+   images lack this file. Use HTTPS and configure a Coolify CMD health check with exactly
+   `node /app/healthcheck.cjs`. Avoid host port mappings, fixed container names, custom Docker
+   options, and Swarm. Deploy the image and confirm the standalone application is healthy. This
+   creates the prior deployment record the workflow requires before it changes the image.
+2. Create a GitHub environment named `coolify-production` and restrict it to `main`. Configure any
+   required reviewers. Set environment variables `COOLIFY_URL` (the HTTPS origin) and
+   `COOLIFY_APP_ID` (the Docker Image application's UUID), and the environment secret
+   `COOLIFY_TOKEN`. Verify that one token can combine the read, sensitive-read, write, and deploy
+   permissions on the installed Coolify version. With that token, verify that the prior deployment
+   and its logs are visible through the API. If the permissions cannot be combined or the logs are
+   unavailable, leave automation disabled: this workflow does not support separate tokens. Do not
+   use a root or broader token as a workaround. Keep the token out of PR environments.
+3. Enable the repository variable for staging, then run a main CI build. Verify the reported digest,
+   Coolify deployment log and rolling update, health, sign-in and Server Actions. Test with traffic
+   and verify migration and rollback compatibility. No automated check can establish zero downtime.
+   Disable the variable and inspect the deployment queue before changing resources.
+4. Back up production, record its previous digest and validate the rollback procedure. Only after
+   staging succeeds, bootstrap the replacement production Docker Image resource with a tested digest
+   containing `/app/healthcheck.cjs` and the exact CMD health check above. Confirm its prior
+   deployment is healthy and its logs are visible with the intended token. Configure the protected
+   environment, then enable the variable. To stop automation, set it to `false` or remove it.
+
+The publisher records the tested registry digest in a run-specific receipt. The deploy workflow
+checks the originating CI workflow, run, attempt, commit and current `main`, then checks Coolify's
+active deployment queue and resource settings before changing its digest. It waits for the deployment
+and checks the image and rolling update in Coolify's deployment log and the resource's health.
+The receipt is trusted because it comes from a successful main CI run; restrict who can change main
+and its workflows. The jobs serialize with each other but cannot lock Coolify's UI or other clients.
+A manual change or a push can race these checks, and a cancelled job can leave a deployment running.
+
+On any failure, cancellation or timeout, inspect the Coolify deployment queue, deployment log and
+configured image before retrying or restarting the resource. A failed API request may still have
+changed the configured digest. The workflow does not guess whether to roll back. To recover, disable
+automation, wait for active deployments to finish, restore the recorded previous digest in Coolify,
+deploy it, and verify health and data. Confirm database migration compatibility before rolling back.
 
 The same container test runs on PRs. To run it locally after building:
 
