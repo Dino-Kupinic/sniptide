@@ -479,9 +479,8 @@ environment before changing production. Runtime configuration and secrets remain
 
 Production deployment is disabled unless repository variable `COOLIFY_PRODUCTION_DEPLOY` is set to
 `true`. It runs separately from CI and the release workflow. It does not configure or migrate the
-existing Coolify application. Preview images remain available for a manual, isolated deployment;
-no PR workflow receives a Coolify token. A future preview integration needs a separate host or a
-restricted broker that does not grant PR code access to the production host.
+existing Coolify application. Preview images are also available for manual, isolated deployment.
+No PR-triggered CI job receives a Coolify token.
 
 Before enabling the workflow:
 
@@ -526,6 +525,64 @@ configured image before retrying or restarting the resource. A failed API reques
 changed the configured digest. The workflow does not guess whether to roll back. To recover, disable
 automation, wait for active deployments to finish, restore the recorded previous digest in Coolify,
 deploy it, and verify health and data. Confirm database migration compatibility before rolling back.
+
+### Opt in to image previews
+
+Preview automation is disabled unless both repository variables `COOLIFY_PREVIEW_DEPLOY` and
+`COOLIFY_PREVIEW_RISK_ACKNOWLEDGED` are `true`. Previews can run on the same VPS as production, but
+that shares the host's attack surface: PR code executes in preview containers, and Coolify write,
+deploy and delete credentials can have broader effects on that host than one application. Separate
+hosts or a restricted broker provide stronger isolation. Review the network, container privileges,
+registry access and host exposure before acknowledging this risk.
+
+Use a separate Docker Image application, nonproduction secrets, and a disposable nonproduction
+database. Unless you provision a database per PR separately, previews share that database and can
+read or change one another's data. Keep preview domains outside every production cookie domain: for
+example, a preview under `*.sniptide.com` can receive cookies scoped to `sniptide.com`. Confirm the
+preview cannot reach production databases, internal services or production credentials.
+
+Before adding a preview token, create the GitHub environment `coolify-preview` and restrict its
+custom deployment branch policy to the `main` branch only. Do not allow PR refs, other branches,
+wildcards or tags. Protect `main` and its workflow changes. Create `COOLIFY_PREVIEW_TOKEN` **only as
+an environment secret**, never a repository or organization secret; it must be distinct from the
+production token. Set environment variables `COOLIFY_PREVIEW_URL` and `COOLIFY_PREVIEW_APP_ID` for
+the separate preview app. The handler checks GitHub's environment policy and fails closed if it
+cannot read a single exact `main` rule. Verify the installed GitHub environment rules also prohibit
+tag rules and PR refs; do not rely on the workflow check as a substitute for that protection.
+
+The preview token needs Coolify read, deploy, write and delete permissions to inspect the app and
+queue, create previews, and request deletion. These permissions may give broader host access. Verify
+its scope, the v4.7.3 digest-based `docker_tag` preview API, and GitHub's environment rules using a
+disposable preview before enabling. Never reuse the production token or fall back to broader
+credentials if the required permissions are unavailable.
+
+A successful same-repository PR CI run publishes a digest receipt. A separate default-branch
+`workflow_run` job checks the source workflow and current PR head, base, and synthetic merge commit
+before deploying it. Forks and Dependabot remain test-only. The handler executes default-branch code;
+it does not execute PR files with the token. Contributors trusted to modify same-repository CI can
+change the image and checks that produce a receipt. Coolify reporting a finished deployment and a
+stored digest tag does not prove runtime health; check the preview domain and health separately.
+
+Every 30 minutes, an opt-in scheduled workflow on the default branch lists known preview records,
+checks each PR's current state and repository, and requests a separate cleanup run on `main` for
+closed same-repository PRs, including retargeted PRs. Each protected cleanup run rechecks the PR and
+preview before deletion. GitHub scheduled runs can be delayed or disabled, so cleanup is not
+immediate or guaranteed. You can also run `Manage image preview` manually on `main` with the closed
+PR number. This design does not use `pull_request_target`, which GitHub plans to block by default in
+public repositories; see [GitHub's event policy announcement](https://github.blog/changelog/2026-11-02-pull_request_target-blocked-by-default-december-2/).
+
+A missing preview record is not proof that server cleanup completed: Coolify removes the record before
+asynchronous container and network cleanup, which can fail. Inspect the server for orphan containers
+and queued deployments and recover manually when necessary. Reopening triggers a fresh PR CI run; a
+successful run can recreate the preview.
+
+GitHub state and Coolify deletion are not atomic: a PR can reopen immediately after the final state
+check and its preview can still be deleted. Per-PR concurrency orders these jobs, but GitHub may
+replace a pending job; failed, cancelled or superseded jobs can leave stale previews. The handler
+waits for an active deployment on the preview app to clear, but its queue check cannot exclude a
+concurrent manual deployment or another PR starting at the same time. Inspect the preview and PR
+state before manual recovery. Check isolation, cookie domains, lifecycle, digest and runtime health
+in staging before enabling. Set either opt-in variable to `false` to stop new automation.
 
 The same container test runs on PRs. To run it locally after building:
 

@@ -43,7 +43,7 @@ jobs:
         env:
           LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
       - run: bash scripts/test-ci-image-tag.sh
-      - run: node --test scripts/test-deploy-production.mjs scripts/test-healthcheck.mjs
+      - run: node --test scripts/test-deploy-production.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
 
@@ -216,6 +216,24 @@ jobs:
         with:
           name: production-image-receipt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/image-receipt/receipt.json
+          retention-days: 7
+
+      - name: Record the preview image receipt
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'dependabot[bot]' }}
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+          BUILD_ATTEMPT: ${{ steps.build.outputs.attempt }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/preview-receipt"
+          node -e 'const fs = require("node:fs"); const e = process.env; fs.writeFileSync(`${e.RUNNER_TEMP}/preview-receipt/receipt.json`, JSON.stringify({repository:e.GITHUB_REPOSITORY, merge_sha:e.GITHUB_SHA, head_sha:e.PR_HEAD, base_sha:e.PR_BASE, pr:e.PR_NUMBER, run_id:e.GITHUB_RUN_ID, run_attempt:e.GITHUB_RUN_ATTEMPT, build_attempt:e.BUILD_ATTEMPT, digest:e.DIGEST}))'
+      - uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'dependabot[bot]' }}
+        with:
+          name: preview-image-receipt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/preview-receipt/receipt.json
           retention-days: 7
 
   # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.

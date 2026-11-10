@@ -65,6 +65,7 @@ Repository CI publishes tested amd64 images for commits on `main` and trusted pu
 A successful publishing job reports its image tag and digest in the workflow summary. Publishing these images does not deploy them to Coolify or create previews by default. The template above continues to use the latest stable release image.
 Operators who configure a separate image-based application should pin a registry digest, provide
 runtime settings and an isolated database for previews, and manage preview creation and removal.
-Repository operators can configure the opt-in production workflow described in the guide below.
+Repository operators can configure opt-in production and isolated preview workflows described in the
+guide below.
 See the [container publishing guide](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/development.md#container-publishing)
 for image tags and rollout constraints.
