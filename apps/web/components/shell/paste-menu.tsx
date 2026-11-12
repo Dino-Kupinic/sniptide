@@ -49,6 +49,7 @@ import {
   setStarred,
   trashPaste,
 } from "@/lib/pastes/actions"
+import { keyedUrl } from "@/lib/pastes/keyring"
 import type { SidebarPaste } from "@/lib/pastes/types"
 
 // The ⋯ menu on a sidebar paste row. Renaming, filing and deleting only apply to the viewer's own
@@ -133,7 +134,8 @@ export function PasteMenu({
             onClick={() => {
               if (expired) return
               track("share_link_copied", { from: "menu" })
-              return copyText(`${window.location.protocol}//${host}/${paste.slug}`, {
+              const url = `${window.location.protocol}//${host}/${paste.slug}`
+              return copyText(keyedUrl(url, paste.encryptionKeyId), {
                 success: feedbackT("linkCopied"),
                 error: feedbackT("copyError"),
               })

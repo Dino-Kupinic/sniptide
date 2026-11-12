@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { PasteEditor } from "@/components/paste/paste-editor"
 import { getPreferences, getSession } from "@/lib/auth"
@@ -18,6 +18,8 @@ export default async function Page({ params }: PageProps<"/pastes/[slug]/edit">)
   const slug = slugFromRoute((await params).slug)
   const paste = await getPaste(slug)
   if (!paste) notFound()
+  // An encrypted paste's content is fixed; its page is the place to change how it's shared.
+  if (paste.encryptionKeyId) redirect(`/pastes/${slug}`)
 
   const [share, preferences, collections, session] = await Promise.all([
     getShare(slug),

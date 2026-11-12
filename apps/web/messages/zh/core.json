@@ -94,7 +94,8 @@
     "notificationViews": "“{title}”已达到 {count, number} 次浏览",
     "notificationViewsDetail": "在统计分析中查看访问来源",
     "snapshotUnavailable": "Snapshot unavailable",
-    "expired": "已过期"
+    "expired": "已过期",
+    "endToEndEncrypted": "端到端加密"
   },
   "Profile": {
     "metaTitle": "{name} (@{handle}) · Sniptide",

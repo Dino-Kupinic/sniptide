@@ -129,7 +129,9 @@ async function lockContentRecord(tx: PasteTransaction, actor: PasteActor, key: P
 
 async function lockEditable(tx: PasteTransaction, actor: PasteActor, key: PasteKey) {
   const record = await lockContentRecord(tx, actor, key)
-  if (!record || record.deletedAt) return null
+  // An encrypted paste's content is fixed: the server can't merge, diff or snapshot ciphertext
+  // edits, so replacing files and restoring revisions are refused for it.
+  if (!record || record.deletedAt || record.encryptionKeyId) return null
   if (record.ownerId === actor.userId) {
     if (actor.kind === "token" && expired(record)) return null
     return { record, owned: true }
@@ -180,6 +182,7 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
       ? {
           passwordHash: request.passwordHash,
           burnAfterRead: request.input.burnAfterRead,
+          encryptionKeyId: request.input.encryption?.keyId ?? null,
           expiresAt: resolveExpiry(request.input.expiry, null, now.getTime()),
         }
       : {
@@ -358,7 +361,10 @@ async function lockOwnedPasteRow(
         keyWhere(key),
         eq(pasteTable.ownerId, actor.userId),
         includeRestricted ? undefined : allowedPaste(),
-        actor.kind === "token" ? isNull(pasteTable.deletedAt) : undefined,
+        // Tokens never reach encrypted pastes; see `liveOwned` in lib/api/pastes.ts.
+        actor.kind === "token"
+          ? and(isNull(pasteTable.deletedAt), isNull(pasteTable.encryptionKeyId))
+          : undefined,
       ),
     )
     .for("update")
@@ -382,6 +388,9 @@ export async function changePasteSharing(
     (actor.kind === "token" && expired(record))
   )
     return null
+  // A public paste is listed on its owner's profile and indexed, where an encrypted one would
+  // appear without its key. It stays unlisted or private.
+  if (record.encryptionKeyId && rest.visibility === "public") delete rest.visibility
   const [changed] = await tx
     .update(pasteTable)
     .set({

@@ -27,7 +27,8 @@ export default async function Page({ params }: PageProps<"/[slug]/print">) {
   const slug = slugFromRoute((await params).slug)
   const read = await readSharedPaste(slug)
   if (read.status === "missing") notFound()
-  if (read.status !== "ok") redirect(`/${slug}`)
+  // An encrypted paste is decrypted on the share page; this server-rendered one has no key.
+  if (read.status !== "ok" || read.paste.encryptionKeyId) redirect(`/${slug}`)
 
   const [t, locale, files, { host }] = await Promise.all([
     getTranslations("Core"),

@@ -222,6 +222,21 @@
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
     "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
     "expiredSharingHelp": "Este paste ha caducado. Establece una nueva caducidad o elige Nunca para volver a compartirlo.",
-    "manageAccess": "Gestionar acceso"
+    "manageAccess": "Gestionar acceso",
+    "endToEndEncryption": "Cifrado de extremo a extremo",
+    "encryptedInThisBrowser": "Sniptide no puede leer los archivos",
+    "aboutSetting": "Acerca de {setting}",
+    "encryptionHelp": "Los archivos, sus nombres y la descripción se cifran en este navegador antes de guardarse, y la clave forma parte del enlace. El título sigue siendo legible para que puedas encontrar el paste. Un paste cifrado no se puede editar después.",
+    "encryptedPaste": "Paste cifrado",
+    "keyNeeded": "Se necesita la clave",
+    "keyNeededDescription": "Este paste está cifrado de extremo a extremo y el enlace que abriste no incluye la clave. Pega el enlace completo o la clave para leerlo.",
+    "keyNeededOwnerNote": "El navegador que creó el paste conserva su clave. Sniptide nunca la tiene.",
+    "keyNeededBeforeBurn": "Este paste está cifrado de extremo a extremo y el enlace que abriste no incluye la clave. Pega primero el enlace completo o la clave, para no gastar la única lectura en un texto que no puedes descifrar.",
+    "linkOrKey": "Enlace o clave",
+    "keyDoesNotFit": "Esa clave no abre este paste. Comprueba que copiaste el enlace completo.",
+    "decrypt": "Descifrar",
+    "checkKey": "Comprobar la clave",
+    "encryptedLinkHasKey": "Cifrado de extremo a extremo. El enlace que copias aquí incluye la clave, y quien lo tenga puede leer el paste.",
+    "encryptedLinkNoKey": "Cifrado de extremo a extremo. Este navegador no tiene la clave, así que el enlace que copias aquí no abre el paste por sí solo."
   }
 }

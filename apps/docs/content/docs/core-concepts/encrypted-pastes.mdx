@@ -1,0 +1,113 @@
+---
+title: Encrypted pastes
+description: Create a Sniptide paste that is encrypted in your browser, so the server stores only ciphertext. Learn where the key lives and which features an encrypted paste gives up.
+---
+
+**End-to-end encryption** encrypts a paste in your browser before it is saved. The server stores
+ciphertext and never receives the key, so neither Sniptide nor anyone who reads its database or
+backups can read the files. Use it for anything the server shouldn't see, such as credentials or
+a private log.
+
+Turn it on per paste in the editor's **Protection** setting, before you create the paste. It is
+off by default, and an existing paste can't be encrypted afterwards.
+
+## What is encrypted
+
+| Part of the paste | Encrypted |
+| --- | --- |
+| File contents, file names and languages | Yes |
+| Description | Yes |
+| Title | No. It stays readable so you can find the paste in your lists and search. |
+| Link, visibility, expiry, collection, view counts and creation time | No |
+| Size | Hidden up to a point. See [how the encryption works](#how-the-encryption-works). |
+
+Keep anything sensitive out of the title. The editor doesn't name an encrypted paste after its
+first line for the same reason. A paste without a title is called "Encrypted paste".
+
+## The key is part of the link
+
+Your browser creates a random 256-bit key for each paste and puts it after the `#` in the link:
+
+```text
+https://sniptide.com/k7Qe2x#key=3q2-7wAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBk
+```
+
+Browsers never send the part after `#` to a server, so the key stays out of requests and server
+logs. Sniptide's own analytics drop it as well.
+
+- **Whoever has the full link can read the paste.** Send it through a channel you trust.
+- **The link without the key opens a "Key needed" page.** The reader pastes the full link or the
+  key there. You can use this to send the link and the key separately.
+- **Copy link** and the **Share** dialog copy the full link in a browser that has the key.
+
+## Where the key is kept
+
+The browser that created the paste remembers its key, so the paste opens from your lists there
+without the full link. The key is kept in that browser's storage for this site. It isn't part of
+your account and it doesn't sync.
+
+On another device or browser, open the full link once while signed in, and that browser remembers
+the key too. A share page opened by a reader never stores the key.
+
+<Callout type="warn">
+  Save the full link somewhere safe, such as a password manager. If every browser that holds the
+  key loses it and you don't have the link, the paste can't be recovered. Sniptide has no copy of
+  the key and can't reset it.
+</Callout>
+
+Clearing the browser's site data removes its keys. Signing out doesn't, so on a shared computer
+clear the site data when you finish.
+
+## What an encrypted paste gives up
+
+The server can't read the paste, so it can't do anything that needs the plain text.
+
+| Feature | Encrypted paste |
+| --- | --- |
+| Share page, copy and syntax highlighting | Work. The browser decrypts and highlights the files. |
+| Password, expiry, invitations and [burn after read](/core-concepts/burn-after-read) | Work. A password adds a second check on the server and doesn't change the key. |
+| Collections, stars, trash and view counts | Work |
+| Search | Finds the title and link, as for every paste in the app |
+| Editing, autosave and restoring a revision | Not available. The content is fixed when you create the paste. To change it, create a new paste and move the old one to the trash. |
+| Duplicate | Not available |
+| **Public** visibility and your public profile | Not available. An encrypted paste is **Private** or **Unlisted**. |
+| Raw files, download, print, embed and the Markdown copy for agents | Not available |
+| Link previews and posting to Slack or Discord | Not available. A chat app that unfurls the link still shows the title. |
+| [API](/api-tokens), [SDKs](/sdks), [CLI](/cli) and [MCP](/mcp) | Encrypted pastes aren't returned, listed or changed through a token. They are created and read in the web app only. |
+
+An encrypted paste holds about two thirds of the instance's paste size limit, because the
+encrypted form is larger than the text.
+
+## Combine it with burn after read
+
+An encrypted burn-after-read paste checks the key before it offers **Open and burn**. A reader
+who opened the link without the key is asked for it first, so the one read is never spent on text
+they can't decrypt.
+
+## How the encryption works
+
+Encryption uses the browser's built-in Web Crypto API. No cryptography code is downloaded from a
+third party.
+
+- The key is 32 random bytes from the browser's secure random generator.
+- Each paste derives an AES-256-GCM key from it with HKDF-SHA-256 and a random 16-byte salt, and
+  encrypts with a random 12-byte nonce. AES-GCM also detects any change to the stored ciphertext.
+- The files, their names and the description are encrypted together as one envelope, stored in
+  the format `sniptide.e2e.v1.<data>`.
+- The plain text is padded before encryption to at least 512 bytes, then to a size that reveals
+  only its rough magnitude (Padmé padding, under 12% overhead). A short secret's exact length
+  stays hidden.
+- The server stores a 12-byte key id derived from the key with HKDF. A browser uses it to find
+  the right key and to tell a wrong key from the right one. It can't be turned back into the key.
+
+## What it doesn't protect against
+
+- **Someone who has the full link.** The link is the secret. An unlisted encrypted paste is
+  readable by anyone you or a reader forwards the link to.
+- **A compromised device or browser extension** that reads the page after decryption or the
+  browser's storage.
+- **A server that sends altered code.** As with every web app that encrypts in the browser, you
+  trust the JavaScript the instance serves at the moment you open the page. A
+  [self-hosted instance](/self-hosting) puts that trust in your own hands.
+- **Metadata.** The title, link, owner, times, view counts, padded size and readers' IP-derived
+  analytics are handled like those of any other paste.
