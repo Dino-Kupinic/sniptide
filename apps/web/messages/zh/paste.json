@@ -225,6 +225,7 @@
     "manageAccess": "管理访问权限",
     "endToEndEncryption": "端到端加密",
     "encryptedInThisBrowser": "Sniptide 无法读取文件",
+    "aboutSetting": "关于{setting}",
     "encryptionHelp": "文件、文件名和描述会在保存前于此浏览器中加密，密钥包含在链接中。标题保持可读，方便你找到该粘贴。加密的粘贴之后无法编辑。",
     "encryptedPaste": "加密的粘贴",
     "keyNeeded": "需要密钥",

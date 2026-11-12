@@ -225,6 +225,7 @@
     "manageAccess": "アクセスを管理",
     "endToEndEncryption": "エンドツーエンド暗号化",
     "encryptedInThisBrowser": "Sniptide はファイルを読めません",
+    "aboutSetting": "{setting} について",
     "encryptionHelp": "ファイル、ファイル名、説明は保存前にこのブラウザーで暗号化され、鍵はリンクに含まれます。ペーストを見つけられるよう、タイトルは読める状態のままです。暗号化したペーストは後から編集できません。",
     "encryptedPaste": "暗号化されたペースト",
     "keyNeeded": "鍵が必要です",

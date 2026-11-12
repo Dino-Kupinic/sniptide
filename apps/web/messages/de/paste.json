@@ -225,6 +225,7 @@
     "manageAccess": "Zugriff verwalten",
     "endToEndEncryption": "Ende-zu-Ende-Verschlüsselung",
     "encryptedInThisBrowser": "Sniptide kann die Dateien nicht lesen",
+    "aboutSetting": "Über {setting}",
     "encryptionHelp": "Dateien, Dateinamen und die Beschreibung werden vor dem Speichern in diesem Browser verschlüsselt, und der Schlüssel ist Teil des Links. Der Titel bleibt lesbar, damit du den Paste wiederfindest. Ein verschlüsselter Paste lässt sich später nicht bearbeiten.",
     "encryptedPaste": "Verschlüsselter Paste",
     "keyNeeded": "Schlüssel erforderlich",

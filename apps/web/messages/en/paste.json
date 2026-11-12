@@ -225,6 +225,7 @@
     "manageAccess": "Manage access",
     "endToEndEncryption": "End-to-end encryption",
     "encryptedInThisBrowser": "Sniptide can't read the files",
+    "aboutSetting": "About {setting}",
     "encryptionHelp": "Files, file names and the description are encrypted in this browser before saving, and the key is part of the link. The title stays readable so you can find the paste. An encrypted paste can't be edited later.",
     "encryptedPaste": "Encrypted paste",
     "keyNeeded": "Key needed",

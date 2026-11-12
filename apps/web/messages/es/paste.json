@@ -225,6 +225,7 @@
     "manageAccess": "Gestionar acceso",
     "endToEndEncryption": "Cifrado de extremo a extremo",
     "encryptedInThisBrowser": "Sniptide no puede leer los archivos",
+    "aboutSetting": "Acerca de {setting}",
     "encryptionHelp": "Los archivos, sus nombres y la descripción se cifran en este navegador antes de guardarse, y la clave forma parte del enlace. El título sigue siendo legible para que puedas encontrar el paste. Un paste cifrado no se puede editar después.",
     "encryptedPaste": "Paste cifrado",
     "keyNeeded": "Se necesita la clave",

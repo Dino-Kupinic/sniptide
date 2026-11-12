@@ -979,13 +979,11 @@ export function PasteEditor({
                 <ToggleRow
                   label={t("endToEndEncryption")}
                   description={t("encryptedInThisBrowser")}
+                  help={t("encryptionHelp")}
                   checked={encrypted}
                   onCheckedChange={changeEncrypted}
                   large={large}
                 />
-                {encrypted ? (
-                  <p className="text-xs text-muted-foreground">{t("encryptionHelp")}</p>
-                ) : null}
               </>
             )}
             <ToggleRow
