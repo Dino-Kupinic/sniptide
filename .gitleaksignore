@@ -13,8 +13,12 @@ a415cf98c208fe866449152e61d06a0569806f18:apps/web/lib/openapi.ts:generic-api-key
 # Disposable compose smoke-test auth secret.
 248473540e6645e65bb6716ab047a5089386f7c7:scripts/test-compose.sh:generic-api-key:10
 
-# Fixed test vector for the paste encryption format: the key is the bytes 0x00 to 0x1f.
+# Fixed test vector for the paste encryption format: the key is the bytes 0x00 to 0x1f. The first
+# line is the commit on the pull request branch, the second the squash merge on main.
 0c2cd01bd1982d6182e813f945208a1a63c4cb2c:apps/web/test/paste-encryption.test.ts:generic-api-key:110
+5e8018874ac52bf6146bcd472aa7859d126f63d3:apps/web/test/paste-encryption.test.ts:generic-api-key:110
 
-# Example share link in the encrypted pastes page, with a made-up key.
+# Example share link in the encrypted pastes page, with a made-up key. The first line is the
+# commit on the pull request branch, the second the squash merge on main.
 0c2cd01bd1982d6182e813f945208a1a63c4cb2c:apps/docs/content/docs/core-concepts/encrypted-pastes.mdx:generic-api-key:32
+5e8018874ac52bf6146bcd472aa7859d126f63d3:apps/docs/content/docs/core-concepts/encrypted-pastes.mdx:generic-api-key:32
