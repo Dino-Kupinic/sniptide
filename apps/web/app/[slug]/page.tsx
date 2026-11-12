@@ -6,6 +6,7 @@ import type * as React from "react"
 import { type ComponentProps, Suspense } from "react"
 import { LifeField } from "@/components/auth/life-field"
 import { LanguageMenu } from "@/components/language-switcher"
+import { EncryptedSharedPaste } from "@/components/paste/encrypted-paste"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { GateLayout } from "@/components/paste/paste-gate"
 import { RevealPaste } from "@/components/paste/reveal-paste"
@@ -55,7 +56,12 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   if (read.status === "sealed") {
     return (
       <Shell signedIn={signedIn}>
-        <RevealPaste slug={slug} ownerHref={ownerHref} after={signUp} />
+        <RevealPaste
+          slug={slug}
+          ownerHref={ownerHref}
+          encryptionKeyId={read.encryptionKeyId}
+          after={signUp}
+        />
       </Shell>
     )
   }
@@ -71,6 +77,22 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   }
 
   const { paste } = read
+  const [sealedFile] = paste.files
+  if (paste.encryptionKeyId && sealedFile) {
+    // The server only has ciphertext: the browser decrypts it with the key from the link.
+    const { files: _files, ...details } = paste
+    return (
+      <Shell signedIn={signedIn}>
+        <EncryptedSharedPaste
+          slug={slug}
+          paste={details}
+          envelope={sealedFile.content}
+          keyId={paste.encryptionKeyId}
+          after={signUp}
+        />
+      </Shell>
+    )
+  }
   const single = paste.files.length === 1
   const viewerProps = {
     slug,

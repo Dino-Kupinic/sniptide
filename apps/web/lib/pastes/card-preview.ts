@@ -12,12 +12,13 @@ export const CARD_PREVIEW_LINES = 6
 
 // The first lines of each paste's first file, highlighted, for the cards of a paste list. Only
 // the start of the content is read, so a large paste costs no more than a small one. Someone
-// else's password-protected paste shows no code, since the viewer may not have unlocked it.
+// else's password-protected paste shows no code, since the viewer may not have unlocked it, and
+// an encrypted paste shows none because the server only holds its ciphertext.
 export async function cardPreviews(
   pastes: PasteSummary[],
 ): Promise<Record<string, HighlightedLines>> {
   const slugs = pastes
-    .filter((paste) => !(paste.password && paste.owner))
+    .filter((paste) => !(paste.password && paste.owner) && !paste.encryptionKeyId)
     .map((paste) => paste.slug)
   if (slugs.length === 0) return {}
 

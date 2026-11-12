@@ -41,6 +41,7 @@ import {
   setStarred,
   trashPaste,
 } from "@/lib/pastes/actions"
+import { keyedUrl } from "@/lib/pastes/keyring"
 import type { PasteRow } from "@/lib/pastes/rows"
 
 // One entry of a row's menu. The desktop dropdown and the mobile sheet render the same list.
@@ -71,7 +72,7 @@ function useRowActions(row: PasteRow, origin: string, shared: boolean): RowActio
       reason: expired ? t("expired_sharing_help") : undefined,
       onSelect: () =>
         !expired &&
-        copyText(`${origin}/${row.slug}`, {
+        copyText(keyedUrl(`${origin}/${row.slug}`, row.encryptionKeyId), {
           success: feedbackT("linkCopied"),
           error: feedbackT("copyError"),
         }),
@@ -84,19 +85,24 @@ function useRowActions(row: PasteRow, origin: string, shared: boolean): RowActio
       label: t("edit"),
       href: `/pastes/${row.slug}/edit`,
     })
-  actions.push(
-    { id: "duplicate", icon: CopyIcon, label: t("duplicate"), href: `/new?from=${row.slug}` },
-    {
-      id: "star",
-      icon: row.starred ? StarOffIcon : StarIcon,
-      label: row.starred ? t("unstar") : t("star"),
-      onSelect: () =>
-        runAction(() => setStarred(row.slug, !row.starred), {
-          success: row.starred ? t("removed_from_starred") : t("starred"),
-          error: t("couldnt_update_the_star_try_again"),
-        }),
-    },
-  )
+  // A copy of an encrypted paste would be a copy of its ciphertext.
+  if (!row.encryptionKeyId)
+    actions.push({
+      id: "duplicate",
+      icon: CopyIcon,
+      label: t("duplicate"),
+      href: `/new?from=${row.slug}`,
+    })
+  actions.push({
+    id: "star",
+    icon: row.starred ? StarOffIcon : StarIcon,
+    label: row.starred ? t("unstar") : t("star"),
+    onSelect: () =>
+      runAction(() => setStarred(row.slug, !row.starred), {
+        success: row.starred ? t("removed_from_starred") : t("starred"),
+        error: t("couldnt_update_the_star_try_again"),
+      }),
+  })
   if (shared)
     actions.push({
       id: "leave",

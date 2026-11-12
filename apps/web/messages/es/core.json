@@ -94,7 +94,8 @@
     "notificationViews": "«{title}» ha alcanzado {count, number} visitas",
     "notificationViewsDetail": "Consulta su origen en Estadísticas",
     "snapshotUnavailable": "Snapshot unavailable",
-    "expired": "Caducado"
+    "expired": "Caducado",
+    "endToEndEncrypted": "Cifrado de extremo a extremo"
   },
   "Profile": {
     "metaTitle": "{name} (@{handle}) · Sniptide",

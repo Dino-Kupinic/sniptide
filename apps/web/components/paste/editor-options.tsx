@@ -1,6 +1,8 @@
 "use client"
 
+import { Button } from "@sniptide/ui/components/button"
 import { Input } from "@sniptide/ui/components/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@sniptide/ui/components/popover"
 import {
   Select,
   SelectContent,
@@ -11,7 +13,7 @@ import {
 import { StepSlider } from "@sniptide/ui/components/step-slider"
 import { Switch } from "@sniptide/ui/components/switch"
 import { cn } from "@sniptide/ui/lib/utils"
-import { CheckIcon, EyeIcon, EyeOffIcon, XIcon } from "lucide-react"
+import { CheckIcon, CircleHelpIcon, EyeIcon, EyeOffIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { useSiteHost } from "@/components/site-host"
@@ -271,6 +273,7 @@ export function CollectionSelect({
 export function ToggleRow({
   label,
   description,
+  help,
   checked,
   onCheckedChange,
   large = false,
@@ -278,6 +281,8 @@ export function ToggleRow({
 }: {
   label: string
   description?: string
+  // A longer explanation behind a "?" button beside the label.
+  help?: string
   checked: boolean
   onCheckedChange: (checked: boolean) => void
   large?: boolean
@@ -286,12 +291,15 @@ export function ToggleRow({
   const id = React.useId()
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex flex-col">
-        <span
-          id={id}
-          className={cn("text-[13px] leading-[18px] font-medium", large && "text-sm leading-5")}
-        >
-          {label}
+      <div className="flex min-w-0 flex-col">
+        <span className="flex items-center gap-1">
+          <span
+            id={id}
+            className={cn("text-[13px] leading-[18px] font-medium", large && "text-sm leading-5")}
+          >
+            {label}
+          </span>
+          {help ? <HelpTip label={label} text={help} /> : null}
         </span>
         {description ? <span className="text-xs text-muted-foreground">{description}</span> : null}
       </div>
@@ -302,6 +310,38 @@ export function ToggleRow({
         disabled={disabled}
       />
     </div>
+  )
+}
+
+// Styled as a tooltip, but built on a popover that opens on hover: a tooltip never opens on a
+// touch screen, and a popover also opens on tap and closes on a tap outside.
+function HelpTip({ label, text }: { label: string; text: string }) {
+  const t = useTranslations("Paste")
+  return (
+    <Popover>
+      <PopoverTrigger
+        openOnHover
+        delay={100}
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("aboutSetting", { setting: label })}
+            className="relative text-muted-foreground after:absolute after:-inset-2 lg:after:hidden"
+          />
+        }
+      >
+        <CircleHelpIcon />
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="center"
+        className="max-w-72 rounded-md border-0 bg-foreground px-2 py-1 text-xs leading-[18px] text-background shadow-none"
+      >
+        {text}
+      </PopoverContent>
+    </Popover>
   )
 }
 

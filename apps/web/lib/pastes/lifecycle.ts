@@ -39,14 +39,21 @@ export function liveWhere(now = new Date()) {
   return and(isNull(pasteTable.deletedAt), unexpiredWhere(now))
 }
 
-// Whether anyone holding the link can read the paste with no session, password or reveal step.
+// Whether anyone holding the link can read the paste with no session, password, reveal step or key.
 // Link previews, embeds and channel webhooks only ever show these, even to the owner.
 export function openToAnyone(record: {
   visibility: "public" | "unlisted" | "private"
   passwordHash: string | null
   burnAfterRead: boolean
+  encryptionKeyId: string | null
 }) {
-  return record.visibility !== "private" && !record.passwordHash && !record.burnAfterRead
+  // An encrypted paste needs the key from the link's fragment, which none of those surfaces has.
+  return (
+    record.visibility !== "private" &&
+    !record.passwordHash &&
+    !record.burnAfterRead &&
+    !record.encryptionKeyId
+  )
 }
 
 // What Restore writes. A burned paste was read once already, so it comes back for its owner

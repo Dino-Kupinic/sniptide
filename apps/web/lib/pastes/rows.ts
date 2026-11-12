@@ -16,6 +16,8 @@ export interface PasteRow {
   language: string
   visibility: PasteSummary["visibility"]
   burnAfterRead: boolean
+  // Set on an end-to-end encrypted paste; a browser holding that key copies the full link.
+  encryptionKeyId: string | null
   views: number
   expiresLabel: string
   // Expiring within 48 hours: highlighted in the tables and counted on the dashboard.
@@ -72,6 +74,7 @@ function toRow(
     language: paste.language,
     visibility: paste.visibility,
     burnAfterRead: paste.burnAfterRead,
+    encryptionKeyId: paste.encryptionKeyId,
     views: paste.views,
     expiresLabel: expiresLabel(paste, now, locale),
     expiresSoon: Boolean(
@@ -84,7 +87,8 @@ function toRow(
     collection: paste.owner ? null : paste.collection,
     starred: starred.has(paste.slug),
     owner: paste.owner,
-    canEdit,
+    // An encrypted paste's content is fixed.
+    canEdit: canEdit && !paste.encryptionKeyId,
     createdBy: paste.createdBy,
   } satisfies PasteRow
 }

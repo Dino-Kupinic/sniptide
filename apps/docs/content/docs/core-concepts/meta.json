@@ -6,6 +6,7 @@
     "collections",
     "sharing",
     "burn-after-read",
+    "encrypted-pastes",
     "revisions",
     "secrets",
     "analytics"

@@ -75,6 +75,10 @@ export const paste = pgTable(
     // scrypt hash ("salt:hash", hex), never the password itself.
     passwordHash: text("password_hash"),
     burnAfterRead: boolean("burn_after_read").notNull().default(false),
+    // Set on an end-to-end encrypted paste: a public fingerprint of the key its files were
+    // encrypted with in the browser. The key itself never reaches the server. The paste then has
+    // one file whose content is the ciphertext envelope (@sniptide/contracts/encryption).
+    encryptionKeyId: text("encryption_key_id"),
     allowRaw: boolean("allow_raw").notNull().default(true),
     collection: text("collection"),
     // Free-form labels for finding a paste again (`sniptide list --tag react`).
