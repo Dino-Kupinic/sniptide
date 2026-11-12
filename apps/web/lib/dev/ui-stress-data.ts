@@ -63,6 +63,7 @@ export function stressData(dataset: Dataset) {
       language: ["typescript", "objective-c", "text", "python"][index % 4] ?? "text",
       visibility: (["public", "unlisted", "private"] as const)[index % 3] ?? "private",
       burnAfterRead: index % 4 === 3,
+      encryptionKeyId: null,
       views: dataset === "one" ? 1 : worst ? ([0, 1, 1284, 1000000, 12345678][index % 5] ?? 0) : 12,
       expiresLabel:
         index % 4 === 3

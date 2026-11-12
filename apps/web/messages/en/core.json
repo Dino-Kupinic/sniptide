@@ -94,7 +94,8 @@
     "notificationViews": "“{title}” reached {count, number} views",
     "notificationViewsDetail": "See where they came from in Analytics",
     "snapshotUnavailable": "Snapshot unavailable",
-    "expired": "Expired"
+    "expired": "Expired",
+    "endToEndEncrypted": "End-to-end encrypted"
   },
   "Profile": {
     "metaTitle": "{name} (@{handle}) · Sniptide",

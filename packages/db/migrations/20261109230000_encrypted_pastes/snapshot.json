@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "6eb72a33-61f0-4595-ae90-1be36107f758",
+  "prevIds": [
+    "5a93fe8f-f928-44d5-8ea4-75f4dca706d9"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "paste",
+        "encryption_key_id"
+      ],
+      "writes": [
+        "s|col|public.paste.encryption_key_id",
+        "n|col|public.paste.encryption_key_id",
+        "e|col|public.paste.encryption_key_id"
+      ],
+      "reads": [
+        "n|tbl|public.paste",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste",
+        "name": "encryption_key_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

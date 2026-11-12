@@ -94,7 +94,8 @@
     "notificationViews": "„{title}“ hat {count, number} Aufrufe erreicht",
     "notificationViewsDetail": "Sieh dir die Herkunft unter Statistiken an",
     "snapshotUnavailable": "Snapshot unavailable",
-    "expired": "Abgelaufen"
+    "expired": "Abgelaufen",
+    "endToEndEncrypted": "Ende-zu-Ende-verschlüsselt"
   },
   "Profile": {
     "metaTitle": "{name} (@{handle}) · Sniptide",

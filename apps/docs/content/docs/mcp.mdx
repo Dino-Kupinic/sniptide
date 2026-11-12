@@ -204,6 +204,8 @@ depends on your client.
 
 ## Limits and errors
 
+- An agent never sees an [encrypted paste](/core-concepts/encrypted-pastes). The tools don't
+  list, read or change one.
 - MCP requests share the token's **3,600 requests an hour**, the limit of 30 new pastes an hour,
   paste validation and the account's storage limit.
 - Request bodies are capped at 8 MiB and tool results at 25 MiB. Read single snippets if a

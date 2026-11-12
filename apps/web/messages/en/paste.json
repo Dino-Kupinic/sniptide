@@ -222,6 +222,20 @@
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
     "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
     "expiredSharingHelp": "This paste has expired. Set a new expiry or choose Never to share it again.",
-    "manageAccess": "Manage access"
+    "manageAccess": "Manage access",
+    "endToEndEncryption": "End-to-end encryption",
+    "encryptedInThisBrowser": "Sniptide can't read the files",
+    "encryptionHelp": "Files, file names and the description are encrypted in this browser before saving, and the key is part of the link. The title stays readable so you can find the paste. An encrypted paste can't be edited later.",
+    "encryptedPaste": "Encrypted paste",
+    "keyNeeded": "Key needed",
+    "keyNeededDescription": "This paste is end-to-end encrypted and the link you opened has no key. Paste the full link or the key to read it.",
+    "keyNeededOwnerNote": "The browser that created the paste keeps its key. Sniptide never has it.",
+    "keyNeededBeforeBurn": "This paste is end-to-end encrypted and the link you opened has no key. Paste the full link or the key first, so the one read isn't spent on text you can't decrypt.",
+    "linkOrKey": "Link or key",
+    "keyDoesNotFit": "That key doesn't open this paste. Check that you copied the whole link.",
+    "decrypt": "Decrypt",
+    "checkKey": "Check key",
+    "encryptedLinkHasKey": "End-to-end encrypted. The link you copy here includes the key, and whoever has it can read the paste.",
+    "encryptedLinkNoKey": "End-to-end encrypted. This browser doesn't have the key, so the link you copy here can't open the paste on its own."
   }
 }

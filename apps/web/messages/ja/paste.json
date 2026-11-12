@@ -222,6 +222,20 @@
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
     "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
     "expiredSharingHelp": "このペーストは期限切れです。有効期限を変更するか「無期限」を選ぶと、再び共有できます。",
-    "manageAccess": "アクセスを管理"
+    "manageAccess": "アクセスを管理",
+    "endToEndEncryption": "エンドツーエンド暗号化",
+    "encryptedInThisBrowser": "Sniptide はファイルを読めません",
+    "encryptionHelp": "ファイル、ファイル名、説明は保存前にこのブラウザーで暗号化され、鍵はリンクに含まれます。ペーストを見つけられるよう、タイトルは読める状態のままです。暗号化したペーストは後から編集できません。",
+    "encryptedPaste": "暗号化されたペースト",
+    "keyNeeded": "鍵が必要です",
+    "keyNeededDescription": "このペーストはエンドツーエンドで暗号化されており、開いたリンクには鍵が含まれていません。読むには完全なリンクまたは鍵を貼り付けてください。",
+    "keyNeededOwnerNote": "鍵はペーストを作成したブラウザーに保存されています。Sniptide が鍵を持つことはありません。",
+    "keyNeededBeforeBurn": "このペーストはエンドツーエンドで暗号化されており、開いたリンクには鍵が含まれていません。一度きりの閲覧を復号できないテキストに使ってしまわないよう、先に完全なリンクまたは鍵を貼り付けてください。",
+    "linkOrKey": "リンクまたは鍵",
+    "keyDoesNotFit": "その鍵ではこのペーストを開けません。リンク全体をコピーしたか確認してください。",
+    "decrypt": "復号する",
+    "checkKey": "鍵を確認",
+    "encryptedLinkHasKey": "エンドツーエンドで暗号化されています。ここでコピーするリンクには鍵が含まれ、リンクを持つ人はペーストを読めます。",
+    "encryptedLinkNoKey": "エンドツーエンドで暗号化されています。このブラウザーには鍵がないため、ここでコピーするリンクだけではペーストを開けません。"
   }
 }

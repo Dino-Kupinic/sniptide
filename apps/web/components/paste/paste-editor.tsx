@@ -1,5 +1,12 @@
 "use client"
 
+import {
+  ENCRYPTED_FILE_NAME,
+  encryptPayload,
+  generateKey,
+  keyIdOf,
+  withKeyFragment,
+} from "@sniptide/contracts/encryption"
 import { Button } from "@sniptide/ui/components/button"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
@@ -70,6 +77,7 @@ import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
+import { rememberKey } from "@/lib/pastes/keyring"
 import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
 import { isCustomLink } from "@/lib/pastes/links"
 import { passwordField, storedPasswordField } from "@/lib/pastes/password-intent"
@@ -95,11 +103,13 @@ export interface EditorInitial {
 
 type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
+  // The end-to-end encryption switch, so a restored draft is still saved encrypted.
+  encrypted?: boolean
 }
 
 // What the draft on this device keeps: everything except the password, which never leaves memory.
 function forDraft(value: EditorDraft): SavePasteInput {
-  const { automatic: _automatic, ...paste } = value
+  const { automatic: _automatic, encrypted: _encrypted, ...paste } = value
   return { ...paste, password: value.password === null ? null : "" }
 }
 
@@ -261,6 +271,10 @@ export function PasteEditor({
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
+  // New pastes only: the files are encrypted in this browser when the paste is created.
+  const [encrypted, setEncrypted] = React.useState(false)
+  const encryptedRef = React.useRef(encrypted)
+  encryptedRef.current = encrypted
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
@@ -448,8 +462,9 @@ export function PasteEditor({
         visibility: automatic.current.visibility,
         filenames: files.map((file) => automatic.current.filenames.has(file.id)),
       },
+      encrypted,
     }),
-    [value, files],
+    [value, files, encrypted],
   )
   const [draftReady, setDraftReady] = React.useState(false)
   const [draftNotice, setDraftNotice] = React.useState<
@@ -492,6 +507,7 @@ export function PasteEditor({
     setPassword("")
     setCommittedPassword("")
     setBurnAfterRead(next.burnAfterRead)
+    setEncrypted(!editing && Boolean(next.encrypted))
   }
 
   React.useEffect(() => {
@@ -572,9 +588,21 @@ export function PasteEditor({
 
   function updateFiles(next: EditorFile[]) {
     setFiles(next)
+    // The title stays readable to the server, so an encrypted paste never takes one from its
+    // files, and it is never suggested as public.
+    if (encryptedRef.current) return
     if (automatic.current.title) setTitle(suggestedTitle(next))
     if (automatic.current.visibility) {
       setVisibility((current) => suggestedVisibility(next, current))
+    }
+  }
+
+  function changeEncrypted(on: boolean) {
+    setEncrypted(on)
+    if (automatic.current.title) setTitle(on ? t("encryptedPaste") : suggestedTitle(files))
+    if (on && visibility === "public") {
+      automatic.current.visibility = false
+      setVisibility("unlisted")
     }
   }
 
@@ -754,7 +782,26 @@ export function PasteEditor({
     }
 
     startTransition(async () => {
-      const result = await savePaste(value).catch(() => null)
+      // Encrypted: the server gets one ciphertext file and the key's public id. The description
+      // and the files' names and contents exist in the clear only in this browser.
+      const key = encrypted ? generateKey() : null
+      const sent: SavePasteInput = key
+        ? {
+            ...value,
+            description: "",
+            files: [
+              {
+                name: ENCRYPTED_FILE_NAME,
+                content: await encryptPayload(
+                  { description, files: files.map(({ name, content }) => ({ name, content })) },
+                  key,
+                ),
+              },
+            ],
+            encryption: { keyId: await keyIdOf(key) },
+          }
+        : value
+      const result = await savePaste(sent).catch(() => null)
 
       if (!result) {
         setError(t("couldnTSaveThePasteCheck"))
@@ -772,11 +819,16 @@ export function PasteEditor({
         password: passwordOn,
         custom_link: Boolean(slugForSave),
         invites: 0,
+        encrypted,
       })
       toast.success(t("pasteCreated"))
       autosaver.rebase(value)
       await discardDraft()
-      router.push(`/pastes/${result.slug}`)
+      // The paste's page finds the key in this browser's key ring. Where storage is blocked the
+      // key rides in the fragment instead, which is never sent to the server.
+      const remembered = key ? await rememberKey(key) : true
+      const path = `/pastes/${result.slug}`
+      router.push(key && !remembered ? withKeyFragment(path, key) : path)
     })
   }
 
@@ -858,10 +910,13 @@ export function PasteEditor({
                 automatic.current.visibility = false
                 setVisibility(next)
               }}
-              options={visibilityOptions.map((option) => ({
-                ...option,
-                label: t("visibilityValue", { value: option.value }),
-              }))}
+              options={visibilityOptions
+                // A public listing would show an encrypted paste without its key.
+                .filter((option) => !(encrypted && option.value === "public"))
+                .map((option) => ({
+                  ...option,
+                  label: t("visibilityValue", { value: option.value }),
+                }))}
               itemClassName={large ? "py-2 text-sm" : undefined}
             />
             <p className="text-xs text-muted-foreground">
@@ -916,9 +971,23 @@ export function PasteEditor({
         id: "protection",
         label: t("protection"),
         icon: LockIcon,
-        marked: passwordOn || burnAfterRead,
+        marked: passwordOn || burnAfterRead || encrypted,
         content: (
           <>
+            {editing ? null : (
+              <>
+                <ToggleRow
+                  label={t("endToEndEncryption")}
+                  description={t("encryptedInThisBrowser")}
+                  checked={encrypted}
+                  onCheckedChange={changeEncrypted}
+                  large={large}
+                />
+                {encrypted ? (
+                  <p className="text-xs text-muted-foreground">{t("encryptionHelp")}</p>
+                ) : null}
+              </>
+            )}
             <ToggleRow
               label={t("password")}
               description={t("visitorsMustEnterItToView")}
@@ -1263,7 +1332,7 @@ export function PasteEditor({
             onClick={() => setSettingsOpen(true)}
             className="h-auto min-h-[38px] min-w-0 flex-1 basis-[10rem] justify-start px-3 py-2"
           >
-            {passwordOn || burnAfterRead ? <LockIcon /> : <EyeIcon />}
+            {passwordOn || burnAfterRead || encrypted ? <LockIcon /> : <EyeIcon />}
             <span className="truncate">{settingsSummary}</span>
             <ChevronUpIcon className="ml-auto text-muted-foreground" />
           </Button>

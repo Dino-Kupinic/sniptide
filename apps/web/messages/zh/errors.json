@@ -91,7 +91,8 @@
     "unlinkLast": "请至少保留一种登录方式。先添加密码或关联其他账户。",
     "unlinkFailed": "无法取消关联该账户，请重试。",
     "demoLocked": "演示中不提供此功能。",
-    "signInFresh": "为了安全，请先退出并重新登录，然后重试。"
+    "signInFresh": "为了安全，请先退出并重新登录，然后重试。",
+    "encryptedPasteSize": "此粘贴过大，无法加密。加密的粘贴约可容纳 {limit} 上限的三分之二。"
   },
   "ServerError": {
     "title": "出了点问题",

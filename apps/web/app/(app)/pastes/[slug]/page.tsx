@@ -6,6 +6,11 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
 import { LocalDateTime } from "@/components/local-date-time"
 import { CompareRevisions } from "@/components/paste/compare-revisions"
+import {
+  DecryptedDescription,
+  DecryptedFileViewer,
+  EncryptedPasteProvider,
+} from "@/components/paste/encrypted-paste"
 import { ExpiredBadge, ExpiredNotice } from "@/components/paste/expiry-status"
 import { ActiveFileProvider, FileViewer } from "@/components/paste/file-viewer"
 import {
@@ -75,11 +80,15 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
       listCollections(),
       owned ? listPasteShares(slug) : null,
       getSession(),
-      highlightFiles(paste.files),
+      // An encrypted paste's one file is ciphertext; the browser decrypts and colours it.
+      paste.encryptionKeyId ? [] : highlightFiles(paste.files),
     ])
   if (share && !share.seen) await markShareSeen(slug)
 
-  const canEdit = owned || share?.access === "edit"
+  const { encryptionKeyId } = paste
+  const envelope = encryptionKeyId ? paste.files[0]?.content : undefined
+  // Content is fixed once encrypted, so there is nothing to edit, duplicate or compare.
+  const canEdit = !encryptionKeyId && (owned || share?.access === "edit")
   const url = `${origin}/${paste.slug}`
   const first = files[0]
   const collection = owned ? collections.find((c) => c.slug === paste.collection) : undefined
@@ -93,6 +102,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     paste.visibility !== "private" &&
     !paste.password &&
     !paste.burnAfterRead &&
+    !encryptionKeyId &&
     (!paste.expiresAt || paste.expiresAt > Date.now())
   const shareDialog = (trigger: "button" | "icon") =>
     people ? (
@@ -101,6 +111,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         expiresAt={paste.expiresAt}
         title={paste.title}
         url={url}
+        encryptionKeyId={encryptionKeyId}
         visibility={paste.visibility}
         owner={{
           id: paste.author.username,
@@ -129,6 +140,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     hasPassword: Boolean(paste.password),
     burnAfterRead: paste.burnAfterRead,
     allowRaw: paste.allowRaw,
+    encryptionKeyId,
   }
 
   // Rendered once and shown in the desktop side panel and in the mobile sheets.
@@ -157,10 +169,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   )
   const revisions = (
     <div>
-      <CompareRevisions
-        slug={slug}
-        current={{ title: paste.title, description: paste.description, files: paste.files }}
-      />
+      {encryptionKeyId ? null : (
+        <CompareRevisions
+          slug={slug}
+          current={{ title: paste.title, description: paste.description, files: paste.files }}
+        />
+      )}
       <ol className="flex flex-col divide-y divide-border">
         {paste.revisions.map((entry, index) => {
           // Counted from the oldest, the way "Restored revision 3" names them.
@@ -236,7 +250,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
     ) : undefined
   const viewsValue = `${formatNumber(paste.views, locale)} · ${t("unique", { count: paste.uniqueViews })}`
 
-  return (
+  const page = (
     <ActiveFileProvider>
       <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-5 lg:p-7 lg:pb-7">
         {/* The page's own heading carries the visibility badge, so the bar keeps only the title. */}
@@ -245,15 +259,17 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         </HeaderTitle>
         <HeaderActions>
           <StarButton slug={slug} starred={starred} />
-          <Button
-            variant="outline"
-            size="lg"
-            render={<Link href={`/new?from=${slug}`} />}
-            nativeButton={false}
-          >
-            <CopyIcon />
-            {t("duplicate")}
-          </Button>
+          {encryptionKeyId ? null : (
+            <Button
+              variant="outline"
+              size="lg"
+              render={<Link href={`/new?from=${slug}`} />}
+              nativeButton={false}
+            >
+              <CopyIcon />
+              {t("duplicate")}
+            </Button>
+          )}
           {canEdit ? (
             <Button
               variant="outline"
@@ -266,7 +282,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             </Button>
           ) : null}
           {shareDialog("button")}
-          <CopyLinkButton url={url} expiresAt={paste.expiresAt} />
+          <CopyLinkButton url={url} encryptionKeyId={encryptionKeyId} expiresAt={paste.expiresAt} />
         </HeaderActions>
 
         {/* Mobile header */}
@@ -289,12 +305,14 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               expiresAt={paste.expiresAt}
               canTrash={owned}
               canLeave={Boolean(share)}
-              rawAllowed={paste.allowRaw}
+              rawAllowed={paste.allowRaw && !encryptionKeyId}
               url={url}
+              encryptionKeyId={encryptionKeyId}
             />
             {shareDialog("icon") ?? (
               <ShareButton
                 url={url}
+                encryptionKeyId={encryptionKeyId}
                 title={paste.title}
                 expiresAt={paste.expiresAt}
                 className="size-10"
@@ -314,7 +332,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
             {owned ? null : <VisibilityBadge paste={paste} />}
           </div>
           <ExpiredNotice expiresAt={paste.expiresAt} />
-          {paste.description ? (
+          {encryptionKeyId ? (
+            <DecryptedDescription className="text-base leading-6 lg:text-sm lg:leading-5" />
+          ) : paste.description ? (
             <p className="text-base leading-6 lg:text-sm lg:leading-5">{paste.description}</p>
           ) : null}
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
@@ -359,18 +379,30 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 
         <SidePanelProvider>
           <div className="flex flex-col gap-5 pt-4 lg:flex-row lg:items-start lg:pt-0">
-            <FileViewer
-              slug={slug}
-              files={files}
-              rawAllowed={paste.allowRaw}
-              lineNumbers={preferences.lineNumbers}
-              collapseAt={6}
-              panelToggle
-              printable
-              className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
-              bodyClassName="bg-muted dark:bg-sidebar"
-              footer={t("revision", { number: revision, total: revision })}
-            />
+            {encryptionKeyId ? (
+              <DecryptedFileViewer
+                slug={slug}
+                lineNumbers={preferences.lineNumbers}
+                collapseAt={6}
+                panelToggle
+                className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
+                bodyClassName="bg-muted dark:bg-sidebar"
+                footer={t("endToEndEncrypted")}
+              />
+            ) : (
+              <FileViewer
+                slug={slug}
+                files={files}
+                rawAllowed={paste.allowRaw}
+                lineNumbers={preferences.lineNumbers}
+                collapseAt={6}
+                panelToggle
+                printable
+                className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
+                bodyClassName="bg-muted dark:bg-sidebar"
+                footer={t("revision", { number: revision, total: revision })}
+              />
+            )}
 
             <PasteDetailPanel
               state={owned ? sharingState : undefined}
@@ -433,6 +465,13 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         </div>
       </div>
     </ActiveFileProvider>
+  )
+  return encryptionKeyId && envelope ? (
+    <EncryptedPasteProvider envelope={envelope} keyId={encryptionKeyId}>
+      {page}
+    </EncryptedPasteProvider>
+  ) : (
+    page
   )
 }
 

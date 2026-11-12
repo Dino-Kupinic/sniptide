@@ -26,15 +26,16 @@ describe("paste lifecycle", () => {
   })
 
   test.each([
-    ["public", null, false, true],
-    ["unlisted", null, false, true],
-    ["private", null, false, false],
-    ["public", "salt:hash", false, false],
-    ["unlisted", null, true, false],
+    ["public", null, false, null, true],
+    ["unlisted", null, false, null, true],
+    ["private", null, false, null, false],
+    ["public", "salt:hash", false, null, false],
+    ["unlisted", null, true, null, false],
+    ["unlisted", null, false, "PkImfqDZFr0kFDhq", false],
   ] as const)(
-    "a %s paste with password %s and burn %s is open to anyone: %s",
-    (visibility, passwordHash, burnAfterRead, open) => {
-      expect(openToAnyone({ visibility, passwordHash, burnAfterRead })).toBe(open)
+    "a %s paste with password %s, burn %s and key id %s is open to anyone: %s",
+    (visibility, passwordHash, burnAfterRead, encryptionKeyId, open) => {
+      expect(openToAnyone({ visibility, passwordHash, burnAfterRead, encryptionKeyId })).toBe(open)
     },
   )
 

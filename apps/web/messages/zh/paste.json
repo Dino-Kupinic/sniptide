@@ -222,6 +222,20 @@
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
     "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
     "expiredSharingHelp": "此粘贴已过期。设置新的有效期或选择“永不”，即可再次分享。",
-    "manageAccess": "管理访问权限"
+    "manageAccess": "管理访问权限",
+    "endToEndEncryption": "端到端加密",
+    "encryptedInThisBrowser": "Sniptide 无法读取文件",
+    "encryptionHelp": "文件、文件名和描述会在保存前于此浏览器中加密，密钥包含在链接中。标题保持可读，方便你找到该粘贴。加密的粘贴之后无法编辑。",
+    "encryptedPaste": "加密的粘贴",
+    "keyNeeded": "需要密钥",
+    "keyNeededDescription": "此粘贴已端到端加密，而你打开的链接不含密钥。粘贴完整链接或密钥即可阅读。",
+    "keyNeededOwnerNote": "创建该粘贴的浏览器保存着密钥。Sniptide 从不持有它。",
+    "keyNeededBeforeBurn": "此粘贴已端到端加密，而你打开的链接不含密钥。请先粘贴完整链接或密钥，以免把唯一一次阅读用在无法解密的内容上。",
+    "linkOrKey": "链接或密钥",
+    "keyDoesNotFit": "该密钥无法打开此粘贴。请确认你复制了完整链接。",
+    "decrypt": "解密",
+    "checkKey": "检查密钥",
+    "encryptedLinkHasKey": "已端到端加密。你在此复制的链接包含密钥，持有该链接的人都能阅读此粘贴。",
+    "encryptedLinkNoKey": "已端到端加密。此浏览器没有密钥，因此你在此复制的链接无法单独打开该粘贴。"
   }
 }
