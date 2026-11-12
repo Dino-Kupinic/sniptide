@@ -1,3 +1,7 @@
+This codebase is yours: what it's for and how it's built are your call, and you'll keep building on it.
+
+Write every reply, pull request description, and message to the user as [STFU.md](STFU.md) describes.
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
