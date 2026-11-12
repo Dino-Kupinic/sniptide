@@ -86,6 +86,28 @@ describe("Sniptide MCP tools", () => {
       "files",
     ])
   })
+  test("annotate every tool with a title and its read or destructive hint", async () => {
+    const client = await connected()
+    const { tools } = await client.listTools()
+    const hints = Object.fromEntries(
+      tools.map(({ name, title, annotations }) => {
+        expect(title).toBeTruthy()
+        expect(annotations?.title).toBe(title)
+        return [name, [annotations?.readOnlyHint, annotations?.destructiveHint]]
+      }),
+    )
+    expect(hints).toEqual({
+      search_snippets: [true, false],
+      read_snippet: [true, false],
+      fetch_collection: [true, false],
+      list_collections: [true, false],
+      create_snippet: [false, false],
+      create_collection: [false, false],
+      update_snippet: [false, true],
+      update_snippet_settings: [false, true],
+      trash_snippet: [false, true],
+    })
+  })
   test("search filters and full code reads survive a protocol round-trip", async () => {
     const client = await connected()
     const args = {
