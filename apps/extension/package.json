@@ -1,0 +1,36 @@
+{
+  "name": "extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sniptide for Chrome: save a selection or a code block from any page as a paste and copy its link.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "dev": "bun scripts/build.ts --watch",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test ./test"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.2.8",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@sniptide/sdk": "workspace:*",
+    "@sniptide/ui": "workspace:*",
+    "lucide-react": "catalog:ui",
+    "react": "catalog:runtime",
+    "react-dom": "catalog:runtime"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:ui",
+    "@types/bun": "catalog:tooling",
+    "@types/chrome": "^0.1.4",
+    "@types/react": "catalog:tooling",
+    "@types/react-dom": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "postcss": "^8.5.31",
+    "tailwindcss": "catalog:ui",
+    "typescript": "catalog:tooling"
+  }
+}

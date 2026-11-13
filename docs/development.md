@@ -28,6 +28,9 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`
 - `apps/docs`: the documentation site (Next.js and Fumadocs, MDX in `content/docs`); see
   `apps/docs/README.md`
+- `apps/extension`: Sniptide for Chrome, a Manifest V3 extension that saves a selection as a paste.
+  `bun --filter extension build` writes the unpacked extension to `apps/extension/dist`; see
+  `apps/extension/README.md`
 - `packages/auth`: better-auth setup on the Drizzle adapter
 - `packages/cli`: the `sniptide` CLI for capture, restore, agent skills and `.env` sync, built as a
   dependency-free Node.js executable
@@ -50,6 +53,7 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 | Documentation site | `apps/docs` | `bun run test:docs` |
 | CLI capture and restore | `packages/cli/src`, `packages/cli/API.md` | `bun run test:cli` |
 | SDKs | `packages/sdk/src`, `packages/sdk-python/sniptide` | `bun run test:sdk` |
+| Browser extension | `apps/extension/src`, with the OAuth and paste rules in `src/lib` | `bun run test:extension`, then load `apps/extension/dist` in Chrome |
 | MCP tools and transport | `packages/mcp/src`, `apps/web/lib/api/mcp.ts` | `bun run test:mcp`, `apps/web/test/mcp.test.ts` |
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
 | Database schema and migrations | `packages/db/src/schema`, `packages/db/migrations` | Web integration tests and migration tests |
@@ -118,6 +122,7 @@ sidebar order.
 | MCP tools, prompts, or the OAuth flow | `mcp.mdx` and `oauth.mdx` |
 | CLI commands or options | `cli.mdx` and `packages/cli/API.md` |
 | The TypeScript or Python SDK | The pages in `sdks/` |
+| The browser extension in `apps/extension` | `browser-extension.mdx` |
 | Skills or the agent plugin in `skills/` | `mcp.mdx#install-the-agent-plugin` |
 | Variables in `apps/web/.env.example` | `self-hosting/configuration.mdx` |
 | The image, `docker-compose.yml`, or `deploy/` | The matching page in `self-hosting/` |
@@ -190,11 +195,12 @@ Run these commands from the repository root:
 | `bun run audit:deps` | Known advisories in the complete dependency lockfile | Access to the npm advisory service |
 | `bun run test:cli` | CLI behavior through its built Node executable | Node and temporary loopback HTTP listeners |
 | `bun run test:mcp` | MCP tool schemas and transports | Temporary loopback HTTP listeners |
+| `bun run test:extension` | The extension's OAuth flow, token renewal and paste rules against a stand-in instance | Installed dependencies |
 | `bun run test:docs` | Documentation site metadata, structured data, links, and drift against the code | Installed dependencies |
 | `bun run test:web` | Web unit tests and available integration tests | `TEST_DATABASE_URL` for database coverage |
 | `bun run test:web:unit` | Non-database web cases and Node admission tests; ignores ambient database URLs | Installed dependencies and loopback listeners |
 | `bun run test:web:integration` | Web cases with required database coverage and Node admission tests | A valid dedicated `TEST_DATABASE_URL` |
-| `bun run test` | CLI, MCP, docs, then web tests in separate processes | Same requirements as the individual suites |
+| `bun run test` | CLI, MCP, docs, web, SDK, then extension tests in separate processes | Same requirements as the individual suites |
 | `bun run build` | Production workspace builds | Installed dependencies |
 | `bun run verify` | `check`, then `test`, then the docs build: the local gate before a pull request | Same requirements as `test` |
 | `bun run test:e2e` | Browser behavior | Chromium and a dedicated `E2E_DATABASE_URL` |
