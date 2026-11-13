@@ -2,7 +2,9 @@
 
 [Sniptide](https://sniptide.com) is a self-hostable pastebin for coding agents. This plugin
 connects Claude Code to the hosted Sniptide MCP server at `https://app.sniptide.com/api/mcp`,
-so Claude can search, read and save your snippets and collections.
+so Claude can search, read and save your snippets and collections. It also adds five skills:
+`setup-sniptide`, `reuse-snippets`, `save-snippets`, `apply-collection` and
+`integrate-sniptide-sdk`.
 
 ## Install
 

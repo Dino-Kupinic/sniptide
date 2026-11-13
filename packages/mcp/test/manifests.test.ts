@@ -5,6 +5,13 @@ import path from "node:path"
 const root = path.resolve(import.meta.dir, "../../..")
 const read = (file: string) => JSON.parse(readFileSync(path.join(root, file), "utf8"))
 const endpoint = "https://app.sniptide.com/api/mcp"
+const skills = [
+  "apply-collection",
+  "integrate-sniptide-sdk",
+  "reuse-snippets",
+  "save-snippets",
+  "setup-sniptide",
+]
 
 // The Gemini CLI extension and the Claude Code plugin are read straight from the repository, so
 // they must name the hosted endpoint and share one version and description.
@@ -33,7 +40,8 @@ describe("agent plugin manifests", () => {
   })
 
   // The plugin directory scans everything under the plugin source, so the folder holds only the
-  // manifest, the icon, the README and the license, and the icon path resolves inside it.
+  // manifest, the icon, the README, the license and copies of the five skills. Gemini CLI and the
+  // root Agent Plugin read the skills from skills/, so each copy must match its source exactly.
   test("keep the Claude Code plugin folder minimal", () => {
     const dir = path.join(root, "plugins/claude")
     const files = readdirSync(dir, { recursive: true, withFileTypes: true })
@@ -45,7 +53,13 @@ describe("agent plugin manifests", () => {
       ".claude-plugin/plugin.json",
       "LICENSE",
       "README.md",
+      ...skills.map((name) => `skills/${name}/SKILL.md`),
     ])
+    for (const name of skills) {
+      expect(readFileSync(path.join(dir, "skills", name, "SKILL.md"))).toEqual(
+        readFileSync(path.join(root, "skills", name, "SKILL.md")),
+      )
+    }
     expect(claude.icon).toBe(".claude-plugin/icon.png")
     expect(claude.privacyPolicyUrl).toBe("https://sniptide.com/privacy")
     expect(claude.license).toBe("AGPL-3.0-only")

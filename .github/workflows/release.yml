@@ -73,10 +73,7 @@ jobs:
         uses: cycjimmy/semantic-release-action@9e1f8a3ef91f1097285028e799a5fb8bb90e8899 # v8
         with:
           semantic_version: 25.0.9
-          extra_plugins: |
-            conventional-changelog-conventionalcommits@8.0.0
-            @semantic-release/exec@7.1.0
-            @semantic-release/git@10.0.1
+          extra_plugins: conventional-changelog-conventionalcommits@8.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

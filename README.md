@@ -81,7 +81,7 @@ Use `<your-instance-url>/api/mcp` on a self-hosted instance.
 The [MCP guide](https://docs.sniptide.com/mcp) covers Cursor and a local server, and the [CLI](https://docs.sniptide.com/cli) installs a collection as an agent skill.
 This repository is also an [Agent Plugin](https://agent-plugins.org): `plugin.json` bundles the MCP servers in `mcp.json` with the skills in `skills/`.
 
-To install Sniptide as a plugin, run one of these. The Claude Code plugin in `plugins/claude/` adds the MCP server, and the Gemini CLI extension adds the MCP server and the skills.
+To install the MCP server and the skills as a plugin, run one of these. The Claude Code plugin lives in `plugins/claude/`.
 
 ```bash
 # Claude Code

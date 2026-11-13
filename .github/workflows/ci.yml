@@ -45,7 +45,6 @@ jobs:
           LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
-      - run: node --test scripts/test-plugin-versions.mjs
 
       - run: bun run check
 
