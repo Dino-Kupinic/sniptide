@@ -66,7 +66,10 @@ Merging a PR into `main` automatically publishes a GitHub release after its CI p
 Conventional Commit title determines the version: `feat` bumps the minor version, `fix` and
 other types bump the patch version, and `!` or a `BREAKING CHANGE:` footer bumps the major
 version. Changes since the previous tag are included in the release notes. No manual version
-bump or tag is needed; the private root package version is not the release version.
+bump or tag is needed; the private root package version is not the release version. The
+release commits the new version into `gemini-extension.json` and
+`plugins/claude/.claude-plugin/plugin.json` with a `chore(release)` commit, because Gemini CLI and
+Claude Code offer an update only when the manifest version changes.
 
 The release workflow then builds, smoke-tests and publishes the matching AMD64/ARM64 Docker
 image, including its version tags and `latest`. A failed CI run never publishes a release.

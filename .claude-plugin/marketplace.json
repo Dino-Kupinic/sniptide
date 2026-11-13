@@ -2,5 +2,5 @@
   "name": "sniptide",
   "owner": { "name": "Dino Kupinic" },
   "metadata": { "description": "The Sniptide plugin for Claude Code." },
-  "plugins": [{ "name": "sniptide", "source": "./" }]
+  "plugins": [{ "name": "sniptide", "source": "./plugins/claude" }]
 }

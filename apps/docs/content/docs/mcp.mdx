@@ -12,8 +12,9 @@ to deploy.
 
 ## Install in your agent
 
-Claude Code and Gemini CLI can install Sniptide as a plugin, which adds the MCP server and the
-five Sniptide skills in one step. The plugin connects to the hosted app at
+Claude Code and Gemini CLI can install Sniptide as a plugin. The Claude Code plugin adds the MCP
+server, and the Gemini CLI extension adds the MCP server and the five Sniptide skills. Both connect
+to the hosted app at
 `https://app.sniptide.com`, and the client signs you in through [OAuth](/oauth) the first time
 it calls Sniptide. For a self-hosted instance or another client, use
 [Connect an agent](#connect-an-agent) instead.
@@ -237,9 +238,10 @@ bundles the MCP servers in `mcp.json` with five skills: `setup-sniptide`, `reuse
 `SNIPTIDE_TOKEN` as a bearer token, so export a token before you use it. How you install a plugin
 depends on your client.
 
-The same repository carries a Claude Code plugin in `.claude-plugin/` and a Gemini CLI extension
-in `gemini-extension.json`. Both bundle the same five skills, connect through OAuth instead of a
-token, and install with the commands in [Install in your agent](#install-in-your-agent).
+The same repository carries a Claude Code plugin in `plugins/claude/` and a Gemini CLI extension
+in `gemini-extension.json`. Both connect through OAuth instead of a token and install with the
+commands in [Install in your agent](#install-in-your-agent). The Claude Code plugin holds only the
+remote MCP server and ships without the five skills.
 
 ## Limits and errors
 
