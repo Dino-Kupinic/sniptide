@@ -50,6 +50,14 @@ and open PRs.
 
 ## Pull requests
 
+Review the [Individual Contributor License Agreement](CLA.md) before contributing. The agreement
+allows Dino Kupinic to license contributions commercially while contributors retain ownership.
+CLA Assistant setup is pending. Once active, follow its pull request prompt to sign with your own
+GitHub account. Each contributor must accept voluntarily and have authority to grant the rights,
+including any employer-owned rights. Disclose third-party work and restrictions as the agreement
+requires. The maintainer reviews co-authors and identities that the service cannot resolve.
+Maintainer activation steps are in [CLA setup](.github/CLA_SETUP.md).
+
 - Keep a PR to one change, and say in the description what it does and why.
 - Update the documentation in the same PR when the change affects readers. See
   [Update the documentation](docs/development.md#update-the-documentation).
