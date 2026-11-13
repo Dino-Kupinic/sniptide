@@ -11,7 +11,7 @@
   "repository": "https://github.com/Dino-Kupinic/sniptide",
   "license": "AGPL-3.0-only",
   "privacyPolicyUrl": "https://sniptide.com/privacy",
-  "icon": "./.claude-plugin/icon.png",
+  "icon": ".claude-plugin/icon.png",
   "keywords": ["pastebin", "mcp", "snippets"],
   "mcpServers": {
     "sniptide": {
