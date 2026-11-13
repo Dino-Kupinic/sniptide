@@ -1,0 +1,142 @@
+---
+title: Browser extension
+description: Save a selection or a code block from any web page as a Sniptide paste and copy its link, with the Sniptide extension for Chrome.
+---
+
+Sniptide for Chrome saves the text you select on a web page as a paste and copies its link. You
+can save from the context menu, with a keyboard shortcut, or from the extension's popup, where you
+choose the title, visibility, collection and expiry first.
+
+The extension signs in with [OAuth](/oauth), so no token is pasted anywhere, and it works with
+app.sniptide.com and with a self-hosted instance.
+
+## Before you begin
+
+- Chrome 127 or newer, or another Chromium browser of the same age.
+- A Sniptide account on app.sniptide.com or on your own instance.
+- The extension isn't in the Chrome Web Store yet. Until it is, you build it from the
+  [repository](https://github.com/Dino-Kupinic/sniptide) with [Bun](https://bun.sh).
+
+## Install the extension
+
+1. Build the extension from a checkout of the repository:
+
+   ```bash
+   bun install
+   bun --filter extension build
+   ```
+
+   The build writes the unpacked extension to `apps/extension/dist`.
+
+2. Open `chrome://extensions` and turn on **Developer mode**.
+3. Select **Load unpacked** and choose `apps/extension/dist`.
+4. Pin **Sniptide** to the toolbar from the extensions menu.
+
+## Sign in
+
+1. Select the **Sniptide** button in the toolbar.
+2. For a self-hosted instance, select **Use a self-hosted instance** and enter its address, such
+   as `paste.example.com`. Chrome asks you to allow the extension to reach that address.
+3. Select **Sign in to Sniptide**. A window opens with Sniptide's consent screen.
+4. Check that the screen names **Sniptide for Chrome**, then select **Allow access**.
+
+The popup closes while the consent window is open. Open it again and it shows the **New paste**
+tab. The connection is listed in **Settings** > **API tokens** as "Sniptide for Chrome" with
+"Connected with OAuth".
+
+The instance address must use `https://`. Plain `http://` works only for `localhost`.
+
+## Save a selection
+
+1. Select text or code on a page.
+2. Right-click the selection and choose **Save selection to Sniptide**, or press
+   <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>.
+
+A toast in the corner of the page says **Link copied**, and the paste's link is on your
+clipboard. **Open** shows the paste in a new tab. **Undo** moves it to the
+[trash](/core-concepts/pastes#trash).
+
+The extension fills in the paste from the page:
+
+| Field | Value |
+| --- | --- |
+| Title | The page's title, up to 120 characters. A page without a title gives the selection's first line. |
+| File | `snippet` with the extension of the code block's language, such as `snippet.ts`. Valid JSON becomes `snippet.json`, and anything else `snippet.txt`. |
+| Description | "From" and the page's address without the part after `#`. An address too long for the description is shortened to the site. |
+| Visibility | **Unlisted**, so anyone with the link can open the paste. Change the default in the extension's [settings](#change-the-defaults). |
+
+The language comes from the names sites put on their code blocks, such as `language-ts`. When a
+page names none, the file is plain text. Rename the file in Sniptide to change its language.
+
+## Choose the details before saving
+
+Open the popup to review a paste before it is saved.
+
+1. Select text on the page, then select the **Sniptide** button. The **New paste** tab holds your
+   selection. Without a selection, **Code on this page** lists the page's code blocks, and you
+   pick one. You can also type or paste into the field.
+2. Change the file name above the content, and the **Title**.
+3. Choose the **Visibility**, a **Collection** and when the paste **Expires**.
+4. Select **Save and copy link**, or press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
+   (<kbd>⌘</kbd>+<kbd>Enter</kbd> on a Mac).
+
+The popup shows the link and confirms that it was copied. Chrome closes a popup when you click
+elsewhere, so the extension keeps unsaved text until you close the browser and restores it the
+next time you open the popup.
+
+## Find a paste again
+
+The **Recent** tab lists your 20 most recently changed pastes. Type in **Search your pastes** to
+search titles, descriptions, tags, file names and code, as the
+[API's search](/api-tokens#endpoints) does. Select a paste to copy its link, or the arrow beside
+it to open it.
+
+## Change the defaults
+
+Select the gear in the popup.
+
+| Setting | Default | What it changes |
+| --- | --- | --- |
+| **Visibility for quick saves** | Unlisted | The visibility of pastes saved from the context menu or the shortcut, and the popup's starting choice. |
+| **Add the page's address to the description** | On | Whether a new paste's description names the page it came from. Turn it off when the addresses you save from are private. |
+| **Shortcut for saving the selection** | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | **Change** opens `chrome://extensions/shortcuts`, where Chrome sets it. Chrome leaves the shortcut unset when another extension already uses it. |
+
+**Sign out** ends the connection on the instance and removes its tokens from the browser.
+
+## What the extension can access
+
+| Permission | Why |
+| --- | --- |
+| The page you act on (`activeTab`, `scripting`) | Reads your selection and the page's code blocks, and shows the toast, only after you use the context menu, the shortcut or the popup on that page. |
+| `contextMenus` | Adds **Save selection to Sniptide**. |
+| `identity` | Opens the sign-in window and receives its answer. |
+| `storage` | Keeps the connection's tokens, your settings and the unsaved draft in Chrome's local extension storage. |
+| `https://app.sniptide.com` | Calls the Sniptide API. A self-hosted address is requested when you sign in to it. |
+
+The extension reads no page until you act on it, sends nothing anywhere but your Sniptide
+instance, and has no analytics. The access token lasts an hour and renews itself, as
+[OAuth for agents](/oauth#token-lifetime-and-revocation) describes. **Revoke** on the connection
+in **Settings** > **API tokens** signs the extension out at its next request.
+
+## Limits
+
+- A selection becomes a paste with one file. Use the app, the [CLI](/cli) or the
+  [API](/api-tokens) for several files.
+- The extension can't create or read [encrypted pastes](/core-concepts/encrypted-pastes), because
+  their key never leaves the app's own page.
+- Passwords and burn after read are set in Sniptide after saving.
+- New pastes count toward the account's limit of 30 an hour, shared with the app.
+- The interface is in English.
+- Chrome keeps extensions out of its own pages and the Chrome Web Store, so a selection there
+  can't be read. Copy the text and paste it into the popup instead.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| "No Sniptide instance answers at that address." | The address isn't a Sniptide instance, or the instance's `BETTER_AUTH_URL` differs from the address you entered. | Enter the address people open in the browser. See [Configuration](/self-hosting/configuration#required). |
+| "Sign-in was closed before it finished." | The consent window was closed, or **Cancel** was selected. | Select **Sign in to Sniptide** again and allow access. |
+| "Your Sniptide connection ended. Sign in again." | The connection was revoked in **Settings** > **API tokens**, or it went unused for 30 days. | Sign in again from the popup. |
+| The toast says **Saved to Sniptide** instead of **Link copied** | The page refused clipboard access. | Select **Open** on the toast, or copy the link from the **Recent** tab. |
+| "Nothing is selected." after pressing the shortcut | The selection is inside an embedded frame from another site. | Right-click the selection and use the context menu, which reaches frames. |
+| The shortcut does nothing | Another extension or the system uses it. | Set another one at `chrome://extensions/shortcuts`. |

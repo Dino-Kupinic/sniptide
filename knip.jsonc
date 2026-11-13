@@ -16,6 +16,16 @@
       // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
       "ignoreDependencies": ["@tailwindcss/postcss"]
     },
+    "apps/extension": {
+      "entry": ["src/background.ts", "src/popup/main.tsx", "test/**/*.test.ts"],
+      // scripts/build.ts copies the font files by path, and popup.css imports Tailwind through
+      // the @sniptide/ui theme.
+      "ignoreDependencies": [
+        "@fontsource-variable/archivo",
+        "@fontsource-variable/inter",
+        "tailwindcss"
+      ]
+    },
     "packages/ui": {
       // shadcn generates components on demand; postcss-load-config appears only in a JSDoc type.
       "ignoreDependencies": ["shadcn", "postcss-load-config"]
