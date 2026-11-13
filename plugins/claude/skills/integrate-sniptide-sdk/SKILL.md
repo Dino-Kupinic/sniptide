@@ -7,7 +7,7 @@ description: Add the official Sniptide JavaScript, TypeScript, or Python SDK to 
 
 1. Inspect the project's runtime, package manager, dependency files, and secret configuration. Use `@sniptide/sdk` for JavaScript or TypeScript, or `sniptide` for Python. Follow the project's dependency and lockfile conventions.
 2. Check the installed version's API before writing calls. The JavaScript package requires Node.js 18 or later and uses ESM with bundled types. The Python client requires Python 3.9 or later and is synchronous with no runtime dependencies.
-3. Load a personal API token from the application's server-side secret configuration. Read operations need `read`; mutations need `write`. Keep the token out of browser bundles, source control, logs, and pasted examples. Configure credentials privately rather than asking for them in chat.
+3. Load a personal API token from the application's server-side secret configuration. Read operations need `read`; mutations need `write`. Keep the token out of browser bundles, source control, logs, and pasted examples. Configure credentials privately rather than asking for them in chat. The plugin's `api_token` setting only authenticates the MCP connection and is not available to application code, so the user creates a token for the application itself.
 4. Start with `me()` to verify access without changing account data. Use the hosted default or supply the user's self-hosted base URL, preserving any path prefix. HTTPS is required except on loopback addresses, and redirects are rejected.
 5. Implement only the requested operations. Methods return JSON envelopes, not bare snippets. Use `paste` for a single snippet and `pastes` for a page. Continue `listPastes` / `list_pastes` and `collectionPastes` / `collection_pastes` with the returned `nextCursor` until it is null or the requested result is complete.
 6. Handle `SniptideError` through `status`, `code`, and `retryAfter` in JavaScript or `retry_after` in Python. The SDK does not retry automatically. Respect rate-limit delays and avoid blind mutation retries after timeouts. Create methods accept an idempotency key, but older servers may ignore it; check the target server's support before relying on retries.
@@ -22,19 +22,18 @@ JavaScript or TypeScript, in a server-side ESM context:
 ```js
 import { SniptideClient } from "@sniptide/sdk"
 
-const token = process.env.SNIPTIDE_TOKEN
-if (!token) throw new Error("Set SNIPTIDE_TOKEN in the server environment")
-const client = new SniptideClient(token)
+// Replace YOUR_API_KEY with the token from the application's server-side secret store.
+const client = new SniptideClient("YOUR_API_KEY")
 const account = await client.me()
 ```
 
 Python:
 
 ```python
-import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+# Replace YOUR_API_KEY with the token from the application's server-side secret store.
+client = SniptideClient("YOUR_API_KEY")
 account = client.me()
 ```
 

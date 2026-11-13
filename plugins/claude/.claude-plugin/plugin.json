@@ -1,7 +1,7 @@
 {
   "name": "sniptide",
   "displayName": "Sniptide",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Search, read and save your Sniptide snippets and collections from a coding agent.",
   "author": {
     "name": "Dino Kupinic",
@@ -13,10 +13,23 @@
   "privacyPolicyUrl": "https://sniptide.com/privacy",
   "icon": ".claude-plugin/icon.png",
   "keywords": ["pastebin", "mcp", "snippets"],
+  "supportUrl": "https://github.com/Dino-Kupinic/sniptide/issues",
+  "userConfig": {
+    "api_token": {
+      "type": "string",
+      "title": "Sniptide API token",
+      "description": "Optional personal API token from Settings > API tokens. Leave it empty to sign in with OAuth.",
+      "sensitive": true,
+      "required": false
+    }
+  },
   "mcpServers": {
     "sniptide": {
       "type": "http",
-      "url": "https://app.sniptide.com/api/mcp"
+      "url": "https://app.sniptide.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.api_token}"
+      }
     }
   }
 }

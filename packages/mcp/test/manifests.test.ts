@@ -12,6 +12,7 @@ const skills = [
   "save-snippets",
   "setup-sniptide",
 ]
+const tokenSkills = ["integrate-sniptide-sdk", "setup-sniptide"]
 
 // The Gemini CLI extension and the Claude Code plugin are read straight from the repository, so
 // they must name the hosted endpoint and share one version and description.
@@ -22,8 +23,23 @@ describe("agent plugin manifests", () => {
 
   test("point at the hosted MCP endpoint without credentials", () => {
     expect(gemini.mcpServers).toEqual({ sniptide: { httpUrl: endpoint } })
-    expect(claude.mcpServers).toEqual({ sniptide: { type: "http", url: endpoint } })
-    expect(JSON.stringify([gemini, claude])).not.toMatch(/authorization|bearer|token/i)
+    expect(claude.mcpServers).toEqual({
+      sniptide: {
+        type: "http",
+        url: endpoint,
+        headers: { Authorization: "Bearer ${user_config.api_token}" },
+      },
+    })
+    expect(JSON.stringify(gemini)).not.toMatch(/authorization|bearer|token/i)
+  })
+
+  // The Claude Code plugin takes an optional token as a plugin setting. Claude Code keeps a
+  // sensitive value in its credential store, so the manifest holds only the placeholder.
+  test("take the Claude Code token from a sensitive plugin setting", () => {
+    expect(claude.userConfig.api_token).toMatchObject({ type: "string", sensitive: true })
+    expect(claude.userConfig.api_token.required).not.toBe(true)
+    expect(claude.supportUrl).toBe("https://github.com/Dino-Kupinic/sniptide/issues")
+    expect(JSON.stringify(claude)).not.toMatch(/SNIPTIDE_TOKEN|Bearer [A-Za-z0-9]/)
   })
 
   test("share one name, version and description", () => {
@@ -41,7 +57,8 @@ describe("agent plugin manifests", () => {
 
   // The plugin directory scans everything under the plugin source, so the folder holds only the
   // manifest, the icon, the README, the license and copies of the five skills. Gemini CLI and the
-  // root Agent Plugin read the skills from skills/, so each copy must match its source exactly.
+  // root Agent Plugin read the skills from skills/, so a copy matches its source exactly unless it
+  // handles the token.
   test("keep the Claude Code plugin folder minimal", () => {
     const dir = path.join(root, "plugins/claude")
     const files = readdirSync(dir, { recursive: true, withFileTypes: true })
@@ -56,9 +73,16 @@ describe("agent plugin manifests", () => {
       ...skills.map((name) => `skills/${name}/SKILL.md`),
     ])
     for (const name of skills) {
-      expect(readFileSync(path.join(dir, "skills", name, "SKILL.md"))).toEqual(
-        readFileSync(path.join(root, "skills", name, "SKILL.md")),
-      )
+      const copy = readFileSync(path.join(dir, "skills", name, "SKILL.md"))
+      const source = readFileSync(path.join(root, "skills", name, "SKILL.md"))
+      if (tokenSkills.includes(name)) {
+        // These two read the token from the environment at the root. The plugin copies point to
+        // the plugin setting and use a placeholder instead.
+        expect(copy.toString()).not.toContain("SNIPTIDE_TOKEN")
+        expect(copy.toString()).toContain("YOUR_API_KEY")
+      } else {
+        expect(copy).toEqual(source)
+      }
     }
     expect(claude.icon).toBe(".claude-plugin/icon.png")
     expect(claude.privacyPolicyUrl).toBe("https://sniptide.com/privacy")

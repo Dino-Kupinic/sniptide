@@ -1,6 +1,6 @@
 {
   "name": "sniptide",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Search, read and save your Sniptide snippets and collections from a coding agent.",
   "mcpServers": {
     "sniptide": {

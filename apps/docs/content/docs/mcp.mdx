@@ -238,9 +238,11 @@ bundles the MCP servers in `mcp.json` with five skills: `setup-sniptide`, `reuse
 depends on your client.
 
 The same repository carries a Claude Code plugin in `plugins/claude/` and a Gemini CLI extension
-in `gemini-extension.json`. Both connect through OAuth instead of a token and install with the
-commands in [Install in your agent](#install-in-your-agent). Both bundle the remote MCP server
-and the same five skills.
+in `gemini-extension.json`. Both bundle the remote MCP server and the same five skills, and both
+install with the commands in [Install in your agent](#install-in-your-agent). They sign in through
+OAuth by default. The Claude Code plugin also has an optional **Sniptide API token** setting for a
+[personal API token](/api-tokens). Claude Code stores that value in its credential store and sends
+it as the bearer token, so it never appears in a file in your project.
 
 ## Limits and errors
 
