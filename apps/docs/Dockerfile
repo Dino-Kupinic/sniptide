@@ -12,6 +12,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Install from the manifests first so the dependency layer is cached between content changes.
 COPY package.json bun.lock ./
 COPY apps/docs/package.json apps/docs/
+COPY apps/extension/package.json apps/extension/
 COPY apps/web/package.json apps/web/
 COPY packages/auth/package.json packages/auth/
 COPY packages/cli/package.json packages/cli/
