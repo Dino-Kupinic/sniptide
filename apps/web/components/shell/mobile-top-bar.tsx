@@ -30,7 +30,13 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
         <Logo className="min-w-0 max-w-full [&>span]:min-w-0 [&>span]:shrink [&>span>svg]:max-w-full" />
       </Link>
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <Button variant="outline" size="icon-lg" aria-label={t("search")} onClick={openCommandMenu}>
+        <Button
+          variant="outline"
+          size="icon-lg"
+          aria-label={t("search")}
+          onClick={openCommandMenu}
+          data-tour="search-mobile"
+        >
           <SearchIcon />
         </Button>
         <DropdownMenu>
