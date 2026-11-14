@@ -502,9 +502,11 @@ Before enabling the workflow:
    `COOLIFY_APP_ID` (the Docker Image application's UUID), and the environment secret
    `COOLIFY_TOKEN`. Verify that one token can combine the read, sensitive-read, write, and deploy
    permissions on the installed Coolify version. With that token, verify that the prior deployment
-   and its logs are visible through the API. If the permissions cannot be combined or the logs are
-   unavailable, leave automation disabled: this workflow does not support separate tokens. Do not
-   use a root or broader token as a workaround. Keep the token out of PR environments.
+   and its application ID and logs are visible through the API. The workflow uses that history to
+   identify the resource when Coolify hides the numeric ID from application responses. If the
+   permissions cannot be combined or the logs are unavailable, leave automation disabled: this
+   workflow does not support separate tokens. Do not use a root or broader token as a workaround.
+   Keep the token out of PR environments.
 3. Enable the repository variable for staging, then run a main CI build. Verify the reported digest,
    Coolify deployment log and rolling update, health, sign-in and Server Actions. Test with traffic
    and verify migration and rollback compatibility. Keep proxy label configuration unchanged across
@@ -542,8 +544,10 @@ hosts or a restricted broker provide stronger isolation. Review the network, con
 registry access and host exposure before acknowledging this risk.
 
 Use a separate Docker Image application, nonproduction secrets, and a disposable nonproduction
-database. Unless you provision a database per PR separately, previews share that database and can
-read or change one another's data. Keep preview domains outside every production cookie domain: for
+database. Deploy the base image once before enabling preview automation so its deployment history
+identifies the application for queue and deployment checks. Unless you provision a database per PR
+separately, previews share that database and can read or change one another's data. Keep preview
+domains outside every production cookie domain: for
 example, a preview under `*.sniptide.com` can receive cookies scoped to `sniptide.com`. Confirm the
 preview cannot reach production databases, internal services or production credentials.
 

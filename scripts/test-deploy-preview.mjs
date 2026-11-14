@@ -51,6 +51,12 @@ function mock(options = {}) {
       data = { pull_request_id: 7, docker_registry_image_tag: digest.replace(":", "-") }
     } else if (path.endsWith("/applications/preview-1/previews"))
       data = { deployment_uuid: "deployment-1" }
+    else if (path.endsWith("/deployments/applications/preview-1"))
+      data = {
+        deployments: [
+          { application_id: options.historyId === undefined ? "9" : options.historyId },
+        ],
+      }
     else if (path.endsWith("/applications/preview-1"))
       data = {
         id: 9,
@@ -113,6 +119,23 @@ test("deploys tested digest only after validating same-repo current merge", asyn
     docker_tag: digest.replace(":", "-"),
   })
   assert.ok(m.calls.every((call) => call.redirect === "error"))
+})
+
+test("uses deployment history when Coolify hides the preview application ID", async () => {
+  const m = mock({ app: { id: undefined } })
+  await run(m)
+  assert.ok(m.calls.some((call) => call.method === "POST"))
+  const busy = mock({ app: { id: undefined }, queue: [{ application_id: "9", status: "queued" }] })
+  await assert.rejects(run(busy))
+  noWrites(busy)
+})
+
+test("rejects missing or inconsistent preview history identity", async () => {
+  for (const historyId of [null, "", "0", "invalid", "10"]) {
+    const m = mock({ historyId })
+    await assert.rejects(run(m))
+    noWrites(m)
+  }
 })
 
 test("rejects fork, bot, wrong workflow and stale merge before mutation", async () => {
