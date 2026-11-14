@@ -246,6 +246,8 @@ jobs:
   # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
   docs-image:
     name: Docs Docker image
+    outputs:
+      build-attempt: ${{ steps.attempt.outputs.value }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -265,6 +267,65 @@ jobs:
 
       - name: Verify the docs Docker image
         run: bash scripts/test-docs-image.sh sniptide-docs:ci
+
+      - name: Record the build attempt
+        id: attempt
+        run: echo "value=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - name: Save the tested docs image
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: docker save sniptide-docs:ci -o "$RUNNER_TEMP/sniptide-docs-image.tar"
+      - uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        with:
+          name: tested-docs-image-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sniptide-docs-image.tar
+          retention-days: 1
+
+  publish-docs-image:
+    name: Publish tested docs image
+    needs: [docker, checks, tests, e2e-result, docs-image]
+    if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - name: Validate build attempt
+        id: build
+        env:
+          BUILD_ATTEMPT: ${{ needs.docs-image.outputs.build-attempt }}
+        run: |
+          [[ "$BUILD_ATTEMPT" =~ ^[0-9]+$ ]] || exit 1
+          echo "attempt=$BUILD_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: tested-docs-image-${{ steps.build.outputs.attempt }}
+          path: ${{ runner.temp }}
+      - run: docker load -i "$RUNNER_TEMP/sniptide-docs-image.tar"
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish tested image and receipt
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          ATTEMPT: ${{ steps.build.outputs.attempt }}
+        run: |
+          [[ "$REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$SHA" =~ ^[a-f0-9]{40}$ && "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$ATTEMPT" =~ ^[0-9]+$ ]] || exit 1
+          image="ghcr.io/${REPOSITORY,,}-docs:sha-$SHA-$GITHUB_RUN_ID-$ATTEMPT"
+          docker tag sniptide-docs:ci "$image"
+          output="$(docker push "$image")"
+          digest="$(printf '%s\n' "$output" | sed -nE 's/.*digest: (sha256:[a-f0-9]{64}).*/\1/p' | tail -n 1)"
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
+          mkdir -p "$RUNNER_TEMP/docs-receipt"
+          DIGEST="$digest" BUILD_ATTEMPT="$ATTEMPT" node -e 'const fs = require("fs"); const e = process.env; fs.writeFileSync(`${e.RUNNER_TEMP}/docs-receipt/receipt.json`, JSON.stringify({repository:e.GITHUB_REPOSITORY, sha:e.GITHUB_SHA, run_id:e.GITHUB_RUN_ID, run_attempt:e.GITHUB_RUN_ATTEMPT, build_attempt:e.BUILD_ATTEMPT, digest:e.DIGEST}))'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-image-receipt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docs-receipt/receipt.json
+          retention-days: 7
 
   # Runs the store and routes against a real Postgres: the access rules and the one-time-read
   # claim live in SQL, so a mock would prove nothing.

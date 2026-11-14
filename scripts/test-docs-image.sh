@@ -38,6 +38,9 @@ if [ "$ready" != true ]; then
   exit 1
 fi
 
+# Coolify uses this command to gate rolling updates.
+docker exec "$name" node /app/healthcheck.cjs
+
 # Read each response into a variable first: `grep -q` closing the pipe early would fail the
 # pipeline under pipefail (SIGPIPE).
 page="$(fetch /getting-started)"

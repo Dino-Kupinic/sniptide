@@ -220,3 +220,21 @@ test("waits for Coolify's application health status to refresh", async () => {
     4,
   )
 })
+
+test("deploys a tested docs image only to a docs image resource", async () => {
+  const m = mock({
+    app: { docker_registry_image_name: "ghcr.io/owner/repo-docs" },
+    deployment: {
+      logs: JSON.stringify([
+        { output: `Starting deployment of ghcr.io/owner/repo-docs@${digest}` },
+        { output: "New container is healthy." },
+        { output: "Rolling update completed." },
+      ]),
+    },
+  })
+  await run(m, { ...config, kind: "docs" })
+  const wrong = mock()
+  await assert.rejects(run(wrong, { ...config, kind: "docs" }), /preflight/)
+  noWrites(wrong)
+  await assert.rejects(run(mock(), { ...config, kind: "other" }), /deployment kind/)
+})
