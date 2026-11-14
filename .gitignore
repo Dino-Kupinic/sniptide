@@ -70,3 +70,6 @@ __pycache__/
 
 # Pull request screenshots, committed only by scripts/attach-pr-media.sh
 .pr-media/
+
+# Packaged VS Code extension
+*.vsix

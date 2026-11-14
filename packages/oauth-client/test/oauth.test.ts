@@ -6,8 +6,8 @@ import {
   instanceOrigin,
   OAuthError,
   readCallback,
-} from "../src/lib/oauth"
-import { fakeInstance, INSTANCE, REDIRECT } from "./fake-instance"
+} from "../src/index"
+import { fakeInstance, INSTANCE, REDIRECT } from "../src/testing"
 
 describe("instanceOrigin", () => {
   test("accepts a host, a full address and a local instance", () => {

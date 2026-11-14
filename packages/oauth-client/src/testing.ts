@@ -1,5 +1,5 @@
 // A stand-in for a Sniptide instance's OAuth and token API, answering through `fetch`. It keeps
-// the server's rules that matter to the extension: codes need the PKCE verifier, a refresh token
+// the server's rules that matter to a client: codes need the PKCE verifier, a refresh token
 // works once, and a revoked or lapsed access token gets a 401.
 
 export const INSTANCE = "https://sniptide.test"
@@ -16,8 +16,9 @@ async function challengeOf(verifier: string) {
 export function fakeInstance() {
   const state = {
     requests: [] as string[],
-    clients: new Set<string>(),
-    codes: new Map<string, { clientId: string; challenge: string }>(),
+    // Client IDs and the names they registered under.
+    clients: new Map<string, string>(),
+    codes: new Map<string, { clientId: string; challenge: string; redirectUri: string }>(),
     access: new Set<string>(),
     refresh: new Map<string, string>(),
     revoked: [] as string[],
@@ -56,7 +57,8 @@ export function fakeInstance() {
     if (url.pathname === "/.well-known/oauth-authorization-server") return json(state.metadata)
     if (url.pathname === "/api/oauth/register") {
       const id = `sntc_${++state.counter}`
-      state.clients.add(id)
+      const body = JSON.parse(typeof init?.body === "string" ? init.body : "{}")
+      state.clients.set(id, String(body.client_name ?? ""))
       return json({ client_id: id }, 201)
     }
     if (url.pathname === "/api/oauth/token") {
@@ -67,7 +69,7 @@ export function fakeInstance() {
         const verified =
           grant?.clientId === clientId &&
           grant.challenge === (await challengeOf(form.get("code_verifier") ?? "")) &&
-          form.get("redirect_uri") === REDIRECT
+          form.get("redirect_uri") === grant.redirectUri
         if (!verified) return json({ error: "invalid_grant", error_description: "Bad code." }, 400)
         return json(issue(clientId))
       }
@@ -105,6 +107,7 @@ export function fakeInstance() {
     state.codes.set(code, {
       clientId: params.get("client_id") ?? "",
       challenge: params.get("code_challenge") ?? "",
+      redirectUri: params.get("redirect_uri") ?? "",
     })
     const callback = new URL(params.get("redirect_uri") ?? "")
     callback.searchParams.set("code", code)
