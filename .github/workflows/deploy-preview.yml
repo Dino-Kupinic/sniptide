@@ -1,0 +1,88 @@
+name: Manage image preview
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Closed pull request number to inspect for preview cleanup
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+jobs:
+  reconcile:
+    if: ${{ vars.COOLIFY_PREVIEW_DEPLOY == 'true' && vars.COOLIFY_PREVIEW_RISK_ACKNOWLEDGED == 'true' && github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
+    environment: coolify-preview
+    concurrency:
+      group: coolify-preview-reconcile
+      cancel-in-progress: false
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Request cleanup of closed previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COOLIFY_URL: ${{ vars.COOLIFY_PREVIEW_URL }}
+          COOLIFY_APP_ID: ${{ vars.COOLIFY_PREVIEW_APP_ID }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
+        run: node scripts/reconcile-previews.mjs
+
+  preview:
+    if: ${{ vars.COOLIFY_PREVIEW_DEPLOY == 'true' && vars.COOLIFY_PREVIEW_RISK_ACKNOWLEDGED == 'true' && ((github.event_name == 'workflow_run' && github.ref == 'refs/heads/main' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.repository.full_name == github.repository && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.actor.login != 'dependabot[bot]' && github.event.workflow_run.pull_requests[0].number != '') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
+    environment: coolify-preview
+    concurrency:
+      group: coolify-preview-${{ inputs.pr || github.event.workflow_run.pull_requests[0].number }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify source workflow
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+        run: |
+          actual="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml" --jq .id)"
+          test "$actual" = "$WORKFLOW_ID"
+      - uses: actions/download-artifact@v4
+        if: github.event_name == 'workflow_run'
+        with:
+          name: preview-image-receipt-${{ github.event.workflow_run.run_attempt }}
+          path: ${{ runner.temp }}/preview-receipt
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Deploy or remove preview
+        env:
+          EVENT_TYPE: ${{ github.event_name }}
+          PR_NUMBER: ${{ inputs.pr || github.event.workflow_run.pull_requests[0].number }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          GH_TOKEN: ${{ github.token }}
+          COOLIFY_URL: ${{ vars.COOLIFY_PREVIEW_URL }}
+          COOLIFY_APP_ID: ${{ vars.COOLIFY_PREVIEW_APP_ID }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
+        run: node scripts/deploy-preview.mjs

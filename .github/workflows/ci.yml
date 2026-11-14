@@ -1,7 +1,6 @@
 name: CI
 
-# Checks every pull request and every push to main. Deploys happen in Coolify, which builds
-# the Dockerfile from main.
+# Checks every pull request and every push to main. Publishing an image does not deploy it.
 on:
   pull_request:
   push:
@@ -43,6 +42,8 @@ jobs:
       - run: node --test scripts/test-release-gates.mjs
         env:
           LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
+      - run: bash scripts/test-ci-image-tag.sh
+      - run: node --test scripts/test-deploy-production.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
 
@@ -59,14 +60,17 @@ jobs:
       - run: node packages/ui/scripts/test-npm-release.mjs "$RUNNER_TEMP/ui-package"
       - run: bun run test:docs
 
-  # The same image Coolify deploys, so a broken Dockerfile shows up in the PR. Layers come from
-  # the GitHub Actions cache, so the dependency install rarely rebuilds.
+  # Build and test in parallel with the other checks; publishing waits for all of them.
   docker:
     name: Docker image, upgrade and compose
+    outputs:
+      build-attempt: ${{ github.run_attempt }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@v4
 
@@ -76,6 +80,7 @@ jobs:
           context: .
           load: true
           tags: sniptide:ci
+          build-args: DEPLOYMENT_VERSION=${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           cache-from: |
             type=gha,scope=ci-web
             type=gha,scope=docker-amd64
@@ -114,6 +119,124 @@ jobs:
       # docker-compose.yml and the Coolify template, the two ways self-hosters start Sniptide.
       - name: Verify docker compose and the Coolify template
         run: bash scripts/test-compose.sh sniptide:ci
+
+      - name: Select a tag for trusted events
+        id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          ATTEMPT: ${{ github.run_attempt }}
+          ACTOR: ${{ github.actor }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          tag="$(bash scripts/ci-image-tag.sh "$REPOSITORY" "$EVENT" "$REF" "$HEAD_REPOSITORY" "$SHA" "$RUN_ID" "$ATTEMPT" "$ACTOR" "$AUTHOR")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Save the tested image
+        if: steps.image.outputs.tag != ''
+        run: docker save sniptide:ci -o "$RUNNER_TEMP/sniptide-image.tar"
+
+      - name: Upload the tested image
+        if: steps.image.outputs.tag != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: tested-web-image-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sniptide-image.tar
+          retention-days: 1
+
+  publish-ci-image:
+    name: Publish tested CI image
+    needs: [docker, checks, tests, e2e-result, docs-image]
+    if: ${{ github.actor != 'dependabot[bot]' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - name: Validate the build attempt
+        id: build
+        env:
+          BUILD_ATTEMPT: ${{ needs.docker.outputs.build-attempt }}
+        run: |
+          [[ "$BUILD_ATTEMPT" =~ ^[0-9]+$ ]] || { echo 'Invalid build attempt' >&2; exit 1; }
+          echo "attempt=$BUILD_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: tested-web-image-${{ steps.build.outputs.attempt }}
+          path: ${{ runner.temp }}
+      - name: Load the tested image
+        run: docker load -i "$RUNNER_TEMP/sniptide-image.tar"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish the tested image
+        id: publish
+        env:
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          ATTEMPT: ${{ steps.build.outputs.attempt }}
+        run: |
+          if [[ ! "$REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] ||
+             [[ ! "$SHA" =~ ^[a-f0-9]{40}$ ]] || [[ ! "$RUN_ID" =~ ^[0-9]+$ ]] ||
+             [[ ! "$ATTEMPT" =~ ^[0-9]+$ ]]; then
+            echo 'Invalid image destination inputs' >&2
+            exit 1
+          fi
+          IMAGE="ghcr.io/${REPOSITORY,,}:sha-$SHA-$RUN_ID-$ATTEMPT"
+          docker tag sniptide:ci "$IMAGE"
+          output="$(docker push "$IMAGE")"
+          printf '%s\n' "$output"
+          digest="$(printf '%s\n' "$output" | sed -nE 's/.*digest: (sha256:[a-f0-9]{64}).*/\1/p' | tail -n 1)"
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo 'Could not find the pushed registry digest' >&2
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Published tested image: \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Registry digest: \`${IMAGE%:*}@$digest\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record the production image receipt
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+          BUILD_ATTEMPT: ${{ steps.build.outputs.attempt }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/image-receipt"
+          node -e 'const fs = require("node:fs"); const e = process.env; fs.writeFileSync(`${e.RUNNER_TEMP}/image-receipt/receipt.json`, JSON.stringify({repository:e.GITHUB_REPOSITORY, sha:e.GITHUB_SHA, run_id:e.GITHUB_RUN_ID, run_attempt:e.GITHUB_RUN_ATTEMPT, build_attempt:e.BUILD_ATTEMPT, digest:e.DIGEST}))'
+      - uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        with:
+          name: production-image-receipt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/image-receipt/receipt.json
+          retention-days: 7
+
+      - name: Record the preview image receipt
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'dependabot[bot]' }}
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+          BUILD_ATTEMPT: ${{ steps.build.outputs.attempt }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/preview-receipt"
+          node -e 'const fs = require("node:fs"); const e = process.env; fs.writeFileSync(`${e.RUNNER_TEMP}/preview-receipt/receipt.json`, JSON.stringify({repository:e.GITHUB_REPOSITORY, merge_sha:e.GITHUB_SHA, head_sha:e.PR_HEAD, base_sha:e.PR_BASE, pr:e.PR_NUMBER, run_id:e.GITHUB_RUN_ID, run_attempt:e.GITHUB_RUN_ATTEMPT, build_attempt:e.BUILD_ATTEMPT, digest:e.DIGEST}))'
+      - uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'dependabot[bot]' }}
+        with:
+          name: preview-image-receipt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/preview-receipt/receipt.json
+          retention-days: 7
 
   # The docs site deploys as its own Coolify service from apps/docs/Dockerfile.
   docs-image:

@@ -59,6 +59,7 @@ docker run -d --name "$app" --network "$network" \
   -e BETTER_AUTH_URL=http://localhost:3000 \
   "$image" >/dev/null
 wait_for_app
+docker exec "$app" node /app/healthcheck.cjs
 
 # Check a rendered page, the copied static assets and a write through the migrated auth schema.
 docker exec -i "$app" node --input-type=module <<'JS'
