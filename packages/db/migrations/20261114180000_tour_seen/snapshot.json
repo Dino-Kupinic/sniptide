@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "ab0c568a-8f14-467a-81dd-dded8474c5df",
+  "prevIds": [
+    "6eb72a33-61f0-4595-ae90-1be36107f758"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "onboarding",
+        "tour_seen_at"
+      ],
+      "writes": [
+        "s|col|public.onboarding.tour_seen_at",
+        "n|col|public.onboarding.tour_seen_at",
+        "e|col|public.onboarding.tour_seen_at"
+      ],
+      "reads": [
+        "n|tbl|public.onboarding",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "onboarding",
+        "name": "tour_seen_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

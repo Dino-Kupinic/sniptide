@@ -54,6 +54,8 @@ jobs:
       - run: bun run test:sdk
       - run: bun run test:extension
       - run: bun --filter extension build
+      - run: bun run test:vscode
+      - run: bun --filter sniptide-vscode build
       - run: npm ci --no-audit --no-fund
         working-directory: plugins/raycast
       - run: bun run test:raycast

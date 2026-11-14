@@ -1,7 +1,7 @@
 "use server"
 
 import { apiToken, oauthClient, onboarding } from "@workspace/db/schema"
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm"
 import { getSession } from "@/lib/auth"
 import { getDb } from "@/lib/db"
 import { actionError } from "@/lib/i18n/action-errors"
@@ -45,6 +45,24 @@ export async function saveUseCase(answer: string): Promise<Result> {
       .insert(onboarding)
       .values({ userId: session.user.id, source: "skipped", useCase: answer })
       .onConflictDoUpdate({ target: onboarding.userId, set: { useCase: sql`excluded.use_case` } })
+  } catch {
+    return { ok: false, error: await actionError("saveFailed") }
+  }
+  return { ok: true }
+}
+
+// Records that the tour started for the account, so it never starts by itself again. The first
+// time wins. An account without a row is older than the welcome wizard and never gets the tour
+// unasked, so there is nothing to record for it.
+export async function markTourSeen(): Promise<Result> {
+  const session = await getSession()
+  if (!session) return { ok: false, error: await actionError("signInSettings") }
+
+  try {
+    await getDb()
+      .update(onboarding)
+      .set({ tourSeenAt: new Date() })
+      .where(and(eq(onboarding.userId, session.user.id), isNull(onboarding.tourSeenAt)))
   } catch {
     return { ok: false, error: await actionError("saveFailed") }
   }

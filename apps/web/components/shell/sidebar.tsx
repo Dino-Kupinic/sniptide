@@ -145,6 +145,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={openCommandMenu}
+          data-tour="search"
           className="flex h-8.5 shrink-0 items-center gap-2 rounded-lg border border-border bg-background pr-1.5 pl-2.5 text-[13px] text-muted-foreground outline-none hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring/40"
         >
           <SearchIcon className="size-3.5" />
@@ -157,6 +158,7 @@ export function Sidebar({
           className="h-[34px] shrink-0 justify-start gap-2 pr-1.5 pl-3"
           render={<Link href="/new" />}
           nativeButton={false}
+          data-tour="new-paste"
         >
           <PlusIcon />
           {t("new_paste")}
@@ -509,6 +511,7 @@ function Section({
     <section
       ref={ref}
       aria-label={title}
+      data-tour={id === "collections" ? id : undefined}
       className={cn(
         "flex shrink-0 flex-col gap-0.5",
         isDragSource && "rounded-md relative z-20 bg-sidebar shadow-sm",

@@ -30,3 +30,15 @@ export async function getOnboardingAnswers(userId: string) {
 export async function shouldOnboard(user: Account, now = new Date()) {
   return canOnboard(user, now) && !(await getOnboardingAnswers(user.id))
 }
+
+// Whether the tour starts by itself: the account is new, went through or skipped the welcome
+// wizard, and the tour hasn't started for it before. Older accounts open it from the account menu.
+export async function shouldStartTour(user: Account, now = new Date()) {
+  if (!canOnboard(user, now)) return false
+  const [row] = await getDb()
+    .select({ tourSeenAt: onboarding.tourSeenAt })
+    .from(onboarding)
+    .where(eq(onboarding.userId, user.id))
+    .limit(1)
+  return row !== undefined && row.tourSeenAt === null
+}
