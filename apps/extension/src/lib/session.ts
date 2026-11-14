@@ -12,12 +12,15 @@ import {
   registerClient,
   revoke,
   type TokenSet,
-} from "./oauth"
+} from "@workspace/oauth-client"
 import type { Account } from "./protocol"
 
 // The signed-in connection: its tokens, the client it registered as and the account behind it.
 // Storage, fetch and the browser's sign-in window are passed in, so the token handling runs under
 // test without chrome.*.
+
+// What the consent screen and the connection list in Settings call the extension.
+export const CLIENT_NAME = "Sniptide for Chrome"
 
 export interface Session extends TokenSet {
   instance: string
@@ -109,7 +112,10 @@ export function createSessions(deps: SessionDeps) {
 
     async signIn(instance: string): Promise<Account> {
       const endpoints = await discover(deps.fetch, instance)
-      const clientId = await registerClient(deps.fetch, endpoints, deps.redirectUri)
+      const clientId = await registerClient(deps.fetch, endpoints, {
+        name: CLIENT_NAME,
+        redirectUri: deps.redirectUri,
+      })
       const { verifier, challenge } = await createPkce()
       const state = randomToken(16)
       const callback = await deps.authorize(

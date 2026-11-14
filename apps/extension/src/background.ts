@@ -1,7 +1,7 @@
 import { SniptideError } from "@sniptide/sdk"
+import { instanceOrigin, OAuthError } from "@workspace/oauth-client"
 import { captureFromSelection, type PageSelection } from "./lib/capture"
 import { messages } from "./lib/messages"
-import { instanceOrigin, OAuthError } from "./lib/oauth"
 import { type PageToast, readSelection, showToast } from "./lib/page"
 import {
   DEFAULT_SETTINGS,

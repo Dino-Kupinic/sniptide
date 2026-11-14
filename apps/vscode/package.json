@@ -1,0 +1,287 @@
+{
+  "name": "sniptide-vscode",
+  "displayName": "Sniptide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Share a selection as a link, save it to a collection, and insert your snippets without leaving the editor.",
+  "publisher": "sniptide",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://docs.sniptide.com/vscode-extension",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dino-Kupinic/sniptide.git",
+    "directory": "apps/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/Dino-Kupinic/sniptide/issues"
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0C0B0B",
+    "theme": "dark"
+  },
+  "categories": [
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "snippets",
+    "pastebin",
+    "share code",
+    "gist",
+    "cursor"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "dev": "bun scripts/build.ts --watch",
+    "package": "bun scripts/build.ts && bunx @vscode/vsce@3.9.2 package --no-dependencies",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test ./test"
+  },
+  "devDependencies": {
+    "@sniptide/sdk": "workspace:*",
+    "@types/bun": "catalog:tooling",
+    "@types/vscode": "1.90.0",
+    "@workspace/oauth-client": "workspace:*",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "sniptide.shareSelection",
+        "title": "Share Selection as Link",
+        "category": "Sniptide",
+        "icon": "$(link)"
+      },
+      {
+        "command": "sniptide.saveSelection",
+        "title": "Save Selection as Snippet",
+        "category": "Sniptide",
+        "icon": "$(add)"
+      },
+      {
+        "command": "sniptide.insertSnippet",
+        "title": "Insert Snippet",
+        "category": "Sniptide"
+      },
+      {
+        "command": "sniptide.signIn",
+        "title": "Sign In",
+        "category": "Sniptide"
+      },
+      {
+        "command": "sniptide.signOut",
+        "title": "Sign Out",
+        "category": "Sniptide"
+      },
+      {
+        "command": "sniptide.search",
+        "title": "Search Snippets",
+        "category": "Sniptide",
+        "icon": "$(search)"
+      },
+      {
+        "command": "sniptide.clearSearch",
+        "title": "Clear Search",
+        "category": "Sniptide",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "sniptide.refresh",
+        "title": "Refresh",
+        "category": "Sniptide",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sniptide.preview",
+        "title": "Open Snippet",
+        "category": "Sniptide"
+      },
+      {
+        "command": "sniptide.insert",
+        "title": "Insert at Cursor",
+        "category": "Sniptide",
+        "icon": "$(insert)"
+      },
+      {
+        "command": "sniptide.copy",
+        "title": "Copy Content",
+        "category": "Sniptide",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "sniptide.copyLink",
+        "title": "Copy Link",
+        "category": "Sniptide"
+      },
+      {
+        "command": "sniptide.openInBrowser",
+        "title": "Open in Sniptide",
+        "category": "Sniptide"
+      },
+      {
+        "command": "sniptide.loadMore",
+        "title": "Load More",
+        "category": "Sniptide"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sniptide",
+          "title": "Sniptide",
+          "icon": "media/sniptide.svg"
+        }
+      ]
+    },
+    "views": {
+      "sniptide": [
+        {
+          "id": "sniptide.snippets",
+          "name": "Snippets",
+          "icon": "media/sniptide.svg",
+          "contextualTitle": "Sniptide"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "sniptide.snippets",
+        "contents": "Sign in to browse your snippets and share code as a link.\n[Sign In to Sniptide](command:sniptide.signIn)",
+        "when": "!sniptide.signedIn"
+      },
+      {
+        "view": "sniptide.snippets",
+        "contents": "You have no snippets yet. Select code in the editor and save it.\n[Save Selection as Snippet](command:sniptide.saveSelection)",
+        "when": "sniptide.signedIn && sniptide.empty"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "sniptide.signIn",
+          "when": "!sniptide.signedIn"
+        },
+        {
+          "command": "sniptide.signOut",
+          "when": "sniptide.signedIn"
+        },
+        {
+          "command": "sniptide.clearSearch",
+          "when": "sniptide.searching"
+        },
+        {
+          "command": "sniptide.preview",
+          "when": "false"
+        },
+        {
+          "command": "sniptide.insert",
+          "when": "false"
+        },
+        {
+          "command": "sniptide.copy",
+          "when": "false"
+        },
+        {
+          "command": "sniptide.copyLink",
+          "when": "false"
+        },
+        {
+          "command": "sniptide.openInBrowser",
+          "when": "false"
+        },
+        {
+          "command": "sniptide.loadMore",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "sniptide.shareSelection",
+          "when": "editorHasSelection",
+          "group": "sniptide@1"
+        },
+        {
+          "command": "sniptide.saveSelection",
+          "when": "editorHasSelection",
+          "group": "sniptide@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "sniptide.search",
+          "when": "view == sniptide.snippets && sniptide.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sniptide.clearSearch",
+          "when": "view == sniptide.snippets && sniptide.searching",
+          "group": "navigation@2"
+        },
+        {
+          "command": "sniptide.refresh",
+          "when": "view == sniptide.snippets && sniptide.signedIn",
+          "group": "navigation@3"
+        },
+        {
+          "command": "sniptide.signOut",
+          "when": "view == sniptide.snippets && sniptide.signedIn",
+          "group": "account"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sniptide.insert",
+          "when": "view == sniptide.snippets && viewItem == snippet",
+          "group": "inline@1"
+        },
+        {
+          "command": "sniptide.copy",
+          "when": "view == sniptide.snippets && viewItem == snippet",
+          "group": "inline@2"
+        },
+        {
+          "command": "sniptide.insert",
+          "when": "view == sniptide.snippets && viewItem == snippet",
+          "group": "1_use@1"
+        },
+        {
+          "command": "sniptide.copy",
+          "when": "view == sniptide.snippets && viewItem == snippet",
+          "group": "1_use@2"
+        },
+        {
+          "command": "sniptide.copyLink",
+          "when": "view == sniptide.snippets && viewItem == snippet",
+          "group": "2_link@1"
+        },
+        {
+          "command": "sniptide.openInBrowser",
+          "when": "view == sniptide.snippets && viewItem == snippet",
+          "group": "2_link@2"
+        }
+      ]
+    }
+  }
+}
