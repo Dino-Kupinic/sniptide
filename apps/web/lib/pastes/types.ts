@@ -56,6 +56,9 @@ export interface PasteSummary {
   password: string | null
   burnAfterRead: boolean
   allowRaw: boolean
+  // Set on an end-to-end encrypted paste: the public id of the key a browser needs to read it.
+  // Its one file then holds ciphertext, and its description is inside that ciphertext.
+  encryptionKeyId: string | null
   collection: string | null
   // null means the signed-in viewer owns it.
   owner: Person | null
@@ -99,6 +102,7 @@ export type SharedPaste = Pick<
   | "views"
   | "burnAfterRead"
   | "allowRaw"
+  | "encryptionKeyId"
 >
 
 export interface Share {
@@ -135,6 +139,8 @@ export interface PasteInput {
   collection: string | null
   password: string | null
   burnAfterRead: boolean
+  // Set when the browser encrypted the paste: `files` is then the one ciphertext file.
+  encryption?: { keyId: string } | null
 }
 
 // The sidebar's counts next to My pastes, Starred and Shared with me.
@@ -154,6 +160,7 @@ export interface SidebarPaste {
   starred: boolean
   collection: string | null
   updatedAt: number
+  encryptionKeyId: string | null
 }
 
 export interface SidebarData {

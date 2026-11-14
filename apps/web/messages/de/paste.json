@@ -222,6 +222,21 @@
     "compareLinesAdded": "{count, plural, one {# line added} other {# lines added}}",
     "compareLinesRemoved": "{count, plural, one {# line removed} other {# lines removed}}",
     "expiredSharingHelp": "Dieser Paste ist abgelaufen. Lege ein neues Ablaufdatum fest oder wähle „Nie“, um ihn wieder zu teilen.",
-    "manageAccess": "Zugriff verwalten"
+    "manageAccess": "Zugriff verwalten",
+    "endToEndEncryption": "Ende-zu-Ende-Verschlüsselung",
+    "encryptedInThisBrowser": "Sniptide kann die Dateien nicht lesen",
+    "aboutSetting": "Über {setting}",
+    "encryptionHelp": "Dateien, Dateinamen und die Beschreibung werden vor dem Speichern in diesem Browser verschlüsselt, und der Schlüssel ist Teil des Links. Der Titel bleibt lesbar, damit du den Paste wiederfindest. Ein verschlüsselter Paste lässt sich später nicht bearbeiten.",
+    "encryptedPaste": "Verschlüsselter Paste",
+    "keyNeeded": "Schlüssel erforderlich",
+    "keyNeededDescription": "Dieser Paste ist Ende-zu-Ende-verschlüsselt, und der geöffnete Link enthält keinen Schlüssel. Füge den vollständigen Link oder den Schlüssel ein, um ihn zu lesen.",
+    "keyNeededOwnerNote": "Der Browser, in dem der Paste erstellt wurde, bewahrt den Schlüssel auf. Sniptide hat ihn nie.",
+    "keyNeededBeforeBurn": "Dieser Paste ist Ende-zu-Ende-verschlüsselt, und der geöffnete Link enthält keinen Schlüssel. Füge zuerst den vollständigen Link oder den Schlüssel ein, damit der einzige Aufruf nicht für Text verbraucht wird, den du nicht entschlüsseln kannst.",
+    "linkOrKey": "Link oder Schlüssel",
+    "keyDoesNotFit": "Dieser Schlüssel öffnet den Paste nicht. Prüfe, ob du den ganzen Link kopiert hast.",
+    "decrypt": "Entschlüsseln",
+    "checkKey": "Schlüssel prüfen",
+    "encryptedLinkHasKey": "Ende-zu-Ende-verschlüsselt. Der hier kopierte Link enthält den Schlüssel, und wer ihn hat, kann den Paste lesen.",
+    "encryptedLinkNoKey": "Ende-zu-Ende-verschlüsselt. Dieser Browser hat den Schlüssel nicht, daher öffnet der hier kopierte Link den Paste nicht von allein."
   }
 }

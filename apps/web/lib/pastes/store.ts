@@ -224,6 +224,7 @@ function summariesOf(
         password: record.passwordHash,
         burnAfterRead: record.burnAfterRead,
         allowRaw: record.allowRaw,
+        encryptionKeyId: record.encryptionKeyId,
         collection: record.collection,
         owner: record.ownerId === viewer ? null : author,
         author,
@@ -930,7 +931,8 @@ export const getPasteMeta = cache(async (slug: string) => {
 export type SharedRead =
   | { status: "ok"; paste: SharedPaste; owned: boolean; signedIn: boolean }
   // A burn-after-read paste before an explicit reveal, for every visitor including its owner.
-  | { status: "sealed"; owned: boolean; signedIn: boolean }
+  // `encryptionKeyId` lets the page check the reader's key before the one read is spent.
+  | { status: "sealed"; owned: boolean; signedIn: boolean; encryptionKeyId: string | null }
   // A password paste before its unlock cookie, for every visitor including its owner.
   | { status: "locked"; owned: boolean; signedIn: boolean }
   | { status: "missing" }
@@ -1031,6 +1033,7 @@ async function loadSharedPaste(tx: Transaction, record: PasteRecord): Promise<Sh
     views: record.views,
     burnAfterRead: record.burnAfterRead,
     allowRaw: record.allowRaw,
+    encryptionKeyId: record.encryptionKeyId,
   }
 }
 
@@ -1050,7 +1053,13 @@ export async function readSharedPaste(
       const owned = record.ownerId === viewer
       if (verdict === "locked") return { status: verdict, owned, signedIn: viewer !== null }
       if (verdict !== "ok") return { status: verdict }
-      if (record.burnAfterRead) return { status: "sealed", owned, signedIn: viewer !== null }
+      if (record.burnAfterRead)
+        return {
+          status: "sealed",
+          owned,
+          signedIn: viewer !== null,
+          encryptionKeyId: record.encryptionKeyId,
+        }
       const paste = await loadSharedPaste(tx, record)
       if (!paste) return { status: "missing" }
       const counted = Boolean(options.visit && !owned)
@@ -1146,7 +1155,9 @@ export async function readRawFile(slug: string, name: string | null): Promise<Ra
     const verdict = await canOpenLink(record, viewer, tx)
     if (verdict !== "ok") return { status: verdict }
     const owned = record.ownerId === viewer
-    if (!owned && (record.burnAfterRead || !record.allowRaw)) return { status: "forbidden" }
+    // A raw URL can't carry the key, so an encrypted paste has no raw file, for its owner either.
+    if (record.encryptionKeyId || (!owned && (record.burnAfterRead || !record.allowRaw)))
+      return { status: "forbidden" }
     const [file] = await tx
       .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
       .from(pasteFile)
@@ -1244,6 +1255,7 @@ export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> 
     views: record.views,
     burnAfterRead: false,
     allowRaw: record.allowRaw,
+    encryptionKeyId: null,
   }
 }
 
@@ -1350,6 +1362,7 @@ export const sidebarData = cache(
       collection: record.ownerId === viewer ? record.collection : null,
       expiresAt: record.expiresAt?.getTime() ?? null,
       updatedAt: record.updatedAt.getTime(),
+      encryptionKeyId: record.encryptionKeyId,
     })
     return {
       counts: { pastes: own?.count ?? 0, starred: starCount?.count ?? 0, shared },

@@ -140,12 +140,15 @@ async function withFiles(
   })
 }
 
-// The owner's live pastes: not trashed and not expired.
+// The owner's live pastes: not trashed and not expired. End-to-end encrypted pastes are left out
+// of the token API altogether: a token holder has no key, so a client would restore ciphertext to
+// disk or hand it to an agent as if it were code.
 function liveOwned(owner: string): SQL {
   return and(
     allowedPaste(),
     eq(pasteTable.ownerId, owner),
     isNull(pasteTable.deletedAt),
+    isNull(pasteTable.encryptionKeyId),
     or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
   ) as SQL
 }

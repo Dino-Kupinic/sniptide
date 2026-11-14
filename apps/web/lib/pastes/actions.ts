@@ -119,12 +119,19 @@ export async function savePaste(
 
   const parsed = pasteSchema.safeParse(input)
   if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "Check the paste and try again."
+    // The limit counts the stored envelope, which is larger than what the person typed.
+    const limit = input.encryption ? /^Pastes are limited to (.+)\.$/.exec(message)?.[1] : undefined
     return {
       ok: false,
-      error: await translateActionError(
-        parsed.error.issues[0]?.message ?? "Check the paste and try again.",
-      ),
+      error: limit
+        ? await actionError("encryptedPasteSize", { limit })
+        : await translateActionError(message),
     }
+  }
+  // Encryption is chosen when a paste is created; an open paste can't switch.
+  if (editing && parsed.data.encryption) {
+    return { ok: false, error: await actionError("pasteMissing") }
   }
   const tooOften = await limited(editing ? limits.edit(user) : limits.create(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }

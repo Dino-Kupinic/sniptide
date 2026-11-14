@@ -21,7 +21,9 @@ search engines out of `/api/`, and lets them load the `/_next/` files they need 
 
 Pastes you create in the web editor start unlisted until you change your
 [paste defaults](/settings#set-paste-defaults). With an unlisted paste the link itself is the
-secret, so don't rely on it to protect anything sensitive.
+secret, so don't rely on it to protect anything sensitive. The server can still read the paste. An
+[encrypted paste](/core-concepts/encrypted-pastes) keeps its files from the server too, and can't
+be public.
 
 ## Your public profile
 
@@ -113,6 +115,9 @@ Fetching the Markdown copy doesn't count as a view.
   print or save as a PDF. It has the same access as the share page and doesn't count a view. A
   burn-after-read paste prints only for its owner.
 - **Download** saves a single file to your device.
+
+An [encrypted paste](/core-concepts/encrypted-pastes) has no raw files, Markdown copy, embed,
+print view or download, because the server renders all of them.
 
 ## Set an expiry
 

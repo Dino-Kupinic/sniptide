@@ -28,8 +28,10 @@ import { LocalDateTime } from "@/components/local-date-time"
 import { track } from "@/lib/analytics"
 import { runAction } from "@/lib/feedback"
 import { updateSharing } from "@/lib/pastes/actions"
+import { useKeyedUrl } from "@/lib/pastes/keyring"
 import type { Expiry, Visibility } from "@/lib/pastes/types"
 import { LinkCopyContent, useCopyLink } from "./copy-button"
+import { EncryptionNote } from "./encryption-note"
 import { usePasteExpired } from "./expiry-status"
 import { type PanelSection, SidePanel } from "./side-panel"
 
@@ -41,6 +43,9 @@ export interface SharingState {
   hasPassword: boolean
   burnAfterRead: boolean
   allowRaw: boolean
+  // Set on an end-to-end encrypted paste: no Public option and no raw files, and the copied link
+  // carries the key.
+  encryptionKeyId?: string | null
 }
 
 const expiryChoices: { value: Expiry; label: string }[] = [
@@ -54,16 +59,19 @@ const expiryChoices: { value: Expiry; label: string }[] = [
 
 export function ShareLinkField({
   url,
+  encryptionKeyId,
   expiresAt,
   className,
 }: {
   url: string
+  encryptionKeyId?: string | null
   expiresAt: number | null
   className?: string
 }) {
   const t = useTranslations("Paste")
   const expired = usePasteExpired(expiresAt)
-  const { state, props } = useCopyLink(url, () =>
+  const keyed = useKeyedUrl(url, encryptionKeyId)
+  const { state, props } = useCopyLink(keyed, () =>
     track("share_link_copied", { from: "sharing_panel" }),
   )
 
@@ -146,9 +154,10 @@ function useSharingControls(state: SharingState, list: boolean) {
         save({ visibility: next }, () => setVisibility(previous))
       }}
       options={[
-        { value: "private", label: t("private") },
-        { value: "unlisted", label: t("unlisted") },
-        { value: "public", label: t("public") },
+        { value: "private" as const, label: t("private") },
+        { value: "unlisted" as const, label: t("unlisted") },
+        // A public listing would show an encrypted paste without its key.
+        ...(state.encryptionKeyId ? [] : [{ value: "public" as const, label: t("public") }]),
       ]}
       itemClassName={list ? "py-2 text-sm" : undefined}
     />
@@ -249,16 +258,18 @@ function useSharingControls(state: SharingState, list: boolean) {
           }}
         />
       </SettingRow>
-      <SettingRow label={t("allowRawAccess")} list={list}>
-        <Switch
-          aria-label={t("allowRawAccess")}
-          checked={allowRaw}
-          onCheckedChange={(checked) => {
-            setAllowRaw(checked)
-            save({ allowRaw: checked }, () => setAllowRaw(!checked))
-          }}
-        />
-      </SettingRow>
+      {state.encryptionKeyId ? null : (
+        <SettingRow label={t("allowRawAccess")} list={list}>
+          <Switch
+            aria-label={t("allowRawAccess")}
+            checked={allowRaw}
+            onCheckedChange={(checked) => {
+              setAllowRaw(checked)
+              save({ allowRaw: checked }, () => setAllowRaw(!checked))
+            }}
+          />
+        </SettingRow>
+      )}
     </>
   )
 
@@ -320,7 +331,12 @@ function OwnerPanel({ state, rest }: { state: SharingState; rest: PanelSection[]
       icon: LinkIcon,
       content: (
         <>
-          <ShareLinkField url={state.url} expiresAt={state.expiresAt} />
+          <ShareLinkField
+            url={state.url}
+            encryptionKeyId={state.encryptionKeyId}
+            expiresAt={state.expiresAt}
+          />
+          {state.encryptionKeyId ? <EncryptionNote keyId={state.encryptionKeyId} /> : null}
           {controls.visibilityControl}
           <p className="text-xs text-muted-foreground">
             {t("visibilityHelp", { value: controls.visibility })}

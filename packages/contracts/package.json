@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./encryption": "./src/encryption.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

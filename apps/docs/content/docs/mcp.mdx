@@ -10,6 +10,41 @@ to deploy.
 
 <AgentLoopVisual />
 
+## Install in your agent
+
+Claude Code and Gemini CLI can install Sniptide as a plugin, which adds the MCP server and the
+five Sniptide skills in one step. The plugin connects to the hosted app at
+`https://app.sniptide.com`, and the client signs you in through [OAuth](/oauth) the first time
+it calls Sniptide. For a self-hosted instance or another client, use
+[Connect an agent](#connect-an-agent) instead.
+
+<Tabs items={["Claude Code", "Gemini CLI"]} groupId="agent" persist>
+<Tab value="Claude Code">
+
+Add the Sniptide marketplace, then install the plugin from it:
+
+```bash
+claude plugin marketplace add Dino-Kupinic/sniptide
+claude plugin install sniptide@sniptide
+```
+
+Start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**.
+
+</Tab>
+<Tab value="Gemini CLI">
+
+```bash
+gemini extensions install https://github.com/Dino-Kupinic/sniptide
+```
+
+Start Gemini CLI and run `/mcp auth sniptide` to sign in.
+
+</Tab>
+</Tabs>
+
+The extension and plugin manifests contain no token. To check the install, ask the agent to list
+your Sniptide collections.
+
 ## Connect an agent
 
 Run the command for your client. The client opens Sniptide in your browser, where you allow
@@ -202,8 +237,17 @@ bundles the MCP servers in `mcp.json` with five skills: `setup-sniptide`, `reuse
 `SNIPTIDE_TOKEN` as a bearer token, so export a token before you use it. How you install a plugin
 depends on your client.
 
+The same repository carries a Claude Code plugin in `plugins/claude/` and a Gemini CLI extension
+in `gemini-extension.json`. Both bundle the remote MCP server and the same five skills, and both
+install with the commands in [Install in your agent](#install-in-your-agent). They sign in through
+OAuth by default. The Claude Code plugin also has an optional **Sniptide API token** setting for a
+[personal API token](/api-tokens). Claude Code stores that value in its credential store and sends
+it as the bearer token, so it never appears in a file in your project.
+
 ## Limits and errors
 
+- An agent never sees an [encrypted paste](/core-concepts/encrypted-pastes). The tools don't
+  list, read or change one.
 - MCP requests share the token's **3,600 requests an hour**, the limit of 30 new pastes an hour,
   paste validation and the account's storage limit.
 - Request bodies are capped at 8 MiB and tool results at 25 MiB. Read single snippets if a

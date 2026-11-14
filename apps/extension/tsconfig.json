@@ -1,0 +1,16 @@
+{
+  "extends": "@workspace/typescript/react-library.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["chrome", "bun"],
+    "paths": {
+      "@sniptide/ui/*": ["../../packages/ui/src/*"],
+      // The SDK publishes its build output, so the extension reads the source and needs no
+      // build of the package first.
+      "@sniptide/sdk": ["../../packages/sdk/src/index.ts"]
+    }
+  },
+  "include": ["src", "scripts", "test"]
+}

@@ -58,7 +58,7 @@ async function gistDraft(
 // `?template=<name>` starts from a template on the marketing site (Use template on its page).
 export default async function Page({ searchParams }: PageProps<"/new">) {
   const { from, gist, file, template } = await searchParams
-  const [source, preferences, collections, imported, templated, session, t] = await Promise.all([
+  const [copied, preferences, collections, imported, templated, session, t] = await Promise.all([
     typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
     listCollections(),
@@ -67,6 +67,8 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
     getSession(),
     getTranslations("Core"),
   ])
+  // An encrypted paste's files are ciphertext, so there is nothing to start a copy from.
+  const source = copied?.encryptionKeyId ? null : copied
   const draft = (imported && "draft" in imported ? imported.draft : null) ?? templated
   const files =
     draft?.files ??

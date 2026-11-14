@@ -12,6 +12,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json bun.lock ./
 COPY apps/web/package.json apps/web/
 COPY apps/docs/package.json apps/docs/
+COPY apps/extension/package.json apps/extension/
 COPY packages/auth/package.json packages/auth/
 COPY packages/cli/package.json packages/cli/
 COPY packages/contracts/package.json packages/contracts/
