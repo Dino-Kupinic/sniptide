@@ -26,6 +26,9 @@
         "tailwindcss"
       ]
     },
+    "apps/vscode": {
+      "entry": ["src/extension.ts", "test/**/*.test.ts"]
+    },
     "packages/ui": {
       // shadcn generates components on demand; postcss-load-config appears only in a JSDoc type.
       "ignoreDependencies": ["shadcn", "postcss-load-config"]

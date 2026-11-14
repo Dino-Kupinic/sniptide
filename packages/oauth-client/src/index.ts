@@ -1,9 +1,9 @@
-// The OAuth 2.1 authorization code flow with PKCE against a Sniptide instance. The extension is a
-// public client: it registers itself (RFC 7591), sends the reader to the consent screen and trades
-// the returned code for an hourly access token and a rotating refresh token. Nothing here touches
-// chrome.*, so the flow runs under test with a stub fetch.
+// The OAuth 2.1 authorization code flow with PKCE against a Sniptide instance, shared by the
+// browser extension and the VS Code extension. Each is a public client: it registers itself
+// (RFC 7591), sends the reader to the consent screen and trades the returned code for an hourly
+// access token and a rotating refresh token. Nothing here touches a browser or an editor API, so
+// the flow runs under test with a stub fetch.
 
-export const CLIENT_NAME = "Sniptide for Chrome"
 export const SCOPE = "read write"
 
 export interface Endpoints {
@@ -123,20 +123,25 @@ export async function discover(fetcher: Fetch, instance: string): Promise<Endpoi
   return { authorization, token, registration, revocation: endpoint("revocation_endpoint") }
 }
 
-export async function registerClient(fetcher: Fetch, endpoints: Endpoints, redirectUri: string) {
+// `name` is what the consent screen and the connection list in Settings call the client.
+export async function registerClient(
+  fetcher: Fetch,
+  endpoints: Endpoints,
+  client: { name: string; redirectUri: string },
+) {
   const body = await send(fetcher, endpoints.registration, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      client_name: CLIENT_NAME,
-      redirect_uris: [redirectUri],
+      client_name: client.name,
+      redirect_uris: [client.redirectUri],
       token_endpoint_auth_method: "none",
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
     }),
   })
   if (typeof body.client_id !== "string")
-    throw new OAuthError("Sniptide didn't register the extension. Try again.")
+    throw new OAuthError("Sniptide didn't register this client. Try again.")
   return body.client_id
 }
 
