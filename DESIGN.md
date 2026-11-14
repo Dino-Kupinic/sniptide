@@ -239,6 +239,11 @@ Success messages state what happened in a short past-tense phrase with no closin
 
 Every desktop table starts with a 48px column of checkboxes, and the header box selects the whole page and shows a dash while only some rows are checked. Shift-click checks the range from the last row clicked. A checked row keeps a `bg-muted/70` tint, deeper than hover. While rows are checked, a selection bar floats at the bottom of the list, starting at its left edge so the Undo toast never covers it. It is a floating layer with a hairline border and `--float-shadow`, and it holds the count, the table's actions as `ghost` `sm` buttons (destructive ones in `--destructive` text) and a clear button. Escape clears the selection. Actions that can be taken back end in a success toast with Undo, and deleting for good asks first.
 
+### Tour
+**Role:** Showing a new account the main parts of the app.
+
+A popover per step, anchored to the control it describes and placed beside it: to the right of sidebar items, above the tab bar and below the top bar. It is a floating layer 320px wide with 16px padding, a 14px weight 500 title, one or two sentences of 14px `--muted-foreground` text, and a row with the step count in 13px tabular numerals, a `ghost` `sm` Skip tour button and a `default` `sm` Next button, both 40px tall on phones. The control gets a 2px outline in `--ring`, 2px outside it. The page behind stays usable, and no backdrop covers it. Escape, Skip tour and leaving the dashboard end the tour. It has at most five steps, starts by itself once for a new account, and opens again from Take the tour in the account menu. Steps live in `apps/web/lib/tour.ts`, and a control becomes a target through its `data-tour` attribute.
+
 ### Tooltip
 **Role:** Names for icon-only controls.
 
@@ -247,7 +252,7 @@ Mono 12px on an inverted fill with 8px by 4px padding.
 ### App shell
 **Role:** Navigation frame for every signed-in screen.
 
-A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and Collections as collapsible sections, with Shared with me and Trash in a "More" menu below the Dashboard link. Feedback sits in the account menu, below Keyboard shortcuts, and opens the support dialog. Dragging below 200px collapses it, like the header button does. Its width and folded sections persist in the `sidebar` cookie, so the server renders it without a jump. Below 1024px the sidebar becomes a sheet and a bottom tab bar appears, with the new-paste action as a 48px by 40px blue block.
+A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and Collections as collapsible sections, with Shared with me and Trash in a "More" menu below the Dashboard link. Take the tour and Feedback sit in the account menu, below Keyboard shortcuts. Feedback opens the support dialog. Dragging below 200px collapses it, like the header button does. Its width and folded sections persist in the `sidebar` cookie, so the server renders it without a jump. Below 1024px the sidebar becomes a sheet and a bottom tab bar appears, with the new-paste action as a 48px by 40px blue block.
 
 ### Paste side panel
 **Role:** Settings and history next to a paste.
@@ -264,7 +269,7 @@ Six horizontal stripes that taper from a hairline at the top to a full bar at th
 Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.
 
 - The mobile top bar holds the wordmark, search, notifications and the account avatar.
-- The tab bar holds Home, Pastes, the new-paste block, Starred and More. More opens a bottom sheet with Analytics, Collections, Secrets, Shared with me, Trash, Import gist, Settings and the account. Feedback is in the account menu behind the avatar in the top bar.
+- The tab bar holds Home, Pastes, the new-paste block, Starred and More. More opens a bottom sheet with Analytics, Collections, Secrets, Shared with me, Trash, Import gist, Settings and the account. Feedback and Take the tour are in the account menu behind the avatar in the top bar.
 - Page actions that sit in the desktop header render next to the page title on phones.
 - List rows end in a 40px menu button with the same actions as the desktop row menu. Sort and filters open in a bottom sheet next to the search field.
 - Screens with their own primary action (the editor, paste detail, secrets) replace the tab bar with a 56px bottom bar: one `xl` primary button and at most one secondary control. The editor hides this bar while the on-screen keyboard is open.

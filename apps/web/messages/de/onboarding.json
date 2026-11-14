@@ -54,5 +54,30 @@
       "skipForNow": "Vorerst überspringen",
       "finish": "Zum Dashboard"
     }
+  },
+  "Tour": {
+    "progress": "{current} von {total}",
+    "skip": "Tour überspringen",
+    "next": "Weiter",
+    "done": "Fertig",
+    "steps": {
+      "new_paste": {
+        "title": "Paste speichern",
+        "body": "Ein Paste enthält Code, Notizen oder einen Prompt in einer oder mehreren Dateien und bekommt einen eigenen Link zum Teilen."
+      },
+      "search": {
+        "title": "Alles finden",
+        "body": "Die Suche umfasst deine Pastes, deine Sammlungen und jede Aktion in der App."
+      },
+      "collections": {
+        "title": "Pastes in Sammlungen ordnen",
+        "body": "Eine Sammlung hält zusammengehörige Pastes beisammen, und dein Agent kann sie in einem Zug abrufen.",
+        "bodyMore": "Sammlungen findest du unter „Mehr“. Eine Sammlung hält zusammengehörige Pastes beisammen, und dein Agent kann sie in einem Zug abrufen."
+      },
+      "agent": {
+        "title": "Deinen Agenten verbinden",
+        "body": "Führe diese Einrichtung einmal aus, dann speichert dein Agent Pastes und liest sie für dich wieder aus."
+      }
+    }
   }
 }

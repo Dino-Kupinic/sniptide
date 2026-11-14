@@ -54,5 +54,30 @@
       "skipForNow": "Omitir por ahora",
       "finish": "Ir al panel"
     }
+  },
+  "Tour": {
+    "progress": "{current} de {total}",
+    "skip": "Omitir recorrido",
+    "next": "Siguiente",
+    "done": "Listo",
+    "steps": {
+      "new_paste": {
+        "title": "Guarda un fragmento",
+        "body": "Un fragmento contiene código, notas o un prompt en uno o varios archivos, y tiene su propio enlace para compartir."
+      },
+      "search": {
+        "title": "Encuentra lo que buscas",
+        "body": "La búsqueda abarca tus fragmentos, tus colecciones y todas las acciones de la aplicación."
+      },
+      "collections": {
+        "title": "Agrupa fragmentos en colecciones",
+        "body": "Una colección reúne los fragmentos relacionados, y tu agente puede obtenerla entera de una vez.",
+        "bodyMore": "Las colecciones están en Más. Una colección reúne los fragmentos relacionados, y tu agente puede obtenerla entera de una vez."
+      },
+      "agent": {
+        "title": "Conecta tu agente",
+        "body": "Ejecuta esta configuración una vez, y tu agente guardará fragmentos y los leerá por ti."
+      }
+    }
   }
 }

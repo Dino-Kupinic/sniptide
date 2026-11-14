@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { CommandMenuProvider } from "@/components/command-menu/command-menu"
+import { TourProvider } from "@/components/onboarding/tour"
 import { ShortcutsProvider } from "@/components/shortcuts/shortcuts-help"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
 import { LiveUpdates } from "./live-updates"
@@ -41,11 +42,14 @@ export function AppShell({
   children,
   initialSidebar,
   demo = false,
+  tour = false,
   trashCount = 0,
   ...sidebarProps
 }: SidebarProps & {
   initialSidebar: SidebarState
   demo?: boolean
+  // Whether the tour starts by itself on the dashboard, which it does once for a new account.
+  tour?: boolean
   // For the More sheet; the sidebar's own counts don't cover Trash.
   trashCount?: number
   children: React.ReactNode
@@ -79,6 +83,12 @@ export function AppShell({
           ? state.closed.filter((id) => id !== section)
           : [...state.closed, section],
       })),
+    [update],
+  )
+
+  // The tour points at the sidebar on desktop, so a hidden sidebar comes back for it.
+  const showSidebar = React.useCallback(
+    () => update((state) => (state.collapsed ? { ...state, collapsed: false } : state)),
     [update],
   )
 
@@ -124,115 +134,118 @@ export function AppShell({
                 recent={sidebarProps.data.recent}
                 collections={sidebarProps.collections}
               >
-                <a
-                  href="#main-content"
-                  className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:ring-2 focus:ring-ring"
-                >
-                  {t("skipToMain")}
-                </a>
-                <div className="flex min-h-svh bg-background lg:bg-sidebar">
-                  <aside
-                    aria-label={t("sidebar")}
-                    style={{ width }}
-                    className={cn(
-                      "sticky top-0 hidden h-svh shrink-0 lg:block",
-                      layout.collapsed && "lg:hidden",
-                      dragWidth !== null && "select-none",
-                    )}
+                <TourProvider autoStart={tour} onBeforeStart={showSidebar}>
+                  <a
+                    href="#main-content"
+                    className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:ring-2 focus:ring-ring"
                   >
-                    <div
+                    {t("skipToMain")}
+                  </a>
+                  <div className="flex min-h-svh bg-background lg:bg-sidebar">
+                    <aside
+                      aria-label={t("sidebar")}
+                      style={{ width }}
                       className={cn(
-                        "h-full overflow-hidden transition-opacity",
-                        releaseToCollapse && "opacity-50",
+                        "sticky top-0 hidden h-svh shrink-0 lg:block",
+                        layout.collapsed && "lg:hidden",
+                        dragWidth !== null && "select-none",
                       )}
                     >
-                      <Sidebar
-                        {...sidebarProps}
-                        closed={layout.closed}
-                        sectionOrder={layout.sectionOrder}
-                        collectionOrder={layout.collectionOrder}
-                        onReorderSections={(sectionOrder) =>
-                          update((state) => ({ ...state, sectionOrder }))
-                        }
-                        onReorderCollections={(collectionOrder) =>
-                          update((state) => ({ ...state, collectionOrder }))
-                        }
-                        onToggleSection={toggleSection}
-                        onToggleSidebar={toggleSidebar}
-                        views={layout.views}
-                        onChangeViews={(views) => {
-                          const refetch =
-                            JSON.stringify(views.pastes) !== JSON.stringify(layout.views.pastes) ||
-                            JSON.stringify(views.starred) !== JSON.stringify(layout.views.starred)
-                          // Write the cookie before refreshing, so the server lists what the filter
-                          // asks for.
-                          const next = { ...layout, views }
-                          writeSidebarState(next)
-                          setLayout(next)
-                          if (refetch) router.refresh()
+                      <div
+                        className={cn(
+                          "h-full overflow-hidden transition-opacity",
+                          releaseToCollapse && "opacity-50",
+                        )}
+                      >
+                        <Sidebar
+                          {...sidebarProps}
+                          closed={layout.closed}
+                          sectionOrder={layout.sectionOrder}
+                          collectionOrder={layout.collectionOrder}
+                          onReorderSections={(sectionOrder) =>
+                            update((state) => ({ ...state, sectionOrder }))
+                          }
+                          onReorderCollections={(collectionOrder) =>
+                            update((state) => ({ ...state, collectionOrder }))
+                          }
+                          onToggleSection={toggleSection}
+                          onToggleSidebar={toggleSidebar}
+                          views={layout.views}
+                          onChangeViews={(views) => {
+                            const refetch =
+                              JSON.stringify(views.pastes) !==
+                                JSON.stringify(layout.views.pastes) ||
+                              JSON.stringify(views.starred) !== JSON.stringify(layout.views.starred)
+                            // Write the cookie before refreshing, so the server lists what the filter
+                            // asks for.
+                            const next = { ...layout, views }
+                            writeSidebarState(next)
+                            setLayout(next)
+                            if (refetch) router.refresh()
+                          }}
+                        />
+                      </div>
+                      <ResizeHandle
+                        width={width}
+                        settledWidth={settledWidth}
+                        maxWidth={maxWidth ?? settledWidth}
+                        onDrag={setDragWidth}
+                        onRelease={(next) => {
+                          setDragWidth(null)
+                          if (next < SIDEBAR_MIN_WIDTH) {
+                            // Collapse like the header button does, and come back at the last good width.
+                            update((state) => ({ ...state, collapsed: true }))
+                          } else {
+                            update((state) => ({ ...state, width: next }))
+                          }
                         }}
                       />
-                    </div>
-                    <ResizeHandle
-                      width={width}
-                      settledWidth={settledWidth}
-                      maxWidth={maxWidth ?? settledWidth}
-                      onDrag={setDragWidth}
-                      onRelease={(next) => {
-                        setDragWidth(null)
-                        if (next < SIDEBAR_MIN_WIDTH) {
-                          // Collapse like the header button does, and come back at the last good width.
-                          update((state) => ({ ...state, collapsed: true }))
-                        } else {
-                          update((state) => ({ ...state, width: next }))
-                        }
-                      }}
-                    />
-                  </aside>
+                    </aside>
 
-                  <div
-                    className={cn(
-                      "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
-                      layout.collapsed && "lg:ml-2",
-                    )}
-                  >
-                    <TopBar
-                      onToggleSidebar={toggleSidebar}
-                      sidebarOpen={!layout.collapsed}
-                      counts={{
-                        "/pastes": sidebarProps.data.counts.pastes,
-                        "/starred": sidebarProps.data.counts.starred,
-                        "/shared": sidebarProps.data.counts.shared,
-                        "/collections": sidebarProps.collections.length,
-                        "/trash": trashCount,
-                      }}
-                    />
-                    {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
-                    <main
-                      id="main-content"
-                      tabIndex={-1}
+                    <div
                       className={cn(
-                        "flex-1",
-                        chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+                        "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
+                        layout.collapsed && "lg:ml-2",
                       )}
                     >
-                      {children}
-                    </main>
-                  </div>
+                      <TopBar
+                        onToggleSidebar={toggleSidebar}
+                        sidebarOpen={!layout.collapsed}
+                        counts={{
+                          "/pastes": sidebarProps.data.counts.pastes,
+                          "/starred": sidebarProps.data.counts.starred,
+                          "/shared": sidebarProps.data.counts.shared,
+                          "/collections": sidebarProps.collections.length,
+                          "/trash": trashCount,
+                        }}
+                      />
+                      {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
+                      <main
+                        id="main-content"
+                        tabIndex={-1}
+                        className={cn(
+                          "flex-1",
+                          chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+                        )}
+                      >
+                        {children}
+                      </main>
+                    </div>
 
-                  {chrome.tabBar ? (
-                    <TabBar
-                      viewer={sidebarProps.viewer}
-                      counts={{
-                        collections: sidebarProps.collections.length,
-                        shared: sidebarProps.data.counts.shared,
-                        trash: trashCount,
-                      }}
-                    />
-                  ) : null}
-                </div>
-                {/* The demo's visitors share one guest account, so they don't follow its changes. */}
-                {demo ? null : <LiveUpdates />}
+                    {chrome.tabBar ? (
+                      <TabBar
+                        viewer={sidebarProps.viewer}
+                        counts={{
+                          collections: sidebarProps.collections.length,
+                          shared: sidebarProps.data.counts.shared,
+                          trash: trashCount,
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                  {/* The demo's visitors share one guest account, so they don't follow its changes. */}
+                  {demo ? null : <LiveUpdates />}
+                </TourProvider>
               </CommandMenuProvider>
             </ShortcutsProvider>
           </NotificationsProvider>

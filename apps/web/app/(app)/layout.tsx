@@ -8,6 +8,7 @@ import { SiteHostProvider } from "@/components/site-host"
 import { isDemoMode, requireSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
+import { shouldStartTour } from "@/lib/onboarding-server"
 import { trashTotals } from "@/lib/pastes/lists"
 import { sidebarData } from "@/lib/pastes/store"
 import { getSiteOrigin } from "@/lib/site"
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <SupportProvider settings={supportSettings(session.user.id)}>
             <AppShell
               demo={isDemoMode()}
+              tour={await shouldStartTour(session.user)}
               viewer={viewerFromUser(session.user)}
               data={data}
               collections={collections}

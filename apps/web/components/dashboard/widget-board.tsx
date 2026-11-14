@@ -230,11 +230,13 @@ export function WidgetBoard({
             onRemove={() => dashboard.remove(widget)}
           >
             {widget === "agents" ? (
-              <AgentArea
-                agents={agents}
-                origin={appOrigin}
-                onRemove={editing ? undefined : () => dashboard.remove("agents")}
-              />
+              <div data-tour="agent" className="rounded-lg">
+                <AgentArea
+                  agents={agents}
+                  origin={appOrigin}
+                  onRemove={editing ? undefined : () => dashboard.remove("agents")}
+                />
+              </div>
             ) : (
               <React.Suspense fallback={<WidgetFallback id={widget} />}>
                 <DataWidget id={widget} data={data} origin={origin} />
