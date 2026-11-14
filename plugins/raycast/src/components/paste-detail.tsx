@@ -2,11 +2,11 @@ import { ActionPanel, Detail } from "@raycast/api"
 import { usePromise } from "@raycast/utils"
 import type { PasteSummary } from "@sniptide/sdk"
 import { client } from "../api"
+import type { CodeAction } from "../deliver"
 import { describe } from "../lib/errors"
 import { pasteMarkdown, visibilityLabel } from "../lib/format"
 import { messages } from "../lib/messages"
 import { report } from "../report"
-import type { CodeAction } from "../deliver"
 import { CodeActions, LinkActions } from "./paste-actions"
 
 // A paste's code with its details beside it.

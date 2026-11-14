@@ -1,8 +1,8 @@
 import { Action, ActionPanel, Icon, List } from "@raycast/api"
 import type { CodeFile } from "@sniptide/sdk"
+import { type CodeAction, deliver } from "../deliver"
 import { fileMarkdown, lineCount } from "../lib/format"
 import { messages } from "../lib/messages"
-import { type CodeAction, deliver } from "../deliver"
 
 // The files of a paste that holds several, each with its code beside it.
 export function FileList(props: { title: string; files: CodeFile[]; first: CodeAction }) {
