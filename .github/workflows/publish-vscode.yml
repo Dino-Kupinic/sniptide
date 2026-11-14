@@ -1,0 +1,57 @@
+name: Publish VS Code extension
+
+# Publishes apps/vscode at its checked-in version to the VS Code Marketplace and to Open VSX,
+# which Cursor, Windsurf and VSCodium install from. Both registries get the same .vsix.
+
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: Where to publish the checked-in version
+        type: choice
+        options: [both, marketplace, open-vsx, package-only]
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-vscode
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun run test:vscode
+      - run: bun --filter sniptide-vscode typecheck
+      # The PostHog key turns on the install and sign-in events of a release build.
+      - run: bun --filter sniptide-vscode package
+        env:
+          SNIPTIDE_POSTHOG_KEY: ${{ vars.POSTHOG_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sniptide-vscode
+          path: apps/vscode/*.vsix
+          if-no-files-found: error
+      - name: Publish to the VS Code Marketplace
+        if: inputs.registry == 'both' || inputs.registry == 'marketplace'
+        working-directory: apps/vscode
+        run: bunx @vscode/vsce@3.9.2 publish --packagePath *.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Publish to Open VSX
+        if: inputs.registry == 'both' || inputs.registry == 'open-vsx'
+        working-directory: apps/vscode
+        run: bunx ovsx@0.10.12 publish *.vsix
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

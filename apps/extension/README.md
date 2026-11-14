@@ -25,7 +25,7 @@ self-hosted instance** in the popup and enter `http://localhost:3000`.
 | `manifest.json` | The extension manifest. The build fills in the version from `package.json`. |
 | `src/background.ts` | The service worker: the context menu, the shortcut, and every request to Sniptide. |
 | `src/popup` | The popup, built in React from the `@sniptide/ui` components and theme. |
-| `src/lib/oauth.ts`, `session.ts` | The OAuth 2.1 flow with PKCE, token storage and renewal. |
+| `src/lib/session.ts` | Token storage and renewal, on the OAuth 2.1 flow with PKCE in `packages/oauth-client`. |
 | `src/lib/capture.ts` | How a selection becomes a paste: title, file name and description. |
 | `src/lib/page.ts` | The functions that run inside a web page: reading the selection and showing the toast. |
 | `src/lib/messages.ts` | Every sentence the extension shows. |

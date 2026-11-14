@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import { fakeInstance, INSTANCE, REDIRECT } from "@workspace/oauth-client/testing"
 import { createSessions, type Session, SignedOutError } from "../src/lib/session"
-import { fakeInstance, INSTANCE, REDIRECT } from "./fake-instance"
 
 function setup() {
   const instance = fakeInstance()
