@@ -481,6 +481,26 @@ builds to overlap safely: drain old instances and expect stale browser pages to 
 Action fails. Verify the deployment, migrations, rollback procedure, and action behavior in a staged
 environment before changing production. Runtime configuration and secrets remain on the host.
 
+### Demo and documentation images
+
+Main CI publishes the tested documentation image as `ghcr.io/<owner>/<repository>-docs` and
+records its digest in a run-specific receipt. The demo uses the tested web image. The opt-in
+`deploy-demo.yml` and `deploy-docs.yml` workflows apply those digests only after successful main CI.
+They use the same queue, current-main, health and rolling-deployment checks as production.
+
+Create separate Coolify Docker Image applications for demo and docs. Give each its own runtime
+configuration and database where needed. Bootstrap each with a tested image, enable the CMD health
+check `node /app/healthcheck.cjs`, and verify health, prior deployment logs, routing and rollback
+before switching traffic. Docs images built before this health check was added cannot be used for
+bootstrap. For each application, configure a protected GitHub environment (`coolify-demo` or
+`coolify-docs`) restricted to main. Set its `COOLIFY_DEMO_URL` or `COOLIFY_DOCS_URL`, its
+`COOLIFY_DEMO_APP_ID` or `COOLIFY_DOCS_APP_ID`, and the matching `COOLIFY_DEMO_TOKEN` or
+`COOLIFY_DOCS_TOKEN` secret. Scope each token to its application and grant only read,
+read-sensitive, write and deploy permissions. Set repository variable `COOLIFY_DEMO_DEPLOY` or
+`COOLIFY_DOCS_DEPLOY` to `true` only after staged testing. Remove it or set it to `false` to pause.
+The docs Dockerfile's `APP_URL` and `SITE_URL` are build-time values; CI uses their defaults, so
+verify they are suitable for the target before deploying the published image.
+
 ### Opt in to image-based production deployment
 
 Production deployment is disabled unless repository variable `COOLIFY_PRODUCTION_DEPLOY` is set to

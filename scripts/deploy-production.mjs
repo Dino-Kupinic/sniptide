@@ -13,6 +13,8 @@ export async function deployProduction(
 ) {
   const { receipt, repo, runId, runAttempt, sha, githubToken, coolifyToken, coolifyUrl, appId } =
     config
+  const kind = config.kind ?? "app"
+  if (!["app", "docs"].includes(kind)) throw new Error("Invalid deployment kind")
   if (
     !repoPattern.test(repo ?? "") ||
     !numberPattern.test(runId ?? "") ||
@@ -82,7 +84,7 @@ export async function deployProduction(
     const main = await github("/branches/main")
     if (main.commit?.sha !== sha) throw new Error("Main has moved since CI")
   }
-  const image = `ghcr.io/${repo.toLowerCase()}`
+  const image = `ghcr.io/${repo.toLowerCase()}${kind === "docs" ? "-docs" : ""}`
   const app = await coolify(`/applications/${appId}`)
   if (
     app.uuid !== appId ||
@@ -199,6 +201,7 @@ if (import.meta.main) {
         coolifyUrl: e.COOLIFY_URL,
         coolifyToken: e.COOLIFY_TOKEN,
         appId: e.COOLIFY_APP_ID,
+        kind: e.DEPLOYMENT_KIND || "app",
       })
     })
     .catch((error) => {
