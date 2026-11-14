@@ -54,6 +54,9 @@ jobs:
       - run: bun run test:sdk
       - run: bun run test:extension
       - run: bun --filter extension build
+      - run: npm ci --no-audit --no-fund
+        working-directory: plugins/raycast
+      - run: bun run test:raycast
       - run: node packages/sdk/scripts/test-npm-release.mjs
       - run: node packages/mcp/scripts/test-npm-release.mjs
       - run: node scripts/npm-release.mjs ui "$RUNNER_TEMP/ui-package"

@@ -1,0 +1,131 @@
+---
+title: Raycast extension
+description: Search your Sniptide pastes and collections from Raycast, paste or copy their code, and share your clipboard or selection as a link.
+---
+
+Sniptide for Raycast searches your pastes and collections from the launcher and pastes a paste's
+code into the app you're working in. It also saves your selection or clipboard as a paste and
+copies the link.
+
+The extension signs in with an [API token](/api-tokens) and works with app.sniptide.com and with a
+self-hosted instance. It is separate from the [MCP server](/mcp), which connects Sniptide to an AI
+agent.
+
+## Before you begin
+
+- [Raycast](https://www.raycast.com) on macOS or Windows.
+- A Sniptide account on app.sniptide.com or on your own instance.
+- The extension isn't in the Raycast Store yet. Until it is, you run it from the
+  [repository](https://github.com/Dino-Kupinic/sniptide) with [Node.js](https://nodejs.org) 22.22
+  or newer.
+
+## Install the extension
+
+1. Start the extension from a checkout of the repository:
+
+   ```bash
+   cd plugins/raycast
+   npm install
+   npm run dev
+   ```
+
+   Raycast opens with the Sniptide commands at the top of the root search.
+
+2. Stop the command with <kbd>Ctrl</kbd>+<kbd>C</kbd>. The extension stays installed in Raycast.
+
+## Connect your account
+
+1. In Sniptide, open **Settings** and select **API tokens**.
+2. Create a token. **Read** access is enough to search, and the commands that create pastes need
+   **Write** access. [Create a token](/api-tokens#create-a-token) describes each step.
+3. Run any Sniptide command in Raycast. Raycast asks for the **API Token** the first time.
+4. Paste the token and continue.
+
+For a self-hosted instance, also set **Instance Address** to its address, such as
+`https://paste.example.com`. The address must use `https://`. Plain `http://` works only for
+`localhost`.
+
+## Search your pastes
+
+1. Run **Search Pastes** and type. The search covers titles, descriptions, tags, file names and
+   code, as the [API's search](/api-tokens#endpoints) does.
+2. Choose a collection in the dropdown beside the search field to search only that collection.
+3. Press <kbd>Enter</kbd> to paste the code into the frontmost app.
+
+The action panel holds the other actions:
+
+| Action | What it does |
+| --- | --- |
+| **Paste Code** | Pastes the code into the frontmost app. |
+| **Copy Code** | Copies the code to the clipboard. |
+| **Show Paste** | Shows the code with the paste's visibility, collection, tags and link. |
+| **Copy Link** | Copies the paste's link. |
+| **Open in Sniptide** | Opens the paste in your browser. |
+
+A paste with several files lists them first, with each file's code beside it, and the action
+applies to the file you choose.
+
+The list shows your own live pastes. Pastes shared with you, the trash, expired pastes and
+[encrypted pastes](/core-concepts/encrypted-pastes) don't appear, as [Access](/api-tokens#access)
+explains.
+
+## Browse a collection
+
+Run **Search Collections**, choose a collection and press <kbd>Enter</kbd>. The list holds the
+collection's pastes, and the search field searches inside it.
+
+## Create a paste
+
+1. Select text in any app, or copy it.
+2. Run **Create Paste**. **Content** holds your selection, or your clipboard when nothing is
+   selected.
+3. Enter a **Title**. Without one, the paste takes the content's first line.
+4. Set the **File Name**. Sniptide reads the language from its extension, such as `query.sql`.
+5. Choose the **Visibility** and a **Collection**.
+6. Press <kbd>⌘</kbd>+<kbd>Enter</kbd>, or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> on Windows.
+
+Raycast confirms with **Link copied**, and the paste's link is on your clipboard.
+
+## Share without a window
+
+**Share Selection** saves the text selected in the frontmost app, and **Share Clipboard** saves
+the clipboard's text. Both copy the link and confirm with **Link copied**. Assign each a hotkey in
+Raycast's settings to share with one keystroke.
+
+The extension fills in the paste:
+
+| Field | Value |
+| --- | --- |
+| Title | The text's first line, up to 60 characters. |
+| File | `snippet.json` for valid JSON, and `snippet.txt` for anything else. |
+| Visibility | **Unlisted**, so anyone with the link can open the paste. Change it in the [preferences](#change-the-preferences). |
+
+Share Clipboard sends whatever text the clipboard holds. Check what you copied last before you run
+it, because an unlisted paste opens for anyone who has its link.
+
+## Change the preferences
+
+Open Raycast's settings, select **Extensions** and then **Sniptide**.
+
+| Preference | Default | What it changes |
+| --- | --- | --- |
+| **API Token** | None | The token every command signs in with. |
+| **Instance Address** | `https://app.sniptide.com` | The Sniptide instance the extension reaches. |
+| **Visibility for New Pastes** | Unlisted | The visibility Share Selection and Share Clipboard use, and Create Paste's starting choice. |
+| **Primary Action** | Paste | Whether <kbd>Enter</kbd> in **Search Pastes** pastes the code or copies it. Select the **Search Pastes** command to find it. |
+
+## Limits
+
+- New pastes count toward the account's limit of 30 an hour, and every search is a request against
+  the token's quota. [Limits](/api-tokens#limits) lists both.
+- A paste created from Raycast starts without an expiry. Set one in Sniptide.
+- The extension doesn't edit a paste or move one to the trash.
+
+## Troubleshooting
+
+| Message | What to do |
+| --- | --- |
+| **Sniptide rejected the API token.** | The token is wrong, expired or revoked. Create a new one and set it in the preferences. |
+| **This API token is read-only.** | Create a token with **Write** access and set it in the preferences. |
+| **Can't reach Sniptide.** | Check your connection. For a self-hosted instance, check that **Instance Address** is the address you open in the browser. |
+| **Nothing is selected.** | Select text first. Some apps don't share their selection with Raycast, so copy the text and run **Share Clipboard** instead. |
