@@ -36,6 +36,7 @@ export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: More
         <Link
           href="/new"
           aria-label={t("new_paste")}
+          data-tour="new-paste-tab"
           className="flex w-15 justify-center outline-none focus-visible:[&>span]:ring-2 focus-visible:[&>span]:ring-ring/40 focus-visible:[&>span]:ring-offset-2"
         >
           <span className="flex h-10 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -56,7 +57,9 @@ export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: More
           // Marks the button like the current tab while on one of the pages the sheet leads to.
           aria-current={moreActive ? "page" : undefined}
           onClick={() => setMoreOpen(true)}
-          className={tabClass}
+          data-tour="more-tab"
+          // The tab reaches the screen edge, so the tour's outline sits inside it.
+          className={`${tabClass} data-tour-current:-outline-offset-2`}
         >
           <moreTab.icon className="size-[22px]" />
           {t(moreTab.label)}

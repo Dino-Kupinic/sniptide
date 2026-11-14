@@ -1,0 +1,23 @@
+{
+  "name": "@workspace/oauth-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The OAuth 2.1 flow with PKCE that Sniptide's own clients use to sign in to an instance.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test ./test"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  }
+}

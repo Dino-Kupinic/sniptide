@@ -8,6 +8,8 @@
     "---Use Sniptide---",
     "settings",
     "browser-extension",
+    "vscode-extension",
+    "raycast-extension",
     "---Agents and automation---",
     "mcp",
     "oauth",

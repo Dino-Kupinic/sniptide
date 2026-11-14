@@ -31,12 +31,20 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 - `apps/extension`: Sniptide for Chrome, a Manifest V3 extension that saves a selection as a paste.
   `bun --filter extension build` writes the unpacked extension to `apps/extension/dist`; see
   `apps/extension/README.md`
+- `apps/vscode`: Sniptide for VS Code, which shares a selection as a link, saves it to a collection
+  and lists snippets in a sidebar. `bun --filter sniptide-vscode package` writes the `.vsix` to
+  `apps/vscode`; see `apps/vscode/README.md`
+- `plugins/raycast`: Sniptide for Raycast. It is an npm project outside the Bun workspace, because
+  the Raycast Store builds an extension with npm from its own `package-lock.json`; see
+  [Raycast extension](#raycast-extension)
 - `packages/auth`: better-auth setup on the Drizzle adapter
 - `packages/cli`: the `sniptide` CLI for capture, restore, agent skills and `.env` sync, built as a
   dependency-free Node.js executable
 - `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable
 - `packages/contracts`: shared wire contracts for the web app, CLI, and MCP server
 - `packages/db`: Drizzle schema, Postgres client and migrations
+- `packages/oauth-client`: the OAuth 2.1 flow with PKCE that the browser extension and the VS Code
+  extension sign in with, and a stand-in instance for their tests
 - `packages/sdk`: `@sniptide/sdk`, the JavaScript and TypeScript client for the token API
 - `packages/sdk-python`: `sniptide`, the Python client for the token API
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
@@ -53,7 +61,10 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 | Documentation site | `apps/docs` | `bun run test:docs` |
 | CLI capture and restore | `packages/cli/src`, `packages/cli/API.md` | `bun run test:cli` |
 | SDKs | `packages/sdk/src`, `packages/sdk-python/sniptide` | `bun run test:sdk` |
-| Browser extension | `apps/extension/src`, with the OAuth and paste rules in `src/lib` | `bun run test:extension`, then load `apps/extension/dist` in Chrome |
+| Browser extension | `apps/extension/src`, with the session and paste rules in `src/lib` | `bun run test:extension`, then load `apps/extension/dist` in Chrome |
+| VS Code extension | `apps/vscode/src`, with the session, share and analytics rules in `src/lib` | `bun run test:vscode`, then press F5 in `apps/vscode` or install the `.vsix` |
+| OAuth sign-in of the extensions | `packages/oauth-client/src` | `bun run test:extension` and `bun run test:vscode` |
+| Raycast extension | `plugins/raycast/src`, with the paste and error rules in `src/lib` | `bun run test:raycast`, then `npm run dev` in `plugins/raycast` on a machine with Raycast |
 | MCP tools and transport | `packages/mcp/src`, `apps/web/lib/api/mcp.ts` | `bun run test:mcp`, `apps/web/test/mcp.test.ts` |
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
 | Database schema and migrations | `packages/db/src/schema`, `packages/db/migrations` | Web integration tests and migration tests |
@@ -123,6 +134,8 @@ sidebar order.
 | CLI commands or options | `cli.mdx` and `packages/cli/API.md` |
 | The TypeScript or Python SDK | The pages in `sdks/` |
 | The browser extension in `apps/extension` | `browser-extension.mdx` |
+| The VS Code extension in `apps/vscode` | `vscode-extension.mdx` and `apps/vscode/README.md`, which is the extension's Marketplace page |
+| The Raycast extension in `plugins/raycast` | `raycast-extension.mdx` |
 | Skills or the agent plugin in `skills/` | `mcp.mdx#install-the-agent-plugin` |
 | Variables in `apps/web/.env.example` | `self-hosting/configuration.mdx` |
 | The image, `docker-compose.yml`, or `deploy/` | The matching page in `self-hosting/` |
@@ -195,12 +208,13 @@ Run these commands from the repository root:
 | `bun run audit:deps` | Known advisories in the complete dependency lockfile | Access to the npm advisory service |
 | `bun run test:cli` | CLI behavior through its built Node executable | Node and temporary loopback HTTP listeners |
 | `bun run test:mcp` | MCP tool schemas and transports | Temporary loopback HTTP listeners |
-| `bun run test:extension` | The extension's OAuth flow, token renewal and paste rules against a stand-in instance | Installed dependencies |
+| `bun run test:extension` | The shared OAuth flow and the browser extension's token renewal and paste rules against a stand-in instance | Installed dependencies |
+| `bun run test:vscode` | The VS Code extension's sessions, share options, paste rules and analytics against a stand-in instance | Installed dependencies |
 | `bun run test:docs` | Documentation site metadata, structured data, links, and drift against the code | Installed dependencies |
 | `bun run test:web` | Web unit tests and available integration tests | `TEST_DATABASE_URL` for database coverage |
 | `bun run test:web:unit` | Non-database web cases and Node admission tests; ignores ambient database URLs | Installed dependencies and loopback listeners |
 | `bun run test:web:integration` | Web cases with required database coverage and Node admission tests | A valid dedicated `TEST_DATABASE_URL` |
-| `bun run test` | CLI, MCP, docs, web, SDK, then extension tests in separate processes | Same requirements as the individual suites |
+| `bun run test` | CLI, MCP, docs, web, SDK, browser extension, then VS Code extension tests in separate processes | Same requirements as the individual suites |
 | `bun run build` | Production workspace builds | Installed dependencies |
 | `bun run verify` | `check`, then `test`, then the docs build: the local gate before a pull request | Same requirements as `test` |
 | `bun run test:e2e` | Browser behavior | Chromium and a dedicated `E2E_DATABASE_URL` |
@@ -424,6 +438,31 @@ bun run test:mcp
 ```
 
 See the [CLI guide](../packages/cli/README.md) and [MCP guide](../packages/mcp/README.md) for usage and configuration.
+
+### Raycast extension
+
+`plugins/raycast` installs its own dependencies with npm and takes `@sniptide/sdk` from the npm
+registry, so a change to `packages/sdk` reaches it only after an SDK release.
+
+```sh
+cd plugins/raycast
+npm install
+npm run dev        # loads the extension into Raycast and reloads it on every change
+npm run check      # typecheck, ESLint, Prettier, the unit tests and a build
+```
+
+`bun run test:raycast` runs the same check from the repository root and is part of
+`bun run verify`. The check runs on Linux, but the commands themselves run only inside Raycast on
+macOS or Windows, so try a change there before you open a pull request.
+
+Every sentence the extension shows is in `src/lib/messages.ts`. The rules that turn text into a
+paste, name a failure and format code are pure modules in `src/lib` with tests in `test`, and the
+files beside them hold the Raycast views.
+
+To release, set `author` in `package.json` to the Raycast username that owns the listing, add
+screenshots of 2000 by 1250 pixels to `metadata/`, run `npm run lint` and then `npm run publish`.
+The publish command opens a pull request against `raycast/extensions`, where Raycast reviews the
+extension. `npm run lint` checks the author against raycast.com, so it needs network access.
 
 ## Update translations
 
