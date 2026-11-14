@@ -81,8 +81,6 @@ export async function managePreview(
   const image = `ghcr.io/${repo.toLowerCase()}`
   const app = await coolify(`/applications/${appId}`)
   if (
-    !Number.isSafeInteger(app.id) ||
-    app.id <= 0 ||
     app.uuid !== appId ||
     app.build_pack !== "dockerimage" ||
     app.docker_registry_image_name !== image
@@ -124,6 +122,14 @@ export async function managePreview(
     )
     return
   }
+  const history = await coolify(`/deployments/applications/${appId}?take=1`)
+  const applicationId = history.deployments?.[0]?.application_id
+  if (
+    typeof applicationId !== "string" ||
+    !numberPattern.test(applicationId) ||
+    (app.id !== undefined && String(app.id) !== applicationId)
+  )
+    throw new Error("Deployment history does not identify the preview application")
   if (
     !numberPattern.test(runId ?? "") ||
     !numberPattern.test(runAttempt ?? "") ||
@@ -185,7 +191,7 @@ export async function managePreview(
         !["queued", "in_progress"].includes(entry.status)
       )
         throw new Error("Invalid deployment queue entry")
-      if (entry.application_id === String(app.id)) active = true
+      if (entry.application_id === applicationId) active = true
     }
     if (!active) {
       queueClear = true
@@ -207,7 +213,7 @@ export async function managePreview(
     const state = await coolify(`/deployments/${deploymentId}`)
     if (
       state.deployment_uuid !== deploymentId ||
-      String(state.application_id) !== String(app.id) ||
+      state.application_id !== applicationId ||
       state.pull_request_id !== Number(pr) ||
       state.docker_registry_image_tag !== tag
     )

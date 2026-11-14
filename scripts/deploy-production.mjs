@@ -85,8 +85,6 @@ export async function deployProduction(
   const image = `ghcr.io/${repo.toLowerCase()}`
   const app = await coolify(`/applications/${appId}`)
   if (
-    !Number.isSafeInteger(app.id) ||
-    app.id <= 0 ||
     app.uuid !== appId ||
     app.build_pack !== "dockerimage" ||
     app.docker_registry_image_name !== image ||
@@ -109,6 +107,13 @@ export async function deployProduction(
   const previous = history.deployments?.[0]
   if (!previous || typeof previous.logs !== "string" || !Array.isArray(JSON.parse(previous.logs)))
     throw new Error("Deployment log access is required before changing the resource")
+  const applicationId = previous.application_id
+  if (
+    typeof applicationId !== "string" ||
+    !numberPattern.test(applicationId) ||
+    (app.id !== undefined && String(app.id) !== applicationId)
+  )
+    throw new Error("Deployment history does not identify the target application")
   const queue = await coolify("/deployments")
   if (!Array.isArray(queue) && (!queue || typeof queue !== "object"))
     throw new Error("Invalid deployment queue")
@@ -119,7 +124,7 @@ export async function deployProduction(
       !["queued", "in_progress"].includes(item.status)
     )
       throw new Error("Invalid deployment queue entry")
-    if (item.application_id === String(app.id)) throw new Error("Another deployment is active")
+    if (item.application_id === applicationId) throw new Error("Another deployment is active")
   }
   await current()
   const imageTag = receipt.digest.replace(":", "-")
@@ -137,7 +142,7 @@ export async function deployProduction(
     throw new Error("Coolify did not provide a deployment ID; inspect the queue and resource")
   for (let attempt = 0; attempt < 120; attempt++) {
     const state = await coolify(`/deployments/${deploymentId}`)
-    if (String(state.application_id) !== String(app.id) || state.deployment_uuid !== deploymentId)
+    if (state.application_id !== applicationId || state.deployment_uuid !== deploymentId)
       throw new Error("Deployment identity mismatch")
     if (state.status === "finished") {
       const logs = typeof state.logs === "string" ? JSON.parse(state.logs) : null

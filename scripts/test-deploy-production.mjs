@@ -68,7 +68,12 @@ function mock(overrides = {}) {
     else if (path.endsWith("/branches/main")) data = { commit: { sha: overrides.main ?? sha } }
     else if (path.endsWith("/deployments/applications/app-1"))
       data = {
-        deployments: [{ logs: overrides.historyLogs === undefined ? "[]" : overrides.historyLogs }],
+        deployments: [
+          {
+            application_id: overrides.historyId === undefined ? "23" : overrides.historyId,
+            logs: overrides.historyLogs === undefined ? "[]" : overrides.historyLogs,
+          },
+        ],
       }
     else if (path.endsWith("/applications/app-1")) {
       if (!options.method) appReads++
@@ -108,6 +113,23 @@ test("deploys only the receipt digest, checks queue, identity and health", async
   })
   assert.ok(m.calls.some((call) => call.url.endsWith("/deployments")))
   assert.ok(m.calls.every((call) => call.redirect === "error"))
+})
+
+test("uses the target's deployment history when Coolify hides the application ID", async () => {
+  const m = mock({ app: { id: undefined } })
+  await run(m)
+  assert.ok(m.calls.some((call) => call.method === "PATCH"))
+  const busy = mock({ app: { id: undefined }, queue: [{ application_id: "23", status: "queued" }] })
+  await assert.rejects(run(busy))
+  noWrites(busy)
+})
+
+test("rejects missing or inconsistent history identity before mutation", async () => {
+  for (const historyId of [null, "", "0", "not-an-id", "24"]) {
+    const m = mock({ historyId })
+    await assert.rejects(run(m))
+    noWrites(m)
+  }
 })
 
 test("rejects mismatched receipt and untrusted or stale source runs before mutation", async () => {
