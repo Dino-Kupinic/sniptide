@@ -6,9 +6,9 @@ import { ArrowLeftIcon } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { messages } from "../lib/messages"
 import type { Account, Settings, State } from "../lib/protocol"
-import { openTab } from "./app"
 import { IconButton } from "./icon-button"
 import { ask } from "./rpc"
+import { openTab } from "./tabs"
 import { visibilityOptions } from "./visibility"
 
 export function SettingsView({

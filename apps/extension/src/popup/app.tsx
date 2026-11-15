@@ -11,6 +11,7 @@ import { Recent } from "./recent"
 import { ask } from "./rpc"
 import { SettingsView } from "./settings"
 import { SignIn } from "./sign-in"
+import { openTab } from "./tabs"
 
 export function App() {
   const [state, setState] = useState<State | null>(null)
@@ -61,8 +62,4 @@ export function App() {
       <Toaster className="top-auto bottom-3 lg:right-0 lg:w-auto" dismissLabel={messages.dismiss} />
     </Tabs>
   )
-}
-
-export function openTab(url: string) {
-  void chrome.tabs.create({ url })
 }
