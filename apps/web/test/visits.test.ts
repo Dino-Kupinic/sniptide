@@ -9,7 +9,8 @@ import {
 } from "@workspace/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
-import { readRawFile, readSharedPaste, revealSharedPaste, sharePaste } from "@/lib/pastes/store"
+import { sharePaste } from "@/lib/pastes/shares"
+import { readRawFile, readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
 import {
   drainVisits,
   scheduleVisitDrain,

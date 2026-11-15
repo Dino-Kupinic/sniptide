@@ -43,6 +43,7 @@ import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
 import { PasteBudgetError } from "@/lib/pastes/budget"
+import { liveWhere } from "@/lib/pastes/lifecycle"
 import { limits } from "@/lib/pastes/limits"
 import {
   type CaptureReplacement,
@@ -59,6 +60,7 @@ import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
 import { type CreateReceipt, createWithReceipt } from "./idempotency"
+import { meterReads } from "./meter"
 
 // Pastes over the token API: what `sniptide push`, `pull`, `list` and `search` read and write.
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
@@ -144,9 +146,8 @@ function liveOwned(owner: string): SQL {
   return and(
     allowedPaste(),
     eq(pasteTable.ownerId, owner),
-    isNull(pasteTable.deletedAt),
+    liveWhere(),
     isNull(pasteTable.encryptionKeyId),
-    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
   ) as SQL
 }
 
@@ -185,7 +186,12 @@ export async function createCapture(
         password: null,
         burnAfterRead: false,
       })
-      const { id } = await createPasteRecord(tx, {
+      const files = data.files.map((file, position) => ({
+        ...file,
+        startLine: capture.files[position]?.lines?.start ?? null,
+        endLine: capture.files[position]?.lines?.end ?? null,
+      }))
+      const created = await createPasteRecord(tx, {
         kind: "capture",
         actor: { kind: "token", userId: owner },
         origin: createdFrom,
@@ -196,18 +202,33 @@ export async function createCapture(
           collection: data.collection,
           tags: capture.tags,
           source: capture.source,
-          files: data.files.map((file, position) => ({
-            ...file,
-            startLine: capture.files[position]?.lines?.start ?? null,
-            endLine: capture.files[position]?.lines?.end ?? null,
-          })),
+          files,
         },
       })
-      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, id))
-      if (!record) throw new Error("The created paste wasn't returned.")
-      const [created] = await withFiles([record], tx, origin)
-      if (!created) throw new Error("The created paste files weren't returned.")
-      return { paste: created }
+      // The response is what was just written, so it needs no second read of the paste.
+      const paste: ApiPaste = {
+        id: created.id,
+        slug: created.slug,
+        url: `${origin}/${created.slug}`,
+        title: data.title,
+        description: data.description,
+        visibility: data.visibility,
+        collection: data.collection,
+        tags: capture.tags,
+        source: capture.source ?? null,
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.createdAt.toISOString(),
+        expiresAt: null,
+        files: files.map((file) => ({
+          name: file.name,
+          language: file.language,
+          content: file.content,
+          ...(file.startLine !== null && file.endLine !== null
+            ? { lines: { start: file.startLine, end: file.endLine } }
+            : {}),
+        })),
+      }
+      return { paste }
     })
     await announceChange(owner)
     return response.paste
@@ -230,40 +251,27 @@ const filesColumn = sql<ApiFile[]>`coalesce((
   from ${pasteFile} f where f.paste_id = ${pasteTable}.id
 ), '[]'::json)`
 
-// One of the owner's pastes by its id or its slug. With `countRead` the same statement counts a
-// read with a token, for "Read N times through MCP or the CLI" on the paste page. Only reads the
-// caller asked for count: never search results or the read-back after a write. The count changes
-// no version or edit time, so open editors see no conflict.
+// One of the owner's pastes by its id or its slug. With `countRead` the read is counted for the
+// paste page (see meterReads).
 export async function getCapture(
   owner: string,
   idOrSlug: string,
   { countRead = false } = {},
 ): Promise<ApiPaste | null> {
-  const found = and(
-    allowedPaste(),
-    UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug),
-    liveOwned(owner),
-  )
-  const columns = { ...getTableColumns(pasteTable), files: filesColumn }
   const origin = await shareOrigin()
-  const [record] = countRead
-    ? await getDb()
-        .update(pasteTable)
-        .set({ agentReads: sql`${pasteTable.agentReads} + 1` })
-        .where(found)
-        .returning(columns)
-    : await getDb().select(columns).from(pasteTable).where(found)
+  const [record] = await getDb()
+    .select({ ...getTableColumns(pasteTable), files: filesColumn })
+    .from(pasteTable)
+    .where(
+      and(
+        allowedPaste(),
+        UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug),
+        liveOwned(owner),
+      ),
+    )
   if (!record || record.files.length === 0) return null
+  if (countRead) meterReads([record.id])
   return { ...toSummaryFields(record, origin), files: record.files }
-}
-
-// Counts a read with a token on each paste of a page the caller asked for.
-export async function recordTokenReads(owner: string, ids: string[]) {
-  if (ids.length === 0) return
-  await getDb()
-    .update(pasteTable)
-    .set({ agentReads: sql`${pasteTable.agentReads} + 1` })
-    .where(and(eq(pasteTable.ownerId, owner), inArray(pasteTable.id, [...new Set(ids)])))
 }
 
 // Replaces title/files, preserving omitted metadata and all sharing controls. Token callers

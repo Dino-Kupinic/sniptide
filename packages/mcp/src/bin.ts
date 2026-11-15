@@ -13,7 +13,7 @@ try {
     process.env.SNIPTIDE_BASE_URL ?? DEFAULT_BASE_URL,
     process.env.SNIPTIDE_TOKEN?.trim() ?? "",
   )
-  await createSniptideServer(backend).connect(new StdioServerTransport())
+  await createSniptideServer(() => backend).connect(new StdioServerTransport())
 } catch (error) {
   process.stderr.write(
     `${error instanceof ToolError ? error.message : "Couldn't start Sniptide MCP."}\n`,

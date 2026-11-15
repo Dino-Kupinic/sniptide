@@ -7,6 +7,7 @@ import { POST as createCollection } from "@/app/api/v1/collections/route"
 import { GET as me } from "@/app/api/v1/me/route"
 import { POST as createPaste } from "@/app/api/v1/pastes/route"
 import { withToken } from "@/lib/api/http"
+import { flushMeter } from "@/lib/api/meter"
 import { createToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { purgeStaleData } from "@/lib/pastes/purge"
@@ -226,6 +227,7 @@ describeDb("API create reliability", () => {
     expect(
       await (await createPaste(call("/api/v1/pastes", operations[1]?.body, "paste"))).json(),
     ).toEqual(body.results[1].body)
+    await flushMeter()
     const [counter] = await getDb()
       .select()
       .from(rateLimit)

@@ -29,7 +29,8 @@ import { cursorKey, decodeCursor, encodeCursor } from "./cursor"
 import { PASTE_PAGE_SIZE, type PasteListQuery, sortDirection } from "./list-query"
 import { TRASH_DAYS } from "./purge"
 import { type SharedListQuery, sharedDirection } from "./shared-list-query"
-import { purgeTrash, readableStarsWhere, sharedWithWhere, summarizePastes } from "./store"
+import { sharedWithWhere } from "./shares"
+import { purgeTrash, readableStarsWhere, summarizePastes } from "./store"
 import type { Person } from "./types"
 
 export interface PasteListScope {

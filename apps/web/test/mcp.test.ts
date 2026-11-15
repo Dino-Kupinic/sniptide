@@ -24,6 +24,7 @@ import {
 } from "@/app/api/v1/pastes/[id]/route"
 import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/route"
 import { apiLimits } from "@/lib/api/http"
+import { flushMeter, resetMeter } from "@/lib/api/meter"
 import type { ApiPaste, ApiPasteSummary } from "@/lib/api/pastes"
 import { createToken, hashToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
@@ -351,8 +352,10 @@ describeDb("MCP with real token API and Postgres", () => {
   test("reads and collection fetches count as token reads; search and writes don't", async () => {
     const client = await remote(token)
     const created = (await data(client, "create_snippet", input)).paste
-    const reads = async () =>
-      (await getDb().select().from(paste).where(eq(paste.id, created.id)))[0]?.agentReads
+    const reads = async () => {
+      await flushMeter()
+      return (await getDb().select().from(paste).where(eq(paste.id, created.id)))[0]?.agentReads
+    }
     expect(await reads()).toBe(0)
     await data(client, "search_snippets", { query: "button" })
     await data(client, "update_snippet", { id: created.id, ...input, title: "Renamed" })
@@ -506,7 +509,12 @@ describeDb("MCP with real token API and Postgres", () => {
       .where(eq(apiToken.hash, hashToken(token)))
     if (!row) throw new Error("Missing token")
     const limit = apiLimits.request(row.id)
-    await getDb().update(rateLimit).set({ count: limit.max }).where(eq(rateLimit.key, limit.key))
+    await getDb()
+      .insert(rateLimit)
+      .values({ key: limit.key, count: limit.max })
+      .onConflictDoUpdate({ target: rateLimit.key, set: { count: limit.max } })
+    // A process that hasn't counted for this token yet asks the database, as a second replica would.
+    resetMeter()
     const response = await postMcp(rpc(token))
     expect(response.status).toBe(429)
     expect(response.headers.get("retry-after")).toBeTruthy()

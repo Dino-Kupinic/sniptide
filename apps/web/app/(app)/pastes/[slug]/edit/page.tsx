@@ -4,7 +4,8 @@ import { PasteEditor } from "@/components/paste/paste-editor"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { slugFromRoute } from "@/lib/pastes/links"
-import { getPaste, getShare } from "@/lib/pastes/store"
+import { getShare } from "@/lib/pastes/shares"
+import { getPaste } from "@/lib/pastes/store"
 
 export async function generateMetadata({ params }: PageProps<"/pastes/[slug]/edit">) {
   const paste = await getPaste(slugFromRoute((await params).slug))
