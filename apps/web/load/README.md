@@ -1,4 +1,4 @@
-# Read-load tests
+# Load tests
 
 The first suite measures HTTP reads at the early-growth target. It has a deterministic fixture
 layout, constant arrival rates, response-content checks, per-route latency thresholds, and JSON
@@ -92,6 +92,51 @@ instance containing these fixtures. Keep rates/durations bounded and watch the a
 Repeat at 20 and 50 reads/sec, then increase for a separate stress exercise. Reload/restart the
 app for a cold-process experiment; warmup results remain in summary.json but measured thresholds
 apply only to the reads scenario. This is not a guarantee of a cold Postgres buffer cache.
+
+## Measure agent traffic
+
+The second suite measures what agents send: token API reads, lists, searches and creates, MCP
+tool calls, and unauthenticated reads of a shared paste. It answers a different question from
+the read suite. A fixed number of clients each send their next request as soon as the last one
+returns, so the result is the throughput the server sustains and the latency at that load.
+
+The seeder adds 1,000 writer accounts with one API token each and 25 tokens on the large
+account. The tokens are derived from `LOAD_PASSWORD`, so the manifest holds no credential. A
+database seeded before these fixtures existed has no tokens; create a new one and seed again.
+
+With the app running as above, and `LOAD_DATABASE_URL`, `LOAD_PASSWORD` and `METRICS_TOKEN` set:
+
+```sh
+bun run load:agents
+```
+
+Each scenario runs for 15 seconds with 1, 16 and 64 clients. `LOAD_SCENARIOS`, `LOAD_CLIENTS` and
+`LOAD_DURATION` change the list, the client counts and the length of a run. The runner clears
+the `rate_limit` table before every run, because a token may send 3,600 requests an hour and an
+account may create 30 pastes an hour, and a run would otherwise throttle the next one. It needs
+the database URL for that, and only accepts a database whose name ends in `_loadtest`.
+
+| Scenario | Request |
+| --- | --- |
+| `api_read` | `GET /api/v1/pastes/:id` for a paste of the large account |
+| `api_list` | `GET /api/v1/pastes?limit=20` |
+| `api_search_common`, `api_search_title`, `api_search_rare`, `api_search_none` | `GET /api/v1/pastes?q=` with a word in every paste's code, a word only in titles, a word in one paste's code and a word in none |
+| `api_create` | `POST /api/v1/pastes` with one 2 KB file, spread over the writer accounts |
+| `mcp_tools_list`, `mcp_read`, `mcp_search_common`, `mcp_create` | `POST /api/mcp` with `tools/list` and the `read_snippet`, `search_snippets` and `create_snippet` tools |
+| `shared_page`, `shared_raw` | A public paste's page and one of its raw files, without a session |
+
+`artifacts/agents.md` and `artifacts/agents.json` hold a row for each run: requests per second,
+latency percentiles, the share of failed requests, and where the time went. App CPU is the Node
+process's user and system time from `/api/metrics`. Statements per request counts what the app
+sent to the database. PostgreSQL time is statement execution from `pg_stat_statements`, which
+the database must load through `shared_preload_libraries`; without it that column reads `n/a`.
+
+Read the columns together. A run whose app CPU sits near one core is limited by the single Node
+process, and more clients only add queueing. A run with low app CPU and high PostgreSQL time is
+limited by a query. Shared pastes are rate limited by address, so `shared_page` and `shared_raw`
+report mostly refusals once one address passes the limit; raise the client address variety or
+read them as a check of the limiter. The [agent-traffic results](../../../docs/load-testing/agent-traffic.md)
+record a run of this suite and what it changed.
 
 ## Coverage and next steps
 
