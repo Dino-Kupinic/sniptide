@@ -3,6 +3,7 @@ import "server-only"
 import type { Database } from "@workspace/db"
 import { accountUsage, apiTokenUsageDay } from "@workspace/db/schema"
 import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm"
+import { flushMeter } from "@/lib/api/meter"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
 
@@ -24,6 +25,9 @@ export async function getAccountTotals(owner: string) {
 }
 
 export async function getAccountUsage(owner: string, now = new Date()) {
+  // Requests counted in this process since the last flush belong in the answer, including the
+  // request that is asking.
+  await flushMeter()
   const today = Math.floor(now.getTime() / DAY)
   const [totals, apiRequests] = await Promise.all([
     getAccountTotals(owner),

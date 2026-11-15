@@ -59,6 +59,7 @@ import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
 import { type CreateReceipt, createWithReceipt } from "./idempotency"
+import { meterReads } from "./meter"
 
 // Pastes over the token API: what `sniptide push`, `pull`, `list` and `search` read and write.
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
@@ -250,40 +251,27 @@ const filesColumn = sql<ApiFile[]>`coalesce((
   from ${pasteFile} f where f.paste_id = ${pasteTable}.id
 ), '[]'::json)`
 
-// One of the owner's pastes by its id or its slug. With `countRead` the same statement counts a
-// read with a token, for "Read N times through MCP or the CLI" on the paste page. Only reads the
-// caller asked for count: never search results or the read-back after a write. The count changes
-// no version or edit time, so open editors see no conflict.
+// One of the owner's pastes by its id or its slug. With `countRead` the read is counted for the
+// paste page (see meterReads).
 export async function getCapture(
   owner: string,
   idOrSlug: string,
   { countRead = false } = {},
 ): Promise<ApiPaste | null> {
-  const found = and(
-    allowedPaste(),
-    UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug),
-    liveOwned(owner),
-  )
-  const columns = { ...getTableColumns(pasteTable), files: filesColumn }
   const origin = await shareOrigin()
-  const [record] = countRead
-    ? await getDb()
-        .update(pasteTable)
-        .set({ agentReads: sql`${pasteTable.agentReads} + 1` })
-        .where(found)
-        .returning(columns)
-    : await getDb().select(columns).from(pasteTable).where(found)
+  const [record] = await getDb()
+    .select({ ...getTableColumns(pasteTable), files: filesColumn })
+    .from(pasteTable)
+    .where(
+      and(
+        allowedPaste(),
+        UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug),
+        liveOwned(owner),
+      ),
+    )
   if (!record || record.files.length === 0) return null
+  if (countRead) meterReads([record.id])
   return { ...toSummaryFields(record, origin), files: record.files }
-}
-
-// Counts a read with a token on each paste of a page the caller asked for.
-export async function recordTokenReads(owner: string, ids: string[]) {
-  if (ids.length === 0) return
-  await getDb()
-    .update(pasteTable)
-    .set({ agentReads: sql`${pasteTable.agentReads} + 1` })
-    .where(and(eq(pasteTable.ownerId, owner), inArray(pasteTable.id, [...new Set(ids)])))
 }
 
 // Replaces title/files, preserving omitted metadata and all sharing controls. Token callers

@@ -3,7 +3,7 @@ import "server-only"
 import { AsyncLocalStorage } from "node:async_hooks"
 
 import { rateLimit } from "@workspace/db/schema"
-import { eq, type SQL, sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import type { Seconds } from "@/lib/time"
 
@@ -40,18 +40,6 @@ export function quotaHeaders(quotas: Iterable<Quota>) {
       .join(", "),
     ratelimit: values.map((q) => `"${q.policy}";r=${q.remaining};t=${q.resetSeconds}`).join(", "),
   }
-}
-
-// The upsert that counts one hit on `key`, for a statement that already makes a round trip and
-// can count in it. Returns the same `count` and `left` columns that `settle` reads.
-export function countHit(key: SQL, windowSeconds: Seconds): SQL {
-  const window = Number(windowSeconds)
-  const fresh = sql`rate_limit.window_start <= now() - make_interval(secs => ${window}::int)`
-  return sql`insert into ${rateLimit} (key, count) ${key}
-    on conflict (key) do update set
-      count = case when ${fresh} then 1 else rate_limit.count + 1 end,
-      window_start = case when ${fresh} then now() else rate_limit.window_start end
-    returning count, ceil(extract(epoch from (window_start + make_interval(secs => ${window}::int) - now())))::int as left`
 }
 
 // Turns counted hits into the verdict, and records each named quota for the response headers.
