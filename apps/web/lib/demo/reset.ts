@@ -20,6 +20,7 @@ import { hashPassword } from "better-auth/crypto"
 import { eq, sql } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { captureServerError } from "@/lib/error-tracking"
 import { insertPaste } from "@/lib/pastes/insert"
 import { DAY, HOUR, MINUTE } from "@/lib/time"
 import { DEMO_EMAIL, DEMO_NAME, DEMO_USER_ID, DEMO_USERNAME, demoPassword } from "./guest"
@@ -202,6 +203,7 @@ export function scheduleDemoReset() {
       console.info(JSON.stringify({ event: "demo_reset", reset }))
     } catch (error) {
       console.error("Demo reset failed", error)
+      await captureServerError(error, { source: "job", job: "demo_reset" })
     }
   }
   void run()

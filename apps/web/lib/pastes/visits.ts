@@ -5,6 +5,7 @@ import { envInteger } from "@workspace/db/config"
 import { paste, pasteViewDay, pasteVisit } from "@workspace/db/schema"
 import { asc, eq, inArray, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { captureServerError } from "@/lib/error-tracking"
 import { recordNotifications } from "@/lib/notifications/record"
 import { recordMaintenance, recordMetric } from "@/lib/telemetry"
 
@@ -178,6 +179,7 @@ export function scheduleVisitDrain(runDrain: typeof drainVisits = drainVisits): 
         await runDrain()
       } catch (error) {
         console.error("Visit drain failed", error)
+        await captureServerError(error, { source: "job", job: "visits" })
       } finally {
         running = false
       }

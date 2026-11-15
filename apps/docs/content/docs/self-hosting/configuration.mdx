@@ -186,10 +186,34 @@ removed after 30 days by a cleanup that runs at startup and hourly.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, and `email`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
-| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. Cookieless events carry the visitor's country only when a CDN in front of the app sends one (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), because PostHog drops the IP of cookieless events before its GeoIP lookup. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). The key reaches the browser only on allowed hosts: preview deployments (`pr-NNN.sniptide.com`, `NN.sniptide.com`) and local development get no key, so they cannot report. |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics and server [error tracking](#error-tracking), off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. Cookieless events carry the visitor's country only when a CDN in front of the app sends one (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), because PostHog drops the IP of cookieless events before its GeoIP lookup. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). The key reaches the browser only on allowed hosts: preview deployments (`pr-NNN.sniptide.com`, `NN.sniptide.com`) and local development get no key, so they cannot report. |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing
 is sent anywhere else.
+
+### Error tracking
+
+With `POSTHOG_KEY` set, the server also sends its exceptions to PostHog error tracking in the same
+project: errors in pages, route handlers, server actions and the proxy, and failures in the
+maintenance jobs, the visit queue and the demo reset. Without a key nothing is sent, and
+exceptions only reach the server log as before. Preview deployments and `localhost` never report.
+
+Each exception carries the route file (such as `app/[slug]/page`, never the visited path), the
+release from `DEPLOYMENT_VERSION`, the runtime, the request method or the job's name, and Next's
+error digest. Before an exception leaves the server, Sniptide removes:
+
+- Quoted values in the message, which is where paste content, slugs and other input appear.
+- A failed query's parameters and Postgres key details.
+- Email addresses, API tokens, bearer credentials, JWTs and long random strings.
+- URL paths beyond their route, query strings and fragments, in the message and in stack frames.
+- Every other property of the error object, such as a request or a query.
+
+Each server process sends at most 30 exceptions a minute and waits at most 3 seconds for PostHog,
+so a failure loop can't flood the project or slow down responses. Errors in the browser are not
+sent.
+
+To get notified, add alerts in PostHog's error tracking settings on the issue created and issue
+spiking triggers, and send them to Slack, Linear, GitHub or a webhook.
 
 ## Support and feedback
 
