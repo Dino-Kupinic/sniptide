@@ -43,6 +43,7 @@ import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
 import { PasteBudgetError } from "@/lib/pastes/budget"
+import { liveWhere } from "@/lib/pastes/lifecycle"
 import { limits } from "@/lib/pastes/limits"
 import {
   type CaptureReplacement,
@@ -145,9 +146,8 @@ function liveOwned(owner: string): SQL {
   return and(
     allowedPaste(),
     eq(pasteTable.ownerId, owner),
-    isNull(pasteTable.deletedAt),
+    liveWhere(),
     isNull(pasteTable.encryptionKeyId),
-    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
   ) as SQL
 }
 

@@ -13,13 +13,8 @@ import {
   NOTIFICATION_LIMIT,
 } from "@/lib/notifications/store"
 import { purgeStaleData } from "@/lib/pastes/purge"
-import {
-  leaveShare,
-  readSharedPaste,
-  revealSharedPaste,
-  sharePaste,
-  unsharePaste,
-} from "@/lib/pastes/store"
+import { leaveShare, sharePaste, unsharePaste } from "@/lib/pastes/shares"
+import { readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 

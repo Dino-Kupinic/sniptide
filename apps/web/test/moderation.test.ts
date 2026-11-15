@@ -45,15 +45,14 @@ import { getDashboardData } from "@/lib/pastes/dashboard"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage, listSharedPage, trashTotals } from "@/lib/pastes/lists"
 import { parseSharedListQuery } from "@/lib/pastes/shared-list-query"
+import { getShare, listPasteShares, restoreShare, sharePaste } from "@/lib/pastes/shares"
 import {
   deleteForever,
   getPaste,
   getPasteMeta,
-  getShare,
   getUnlockHash,
   isSlugAvailable,
   isStarred,
-  listPasteShares,
   navCounts,
   readPublicPreview,
   readRawFile,
@@ -63,13 +62,11 @@ import {
   renamePaste,
   restorePaste,
   restoreRevision,
-  restoreShare,
   revealSharedPaste,
   sealRevision,
   searchOwnPastes,
   setPasteCollection,
   setStarred,
-  sharePaste,
   sidebarData,
   starredSlugs,
   trashPaste,
