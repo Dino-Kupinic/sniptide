@@ -1,12 +1,13 @@
 import "server-only"
 
 import { createHash, randomBytes } from "node:crypto"
-import { apiToken, oauthClient, user } from "@workspace/db/schema"
-import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm"
+import { apiToken, apiTokenUsageDay, oauthClient, user } from "@workspace/db/schema"
+import { and, asc, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { type AgentClient, agentClientFromName } from "@/lib/onboarding"
-import { DAY } from "@/lib/time"
+import { countHit, type Hit, type Limit, settle } from "@/lib/rate-limit"
+import { DAY, HOUR_SECONDS } from "@/lib/time"
 import { SCOPES, type Scope } from "./scopes"
 
 // Personal API tokens (packages/db/src/schema/tokens.ts). A token acts for the account that made
@@ -23,7 +24,7 @@ const EXPIRY_DAYS: Record<Exclude<TokenExpiry, "never">, number> = {
   "1y": 365,
 }
 // last_used_at is a hint for the settings list, so it's written at most once a minute per token.
-const LAST_USED_GRANULARITY_MS = 60_000
+const LAST_USED_GRANULARITY_SECONDS = 60
 
 export interface TokenSummary {
   id: string
@@ -136,43 +137,96 @@ export async function revokeToken(owner: string, id: string) {
   return rows.length > 0
 }
 
+// The limit every request with a valid token counts against, so a leaked token or a looping agent
+// can't hammer the server.
+export function tokenRequestLimit(tokenId: string): Limit {
+  return {
+    policy: "api-token",
+    key: `${TOKEN_LIMIT_PREFIX}${tokenId}`,
+    max: 3600,
+    windowSeconds: HOUR_SECONDS,
+  }
+}
+const TOKEN_LIMIT_PREFIX = "api:token:"
+
+interface TokenRow extends Record<string, unknown> {
+  id: string
+  owner_id: string
+  scopes: string[]
+  client: string | null
+  count: number | null
+  left: number | null
+}
+
+function bearer(request: Request) {
+  const header = request.headers.get("authorization") ?? ""
+  const match = /^Bearer ([A-Za-z0-9_-]{16,128})$/.exec(header.trim())
+  return match?.[1]?.startsWith(TOKEN_PREFIX) ? match[1] : null
+}
+
+// Looks the token up and stamps last_used_at in one statement. With `metered` the same statement
+// also counts the request for the Usage tab and against the token's rate limit, so a request
+// pays one round trip and one commit before its handler instead of three and two.
+async function lookup(request: Request, metered: { now: Date } | null) {
+  const token = bearer(request)
+  if (!token) return null
+  const [row] = await getDb().execute<TokenRow>(sql`
+    with token as (
+      select t.id, t.owner_id, t.scopes, c.name as client
+      from ${apiToken} t left join ${oauthClient} c on c.id = t.client_id
+      where t.hash = ${hashToken(token)} and (t.expires_at is null or t.expires_at > now())
+    ), used as (
+      update ${apiToken} set last_used_at = now() from token
+      where api_token.id = token.id and (
+        api_token.last_used_at is null
+        or api_token.last_used_at < now() - make_interval(secs => ${LAST_USED_GRANULARITY_SECONDS}::int)
+      )
+    )${
+      metered
+        ? sql`, usage as (
+      insert into ${apiTokenUsageDay} (owner_id, token_id, day, requests)
+      select owner_id, id, ${Math.floor(metered.now.getTime() / DAY)}::int, 1 from token
+      on conflict (owner_id, day, token_id)
+      do update set requests = api_token_usage_day.requests + 1
+    ), quota as (
+      ${countHit(
+        sql`select ${TOKEN_LIMIT_PREFIX}::text || id::text, 1 from token`,
+        tokenRequestLimit("").windowSeconds,
+      )}
+    )
+    select token.*, quota.count, quota.left from token left join quota on true`
+        : sql`
+    select token.*, null::int as count, null::int as left from token`
+    }`)
+  if (!row) return null
+  const owner: TokenOwner = {
+    tokenId: row.id,
+    userId: row.owner_id,
+    scopes: scopesOf(row.scopes),
+    agent: row.client === null ? null : agentClientFromName(row.client),
+  }
+  return { owner, row }
+}
+
 // The account and scopes behind a request's `Authorization: Bearer <token>`, or null for a
 // missing, malformed, unknown, revoked or expired token.
 export async function authenticate(request: Request): Promise<TokenOwner | null> {
-  const header = request.headers.get("authorization") ?? ""
-  const match = /^Bearer ([A-Za-z0-9_-]{16,128})$/.exec(header.trim())
-  if (!match?.[1]?.startsWith(TOKEN_PREFIX)) return null
-  const db = getDb()
-  const [row] = await db
-    .select({
-      id: apiToken.id,
-      ownerId: apiToken.ownerId,
-      scopes: apiToken.scopes,
-      expiresAt: apiToken.expiresAt,
-      lastUsedAt: apiToken.lastUsedAt,
-      client: oauthClient.name,
-    })
-    .from(apiToken)
-    .leftJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
-    .where(eq(apiToken.hash, hashToken(match[1])))
-  if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
-  const now = new Date()
-  const threshold = new Date(now.getTime() - LAST_USED_GRANULARITY_MS)
-  if (!row.lastUsedAt || row.lastUsedAt < threshold) {
-    await db
-      .update(apiToken)
-      .set({ lastUsedAt: now })
-      .where(
-        and(
-          eq(apiToken.id, row.id),
-          or(isNull(apiToken.lastUsedAt), lt(apiToken.lastUsedAt, threshold)),
-        ),
-      )
-  }
+  return (await lookup(request, null))?.owner ?? null
+}
+
+// `authenticate` for a request that is about to be served: it also counts the request in the
+// account's usage and against the token's rate limit, and returns that verdict.
+export async function admitToken(
+  request: Request,
+  now = new Date(),
+): Promise<{ owner: TokenOwner; quota: Hit } | null> {
+  const found = await lookup(request, { now })
+  if (!found) return null
+  const { owner, row } = found
+  if (row.count === null || row.left === null)
+    throw new Error("The rate-limit counter wasn't returned.")
   return {
-    tokenId: row.id,
-    userId: row.ownerId,
-    scopes: scopesOf(row.scopes),
-    agent: row.client === null ? null : agentClientFromName(row.client),
+    owner,
+    quota: settle([{ limit: tokenRequestLimit(owner.tokenId), count: row.count, left: row.left }]),
   }
 }

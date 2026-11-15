@@ -203,3 +203,40 @@ describe("legal settings", () => {
     expect(() => getConfig({ TERMS_URL: "terms" })).toThrow(/TERMS_URL/)
   })
 })
+
+describe("getConfig", () => {
+  const env = process.env as Record<string, string | undefined>
+  const mode = env.NODE_ENV
+  const shareUrl = env.SHARE_URL
+  function restore() {
+    env.NODE_ENV = mode
+    if (shareUrl === undefined) delete env.SHARE_URL
+    else env.SHARE_URL = shareUrl
+  }
+
+  test("validates the environment on every call outside production", () => {
+    try {
+      env.SHARE_URL = "https://one.example"
+      expect(getConfig().shareUrl).toBe("https://one.example")
+      env.SHARE_URL = "https://two.example"
+      expect(getConfig().shareUrl).toBe("https://two.example")
+    } finally {
+      restore()
+    }
+  })
+
+  test("validates the environment once in production", () => {
+    try {
+      env.NODE_ENV = "production"
+      env.SHARE_URL = "https://one.example"
+      const first = getConfig()
+      env.SHARE_URL = "https://two.example"
+      expect(getConfig()).toBe(first)
+      expect(getConfig().shareUrl).toBe("https://one.example")
+      // An explicit environment is always read as given.
+      expect(getConfig({ ...env }).shareUrl).toBe("https://two.example")
+    } finally {
+      restore()
+    }
+  })
+})

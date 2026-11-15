@@ -1,17 +1,16 @@
 import "server-only"
 
 import { ZodError } from "zod"
-import { recordApiRequest } from "@/lib/account/usage"
 import { clientAddress } from "@/lib/client-ip"
 import { bearerChallenge } from "@/lib/oauth/metadata"
 import type { PasteOrigin } from "@/lib/pastes/mutations"
 import { hit, type Limit, quotaHeaders, requestQuotas } from "@/lib/rate-limit"
 import { isAdmissionError } from "@/lib/request-admission"
 import { BodyTooLargeError, readBody } from "@/lib/request-body"
-import { HOUR_SECONDS, seconds } from "@/lib/time"
+import { seconds } from "@/lib/time"
 import { failure } from "./errors"
 import type { Scope } from "./scopes"
-import { authenticate, type TokenOwner } from "./tokens"
+import { admitToken, type TokenOwner, tokenRequestLimit } from "./tokens"
 
 export { failure } from "./errors"
 
@@ -22,13 +21,7 @@ export { failure } from "./errors"
 const headers = { "cache-control": "private, no-store" }
 
 export const apiLimits = {
-  // Every request a token makes, so a leaked token or a looping agent can't hammer the server.
-  request: (token: string): Limit => ({
-    policy: "api-token",
-    key: `api:token:${token}`,
-    max: 3600,
-    windowSeconds: HOUR_SECONDS,
-  }),
+  request: tokenRequestLimit,
   // Requests without a valid token, per address, so nobody can guess tokens at full speed. An
   // agent that forgot its token still learns the quota from the RateLimit headers on the 401.
   unauthenticated: (address: string): Limit => ({
@@ -91,8 +84,8 @@ export async function withToken(
 
   async function execute() {
     try {
-      const owner = await authenticate(request)
-      if (!owner) {
+      const admitted = await admitToken(request)
+      if (!admitted) {
         // An unknown address (no CLIENT_IP_SOURCE behind a proxy) would pool every visitor.
         const address = clientAddress(request.headers)
         const limit = address === "unknown" ? null : await hit([apiLimits.unauthenticated(address)])
@@ -110,8 +103,7 @@ export async function withToken(
         )
         return response
       }
-      await recordApiRequest(owner)
-      const limit = await hit([apiLimits.request(owner.tokenId)])
+      const { owner, quota: limit } = admitted
       if (!limit.allowed)
         return failure(429, "Too many requests. Slow down.", limit.retryAfterSeconds)
       if (!owner.scopes.includes(scope)) {

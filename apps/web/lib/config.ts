@@ -211,7 +211,18 @@ function oauth(clientId?: string, clientSecret?: string) {
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
 }
 
-export function getConfig(env: Record<string, string | undefined> = process.env) {
+// A running server's environment never changes, so production validates it once: every request
+// reads the configuration, and validating the whole environment each time took about 7% of the
+// CPU of a token API read. Development and tests validate on every call, because `next dev`
+// reloads env files and tests set variables between calls.
+let validated: Config | undefined
+export function getConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env !== process.env || process.env.NODE_ENV !== "production") return parseConfig(env)
+  validated ??= parseConfig(env)
+  return validated
+}
+
+function parseConfig(env: Record<string, string | undefined>) {
   // `FOO=` in an env file is "unset", not an empty value.
   const present = Object.fromEntries(
     Object.entries(env).filter(([, value]) => value !== undefined && value.trim() !== ""),
@@ -335,4 +346,4 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
   }
 }
 
-export type Config = ReturnType<typeof getConfig>
+export type Config = ReturnType<typeof parseConfig>
