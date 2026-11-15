@@ -8,6 +8,9 @@ import { READ_RETENTION_DAYS, UNREAD_RETENTION_DAYS } from "@/lib/notifications/
 import { recordMaintenance, recordMetric } from "@/lib/telemetry"
 import { DAY } from "@/lib/time"
 
+// How long a stored highlighting result is kept before the next view rebuilds it.
+const HIGHLIGHT_RETENTION_DAYS = 30
+
 export const TRASH_DAYS = 30
 const PURGE_LOCK = 0x5e1d_7a1d
 
@@ -54,6 +57,10 @@ export async function purgeStaleData(now = new Date()) {
         const limits = await tx.execute(
           sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY).toISOString()} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
+        // Stored highlighting is rebuilt on the next view, so an old row costs nothing to drop.
+        const highlights = await tx.execute(
+          sql`DELETE FROM highlight_cache WHERE key IN (SELECT key FROM highlight_cache WHERE created_at < ${new Date(now.getTime() - HIGHLIGHT_RETENTION_DAYS * DAY).toISOString()} ORDER BY created_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
+        )
         const receipts = await tx.execute(
           sql`DELETE FROM api_receipt WHERE (token_id, key) IN (SELECT token_id, key FROM api_receipt WHERE expires_at < ${now.toISOString()} ORDER BY expires_at LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
@@ -89,6 +96,7 @@ export async function purgeStaleData(now = new Date()) {
             auth,
             notices,
             receipts,
+            highlights,
             codes,
             grants,
             clients,

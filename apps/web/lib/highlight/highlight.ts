@@ -1,11 +1,14 @@
 import "server-only"
 import { createHash } from "node:crypto"
 import { envInteger } from "@workspace/db/config"
+import { highlightCache } from "@workspace/db/schema"
+import { eq } from "drizzle-orm"
+import { getDb } from "@/lib/db"
 import type { PasteFile } from "@/lib/pastes/types"
 import { observe, recordMetric } from "@/lib/telemetry"
 import { grammarFor } from "./grammars"
 import { loadGrammar, tokenize } from "./shiki"
-import type { HighlightedLines } from "./types"
+import { type HighlightedLines, highlightRoles } from "./types"
 
 export { grammarFor }
 
@@ -24,12 +27,92 @@ interface Entry {
   bytes: number
   expires: number
 }
-// Only derived tokens are cached. Every caller must authorize and read current content first;
-// cache entries cannot be addressed by slug or fetched through an endpoint.
+// Only derived tokens are cached, in this process and for larger files in the database. Every
+// caller must authorize and read current content first; cache entries cannot be addressed by slug
+// or fetched through an endpoint.
 const entries = new Map<string, Entry>()
 const inFlight = new Map<string, Promise<HighlightedLines | undefined>>()
 let residentBytes = 0
 const rendererVersion = "syntax-v1"
+// Code this size or larger keeps its result in the database, where a restart or another instance
+// finds it. Tokenizing takes about 2 ms per KB of TypeScript on the request thread, so below this
+// the lookup would cost about as much as the work it saves.
+const STORE_FROM_BYTES = 2048
+
+// A stored result holds run lengths and colour numbers, never text (see the schema). The text
+// comes back from the code the caller already read, which is also what the key was made from.
+export function packRuns(lines: HighlightedLines): number[][] {
+  return lines.map((line) =>
+    line.flatMap((token) =>
+      typeof token === "string"
+        ? [token.length, 0]
+        : [token[0].length, highlightRoles.indexOf(token[1]) + 1],
+    ),
+  )
+}
+
+// Null when the runs don't fit the code, so a damaged row is treated as a miss.
+export function unpackRuns(code: string, runs: number[][]): HighlightedLines | null {
+  // The same line breaks the tokenizer splits on.
+  const source = code.split(/\r\n|\r|\n/)
+  if (!Array.isArray(runs) || runs.length !== source.length) return null
+  const lines: HighlightedLines = []
+  for (const [index, text] of source.entries()) {
+    const line: HighlightedLines[number] = []
+    const packed = runs[index] ?? []
+    let at = 0
+    for (let run = 0; run < packed.length; run += 2) {
+      const length = packed[run]
+      const role = packed[run + 1]
+      if (!Number.isInteger(length) || length === undefined || length < 0 || role === undefined)
+        return null
+      const part = text.slice(at, at + length)
+      if (part.length !== length) return null
+      at += length
+      if (role === 0) line.push(part)
+      else {
+        const name = highlightRoles[role - 1]
+        if (!name) return null
+        line.push([part, name])
+      }
+    }
+    if (at !== text.length) return null
+    lines.push(line)
+  }
+  return lines
+}
+
+async function storedOrTokenized(key: string, grammar: string, code: string) {
+  const kept = Buffer.byteLength(code, "utf8") >= STORE_FROM_BYTES
+  if (kept) {
+    try {
+      const [row] = await getDb()
+        .select({ runs: highlightCache.runs })
+        .from(highlightCache)
+        .where(eq(highlightCache.key, key))
+      const lines = row ? unpackRuns(code, row.runs) : null
+      if (lines) {
+        recordMetric("highlight:stored", 0)
+        return lines
+      }
+    } catch {
+      // The database is only a shortcut here; without it the code is tokenized as before.
+    }
+  }
+  const lines = tokenize(await loadGrammar(grammar), code, grammar)
+  if (kept) {
+    try {
+      await getDb()
+        .insert(highlightCache)
+        .values({ key, runs: packRuns(lines) })
+        .onConflictDoUpdate({ target: highlightCache.key, set: { runs: packRuns(lines) } })
+    } catch {
+      console.warn(JSON.stringify({ event: "highlight_store_failed" }))
+    }
+  }
+  return lines
+}
+
 async function tokenizeFile(file: PasteFile): Promise<HighlightedLines | undefined> {
   const grammar = grammarFor(file)
   if (!grammar) return undefined
@@ -54,7 +137,7 @@ async function tokenizeFile(file: PasteFile): Promise<HighlightedLines | undefin
   if (pending) return pending
   recordMetric("highlight:miss", 0)
   const work = observe("highlight:tokenize", async () => {
-    const lines = tokenize(await loadGrammar(grammar), code, grammar)
+    const lines = await storedOrTokenized(key, grammar, code)
     const bytes = Buffer.byteLength(JSON.stringify(lines), "utf8")
     if (bytes > 1024 * 1024) return undefined
     const capacity = envInteger("HIGHLIGHT_CACHE_BYTES", 32 * 1024 * 1024, 0, 256 * 1024 * 1024)
