@@ -46,8 +46,7 @@ docker compose exec -T db pg_dump -U sniptide -d sniptide \
   --format=custom --no-owner --no-privileges > sniptide.dump
 ```
 
-Against a Postgres you run yourself, point `pg_dump` at it (use Postgres 17 tools, the version
-Sniptide runs on):
+Against a Postgres you run yourself, point `pg_dump` at it (use tools at least as new as the server):
 
 ```bash
 pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" > sniptide.dump
@@ -169,5 +168,5 @@ database volume for the project named in that directory's `.env`.
 ## What a backup doesn't cover
 
 - **Your secrets and settings.** Keep `.env` (or the Coolify variables) with them.
-- **The Postgres and app versions.** Restore into Postgres 17, the version Sniptide runs on.
+- **The Postgres and app versions.** Restore into the same or a newer supported Postgres major version.
 - **Caddy's certificates**, if you use the bundled proxy. They are re-issued automatically.

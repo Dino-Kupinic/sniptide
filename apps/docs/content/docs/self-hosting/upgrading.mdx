@@ -37,6 +37,58 @@ Skipping releases is expected to work, since every migration the database is mis
 order. What CI exercises on every pull request is the step from the latest release to the next one
 (see [Versions and releases](/self-hosting/versions)).
 
+## Upgrade Postgres 17 to 18
+
+Postgres major versions cannot use the same data directory. The Postgres 18 image also uses a
+new volume layout. The templates refuse to start when they find a Postgres 17 volume. Keep the
+old volume and a verified backup until you have checked the restored instance. Schedule downtime
+and stop all writers, including external clients, before taking the final backup.
+
+### Docker Compose
+
+1. With the Postgres 17 Compose file still in place, stop writes: `docker compose stop app`.
+   Run `bash scripts/backup.sh` and copy the resulting dump and `.env` to a safe location.
+   Verify the dump by restoring it into a separate instance as described in
+   [Backups and restore](/self-hosting/backups#check-a-backup-in-a-throwaway-copy).
+2. Save the old `docker-compose.yml`. Stop the stack with `docker compose down` (do not add
+   `-v`). Download the new Compose file and add `POSTGRES_VOLUME=postgres18` to `.env`.
+   This gives Postgres 18 an empty volume and leaves the old one intact. Keep the setting in
+   `.env` for future upgrades, including when you rerun the installer.
+3. Run `bash scripts/restore.sh path/to/backup.dump`. It starts the new database, restores the
+   dump and starts the application. Check the health endpoint, sign in, and inspect your data.
+   Keep the old Compose file, volume and backup until you have verified the upgrade.
+4. To roll back, stop the new stack with `docker compose down`, restore the saved Compose file,
+   remove `POSTGRES_VOLUME` from `.env`, and run `docker compose up -d`. This returns to the old database as it was at the backup;
+   writes made after the upgrade are not included.
+
+### Coolify
+
+1. Block traffic and stop the Sniptide service and all other writers. On the Docker host, set
+   `db` to the Postgres 17 container name and create a custom-format dump:
+
+   ```bash
+   umask 077
+   docker exec "$db" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner --no-privileges' > backup.dump
+   docker exec -i "$db" pg_restore --list < backup.dump > /dev/null
+   ```
+
+   Verify the dump by restoring it into a separate database. Keep the old template, volume,
+   database credentials and auth secrets.
+2. In the updated template, change the database volume name `sniptide-postgres-data` to a new volume
+   name, such as `sniptide-postgres18-data`. Deploy it, keeping traffic blocked. Stop Sniptide
+   again once the new database is healthy, before restoring data.
+3. On the Docker host, set `db` to the new Postgres container name. Replace `backup.dump` with
+   the verified dump. These commands replace the new database completely:
+
+   ```bash
+   docker exec "$db" sh -c 'dropdb -U "$POSTGRES_USER" --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+   docker exec -i "$db" sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges --exit-on-error' < backup.dump
+   ```
+
+4. Start Sniptide, verify its health and data, then restore traffic. To roll back, block traffic,
+   restore the saved template and redeploy it with its original volume. The original volume has
+   no writes made after the migration.
+
 ## Upgrade the instance
 
 <Tabs items={["Docker Compose", "Docker", "Coolify"]}>
@@ -46,6 +98,8 @@ order. What CI exercises on every pull request is the step from the latest relea
 docker compose pull
 docker compose up -d
 ```
+
+For a Postgres 17 to 18 upgrade, complete [Upgrade Postgres 17 to 18](#upgrade-postgres-17-to-18) first.
 
 Compose uses `latest` by default. For repeatable deployments, pin a release in `.env`:
 

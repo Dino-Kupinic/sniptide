@@ -22,7 +22,7 @@ trap cleanup EXIT
 docker network create "$network" >/dev/null
 docker run -d --name "$database" --network "$network" --network-alias db \
   -e POSTGRES_USER=sniptide -e POSTGRES_PASSWORD=sniptide -e POSTGRES_DB=sniptide \
-  postgres:17-alpine >/dev/null
+  postgres:18-alpine >/dev/null
 
 wait_for_database() {
   for ((attempt = 0; attempt < 60; attempt++)); do

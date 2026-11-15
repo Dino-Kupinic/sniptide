@@ -28,7 +28,17 @@ x-logging: &logging
 
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
+    # The 17 volume has PG_VERSION at its root. Refuse to initialize an empty 18 cluster over it.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ -f /var/lib/postgresql/PG_VERSION ]; then
+          echo "PostgreSQL 17 data detected. Follow the PostgreSQL upgrade guide before starting." >&2
+          exit 1
+        fi
+        exec docker-entrypoint.sh postgres
     restart: unless-stopped
     mem_limit: ${POSTGRES_MEMORY:-0}
     logging: *logging
@@ -39,7 +49,7 @@ services:
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - ${POSTGRES_VOLUME:-postgres}:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sniptide -d sniptide"]
       interval: 5s
@@ -159,5 +169,6 @@ services:
 
 volumes:
   postgres:
+  postgres18:
   caddy-data:
   caddy-config:

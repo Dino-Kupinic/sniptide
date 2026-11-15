@@ -74,14 +74,24 @@ services:
       start_period: 30s
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
+    # The 17 volume has PG_VERSION at its root. Refuse to initialize an empty 18 cluster over it.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ -f /var/lib/postgresql/PG_VERSION ]; then
+          echo "PostgreSQL 17 data detected. Follow the PostgreSQL upgrade guide before starting." >&2
+          exit 1
+        fi
+        exec docker-entrypoint.sh postgres
     mem_limit: ${POSTGRES_MEMORY:-0}
     environment:
       - POSTGRES_USER=${SERVICE_USER_POSTGRES}
       - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
       - POSTGRES_DB=${POSTGRES_DB:-sniptide}
     volumes:
-      - sniptide-postgres-data:/var/lib/postgresql/data
+      - sniptide-postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

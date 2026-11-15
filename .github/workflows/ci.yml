@@ -127,6 +127,9 @@ jobs:
       - name: Verify docker compose and the Coolify template
         run: bash scripts/test-compose.sh sniptide:ci
 
+      - name: Test PostgreSQL major upgrade
+        run: bash scripts/test-postgres-upgrade.sh
+
       - name: Select a tag for trusted events
         id: image
         env:
@@ -335,9 +338,12 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      matrix:
+        postgres: [17, 18]
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:${{ matrix.postgres }}-alpine
         env:
           POSTGRES_USER: sniptide
           POSTGRES_PASSWORD: sniptide
@@ -365,6 +371,19 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: bun run test:web:integration
+
+  # Branch protection requires a single result for both Postgres versions.
+  tests-result:
+    name: Tests
+    needs: tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every Postgres version to pass
+        env:
+          RESULT: ${{ needs.tests.result }}
+        run: test "$RESULT" = success
 
   # Two shards split the test files between runners. Each has its own Postgres and builds the app,
   # which the Next build cache keeps cheap.
