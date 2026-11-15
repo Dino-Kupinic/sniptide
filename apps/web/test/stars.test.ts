@@ -3,7 +3,8 @@ import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { toRows } from "@/lib/pastes/rows"
-import { navCounts, setStarred, sharePaste } from "@/lib/pastes/store"
+import { sharePaste } from "@/lib/pastes/shares"
+import { navCounts, setStarred } from "@/lib/pastes/store"
 import {
   hasDatabase,
   resetDatabase,

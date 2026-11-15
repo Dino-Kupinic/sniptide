@@ -213,7 +213,7 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
       }
     }
   }
-  return { id, slug }
+  return { id, slug, createdAt: now }
 }
 
 export async function replacePaste(

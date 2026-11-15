@@ -1,13 +1,14 @@
 import "server-only"
 
 import { createHash, randomBytes } from "node:crypto"
-import { apiToken, apiTokenUsageDay, oauthClient, user } from "@workspace/db/schema"
+import { apiToken, oauthClient, user } from "@workspace/db/schema"
 import { and, asc, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { type AgentClient, agentClientFromName } from "@/lib/onboarding"
-import { countHit, type Hit, type Limit, settle } from "@/lib/rate-limit"
+import type { Hit, Limit } from "@/lib/rate-limit"
 import { DAY, HOUR_SECONDS } from "@/lib/time"
+import { meterRequest, meterTokenUse } from "./meter"
 import { SCOPES, type Scope } from "./scopes"
 
 // Personal API tokens (packages/db/src/schema/tokens.ts). A token acts for the account that made
@@ -24,7 +25,7 @@ const EXPIRY_DAYS: Record<Exclude<TokenExpiry, "never">, number> = {
   "1y": 365,
 }
 // last_used_at is a hint for the settings list, so it's written at most once a minute per token.
-const LAST_USED_GRANULARITY_SECONDS = 60
+const LAST_USED_GRANULARITY_MS = 60_000
 
 export interface TokenSummary {
   id: string
@@ -149,69 +150,34 @@ export function tokenRequestLimit(tokenId: string): Limit {
 }
 const TOKEN_LIMIT_PREFIX = "api:token:"
 
-interface TokenRow extends Record<string, unknown> {
-  id: string
-  owner_id: string
-  scopes: string[]
-  client: string | null
-  count: number | null
-  left: number | null
-}
-
-function bearer(request: Request) {
+// The account and scopes behind a request's `Authorization: Bearer <token>`, or null for a
+// missing, malformed, unknown, revoked or expired token. A token whose last-used time is stale
+// is marked for the next meter flush, so looking a token up writes nothing.
+export async function authenticate(request: Request): Promise<TokenOwner | null> {
   const header = request.headers.get("authorization") ?? ""
   const match = /^Bearer ([A-Za-z0-9_-]{16,128})$/.exec(header.trim())
-  return match?.[1]?.startsWith(TOKEN_PREFIX) ? match[1] : null
-}
-
-// Looks the token up and stamps last_used_at in one statement. With `metered` the same statement
-// also counts the request for the Usage tab and against the token's rate limit, so a request
-// pays one round trip and one commit before its handler instead of three and two.
-async function lookup(request: Request, metered: { now: Date } | null) {
-  const token = bearer(request)
-  if (!token) return null
-  const [row] = await getDb().execute<TokenRow>(sql`
-    with token as (
-      select t.id, t.owner_id, t.scopes, c.name as client
-      from ${apiToken} t left join ${oauthClient} c on c.id = t.client_id
-      where t.hash = ${hashToken(token)} and (t.expires_at is null or t.expires_at > now())
-    ), used as (
-      update ${apiToken} set last_used_at = now() from token
-      where api_token.id = token.id and (
-        api_token.last_used_at is null
-        or api_token.last_used_at < now() - make_interval(secs => ${LAST_USED_GRANULARITY_SECONDS}::int)
-      )
-    )${
-      metered
-        ? sql`, usage as (
-      insert into ${apiTokenUsageDay} (owner_id, token_id, day, requests)
-      select owner_id, id, ${Math.floor(metered.now.getTime() / DAY)}::int, 1 from token
-      on conflict (owner_id, day, token_id)
-      do update set requests = api_token_usage_day.requests + 1
-    ), quota as (
-      ${countHit(
-        sql`select ${TOKEN_LIMIT_PREFIX}::text || id::text, 1 from token`,
-        tokenRequestLimit("").windowSeconds,
-      )}
-    )
-    select token.*, quota.count, quota.left from token left join quota on true`
-        : sql`
-    select token.*, null::int as count, null::int as left from token`
-    }`)
-  if (!row) return null
-  const owner: TokenOwner = {
+  if (!match?.[1]?.startsWith(TOKEN_PREFIX)) return null
+  const [row] = await getDb()
+    .select({
+      id: apiToken.id,
+      ownerId: apiToken.ownerId,
+      scopes: apiToken.scopes,
+      expiresAt: apiToken.expiresAt,
+      lastUsedAt: apiToken.lastUsedAt,
+      client: oauthClient.name,
+    })
+    .from(apiToken)
+    .leftJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
+    .where(eq(apiToken.hash, hashToken(match[1])))
+  if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
+  if (!row.lastUsedAt || row.lastUsedAt.getTime() < Date.now() - LAST_USED_GRANULARITY_MS)
+    meterTokenUse(row.id)
+  return {
     tokenId: row.id,
-    userId: row.owner_id,
+    userId: row.ownerId,
     scopes: scopesOf(row.scopes),
     agent: row.client === null ? null : agentClientFromName(row.client),
   }
-  return { owner, row }
-}
-
-// The account and scopes behind a request's `Authorization: Bearer <token>`, or null for a
-// missing, malformed, unknown, revoked or expired token.
-export async function authenticate(request: Request): Promise<TokenOwner | null> {
-  return (await lookup(request, null))?.owner ?? null
 }
 
 // `authenticate` for a request that is about to be served: it also counts the request in the
@@ -220,13 +186,6 @@ export async function admitToken(
   request: Request,
   now = new Date(),
 ): Promise<{ owner: TokenOwner; quota: Hit } | null> {
-  const found = await lookup(request, { now })
-  if (!found) return null
-  const { owner, row } = found
-  if (row.count === null || row.left === null)
-    throw new Error("The rate-limit counter wasn't returned.")
-  return {
-    owner,
-    quota: settle([{ limit: tokenRequestLimit(owner.tokenId), count: row.count, left: row.left }]),
-  }
+  const owner = await authenticate(request)
+  return owner ? { owner, quota: await meterRequest(owner, now) } : null
 }

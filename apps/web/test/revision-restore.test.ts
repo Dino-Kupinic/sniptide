@@ -10,8 +10,9 @@ import {
   type SavePasteInput,
   savePaste,
 } from "@/lib/pastes/actions"
+import { sharePaste } from "@/lib/pastes/shares"
 import { SNAPSHOT_LIMIT } from "@/lib/pastes/snapshot"
-import { getPaste, sharePaste, updatePaste } from "@/lib/pastes/store"
+import { getPaste, updatePaste } from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedUser, signInAs } from "./harness"
 
 // Rolling a paste back to an earlier revision: its title, description and files return, nothing

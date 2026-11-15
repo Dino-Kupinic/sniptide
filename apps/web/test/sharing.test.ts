@@ -11,21 +11,23 @@ import {
 } from "@/lib/pastes/actions"
 import { toSharedRows } from "@/lib/pastes/rows"
 import {
-  createPaste,
   findPerson,
-  getPaste,
-  getPasteMeta,
   getShare,
   leaveShare,
   listPasteShares,
   markShareSeen,
+  sharePaste,
+  unsharePaste,
+} from "@/lib/pastes/shares"
+import {
+  createPaste,
+  getPaste,
+  getPasteMeta,
   navCounts,
   readRawFile,
   readSharedPaste,
   setStarred,
-  sharePaste,
   trashPaste,
-  unsharePaste,
   updatePaste,
 } from "@/lib/pastes/store"
 import type { PasteInput } from "@/lib/pastes/types"

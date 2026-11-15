@@ -23,7 +23,8 @@ import {
   unsubscribeNotificationEmail,
   verifyUnsubscribeToken,
 } from "@/lib/notifications/unsubscribe"
-import { readSharedPaste, revealSharedPaste, sharePaste, unsharePaste } from "@/lib/pastes/store"
+import { sharePaste, unsharePaste } from "@/lib/pastes/shares"
+import { readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import { readPreferences } from "@/lib/preference-store"
 import { parsePreferences } from "@/lib/preferences-schema"

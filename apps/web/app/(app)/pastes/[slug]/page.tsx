@@ -37,14 +37,8 @@ import { formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { embedCode } from "@/lib/pastes/embed"
 import { slugFromRoute } from "@/lib/pastes/links"
-import {
-  getPaste,
-  getPasteMeta,
-  getShare,
-  isStarred,
-  listPasteShares,
-  markShareSeen,
-} from "@/lib/pastes/store"
+import { getShare, listPasteShares, markShareSeen } from "@/lib/pastes/shares"
+import { getPaste, getPasteMeta, isStarred } from "@/lib/pastes/store"
 import type { Paste } from "@/lib/pastes/types"
 import { WEBHOOK_TARGETS } from "@/lib/pastes/webhook-url"
 import { getSiteOrigin } from "@/lib/site"

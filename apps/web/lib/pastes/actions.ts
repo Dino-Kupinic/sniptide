@@ -21,6 +21,7 @@ import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
 import { passwordIntent } from "./password-intent"
 import { pasteSchema } from "./schema"
+import * as shares from "./shares"
 import { hasSensitiveContent, suggestedVisibility } from "./smart-defaults"
 import * as store from "./store"
 import {
@@ -275,7 +276,7 @@ export async function findPerson(identifier: string): Promise<FindPersonResult> 
   const tooOften = await limited(limits.personLookup(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const found = await store.findPerson(text.data)
+  const found = await shares.findPerson(text.data)
   if (found.status === "self") return { ok: false, error: await actionError("personSelf") }
   if (found.status === "missing") {
     return { ok: false, error: await actionError("personMissing") }
@@ -286,7 +287,7 @@ export async function findPerson(identifier: string): Promise<FindPersonResult> 
 export type ShareResult = { ok: true; people: SharePerson[] } | { ok: false; error: string }
 
 async function sharesOf(slug: string): Promise<ShareResult> {
-  const people = await store.listPasteShares(slug)
+  const people = await shares.listPasteShares(slug)
   return people ? { ok: true, people } : { ok: false, error: await actionError("pasteMissing") }
 }
 
@@ -310,7 +311,7 @@ export async function setShareAccess(
   const user = await assertSignedIn()
   const parsed = z.enum(ACCESSES).safeParse(access)
   if (!parsed.success) return { ok: false, error: await actionError("pickAccess") }
-  const outcome = await store.sharePaste(slug, userId, parsed.data)
+  const outcome = await shares.sharePaste(slug, userId, parsed.data)
   if (outcome.status !== "ok") {
     return {
       ok: false,
@@ -323,7 +324,7 @@ export async function setShareAccess(
 
 export async function removeShare(slug: string, userId: string): Promise<ShareResult> {
   const user = await assertSignedIn()
-  await store.unsharePaste(slug, userId)
+  await shares.unsharePaste(slug, userId)
   await revalidateWorkspace(user, userId)
   return sharesOf(slug)
 }
@@ -342,7 +343,7 @@ export async function restoreRemovedShare(
     .safeParse({ access, sharedAt })
   if (!parsed.success) return { ok: false, error: await actionError("shareRestore") }
   const date = new Date(Math.min(parsed.data.sharedAt, Date.now()))
-  const outcome = await store.sharePaste(slug, userId, parsed.data.access, date)
+  const outcome = await shares.sharePaste(slug, userId, parsed.data.access, date)
   if (outcome.status !== "ok") {
     return {
       ok: false,
@@ -356,14 +357,14 @@ export async function restoreRemovedShare(
 // Drops a paste someone shared with the viewer from their Shared with me.
 export async function leaveShare(slug: string) {
   const user = await assertSignedIn()
-  await store.leaveShare(slug)
+  await shares.leaveShare(slug)
   await revalidateWorkspace(user)
 }
 
 // Undoes leaveShare, unless the owner has revoked the share since.
 export async function restoreShare(slug: string): Promise<ActionOutcome> {
   const user = await assertSignedIn()
-  if (!(await store.restoreShare(slug))) {
+  if (!(await shares.restoreShare(slug))) {
     return { ok: false, error: await actionError("shareRevoked") }
   }
   await revalidateWorkspace(user)
@@ -622,13 +623,13 @@ export async function setPastesVisibility(slugs: string[], visibility: Visibilit
 }
 
 export async function leaveShares(slugs: string[]) {
-  await forEachSlug(slugs, store.leaveShare)
+  await forEachSlug(slugs, shares.leaveShare)
 }
 
 export async function restoreShares(slugs: string[]): Promise<ActionOutcome> {
   let restored = 0
   await forEachSlug(slugs, async (slug) => {
-    if (await store.restoreShare(slug)) restored += 1
+    if (await shares.restoreShare(slug)) restored += 1
   })
   return restored > 0 ? { ok: true } : { ok: false, error: await actionError("shareRevoked") }
 }

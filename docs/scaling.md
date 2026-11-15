@@ -50,6 +50,14 @@ visits available for retry. Counts and milestone notifications are eventually ap
 accepted visits whose paste is subsequently trashed or moderated. Permanent deletion cascades.
 Burn-after-read claims, counters and notifications remain synchronous and atomic.
 
+Token requests count in memory (`lib/api/meter.ts`): the token's rate limit, the account's daily
+usage, the token's last-used time and reads of a paste. Each process writes its counts in one
+transaction a second, so a token API read commits nothing. The first request for a token in a
+window asks the database, and each write returns what all processes have counted. A token can
+pass its limit by what other processes admit within a second, and a process that stops without
+a flush loses up to a second of counts. A failed write keeps its counts for the next one and logs
+`meter_flush_failed`.
+
 The worker samples capped backlog and oldest age after every pass, even when another replica holds
 the drain lock. Drain failure, backlog at 10,000 or oldest age above 30 seconds causes early dynamic
 HTTP admission to return 503 until recovery. These per-process samples permit overshoot between
