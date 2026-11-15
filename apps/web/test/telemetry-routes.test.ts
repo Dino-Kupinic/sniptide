@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { routeName } from "@/lib/telemetry"
+import { requestLogMode, routeName } from "@/lib/telemetry"
 
 test("names token API and MCP routes without ids, slugs or query strings", () => {
   expect(routeName("/api/mcp")).toBe("/api/mcp")
@@ -27,4 +27,21 @@ test("keeps the names of pages and probes", () => {
   expect(routeName("/pastes/abc/edit")).toBe("/pastes/[slug]/edit")
   expect(routeName("/some-slug/raw?file=a.ts")).toBe("/[slug]/raw")
   expect(routeName("/some-slug")).toBe("/[slug]")
+})
+
+test("REQUEST_LOG accepts all, errors and off, and refuses anything else", () => {
+  const before = process.env.REQUEST_LOG
+  try {
+    delete process.env.REQUEST_LOG
+    expect(requestLogMode()).toBe("all")
+    process.env.REQUEST_LOG = " Errors "
+    expect(requestLogMode()).toBe("errors")
+    process.env.REQUEST_LOG = "off"
+    expect(requestLogMode()).toBe("off")
+    process.env.REQUEST_LOG = "quiet"
+    expect(() => requestLogMode()).toThrow("REQUEST_LOG must be all, errors or off")
+  } finally {
+    if (before === undefined) delete process.env.REQUEST_LOG
+    else process.env.REQUEST_LOG = before
+  }
 })

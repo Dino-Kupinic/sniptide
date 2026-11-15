@@ -123,6 +123,7 @@ services:
       PURGE_TIME_BUDGET_MS: ${PURGE_TIME_BUDGET_MS:-2000}
       HIGHLIGHT_CACHE_BYTES: ${HIGHLIGHT_CACHE_BYTES:-33554432}
       SLOW_QUERY_MS: ${SLOW_QUERY_MS:-500}
+      REQUEST_LOG: ${REQUEST_LOG:-all}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       # Where rate limits get the visitor's IP (see .env.example). With SNIPTIDE_DOMAIN set, the
       # bundled proxy is in front, so the defaults read X-Forwarded-For from private addresses.

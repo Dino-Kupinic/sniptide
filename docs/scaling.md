@@ -109,6 +109,7 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | NOTIFICATION_EMAIL_CONCURRENCY | 2 | Concurrent notification deliveries per process, from 1 to 10 |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
 | SLOW_QUERY_MS | 500 | Threshold for slow-query log events |
+| REQUEST_LOG | all | Requests that get a log line: `all`, `errors` or `off` |
 | METRICS_TOKEN | unset | Operator bearer token for metrics and explicit maintenance execution |
 
 Cleanup runs at startup and hourly. Transactions commit between batches and use a shared advisory

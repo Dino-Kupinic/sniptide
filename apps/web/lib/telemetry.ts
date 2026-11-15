@@ -157,8 +157,18 @@ export function routeName(path = "/") {
   if (pathname.endsWith("/reveal")) return "/[slug]/reveal"
   return "/[slug]"
 }
+// REQUEST_LOG chooses which requests get a log line: `all` (the default), `errors` for 5xx and
+// aborted responses only, or `off`. Metrics count every request whatever it says. A line is a
+// synchronous write, about 5% of the CPU of a token API read.
+export function requestLogMode() {
+  const value = process.env.REQUEST_LOG?.trim().toLowerCase() || "all"
+  if (value !== "all" && value !== "errors" && value !== "off")
+    throw new Error("Invalid configuration: REQUEST_LOG must be all, errors or off.")
+  return value
+}
 export function startTelemetry() {
   if (telemetry.started) return
+  const requestLog = requestLogMode()
   telemetry.started = true
   telemetry.loop.enable()
   const original = Server.prototype.emit
@@ -179,6 +189,8 @@ export function startTelemetry() {
         durationMs,
         response.statusCode >= 500 || !response.writableFinished,
       )
+      const failed = response.statusCode >= 500 || !response.writableFinished
+      if (requestLog === "off" || (requestLog === "errors" && !failed)) return
       console.info(
         JSON.stringify({
           event: "request",
