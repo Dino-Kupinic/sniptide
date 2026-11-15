@@ -50,6 +50,7 @@ jobs:
       - run: bun run check
       - run: bun run check:unused
 
+      - run: bun run test:contracts
       - run: bun run test:cli
       - run: bun run test:mcp
       - run: bun run test:sdk

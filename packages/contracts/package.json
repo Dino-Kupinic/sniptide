@@ -6,10 +6,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./encryption": "./src/encryption.ts"
+    "./encryption": "./src/encryption.ts",
+    "./http": "./src/http.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "bun test ./test",
     "lint": "biome lint .",
     "format": "biome format --write ."
   },
@@ -17,6 +19,7 @@
     "zod": "catalog:runtime"
   },
   "devDependencies": {
+    "@types/bun": "catalog:tooling",
     "@workspace/typescript": "workspace:*",
     "typescript": "catalog:tooling"
   }

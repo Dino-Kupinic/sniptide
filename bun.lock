@@ -169,6 +169,7 @@
         "zod": "catalog:runtime",
       },
       "devDependencies": {
+        "@types/bun": "catalog:tooling",
         "@workspace/typescript": "workspace:*",
         "typescript": "catalog:tooling",
       },

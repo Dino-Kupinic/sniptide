@@ -1,3 +1,4 @@
+import { ResponseTooLargeError, readJson } from "@sniptide/contracts/http"
 import type { Config } from "./config"
 import { record } from "./contract"
 import { CliError } from "./errors"
@@ -79,26 +80,10 @@ export class Api {
       throw new CliError(`Sniptide returned HTTP ${response.status}.${suffix}`, "API_ERROR", 1)
     }
     try {
-      if (!response.body) throw new Error("Missing response body")
-      const reader = response.body.getReader()
-      const chunks: Uint8Array[] = []
-      let bytes = 0
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          bytes += value.byteLength
-          if (bytes > 25 * 1024 * 1024) {
-            await reader.cancel()
-            throw new CliError("API response exceeds 25 MiB.", "RESPONSE_TOO_LARGE", 1)
-          }
-          chunks.push(value)
-        }
-      } finally {
-        reader.releaseLock()
-      }
-      return record(JSON.parse(Buffer.concat(chunks).toString("utf8")))
+      return record(await readJson(response))
     } catch (error) {
+      if (error instanceof ResponseTooLargeError)
+        throw new CliError("API response exceeds 25 MiB.", "RESPONSE_TOO_LARGE", 1)
       if (error instanceof CliError) throw error
       throw new CliError("Sniptide returned an invalid JSON response.", "INVALID_RESPONSE", 1)
     }
