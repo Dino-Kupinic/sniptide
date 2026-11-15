@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import path from "node:path"
 import { createDb } from "@workspace/db"
 import { migrateDb } from "@workspace/db/migrate"
@@ -19,6 +20,15 @@ const whaleCount = Math.min(10000, Math.floor(count / 2))
 const id = (index: number) => `load-owner-${index}`
 const slug = (index: number) => `load-${String(index).padStart(7, "0")}`
 const hash = await hashPassword(password)
+// API tokens for the agent suite. Each is derived from LOAD_PASSWORD, so agents.js can rebuild
+// them and the manifest never holds a credential. Writers are accounts of their own, because an
+// account may create 30 pastes an hour.
+const writerCount = 1000
+const whaleTokenCount = 25
+const digest = (value: string, encoding: "hex" | "base64url") =>
+  createHash("sha256").update(value).digest(encoding)
+const tokenHash = (kind: string, index: number) =>
+  digest(`snpt_${digest(`${password}:${kind}:${index}`, "base64url")}`, "hex")
 try {
   await migrateDb(db, path.join(import.meta.dir, "../../../packages/db/migrations"))
   // Never reset arbitrary data, even in a database with the required suffix.
@@ -38,6 +48,24 @@ try {
         sql`insert into collection (owner_id, slug, name) values (${id(index)}, 'notes', 'Load notes')`,
       )
     }
+  })
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`insert into "user" (id, name, email, email_verified)
+      select 'load-writer-' || i, 'Load writer ' || i, 'load-writer-' || i || '@example.invalid', true
+      from generate_series(0, ${writerCount - 1}) i`)
+    const tokens = [
+      ...Array.from({ length: writerCount }, (_, i) => ({
+        owner: `load-writer-${i}`,
+        hash: tokenHash("writer", i),
+      })),
+      ...Array.from({ length: whaleTokenCount }, (_, i) => ({
+        owner: id(0),
+        hash: tokenHash("whale", i),
+      })),
+    ]
+    await tx.execute(sql`insert into api_token (owner_id, name, prefix, hash, scopes)
+      select owner, 'Load token', 'snpt_load', hash, '{read,write}'
+      from json_to_recordset(${JSON.stringify(tokens)}::json) as fixture(owner text, hash text)`)
   })
   const started = Date.now()
   for (let start = 0; start < count; start += 500) {
@@ -104,6 +132,8 @@ try {
         email: "load-0@example.invalid",
         normalEmail: "load-1@example.invalid",
         collection: "notes",
+        writerCount,
+        whaleTokenCount,
       },
       null,
       2,
