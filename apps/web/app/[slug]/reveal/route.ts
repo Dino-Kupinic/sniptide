@@ -32,9 +32,9 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/r
   // header details and the same server-side syntax colours. Highlighting happens after the burn
   // commits; a grammar failure leaves that file plain rather than failing the reveal.
   const { paste } = read
-  const files = await highlightFiles(
-    paste.files.map(({ name, language, content }) => ({ name, language, content })),
-  )
+  // An encrypted paste's file is ciphertext; the browser decrypts and colours it.
+  const plain = paste.files.map(({ name, language, content }) => ({ name, language, content }))
+  const files = paste.encryptionKeyId ? plain : await highlightFiles(plain)
   return Response.json(
     {
       ok: true,
@@ -46,6 +46,7 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/r
       views: paste.views,
       // Whether this reveal used the paste up.
       burned: paste.burnAfterRead,
+      encryptionKeyId: paste.encryptionKeyId,
     },
     { headers },
   )

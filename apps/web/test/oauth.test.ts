@@ -47,7 +47,13 @@ test("redirect URIs allow https, loopback http and app schemes, never scripts or
 
 test("sign-in only returns to the consent screen", () => {
   expect(afterSignIn("/oauth/authorize?client_id=x")).toBe("/oauth/authorize?client_id=x")
-  for (const next of ["//evil.example", "https://evil.example", "/settings", "/oauth/authorizex"])
+  for (const next of [
+    "//evil.example",
+    "https://evil.example",
+    "/settings",
+    "/oauth/authorizex",
+    "/new?next=//evil.example",
+  ])
     expect(afterSignIn(next)).toBe("/dashboard")
 })
 

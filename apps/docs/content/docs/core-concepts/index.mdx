@@ -13,7 +13,8 @@ section explains each one and where its setting lives.
 - A **paste** is a title, an optional description and 1 to 10 files, reached through its own link.
 - You file pastes in **collections** to find them again. A collection belongs to you alone.
 - Each paste has its own **sharing** settings: who can open the link, an optional password, the
-  people you invited, and when it expires. **Burn after read** makes a paste readable once.
+  people you invited, and when it expires. **Burn after read** makes a paste readable once, and
+  **end-to-end encryption** keeps its files unreadable to the server.
 - Editing a paste records **revisions** that you can compare and restore.
 - A deleted paste stays in the **trash** for 30 days before it is removed for good.
 - **Encrypted secrets** hold a project's environment variables, separate from pastes.
@@ -27,6 +28,7 @@ or agent connection only reaches the pastes of the account that created it.
   <Card icon={<FolderTreeIcon />} title="Collections" href="/core-concepts/collections" description="Group your pastes and reuse them as an ordered set." />
   <Card icon={<Share2Icon />} title="Sharing" href="/core-concepts/sharing" description="Visibility, passwords, invitations, raw access, embeds and expiry." />
   <Card icon={<FlameIcon />} title="Burn after read" href="/core-concepts/burn-after-read" description="A paste that deletes itself after one read." />
+  <Card icon={<LockKeyholeIcon />} title="Encrypted pastes" href="/core-concepts/encrypted-pastes" description="A paste encrypted in your browser, with the key in its link." />
   <Card icon={<HistoryIcon />} title="Revisions" href="/core-concepts/revisions" description="Compare earlier versions of a paste and restore one." />
   <Card icon={<KeyRoundIcon />} title="Encrypted secrets" href="/core-concepts/secrets" description="Edit env groups, reveal values and create expiring links." />
   <Card icon={<ChartColumnIcon />} title="Analytics" href="/core-concepts/analytics" description="Views, visitors, copies and referrers, without cookies." />

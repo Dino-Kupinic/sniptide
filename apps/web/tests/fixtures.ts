@@ -6,12 +6,14 @@ import { onboarding, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { databaseUrl } from "./environment"
 
-// A new account goes through the welcome wizard first. Tests start on the dashboard, so every test
-// account has already skipped it.
-export async function skipOnboarding(db: ReturnType<typeof createDb>, email: string) {
+// A new account goes through the welcome wizard first and then gets the tour. Tests start on a
+// plain dashboard, so every test account has already skipped the wizard and seen the tour.
+async function skipOnboarding(db: ReturnType<typeof createDb>, email: string) {
   const [created] = await db.select({ id: user.id }).from(user).where(eq(user.email, email))
   if (!created) throw new Error(`No test account for ${email}.`)
-  await db.insert(onboarding).values({ userId: created.id, source: "skipped" })
+  await db
+    .insert(onboarding)
+    .values({ userId: created.id, source: "skipped", tourSeenAt: new Date() })
 }
 
 // Seed through Better Auth, then install its real session cookie. This keeps screenshots

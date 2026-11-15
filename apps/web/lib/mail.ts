@@ -93,7 +93,7 @@ export function createMailSender(smtp: NonNullable<Config["smtp"]>) {
   }
 }
 
-export async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.Options) {
+async function sendMail(smtp: NonNullable<Config["smtp"]>, message: Mail.Options) {
   const sender = createMailSender(smtp)
   try {
     await sender.send(message)

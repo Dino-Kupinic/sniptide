@@ -1,0 +1,185 @@
+---
+title: VS Code extension
+description: Share a selection as a Sniptide link, save it to a collection and insert your snippets from VS Code, Cursor, Windsurf or VSCodium.
+---
+
+Sniptide for VS Code shares the code you select as a link, saves it to a collection, and puts your
+snippets one command away from the editor. A sidebar lists your recent snippets and your
+collections, and you can insert or copy any of them without opening the browser.
+
+The extension works in VS Code and in the editors built on it, such as Cursor, Windsurf and
+VSCodium. It signs in with [OAuth](/oauth) or an [API token](/api-tokens), on app.sniptide.com or
+a self-hosted instance.
+
+## Before you begin
+
+- VS Code 1.90 or newer, or an editor built on that version or a newer one.
+- A Sniptide account on app.sniptide.com or on your own instance.
+- The extension isn't in the VS Code Marketplace or Open VSX yet. Until it is, you build it from
+  the [repository](https://github.com/Dino-Kupinic/sniptide) with [Bun](https://bun.sh).
+
+## Install the extension
+
+1. Package the extension from a checkout of the repository:
+
+   ```bash
+   bun install
+   bun --filter sniptide-vscode package
+   ```
+
+   The command writes `sniptide-vscode-0.1.0.vsix` to `apps/vscode`.
+
+2. In the editor, open the Command Palette with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>
+   (<kbd>⌘</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> on a Mac) and run **Extensions: Install from
+   VSIX**.
+3. Choose the `.vsix` file. The Sniptide icon appears in the Activity Bar.
+
+## Sign in
+
+1. Select the Sniptide icon in the Activity Bar, then **Sign In to Sniptide**. You can also run
+   **Sniptide: Sign In** from the Command Palette.
+2. Choose how to sign in:
+
+   | Choice | Use it when |
+   | --- | --- |
+   | **Sign in with your browser** | Your account is on app.sniptide.com. |
+   | **Use a self-hosted instance** | You run your own instance. Enter its address, such as `paste.example.com`. |
+   | **Paste an API token** | The editor can't open your browser. Create a token with the `read` and `write` scopes in **Settings** > **API tokens**. |
+
+3. For the first two choices, your browser opens Sniptide's consent screen. Check that it names
+   **Sniptide for VS Code**, then select **Allow access**. The browser asks to open your editor,
+   and the editor shows **Signed in as** and your name.
+
+The connection is listed in **Settings** > **API tokens** as "Sniptide for VS Code" with
+"Connected with OAuth". The editor keeps the connection in its secret storage, which your
+operating system's keychain protects, and every window of the editor shares it.
+
+The instance address must use `https://`. Plain `http://` works only for `localhost`.
+
+## Share a selection as a link
+
+1. Select code in the editor.
+2. Right-click the selection and choose **Sniptide: Share Selection as Link**, or run the command
+   from the Command Palette.
+3. Press <kbd>Enter</kbd> on **Create link**, or change an option first:
+
+   | Option | Choices | Default |
+   | --- | --- | --- |
+   | **Visibility** | Unlisted, Public, Private | Unlisted |
+   | **Expires** | Never, or after 1 hour, 1 day, 1 week, 1 month or 1 year | Never |
+   | **Password** | Any password, which readers enter before they see the paste | None |
+
+The editor says **Link copied**, and the link is on your clipboard. **Open** shows the paste in
+your browser. **Undo** moves it to the [trash](/core-concepts/pastes#trash).
+
+The next share starts from the visibility and expiry you chose last. A password is asked for
+again each time and is never stored.
+
+With nothing selected, the command shares the whole file. With several selections, it joins them
+in the order they appear in the file.
+
+The extension fills in the paste from the editor:
+
+| Field | Value |
+| --- | --- |
+| Title | The file's name and the selected lines, such as `auth.ts:12-30`. |
+| File | The file's name, which sets the language. A document that was never saved becomes `snippet` with the extension of its language, such as `snippet.py`. |
+| Lines | The selected line range, for one selection in a saved file. |
+
+## Save a selection as a snippet
+
+1. Select code in the editor.
+2. Right-click the selection and choose **Sniptide: Save Selection as Snippet**, or run the
+   command from the Command Palette.
+3. Choose a collection, **No collection** or **New collection**.
+4. Change the snippet's name when you want another one, then press <kbd>Enter</kbd>.
+
+The snippet is saved as private. Change its visibility in Sniptide when you want to share it.
+
+## Browse and search your snippets
+
+Select the Sniptide icon in the Activity Bar to open the **Snippets** view.
+
+- **Recent** lists your 30 most recently changed snippets, and **Load more** fetches the next 30.
+- Each [collection](/core-concepts/collections) opens to its snippets.
+- The icon in front of a snippet shows its visibility: a globe for public, a link for unlisted
+  and a lock for private.
+- The search button in the view's title bar searches titles, descriptions, tags, file names and
+  code, as the [API's search](/api-tokens#endpoints) does. **Clear Search** brings the lists back.
+- The refresh button loads changes you made elsewhere.
+
+Select a snippet to read it in a read-only editor tab. A snippet with several files asks which
+file you want.
+
+## Insert or copy a snippet
+
+Point at a snippet in the **Snippets** view and use the buttons on its row:
+
+- **Insert at Cursor** puts the snippet's content at the cursor, or replaces the selection.
+- **Copy Content** copies it to the clipboard.
+
+Right-click a snippet for **Copy Link** and **Open in Sniptide** as well.
+
+To insert without leaving the keyboard, run **Sniptide: Insert Snippet** from the Command Palette.
+Type to search, then press <kbd>Enter</kbd> on a result to insert it at the cursor.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| **Sniptide: Share Selection as Link** | Creates a paste from the selection and copies its link. |
+| **Sniptide: Save Selection as Snippet** | Saves the selection as a private snippet in a collection. |
+| **Sniptide: Insert Snippet** | Searches your snippets and inserts the one you choose. |
+| **Sniptide: Search Snippets** | Filters the **Snippets** view. |
+| **Sniptide: Refresh** | Reloads the **Snippets** view. |
+| **Sniptide: Sign In** | Connects the editor to your account. |
+| **Sniptide: Sign Out** | Ends the connection on the instance and removes it from the editor. |
+
+No command has a keyboard shortcut by default. Add your own in **Keyboard Shortcuts** by searching
+for "Sniptide".
+
+## Privacy
+
+The extension reads a file only when you run a command on it, and it sends your code nowhere but
+your Sniptide instance.
+
+A release from the VS Code Marketplace or Open VSX also sends two anonymous events to Sniptide's
+analytics, so installs and connected accounts can be counted:
+
+| Event | When | What it holds |
+| --- | --- | --- |
+| `vscode_extension_installed` | Once, when the extension first starts | The editor's name and the extension's version |
+| `vscode_extension_connected` | Each time you sign in | The same, how you signed in, and whether the instance is app.sniptide.com |
+
+The events carry a random ID made for this purpose. They never hold code, file names, titles,
+links, your account or the address of a self-hosted instance. Set the editor's
+`telemetry.telemetryLevel` setting to `off` to send nothing. An extension you build from the
+repository sends nothing either.
+
+The access token of an OAuth connection lasts an hour and renews itself, as
+[OAuth for agents](/oauth#token-lifetime-and-revocation) describes. **Revoke** on the connection
+in **Settings** > **API tokens** signs the editor out at its next request.
+
+## Limits
+
+- A selection becomes a paste with one file. Use the app, the [CLI](/cli) or the
+  [API](/api-tokens) for several files.
+- The extension can't create or read [encrypted pastes](/core-concepts/encrypted-pastes), because
+  their key never leaves the app's own page.
+- Burn after read is set in Sniptide after sharing.
+- New pastes count toward the account's limit of 30 an hour, shared with the app.
+- The interface is in English.
+- The extension doesn't run in vscode.dev or github.dev, which have no place to run it. It does
+  run in a remote session, such as SSH, a dev container or GitHub Codespaces.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| "No Sniptide instance answers at that address." | The address isn't a Sniptide instance, or the instance's `BETTER_AUTH_URL` differs from the address you entered. | Enter the address people open in the browser. See [Configuration](/self-hosting/configuration#required). |
+| The editor keeps showing "Waiting for you to allow access in the browser" | The browser didn't hand the answer back to the editor, or the tab was closed. | Select **Cancel** on the notification and sign in again. When the browser asks to open the editor, allow it. |
+| "Sign-in took longer than five minutes." | The consent screen stayed open too long. | Sign in again and allow access. |
+| "That API token doesn't work on this instance." | The token was mistyped, expired or revoked, or it belongs to another instance. | Create a token in **Settings** > **API tokens** and paste it again with the right address. |
+| "Your Sniptide connection ended. Sign in again." | The connection was revoked in **Settings** > **API tokens**, or it went unused for 30 days. | Run **Sniptide: Sign In**. |
+| "This connection is read-only." | The API token has only the `read` scope. | Sign in with a token that has `write`, or with the browser. |
+| "Sniptide couldn't set the expiry or the password, so nothing was shared." | The instance refused the options, for example a password longer than 200 characters. | Share again with other options. The paste that was started is in the trash. |

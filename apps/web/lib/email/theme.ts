@@ -13,7 +13,7 @@ export const light = {
   depth: "#110f7c",
 }
 
-export const dark = {
+const dark = {
   canvas: "#0c0b0b",
   surface: "#121111",
   border: "#2f2c2c",

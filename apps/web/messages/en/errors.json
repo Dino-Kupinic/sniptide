@@ -91,7 +91,8 @@
     "unlinkLast": "Keep at least one way to sign in. Add a password or connect another account first.",
     "unlinkFailed": "Couldn't disconnect that account. Try again.",
     "demoLocked": "This isn't available in the demo.",
-    "signInFresh": "For your safety, sign out and back in, then try again."
+    "signInFresh": "For your safety, sign out and back in, then try again.",
+    "encryptedPasteSize": "This paste is too large to encrypt. An encrypted paste holds about two thirds of the {limit} limit."
   },
   "ServerError": {
     "title": "Something went wrong",

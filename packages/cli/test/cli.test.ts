@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { execFile } from "node:child_process"
-import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
@@ -37,7 +37,8 @@ beforeAll(async () => {
   await exec("bun", ["run", "build"], { cwd: path.resolve(import.meta.dir, "..") })
 })
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "sniptide-cli-"))
+  // The CLI reports real paths, and on macOS the temp directory is a symlink into /private.
+  root = await realpath(await mkdtemp(path.join(tmpdir(), "sniptide-cli-")))
   source = path.join(root, "source")
   target = path.join(root, "target")
   await mkdir(source)

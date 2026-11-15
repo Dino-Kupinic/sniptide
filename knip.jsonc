@@ -1,7 +1,16 @@
 {
   "$schema": "./node_modules/knip/schema.json",
+  // A type that an exported signature in the same file names has to stay exported for declaration
+  // output, even when no other file imports it.
+  "ignoreExportsUsedInFile": { "interface": true, "type": true },
   "workspaces": {
+    ".": {
+      // Node tests for the deploy and release scripts, run by name in CI.
+      "entry": ["scripts/*.{mjs,cjs}"]
+    },
     "apps/docs": {
+      // The Docker image's health probe, copied in by apps/docs/Dockerfile.
+      "entry": ["healthcheck.cjs"],
       // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
       "ignoreDependencies": ["@tailwindcss/postcss"]
     },
@@ -9,20 +18,61 @@
       "entry": [
         "scripts/**/*.ts",
         "test/**/*.test.ts",
+        // Programs the tests start in a process of their own.
+        "test/fixtures/*.ts",
+        "test/request-admission.node.ts",
         "tests/**/*.e2e.ts",
+        "e2e.config.ts",
+        // Load tests, started by `bun run load:seed` and `bun run load:run`.
+        "load/*.ts",
+        // Declares the app's locales to next-intl through module augmentation.
+        "i18n/types.ts",
         // React Email previews, opened by `bun run email`.
         "emails/*.tsx"
       ],
+      // k6 runs reads.js and agents.js with its own runtime and modules. The dither code is
+      // vendored from dithercn and keeps the exports it ships with.
+      "ignore": ["load/reads.js", "load/agents.js", "lib/dither/**"],
       // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
       "ignoreDependencies": ["@tailwindcss/postcss"]
+    },
+    "apps/extension": {
+      // scripts/build.ts reads the two style sheets by path.
+      "entry": [
+        "src/background.ts",
+        "src/popup/main.tsx",
+        "src/popup/popup.css",
+        "public/fonts.css",
+        "test/**/*.test.ts"
+      ],
+      // scripts/build.ts copies the font files by path, and popup.css imports Tailwind through
+      // the @sniptide/ui theme.
+      "ignoreDependencies": [
+        "@fontsource-variable/archivo",
+        "@fontsource-variable/inter",
+        "tailwindcss"
+      ]
+    },
+    "apps/vscode": {
+      "entry": ["src/extension.ts", "test/**/*.test.ts"]
+    },
+    "packages/cli": {
+      "entry": ["src/bin.ts", "test/**/*.test.ts"]
+    },
+    "packages/mcp": {
+      "entry": ["src/bin.ts", "test/**/*.test.ts"]
+    },
+    // Raycast installs with npm outside the Bun workspaces. Its manifest lists a command per file
+    // in src.
+    "plugins/raycast": {
+      "entry": ["src/*.{ts,tsx}", "test/**/*.test.ts"],
+      // @raycast/api brings React and the `ray` command, and `ray lint` runs ESLint and Prettier.
+      "ignoreDependencies": ["react", "prettier"],
+      "ignoreBinaries": ["ray", "eslint", "prettier"]
     },
     "packages/ui": {
       // shadcn generates components on demand; postcss-load-config appears only in a JSDoc type.
       "ignoreDependencies": ["shadcn", "postcss-load-config"]
-    },
-    "packages/auth": {
-      // Better Auth's inferred exported types need a direct Zod reference for portable declarations.
-      "ignoreDependencies": ["zod"]
     }
   }
 }

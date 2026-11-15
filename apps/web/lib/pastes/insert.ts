@@ -32,6 +32,7 @@ export interface InsertedPaste {
   collection: string | null
   passwordHash?: string | null
   burnAfterRead?: boolean
+  encryptionKeyId?: string | null
   expiresAt?: Date | null
   tags?: string[]
   source?: PasteSource | null
@@ -53,6 +54,7 @@ export async function insertPaste(tx: Transaction, paste: InsertedPaste) {
     visibility: paste.visibility,
     passwordHash: paste.passwordHash ?? null,
     burnAfterRead: paste.burnAfterRead ?? false,
+    encryptionKeyId: paste.encryptionKeyId ?? null,
     collection: paste.collection,
     tags: paste.tags ?? [],
     source: paste.source ?? null,

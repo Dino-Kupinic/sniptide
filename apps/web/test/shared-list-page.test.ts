@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { listSharedPage } from "@/lib/pastes/lists"
 import { parseSharedListQuery, sharedListSearch } from "@/lib/pastes/shared-list-query"
-import { listShared } from "@/lib/pastes/store"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -87,7 +86,10 @@ describeDb("shared pages", () => {
     expect(pages[0]?.languageOptions).toEqual(["text", "typescript"])
     expect(pages[0]?.ownerOptions.map(({ id }) => id)).toEqual(["alice", "bob"])
     expect(pages[0]?.peopleCount).toBe(2)
-    const expected = (await listShared()).map(({ paste }) => paste.slug)
+    // Every share and paste has the same time, so the paste id alone decides the order.
+    const expected = (await getDb().select({ slug: paste.slug }).from(paste).orderBy(paste.id)).map(
+      (row) => row.slug,
+    )
     expect(pages.flatMap((page) => page.entries.map(({ paste }) => paste.slug))).toEqual(expected)
     for (const sort of ["shared", "updated", "title"]) {
       const result = await listSharedPage(query({ sort, page: "999" }))

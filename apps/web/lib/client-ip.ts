@@ -13,8 +13,8 @@ import { BlockList, isIP } from "node:net"
 // - cloudflare: Cloudflare's CF-Connecting-IP, for an origin that only Cloudflare can reach.
 //
 // Each falls back to the TCP peer when its header is missing or isn't an address.
-export const CLIENT_IP_SOURCES = ["direct", "x-forwarded-for", "x-real-ip", "cloudflare"] as const
-export type ClientIpSource = (typeof CLIENT_IP_SOURCES)[number]
+const CLIENT_IP_SOURCES = ["direct", "x-forwarded-for", "x-real-ip", "cloudflare"] as const
+type ClientIpSource = (typeof CLIENT_IP_SOURCES)[number]
 
 // Set by this server on every request (see recordPeerAddresses), never taken from the client.
 export const PEER_ADDRESS_HEADER = "x-sniptide-peer-address"

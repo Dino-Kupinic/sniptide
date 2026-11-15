@@ -17,8 +17,6 @@ export {
   type ApiPaste,
   type ApiPasteSummary,
   apiCaptureSchema as captureSchema,
-  type CaptureInput,
-  type CodeFile as ApiFile,
 } from "@sniptide/contracts"
 
 import { collection as collectionTable, pasteFile, paste as pasteTable } from "@workspace/db/schema"
@@ -45,6 +43,7 @@ import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
 import { PasteBudgetError } from "@/lib/pastes/budget"
+import { liveWhere } from "@/lib/pastes/lifecycle"
 import { limits } from "@/lib/pastes/limits"
 import {
   type CaptureReplacement,
@@ -61,14 +60,14 @@ import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
 import { ApiError } from "./http"
 import { type CreateReceipt, createWithReceipt } from "./idempotency"
+import { meterReads } from "./meter"
 
 // Pastes over the token API: what `sniptide push`, `pull`, `list` and `search` read and write.
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
 // they are everywhere outside the owner's own screens.
 
-export const LIST_LIMIT = 100
-export const COLLECTION_PAGE_SIZE = 50
-export { MAX_TAGS } from "@sniptide/contracts"
+const LIST_LIMIT = 100
+const COLLECTION_PAGE_SIZE = 50
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -140,13 +139,15 @@ async function withFiles(
   })
 }
 
-// The owner's live pastes: not trashed and not expired.
+// The owner's live pastes: not trashed and not expired. End-to-end encrypted pastes are left out
+// of the token API altogether: a token holder has no key, so a client would restore ciphertext to
+// disk or hand it to an agent as if it were code.
 function liveOwned(owner: string): SQL {
   return and(
     allowedPaste(),
     eq(pasteTable.ownerId, owner),
-    isNull(pasteTable.deletedAt),
-    or(isNull(pasteTable.expiresAt), gt(pasteTable.expiresAt, new Date())),
+    liveWhere(),
+    isNull(pasteTable.encryptionKeyId),
   ) as SQL
 }
 
@@ -185,7 +186,12 @@ export async function createCapture(
         password: null,
         burnAfterRead: false,
       })
-      const { id } = await createPasteRecord(tx, {
+      const files = data.files.map((file, position) => ({
+        ...file,
+        startLine: capture.files[position]?.lines?.start ?? null,
+        endLine: capture.files[position]?.lines?.end ?? null,
+      }))
+      const created = await createPasteRecord(tx, {
         kind: "capture",
         actor: { kind: "token", userId: owner },
         origin: createdFrom,
@@ -196,18 +202,33 @@ export async function createCapture(
           collection: data.collection,
           tags: capture.tags,
           source: capture.source,
-          files: data.files.map((file, position) => ({
-            ...file,
-            startLine: capture.files[position]?.lines?.start ?? null,
-            endLine: capture.files[position]?.lines?.end ?? null,
-          })),
+          files,
         },
       })
-      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, id))
-      if (!record) throw new Error("The created paste wasn't returned.")
-      const [created] = await withFiles([record], tx, origin)
-      if (!created) throw new Error("The created paste files weren't returned.")
-      return { paste: created }
+      // The response is what was just written, so it needs no second read of the paste.
+      const paste: ApiPaste = {
+        id: created.id,
+        slug: created.slug,
+        url: `${origin}/${created.slug}`,
+        title: data.title,
+        description: data.description,
+        visibility: data.visibility,
+        collection: data.collection,
+        tags: capture.tags,
+        source: capture.source ?? null,
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.createdAt.toISOString(),
+        expiresAt: null,
+        files: files.map((file) => ({
+          name: file.name,
+          language: file.language,
+          content: file.content,
+          ...(file.startLine !== null && file.endLine !== null
+            ? { lines: { start: file.startLine, end: file.endLine } }
+            : {}),
+        })),
+      }
+      return { paste }
     })
     await announceChange(owner)
     return response.paste
@@ -218,39 +239,43 @@ export async function createCapture(
   }
 }
 
-// One of the owner's pastes by its id or its slug.
-export async function getCapture(owner: string, idOrSlug: string): Promise<ApiPaste | null> {
-  const key = UUID.test(idOrSlug)
-    ? and(allowedPaste(), eq(pasteTable.id, idOrSlug))
-    : and(allowedPaste(), eq(pasteTable.slug, idOrSlug))
+// A paste's files in their saved order, as a column of the paste's own row. Reading both in one
+// statement gives one snapshot without a transaction around two queries.
+const filesColumn = sql<ApiFile[]>`coalesce((
+  select json_agg(
+    case when f.start_line is not null and f.end_line is not null
+      then json_build_object('name', f.name, 'language', f.language, 'content', f.content,
+        'lines', json_build_object('start', f.start_line, 'end', f.end_line))
+      else json_build_object('name', f.name, 'language', f.language, 'content', f.content)
+    end order by f.position, f.id)
+  from ${pasteFile} f where f.paste_id = ${pasteTable}.id
+), '[]'::json)`
+
+// One of the owner's pastes by its id or its slug. With `countRead` the read is counted for the
+// paste page (see meterReads).
+export async function getCapture(
+  owner: string,
+  idOrSlug: string,
+  { countRead = false } = {},
+): Promise<ApiPaste | null> {
   const origin = await shareOrigin()
-  return getDb().transaction(
-    async (tx) => {
-      const [record] = await tx
-        .select()
-        .from(pasteTable)
-        .where(and(key, liveOwned(owner)))
-      if (!record) return null
-      const [paste] = await withFiles([record], tx, origin)
-      return paste ?? null
-    },
-    { isolationLevel: "repeatable read", accessMode: "read only" },
-  )
+  const [record] = await getDb()
+    .select({ ...getTableColumns(pasteTable), files: filesColumn })
+    .from(pasteTable)
+    .where(
+      and(
+        allowedPaste(),
+        UUID.test(idOrSlug) ? eq(pasteTable.id, idOrSlug) : eq(pasteTable.slug, idOrSlug),
+        liveOwned(owner),
+      ),
+    )
+  if (!record || record.files.length === 0) return null
+  if (countRead) meterReads([record.id])
+  return { ...toSummaryFields(record, origin), files: record.files }
 }
 
 // Replaces title/files, preserving omitted metadata and all sharing controls. Token callers
 // never use the browser session. The account lock and transaction serialize edits and budgets.
-// Counts a read with a token on each paste, for "Read N times through MCP or the CLI" on the
-// paste page. Only reads the caller asked for count: never search results or the read-back after
-// a write. It changes no version or edit time, so open editors see no conflict.
-export async function recordTokenReads(owner: string, ids: string[]) {
-  if (ids.length === 0) return
-  await getDb()
-    .update(pasteTable)
-    .set({ agentReads: sql`${pasteTable.agentReads} + 1` })
-    .where(and(eq(pasteTable.ownerId, owner), inArray(pasteTable.id, [...new Set(ids)])))
-}
-
 export async function updateCapture(
   owner: string,
   idOrSlug: string,
@@ -309,7 +334,7 @@ export async function updateCapture(
   return updated
 }
 
-export const settingsSchema = z
+const settingsSchema = z
   .object({
     visibility: visibilitySchema.optional(),
     // Counted from now, like the editor's Expires after.
@@ -459,7 +484,11 @@ const MAX_QUERY_WORDS = 8
 // A paste matches a query when every word of it appears somewhere in the paste: the title, slug,
 // description, a tag, or the path or code of one of its files. Agents search with phrases such
 // as "retry with backoff", which rarely sit in a title as written.
-function matchesQuery(q: string): SQL | undefined {
+//
+// `offset 0` keeps the file check a per-paste index probe. Without it PostgreSQL may run the check
+// once as a scan of every account's files, so a search would cost as much as the whole instance
+// holds instead of what the caller's account holds, and couldn't stop at the first full page.
+export function matchesQuery(q: string): SQL | undefined {
   const words = [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, MAX_QUERY_WORDS)
   return and(
     ...words.map((word) => {
@@ -469,17 +498,10 @@ function matchesQuery(q: string): SQL | undefined {
         ilike(pasteTable.slug, pattern),
         ilike(pasteTable.description, pattern),
         sql`array_to_string(${pasteTable.tags}, ' ') ilike ${pattern}`,
-        exists(
-          getDb()
-            .select({ id: pasteFile.id })
-            .from(pasteFile)
-            .where(
-              and(
-                eq(pasteFile.pasteId, pasteTable.id),
-                or(ilike(pasteFile.name, pattern), ilike(pasteFile.content, pattern)),
-              ),
-            ),
-        ),
+        sql`exists (
+          select 1 from ${pasteFile} f
+          where f.paste_id = ${pasteTable}.id and (f.name ilike ${pattern} or f.content ilike ${pattern})
+          offset 0)`,
       )
     }),
   )
@@ -492,86 +514,56 @@ export async function listCaptures(
   query: z.infer<typeof listQuerySchema>,
 ): Promise<{ pastes: ApiPasteSummary[]; nextCursor: string | null }> {
   const origin = await shareOrigin()
-  return getDb().transaction(
-    async (db) => {
-      const cursor = decodeCursor(query.cursor)
-      const updatedAt = cursorColumn(pasteTable.updatedAt, cursor)
-      const conditions: (SQL | undefined)[] = [liveOwned(owner)]
-      if (query.q) conditions.push(matchesQuery(query.q))
-      if (query.tags.length) conditions.push(arrayContains(pasteTable.tags, query.tags))
-      if (query.collection) conditions.push(eq(pasteTable.collection, query.collection))
-      if (query.language) {
-        conditions.push(
-          exists(
-            db
-              .select({ id: pasteFile.id })
-              .from(pasteFile)
-              .where(
-                and(
-                  and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, pasteTable.id)),
-                  eq(pasteFile.language, query.language),
-                ),
-              ),
-          ),
-        )
-      }
-      if (cursor) {
-        const at = stamp(cursor.at)
-        conditions.push(
-          and(
-            lte(updatedAt, at),
-            or(lt(updatedAt, at), and(eq(updatedAt, at), gt(pasteTable.id, cursor.id))),
-          ),
-        )
-      }
-      const records = await db
-        .select({
-          ...getTableColumns(pasteTable),
-          cursorAt: preciseTimestamp(pasteTable.updatedAt),
-        })
-        .from(pasteTable)
-        .where(and(...conditions))
-        .orderBy(desc(updatedAt), asc(pasteTable.id))
-        .limit(query.limit + 1)
-      const page = records.slice(0, query.limit)
-      const files = await (page.length
-        ? db
-            .select({
-              pasteId: pasteFile.pasteId,
-              language: pasteFile.language,
-            })
-            .from(pasteFile)
-            .where(
-              and(
-                allowedParent(pasteFile.pasteId),
-                inArray(
-                  pasteFile.pasteId,
-                  page.map((record) => record.id),
-                ),
-              ),
-            )
-            .orderBy(asc(pasteFile.position))
-        : [])
-      const languages = new Map<string, Set<string>>()
-      for (const file of files) {
-        const group = languages.get(file.pasteId)
-        if (group) group.add(file.language)
-        else languages.set(file.pasteId, new Set([file.language]))
-      }
-      const visible = page.filter((record) => languages.has(record.id))
-      const last = visible.at(-1)
-      return {
-        pastes: visible.map((record) => ({
-          ...toSummaryFields(record, origin),
-          languages: [...(languages.get(record.id) ?? [])],
-          bytes: record.bytes,
-        })),
-        nextCursor:
-          records.length > query.limit && last ? encodeCursor(last, "updatedAt", cursor) : null,
-      }
-    },
-    { isolationLevel: "repeatable read", accessMode: "read only" },
-  )
+  const db = getDb()
+  const cursor = decodeCursor(query.cursor)
+  const updatedAt = cursorColumn(pasteTable.updatedAt, cursor)
+  const conditions: (SQL | undefined)[] = [liveOwned(owner)]
+  if (query.q) conditions.push(matchesQuery(query.q))
+  if (query.tags.length) conditions.push(arrayContains(pasteTable.tags, query.tags))
+  if (query.collection) conditions.push(eq(pasteTable.collection, query.collection))
+  if (query.language) {
+    conditions.push(
+      exists(
+        db
+          .select({ id: pasteFile.id })
+          .from(pasteFile)
+          .where(and(eq(pasteFile.pasteId, pasteTable.id), eq(pasteFile.language, query.language))),
+      ),
+    )
+  }
+  if (cursor) {
+    const at = stamp(cursor.at)
+    conditions.push(
+      and(
+        lte(updatedAt, at),
+        or(lt(updatedAt, at), and(eq(updatedAt, at), gt(pasteTable.id, cursor.id))),
+      ),
+    )
+  }
+  // The languages ride along as a column, so a page is one statement and one snapshot.
+  const records = await db
+    .select({
+      ...getTableColumns(pasteTable),
+      cursorAt: preciseTimestamp(pasteTable.updatedAt),
+      languages: sql<string[]>`array(
+        select f.language from ${pasteFile} f where f.paste_id = ${pasteTable}.id
+        order by f.position)`,
+    })
+    .from(pasteTable)
+    .where(and(...conditions))
+    .orderBy(desc(updatedAt), asc(pasteTable.id))
+    .limit(query.limit + 1)
+  const visible = records.slice(0, query.limit).filter((record) => record.languages.length > 0)
+  const last = visible.at(-1)
+  return {
+    pastes: visible.map((record) => ({
+      ...toSummaryFields(record, origin),
+      languages: [...new Set(record.languages)],
+      bytes: record.bytes,
+    })),
+    nextCursor:
+      records.length > query.limit && last ? encodeCursor(last, "updatedAt", cursor) : null,
+  }
 }
 
 // A collection's pastes in full, oldest first, so a pull restores them in the order they were

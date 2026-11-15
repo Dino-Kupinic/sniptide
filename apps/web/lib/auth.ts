@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
+import { RETURN_TO_HEADER, signInPath } from "@/lib/auth-redirect"
 import { RESOLVED_IP_HEADER } from "@/lib/client-ip"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
@@ -85,11 +86,15 @@ export const getSession = cache(async () => {
   return auth.api.getSession({ headers: requestHeaders })
 })
 
-// For pages behind sign-in: returns the session or sends the visitor to /sign-in.
+// For pages behind sign-in: returns the session or sends the visitor to /sign-in, which brings
+// them back afterwards when the page is one ?next= accepts, such as /new?template=claude-md.
 export async function requireSession() {
   const session = await getSession()
-  // On a demo instance anyone without a session becomes the guest instead of seeing sign-in.
-  if (!session) redirect(isDemoMode() ? "/demo" : "/sign-in")
+  if (!session) {
+    // On a demo instance anyone without a session becomes the guest instead of seeing sign-in.
+    if (isDemoMode()) redirect("/demo")
+    redirect(signInPath((await headers()).get(RETURN_TO_HEADER)))
+  }
 
   return session
 }

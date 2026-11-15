@@ -95,7 +95,10 @@ test("Ctrl+S keeps a draft and Ctrl+Enter creates the paste", async ({ app, brow
   // Ctrl+S stays in the editor and says where the draft went. The draft is only kept once the
   // editor has started backing up, so press until the notice shows.
   const toastShown = () =>
-    browser.evaluate(() => document.body.innerText.includes("Draft saved on this device"))
+    browser.evaluate(() =>
+      // biome-ignore lint/performance/useDomNodeTextContent: innerText leaves out hidden text, so this matches only a notice on screen
+      document.body.innerText.includes("Draft saved on this device"),
+    )
   await expect
     .poll(async () => {
       await editor.press("Control+s")

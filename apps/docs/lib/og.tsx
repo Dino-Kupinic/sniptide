@@ -5,7 +5,7 @@ import { ImageResponse } from "next/og"
 import { tide } from "@/lib/og-tide"
 import { siteName } from "@/lib/site"
 
-export const ogSize = { width: 1200, height: 630 }
+const ogSize = { width: 1200, height: 630 }
 
 // The pink field card from the Paper file (Brand, "OG v2 · B · Pink field"): the brand pink with the
 // logo and the title in pink ink and a Tide blue pixel tide along the bottom. It sets the docs apart

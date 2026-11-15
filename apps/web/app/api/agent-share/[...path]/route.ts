@@ -17,17 +17,22 @@ export async function GET(_request: Request, context: { params: Promise<{ path: 
     body = "# Burn after read\n\nOpen this paste in a browser to reveal it.\n"
   if (read.status === "ok") {
     body = `# ${read.paste.title}\n\n`
-    body += read.paste.allowRaw
-      ? read.paste.files
-          .map((file) => {
-            let fenceLength = 3
-            for (const match of file.content.matchAll(/`+/g))
-              fenceLength = Math.max(fenceLength, match[0].length + 1)
-            const fence = "`".repeat(fenceLength)
-            return `## ${file.name}\n\n${fence}${file.language}\n${file.content}\n${fence}\n`
-          })
-          .join("\n")
-      : "Raw access is disabled for this paste. Open it in a browser.\n"
+    if (read.paste.encryptionKeyId)
+      // The server holds only ciphertext, and the key in the link's fragment never reaches it.
+      body +=
+        "This paste is end-to-end encrypted. Open its full link, including the part after #, in a browser to read it.\n"
+    else
+      body += read.paste.allowRaw
+        ? read.paste.files
+            .map((file) => {
+              let fenceLength = 3
+              for (const match of file.content.matchAll(/`+/g))
+                fenceLength = Math.max(fenceLength, match[0].length + 1)
+              const fence = "`".repeat(fenceLength)
+              return `## ${file.name}\n\n${fence}${file.language}\n${file.content}\n${fence}\n`
+            })
+            .join("\n")
+        : "Raw access is disabled for this paste. Open it in a browser.\n"
   }
   return new Response(body, {
     status: read.status === "missing" ? 404 : 200,

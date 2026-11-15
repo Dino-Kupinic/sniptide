@@ -34,7 +34,11 @@ export function previewMetadata(preview: PastePreview, origin: string): Metadata
   return {
     title,
     description,
-    ...(preview.unlisted && { robots: { index: false, follow: false } }),
+    // A public paste also answers on the app's domain when SHARE_URL moves share links elsewhere
+    // (app.sniptide.com/k7Qe2x and sniptide.com/k7Qe2x), so search engines index the share link.
+    ...(preview.unlisted
+      ? { robots: { index: false, follow: false } }
+      : { alternates: { canonical: url } }),
     openGraph: {
       type: "website",
       siteName: "Sniptide",

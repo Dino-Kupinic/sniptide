@@ -14,14 +14,22 @@ the paste's **Sharing** and **Access** rows and its **Share** button.
 | **Unlisted** | Anyone with the link | Told not to index it | Yes, unless it has a password or burns after read |
 | **Public** | Anyone with the link | May index it | Yes, unless it has a password or burns after read |
 
+When share links live on their own domain (`SHARE_URL`), a public paste also opens on the app's
+domain. Its page names the share link as the canonical address, so search engines index
+`sniptide.com/k7Qe2x` and not the copy on `app.sniptide.com`. The instance's `robots.txt` keeps
+search engines out of `/api/`, and lets them load the `/_next/` files they need to render a page.
+
 Pastes you create in the web editor start unlisted until you change your
 [paste defaults](/settings#set-paste-defaults). With an unlisted paste the link itself is the
-secret, so don't rely on it to protect anything sensitive.
+secret, so don't rely on it to protect anything sensitive. The server can still read the paste. An
+[encrypted paste](/core-concepts/encrypted-pastes) keeps its files from the server too, and can't
+be public.
 
 ## Your public profile
 
 Your username has a profile page at `/@username` on your instance, such as
-`sniptide.com/@username` on the hosted service. Every `@username` on a share page, in **Shared
+`sniptide.com/@username` on the hosted service. Every account has one, including accounts created
+through GitHub or Google sign-in. Every `@username` on a share page, in **Shared
 with me** and in the **Share** dialog links to it. Open your own by selecting your name at the top
 of the account menu, or from **Your profile** under **More** on a phone. Handles match in any case, so `/@Dino` opens the same
 page as `/@dino`. Your
@@ -107,6 +115,9 @@ Fetching the Markdown copy doesn't count as a view.
   print or save as a PDF. It has the same access as the share page and doesn't count a view. A
   burn-after-read paste prints only for its owner.
 - **Download** saves a single file to your device.
+
+An [encrypted paste](/core-concepts/encrypted-pastes) has no raw files, Markdown copy, embed,
+print view or download, because the server renders all of them.
 
 ## Set an expiry
 

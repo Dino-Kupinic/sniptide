@@ -1,5 +1,5 @@
 import { cn } from "@sniptide/ui/lib/utils"
-import { ClockIcon, EyeIcon, FlameIcon } from "lucide-react"
+import { ClockIcon, EyeIcon, FlameIcon, LockIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import type * as React from "react"
 import { byteLength, formatBytes, lineCount, timeAgo, timeUntil } from "@/lib/format"
@@ -24,6 +24,8 @@ export interface SharedPasteViewData {
   views: number
   burnAfterRead: boolean
   allowRaw: boolean
+  // Decrypted in this browser: the details line says so, since the server never saw the files.
+  encrypted?: boolean
 }
 
 const avatarTone = {
@@ -117,12 +119,18 @@ export function SharedPasteView({
               <EyeIcon className="hidden size-3.5 lg:block" />
               {t("viewCount", { count: paste.views })}
             </span>
+            {paste.encrypted ? (
+              <span className="inline-flex items-center gap-1.5">
+                <LockIcon className="hidden size-3.5 lg:block" />
+                {t("endToEndEncrypted")}
+              </span>
+            ) : null}
           </p>
         </div>
         {files.length === 1 && first ? (
           <div className="hidden shrink-0 lg:block">
             <ShareActions
-              slug={gone ? undefined : slug}
+              slug={gone || paste.encrypted ? undefined : slug}
               rawHref={rawHref}
               content={first.content}
             />
@@ -145,7 +153,7 @@ export function SharedPasteView({
       {first ? (
         <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-6 box-content flex h-14 flex-col justify-center border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
           <ShareActions
-            slug={gone ? undefined : slug}
+            slug={gone || paste.encrypted ? undefined : slug}
             rawHref={rawHref}
             content={first.content}
             compact

@@ -4,7 +4,7 @@ import { userAgent } from "next/server"
 // read off the request's headers and kept coarse on purpose: a device class, the referrer's host
 // and a country. Pure functions, so they're tested without a database.
 
-export const DEVICES = ["desktop", "mobile", "cli"] as const
+const DEVICES = ["desktop", "mobile", "cli"] as const
 export type Device = (typeof DEVICES)[number]
 
 // Link unfurlers and search crawlers are caught by Next's list; this adds the headless browsers

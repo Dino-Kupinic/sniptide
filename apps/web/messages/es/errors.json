@@ -91,7 +91,8 @@
     "unlinkLast": "Conserva al menos una forma de iniciar sesión. Añade antes una contraseña o conecta otra cuenta.",
     "unlinkFailed": "No se pudo desconectar esa cuenta. Vuelve a intentarlo.",
     "demoLocked": "Esto no está disponible en la demo.",
-    "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo."
+    "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo.",
+    "encryptedPasteSize": "Este paste es demasiado grande para cifrarlo. Un paste cifrado admite unos dos tercios del límite de {limit}."
   },
   "ServerError": {
     "title": "Algo salió mal",

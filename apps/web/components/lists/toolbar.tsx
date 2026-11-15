@@ -575,16 +575,3 @@ export function ListHeader({
     </div>
   )
 }
-
-export function usePaged<T>(items: T[], page: number, pageSize: number) {
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize))
-  const current = Math.min(page, pageCount)
-  const start = (current - 1) * pageSize
-
-  return {
-    page: current,
-    pageCount,
-    items: items.slice(start, start + pageSize),
-    range: items.length === 0 ? "0" : `${start + 1}–${Math.min(start + pageSize, items.length)}`,
-  }
-}

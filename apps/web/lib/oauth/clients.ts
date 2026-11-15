@@ -10,7 +10,7 @@ import { getDb } from "@/lib/db"
 // Every client is public: it proves itself with PKCE instead of a secret, and the user decides
 // whether to trust it on the consent screen, which names the client and where it sends them.
 
-export const CLIENT_PREFIX = "sntc_"
+const CLIENT_PREFIX = "sntc_"
 const MAX_REDIRECT_URIS = 10
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 // Schemes a browser would run or read locally instead of handing to an app.

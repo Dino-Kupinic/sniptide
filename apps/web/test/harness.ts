@@ -14,6 +14,7 @@ import {
   user,
 } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { resetMeter } from "@/lib/api/meter"
 import { getDb } from "@/lib/db"
 import { hashPassword } from "@/lib/pastes/passwords"
 import type { Visibility } from "@/lib/pastes/types"
@@ -56,6 +57,7 @@ export async function resetDatabase() {
   // The rollup state and salts belong to no account. With no state every day is read from the hits.
   await getDb().delete(analyticsRollup)
   await getDb().delete(analyticsSalt)
+  resetMeter()
   request.viewer = null
   request.username = null
   request.cookies.clear()

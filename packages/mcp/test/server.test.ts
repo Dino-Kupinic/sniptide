@@ -45,7 +45,7 @@ afterEach(async () => {
   calls.length = 0
 })
 async function connected(service = backend) {
-  const server = createSniptideServer(service)
+  const server = createSniptideServer(() => service)
   const client = new Client({ name: "test", version: "1" })
   const [a, b] = InMemoryTransport.createLinkedPair()
   await server.connect(a)
@@ -85,6 +85,28 @@ describe("Sniptide MCP tools", () => {
       "title",
       "files",
     ])
+  })
+  test("annotate every tool with a title and its read or destructive hint", async () => {
+    const client = await connected()
+    const { tools } = await client.listTools()
+    const hints = Object.fromEntries(
+      tools.map(({ name, title, annotations }) => {
+        expect(title).toBeTruthy()
+        expect(annotations?.title).toBe(title)
+        return [name, [annotations?.readOnlyHint, annotations?.destructiveHint]]
+      }),
+    )
+    expect(hints).toEqual({
+      search_snippets: [true, false],
+      read_snippet: [true, false],
+      fetch_collection: [true, false],
+      list_collections: [true, false],
+      create_snippet: [false, false],
+      create_collection: [false, false],
+      update_snippet: [false, true],
+      update_snippet_settings: [false, true],
+      trash_snippet: [false, true],
+    })
   })
   test("search filters and full code reads survive a protocol round-trip", async () => {
     const client = await connected()
@@ -282,6 +304,44 @@ describe("Sniptide MCP tools", () => {
     expect(
       (await client.callTool({ name: "read_snippet", arguments: { id: "x" } })).isError,
     ).toBeUndefined()
+  })
+})
+
+describe("hosted server reuse", () => {
+  const call = (id: string) =>
+    new Request("http://localhost/api/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name: "read_snippet", arguments: { id } },
+      }),
+    })
+  const account = (owner: string, wait = 0): SniptideBackend => ({
+    ...backend,
+    read: async (id) => {
+      await new Promise((resolve) => setTimeout(resolve, wait))
+      return { paste: { id, owner, files: [{ name: "a.ts", content: owner }] } }
+    },
+  })
+  const owner = async (response: Response) =>
+    (await response.json()).result.structuredContent.paste.owner
+
+  test("every request reaches its own backend, in sequence and at once", async () => {
+    // The first request returns its server to the pool, and the second borrows it.
+    expect(await owner(await handleMcpRequest(call("a"), account("ada")))).toBe("ada")
+    expect(await owner(await handleMcpRequest(call("b"), account("grace")))).toBe("grace")
+    const owners = await Promise.all(
+      Array.from({ length: 12 }, (_, index) =>
+        handleMcpRequest(call("c"), account(`owner-${index}`, index % 3)).then(owner),
+      ),
+    )
+    expect(owners).toEqual(Array.from({ length: 12 }, (_, index) => `owner-${index}`))
   })
 })
 

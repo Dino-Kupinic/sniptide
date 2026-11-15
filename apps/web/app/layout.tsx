@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server"
 
 import "@sniptide/ui/globals.css"
 import "@/components/loading/loading.css"
+import "@/components/onboarding/tour.css"
 import { Toaster } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import { Analytics } from "@/components/analytics"

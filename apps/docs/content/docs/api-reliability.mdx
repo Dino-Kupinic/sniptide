@@ -28,6 +28,11 @@ A `429` response includes `Retry-After` with the seconds left in the window. Ref
 still count. The counters live in Postgres and apply across all app instances, so concurrent
 requests can use up the remaining quota after a response reports it.
 
+Each app instance counts `api-token` requests in memory and writes them to Postgres once a
+second. With several instances a token can pass its quota by what the other instances admit in
+that second, and `RateLimit` reports what the answering instance knows. Usage in Settings, a
+token's last-used time and a paste's read count follow the same one-second write.
+
 The 61st request without a valid token in a window returns `429`. An instance that can't tell
 client addresses apart (see `CLIENT_IP_SOURCE` in [Reverse proxy and client
 IP](/self-hosting/reverse-proxy)) skips this limit and sends no quota headers on a `401`.

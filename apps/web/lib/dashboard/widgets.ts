@@ -52,7 +52,7 @@ export const TEMPLATE_IDS = Object.keys(TEMPLATES) as TemplateId[]
 // A dashboard nobody has arranged yet starts from the Agents template.
 export const DEFAULT_LAYOUT: readonly WidgetId[] = TEMPLATES.agents
 
-export function isWidget(value: unknown): value is WidgetId {
+function isWidget(value: unknown): value is WidgetId {
   return typeof value === "string" && (WIDGETS as readonly string[]).includes(value)
 }
 

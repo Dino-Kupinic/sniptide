@@ -1912,6 +1912,7 @@ export const openApiDocument = {
 } as const
 
 export const internalRoutes = [
+  "/.well-known/openai-apps-challenge",
   "/.well-known/api-catalog",
   // OAuth follows its RFCs and is discovered from these metadata documents instead (lib/oauth).
   "/.well-known/oauth-authorization-server",

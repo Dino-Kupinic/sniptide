@@ -25,6 +25,11 @@ entries, and a default 32 MiB serialized-token budget. Actual heap use is larger
 size and must be monitored. Files over 200,000 UTF-8 bytes or 2,000 lines, and token payloads over
 1 MiB, render as plain text. This cache is disposable and needs no replica coordination.
 
+Files of 2 KiB or more also keep their result in the `highlight_cache` table, so a restart or
+another replica doesn't tokenize them again. A row is found by a hash of the grammar and the code
+and holds run lengths and colour numbers, never the code itself. The cleanup run removes rows
+after 30 days, and the next view rebuilds them. On a local run, 1,155 rows took 872 kB.
+
 ## Storage and write behavior
 
 The defaults are 100 MiB of current UTF-8 file content and 1,000 pastes per account. Trash counts
@@ -44,6 +49,14 @@ milestone notification and pending-row deletion commit together; a failed transa
 visits available for retry. Counts and milestone notifications are eventually applied, including
 accepted visits whose paste is subsequently trashed or moderated. Permanent deletion cascades.
 Burn-after-read claims, counters and notifications remain synchronous and atomic.
+
+Token requests count in memory (`lib/api/meter.ts`): the token's rate limit, the account's daily
+usage, the token's last-used time and reads of a paste. Each process writes its counts in one
+transaction a second, so a token API read commits nothing. The first request for a token in a
+window asks the database, and each write returns what all processes have counted. A token can
+pass its limit by what other processes admit within a second, and a process that stops without
+a flush loses up to a second of counts. A failed write keeps its counts for the next one and logs
+`meter_flush_failed`.
 
 The worker samples capped backlog and oldest age after every pass, even when another replica holds
 the drain lock. Drain failure, backlog at 10,000 or oldest age above 30 seconds causes early dynamic
@@ -109,6 +122,7 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | NOTIFICATION_EMAIL_CONCURRENCY | 2 | Concurrent notification deliveries per process, from 1 to 10 |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
 | SLOW_QUERY_MS | 500 | Threshold for slow-query log events |
+| REQUEST_LOG | all | Requests that get a log line: `all`, `errors` or `off` |
 | METRICS_TOKEN | unset | Operator bearer token for metrics and explicit maintenance execution |
 
 Cleanup runs at startup and hourly. Transactions commit between batches and use a shared advisory
@@ -142,7 +156,8 @@ metrics are cumulative since process start and reset on restart. Histogram bucke
 so aggregate buckets before deriving percentiles. CPU time is cumulative; derive utilization
 from deltas. Event-loop delay percentiles cover process lifetime.
 
-Structured request logs include normalized routes (no slugs or query strings), status, duration,
+Structured request logs include normalized routes (no slugs, ids or query strings; each token
+API and MCP route has its own name, and unknown paths under `/api` share `/api/*`), status, duration,
 observed query count/time, and Content-Length when provided. Streaming responses often lack that
 header; use proxy response-byte metrics for complete payload measurements. Slow-query logs omit
 SQL and bound values. Drizzle fluent, prepared and relational queries, plus raw tagged/unsafe queries and transactions,
@@ -231,5 +246,7 @@ burn reveals, and purge with concurrent reads. Include a rolling deploy's connec
 Begin at tens of reads per second and compare request p95/p99, SQL latency, queueing, locks, heap,
 event-loop delay, response bytes, and cleanup throughput. Agree on latency/error budgets before
 running the exercise. The [read-load suite](../apps/web/load/README.md) seeds this workload and records a baseline.
+The same page describes the agent-load suite for the token API and MCP, and the
+[agent-traffic results](load-testing/agent-traffic.md) record what it found.
 The [local baseline](load-testing/baseline.md) is a reproducibility check; staging measurements are required for capacity claims. Counts/facets and hot-paste
 view updates are the next redesign candidates if those measurements show pressure.

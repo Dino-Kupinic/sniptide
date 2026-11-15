@@ -1,7 +1,7 @@
 import "server-only"
 import type { Database } from "@workspace/db"
 import { allowedPaste } from "@workspace/db/moderation"
-import { paste, user } from "@workspace/db/schema"
+import { accountUsage, paste, user } from "@workspace/db/schema"
 import { and, eq, sql } from "drizzle-orm"
 import { cache } from "react"
 import { getSession } from "@/lib/auth"
@@ -44,22 +44,23 @@ export async function enforceBudget(
   await lockAccount(tx, owner)
   const limit = accountBudget()
   if (limit.bytes === null && limit.pastes === null) return
+  // The trigger-kept totals, which count trash too. They are read in a statement of their own,
+  // after the lock: a statement that waited for the lock would still see the totals from before
+  // the wait. Summing the account's pastes instead would read every one of them on each write.
   const [usage] = await tx
-    .select({
-      bytes: sql<number>`coalesce(sum(${paste.bytes}), 0)::float8`,
-      pastes: sql<number>`count(*)::int`,
-    })
-    .from(paste)
-    .where(eq(paste.ownerId, owner))
+    .select({ bytes: accountUsage.storageBytes, pastes: accountUsage.pasteCount })
+    .from(accountUsage)
+    .where(eq(accountUsage.ownerId, owner))
+  if (!usage) throw new Error("Account usage is missing.")
   const [existing] = editingId
     ? await tx.select({ bytes: paste.bytes }).from(paste).where(eq(paste.id, editingId))
     : []
   const delta = bytes - (existing?.bytes ?? 0)
-  if (!editingId && limit.pastes !== null && (usage?.pastes ?? 0) >= limit.pastes)
+  if (!editingId && limit.pastes !== null && usage.pastes >= limit.pastes)
     throw new PasteBudgetError(
       "You've reached your paste limit. Permanently delete some pastes to create another.",
     )
-  if (limit.bytes !== null && delta > 0 && (usage?.bytes ?? 0) + delta > limit.bytes)
+  if (limit.bytes !== null && delta > 0 && usage.bytes + delta > limit.bytes)
     throw new PasteBudgetError(
       "You've reached your storage limit. Permanently delete some pastes or reduce their size.",
     )

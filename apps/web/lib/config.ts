@@ -144,6 +144,9 @@ const schema = z.object({
   HELP_URL: z
     .url({ message: "must be a full URL like https://example.com/support." })
     .default(DEFAULT_RESOURCE_LINKS.help),
+  TEMPLATES_URL: z
+    .url({ message: "must be a full URL like https://sniptide.com/templates." })
+    .optional(),
 
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
@@ -208,7 +211,18 @@ function oauth(clientId?: string, clientSecret?: string) {
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
 }
 
-export function getConfig(env: Record<string, string | undefined> = process.env) {
+// A running server's environment never changes, so production validates it once: every request
+// reads the configuration, and validating the whole environment each time took about 7% of the
+// CPU of a token API read. Development and tests validate on every call, because `next dev`
+// reloads env files and tests set variables between calls.
+let validated: Config | undefined
+export function getConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env !== process.env || process.env.NODE_ENV !== "production") return parseConfig(env)
+  validated ??= parseConfig(env)
+  return validated
+}
+
+function parseConfig(env: Record<string, string | undefined>) {
   // `FOO=` in an env file is "unset", not an empty value.
   const present = Object.fromEntries(
     Object.entries(env).filter(([, value]) => value !== undefined && value.trim() !== ""),
@@ -287,6 +301,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     shareUrl: value.SHARE_URL,
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
+    templatesUrl: value.TEMPLATES_URL,
     resourceLinks: {
       homepage: value.HOMEPAGE_URL,
       documentation: value.DOCS_URL,
@@ -331,4 +346,4 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
   }
 }
 
-export type Config = ReturnType<typeof getConfig>
+export type Config = ReturnType<typeof parseConfig>

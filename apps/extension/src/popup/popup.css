@@ -1,0 +1,15 @@
+@import "@sniptide/ui/globals.css";
+@source "./";
+
+/* The app sets these through next/font. Here the same families ship inside the extension
+   (fonts.css), so the popup needs no network to look right. */
+:root {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Paper Mono", ui-monospace, monospace;
+}
+
+html {
+  /* Chrome sizes the popup to its content; the width is the one fixed measure. */
+  width: 380px;
+}
