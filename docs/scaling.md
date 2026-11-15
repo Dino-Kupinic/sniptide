@@ -25,6 +25,11 @@ entries, and a default 32 MiB serialized-token budget. Actual heap use is larger
 size and must be monitored. Files over 200,000 UTF-8 bytes or 2,000 lines, and token payloads over
 1 MiB, render as plain text. This cache is disposable and needs no replica coordination.
 
+Files of 2 KiB or more also keep their result in the `highlight_cache` table, so a restart or
+another replica doesn't tokenize them again. A row is found by a hash of the grammar and the code
+and holds run lengths and colour numbers, never the code itself. The cleanup run removes rows
+after 30 days, and the next view rebuilds them. On a local run, 1,155 rows took 872 kB.
+
 ## Storage and write behavior
 
 The defaults are 100 MiB of current UTF-8 file content and 1,000 pastes per account. Trash counts
@@ -117,6 +122,7 @@ and upstream deadlines to suit the service, and alert on request latency and acq
 | NOTIFICATION_EMAIL_CONCURRENCY | 2 | Concurrent notification deliveries per process, from 1 to 10 |
 | HIGHLIGHT_CACHE_BYTES | 33554432 | Serialized tokens per process; zero disables retention |
 | SLOW_QUERY_MS | 500 | Threshold for slow-query log events |
+| REQUEST_LOG | all | Requests that get a log line: `all`, `errors` or `off` |
 | METRICS_TOKEN | unset | Operator bearer token for metrics and explicit maintenance execution |
 
 Cleanup runs at startup and hourly. Transactions commit between batches and use a shared advisory
