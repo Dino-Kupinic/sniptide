@@ -37,9 +37,8 @@ export function mcpBackend(owner: TokenOwner): SniptideBackend {
       safe(() => listCaptures(owner.userId, listQuerySchema.parse({ ...input, q: input.query }))),
     read: (id) =>
       safe(async () => {
-        const paste = await getCapture(owner.userId, id)
+        const paste = await getCapture(owner.userId, id, { countRead: true })
         if (!paste) throw new ApiError(404, "No paste with that id.")
-        await recordTokenReads(owner.userId, [paste.id])
         return { paste }
       }),
     collection: (slug, cursor) =>
