@@ -11,6 +11,7 @@ import { Recent } from "./recent"
 import { ask } from "./rpc"
 import { SettingsView } from "./settings"
 import { SignIn } from "./sign-in"
+import { openTab } from "./tabs"
 
 export function App() {
   const [state, setState] = useState<State | null>(null)
