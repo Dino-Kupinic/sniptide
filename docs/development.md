@@ -41,8 +41,9 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 - `packages/cli`: the `sniptide` CLI for capture, restore, agent skills and `.env` sync, built as a
   dependency-free Node.js executable
 - `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable
-- `packages/contracts`: shared wire contracts for the web app, CLI, and MCP server, and the base
-  URL and response-size rules the CLI and MCP server call an instance with
+- `packages/contracts`: shared wire contracts for the web app, CLI, and MCP server, the base URL
+  and response-size rules the CLI and MCP server call an instance with, and the `.env` parser the CLI
+  and the web app share
 - `packages/db`: Drizzle schema, Postgres client and migrations
 - `packages/oauth-client`: the OAuth 2.1 flow with PKCE that the browser extension and the VS Code
   extension sign in with, the session that stores and renews their tokens, and a stand-in instance
