@@ -211,6 +211,9 @@
     "packages/oauth-client": {
       "name": "@workspace/oauth-client",
       "version": "0.0.0",
+      "dependencies": {
+        "@sniptide/sdk": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "catalog:tooling",
         "@workspace/typescript": "workspace:*",
