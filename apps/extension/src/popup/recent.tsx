@@ -7,7 +7,7 @@ import { ExternalLinkIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { messages } from "../lib/messages"
 import { relativeTime } from "../lib/time"
-import { openTab } from "./app"
+import { openTab } from "./tabs"
 import { IconButton } from "./icon-button"
 import { ask, errorMessage } from "./rpc"
 

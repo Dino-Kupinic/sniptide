@@ -62,7 +62,3 @@ export function App() {
     </Tabs>
   )
 }
-
-export function openTab(url: string) {
-  void chrome.tabs.create({ url })
-}
