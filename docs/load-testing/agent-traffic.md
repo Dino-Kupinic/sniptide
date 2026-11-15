@@ -81,7 +81,8 @@ What to do instead, in order:
    the limit.
 2. Move the per-request counters out of the request. Counting usage, rate limits and reads in
    memory and writing them every second or so removes the two commits from a read. Rate limits
-   would then be approximate across processes for that interval.
+   are then approximate across processes for that interval. This is done; see the follow-up
+   below.
 3. Add an index for code search if accounts grow. A `pg_trgm` index on file content answers a
    rare word without reading the account, and costs index space and slower writes.
 4. If one process must serve more, serve `/api/v1` and `/api/mcp` from a small Node server that
@@ -90,6 +91,33 @@ What to do instead, in order:
 
 A Rust rewrite becomes worth another look when the app tier is still the limit after these
 steps, and CPU cost per request matters more than the cost of two codebases.
+
+## Follow-up: counters, MCP setup and creates
+
+A later change (WRK-570) took three of the steps above and was measured the same way, on the
+same machine, against `main` at `33d1604`. Requests per second and CPU are with 16 clients.
+
+| Request | Requests/s before | after | App CPU ms/request before | after | PostgreSQL ms/request before | after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| API read | 911 | 1,004 | 1.05 | 1.03 | 0.18 | 0.11 |
+| API list | 903 | 968 | 1.08 | 1.05 | 0.24 | 0.17 |
+| API create | 263 | 402 | 2.83 | 2.05 | 1.27 | 0.87 |
+| MCP `tools/list` | 618 | 802 | 1.79 | 1.23 | 0.10 | 0.03 |
+| MCP `read_snippet` | 645 | 840 | 1.52 | 1.11 | 0.21 | 0.13 |
+| MCP `create_snippet` | 261 | 412 | 3.22 | 2.04 | 1.09 | 0.82 |
+
+The read and list rows are the mean of two runs. This session's runs were slower overall than
+the tables above, so compare columns within this table only.
+
+- **Counters are written once a second.** A read commits nothing. Over two 15-second runs of
+  reads and lists PostgreSQL wrote about 32,000 WAL records where it wrote about 172,000. One
+  process gains under 10%, because it is limited by its own CPU and still sends two statements.
+  The gain is the database headroom that several processes share.
+- **The MCP server is reused.** Building it for each request registered nine tools and three
+  prompts again. A call now borrows an idle server.
+- **A create sends 9 statements where it sent 11.** The response is built from what was written,
+  and the account's totals come from the trigger-kept row, so a create no longer sums every paste
+  the account owns.
 
 ## Limits of these numbers
 
