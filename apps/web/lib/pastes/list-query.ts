@@ -1,14 +1,7 @@
 import { languages } from "./languages"
 
 export const PASTE_PAGE_SIZE = 10
-export const PASTE_SORTS = [
-  "updated",
-  "views",
-  "expires",
-  "title",
-  "language",
-  "visibility",
-] as const
+const PASTE_SORTS = ["updated", "views", "expires", "title", "language", "visibility"] as const
 export type PasteSort = (typeof PASTE_SORTS)[number]
 export type SortDirection = "asc" | "desc"
 // Each sort starts in the direction that answers its natural question (newest, most viewed,

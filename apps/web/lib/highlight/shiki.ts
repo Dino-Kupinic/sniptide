@@ -10,7 +10,7 @@ import type { HighlightedLines, HighlightedToken, HighlightRole } from "./types"
 let highlighter: Promise<HighlighterCore> | undefined
 const loading = new Map<string, Promise<void>>()
 
-export function getHighlighter() {
+function getHighlighter() {
   highlighter ??= createHighlighterCore({
     themes: [theme],
     langs: [],

@@ -17,8 +17,6 @@ export {
   type ApiPaste,
   type ApiPasteSummary,
   apiCaptureSchema as captureSchema,
-  type CaptureInput,
-  type CodeFile as ApiFile,
 } from "@sniptide/contracts"
 
 import { collection as collectionTable, pasteFile, paste as pasteTable } from "@workspace/db/schema"
@@ -66,9 +64,8 @@ import { type CreateReceipt, createWithReceipt } from "./idempotency"
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
 // they are everywhere outside the owner's own screens.
 
-export const LIST_LIMIT = 100
-export const COLLECTION_PAGE_SIZE = 50
-export { MAX_TAGS } from "@sniptide/contracts"
+const LIST_LIMIT = 100
+const COLLECTION_PAGE_SIZE = 50
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -312,7 +309,7 @@ export async function updateCapture(
   return updated
 }
 
-export const settingsSchema = z
+const settingsSchema = z
   .object({
     visibility: visibilitySchema.optional(),
     // Counted from now, like the editor's Expires after.

@@ -30,7 +30,7 @@ export function isAdmissionError(error: unknown): error is AdmissionError {
   return error instanceof AdmissionError
 }
 const unavailableBody = JSON.stringify(errorBody(503, "The server is busy. Try again shortly."))
-export const admissionHeaders = {
+const admissionHeaders = {
   "retry-after": "1",
   "cache-control": "private, no-store",
 }

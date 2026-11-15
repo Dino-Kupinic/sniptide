@@ -21,8 +21,8 @@ export type SectionId = (typeof SECTIONS)[number]
 export const SIDEBAR_VISIBILITIES = ["all", "public", "unlisted", "private"] as const
 export const SIDEBAR_SORTS = ["updated", "views", "title"] as const
 export const SIDEBAR_LIMITS = [3, 5, 8, 15] as const
-export type SidebarVisibility = (typeof SIDEBAR_VISIBILITIES)[number]
-export type SidebarSort = (typeof SIDEBAR_SORTS)[number]
+type SidebarVisibility = (typeof SIDEBAR_VISIBILITIES)[number]
+type SidebarSort = (typeof SIDEBAR_SORTS)[number]
 
 export interface PasteSectionView {
   visibility: SidebarVisibility
@@ -31,7 +31,7 @@ export interface PasteSectionView {
 }
 
 // Collections keep the order you drag them into, or sort by name.
-export const COLLECTION_SORTS = ["custom", "name"] as const
+const COLLECTION_SORTS = ["custom", "name"] as const
 export type CollectionSort = (typeof COLLECTION_SORTS)[number]
 
 export interface SidebarViews {
@@ -56,7 +56,7 @@ function parsePasteView(raw: unknown, fallback: PasteSectionView): PasteSectionV
   }
 }
 
-export function parseSidebarViews(raw: unknown): SidebarViews {
+function parseSidebarViews(raw: unknown): SidebarViews {
   const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
   const collections =
     value.collections && typeof value.collections === "object"

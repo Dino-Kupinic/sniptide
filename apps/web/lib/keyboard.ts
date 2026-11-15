@@ -1,5 +1,5 @@
 // Whether a key press is going into a field, where single-key shortcuts must stay out of the way.
-export function isTypingTarget(target: EventTarget | null) {
+function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false
   }

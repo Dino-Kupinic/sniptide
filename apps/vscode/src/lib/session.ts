@@ -38,7 +38,7 @@ export interface OAuthSession extends TokenSet {
   account: Account
 }
 
-export interface TokenSession {
+interface TokenSession {
   kind: "token"
   instance: string
   accessToken: string
@@ -47,7 +47,7 @@ export interface TokenSession {
 
 export type Session = OAuthSession | TokenSession
 
-export interface SessionStorage {
+interface SessionStorage {
   get(): Promise<Session | null>
   set(session: Session | null): Promise<void>
 }
@@ -200,5 +200,3 @@ export function createSessions(deps: SessionDeps) {
     },
   }
 }
-
-export type Sessions = ReturnType<typeof createSessions>

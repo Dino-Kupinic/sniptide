@@ -3,7 +3,7 @@
 import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { LoadingRegion } from "./region"
 
-export function CodeSkeleton({ lines = 9 }: { lines?: number }) {
+function CodeSkeleton({ lines = 9 }: { lines?: number }) {
   return (
     <div className="flex flex-col gap-2.5 overflow-hidden rounded-lg border border-border bg-sidebar p-4">
       <div className="mb-2 flex h-8 items-center gap-2 border-b border-border pb-3">

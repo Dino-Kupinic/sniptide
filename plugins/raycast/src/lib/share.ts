@@ -2,7 +2,7 @@ import type { CaptureInput, Paste } from "@sniptide/sdk"
 import { type CaptureOptions, captureFromText } from "./capture"
 
 // The part of the client the share commands use, so a test can stand in for Sniptide.
-export interface PasteCreator {
+interface PasteCreator {
   createPaste(input: CaptureInput, idempotencyKey?: string): Promise<{ paste: Paste }>
 }
 

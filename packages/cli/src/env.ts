@@ -18,7 +18,7 @@ export interface Variable {
 }
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_]{0,255}$/
-export const GROUP = /^[a-z0-9][a-z0-9._-]{0,63}$/
+const GROUP = /^[a-z0-9][a-z0-9._-]{0,63}$/
 const MAX_FILE_BYTES = 1024 * 1024
 
 export function groupName(value: string | undefined): string {
@@ -127,7 +127,7 @@ export function readRevision(text: string, group: string): number | undefined {
 }
 
 // The file's text with its header set to this group and revision, replacing an existing header.
-export function withRevision(text: string, group: string, revision: number) {
+function withRevision(text: string, group: string, revision: number) {
   const body = text.replace(/^\uFEFF/, "")
   const first = body.split(/\r?\n/, 1)[0] ?? ""
   const rest = HEADER.test(first) ? body.slice(first.length).replace(/^\r?\n/, "") : body

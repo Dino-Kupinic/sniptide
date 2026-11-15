@@ -127,13 +127,7 @@ function DiffSection({
   )
 }
 
-export function RevisionComparison({
-  current,
-  revisions,
-}: {
-  current: Snapshot
-  revisions: Revision[]
-}) {
+function RevisionComparison({ current, revisions }: { current: Snapshot; revisions: Revision[] }) {
   const t = useTranslations("Paste")
   const [before, setBefore] = useState(String(revisions[1]?.id ?? revisions[0]?.id ?? "current"))
   const [after, setAfter] = useState("current")

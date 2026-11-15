@@ -8,8 +8,8 @@ import { SignedOutError } from "./lib/session"
 // The Snippets view: the most recently changed snippets and every collection, or the results of
 // a search. Lists load a page at a time and stay cached until the view refreshes.
 
-export const VIEW_ID = "sniptide.snippets"
-export const CONTENT_SCHEME = "sniptide"
+const VIEW_ID = "sniptide.snippets"
+const CONTENT_SCHEME = "sniptide"
 const PAGE_SIZE = 30
 
 type Listed = PasteSummary | Paste

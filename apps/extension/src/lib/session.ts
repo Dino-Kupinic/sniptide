@@ -20,7 +20,7 @@ import type { Account } from "./protocol"
 // test without chrome.*.
 
 // What the consent screen and the connection list in Settings call the extension.
-export const CLIENT_NAME = "Sniptide for Chrome"
+const CLIENT_NAME = "Sniptide for Chrome"
 
 export interface Session extends TokenSet {
   instance: string
@@ -29,7 +29,7 @@ export interface Session extends TokenSet {
   account: Account
 }
 
-export interface SessionStorage {
+interface SessionStorage {
   get(): Promise<Session | null>
   set(session: Session | null): Promise<void>
 }

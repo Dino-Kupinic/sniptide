@@ -26,7 +26,7 @@ export interface FiledReport {
   duplicate: boolean
 }
 
-export class LinearError extends Error {}
+class LinearError extends Error {}
 
 async function request<T>(
   settings: LinearSettings,

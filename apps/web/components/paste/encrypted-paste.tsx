@@ -55,7 +55,7 @@ async function open(envelope: string, key: string): Promise<Decrypted> {
 
 // `remember` keeps a working key in this browser's key ring. The app's own screens do, so an
 // owner who opened the full link once can come back from their lists; a share page never does.
-export function useEncryptedPaste(
+function useEncryptedPaste(
   envelope: string,
   keyId: string,
   remember: boolean,

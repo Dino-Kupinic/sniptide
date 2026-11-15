@@ -242,7 +242,7 @@ function scrubProperties(properties: Record<string, unknown> | undefined) {
   }
 }
 
-export function isSecretPath(value: string) {
+function isSecretPath(value: string) {
   try {
     const path = new URL(value, "https://analytics.invalid").pathname
     return /^\/(?:secrets|secret-share)(?:\/|$)/.test(path)

@@ -32,12 +32,6 @@ export const visibilityOptions: { value: Visibility; label: string }[] = [
   { value: "public", label: "Public" },
 ]
 
-export const visibilityHelp: Record<Visibility, string> = {
-  private: "Only you and people you invite can open it.",
-  unlisted: "Anyone with the link can open it. It isn't listed on your profile.",
-  public: "Listed on your profile and open to anyone.",
-}
-
 export const expiryOptions: { value: Expiry; label: string }[] = [
   { value: "1h", label: "1h" },
   { value: "1d", label: "1d" },

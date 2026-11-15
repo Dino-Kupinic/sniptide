@@ -4,8 +4,8 @@ import type { CaptureInput, Visibility } from "@sniptide/sdk"
 // Raycast: the file name carries the language (Sniptide reads it from the extension), and the
 // title is the text's first line.
 
-export const MAX_TITLE = 120
-export const MAX_FILE_NAME = 120
+const MAX_TITLE = 120
+const MAX_FILE_NAME = 120
 
 function looksLikeJson(text: string) {
   const trimmed = text.trim()

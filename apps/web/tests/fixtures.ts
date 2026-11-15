@@ -8,7 +8,7 @@ import { databaseUrl } from "./environment"
 
 // A new account goes through the welcome wizard first and then gets the tour. Tests start on a
 // plain dashboard, so every test account has already skipped the wizard and seen the tour.
-export async function skipOnboarding(db: ReturnType<typeof createDb>, email: string) {
+async function skipOnboarding(db: ReturnType<typeof createDb>, email: string) {
   const [created] = await db.select({ id: user.id }).from(user).where(eq(user.email, email))
   if (!created) throw new Error(`No test account for ${email}.`)
   await db

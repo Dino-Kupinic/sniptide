@@ -8,7 +8,7 @@ import { previewLines } from "./preview"
 import type { PasteSummary } from "./types"
 
 // Lines a paste card shows before its code panel runs off the bottom edge.
-export const CARD_PREVIEW_LINES = 6
+const CARD_PREVIEW_LINES = 6
 
 // The first lines of each paste's first file, highlighted, for the cards of a paste list. Only
 // the start of the content is read, so a large paste costs no more than a small one. Someone

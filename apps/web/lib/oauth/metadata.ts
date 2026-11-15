@@ -26,7 +26,7 @@ export const oauthPaths = {
 
 // The protected resource metadata URL for a resource path: the root document for the API as a
 // whole, and /.well-known/oauth-protected-resource/api/mcp for the MCP endpoint (RFC 9728 3.1).
-export function resourceMetadataUrl(origin: string, resourcePath = "") {
+function resourceMetadataUrl(origin: string, resourcePath = "") {
   return `${origin}${oauthPaths.protectedResource}${resourcePath}`
 }
 

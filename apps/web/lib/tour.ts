@@ -3,9 +3,9 @@
 // order of preference, because the sidebar holds them on desktop and the tab bar and top bar hold
 // them on phones.
 
-export type TourSide = "top" | "right" | "bottom"
+type TourSide = "top" | "right" | "bottom"
 
-export interface TourTarget {
+interface TourTarget {
   // The value of the element's `data-tour` attribute.
   name: string
   // Where the popover sits relative to the element.

@@ -14,13 +14,13 @@ import {
 
 // Every report from one account, from the dialog and from the assistant together. Enough for a
 // bad afternoon, too few to flood the triage queue.
-export const REPORTS_PER_HOUR = 10
+const REPORTS_PER_HOUR = 10
 
 export type ReportResult =
   | { ok: true; issue: LinearIssue; duplicate: boolean }
   | { ok: false; reason: "not_configured" | "rate_limited" | "failed"; retryAfterSeconds?: number }
 
-export function reportLimit(userId: string) {
+function reportLimit(userId: string) {
   return { key: `support-report:${userId}`, max: REPORTS_PER_HOUR, windowSeconds: HOUR_SECONDS }
 }
 

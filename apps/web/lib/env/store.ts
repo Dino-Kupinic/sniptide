@@ -11,13 +11,7 @@ import { decryptValue, encryptValue } from "./crypto"
 
 export {
   GROUP_SLUG,
-  groupSlugSchema,
-  MAX_GROUP_BYTES,
   MAX_GROUPS,
-  MAX_VALUE_BYTES,
-  MAX_VARIABLES,
-  type Variable,
-  variablesSchema,
 } from "./inputs"
 
 import { groupSlugSchema, MAX_GROUPS, type Variable, variablesSchema } from "./inputs"

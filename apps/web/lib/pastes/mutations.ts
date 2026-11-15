@@ -35,7 +35,7 @@ export interface PasteOrigin {
   agent: AgentClient | null
 }
 
-export interface CaptureData {
+interface CaptureData {
   title: string
   description: string
   files: InsertedFile[]

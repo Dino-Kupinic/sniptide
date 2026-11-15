@@ -9,7 +9,7 @@ export interface Config {
   baseUrl: string
   token?: string
 }
-export const defaultBaseUrl = "https://app.sniptide.com"
+const defaultBaseUrl = "https://app.sniptide.com"
 
 export function normalizeBaseUrl(value: string): string {
   let url: URL
@@ -35,7 +35,7 @@ export function configPath(env: NodeJS.ProcessEnv): string {
   )
 }
 
-export async function readConfig(env: NodeJS.ProcessEnv): Promise<Config | null> {
+async function readConfig(env: NodeJS.ProcessEnv): Promise<Config | null> {
   try {
     const data = record(JSON.parse(await readFile(configPath(env), "utf8")))
     return {
