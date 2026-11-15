@@ -76,7 +76,9 @@ async function result(run: () => Promise<Data>): Promise<CallToolResult> {
   }
 }
 
-export function createSniptideServer(backend: SniptideBackend) {
+// `backend` is read on every call, so one server can answer requests for different accounts, one
+// request at a time (see http.ts).
+export function createSniptideServer(backend: () => SniptideBackend) {
   const server = new McpServer(
     { name: "sniptide", version },
     {
@@ -102,7 +104,7 @@ export function createSniptideServer(backend: SniptideBackend) {
       inputSchema: searchSchema,
       annotations: readOnly("Search snippets"),
     },
-    (input) => result(() => backend.search(input)),
+    (input) => result(() => backend().search(input)),
   )
   server.registerTool(
     "read_snippet",
@@ -113,7 +115,7 @@ export function createSniptideServer(backend: SniptideBackend) {
       inputSchema: { id: identifier },
       annotations: readOnly("Read snippet"),
     },
-    ({ id }) => result(() => backend.read(id)),
+    ({ id }) => result(() => backend().read(id)),
   )
   server.registerTool(
     "fetch_collection",
@@ -130,7 +132,7 @@ export function createSniptideServer(backend: SniptideBackend) {
     },
     ({ slug, cursor, startStep }) =>
       result(async () => {
-        const page = await backend.collection(slug, cursor ?? null)
+        const page = await backend().collection(slug, cursor ?? null)
         return {
           collection: slug,
           steps: page.pastes.map((paste, index) => ({ step: startStep + index, paste })),
@@ -154,7 +156,7 @@ export function createSniptideServer(backend: SniptideBackend) {
         openWorldHint: false,
       },
     },
-    (input) => result(() => backend.create(input)),
+    (input) => result(() => backend().create(input)),
   )
   server.registerTool(
     "update_snippet",
@@ -171,7 +173,7 @@ export function createSniptideServer(backend: SniptideBackend) {
         openWorldHint: false,
       },
     },
-    ({ id, ...input }) => result(() => backend.update(id, input)),
+    ({ id, ...input }) => result(() => backend().update(id, input)),
   )
   server.registerTool(
     "list_collections",
@@ -182,7 +184,7 @@ export function createSniptideServer(backend: SniptideBackend) {
       inputSchema: {},
       annotations: readOnly("List collections"),
     },
-    () => result(() => backend.collections()),
+    () => result(() => backend().collections()),
   )
   server.registerTool(
     "create_collection",
@@ -199,7 +201,7 @@ export function createSniptideServer(backend: SniptideBackend) {
         openWorldHint: false,
       },
     },
-    ({ name }) => result(() => backend.createCollection(name)),
+    ({ name }) => result(() => backend().createCollection(name)),
   )
   server.registerTool(
     "update_snippet_settings",
@@ -220,7 +222,7 @@ export function createSniptideServer(backend: SniptideBackend) {
       result(async () => {
         if (Object.values(input).every((value) => value === undefined))
           throw new ToolError("Pass at least one of visibility, expiry, password or burnAfterRead.")
-        return backend.updateSettings(id, input)
+        return backend().updateSettings(id, input)
       }),
   )
   server.registerTool(
@@ -238,7 +240,7 @@ export function createSniptideServer(backend: SniptideBackend) {
         openWorldHint: false,
       },
     },
-    ({ id }) => result(() => backend.trash(id)),
+    ({ id }) => result(() => backend().trash(id)),
   )
 
   // Prompts are what clients show in their slash menus: Sniptide's main jobs, phrased as a request
@@ -246,7 +248,7 @@ export function createSniptideServer(backend: SniptideBackend) {
   const collectionSlug = (description: string) =>
     completable(z.string().trim().min(1).max(40).describe(description), async (value) => {
       try {
-        const data = await backend.collections()
+        const data = await backend().collections()
         const slugs = Array.isArray(data.collections)
           ? data.collections.flatMap((item) =>
               item && typeof item === "object" && "slug" in item && typeof item.slug === "string"
