@@ -5,8 +5,8 @@ import { getDb } from "@/lib/db"
 import { byteLength } from "@/lib/format"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { trashTotals } from "@/lib/pastes/lists"
-import { listOwnPastes, listTrash } from "@/lib/pastes/store"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
+import { listOwnPastes, listTrash } from "./lists"
 
 // The lists load summaries: sizes and languages come from SQL, and no file content is sent.
 

@@ -12,8 +12,8 @@ import { collectionExists, getCollection, listCollections, slugify } from "@/lib
 import { MAX_COLLECTIONS } from "@/lib/collections/types"
 import { getDb } from "@/lib/db"
 import { savePaste, setPasteCollection } from "@/lib/pastes/actions"
-import { listOwnPastes } from "@/lib/pastes/store"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
+import { listOwnPastes } from "./lists"
 
 // Collections group one account's pastes. Nobody starts with any, they belong to their owner
 // alone, and deleting one never deletes the pastes in it.
