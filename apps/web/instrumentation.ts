@@ -11,12 +11,29 @@ export async function register() {
   }
 }
 
-export const onRequestError: import("next").Instrumentation.onRequestError = (
-  _error,
-  _request,
+export const onRequestError: import("next").Instrumentation.onRequestError = async (
+  error,
+  request,
   context,
 ) => {
   console.error(
     JSON.stringify({ event: "request_error", route: context.routePath, type: context.routeType }),
   )
+  // Error tracking needs Node; errors in the Edge runtime stay in the log.
+  if (process.env.NEXT_RUNTIME !== "nodejs") return
+  const header = (name: string) => {
+    const value = request.headers[name]
+    return Array.isArray(value) ? value[0] : value
+  }
+  const { captureServerError } = await import("@/lib/error-tracking")
+  await captureServerError(error, {
+    source: "request",
+    route: context.routePath,
+    routeType: context.routeType,
+    method: request.method,
+    host: (header("x-forwarded-host") ?? header("host"))
+      ?.split(",")[0]
+      ?.trim()
+      .replace(/:\d+$/, ""),
+  })
 }

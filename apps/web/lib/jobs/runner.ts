@@ -40,6 +40,8 @@ export function createJobRunner<Name extends string>(
     now?: () => number
     schedule?: Schedule
     report?: (report: JobReport) => void
+    // Receives what a job threw, for error tracking. The outcome is "failed" either way.
+    onError?: (name: Name, error: unknown) => void | PromiseLike<void>
   } = {},
 ) {
   const now = options.now ?? Date.now
@@ -107,9 +109,14 @@ export function createJobRunner<Name extends string>(
       try {
         outcome = await definition.run()
         if (outcome === "failed") failureCode = "work_failed"
-      } catch {
+      } catch (error) {
         outcome = "failed"
         failureCode = "execution_failed"
+        try {
+          await options.onError?.(name, error)
+        } catch {
+          // A failing reporter must not change the job's outcome.
+        }
       }
       const finishedAt = now()
       const durationMs = Math.max(0, finishedAt - startedAt)
