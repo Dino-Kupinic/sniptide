@@ -9,7 +9,7 @@
     "lint": "turbo lint",
     "format": "turbo format",
     "typecheck": "turbo typecheck",
-    "check": "biome ci . && bun run typecheck",
+    "check": "biome ci --error-on-warnings . && bun run typecheck",
     "verify": "bun run check && bun run check:unused && bun run test && bun --filter docs build",
     "check:unused": "knip",
     "check:deps": "knip --include dependencies,unlisted,binaries",

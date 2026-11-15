@@ -30,16 +30,22 @@ describeDb("usernames for accounts created without one", () => {
   afterAll(resetDatabase)
   beforeEach(resetDatabase)
 
-  const auth = createAuth({
-    db: getDb(),
-    secret: "test-secret-that-is-long-enough-for-better-auth",
-    baseURL: "http://localhost:3000",
-    github: { clientId: "id", clientSecret: "secret" },
-  })
+  // Built on first use: the runner evaluates this block even when it skips it, and getDb throws
+  // without a database.
+  let instance: ReturnType<typeof createAuth> | undefined
+  const getAuth = () => {
+    instance ??= createAuth({
+      db: getDb(),
+      secret: "test-secret-that-is-long-enough-for-better-auth",
+      baseURL: "http://localhost:3000",
+      github: { clientId: "id", clientSecret: "secret" },
+    })
+    return instance
+  }
 
   // The same call GitHub and Google sign-ups make, with the fields the provider handed over.
   async function create(email: string, name: string, username?: string) {
-    const context = await auth.$context
+    const context = await getAuth().$context
     return context.internalAdapter.createUser(
       { email, name, emailVerified: true, username },
       { method: "oauth", oauth: { providerId: "google" } },
@@ -47,7 +53,7 @@ describeDb("usernames for accounts created without one", () => {
   }
 
   function githubUsername(profile: { login: string; name: string | null }) {
-    const map = auth.options.socialProviders.github?.mapProfileToUser
+    const map = getAuth().options.socialProviders.github?.mapProfileToUser
     if (!map) throw new Error("GitHub sign-in maps no profile fields")
     // biome-ignore lint/suspicious/noExplicitAny: the test passes only the fields the mapper reads.
     return Promise.resolve(map(profile as any)).then((user) => user.username)
