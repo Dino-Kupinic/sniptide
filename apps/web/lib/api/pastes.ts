@@ -476,7 +476,11 @@ const MAX_QUERY_WORDS = 8
 // A paste matches a query when every word of it appears somewhere in the paste: the title, slug,
 // description, a tag, or the path or code of one of its files. Agents search with phrases such
 // as "retry with backoff", which rarely sit in a title as written.
-function matchesQuery(q: string): SQL | undefined {
+//
+// `offset 0` keeps the file check a per-paste index probe. Without it PostgreSQL may run the check
+// once as a scan of every account's files, so a search would cost as much as the whole instance
+// holds instead of what the caller's account holds, and couldn't stop at the first full page.
+export function matchesQuery(q: string): SQL | undefined {
   const words = [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, MAX_QUERY_WORDS)
   return and(
     ...words.map((word) => {
@@ -486,17 +490,10 @@ function matchesQuery(q: string): SQL | undefined {
         ilike(pasteTable.slug, pattern),
         ilike(pasteTable.description, pattern),
         sql`array_to_string(${pasteTable.tags}, ' ') ilike ${pattern}`,
-        exists(
-          getDb()
-            .select({ id: pasteFile.id })
-            .from(pasteFile)
-            .where(
-              and(
-                eq(pasteFile.pasteId, pasteTable.id),
-                or(ilike(pasteFile.name, pattern), ilike(pasteFile.content, pattern)),
-              ),
-            ),
-        ),
+        sql`exists (
+          select 1 from ${pasteFile} f
+          where f.paste_id = ${pasteTable}.id and (f.name ilike ${pattern} or f.content ilike ${pattern})
+          offset 0)`,
       )
     }),
   )
