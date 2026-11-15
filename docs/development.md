@@ -23,6 +23,9 @@ disabled. The callback URLs are `<BETTER_AUTH_URL>/api/auth/callback/github` and
 
 Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 
+CI runs integration tests against PostgreSQL 17 and 18. The required `Tests` check passes only
+when both matrix jobs pass.
+
 ## Workspace
 
 - `apps/web`: Next.js app, auth route at `app/api/auth/[...all]`, health check at `app/api/health`

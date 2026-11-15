@@ -372,6 +372,19 @@ jobs:
 
       - run: bun run test:web:integration
 
+  # Branch protection requires a single result for both Postgres versions.
+  tests-result:
+    name: Tests
+    needs: tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every Postgres version to pass
+        env:
+          RESULT: ${{ needs.tests.result }}
+        run: test "$RESULT" = success
+
   # Two shards split the test files between runners. Each has its own Postgres and builds the app,
   # which the Next build cache keeps cheap.
   e2e:
