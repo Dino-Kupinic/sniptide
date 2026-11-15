@@ -185,7 +185,12 @@ export async function createCapture(
         password: null,
         burnAfterRead: false,
       })
-      const { id } = await createPasteRecord(tx, {
+      const files = data.files.map((file, position) => ({
+        ...file,
+        startLine: capture.files[position]?.lines?.start ?? null,
+        endLine: capture.files[position]?.lines?.end ?? null,
+      }))
+      const created = await createPasteRecord(tx, {
         kind: "capture",
         actor: { kind: "token", userId: owner },
         origin: createdFrom,
@@ -196,18 +201,33 @@ export async function createCapture(
           collection: data.collection,
           tags: capture.tags,
           source: capture.source,
-          files: data.files.map((file, position) => ({
-            ...file,
-            startLine: capture.files[position]?.lines?.start ?? null,
-            endLine: capture.files[position]?.lines?.end ?? null,
-          })),
+          files,
         },
       })
-      const [record] = await tx.select().from(pasteTable).where(eq(pasteTable.id, id))
-      if (!record) throw new Error("The created paste wasn't returned.")
-      const [created] = await withFiles([record], tx, origin)
-      if (!created) throw new Error("The created paste files weren't returned.")
-      return { paste: created }
+      // The response is what was just written, so it needs no second read of the paste.
+      const paste: ApiPaste = {
+        id: created.id,
+        slug: created.slug,
+        url: `${origin}/${created.slug}`,
+        title: data.title,
+        description: data.description,
+        visibility: data.visibility,
+        collection: data.collection,
+        tags: capture.tags,
+        source: capture.source ?? null,
+        createdAt: created.createdAt.toISOString(),
+        updatedAt: created.createdAt.toISOString(),
+        expiresAt: null,
+        files: files.map((file) => ({
+          name: file.name,
+          language: file.language,
+          content: file.content,
+          ...(file.startLine !== null && file.endLine !== null
+            ? { lines: { start: file.startLine, end: file.endLine } }
+            : {}),
+        })),
+      }
+      return { paste }
     })
     await announceChange(owner)
     return response.paste
