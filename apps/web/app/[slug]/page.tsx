@@ -120,9 +120,16 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 function Shell({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
   return (
     <div className="relative isolate flex min-h-svh flex-col">
-      {/* The auth screens' Game of Life, faint and faded out before the paste column so it never
-          sits under text. Phones have no gutter for it. */}
-      <LifeField className="fixed -z-10 opacity-15 [mask-image:linear-gradient(to_right,black,transparent_calc(50%-480px),transparent_calc(50%+480px),black)] max-lg:hidden dark:opacity-25" />
+      {/* The auth screens' Game of Life as a quiet backdrop: a sparse field at a quarter of their
+          speed that ignores the pointer, faint and gone well before the paste column so motion
+          never pulls the eye from the text. Phones have no gutter for it. */}
+      <LifeField
+        density={0.09}
+        fps={20}
+        speed={1}
+        interactive={false}
+        className="fixed -z-10 opacity-15 [mask-image:linear-gradient(to_right,black,transparent_calc(50%-520px),transparent_calc(50%+520px),black)] max-lg:hidden dark:opacity-20"
+      />
       <PublicHeader signedIn={signedIn} languageMenu={false} />
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 lg:gap-6 lg:pt-12">
         {children}
