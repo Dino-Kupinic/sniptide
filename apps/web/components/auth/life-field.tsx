@@ -8,10 +8,11 @@ import { usePrefersReducedMotion } from "@/lib/dither/motion"
 // The Game of Life behind the auth screens' pitch card, from the "Night, pink with blue trails"
 // preview loop: live cells in --pink, and the trails they leave fading through --primary. The
 // field wraps at every edge, reseeds a patch when it runs low, and the pointer sows new cells as
-// it moves. Under reduced motion it draws one generation and sowing only adds cells.
+// it moves. Under reduced motion it draws one generation and sowing only adds cells. A backdrop
+// behind content people read, such as the paste view, passes a lower `speed` and turns
+// `interactive` off so the field drifts slowly and never reacts to the reader's pointer.
 
 const cellSize = 8
-const generationsPerSecond = 4
 const decay = 0.55
 const sparse = 0.012
 
@@ -19,10 +20,16 @@ export function LifeField({
   className,
   density = 0.11,
   fps = 30,
+  speed = 4,
+  interactive = true,
 }: {
   className?: string
   density?: number
   fps?: number
+  /** Generations per second. */
+  speed?: number
+  /** Whether the pointer sows new cells as it moves. */
+  interactive?: boolean
 }) {
   const ref = React.useRef<HTMLCanvasElement>(null)
   const reduce = usePrefersReducedMotion()
@@ -146,7 +153,7 @@ export function LifeField({
     const unwatchTheme = subscribeToTheme(resize)
     const observer = new ResizeObserver(resize)
     observer.observe(host)
-    window.addEventListener("pointermove", onPointerMove)
+    if (interactive) window.addEventListener("pointermove", onPointerMove)
 
     let frame = 0
     if (!reduce) {
@@ -157,7 +164,7 @@ export function LifeField({
         // A hidden tab pauses requestAnimationFrame, so cap the catch-up after it returns.
         elapsed += Math.min(now - before, 250)
         before = now
-        const interval = 1000 / generationsPerSecond
+        const interval = 1000 / speed
         while (elapsed >= interval) {
           step()
           elapsed -= interval
@@ -177,7 +184,7 @@ export function LifeField({
       unwatchTheme()
       window.removeEventListener("pointermove", onPointerMove)
     }
-  }, [density, fps, reduce])
+  }, [density, fps, speed, interactive, reduce])
 
   return (
     <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0", className)}>
