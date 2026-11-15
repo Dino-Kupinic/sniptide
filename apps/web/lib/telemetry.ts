@@ -83,7 +83,45 @@ export function recordMaintenance(values: Record<string, number | boolean>) {
   // Merged, because the purge and the analytics rollup each report their own keys.
   telemetry.maintenance = { ...telemetry.maintenance, ...values }
 }
-function route(path = "/") {
+const API_ROUTES = new Set([
+  "/api/analytics",
+  "/api/favicon",
+  "/api/live",
+  "/api/locale",
+  "/api/mcp",
+  "/api/notifications",
+  "/api/notifications/unsubscribe",
+  "/api/oauth/authorize",
+  "/api/oauth/register",
+  "/api/oauth/revoke",
+  "/api/oauth/token",
+  "/api/openapi.json",
+  "/api/search",
+  "/api/stats",
+  "/api/support/chat",
+  "/api/support/report",
+  "/api/v1/batch",
+  "/api/v1/collections",
+  "/api/v1/env",
+  "/api/v1/me",
+  "/api/v1/pastes",
+  "/api/v1/usage",
+])
+// The token API and MCP carry agent traffic, so each of their routes gets its own name. An
+// unknown path under /api shares one name, which keeps a scanner from filling the metric table.
+function apiRoute(pathname: string) {
+  if (API_ROUTES.has(pathname)) return pathname
+  if (/^\/api\/v1\/pastes\/[^/]+$/.test(pathname)) return "/api/v1/pastes/[id]"
+  if (/^\/api\/v1\/collections\/[^/]+\/pastes$/.test(pathname))
+    return "/api/v1/collections/[slug]/pastes"
+  if (/^\/api\/v1\/env\/[^/]+$/.test(pathname)) return "/api/v1/env/[group]"
+  if (pathname.startsWith("/api/analytics/")) return "/api/analytics/[...path]"
+  if (pathname.startsWith("/api/agent-share/")) return "/api/agent-share/[...path]"
+  return "/api/*"
+}
+// The name a request is logged and measured under: its route with slugs, ids and the query
+// string removed.
+export function routeName(path = "/") {
   const pathname = path.split("?")[0] ?? "/"
   if (/^\/secret-share(?:\/|$)/.test(pathname))
     return pathname.endsWith("/reveal") ? "/secret-share/[token]/reveal" : "/secret-share/[token]"
@@ -95,6 +133,8 @@ function route(path = "/") {
   if (pathname.startsWith("/api/auth/")) return "/api/auth/[...all]"
   if (pathname.startsWith("/api/jobs/")) return "/api/jobs/[name]"
   if (pathname.startsWith("/_next/")) return "/_next/*"
+  if (pathname === "/api/health" || pathname === "/api/metrics") return pathname
+  if (pathname.startsWith("/api/")) return apiRoute(pathname)
   if (
     [
       "/",
@@ -109,8 +149,6 @@ function route(path = "/") {
       "/sign-in",
       "/sign-up",
       "/welcome",
-      "/api/health",
-      "/api/metrics",
     ].includes(pathname)
   )
     return pathname
@@ -134,7 +172,7 @@ export function startTelemetry() {
     const finish = () => {
       if (completed) return
       completed = true
-      const name = route(request.url)
+      const name = routeName(request.url)
       const durationMs = performance.now() - started
       recordMetric(
         `http:${name}`,

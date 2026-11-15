@@ -30,9 +30,9 @@
         // React Email previews, opened by `bun run email`.
         "emails/*.tsx"
       ],
-      // k6 runs reads.js with its own runtime and modules. The dither code is vendored from
-      // dithercn and keeps the exports it ships with.
-      "ignore": ["load/reads.js", "lib/dither/**"],
+      // k6 runs reads.js and agents.js with its own runtime and modules. The dither code is
+      // vendored from dithercn and keeps the exports it ships with.
+      "ignore": ["load/reads.js", "load/agents.js", "lib/dither/**"],
       // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
       "ignoreDependencies": ["@tailwindcss/postcss"]
     },

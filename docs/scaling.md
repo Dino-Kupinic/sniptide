@@ -142,7 +142,8 @@ metrics are cumulative since process start and reset on restart. Histogram bucke
 so aggregate buckets before deriving percentiles. CPU time is cumulative; derive utilization
 from deltas. Event-loop delay percentiles cover process lifetime.
 
-Structured request logs include normalized routes (no slugs or query strings), status, duration,
+Structured request logs include normalized routes (no slugs, ids or query strings; each token
+API and MCP route has its own name, and unknown paths under `/api` share `/api/*`), status, duration,
 observed query count/time, and Content-Length when provided. Streaming responses often lack that
 header; use proxy response-byte metrics for complete payload measurements. Slow-query logs omit
 SQL and bound values. Drizzle fluent, prepared and relational queries, plus raw tagged/unsafe queries and transactions,
@@ -231,5 +232,7 @@ burn reveals, and purge with concurrent reads. Include a rolling deploy's connec
 Begin at tens of reads per second and compare request p95/p99, SQL latency, queueing, locks, heap,
 event-loop delay, response bytes, and cleanup throughput. Agree on latency/error budgets before
 running the exercise. The [read-load suite](../apps/web/load/README.md) seeds this workload and records a baseline.
+The same page describes the agent-load suite for the token API and MCP, and the
+[agent-traffic results](load-testing/agent-traffic.md) record what it found.
 The [local baseline](load-testing/baseline.md) is a reproducibility check; staging measurements are required for capacity claims. Counts/facets and hot-paste
 view updates are the next redesign candidates if those measurements show pressure.
