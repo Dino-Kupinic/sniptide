@@ -23,7 +23,7 @@ function Mark({ children, ...props }: LogoProps) {
   )
 }
 
-export function ClaudeCodeLogo(props: LogoProps) {
+function ClaudeCodeLogo(props: LogoProps) {
   return (
     <Mark {...props}>
       <path
@@ -34,7 +34,7 @@ export function ClaudeCodeLogo(props: LogoProps) {
   )
 }
 
-export function CodexLogo(props: LogoProps) {
+function CodexLogo(props: LogoProps) {
   return (
     <Mark {...props}>
       <path

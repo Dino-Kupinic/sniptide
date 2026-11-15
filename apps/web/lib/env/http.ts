@@ -2,7 +2,7 @@ import "server-only"
 
 import { getConfig } from "@/lib/config"
 
-export const secretHeaders = {
+const secretHeaders = {
   "Cache-Control": "private, no-store, max-age=0",
   "Referrer-Policy": "no-referrer",
   "X-Robots-Tag": "noindex, nofollow, noarchive",

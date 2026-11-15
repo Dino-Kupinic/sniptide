@@ -9,7 +9,7 @@ import { defaultPreferences, type Preferences } from "./preferences"
 const channels = z
   .object({ inApp: z.boolean().catch(true), email: z.boolean().catch(false) })
   .catch({ inApp: true, email: false })
-export const notificationPreferencesSchema = z
+const notificationPreferencesSchema = z
   .object({
     shared: channels,
     burned: channels,

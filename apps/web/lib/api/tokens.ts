@@ -13,11 +13,9 @@ import { SCOPES, type Scope } from "./scopes"
 // it, limited to its scopes: `read` lists and pulls pastes and env groups, `write` creates them.
 // Only a hash is stored, so a lost token can't be shown again; it's revoked and replaced.
 
-export { SCOPES, type Scope } from "./scopes"
-
 export const TOKEN_PREFIX = "snpt_"
 export const MAX_TOKENS = 25
-export const TOKEN_EXPIRIES = ["30d", "90d", "1y", "never"] as const
+const TOKEN_EXPIRIES = ["30d", "90d", "1y", "never"] as const
 export type TokenExpiry = (typeof TOKEN_EXPIRIES)[number]
 const EXPIRY_DAYS: Record<Exclude<TokenExpiry, "never">, number> = {
   "30d": 30,
@@ -47,7 +45,7 @@ export interface TokenOwner {
   agent?: AgentClient | null
 }
 
-export const tokenInputSchema = z.object({
+const tokenInputSchema = z.object({
   name: z.string().trim().min(1, "Name the token.").max(60, "Use at most 60 characters."),
   // Writing without reading back what you wrote isn't useful, so write always comes with read.
   write: z.boolean(),

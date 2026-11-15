@@ -4,7 +4,7 @@ import * as React from "react"
 
 // Whether a media query matches, kept in sync as it changes. The server can't know, so it renders
 // `serverValue` and the browser corrects it right after hydration.
-export function useMediaQuery(query: string, serverValue: boolean) {
+function useMediaQuery(query: string, serverValue: boolean) {
   return React.useSyncExternalStore(
     (notify) => {
       const list = window.matchMedia(query)

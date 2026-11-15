@@ -38,7 +38,7 @@ import { type RowSelection, SelectAllHead, SelectCell } from "./selection"
 
 // Visibility as a quiet outlined label with an icon, so a column of them doesn't shout. Burn after
 // read keeps the blue, since it is the one that changes what happens to the paste.
-export function RowBadge({
+function RowBadge({
   row,
   short = false,
   className,
@@ -108,7 +108,7 @@ export function ExpiryLabel({ row, mobile = false }: { row: PasteRow; mobile?: b
 
 // The logo of the agent that created a paste, or a terminal or plug for the CLI and the API, named
 // for screen readers and on hover. Pastes from the web editor show nothing.
-export function CreatorMark({
+function CreatorMark({
   createdBy,
   className,
 }: {

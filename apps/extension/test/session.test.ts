@@ -22,6 +22,9 @@ function setup() {
     instance,
     sessions,
     stored: () => stored,
+    store: (session: Session) => {
+      stored = session
+    },
     advance: (ms: number) => {
       now += ms
     },
@@ -41,6 +44,7 @@ describe("signing in", () => {
       name: "Ada Lovelace",
       username: "ada",
       canWrite: true,
+      method: "oauth",
     })
     expect(stored()?.clientId).toBe("sntc_1")
     expect(stored()?.expiresAt).toBe(Date.parse("2026-11-13T13:00:00Z"))
@@ -111,6 +115,18 @@ describe("calling the API", () => {
     expect(instance.state.requests).toEqual(["POST /api/oauth/token", "POST /api/v1/pastes"])
     expect(stored()?.refreshToken).not.toBe(before.refreshToken)
     expect(stored()?.accessToken).not.toBe(before.accessToken)
+  })
+
+  test("renews a session stored without a kind, as earlier versions wrote it", async () => {
+    const { sessions, instance, stored, advance, store } = setup()
+    await sessions.signIn(INSTANCE)
+    const { kind: _kind, ...legacy } = stored() as Session
+    store(legacy)
+    advance(61 * 60_000)
+    instance.state.requests.length = 0
+    expect((await create(sessions)).paste.id).toBe("p1")
+    expect(instance.state.requests).toEqual(["POST /api/oauth/token", "POST /api/v1/pastes"])
+    expect(stored()?.refreshToken).not.toBe(legacy.refreshToken)
   })
 
   test("two requests at once share one renewal", async () => {

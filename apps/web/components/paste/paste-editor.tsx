@@ -975,16 +975,14 @@ export function PasteEditor({
         content: (
           <>
             {editing ? null : (
-              <>
-                <ToggleRow
-                  label={t("endToEndEncryption")}
-                  description={t("encryptedInThisBrowser")}
-                  help={t("encryptionHelp")}
-                  checked={encrypted}
-                  onCheckedChange={changeEncrypted}
-                  large={large}
-                />
-              </>
+              <ToggleRow
+                label={t("endToEndEncryption")}
+                description={t("encryptedInThisBrowser")}
+                help={t("encryptionHelp")}
+                checked={encrypted}
+                onCheckedChange={changeEncrypted}
+                large={large}
+              />
             )}
             <ToggleRow
               label={t("password")}

@@ -57,7 +57,7 @@ const expiryChoices: { value: Expiry; label: string }[] = [
   { value: "never", label: "never" },
 ]
 
-export function ShareLinkField({
+function ShareLinkField({
   url,
   encryptionKeyId,
   expiresAt,
@@ -396,7 +396,7 @@ export function SharingPanel({
   )
 }
 
-export function SettingRow({
+function SettingRow({
   label,
   list = false,
   children,

@@ -11,10 +11,10 @@ const catalogs = { en, de, es, ja, zh }
 
 // One run of text in a paragraph. `strong` sets an address or name the reader should check apart
 // from the sentence around it.
-export type Segment = string | { strong: string }
+type Segment = string | { strong: string }
 export type Paragraph = Segment[]
 
-export interface EmailLink {
+interface EmailLink {
   label: string
   href: string
 }

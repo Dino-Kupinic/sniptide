@@ -290,12 +290,6 @@ async function sharesOf(slug: string): Promise<ShareResult> {
   return people ? { ok: true, people } : { ok: false, error: await actionError("pasteMissing") }
 }
 
-// Who one of the viewer's pastes is shared with, for the share dialog.
-export async function listPasteShares(slug: string): Promise<ShareResult> {
-  await assertSignedIn()
-  return sharesOf(slug)
-}
-
 // Invites someone (by exact email or username) to one of the viewer's pastes, or changes the
 // access they already have.
 export async function invitePerson(

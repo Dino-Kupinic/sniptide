@@ -3,8 +3,8 @@ import { z } from "zod"
 const byteLength = (value: string) => new TextEncoder().encode(value).length
 
 export const MAX_GROUPS = 100
-export const MAX_VARIABLES = 500
-export const MAX_VALUE_BYTES = 32 * 1024
+const MAX_VARIABLES = 500
+const MAX_VALUE_BYTES = 32 * 1024
 export const MAX_GROUP_BYTES = 256 * 1024
 
 export const GROUP_SLUG = /^[a-z0-9][a-z0-9._-]{0,63}$/
@@ -41,7 +41,7 @@ export const variablesSchema = z
 
 export type Variable = z.infer<typeof variablesSchema>[number]
 
-export const secretMetadataSchema = z.object({
+const secretMetadataSchema = z.object({
   slug: groupSlugSchema,
   project: z.string().trim().min(1).max(100),
   environment: z.enum(["dev", "staging", "prod"]),

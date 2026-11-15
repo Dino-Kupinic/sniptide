@@ -53,7 +53,7 @@ const themeOptions = [
   { value: "system", label: "system" },
 ] as const
 
-export function ThemeControl({ className }: { className?: string }) {
+function ThemeControl({ className }: { className?: string }) {
   const t = useTranslations("Settings")
   const { theme, setTheme } = useTheme()
   // The theme is only known in the browser; render "system" until mounted.

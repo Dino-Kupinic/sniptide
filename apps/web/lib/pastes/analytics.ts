@@ -2,7 +2,7 @@
 // analytics-report.ts; this file only holds the types and constants, so client components can
 // import it.
 
-export const ANALYTICS_RANGES = ["24h", "7d", "30d", "90d"] as const
+const ANALYTICS_RANGES = ["24h", "7d", "30d", "90d"] as const
 export type AnalyticsRange = (typeof ANALYTICS_RANGES)[number]
 export const DEFAULT_RANGE: AnalyticsRange = "30d"
 

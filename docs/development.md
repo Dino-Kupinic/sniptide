@@ -41,10 +41,13 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 - `packages/cli`: the `sniptide` CLI for capture, restore, agent skills and `.env` sync, built as a
   dependency-free Node.js executable
 - `packages/mcp`: shared MCP tools, remote HTTP transport and local stdio executable
-- `packages/contracts`: shared wire contracts for the web app, CLI, and MCP server
+- `packages/contracts`: shared wire contracts for the web app, CLI, and MCP server, the base URL
+  and response-size rules the CLI and MCP server call an instance with, and the `.env` parser the CLI
+  and the web app share
 - `packages/db`: Drizzle schema, Postgres client and migrations
 - `packages/oauth-client`: the OAuth 2.1 flow with PKCE that the browser extension and the VS Code
-  extension sign in with, and a stand-in instance for their tests
+  extension sign in with, the session that stores and renews their tokens, and a stand-in instance
+  for their tests
 - `packages/sdk`: `@sniptide/sdk`, the JavaScript and TypeScript client for the token API
 - `packages/sdk-python`: `sniptide`, the Python client for the token API
 - `packages/ui`: `@sniptide/ui`, the shared shadcn (Base UI) components, brand pieces and Sniptide
@@ -57,13 +60,14 @@ Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 | --- | --- | --- |
 | Browser paste reads and writes | `apps/web/lib/pastes/store.ts`, `actions.ts`, `mutations.ts`, `schema.ts` | Web store, action, and access tests |
 | Token API | `apps/web/app/api/v1`, `apps/web/lib/api` | `apps/web/test/api-v1.test.ts`, `cli-roundtrip.test.ts` |
-| Shared wire contracts | `packages/contracts/src` | CLI contract tests, MCP tests, and web API tests |
+| Shared wire contracts | `packages/contracts/src` | `bun run test:contracts`, CLI contract tests, MCP tests, and web API tests |
 | Documentation site | `apps/docs` | `bun run test:docs` |
-| CLI capture and restore | `packages/cli/src`, `packages/cli/API.md` | `bun run test:cli` |
+| CLI capture and restore | `packages/cli/src`, `packages/cli/API.md` | `bun run test:contracts` | Base URL validation and the size-capped response reader | Installed dependencies |
+| `bun run test:cli` |
 | SDKs | `packages/sdk/src`, `packages/sdk-python/sniptide` | `bun run test:sdk` |
 | Browser extension | `apps/extension/src`, with the session and paste rules in `src/lib` | `bun run test:extension`, then load `apps/extension/dist` in Chrome |
 | VS Code extension | `apps/vscode/src`, with the session, share and analytics rules in `src/lib` | `bun run test:vscode`, then press F5 in `apps/vscode` or install the `.vsix` |
-| OAuth sign-in of the extensions | `packages/oauth-client/src` | `bun run test:extension` and `bun run test:vscode` |
+| OAuth sign-in and sessions of the extensions | `packages/oauth-client/src`, with token storage and renewal in `sessions.ts` | `bun run test:extension` and `bun run test:vscode` |
 | Raycast extension | `plugins/raycast/src`, with the paste and error rules in `src/lib` | `bun run test:raycast`, then `npm run dev` in `plugins/raycast` on a machine with Raycast |
 | MCP tools and transport | `packages/mcp/src`, `apps/web/lib/api/mcp.ts` | `bun run test:mcp`, `apps/web/test/mcp.test.ts` |
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
@@ -203,7 +207,8 @@ Run these commands from the repository root:
 
 | Command | What it verifies | Requirements |
 | --- | --- | --- |
-| `bun run check` | Biome formatting, lint, import order, and workspace types | Installed dependencies |
+| `bun run check` | Biome formatting, lint, import order, and workspace types. A lint warning fails it like an error | Installed dependencies |
+| `bun run check:unused` | Unused files, exports and exported types, plus everything `check:deps` covers | Installed dependencies |
 | `bun run check:deps` | Unused dependency declarations and undeclared package or binary usage | Installed dependencies |
 | `bun run audit:deps` | Known advisories in the complete dependency lockfile | Access to the npm advisory service |
 | `bun run test:cli` | CLI behavior through its built Node executable | Node and temporary loopback HTTP listeners |
@@ -216,7 +221,7 @@ Run these commands from the repository root:
 | `bun run test:web:integration` | Web cases with required database coverage and Node admission tests | A valid dedicated `TEST_DATABASE_URL` |
 | `bun run test` | CLI, MCP, docs, web, SDK, browser extension, then VS Code extension tests in separate processes | Same requirements as the individual suites |
 | `bun run build` | Production workspace builds | Installed dependencies |
-| `bun run verify` | `check`, then `test`, then the docs build: the local gate before a pull request | Same requirements as `test` |
+| `bun run verify` | `check`, then `check:unused`, then `test`, then the docs build: the local gate before a pull request | Same requirements as `test` |
 | `bun run test:e2e` | Browser behavior | Chromium and a dedicated `E2E_DATABASE_URL` |
 
 The test suites run in separate processes because web tests preload mocks for Next request
@@ -263,6 +268,12 @@ Run `bun run check:deps` after changes to dependencies or entry points. Knip che
 development declarations across the workspaces. `knip.jsonc` includes the language generator and
 browser tests, plus narrow exceptions for the shared PostCSS config and the shadcn generator.
 Add new scripts to the workspace entry points instead of ignoring their dependencies.
+
+`bun run check:unused` runs all of Knip and is part of `bun run verify` and CI. It fails on a file
+nothing imports and on an export no other file uses. Delete the code, or drop `export` when only
+its own file uses it. A file that a script, a Dockerfile or a test runner starts by path is an
+entry point in `knip.jsonc`. The vendored dither code in `apps/web/lib/dither` keeps the exports
+it ships with.
 
 Dependabot opens weekly dependency update PRs. Better Auth and its adapters update together, as
 do Next.js and React. Major upgrades outside those groups stay separate from routine updates.

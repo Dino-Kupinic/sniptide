@@ -8,7 +8,7 @@ declare const secondsBrand: unique symbol
 export type Milliseconds = number & { readonly [millisecondsBrand]: never }
 export type Seconds = number & { readonly [secondsBrand]: never }
 
-export function milliseconds(value: number): Milliseconds {
+function milliseconds(value: number): Milliseconds {
   return value as Milliseconds
 }
 

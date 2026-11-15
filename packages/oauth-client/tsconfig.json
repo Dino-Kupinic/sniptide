@@ -4,7 +4,12 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "paths": {
+      // The SDK publishes its build output, so this package reads the source and needs no build
+      // of the SDK first.
+      "@sniptide/sdk": ["../sdk/src/index.ts"]
+    }
   },
   "include": ["src", "test"]
 }

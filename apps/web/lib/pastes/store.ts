@@ -104,8 +104,9 @@ import { unlockCookieName, unlockToken } from "./unlock"
 // reads behind the same access rules.
 
 export { TRASH_DAYS }
+
 // How many days of views the charts show.
-export const VIEW_HISTORY_DAYS = 60
+const VIEW_HISTORY_DAYS = 60
 
 type PasteRecord = typeof pasteTable.$inferSelect
 
@@ -350,7 +351,7 @@ async function findOwned(slug: string, includeRestricted = false) {
   return record && record.ownerId === viewer ? record : null
 }
 
-export function isExpired(paste: Pick<Paste, "expiresAt">) {
+function isExpired(paste: Pick<Paste, "expiresAt">) {
   return paste.expiresAt !== null && paste.expiresAt <= Date.now()
 }
 

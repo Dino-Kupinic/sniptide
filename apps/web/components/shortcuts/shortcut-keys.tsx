@@ -12,7 +12,7 @@ function subscribe() {
 
 // Whether to show ⌘ or Ctrl. The server can't know, so it renders Ctrl and a Mac swaps to ⌘ right
 // after hydration instead of failing it.
-export function useIsMac() {
+function useIsMac() {
   return React.useSyncExternalStore(
     subscribe,
     () => {

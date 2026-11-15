@@ -19,11 +19,11 @@ import { type PasteRow, toRows } from "./rows"
 import { summarizePastes } from "./store"
 
 // Each list widget shows this many rows and links to the full page for the rest.
-export const WIDGET_ROWS = 5
+const WIDGET_ROWS = 5
 // How far ahead the dashboard warns about an expiry, matching the expiring-paste notification.
-export const EXPIRING_WINDOW_MS = 2 * DAY
+const EXPIRING_WINDOW_MS = 2 * DAY
 
-export type DashboardSecret = Pick<SecretSummary, "id" | "slug" | "environment" | "count">
+type DashboardSecret = Pick<SecretSummary, "id" | "slug" | "environment" | "count">
 
 export interface DashboardData {
   // Live pastes whose links stop working within EXPIRING_WINDOW_MS.

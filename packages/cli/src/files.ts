@@ -10,7 +10,7 @@ const exec = promisify(execFile)
 const maxBytes = 1024 * 1024
 const forbiddenDirectories = new Set([".git", "node_modules", ".next", ".turbo"])
 
-export function safeName(name: string): string {
+function safeName(name: string): string {
   const parts = name.split("/")
   if (
     !name ||
@@ -57,7 +57,7 @@ async function inspect(
   return null
 }
 
-export function detectLanguage(name: string): string {
+function detectLanguage(name: string): string {
   const base = path.posix.basename(name)
   const exact: Record<string, string> = {
     Dockerfile: "docker",

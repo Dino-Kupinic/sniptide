@@ -47,7 +47,7 @@ const globalJobs = globalThis as typeof globalThis & {
 }
 
 // How often the guest account goes back to the example data (DEMO_RESET_MINUTES, hourly).
-export function demoResetMinutes() {
+function demoResetMinutes() {
   return envInteger("DEMO_RESET_MINUTES", 60, 5, 1440)
 }
 

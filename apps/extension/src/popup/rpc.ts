@@ -1,6 +1,6 @@
 import type { Replies, Reply, Request } from "../lib/protocol"
 
-export class RequestError extends Error {
+class RequestError extends Error {
   constructor(
     message: string,
     public code: string,

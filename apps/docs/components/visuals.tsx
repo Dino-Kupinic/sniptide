@@ -108,7 +108,6 @@ function Code({ lines }: { lines: (string | [string, Token])[][] }) {
   return (
     <div className="font-mono text-xs leading-5 whitespace-pre text-(--syntax-foreground)">
       {lines.map((parts, row) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: static lines that never reorder
         <div key={row} className="flex gap-3">
           <span className="w-3 shrink-0 text-right text-muted-foreground/70 tabular-nums">
             {row + 1}
@@ -118,7 +117,6 @@ function Code({ lines }: { lines: (string | [string, Token])[][] }) {
               typeof part === "string" ? (
                 part
               ) : (
-                // biome-ignore lint/suspicious/noArrayIndexKey: static tokens that never reorder
                 <span key={index} className={tokenClass[part[1]]}>
                   {part[0]}
                 </span>

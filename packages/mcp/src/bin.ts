@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { defaultBaseUrl, TokenApiBackend } from "./client"
+import { DEFAULT_BASE_URL } from "@sniptide/contracts/http"
+import { TokenApiBackend } from "./client"
 import { createSniptideServer, ToolError } from "./server"
 
 try {
@@ -9,7 +10,7 @@ try {
       "Configure SNIPTIDE_TOKEN and optionally SNIPTIDE_BASE_URL through the environment; no arguments are supported.",
     )
   const backend = new TokenApiBackend(
-    process.env.SNIPTIDE_BASE_URL ?? defaultBaseUrl,
+    process.env.SNIPTIDE_BASE_URL ?? DEFAULT_BASE_URL,
     process.env.SNIPTIDE_TOKEN?.trim() ?? "",
   )
   await createSniptideServer(backend).connect(new StdioServerTransport())

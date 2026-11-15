@@ -2,7 +2,7 @@ import { languages } from "./languages"
 import { listQueryFields, type SearchParams, type SortDirection } from "./list-query"
 import { ACCESSES, type Access } from "./types"
 
-export const SHARED_SORTS = ["shared", "updated", "title", "language", "owner", "access"] as const
+const SHARED_SORTS = ["shared", "updated", "title", "language", "owner", "access"] as const
 export type SharedSort = (typeof SHARED_SORTS)[number]
 export const DEFAULT_SHARED_DIRECTION: Record<SharedSort, SortDirection> = {
   shared: "desc",

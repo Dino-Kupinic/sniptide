@@ -26,8 +26,6 @@ export const messages = {
   signInTimedOut: "Sign-in took longer than five minutes. Try again.",
   browserDidNotOpen: "The browser didn't open. Paste an API token instead.",
   tokenRejected: "That API token doesn't work on this instance. Check the token and the address.",
-  connectionEnded: "Your Sniptide connection ended. Sign in again.",
-  tokenStopped: "Your API token stopped working. Sign in again.",
   readOnly: "This connection is read-only. Sign in again with write access to save snippets.",
 
   // Sharing

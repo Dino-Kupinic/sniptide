@@ -30,7 +30,7 @@ export interface Person {
   tone: "primary" | "foreground" | "muted"
 }
 
-export interface Revision {
+interface Revision {
   id: number
   message: string
   createdAt: number

@@ -14,12 +14,12 @@ import { contextLines, MAX_QUESTION_LENGTH, type ReportContext } from "./report"
 // problem or it looks like a bug, files it in Linear with the conversation attached. Off unless
 // ANTHROPIC_API_KEY or OPENAI_API_KEY is set.
 
-export const MAX_TURNS = 20
+const MAX_TURNS = 20
 // Replies are the assistant's own text, so they get far more room than a one-line question.
-export const MAX_REPLY_LENGTH = 20_000
+const MAX_REPLY_LENGTH = 20_000
 // There is no billing, so every account gets a fixed number of questions per day. The window
 // starts at the account's first question of the period and the counter resets 24 hours later.
-export const QUESTIONS_PER_DAY = 10
+const QUESTIONS_PER_DAY = 10
 
 export const conversationSchema = z
   .array(

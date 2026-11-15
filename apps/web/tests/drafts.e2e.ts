@@ -10,7 +10,10 @@ test("navigation flushes the latest pending local draft", async ({ app, browser,
   await expect
     .poll(async () => {
       await editor.press("Control+s")
-      return browser.evaluate(() => document.body.innerText.includes("Draft saved on this device"))
+      return browser.evaluate(() =>
+        // biome-ignore lint/performance/useDomNodeTextContent: innerText leaves out hidden text, so this matches only a notice on screen
+        document.body.innerText.includes("Draft saved on this device"),
+      )
     })
     .toBe(true)
   await expect

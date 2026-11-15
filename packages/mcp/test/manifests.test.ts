@@ -27,6 +27,7 @@ describe("agent plugin manifests", () => {
       sniptide: {
         type: "http",
         url: endpoint,
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Claude fills in this placeholder, so it stays literal text
         headers: { Authorization: "Bearer ${user_config.api_token}" },
       },
     })

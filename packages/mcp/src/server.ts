@@ -2,6 +2,7 @@ import { completable } from "@modelcontextprotocol/sdk/server/completable.js"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import { mcpCaptureSchema, mcpTagSchema, visibilitySchema } from "@sniptide/contracts"
+import { MAX_RESPONSE_BYTES } from "@sniptide/contracts/http"
 import { z } from "zod"
 import { version as developmentVersion } from "../package.json"
 
@@ -54,7 +55,7 @@ async function result(run: () => Promise<Data>): Promise<CallToolResult> {
   try {
     const data = await run()
     const text = JSON.stringify(data)
-    if (Buffer.byteLength(text) > 25 * 1024 * 1024)
+    if (Buffer.byteLength(text) > MAX_RESPONSE_BYTES)
       throw new ToolError(
         "This result exceeds 25 MiB. Search for summaries and read individual snippets instead.",
       )

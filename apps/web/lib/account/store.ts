@@ -6,7 +6,7 @@ import { getDb } from "@/lib/db"
 
 export type LinkedProvider = "github" | "google"
 
-export interface SessionSummary {
+interface SessionSummary {
   id: string
   current: boolean
   browser: string | null
