@@ -18,8 +18,6 @@ import {
   getShare,
   leaveShare,
   listPasteShares,
-  listShared,
-  listStarred,
   markShareSeen,
   navCounts,
   readRawFile,
@@ -32,6 +30,7 @@ import {
 } from "@/lib/pastes/store"
 import type { PasteInput } from "@/lib/pastes/types"
 import { hasDatabase, marker, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
+import { listShared, listStarred } from "./lists"
 
 // Sharing a paste with specific accounts (WRK-127) and the recipient's Shared with me (WRK-128):
 // an invited person can open a private paste, everyone else still gets a 404, and taking access

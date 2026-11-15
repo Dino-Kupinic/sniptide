@@ -53,11 +53,7 @@ import {
   getUnlockHash,
   isSlugAvailable,
   isStarred,
-  listOwnPastes,
   listPasteShares,
-  listShared,
-  listStarred,
-  listTrash,
   navCounts,
   readPublicPreview,
   readRawFile,
@@ -90,6 +86,7 @@ import {
   signInAs,
   unlock,
 } from "./harness"
+import { listOwnPastes, listShared, listStarred, listTrash } from "./lists"
 
 const describeDb = hasDatabase ? describe : describe.skip
 const restricted = ["pending", "quarantined", "removed"] as const
