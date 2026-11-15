@@ -11,7 +11,7 @@ describes what Compose runs and the options it takes.
 
 | Service | What it runs |
 | --- | --- |
-| `db` | `postgres:17-alpine`, with data in the `postgres` volume. Published only on `127.0.0.1`, so it isn't reachable from outside the host. |
+| `db` | `postgres:18-alpine`, with data in the `postgres` volume. Published only on `127.0.0.1`, so it isn't reachable from outside the host. |
 | `app` | The Sniptide image on port 3000. It waits until the database is healthy and applies migrations when it starts. |
 | `proxy` | Optional [Caddy](https://caddyserver.com) for HTTPS. Runs only with the `proxy` profile, from `COMPOSE_PROFILES=proxy` in `.env` or `--profile proxy`. |
 

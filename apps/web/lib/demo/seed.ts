@@ -160,7 +160,7 @@ LIMIT 20;
         language: "yaml",
         content: `services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_PASSWORD: example
     healthcheck:

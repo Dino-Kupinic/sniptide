@@ -127,6 +127,9 @@ jobs:
       - name: Verify docker compose and the Coolify template
         run: bash scripts/test-compose.sh sniptide:ci
 
+      - name: Test PostgreSQL major upgrade
+        run: bash scripts/test-postgres-upgrade.sh
+
       - name: Select a tag for trusted events
         id: image
         env:

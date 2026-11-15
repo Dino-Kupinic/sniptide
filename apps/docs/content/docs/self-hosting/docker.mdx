@@ -1,6 +1,6 @@
 ---
 title: Docker
-description: Run the Sniptide image as a single container against a Postgres 17 database you already have, and check that it starts.
+description: Run the Sniptide image as a single container against a Postgres 18 database you already have, and check that it starts.
 ---
 
 Use this route when you already run Postgres and want only the Sniptide container. To run the
@@ -8,7 +8,7 @@ database too, use [Docker Compose](/self-hosting/docker-compose).
 
 ## Before you begin
 
-- Postgres 17, which Sniptide is built and tested against, with an empty database for Sniptide.
+- Postgres 18, which Sniptide is built and tested against, with an empty database for Sniptide.
 - A database user that can create tables and the `pg_trgm` extension. The first migration installs
   `pg_trgm` for title and link search. If your provider doesn't allow that, ask the database
   operator to run `CREATE EXTENSION pg_trgm;` in the database first.
