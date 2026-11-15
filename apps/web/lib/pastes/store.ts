@@ -370,35 +370,6 @@ export async function purgeTrash(owner: string) {
   )
 }
 
-export async function listOwnPastes() {
-  const viewer = await viewerId()
-  if (!viewer) return []
-  const records = await getDb()
-    .select()
-    .from(pasteTable)
-    .where(and(allowedPaste(), eq(pasteTable.ownerId, viewer), isNull(pasteTable.deletedAt)))
-    .orderBy(desc(pasteTable.updatedAt))
-  return summarize(records, viewer)
-}
-
-export async function listTrash() {
-  const viewer = await viewerId()
-  if (!viewer) return []
-  await purgeTrash(viewer)
-  const records = await getDb()
-    .select()
-    .from(pasteTable)
-    .where(
-      and(
-        allowedPaste(),
-        eq(pasteTable.ownerId, viewer),
-        sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()}`,
-      ),
-    )
-    .orderBy(desc(pasteTable.deletedAt))
-  return summarize(records, viewer)
-}
-
 // What makes a paste show up for someone it's shared with: a share row for them on a live paste
 // someone else owns. A burn-after-read paste is read once through its link, so a share never
 // opens it in the app, and an expired one is gone for everyone but its owner.
@@ -420,31 +391,6 @@ function toShare(slug: string, row: typeof pasteShare.$inferSelect) {
     sharedAt: ms(row.createdAt),
     seen: row.seenAt !== null,
   } satisfies Share & { seen: boolean }
-}
-
-// Pastes other people shared with the viewer, newest share first.
-export async function listShared(): Promise<
-  { share: Share & { seen: boolean }; paste: PasteSummary }[]
-> {
-  const viewer = await viewerId()
-  if (!viewer) return []
-  const rows = await getDb()
-    .select({ paste: pasteTable, share: pasteShare })
-    .from(pasteShare)
-    .innerJoin(
-      pasteTable,
-      and(allowedParent(pasteShare.pasteId), eq(pasteShare.pasteId, pasteTable.id)),
-    )
-    .where(sharedWithWhere(viewer))
-    .orderBy(desc(pasteShare.createdAt), pasteTable.id)
-  const summaries = await summarize(
-    rows.map((row) => row.paste),
-    viewer,
-  )
-  return rows.flatMap((row) => {
-    const paste = summaries.find((summary) => summary.slug === row.paste.slug)
-    return paste ? [{ share: toShare(row.paste.slug, row.share), paste }] : []
-  })
 }
 
 // The viewer's share of a paste someone else owns, if it's open to them.
@@ -814,20 +760,6 @@ export async function readableStarsWhere(viewer: string, db: Pick<Database, "sel
       ),
     ),
   )
-}
-
-async function starredRecords(viewer: string) {
-  return getDb()
-    .select()
-    .from(pasteTable)
-    .where(await readableStarsWhere(viewer))
-    .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
-}
-
-export async function listStarred() {
-  const viewer = await viewerId()
-  if (!viewer) return []
-  return summarize(await starredRecords(viewer), viewer)
 }
 
 export async function isStarred(slug: string) {
