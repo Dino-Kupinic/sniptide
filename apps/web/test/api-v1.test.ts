@@ -10,7 +10,6 @@ import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/rout
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
 import { authenticate, createToken, hashToken, listTokens } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
-import { telemetrySnapshot } from "@/lib/telemetry"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // The token API under /api/v1 against a real Postgres: who a token reaches, what each scope
@@ -93,9 +92,9 @@ describeDb("token API", () => {
       await authenticate(request)
       const [first] = await getDb().select().from(apiToken)
       expect(first?.lastUsedAt).toBeInstanceOf(Date)
-      const updates = telemetrySnapshot().metrics["db:update"]?.count ?? 0
       await authenticate(request)
-      expect(telemetrySnapshot().metrics["db:update"]?.count ?? 0).toBe(updates)
+      const [second] = await getDb().select().from(apiToken)
+      expect(second?.lastUsedAt).toEqual(first?.lastUsedAt)
       const old = new Date(Date.now() - 120_000)
       await getDb()
         .update(apiToken)

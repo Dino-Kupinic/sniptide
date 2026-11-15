@@ -30,6 +30,7 @@
     "test:raycast": "cd plugins/raycast && (test -d node_modules || npm ci --no-audit --no-fund) && npm run check",
     "load:seed": "bun apps/web/load/seed.ts",
     "load:run": "bun apps/web/load/run.ts",
+    "load:agents": "bun apps/web/load/agents.ts",
     "test:e2e": "bun --filter web test:e2e",
     "test:sdk": "bun --filter @sniptide/sdk test && cd packages/sdk-python && python3 -m unittest discover -s tests"
   },

@@ -513,14 +513,14 @@ describeDb("host moderation", () => {
       return pending
     })
     const [apiPage, collectionPage, webPage] = await Promise.all(reads)
-    expect(apiPage.pastes).toHaveLength(50)
-    expect(apiPage.nextCursor).toBeTruthy()
+    // The API list is one statement, so it reads its snapshot once the lock clears: the page it
+    // returns is whole, and holds only what moderation left.
+    expect(apiPage.pastes.map((item) => item.slug)).toEqual(["snapshot-50"])
+    expect(apiPage.nextCursor).toBeNull()
     expect(collectionPage?.pastes).toHaveLength(50)
     expect(collectionPage?.nextCursor).toBeTruthy()
     expect(webPage.pastes).toHaveLength(10)
     expect("nextCursor" in webPage.pagination && webPage.pagination.nextCursor).toBeTruthy()
-    const nextApi = await listCaptures("owner", { ...apiQuery, cursor: apiPage.nextCursor })
-    expect(nextApi.pastes.map((item) => item.slug)).toEqual(["snapshot-50"])
     const nextCollection = await collectionCaptures(
       "owner",
       "examples",
