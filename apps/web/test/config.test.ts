@@ -153,14 +153,24 @@ describe("optional SMTP configuration", () => {
       }).smtp,
     ).toMatchObject({ secure: true, requireTLS: false, auth: { user: "user", pass: "password" } })
   })
+  test("port and implicit TLS default from each other", () => {
+    const { SMTP_PORT: _, ...noPort } = complete
+    expect(getConfig(noPort).smtp).toMatchObject({ port: 587, secure: false })
+    expect(getConfig({ ...noPort, SMTP_SECURE: "true" }).smtp).toMatchObject({
+      port: 465,
+      secure: true,
+    })
+    expect(getConfig({ ...complete, SMTP_PORT: "465" }).smtp).toMatchObject({
+      port: 465,
+      secure: true,
+    })
+    expect(getConfig({ ...complete, SMTP_PORT: "465", SMTP_SECURE: "false" }).smtp).toMatchObject({
+      port: 465,
+      secure: false,
+    })
+  })
   test("incomplete SMTP, unpaired credentials and short signing secret are rejected", () => {
-    for (const key of [
-      "SMTP_HOST",
-      "SMTP_PORT",
-      "SMTP_FROM",
-      "BETTER_AUTH_URL",
-      "BETTER_AUTH_SECRET",
-    ])
+    for (const key of ["SMTP_HOST", "SMTP_FROM", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"])
       expect(() => getConfig({ ...complete, [key]: "" })).toThrow(/SMTP requires/)
     expect(() => getConfig({ ...complete, SMTP_USER: "user" })).toThrow(/paired SMTP_USER/)
     expect(() => getConfig({ ...complete, SMTP_PASSWORD: "password" })).toThrow(/paired SMTP_USER/)

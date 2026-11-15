@@ -31,20 +31,30 @@ account at `https://<your-domain>`.
 - `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`, because Coolify's proxy appends
   the visitor's address to `X-Forwarded-For`. See
   [Reverse proxy and client IP](/self-hosting/reverse-proxy).
+- Every other setting keeps the app's default, which suits a small instance.
 - Memory ceilings through `SNIPTIDE_MEMORY` and `POSTGRES_MEMORY`, unset by default. See
   [Memory](/self-hosting/memory).
 
 ## Change settings
 
-The template lists the common optional settings as variables on the resource: sign-up, demo
-mode, GitHub and Google sign-in, `MAX_PASTE_SIZE`, account limits, database capacity,
-`GITHUB_TOKEN`, Slack and Discord webhooks, SMTP and `POSTHOG_KEY`. Set the ones you need from
+The template lists the settings most instances change as variables on the resource, all of them
+optional: `ALLOW_SIGN_UP`, `ALLOWED_EMAILS`, GitHub and Google sign-in, the account limits,
+`GITHUB_TOKEN` and SMTP. Set the ones you need from
 [Configuration](/self-hosting/configuration) and redeploy.
 
-Other settings, such as `ENV_SECRETS_KEY`, `SHARE_URL`, `METRICS_TOKEN`, `COOKIE_PREFIX` and the
-legal links, aren't in the template. To use one, add it to the `environment` list of the
-`sniptide` service in the template, for example `- METRICS_TOKEN=${METRICS_TOKEN}`, then set its
-value and redeploy.
+Any other setting, such as `MAX_PASTE_SIZE`, `METRICS_TOKEN`, `DEMO_MODE` or the legal links, keeps
+its default until you add it to the `environment` list of the `sniptide` service in the template,
+for example `- METRICS_TOKEN=${METRICS_TOKEN}`. Then set its value and redeploy.
+
+Updating the template doesn't change a resource you already deployed: Coolify keeps the Compose
+file and the values you saved. When you paste a newer template over an existing resource, add back
+the lines for any setting you had set that the new template no longer lists.
+
+When several resources share settings, such as production, a demo and previews of the same
+instance, define the value once as a
+[Coolify shared variable](https://coolify.io/docs/core/team/shared-variables) on the team, project
+or environment. Then set the variable on each resource to a reference such as
+`{{project.SMTP_HOST}}`, so a change happens in one place.
 
 The template follows Coolify's one-click service format, with a logo in
 `deploy/coolify/sniptide.svg`. It isn't in Coolify's one-click list yet, so paste it as described
