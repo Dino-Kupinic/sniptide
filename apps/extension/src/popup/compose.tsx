@@ -18,8 +18,8 @@ import { fileNameFor, MAX_FILE_NAME, MAX_TITLE, sourceDescription, titleFor } fr
 import { expiryLabels, messages } from "../lib/messages"
 import { type PageText, readCodeBlocks, readSelection } from "../lib/page"
 import { EXPIRIES, type Expiry, type Settings } from "../lib/protocol"
-import { openTab } from "./app"
 import { ask, errorMessage } from "./rpc"
+import { openTab } from "./tabs"
 import { visibilityOptions } from "./visibility"
 
 const NO_COLLECTION = "none"
