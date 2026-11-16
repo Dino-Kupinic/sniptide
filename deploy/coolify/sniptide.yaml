@@ -6,8 +6,9 @@
 # port: 3000
 
 # Coolify one-click service for Sniptide: the app and its Postgres. Coolify fills in the domain,
-# a database user and password, and the auth secret. Everything else below is optional and shows
-# up as an editable variable. Keep in step with docker-compose.yml and apps/web/.env.example.
+# a database user and password, and the auth secret. The rest are the settings most instances
+# change, each optional and shown as an editable variable. Every other option has a default in
+# the app (apps/web/.env.example); add a line here for one you need, as the self-hosting docs show.
 # The header and sniptide.svg follow Coolify's one-click service format, so this file can go to
 # coollabsio/coolify as templates/compose/sniptide.yaml with the image pinned to a release.
 
@@ -16,47 +17,31 @@ services:
     image: ghcr.io/dino-kupinic/sniptide:latest
     mem_limit: ${SNIPTIDE_MEMORY:-0}
     environment:
-      - NODE_OPTIONS=${NODE_OPTIONS:-}
       - SERVICE_URL_SNIPTIDE_3000
       - DATABASE_URL=postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/${POSTGRES_DB:-sniptide}
       - BETTER_AUTH_SECRET=${SERVICE_BASE64_64_SNIPTIDE}
       - BETTER_AUTH_URL=${SERVICE_URL_SNIPTIDE}
       # Coolify's proxy (Traefik) appends the visitor to X-Forwarded-For; rate limits read it there.
-      - CLIENT_IP_SOURCE=${CLIENT_IP_SOURCE:-x-forwarded-for}
-      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-private}
+      - CLIENT_IP_SOURCE=x-forwarded-for
+      - TRUSTED_PROXIES=private
       # Sign-up closes once the first account (yours) exists. Set true to let anyone sign up.
       - ALLOW_SIGN_UP=${ALLOW_SIGN_UP:-first}
-      - ALLOWED_EMAILS=${ALLOWED_EMAILS}
-      - DEMO_MODE=${DEMO_MODE:-false}
-      - DEMO_RESET_MINUTES=${DEMO_RESET_MINUTES:-60}
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - MAX_PASTE_SIZE=${MAX_PASTE_SIZE}
-      - DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-10}
-      - HTTP_ADMISSION_LIMIT=${HTTP_ADMISSION_LIMIT:-64}
-      - PROBE_ADMISSION_LIMIT=${PROBE_ADMISSION_LIMIT:-2}
-      - LIVE_ADMISSION_LIMIT=${LIVE_ADMISSION_LIMIT:-128}
-      - DATABASE_PROBE_RESERVE=${DATABASE_PROBE_RESERVE:-1}
-      - DATABASE_MAINTENANCE_RESERVE=${DATABASE_MAINTENANCE_RESERVE:-1}
-      - DATABASE_ADMISSION_QUEUE_LIMIT=${DATABASE_ADMISSION_QUEUE_LIMIT:-64}
-      - VISIT_DRAIN_BATCH_SIZE=${VISIT_DRAIN_BATCH_SIZE:-500}
-      - VISIT_QUEUE_MAX_LAG_MS=${VISIT_QUEUE_MAX_LAG_MS:-30000}
-      - VISIT_QUEUE_MAX_BACKLOG=${VISIT_QUEUE_MAX_BACKLOG:-10000}
+      - ALLOWED_EMAILS=${ALLOWED_EMAILS:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      # "unlimited" removes a per-account limit, which suits a server you run for yourself.
       - ACCOUNT_STORAGE_BYTES=${ACCOUNT_STORAGE_BYTES:-}
       - ACCOUNT_PASTE_LIMIT=${ACCOUNT_PASTE_LIMIT:-}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # Email for password resets and notifications. Host and sender turn it on; the port defaults
+      # to 587 with STARTTLS, and 465 switches to implicit TLS.
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-}
       - SMTP_FROM=${SMTP_FROM:-}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - SMTP_SECURE=${SMTP_SECURE:-}
-      - SMTP_REQUIRE_TLS=${SMTP_REQUIRE_TLS:-}
-      - POSTHOG_KEY=${POSTHOG_KEY}
     depends_on:
       postgres:
         condition: service_healthy
