@@ -3,6 +3,7 @@ import net, { type Socket } from "node:net"
 import { createAuth } from "@workspace/auth"
 import { notification, paste, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { GET as openNotification } from "@/app/api/notifications/[id]/open/route"
 import { GET, POST } from "@/app/api/notifications/unsubscribe/route"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
@@ -335,6 +336,41 @@ describeDb("notification channel delivery", () => {
       expect(message).not.toContain("title-of-")
     }
   })
+  test.each(["private", "unlisted"] as const)(
+    "%s burn email opens only for the invited account",
+    async (visibility) => {
+      await enable("shared")
+      await updateNotificationPreference({ kind: "shared", channel: "inApp", enabled: false })
+      await seedPaste({ slug: "burn-secret", owner: "reader", visibility, burnAfterRead: true })
+      signInAs("reader")
+      expect(await sharePaste("burn-secret", "owner", "view")).toEqual({ status: "ok" })
+      expect((await deliverNotificationEmails()).sent).toBe(1)
+      const message = (sink.messages[0] ?? "").replace(/=\r\n/g, "")
+      expect(message).not.toContain("burn-secret")
+      const [row] = await rows()
+      if (!row) throw new Error("expected notification")
+      expect(message).toContain(`/api/notifications/${row.id}/open`)
+      const request = new Request(`http://localhost:3000/api/notifications/${row.id}/open`)
+      const context = { params: Promise.resolve({ id: row.id }) }
+      signInAs(null)
+      const signedOut = await openNotification(request, context)
+      expect(signedOut.headers.get("location")).toContain("/sign-in?next=")
+      signInAs("reader")
+      expect((await openNotification(request, context)).status).toBe(404)
+      signInAs("owner")
+      const response = await openNotification(request, context)
+      expect(response.headers.get("location")).toBe("http://localhost:3000/burn-secret")
+      expect((await readSharedPaste("burn-secret")).status).toBe("sealed")
+      signInAs("reader")
+      await unsharePaste("burn-secret", "owner")
+      signInAs("owner")
+      expect((await openNotification(request, context)).status).toBe(404)
+      expect((await readSharedPaste("burn-secret")).status).toBe(
+        visibility === "private" ? "missing" : "sealed",
+      )
+    },
+  )
+
   test("concurrent workers claim one message once", async () => {
     await enable()
     await queueViews()

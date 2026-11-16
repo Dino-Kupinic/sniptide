@@ -29,6 +29,7 @@
     "./schema": "./src/schema/index.ts",
     "./migrate": "./src/migrate.ts",
     "./moderation": "./src/moderation.ts",
+    "./abuse": "./src/abuse.ts",
     "./config": "./src/config.ts"
   }
 }

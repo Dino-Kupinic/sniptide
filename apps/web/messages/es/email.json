@@ -44,6 +44,13 @@
         "action": "Abrir Compartidos conmigo",
         "event": "fragmentos compartidos"
       },
+      "sharedBurn": {
+        "subject": "Alguien compartió un fragmento contigo",
+        "preview": "Inicia sesión para abrir el contenido sellado.",
+        "body": "Alguien compartió contenido de lectura única con tu cuenta de Sniptide. Abre la página sellada para elegir cuándo leerlo.",
+        "action": "Abrir contenido sellado",
+        "event": "fragmentos compartidos"
+      },
       "burned": {
         "subject": "Se leyó tu fragmento de lectura única",
         "preview": "Se movió a la papelera, donde puedes restaurarlo durante 30 días.",

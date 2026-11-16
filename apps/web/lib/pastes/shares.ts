@@ -83,8 +83,9 @@ export async function isSharedWith(
   record: PasteRecord,
   viewer: string | null,
   db: Pick<Database, "select"> = getDb(),
+  allowBurn = false,
 ) {
-  if (!viewer || record.ownerId === viewer || record.burnAfterRead) return false
+  if (!viewer || record.ownerId === viewer || (record.burnAfterRead && !allowBurn)) return false
   const [row] = await db
     .select({ access: pasteShare.access })
     .from(pasteShare)
