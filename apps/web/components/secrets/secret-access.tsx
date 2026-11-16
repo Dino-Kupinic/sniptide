@@ -5,7 +5,8 @@ import { toast } from "@sniptide/ui/components/toast"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { AccessMenu, InviteField, ShareAvatar } from "@/components/paste/share-people"
+import { AccessMenu, InviteField } from "@/components/paste/share-people"
+import { UserAvatar } from "@/components/people/user-avatar"
 import type { MemberRole } from "@/lib/env/inputs"
 import type { SecretDetail } from "@/lib/env/web-store"
 import { findPerson } from "@/lib/pastes/actions"
@@ -75,7 +76,7 @@ export function SecretAccess({ group }: { group: SecretDetail }) {
               const name = member.name || member.handle
               return (
                 <li key={member.id} className="flex items-center gap-3 px-4 py-2">
-                  <ShareAvatar person={member} className="size-6" />
+                  <UserAvatar person={member} className="size-6" />
                   <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:gap-2">
                     <span className="truncate text-sm font-medium" dir="auto">
                       {name}

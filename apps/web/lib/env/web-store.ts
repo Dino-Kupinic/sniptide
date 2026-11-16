@@ -103,6 +103,7 @@ async function listMembers(db: Reader, id: string) {
       email: user.email,
       username: user.username,
       displayUsername: user.displayUsername,
+      image: user.image,
       role: envMember.role,
     })
     .from(envMember)
@@ -116,6 +117,7 @@ async function listMembers(db: Reader, id: string) {
       name: row.name,
       handle: username ? `@${username}` : row.email,
       initials: initials(row.name),
+      image: row.image,
       role: row.role,
     }
   })

@@ -14,6 +14,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useSiteOrigin } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
@@ -33,7 +34,7 @@ import { EmbedShare } from "./embed-share"
 import { EncryptionNote } from "./encryption-note"
 import { ExpiredNotice, usePasteExpired } from "./expiry-status"
 import { useNativeShare } from "./paste-actions"
-import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
+import { AccessMenu, InviteField } from "./share-people"
 import { WebhookShare } from "./webhook-share"
 
 const visibilityNote: Record<Visibility, { icon: typeof LockIcon; text: string }> = {
@@ -67,7 +68,7 @@ export function ShareDialog({
   // Set on an encrypted paste: Copy and Share hand out the link with its key.
   encryptionKeyId?: string | null
   visibility: Visibility
-  owner: { id: string; name: string; handle: string; initials: string }
+  owner: { id: string; name: string; handle: string; image: string | null }
   people: SharePerson[]
   trigger: "button" | "icon"
   webhookTargets?: WebhookTarget[]
@@ -223,13 +224,13 @@ export function ShareDialog({
 
         <ul className="flex max-h-[40svh] flex-col divide-y divide-border overflow-y-auto">
           <li className="flex items-center gap-3 px-4 py-2.5 lg:px-6">
-            <ShareAvatar person={owner} className="size-8 text-[10px]" />
+            <UserAvatar person={owner} className="size-8" />
             <PersonName name={t("ownerYou", { name: owner.name })} handle={owner.handle} />
             <span className="text-[13px] text-muted-foreground">{t("owner")}</span>
           </li>
           {people.map((person) => (
             <li key={person.id} className="flex items-center gap-3 px-4 py-2.5 lg:px-6">
-              <ShareAvatar person={person} className="size-8 text-[10px]" />
+              <UserAvatar person={person} className="size-8" />
               <PersonName name={person.name} handle={person.handle} />
               <AccessMenu
                 value={person.access}

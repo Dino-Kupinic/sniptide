@@ -1,4 +1,3 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import type { Metadata } from "next"
@@ -6,6 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { currentViewer } from "@/components/not-found/current-viewer"
 import { LanguageIcon } from "@/components/paste/language-icon"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { ActivityGrid } from "@/components/profile/activity-grid"
 import { ProfileFilters } from "@/components/profile/profile-filters"
 import { PublicHeader } from "@/components/public-header"
@@ -96,10 +96,10 @@ export default async function Page(props: Props) {
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col px-4 pt-8 pb-10 lg:pt-14">
         <div className="flex min-w-0 flex-col gap-8 border-b border-border pb-8 lg:gap-10 lg:pb-12">
           <header className="flex min-w-0 items-center gap-4 lg:gap-5">
-            <Avatar className="size-16 rounded-lg font-heading text-xl font-bold lg:size-20 lg:text-2xl">
-              {profile.image ? <AvatarImage src={profile.image} alt="" /> : null}
-              <AvatarFallback>{profile.initials}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              person={{ id: profile.id, image: profile.image }}
+              className="size-16 rounded-lg lg:size-20"
+            />
             <div className="flex min-w-0 flex-col gap-1">
               <h1 className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] break-words">
                 {profile.name}

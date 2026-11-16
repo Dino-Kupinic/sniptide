@@ -142,6 +142,7 @@ async function summarize(
         name: user.name,
         username: user.username,
         displayUsername: user.displayUsername,
+        image: user.image,
       })
       .from(user)
       .where(inArray(user.id, [...new Set(records.map((record) => record.ownerId))])),
@@ -154,7 +155,10 @@ function summariesOf(
   records: PasteRecord[],
   viewer: string | null,
   days: (typeof pasteViewDay.$inferSelect)[],
-  authors: Pick<typeof user.$inferSelect, "id" | "name" | "username" | "displayUsername">[],
+  authors: Pick<
+    typeof user.$inferSelect,
+    "id" | "name" | "username" | "displayUsername" | "image"
+  >[],
   withHistory: boolean,
   firstDay: number,
 ): PasteSummary[] {
@@ -166,7 +170,8 @@ function summariesOf(
         handle: author.username,
         name: author.name,
         initials: initials(author.name),
-        tone: "foreground",
+        id: author.id,
+        image: author.image,
       },
     ]),
   )
@@ -191,7 +196,8 @@ function summariesOf(
         handle: null,
         name: "Unknown",
         initials: "?",
-        tone: "muted",
+        id: record.ownerId,
+        image: null,
       }
 
       return {
@@ -284,6 +290,7 @@ async function hydrate(
           name: user.name,
           username: user.username,
           displayUsername: user.displayUsername,
+          image: user.image,
         })
         .from(user)
         .where(eq(user.id, record.ownerId)),
@@ -601,7 +608,13 @@ async function loadSharedPaste(tx: Transaction, record: PasteRecord): Promise<Sh
       .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
       .orderBy(pasteFile.position, pasteFile.id),
     tx
-      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
+      .select({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        displayUsername: user.displayUsername,
+        image: user.image,
+      })
       .from(user)
       .where(eq(user.id, record.ownerId)),
   ])
@@ -701,7 +714,15 @@ export async function revealSharedPaste(
 }
 
 function pasteAuthor(
-  author: { name: string; username: string | null; displayUsername: string | null } | undefined,
+  author:
+    | {
+        id: string
+        name: string
+        username: string | null
+        displayUsername: string | null
+        image: string | null
+      }
+    | undefined,
 ): SharedPaste["author"] {
   return author
     ? {
@@ -709,9 +730,17 @@ function pasteAuthor(
         username: author.displayUsername ?? author.username ?? author.name,
         handle: author.username,
         initials: initials(author.name),
-        tone: "foreground",
+        id: author.id,
+        image: author.image,
       }
-    : { name: "Unknown", username: "unknown", handle: null, initials: "?", tone: "muted" }
+    : {
+        name: "Unknown",
+        username: "unknown",
+        handle: null,
+        initials: "?",
+        id: "unknown",
+        image: null,
+      }
 }
 
 const sharedAccess = cache(async (slug: string) => {
@@ -824,7 +853,13 @@ export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> 
       .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
       .orderBy(pasteFile.position, pasteFile.id),
     db
-      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
+      .select({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        displayUsername: user.displayUsername,
+        image: user.image,
+      })
       .from(user)
       .where(eq(user.id, record.ownerId)),
   ])

@@ -1,9 +1,9 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { cn } from "@sniptide/ui/lib/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import type { ReactNode } from "react"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useSiteOrigin } from "@/components/site-host"
 import type { AuditEntry, AuditPerson } from "@/lib/env/audit"
 import { profilePath } from "@/lib/profile-path"
@@ -18,10 +18,7 @@ function PersonChip({ person, fallback }: { person: AuditPerson | null; fallback
   if (!person) return <span className="text-muted-foreground">{fallback}</span>
   const content = (
     <>
-      <Avatar className="size-4 rounded-sm font-heading text-[7px] font-bold">
-        {person.image ? <AvatarImage src={person.image} alt="" /> : null}
-        <AvatarFallback>{person.initials}</AvatarFallback>
-      </Avatar>
+      <UserAvatar person={{ id: person.id, image: person.image }} className="size-4 rounded-sm" />
       <span className="truncate" dir="auto">
         {person.name}
       </span>

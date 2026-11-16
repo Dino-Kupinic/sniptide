@@ -26,8 +26,9 @@ export interface Person {
   handle: string | null
   name: string
   initials: string
-  // Avatar fill from the Shared with me design: primary, ink or muted.
-  tone: "primary" | "foreground" | "muted"
+  // The account id, which picks the default picture's colour, and the uploaded picture.
+  id: string
+  image: string | null
 }
 
 interface Revision {
@@ -118,6 +119,7 @@ export interface SharePerson {
   // Their @username, or their email when they have none.
   handle: string
   initials: string
+  image: string | null
   access: Access
   sharedAt: number
 }
