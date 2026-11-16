@@ -1,6 +1,5 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import {
   Sheet,
@@ -24,6 +23,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useSiteOrigin } from "@/components/site-host"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import { profilePath } from "@/lib/profile-path"
@@ -117,10 +117,10 @@ export function MoreSheet({
             />
           </nav>
           <div className="flex min-h-14 items-center gap-3 px-3 py-2">
-            <Avatar className="size-9 rounded-lg font-heading text-[13px] font-bold">
-              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
-              <AvatarFallback>{viewer.initials}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              person={{ id: viewer.id, image: viewer.image }}
+              className="size-9 rounded-lg"
+            />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-medium">{viewer.name}</span>
               <span className="truncate text-[13px] text-muted-foreground">{viewer.email}</span>

@@ -3,9 +3,10 @@
 import { UsersIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { findPerson } from "@/lib/pastes/actions"
 import type { Access, SharePerson } from "@/lib/pastes/types"
-import { AccessMenu, InviteField, RemoveButton, ShareAvatar } from "./share-people"
+import { AccessMenu, InviteField, RemoveButton } from "./share-people"
 
 export type PendingInvite = { person: Omit<SharePerson, "access" | "sharedAt">; access: Access }
 
@@ -61,7 +62,7 @@ export function InvitePeople({
         <ul className="@container flex flex-col divide-y divide-border">
           {invites.map((invite) => (
             <li key={invite.person.id} className="flex flex-wrap items-center gap-2 py-1.5">
-              <ShareAvatar person={invite.person} className="size-5" />
+              <UserAvatar person={invite.person} className="size-5" />
               <span
                 className="min-w-0 flex-1 basis-[calc(100%-3rem)] truncate @min-[20rem]:basis-0"
                 title={`${invite.person.name || invite.person.handle} · ${invite.person.handle}`}

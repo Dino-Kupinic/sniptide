@@ -18,6 +18,7 @@ import * as React from "react"
 import { NavigationLink as Link } from "@/components/navigation-link"
 import { ExpiredBadge } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useListView } from "@/components/shell/page-header"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, SortDirection } from "@/lib/pastes/list-query"
@@ -44,33 +45,6 @@ import {
   SortMenu,
 } from "./toolbar"
 import { useListQuery } from "./use-list-query"
-
-const toneClass: Record<Person["tone"], string> = {
-  primary: "bg-primary text-primary-foreground",
-  foreground: "bg-foreground text-background",
-  muted: "bg-muted text-foreground",
-}
-
-export function PersonAvatar({
-  person,
-  className,
-}: {
-  person: Pick<Person, "initials" | "tone">
-  className?: string
-}) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "flex size-6 shrink-0 items-center justify-center rounded-md font-heading text-[9px] font-bold",
-        toneClass[person.tone],
-        className,
-      )}
-    >
-      {person.initials}
-    </span>
-  )
-}
 
 function AccessBadge({ access }: { access: SharedRow["access"] }) {
   const t = useTranslations("Workspace")
@@ -207,7 +181,7 @@ export function SharedList({
                 value: person.id,
                 label: (
                   <span className="flex items-center gap-2">
-                    <PersonAvatar person={person} className="size-5" />
+                    <UserAvatar person={person} className="size-5" />
                     {person.name}
                   </span>
                 ),
@@ -279,7 +253,7 @@ export function SharedList({
                   label={
                     row.owner ? (
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <PersonAvatar person={row.owner} className="size-4 text-[8px]" />
+                        <UserAvatar person={row.owner} className="size-4 rounded-sm" />
                         <span dir="auto" className="truncate">
                           {row.owner.name || row.owner.username}
                         </span>
@@ -348,7 +322,7 @@ export function SharedList({
                     <TableCell className="text-[13px]">
                       {row.owner ? (
                         <span className="flex min-w-0 items-start gap-2">
-                          <PersonAvatar person={row.owner} />
+                          <UserAvatar person={row.owner} />
                           <span
                             dir="auto"
                             title={row.owner.name || row.owner.username}

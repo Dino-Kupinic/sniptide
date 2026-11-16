@@ -2,6 +2,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { ClockIcon, EyeIcon, FlameIcon, LockIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import type * as React from "react"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { byteLength, formatBytes, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { profilePath } from "@/lib/profile-path"
@@ -15,8 +16,9 @@ export interface SharedPasteViewData {
     username: string
     // Links the name to the author's profile; null when the account has no handle.
     handle?: string | null
-    initials: string
-    tone?: "primary" | "foreground" | "muted"
+    // The account id, which picks the default picture's colour, and the uploaded picture.
+    id: string
+    image?: string | null
   }
   files: { name: string; language: string; content: string; lines?: HighlightedLines }[]
   updatedAt: number
@@ -26,12 +28,6 @@ export interface SharedPasteViewData {
   allowRaw: boolean
   // Decrypted in this browser: the details line says so, since the server never saw the files.
   encrypted?: boolean
-}
-
-const avatarTone = {
-  primary: "bg-primary text-primary-foreground",
-  foreground: "bg-foreground text-background",
-  muted: "bg-muted text-foreground",
 }
 
 // The public share page body: who shared it, the title, the details line, the actions and the
@@ -76,15 +72,7 @@ export function SharedPasteView({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
           <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <span
-              aria-hidden="true"
-              className={cn(
-                "flex size-7 items-center justify-center rounded-md font-heading text-[10px] font-bold",
-                avatarTone[author.tone ?? "foreground"],
-              )}
-            >
-              {author.initials}
-            </span>
+            <UserAvatar person={author} className="size-7" />
             {author.handle ? (
               <a
                 href={profilePath(author.handle)}

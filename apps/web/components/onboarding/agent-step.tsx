@@ -11,7 +11,7 @@ import { CopyButton } from "@/components/paste/copy-button"
 import { track } from "@/lib/analytics"
 import { AGENT_CLIENTS, type AgentClient, agentSetup } from "@/lib/onboarding"
 import { getAgentConnection } from "@/lib/onboarding-actions"
-import { AgentLogo, CursorLogo } from "./agent-logos"
+import { AgentLogo, CursorLogo, GrokBotLogo } from "./agent-logos"
 
 // How often the step asks whether an agent has connected, and for how long.
 const POLL_MS = 2500
@@ -87,7 +87,7 @@ export function AgentStep({
     <section aria-labelledby="onboarding-title" className="flex flex-col gap-6">
       {heading}
 
-      <fieldset aria-label={t("clientLabel")} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <fieldset aria-label={t("clientLabel")} className="grid grid-cols-3 gap-2">
         {AGENT_CLIENTS.map((value) => {
           return (
             <label
@@ -186,6 +186,29 @@ export function AgentSetupSteps({
             {t("addToCursor")}
           </Button>
         </li>
+      ) : client === "grok_bot" ? (
+        <>
+          <li>
+            <Button
+              size="lg"
+              nativeButton={false}
+              render={
+                <a
+                  href={setup.grokBotLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onUse("grok_bot")}
+                />
+              }
+            >
+              <GrokBotLogo />
+              {t("openGrokBot")}
+            </Button>
+          </li>
+          <Step icon={PlugIcon} label={t("grokBotCustom")}>
+            <SetupCode code={setup.url} onCopy={() => onUse("grok_bot")} />
+          </Step>
+        </>
       ) : (
         <Step
           icon={client === "other" ? PlugIcon : TerminalIcon}

@@ -38,6 +38,7 @@
         "claude_code": "Claude Code",
         "codex": "Codex",
         "cursor": "Cursor",
+        "grok_bot": "Grok Bot",
         "other": "其他"
       },
       "steps": {
@@ -45,6 +46,8 @@
         "authenticate": "在 Claude Code 中运行 <code>/mcp</code> 并选择 Authenticate",
         "addServer": "添加为远程 MCP 服务器",
         "addToCursor": "添加到 Cursor",
+        "openGrokBot": "打开 Grok Bot 连接器",
+        "grokBotCustom": "选择 New Connector，然后选择 Custom，并粘贴此地址",
         "allow": "在浏览器中允许访问"
       },
       "yourAgent": "你的代理",

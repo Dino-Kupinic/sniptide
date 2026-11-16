@@ -1,4 +1,3 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Logo } from "@sniptide/ui/components/logo"
 import { cn } from "@sniptide/ui/lib/utils"
 import type { Metadata } from "next"
@@ -6,6 +5,7 @@ import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { currentViewer } from "@/components/not-found/current-viewer"
 import { NotFoundContent } from "@/components/not-found/not-found-content"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { TabBar } from "@/components/shell/tab-bar"
 import { listCollections } from "@/lib/collections/store"
 import { trashTotals } from "@/lib/pastes/lists"
@@ -64,10 +64,7 @@ export default async function NotFound() {
               aria-label={core("settings")}
               className="flex size-10 items-center justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
-              <Avatar className="size-7 font-heading text-[11px] font-bold dark:bg-border dark:text-white">
-                {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
-                <AvatarFallback>{viewer.initials}</AvatarFallback>
-              </Avatar>
+              <UserAvatar person={{ id: viewer.id, image: viewer.image }} className="size-7" />
             </Link>
           ) : null}
         </div>

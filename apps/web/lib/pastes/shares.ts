@@ -118,6 +118,7 @@ export async function listPasteShares(slug: string): Promise<SharePerson[] | nul
       email: user.email,
       username: user.username,
       displayUsername: user.displayUsername,
+      image: user.image,
       access: pasteShare.access,
       createdAt: pasteShare.createdAt,
     })
@@ -135,6 +136,7 @@ export async function listPasteShares(slug: string): Promise<SharePerson[] | nul
     name: row.name,
     handle: handle(row),
     initials: initials(row.name),
+    image: row.image,
     access: row.access,
     sharedAt: ms(row.createdAt),
   }))
@@ -160,6 +162,7 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
       email: user.email,
       username: user.username,
       displayUsername: user.displayUsername,
+      image: user.image,
     })
     .from(user)
     .where(
@@ -176,7 +179,13 @@ export async function findPerson(identifier: string): Promise<PersonLookup> {
   if (row.id === viewer) return { status: "self" }
   return {
     status: "ok",
-    person: { id: row.id, name: row.name, handle: handle(row), initials: initials(row.name) },
+    person: {
+      id: row.id,
+      name: row.name,
+      handle: handle(row),
+      initials: initials(row.name),
+      image: row.image,
+    },
   }
 }
 

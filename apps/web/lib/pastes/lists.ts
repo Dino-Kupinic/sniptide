@@ -319,6 +319,7 @@ export async function listSharedPage(query: SharedListQuery) {
             name: user.name,
             username: user.username,
             displayUsername: user.displayUsername,
+            image: user.image,
           })
           .from(pasteShare)
           .innerJoin(
@@ -384,7 +385,7 @@ export async function listSharedPage(query: SharedListQuery) {
           username: owner.displayUsername ?? owner.username ?? owner.name,
           handle: owner.username,
           initials: initials(owner.name),
-          tone: "foreground" as const,
+          image: owner.image,
         })),
         peopleCount: matching?.people ?? 0,
       }
