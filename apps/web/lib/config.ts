@@ -108,7 +108,7 @@ export const DEFAULT_ACCOUNT_PASTES = 1000
 const schema = z.object({
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
-  SMTP_SECURE: flag.default(false),
+  SMTP_SECURE: flag.optional(),
   SMTP_REQUIRE_TLS: flag.default(true),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
@@ -252,7 +252,6 @@ function parseConfig(env: Record<string, string | undefined>) {
   if (
     smtpPresent &&
     (!value.SMTP_HOST ||
-      !value.SMTP_PORT ||
       !value.SMTP_FROM ||
       !value.BETTER_AUTH_URL ||
       !value.BETTER_AUTH_SECRET ||
@@ -260,18 +259,23 @@ function parseConfig(env: Record<string, string | undefined>) {
       Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD))
   ) {
     throw new Error(
-      "Invalid configuration: SMTP requires SMTP_HOST, SMTP_PORT, SMTP_FROM, BETTER_AUTH_URL, BETTER_AUTH_SECRET (at least 32 characters), and paired SMTP_USER/SMTP_PASSWORD credentials.",
+      "Invalid configuration: SMTP requires SMTP_HOST, SMTP_FROM, BETTER_AUTH_URL, BETTER_AUTH_SECRET (at least 32 characters), and paired SMTP_USER/SMTP_PASSWORD credentials.",
     )
   }
 
+  // Port and TLS mode follow each other, so most servers need neither: implicit TLS is the norm
+  // on 465 and STARTTLS on 587, the submission port every provider offers.
+  const smtpSecure = value.SMTP_SECURE ?? value.SMTP_PORT === 465
+  const smtpPort = value.SMTP_PORT ?? (smtpSecure ? 465 : 587)
+
   return {
     smtp:
-      smtpPresent && value.SMTP_HOST && value.SMTP_PORT && value.SMTP_FROM
+      smtpPresent && value.SMTP_HOST && value.SMTP_FROM
         ? {
             host: value.SMTP_HOST,
-            port: value.SMTP_PORT,
+            port: smtpPort,
             from: value.SMTP_FROM,
-            secure: value.SMTP_SECURE,
+            secure: smtpSecure,
             requireTLS: value.SMTP_REQUIRE_TLS,
             auth:
               value.SMTP_USER && value.SMTP_PASSWORD

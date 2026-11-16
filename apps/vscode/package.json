@@ -61,7 +61,7 @@
   "devDependencies": {
     "@sniptide/sdk": "workspace:*",
     "@types/bun": "catalog:tooling",
-    "@types/vscode": "1.90.0",
+    "@types/vscode": "1.146.0",
     "@workspace/oauth-client": "workspace:*",
     "@workspace/typescript": "workspace:*",
     "typescript": "catalog:tooling"
