@@ -13,34 +13,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { CheckIcon, ChevronDownIcon, UserIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { PersonAvatar } from "@/components/lists/shared-list"
-import type { Access, Person, SharePerson } from "@/lib/pastes/types"
-
-const tones: Person["tone"][] = ["primary", "foreground", "muted"]
-
-function toneFor(id: string) {
-  let hash = 0
-  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) | 0
-  return tones[Math.abs(hash) % tones.length] ?? "foreground"
-}
-
-export function ShareAvatar({
-  person,
-  className,
-}: {
-  person: Pick<SharePerson, "id" | "name" | "handle" | "initials">
-  className?: string
-}) {
-  return (
-    <PersonAvatar
-      person={{
-        initials: person.initials,
-        tone: toneFor(person.id),
-      }}
-      className={className}
-    />
-  )
-}
+import type { Access } from "@/lib/pastes/types"
 
 // "Can view ⌄" with view, edit and, when `onRemove` is given, a way to take access away.
 export function AccessMenu({

@@ -3,7 +3,6 @@
 import { arrayMove } from "@dnd-kit/helpers"
 import { DragDropProvider } from "@dnd-kit/react"
 import { isSortable, useSortable } from "@dnd-kit/react/sortable"
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
@@ -47,6 +46,7 @@ import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistSheet } from "@/components/lists/import-gist"
 import { NavigationLink as Link } from "@/components/navigation-link"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import type { Collection } from "@/lib/collections/types"
 import { setStarred } from "@/lib/pastes/actions"
@@ -379,10 +379,7 @@ export function Sidebar({
       <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
-            <Avatar className="size-6 font-heading text-[11px] font-bold">
-              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
-              <AvatarFallback>{viewer.initials}</AvatarFallback>
-            </Avatar>
+            <UserAvatar person={{ id: viewer.id, image: viewer.image }} className="size-6" />
             <span className="min-w-0 flex-1 truncate text-sm font-medium">{viewer.name}</span>
             <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
           </DropdownMenuTrigger>

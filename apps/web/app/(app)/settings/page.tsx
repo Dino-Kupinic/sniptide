@@ -16,7 +16,6 @@ import { accountBudget } from "@/lib/pastes/budget"
 import { navCounts } from "@/lib/pastes/store"
 import { readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
-import { viewerFromUser } from "@/lib/viewer"
 
 export async function generateMetadata() {
   const t = await getTranslations("Core")
@@ -29,7 +28,6 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
     navCounts(),
     searchParams,
   ])
-  const viewer = viewerFromUser(session.user)
   const [tokens, envGroups, site, security, providers, authT, totals, [account], preferences] =
     await Promise.all([
       listTokens(session.user.id),
@@ -60,12 +58,12 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
         </Suspense>
       }
       profile={{
+        id: session.user.id,
         name: session.user.name,
         username: session.user.username ?? "",
         email: account?.email ?? session.user.email,
         emailVerified: account?.emailVerified ?? false,
         image: session.user.image ?? null,
-        initials: viewer.initials,
       }}
       preferences={preferences}
       emailAvailable={Boolean(getConfig().smtp)}

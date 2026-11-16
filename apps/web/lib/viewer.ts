@@ -3,6 +3,7 @@ import { viewerStorage } from "@/lib/mock-data"
 
 // The signed-in account as the shell shows it.
 export interface ViewerSummary {
+  id: string
   name: string
   email: string
   username: string | null
@@ -13,6 +14,7 @@ export interface ViewerSummary {
 }
 
 interface SessionUser {
+  id: string
   name: string
   email: string
   username?: string | null
@@ -25,6 +27,7 @@ export function viewerFromUser(user: SessionUser): ViewerSummary {
   const name = user.name || user.displayUsername || user.username || user.email
 
   return {
+    id: user.id,
     name,
     email: user.email,
     username: user.username ?? null,

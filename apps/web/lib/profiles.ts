@@ -22,6 +22,7 @@ interface ProfilePaste {
 }
 
 export interface Profile {
+  id: string
   // The normalized handle in the URL, and the one the owner chose to display.
   username: string
   displayUsername: string
@@ -147,6 +148,7 @@ export const readProfile = cache(
     const pageCount = Math.max(1, Math.ceil(total / PROFILE_PAGE_SIZE))
     if (page > pageCount) return null
     return {
+      id: owner.id,
       username: owner.username,
       displayUsername: owner.displayUsername ?? owner.username,
       name: owner.name,
