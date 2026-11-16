@@ -135,15 +135,17 @@ function Shell({ signedIn, children }: { signedIn: boolean; children: React.Reac
       <PublicHeader signedIn={signedIn} languageMenu={false} />
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 lg:gap-6 lg:pt-12">
         {children}
-        {getConfig().abuseReportsEnabled ? (
+      </main>
+      {getConfig().abuseReportsEnabled ? (
+        <footer className="flex justify-end px-4 pb-6 lg:px-10">
           <a
             href={`${getAppOrigin()}/abuse`}
-            className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
+            className="text-sm text-muted-foreground underline underline-offset-4"
           >
             {t("reportLink")}
           </a>
-        ) : null}
-      </main>
+        </footer>
+      ) : null}
     </div>
   )
 }
