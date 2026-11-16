@@ -17,12 +17,24 @@ describe("view milestones", () => {
 })
 
 describe("notification text", () => {
-  const base = { count: null, title: "nginx proxy", slug: "nginx", expiresAt: null, actor: null }
+  const base = {
+    count: null,
+    title: "nginx proxy",
+    slug: "nginx",
+    expiresAt: null,
+    actor: null,
+    burnAfterRead: false,
+  }
 
   test("shared names who shared it and opens the paste", () => {
     const text = describeNotification({ ...base, kind: "shared", actor: "Dana" }, now)
     expect(text.title).toBe("Dana shared “nginx proxy” with you")
     expect(text.href).toBe("/pastes/nginx")
+  })
+
+  test("a shared burn opens the sealed page", () => {
+    const text = describeNotification({ ...base, kind: "shared", burnAfterRead: true }, now)
+    expect(text.href).toBe("/nginx")
   })
 
   test("shared without a known sharer still reads naturally", () => {

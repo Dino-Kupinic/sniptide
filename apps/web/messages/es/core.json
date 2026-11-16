@@ -83,6 +83,7 @@
     "someone": "Alguien",
     "notificationShared": "{name} ha compartido «{title}» contigo",
     "notificationSharedDetail": "Ábrelo en Compartidos conmigo",
+    "notificationSharedBurnDetail": "Abrir el contenido sellado",
     "notificationBurned": "Se ha leído «{title}»",
     "notificationBurnedDetail": "Se eliminó tras su lectura. Restáuralo de la papelera para conservarlo",
     "notificationNeverExpires": "«{title}» ya no caduca",
