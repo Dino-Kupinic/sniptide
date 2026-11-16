@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server"
 import { z } from "zod"
 import { SecretDetail } from "@/components/secrets/secret-detail"
 import { getSession } from "@/lib/auth"
+import { listAudit } from "@/lib/env/audit"
 import { secretDetail } from "@/lib/env/web-store"
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,5 +19,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   if (!z.string().uuid().safeParse(id).success) notFound()
   const group = await secretDetail(session.user.id, id)
   if (!group) notFound()
-  return <SecretDetail key={`${id}:${group.revision}`} group={group} />
+  const activity =
+    group.role === "owner"
+      ? (await listAudit(session.user.id, { groupId: id, limit: 8 })).entries
+      : []
+  return <SecretDetail key={`${id}:${group.revision}`} group={group} activity={activity} />
 }

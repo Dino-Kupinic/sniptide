@@ -47,7 +47,10 @@ describeDb("card previews", () => {
     if (!own) throw new Error("no paste")
 
     expect(Object.keys(await cardPreviews([own]))).toEqual(["mine"])
-    const theirs = { ...own, owner: { username: "bob", name: "Bob", initials: "B", tone: "ink" } }
+    const theirs = {
+      ...own,
+      owner: { username: "bob", name: "Bob", initials: "B", id: "bob", image: null },
+    }
     expect(await cardPreviews([theirs as typeof own])).toEqual({})
   })
 })

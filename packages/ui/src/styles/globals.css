@@ -52,6 +52,20 @@
   --pink: #f6a9d3;
   --pink-foreground: #2b0a1f;
   --highlight: #e353ac;
+  /* Default profile pictures: a silhouette on one of six fills, picked from the account id so a
+     person keeps the same colour everywhere. The same pairs work on light and dark surfaces. */
+  --avatar-1: #f6a9d3;
+  --avatar-1-foreground: #2b0a1f;
+  --avatar-2: #2a26ec;
+  --avatar-2-foreground: #dcdbff;
+  --avatar-3: #047857;
+  --avatar-3-foreground: #cdefe3;
+  --avatar-4: #f5b971;
+  --avatar-4-foreground: #3d2406;
+  --avatar-5: #6d28d9;
+  --avatar-5-foreground: #e4d9fb;
+  --avatar-6: #67d4e8;
+  --avatar-6-foreground: #08343d;
   /* Code colours. Keywords are the brand blue; the rest stay muted enough that blue still leads.
      All clear 4.5:1 on the code backgrounds (white, --sidebar). */
   --syntax-foreground: #1b1919;

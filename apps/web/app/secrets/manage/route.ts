@@ -2,11 +2,13 @@ import { getTranslations } from "next-intl/server"
 import { z } from "zod"
 import { getSession } from "@/lib/auth"
 import { boundedJson, isSameOrigin, secretJson } from "@/lib/env/http"
-import { secretSaveSchema, secretShareSchema } from "@/lib/env/inputs"
+import { MEMBER_ROLES, secretSaveSchema, secretShareSchema } from "@/lib/env/inputs"
 import {
   createSecretShare,
+  grantAccess,
   removeSecret,
   revealSecret,
+  revokeAccess,
   revokeSecretShare,
   saveSecret,
 } from "@/lib/env/web-store"
@@ -25,6 +27,13 @@ const commandSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("delete"), id }),
   z.object({ operation: z.literal("share"), id, input: secretShareSchema }),
   z.object({ operation: z.literal("revoke"), id, shareId: id }),
+  z.object({
+    operation: z.literal("grant"),
+    id,
+    userId: z.string().min(1).max(128),
+    role: z.enum(MEMBER_ROLES),
+  }),
+  z.object({ operation: z.literal("remove_access"), id, userId: z.string().min(1).max(128) }),
 ])
 export async function POST(request: Request) {
   const t = await getTranslations("Secrets")
@@ -47,9 +56,11 @@ export async function POST(request: Request) {
                 ? t("conflict_error")
                 : result.status === "duplicate"
                   ? t("duplicate_error")
-                  : t("save_group_error"),
+                  : result.status === "forbidden"
+                    ? t("forbidden_error")
+                    : t("save_group_error"),
           },
-          result.status === "conflict" ? 409 : 400,
+          result.status === "conflict" ? 409 : result.status === "forbidden" ? 403 : 400,
         )
       }
       case "reveal": {
@@ -62,6 +73,20 @@ export async function POST(request: Request) {
         return secretJson({ ok: await removeSecret(owner, command.id) })
       case "revoke":
         return secretJson({ ok: await revokeSecretShare(owner, command.id, command.shareId) })
+      case "grant": {
+        const limit = await hit([
+          { key: `secret-grant:${owner}`, max: 60, windowSeconds: seconds(3600) },
+        ])
+        if (!limit.allowed) return secretJson({ error: t("retry_error") }, 429)
+        const result = await grantAccess(owner, command.id, command.userId, command.role)
+        if (result.status === "ok") return secretJson({ ok: true })
+        return secretJson(
+          { error: result.status === "limit" ? t("member_limit_error") : t("grant_error") },
+          400,
+        )
+      }
+      case "remove_access":
+        return secretJson({ ok: await revokeAccess(owner, command.id, command.userId) })
       case "share": {
         const limit = await hit([
           { key: `secret-share-create:${owner}`, max: 20, windowSeconds: seconds(3600) },

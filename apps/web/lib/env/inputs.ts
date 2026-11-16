@@ -3,6 +3,9 @@ import { z } from "zod"
 const byteLength = (value: string) => new TextEncoder().encode(value).length
 
 export const MAX_GROUPS = 100
+export const MAX_MEMBERS = 50
+export const MEMBER_ROLES = ["read", "write"] as const
+export type MemberRole = (typeof MEMBER_ROLES)[number]
 const MAX_VARIABLES = 500
 const MAX_VALUE_BYTES = 32 * 1024
 export const MAX_GROUP_BYTES = 256 * 1024
@@ -74,3 +77,6 @@ export const secretShareSchema = z.object({
   hours: z.union([z.literal(1), z.literal(24), z.literal(168)]),
 })
 export type SecretShare = z.infer<typeof secretShareSchema>
+
+export const AUDIT_FILTERS = ["all", "reads", "changes", "access"] as const
+export type AuditFilter = (typeof AUDIT_FILTERS)[number]

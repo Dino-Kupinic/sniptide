@@ -15,15 +15,17 @@ function present(group: { slug: string; updatedAt: number; revision: number; var
 
 export async function GET(request: Request, { params }: Context) {
   const { group: slug } = await params
-  return withToken(request, "read", async ({ userId }) => {
-    const group = GROUP_SLUG.test(slug) ? await readGroup(userId, slug) : null
+  return withToken(request, "read", async ({ userId, tokenId }) => {
+    const group = GROUP_SLUG.test(slug)
+      ? await readGroup(userId, slug, { via: "token", userId, tokenId })
+      : null
     return group ? json({ group: present(group) }) : failure(404, "No env group with that name.")
   })
 }
 
 export async function PUT(request: Request, { params }: Context) {
   const { group: slug } = await params
-  return withToken(request, "write", async ({ userId }) => {
+  return withToken(request, "write", async ({ userId, tokenId }) => {
     const body = (await readJson(request, 1024 * 1024)) as {
       variables?: unknown
       revision?: unknown
@@ -34,7 +36,13 @@ export async function PUT(request: Request, { params }: Context) {
       (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0)
     )
       return failure(400, "revision must be a whole number from 0.")
-    const result = await writeGroup(userId, slug, body?.variables, revision)
+    const result = await writeGroup(
+      userId,
+      slug,
+      body?.variables,
+      { via: "token", userId, tokenId },
+      revision,
+    )
     if (result.status === "limit")
       return failure(409, `You can have up to ${MAX_GROUPS} env groups. Delete one first.`)
     if (result.status === "conflict")
@@ -48,8 +56,9 @@ export async function PUT(request: Request, { params }: Context) {
 
 export async function DELETE(request: Request, { params }: Context) {
   const { group: slug } = await params
-  return withToken(request, "write", async ({ userId }) => {
-    const deleted = GROUP_SLUG.test(slug) && (await deleteGroup(userId, slug))
+  return withToken(request, "write", async ({ userId, tokenId }) => {
+    const deleted =
+      GROUP_SLUG.test(slug) && (await deleteGroup(userId, slug, { via: "token", userId, tokenId }))
     return deleted ? json({ ok: true }) : failure(404, "No env group with that name.")
   })
 }

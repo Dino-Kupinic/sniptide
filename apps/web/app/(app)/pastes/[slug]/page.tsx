@@ -23,11 +23,11 @@ import {
 } from "@/components/paste/paste-actions"
 import { RestoreRevision } from "@/components/paste/restore-revision"
 import { ShareDialog } from "@/components/paste/share-dialog"
-import { ShareAvatar } from "@/components/paste/share-people"
 import { PasteDetailPanel, SharingPanel, SheetRow } from "@/components/paste/sharing-panel"
 import { SidePanelProvider } from "@/components/paste/side-panel"
 import { ViewsSparkline } from "@/components/paste/views-chart"
 import { VisibilityBadge } from "@/components/paste/visibility-badge"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { HeaderActions, HeaderTitle } from "@/components/shell/page-header"
 import { TruncatedText } from "@/components/truncated-text"
 import { getPreferences, getSession } from "@/lib/auth"
@@ -108,12 +108,12 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         encryptionKeyId={encryptionKeyId}
         visibility={paste.visibility}
         owner={{
-          id: paste.author.username,
+          id: paste.author.id,
           name: paste.author.name,
           handle: viewer?.username
             ? `@${viewer.displayUsername ?? viewer.username}`
             : (viewer?.email ?? ""),
-          initials: paste.author.initials,
+          image: paste.author.image,
         }}
         people={people}
         trigger={trigger}
@@ -485,15 +485,7 @@ async function SharedWithYou({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2.5">
-        <ShareAvatar
-          person={{
-            id: owner.username,
-            name: owner.name,
-            handle: owner.username,
-            initials: owner.initials,
-          }}
-          className="size-7 text-[10px]"
-        />
+        <UserAvatar person={owner} className="size-7" />
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-medium">{owner.name}</span>
           <span className="text-xs text-muted-foreground">
