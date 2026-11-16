@@ -38,7 +38,7 @@
         "claude_code": "Claude Code",
         "codex": "Codex",
         "cursor": "Cursor",
-        "grok": "Grok",
+        "grok_bot": "Grok Bot",
         "other": "Otro"
       },
       "steps": {
@@ -46,8 +46,8 @@
         "authenticate": "En Claude Code, ejecuta <code>/mcp</code> y elige Authenticate",
         "addServer": "Añádelo como servidor MCP remoto",
         "addToCursor": "Añadir a Cursor",
-        "openGrok": "Abrir los conectores de Grok",
-        "grokCustom": "Elige New Connector, luego Custom, y pega esta dirección",
+        "openGrokBot": "Abrir los conectores de Grok Bot",
+        "grokBotCustom": "Elige New Connector, luego Custom, y pega esta dirección",
         "allow": "Permite el acceso en tu navegador"
       },
       "yourAgent": "tu agente",

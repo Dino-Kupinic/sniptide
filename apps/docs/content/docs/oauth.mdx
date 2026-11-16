@@ -1,6 +1,6 @@
 ---
 title: OAuth for agents
-description: Connect Claude Code, Codex, Cursor, Grok or another MCP client to Sniptide by signing in through the browser, and look up the OAuth endpoints and scopes.
+description: Connect Claude Code, Codex, Cursor, Grok Bot or another MCP client to Sniptide by signing in through the browser, and look up the OAuth endpoints and scopes.
 ---
 
 Sniptide is an OAuth 2.1 authorization server for its own API and MCP server. A client that
@@ -15,7 +15,7 @@ using a personal [API token](/api-tokens).
 Run the command for your client, then allow access in the browser tab that opens. On a self-hosted
 instance, replace `https://app.sniptide.com` with your instance's address.
 
-<Tabs items={["Claude Code", "Codex", "Cursor", "Grok", "Other clients"]} groupId="agent" persist>
+<Tabs items={["Claude Code", "Codex", "Cursor", "Grok Bot", "Other clients"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 ```bash
@@ -39,7 +39,7 @@ Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no h
 welcome setup in the app also offers an **Add to Cursor** button that fills this in.
 
 </Tab>
-<Tab value="Grok">
+<Tab value="Grok Bot">
 
 Open [grok.com/connectors](https://grok.com/connectors), select **New Connector**, choose
 **Custom** and enter `https://app.sniptide.com/api/mcp`. The instance must be reachable at a
@@ -54,14 +54,14 @@ Add `https://app.sniptide.com/api/mcp` as a remote MCP server using Streamable H
 </Tab>
 </Tabs>
 
-The consent screen shows the client's name, with its logo for Claude Code, Codex, Cursor and Grok, what
-it can do and the address it returns you to. Allow access only when you started the connection
-from that client yourself.
+The consent screen shows the client's name, with its logo for Claude Code, Codex, Cursor and
+Grok Bot, what it can do and the address it returns you to. Allow access only when you started
+the connection from that client yourself.
 
 ## Check the connection
 
 Open **Settings** > **API tokens**. The connection is listed under the client's name with
-"Connected with OAuth", next to the client's logo when it is Claude Code, Codex, Cursor or Grok. In the client, ask it to list your Sniptide collections. It calls
+"Connected with OAuth", next to the client's logo when it is Claude Code, Codex, Cursor or Grok Bot. In the client, ask it to list your Sniptide collections. It calls
 `list_collections` and shows your collections, or an empty list on a new account.
 
 ## What a connection can do

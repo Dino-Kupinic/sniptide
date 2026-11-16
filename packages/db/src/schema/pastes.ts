@@ -91,7 +91,7 @@ export const paste = pgTable(
     agentReads: integer("agent_reads").notNull().default(0),
     createdVia: pasteCreatedVia("created_via").notNull().default("web"),
     // The agent client that created it through an OAuth connection (claude_code, codex, cursor,
-    // grok or other), judged once from the client's name. Null for the web and for personal tokens.
+    // grok_bot or other), judged once from the client's name. Null for the web and for personal tokens.
     createdByAgent: text("created_by_agent"),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),

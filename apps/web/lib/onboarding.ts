@@ -14,7 +14,7 @@ export const SIGNUP_SOURCES = [
 export const USE_CASES = ["agents", "sharing", "team", "exploring"] as const
 
 // The clients the last step has setup instructions for, most used first.
-export const AGENT_CLIENTS = ["claude_code", "codex", "cursor", "grok", "other"] as const
+export const AGENT_CLIENTS = ["claude_code", "codex", "cursor", "grok_bot", "other"] as const
 
 export const ONBOARDING_STEPS = ["source", "use_case", "agent"] as const
 
@@ -38,8 +38,8 @@ export const ONBOARDING_WINDOW_DAYS = 14
 
 // The MCP server's address and the one-line setups for each client. Each one signs in through the
 // OAuth consent screen the first time it connects, so no token is pasted anywhere. Cursor installs
-// from a deep link whose config is base64 JSON. Grok has no install link, so its setup opens the
-// connectors page where the address is pasted into a custom connector.
+// from a deep link whose config is base64 JSON. Grok Bot has no install link, so its setup opens
+// Grok's connectors page, where the address goes into a custom connector.
 export function agentSetup(origin: string) {
   const url = `${origin}/api/mcp`
   const config = btoa(JSON.stringify({ url }))
@@ -48,7 +48,7 @@ export function agentSetup(origin: string) {
     claudeCode: `claude mcp add --transport http sniptide ${url}`,
     codex: `codex mcp add sniptide --url ${url}`,
     cursorLink: `cursor://anysphere.cursor-deeplink/mcp/install?name=sniptide&config=${encodeURIComponent(config)}`,
-    grokLink: "https://grok.com/connectors",
+    grokBotLink: "https://grok.com/connectors",
   }
 }
 
@@ -64,6 +64,6 @@ export function agentClientFromName(name: string): AgentClient {
   if (value.includes("claude")) return "claude_code"
   if (value.includes("codex") || value.includes("openai")) return "codex"
   if (value.includes("cursor")) return "cursor"
-  if (value.includes("grok") || /\bxai\b/.test(value)) return "grok"
+  if (value.includes("grok") || /\bxai\b/.test(value)) return "grok_bot"
   return "other"
 }
