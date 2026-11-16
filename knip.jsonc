@@ -67,7 +67,8 @@
     "plugins/raycast": {
       "entry": ["src/*.{ts,tsx}", "test/**/*.test.ts"],
       // @raycast/api brings React and the `ray` command, and `ray lint` runs ESLint and Prettier.
-      "ignoreDependencies": ["react", "prettier"],
+      // The compiler alias supplies `tsc`; CI analyzes dependencies before the npm install.
+      "ignoreDependencies": ["react", "prettier", "@typescript/native"],
       "ignoreBinaries": ["ray", "eslint", "prettier"]
     },
     "packages/ui": {

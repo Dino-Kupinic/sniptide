@@ -7,6 +7,7 @@
     "moduleResolution": "Bundler",
     "target": "ES2023",
     "strict": true,
+    "types": ["bun", "node"],
     "noUncheckedIndexedAccess": true,
     "isolatedModules": true,
     "esModuleInterop": true,
