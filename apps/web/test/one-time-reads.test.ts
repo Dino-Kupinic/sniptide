@@ -216,7 +216,8 @@ describeDb("one-time reads", () => {
     expect(body).toMatchObject({
       ok: true,
       title: "title-of-burnts",
-      author: { username: "owner" },
+      // The share page draws the author's picture, or the default picture coloured by their id.
+      author: { id: "owner", username: "owner", image: null },
       views: 1,
       burned: true,
     })

@@ -1748,8 +1748,19 @@ export const openApiDocument = {
           },
           author: {
             type: "object",
-            required: ["username", "initials"],
-            properties: { username: { type: "string" }, initials: { type: "string" } },
+            required: ["id", "username", "handle", "image"],
+            properties: {
+              id: { type: "string", description: "The account id." },
+              username: { type: "string" },
+              handle: {
+                type: ["string", "null"],
+                description: "The profile handle, or null when the account has no profile.",
+              },
+              image: {
+                type: ["string", "null"],
+                description: "The profile picture as a data URL, or null when there is none.",
+              },
+            },
           },
           updatedAt: { type: "number", description: "Milliseconds since the epoch." },
           expiresAt: {
