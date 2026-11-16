@@ -1,6 +1,5 @@
 // Where sign-in and sign-up send the visitor afterwards. ?next= may name only the OAuth consent
-// screen or the new-paste editor opened from a template, so the parameter can't turn the sign-in
-// page into an open redirect.
+// screen, a template editor, or an invitation email link. The allowlist prevents open redirects.
 export function afterSignIn(next: string | string[] | undefined) {
   return typeof next === "string" && isReturnTarget(next) ? next : "/dashboard"
 }
@@ -8,7 +7,10 @@ export function afterSignIn(next: string | string[] | undefined) {
 function isReturnTarget(path: string) {
   return (
     /^\/oauth\/authorize(?:\?[^#\\]*)?$/.test(path) ||
-    /^\/new(?:\?template=[a-z0-9-]{1,64})?$/.test(path)
+    /^\/new(?:\?template=[a-z0-9-]{1,64})?$/.test(path) ||
+    /^\/api\/notifications\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/open$/i.test(
+      path,
+    )
   )
 }
 

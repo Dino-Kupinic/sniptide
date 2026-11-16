@@ -83,6 +83,7 @@
     "someone": "Jemand",
     "notificationShared": "{name} hat „{title}“ mit dir geteilt",
     "notificationSharedDetail": "Öffne es unter Mit mir geteilt",
+    "notificationSharedBurnDetail": "Versiegeltes Snippet öffnen",
     "notificationBurned": "„{title}“ wurde gelesen",
     "notificationBurnedDetail": "Es wurde nach dem Lesen gelöscht. Stelle es aus dem Papierkorb wieder her, um es zu behalten",
     "notificationNeverExpires": "„{title}“ läuft nicht mehr ab",

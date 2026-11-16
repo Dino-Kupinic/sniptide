@@ -1943,6 +1943,7 @@ export const internalRoutes = [
   "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",
+  "/api/notifications/[id]/open",
   "/demo",
   "/api/live",
   "/api/locale",

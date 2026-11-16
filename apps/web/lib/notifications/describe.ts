@@ -16,6 +16,7 @@ export interface NotificationRow {
   slug: string
   expiresAt: number | null
   actor: string | null
+  burnAfterRead: boolean
 }
 
 // The words and the link for one notification. Written when listing, from the paste as it is
@@ -30,8 +31,8 @@ export function describeNotification(
     case "shared":
       return {
         title: t("notificationShared", { name: row.actor ?? t("someone"), title: row.title }),
-        detail: t("notificationSharedDetail"),
-        href: `/pastes/${row.slug}`,
+        detail: t(row.burnAfterRead ? "notificationSharedBurnDetail" : "notificationSharedDetail"),
+        href: row.burnAfterRead ? `/${row.slug}` : `/pastes/${row.slug}`,
       }
     case "burned":
       return {

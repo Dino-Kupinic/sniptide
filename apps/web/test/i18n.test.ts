@@ -71,6 +71,7 @@ test("notification sentences use the locale and preserve the paste title", () =>
         count: null,
         title: "my-config.ts",
         slug: "config",
+        burnAfterRead: false,
         expiresAt: null,
         actor: "Alice",
       },

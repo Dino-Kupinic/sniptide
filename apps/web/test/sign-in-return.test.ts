@@ -26,3 +26,15 @@ test("the proxy tells the page which address was opened, over any value the clie
     "/new?template=claude-md",
   )
 })
+
+test("sign-in returns to an invitation link without accepting arbitrary paths", () => {
+  const target = "/api/notifications/12345678-1234-1234-1234-123456789abc/open"
+  expect(afterSignIn(target)).toBe(target)
+  expect(signInPath(target)).toBe(`/sign-in?next=${encodeURIComponent(target)}`)
+  for (const bad of [
+    `${target}?next=//evil.test`,
+    `${target}/evil`,
+    "/api/notifications/invalid/open",
+  ])
+    expect(afterSignIn(bad)).toBe("/dashboard")
+})

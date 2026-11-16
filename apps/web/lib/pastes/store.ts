@@ -551,7 +551,7 @@ async function canOpenLink(
 ) {
   const owned = record.ownerId === viewer
   if (owned && (record.visibility === "private" || !options.asVisitor)) return "ok" as const
-  if (!owned && (await isSharedWith(record, viewer, db))) return "ok" as const
+  if (!owned && (await isSharedWith(record, viewer, db, options.asVisitor))) return "ok" as const
   if (record.visibility === "private") return "missing" as const
   if (record.passwordHash) {
     const cookie = (await cookies()).get(unlockCookieName(record.slug))?.value
