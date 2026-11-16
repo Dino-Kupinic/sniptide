@@ -4,6 +4,7 @@ import type { Database } from "@workspace/db"
 import { apiToken, type EnvAuditDetail, envAudit, oauthClient, user } from "@workspace/db/schema"
 import { and, desc, eq, inArray } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { initials } from "@/lib/format"
 import type { AuditFilter } from "./inputs"
 
 // The audit log of secret groups (env_audit): who read, revealed and edited values, and who
@@ -87,6 +88,7 @@ export async function listAudit(
       groupSlug: envAudit.groupSlug,
       action: envAudit.action,
       via: envAudit.via,
+      actorId: envAudit.actorId,
       actor: envAudit.actor,
       detail: envAudit.detail,
       createdAt: envAudit.createdAt,
@@ -102,9 +104,61 @@ export async function listAudit(
     .orderBy(desc(envAudit.createdAt), desc(envAudit.id))
     .limit(limit + 1)
     .offset((options.page ?? 0) * limit)
+  const page = rows.slice(0, limit)
+  const people = await findPeople(
+    page.flatMap((row) => [row.actorId, row.detail.personId].filter((id) => id != null)),
+  )
   return {
-    entries: rows.slice(0, limit).map((row) => ({ ...row, createdAt: row.createdAt.getTime() })),
+    entries: page.map(({ actorId, actor, ...row }) => ({
+      ...row,
+      createdAt: row.createdAt.getTime(),
+      actor: person(people, actorId, actor),
+      person: person(people, row.detail.personId, row.detail.person ?? null),
+    })),
     more: rows.length > limit,
   }
+}
+
+export interface AuditPerson {
+  id: string
+  name: string
+  handle: string
+  initials: string
+}
+
+// The people an entry names, with their current display names. Someone whose account is gone
+// keeps the handle the entry recorded.
+async function findPeople(ids: string[]) {
+  const unique = [...new Set(ids)]
+  if (!unique.length) return new Map<string, AuditPerson>()
+  const rows = await getDb()
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      displayUsername: user.displayUsername,
+    })
+    .from(user)
+    .where(inArray(user.id, unique))
+  return new Map(
+    rows.map((row) => {
+      const username = row.displayUsername ?? row.username
+      const handle = username ? `@${username}` : row.email
+      const name = row.name.trim() || handle
+      return [row.id, { id: row.id, name, handle, initials: initials(name) }]
+    }),
+  )
+}
+
+function person(
+  people: Map<string, AuditPerson>,
+  id: string | null | undefined,
+  handle: string | null,
+): AuditPerson | null {
+  const found = id ? people.get(id) : undefined
+  if (found) return found
+  if (!handle) return null
+  return { id: id ?? handle, name: handle, handle, initials: initials(handle.replace(/^@/, "")) }
 }
 export type AuditEntry = Awaited<ReturnType<typeof listAudit>>["entries"][number]

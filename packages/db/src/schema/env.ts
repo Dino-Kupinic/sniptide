@@ -108,8 +108,9 @@ export interface EnvAuditDetail {
   variables?: string[]
   // edit: the project or environment changed.
   settings?: boolean
-  // grant, revoke: whose access changed, and to what.
+  // grant, revoke: whose access changed, and to what. `person` keeps their handle as it was.
   person?: string
+  personId?: string
   role?: "read" | "write"
   // via "token": the token's name, or the agent connected through OAuth.
   token?: string

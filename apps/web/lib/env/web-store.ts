@@ -301,7 +301,7 @@ export async function grantAccess(
       .insert(envMember)
       .values({ groupId: id, userId, role })
       .onConflictDoUpdate({ target: [envMember.groupId, envMember.userId], set: { role } })
-    await recordAudit(tx, group, "grant", web(viewer), { person, role })
+    await recordAudit(tx, group, "grant", web(viewer), { person, personId: userId, role })
     return { status: "ok" }
   })
 }
@@ -318,7 +318,11 @@ export async function revokeAccess(viewer: string, id: string, userId: string) {
       .returning({ userId: envMember.userId })
     if (!rows.length) return false
     if (userId === viewer) await recordAudit(tx, found.group, "leave", web(viewer))
-    else await recordAudit(tx, found.group, "revoke", web(viewer), { person: person ?? undefined })
+    else
+      await recordAudit(tx, found.group, "revoke", web(viewer), {
+        person: person ?? undefined,
+        personId: userId,
+      })
     return true
   })
 }

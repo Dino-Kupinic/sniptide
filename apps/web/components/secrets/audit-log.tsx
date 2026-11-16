@@ -2,9 +2,27 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import type { AuditEntry } from "@/lib/env/audit"
+import { ShareAvatar } from "@/components/paste/share-people"
+import type { AuditEntry, AuditPerson } from "@/lib/env/audit"
 
 const code = (chunks: ReactNode) => <span className="font-mono text-[13px]">{chunks}</span>
+
+// A person named in an entry: their avatar and display name on a muted chip, with the handle on
+// hover. An account that no longer exists reads as plain text.
+function PersonChip({ person, fallback }: { person: AuditPerson | null; fallback: string }) {
+  if (!person) return <span className="text-muted-foreground">{fallback}</span>
+  return (
+    <span
+      title={person.handle}
+      className="inline-flex max-w-full items-center gap-1 rounded-md bg-muted py-px pr-1.5 pl-0.5 align-middle font-medium"
+    >
+      <ShareAvatar person={person} className="size-4 rounded-sm text-[7px] ring-1 ring-border" />
+      <span className="truncate" dir="auto">
+        {person.name}
+      </span>
+    </span>
+  )
+}
 
 // Audit entries as one sentence each, with how the request arrived and when. `showGroup` adds the
 // group's name on lists that span groups.
@@ -13,39 +31,46 @@ export function AuditLog({ entries, showGroup }: { entries: AuditEntry[]; showGr
   const format = useFormatter()
 
   function sentence(entry: AuditEntry) {
-    const actor = entry.actor ?? t("audit_unknown_actor")
+    const unknown = t("audit_unknown_actor")
+    const actor = entry.actor?.name ?? unknown
+    const person = entry.person?.name ?? unknown
+    const people = {
+      who: () => <PersonChip person={entry.actor} fallback={unknown} />,
+      whom: () => <PersonChip person={entry.person} fallback={unknown} />,
+      code,
+    }
     const [name] = entry.detail.variables ?? []
     const count = entry.detail.variables?.length ?? 0
     switch (entry.action) {
       case "create":
-        return t("audit_create", { actor })
+        return t.rich("audit_create", { ...people, actor })
       case "edit":
-        if (count === 1 && name) return t.rich("audit_edit_one", { actor, name, code })
-        if (count > 1) return t("audit_edit_many", { actor, count })
-        return t("audit_edit_settings", { actor })
+        if (count === 1 && name) return t.rich("audit_edit_one", { ...people, actor, name })
+        if (count > 1) return t.rich("audit_edit_many", { ...people, actor, count })
+        return t.rich("audit_edit_settings", { ...people, actor })
       case "delete":
-        return t("audit_delete", { actor })
+        return t.rich("audit_delete", { ...people, actor })
       case "read":
-        return entry.via === "link" ? t("audit_read_link") : t("audit_read", { actor })
+        return entry.via === "link"
+          ? t("audit_read_link")
+          : t.rich("audit_read", { ...people, actor })
       case "reveal":
-        return t.rich("audit_reveal", { actor, name: name ?? "", code })
+        return t.rich("audit_reveal", { ...people, actor, name: name ?? "" })
       case "link_create":
-        return t("audit_link_create", { actor })
+        return t.rich("audit_link_create", { ...people, actor })
       case "link_revoke":
-        return t("audit_link_revoke", { actor })
+        return t.rich("audit_link_revoke", { ...people, actor })
       case "grant":
-        return t("audit_grant", {
+        return t.rich("audit_grant", {
+          ...people,
           actor,
-          person: entry.detail.person ?? t("audit_unknown_actor"),
+          person,
           role: entry.detail.role ?? "read",
         })
       case "revoke":
-        return t("audit_revoke", {
-          actor,
-          person: entry.detail.person ?? t("audit_unknown_actor"),
-        })
+        return t.rich("audit_revoke", { ...people, actor, person })
       case "leave":
-        return t("audit_leave", { actor })
+        return t.rich("audit_leave", { ...people, actor })
     }
   }
   function source(entry: AuditEntry) {

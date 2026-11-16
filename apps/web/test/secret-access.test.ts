@@ -241,7 +241,12 @@ describeDb("secret audit log", () => {
     const bob = "bob@example.com"
     expect(await trail()).toEqual([
       { action: "create", via: "web", actor: ada, detail: { variables: ["API_KEY"] } },
-      { action: "grant", via: "web", actor: ada, detail: { person: bob, role: "write" } },
+      {
+        action: "grant",
+        via: "web",
+        actor: ada,
+        detail: { person: bob, personId: "bob", role: "write" },
+      },
       { action: "reveal", via: "web", actor: bob, detail: { variables: ["API_KEY"] } },
       { action: "edit", via: "web", actor: bob, detail: { variables: ["ADDED"] } },
       { action: "edit", via: "web", actor: ada, detail: { variables: ["ADDED"], settings: true } },
@@ -249,8 +254,13 @@ describeDb("secret audit log", () => {
       { action: "read", via: "link", actor: null, detail: {} },
       { action: "link_revoke", via: "web", actor: ada, detail: {} },
       { action: "leave", via: "web", actor: bob, detail: {} },
-      { action: "grant", via: "web", actor: ada, detail: { person: bob, role: "read" } },
-      { action: "revoke", via: "web", actor: ada, detail: { person: bob } },
+      {
+        action: "grant",
+        via: "web",
+        actor: ada,
+        detail: { person: bob, personId: "bob", role: "read" },
+      },
+      { action: "revoke", via: "web", actor: ada, detail: { person: bob, personId: "bob" } },
       { action: "delete", via: "web", actor: ada, detail: {} },
     ])
     expect(JSON.stringify(await getDb().select().from(envAudit))).not.toContain(marker)
@@ -302,11 +312,35 @@ describeDb("secret audit log", () => {
       "create",
     ])
     expect(all.entries.every((entry) => entry.groupSlug === "billing-api")).toBe(true)
+    const grant = all.entries.find((entry) => entry.action === "grant")
+    expect(grant?.actor).toEqual({
+      id: "ada",
+      name: "ada",
+      handle: "ada@example.com",
+      initials: "AD",
+    })
+    expect(grant?.person).toMatchObject({ id: "bob", name: "bob" })
     expect((await listAudit("ada", { filter: "reads" })).entries).toHaveLength(1)
     expect((await listAudit("ada", { filter: "access", groupId: id })).entries).toHaveLength(1)
     const paged = await listAudit("ada", { limit: 3 })
     expect(paged).toMatchObject({ more: true, entries: { length: 3 } })
     expect((await listAudit("ada", { limit: 3, page: 1 })).entries).toHaveLength(1)
+  })
+
+  test("names people by their current display name, and by the recorded handle once they're gone", async () => {
+    const id = await create()
+    await grantAccess("ada", id, "bob", "read")
+    await getDb().update(user).set({ name: "Bob Builder" }).where(eq(user.id, "bob"))
+    let [grant] = (await listAudit("ada", { filter: "access" })).entries
+    expect(grant?.person).toEqual({
+      id: "bob",
+      name: "Bob Builder",
+      handle: "bob@example.com",
+      initials: "BB",
+    })
+    await getDb().delete(user).where(eq(user.id, "bob"))
+    ;[grant] = (await listAudit("ada", { filter: "access" })).entries
+    expect(grant?.person).toMatchObject({ name: "bob@example.com", handle: "bob@example.com" })
   })
 
   test("the database refuses to change or delete an entry while its account exists", async () => {
