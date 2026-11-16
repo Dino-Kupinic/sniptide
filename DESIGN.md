@@ -259,6 +259,11 @@ A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and
 
 A stack of single-line rows (Sharing, Access, Views and Revisions on a paste, and Visibility, Expires, Custom link, Collection and Protection on a new paste). A row shows only its label and a chevron until it opens.
 
+### Avatar
+**Role:** A person's picture next to their name.
+
+`UserAvatar` in `apps/web/components/people` shows the uploaded profile picture. An account without one gets a silhouette on one of six fills, `--avatar-1` to `--avatar-6` with their `-foreground` pairs, picked from the account id so a person keeps one colour across the app. The picture is decorative because a name always sits next to it.
+
 ### Logo
 **Role:** Brand mark.
 

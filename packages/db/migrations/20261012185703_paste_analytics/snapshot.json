@@ -1,2520 +1,981 @@
 {
-  "version": "8",
+  "type": "diff",
+  "version": "9",
   "dialect": "postgres",
   "id": "905e8230-b54e-4780-9594-f77e520204f1",
   "prevIds": [
     "4afea73c-3094-416f-afce-cd1358331e3c"
   ],
-  "ddl": [
+  "footprints": [
     {
-      "values": [
-        "referrer",
-        "country",
-        "device"
-      ],
-      "name": "breakdown_dimension",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "view",
-        "raw",
-        "copy"
-      ],
-      "name": "event_kind",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
         "public",
-        "unlisted",
-        "private"
-      ],
-      "name": "visibility",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "account",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "session",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "user",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "verification",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "analytics_rollup",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "analytics_salt",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_breakdown_day",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_event",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_stats_day",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "collection",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_file",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_revision",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_star",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "paste_view_day",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "auth_rate_limit",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "rate_limit",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "account_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "provider_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "access_token",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "refresh_token",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id_token",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "access_token_expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "refresh_token_expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "scope",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "password",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "token",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "ip_address",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "user_agent",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "email",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "email_verified",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "image",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "username",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "display_username",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "preferences",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "identifier",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "value",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "analytics_rollup"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "finalized_day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "analytics_rollup"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "analytics_salt"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "salt",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "analytics_salt"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "type": "breakdown_dimension",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "dimension",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "key",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "hits",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "type": "bigserial",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "event_kind",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "visitor",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "referrer",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "country",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "device",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "views",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "uniques",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "raw",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "copies",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "owner_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "slug",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'square'",
-      "generated": null,
-      "identity": null,
-      "name": "icon",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'blue'",
-      "generated": null,
-      "identity": null,
-      "name": "hue",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "slug",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "owner_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "title",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "''",
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "bytes",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "visibility",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "visibility",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "password_hash",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "burn_after_read",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "true",
-      "generated": null,
-      "identity": null,
-      "name": "allow_raw",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "collection",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "views",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "unique_views",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "type": "serial",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "position",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "name",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "language",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "content",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "type": "serial",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_revision"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_revision"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "message",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_revision"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_revision"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "paste_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_view_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_view_day"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "views",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "paste_view_day"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "key",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "count",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "bigint",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "last_request",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "key",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rate_limit"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "window_start",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rate_limit"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "count",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rate_limit"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "user_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "account_userId_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "user_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "session_userId_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "username",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "user_username_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "user"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "identifier",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "verification_identifier_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "verification"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "day",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_breakdown_day_retention_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_event_at_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_event_paste_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "day",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_stats_day_retention_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "slug",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "collection_owner_slug_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "collection_owner_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "slug",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_slug_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "updated_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_owner_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "owner_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "collection",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "updated_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_collection_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "deleted_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_deleted_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "expires_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_expired_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "title",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": {
-            "name": "gin_trgm_ops",
-            "default": false
-          }
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "gin",
-      "concurrently": false,
-      "name": "paste_title_search_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "slug",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": {
-            "name": "gin_trgm_ops",
-            "default": false
-          }
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "gin",
-      "concurrently": false,
-      "name": "paste_slug_search_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "position",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_file_paste_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "created_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_revision_paste_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_revision"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_star_paste_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "day",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "paste_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "paste_view_day_retention_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "paste_view_day"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "last_request",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "auth_rate_limit_window_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "auth_rate_limit"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "window_start",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "rate_limit_window_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "rate_limit"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "user_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "account_user_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "account"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "user_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "session_user_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "session"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_breakdown_day_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_event_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_event"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_stats_day_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "owner_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "collection_owner_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "collection"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "owner_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_owner_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_file_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_file"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_revision_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_revision"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "user_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_star_user_id_user_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_star_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "paste_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "paste",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "paste_view_day_paste_id_paste_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "paste_view_day"
-    },
-    {
-      "columns": [
-        "paste_id",
-        "day",
-        "dimension",
-        "key"
-      ],
-      "nameExplicit": false,
-      "name": "paste_breakdown_day_pkey",
-      "entityType": "pks",
-      "schema": "public",
-      "table": "paste_breakdown_day"
-    },
-    {
-      "columns": [
-        "paste_id",
-        "day"
-      ],
-      "nameExplicit": false,
-      "name": "paste_stats_day_pkey",
-      "entityType": "pks",
-      "schema": "public",
-      "table": "paste_stats_day"
-    },
-    {
-      "columns": [
-        "user_id",
-        "paste_id"
-      ],
-      "nameExplicit": false,
-      "name": "paste_star_pkey",
-      "entityType": "pks",
-      "schema": "public",
-      "table": "paste_star"
-    },
-    {
-      "columns": [
-        "paste_id",
-        "day"
-      ],
-      "nameExplicit": false,
-      "name": "paste_view_day_pkey",
-      "entityType": "pks",
-      "schema": "public",
-      "table": "paste_view_day"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "account_pkey",
-      "schema": "public",
-      "table": "account",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "session_pkey",
-      "schema": "public",
-      "table": "session",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "user_pkey",
-      "schema": "public",
-      "table": "user",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "verification_pkey",
-      "schema": "public",
-      "table": "verification",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "analytics_rollup_pkey",
-      "schema": "public",
-      "table": "analytics_rollup",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "day"
-      ],
-      "nameExplicit": false,
-      "name": "analytics_salt_pkey",
-      "schema": "public",
-      "table": "analytics_salt",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "paste_event_pkey",
-      "schema": "public",
-      "table": "paste_event",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "collection_pkey",
-      "schema": "public",
-      "table": "collection",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "paste_pkey",
-      "schema": "public",
-      "table": "paste",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "paste_file_pkey",
-      "schema": "public",
-      "table": "paste_file",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "paste_revision_pkey",
-      "schema": "public",
-      "table": "paste_revision",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "auth_rate_limit_pkey",
-      "schema": "public",
-      "table": "auth_rate_limit",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "key"
-      ],
-      "nameExplicit": false,
-      "name": "rate_limit_pkey",
-      "schema": "public",
-      "table": "rate_limit",
-      "entityType": "pks"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "token"
-      ],
-      "nullsNotDistinct": false,
-      "name": "session_token_key",
-      "schema": "public",
-      "table": "session",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "email"
-      ],
-      "nullsNotDistinct": false,
-      "name": "user_email_key",
-      "schema": "public",
-      "table": "user",
-      "entityType": "uniques"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "key"
-      ],
-      "nullsNotDistinct": false,
-      "name": "auth_rate_limit_key_key",
-      "schema": "public",
-      "table": "auth_rate_limit",
-      "entityType": "uniques"
+        "breakdown_dimension"
+      ],
+      "writes": [
+        "s|enum|public.breakdown_dimension",
+        "n|enum|public.breakdown_dimension",
+        "e|enum|public.breakdown_dimension",
+        "n|type|public.breakdown_dimension"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "event_kind"
+      ],
+      "writes": [
+        "s|enum|public.event_kind",
+        "n|enum|public.event_kind",
+        "e|enum|public.event_kind",
+        "n|type|public.event_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "analytics_rollup"
+      ],
+      "writes": [
+        "s|tbl|public.analytics_rollup",
+        "n|tbl|public.analytics_rollup",
+        "e|tbl|public.analytics_rollup",
+        "n|rel|public.analytics_rollup",
+        "n|type|public.analytics_rollup",
+        "n|rel|public.analytics_rollup_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "analytics_salt"
+      ],
+      "writes": [
+        "s|tbl|public.analytics_salt",
+        "n|tbl|public.analytics_salt",
+        "e|tbl|public.analytics_salt",
+        "n|rel|public.analytics_salt",
+        "n|type|public.analytics_salt",
+        "n|rel|public.analytics_salt_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste_breakdown_day"
+      ],
+      "writes": [
+        "s|tbl|public.paste_breakdown_day",
+        "n|tbl|public.paste_breakdown_day",
+        "e|tbl|public.paste_breakdown_day",
+        "n|rel|public.paste_breakdown_day",
+        "n|type|public.paste_breakdown_day",
+        "n|rel|public.paste_breakdown_day_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.breakdown_dimension"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste_event"
+      ],
+      "writes": [
+        "s|tbl|public.paste_event",
+        "n|tbl|public.paste_event",
+        "e|tbl|public.paste_event",
+        "n|rel|public.paste_event",
+        "n|type|public.paste_event",
+        "n|rel|public.paste_event_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.event_kind"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste_stats_day"
+      ],
+      "writes": [
+        "s|tbl|public.paste_stats_day",
+        "n|tbl|public.paste_stats_day",
+        "e|tbl|public.paste_stats_day",
+        "n|rel|public.paste_stats_day",
+        "n|type|public.paste_stats_day",
+        "n|rel|public.paste_stats_day_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "paste_breakdown_day",
+        "paste_breakdown_day_retention_idx"
+      ],
+      "writes": [
+        "s|idx|public.paste_breakdown_day_retention_idx",
+        "n|idx|public.paste_breakdown_day_retention_idx",
+        "e|idx|public.paste_breakdown_day_retention_idx",
+        "n|rel|public.paste_breakdown_day_retention_idx"
+      ],
+      "reads": [
+        "n|tbl|public.paste_breakdown_day",
+        "n|sch|public",
+        "n|col|public.paste_breakdown_day.day",
+        "n|col|public.paste_breakdown_day.paste_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "paste_event",
+        "paste_event_at_idx"
+      ],
+      "writes": [
+        "s|idx|public.paste_event_at_idx",
+        "n|idx|public.paste_event_at_idx",
+        "e|idx|public.paste_event_at_idx",
+        "n|rel|public.paste_event_at_idx"
+      ],
+      "reads": [
+        "n|tbl|public.paste_event",
+        "n|sch|public",
+        "n|col|public.paste_event.at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "paste_event",
+        "paste_event_paste_idx"
+      ],
+      "writes": [
+        "s|idx|public.paste_event_paste_idx",
+        "n|idx|public.paste_event_paste_idx",
+        "e|idx|public.paste_event_paste_idx",
+        "n|rel|public.paste_event_paste_idx"
+      ],
+      "reads": [
+        "n|tbl|public.paste_event",
+        "n|sch|public",
+        "n|col|public.paste_event.paste_id",
+        "n|col|public.paste_event.at"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "paste_stats_day",
+        "paste_stats_day_retention_idx"
+      ],
+      "writes": [
+        "s|idx|public.paste_stats_day_retention_idx",
+        "n|idx|public.paste_stats_day_retention_idx",
+        "e|idx|public.paste_stats_day_retention_idx",
+        "n|rel|public.paste_stats_day_retention_idx"
+      ],
+      "reads": [
+        "n|tbl|public.paste_stats_day",
+        "n|sch|public",
+        "n|col|public.paste_stats_day.day",
+        "n|col|public.paste_stats_day.paste_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste_breakdown_day"
+      ],
+      "writes": [
+        "s|fk|public.paste_breakdown_day.paste_breakdown_day_paste_id_paste_id_fkey",
+        "n|fk|public.paste_breakdown_day.paste_breakdown_day_paste_id_paste_id_fkey",
+        "e|fk|public.paste_breakdown_day.paste_breakdown_day_paste_id_paste_id_fkey",
+        "n|con|public.paste_breakdown_day.paste_breakdown_day_paste_id_paste_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.paste_breakdown_day",
+        "n|sch|public",
+        "n|tbl|public.paste",
+        "n|sch|public",
+        "n|col|public.paste_breakdown_day.paste_id",
+        "n|col|public.paste.id",
+        "e|uniqueness|public.paste.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste_event"
+      ],
+      "writes": [
+        "s|fk|public.paste_event.paste_event_paste_id_paste_id_fkey",
+        "n|fk|public.paste_event.paste_event_paste_id_paste_id_fkey",
+        "e|fk|public.paste_event.paste_event_paste_id_paste_id_fkey",
+        "n|con|public.paste_event.paste_event_paste_id_paste_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.paste_event",
+        "n|sch|public",
+        "n|tbl|public.paste",
+        "n|sch|public",
+        "n|col|public.paste_event.paste_id",
+        "n|col|public.paste.id",
+        "e|uniqueness|public.paste.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "paste_stats_day"
+      ],
+      "writes": [
+        "s|fk|public.paste_stats_day.paste_stats_day_paste_id_paste_id_fkey",
+        "n|fk|public.paste_stats_day.paste_stats_day_paste_id_paste_id_fkey",
+        "e|fk|public.paste_stats_day.paste_stats_day_paste_id_paste_id_fkey",
+        "n|con|public.paste_stats_day.paste_stats_day_paste_id_paste_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.paste_stats_day",
+        "n|sch|public",
+        "n|tbl|public.paste",
+        "n|sch|public",
+        "n|col|public.paste_stats_day.paste_id",
+        "n|col|public.paste.id",
+        "e|uniqueness|public.paste.id"
+      ]
     }
   ],
-  "renames": []
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "analytics_rollup",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "analytics_salt",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "paste_breakdown_day",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "paste_event",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "paste_stats_day",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "breakdown_dimension",
+        "values": [
+          "referrer",
+          "country",
+          "device"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "event_kind",
+        "values": [
+          "view",
+          "raw",
+          "copy"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "analytics_rollup",
+        "name": "id",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "analytics_rollup",
+        "name": "finalized_day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "analytics_salt",
+        "name": "day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "analytics_salt",
+        "name": "salt",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "paste_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "dimension",
+        "type": "breakdown_dimension",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "key",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "hits",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "id",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "paste_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "kind",
+        "type": "event_kind",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "visitor",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "referrer",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "country",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "device",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "paste_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "views",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "uniques",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "raw",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "copies",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "paste_breakdown_day_retention_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "day",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "paste_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "paste_event_at_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "paste_event_paste_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "paste_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "paste_stats_day_retention_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "day",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "paste_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "paste_breakdown_day_paste_id_paste_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "paste_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "paste",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "paste_event_paste_id_paste_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "paste_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "paste",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "paste_stats_day_paste_id_paste_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "paste_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "paste",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_breakdown_day",
+        "name": "paste_breakdown_day_pkey",
+        "columns": [
+          "paste_id",
+          "day",
+          "dimension",
+          "key"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_stats_day",
+        "name": "paste_stats_day_pkey",
+        "columns": [
+          "paste_id",
+          "day"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "analytics_rollup",
+        "name": "analytics_rollup_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "analytics_salt",
+        "name": "analytics_salt_pkey",
+        "columns": [
+          "day"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "paste_event",
+        "name": "paste_event_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
 }

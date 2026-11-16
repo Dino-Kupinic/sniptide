@@ -8,6 +8,7 @@ import {
   apiToken,
   apiTokenUsageDay,
   collection,
+  envAudit,
   envGroup,
   notification,
   oauthClient,
@@ -106,6 +107,9 @@ export async function resetDemo(db: Database, secret: string, now = new Date()) 
     await tx.delete(apiToken).where(eq(apiToken.ownerId, DEMO_USER_ID))
     await tx.delete(apiTokenUsageDay).where(eq(apiTokenUsageDay.ownerId, DEMO_USER_ID))
     await tx.delete(envGroup).where(eq(envGroup.ownerId, DEMO_USER_ID))
+    // The audit log refuses deletes outside a transaction that sets this (the env_audit migration).
+    await tx.execute(sql`select set_config('sniptide.env_audit_purge', 'on', true)`)
+    await tx.delete(envAudit).where(eq(envAudit.ownerId, DEMO_USER_ID))
 
     await tx.insert(collection).values(
       DEMO_COLLECTIONS.map((entry, index) => ({

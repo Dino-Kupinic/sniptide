@@ -37,7 +37,7 @@ export async function revokeApiToken(id: string): Promise<{ ok: boolean }> {
 export async function deleteEnvGroup(slug: string): Promise<{ ok: boolean }> {
   const session = await getSession()
   if (!session || typeof slug !== "string") return { ok: false }
-  const ok = await deleteGroup(session.user.id, slug)
+  const ok = await deleteGroup(session.user.id, slug, { via: "web", userId: session.user.id })
   revalidatePath("/settings")
   return { ok }
 }

@@ -138,6 +138,7 @@
         "@workspace/db": "workspace:*",
         "better-auth": "catalog:runtime",
         "drizzle-orm": "catalog:runtime",
+        "transliteration": "^2.7.0",
         "zod": "catalog:runtime",
       },
       "devDependencies": {
@@ -2344,6 +2345,8 @@
     "to-regex-range": ["to-regex-range@5.0.1", "", { "dependencies": { "is-number": "^7.0.0" } }, "sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ=="],
 
     "toidentifier": ["toidentifier@1.0.1", "", {}, "sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA=="],
+
+    "transliteration": ["transliteration@2.7.0", "", { "bin": { "slugify": "dist/bin/slugify", "transliterate": "dist/bin/transliterate" } }, "sha512-rCVoWvYXlRMKdwymthS6IR25z2XQnV3Iad3mQPpC+CEdvF7Q8yhq4a3HRPCIDf42nij2v5w7lItxn6cwqcSKiw=="],
 
     "trim-lines": ["trim-lines@3.0.1", "", {}, "sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg=="],
 
