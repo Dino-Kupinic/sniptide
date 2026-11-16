@@ -1249,7 +1249,7 @@ export const openApiDocument = {
         tags: ["Env"],
         summary: "Read an env group",
         description:
-          "The group's variables with their values, in the order they were pushed. `sniptide env pull` and `env run` read this.",
+          "The group's variables with their values, in the order they were pushed. `sniptide env pull` and `env run` read this. Each read is recorded in the group's activity log under the token's name.",
         ...tokenAccess("read"),
         parameters: [envGroupParameter],
         responses: {
