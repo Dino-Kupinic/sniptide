@@ -231,12 +231,50 @@ them to Sniptide's PostHog project as `self_hosted_instance_report`. The report 
   that ID unless you set a different UUID.
 - Release version or commit hash, deployment label, operating system, CPU architecture and Node major version.
   Custom release labels become `unknown`.
-- Bucketed user, paste and collection counts, and token API requests on the previous UTC day.
+- An exact registered-account total, excluding pending invitations. Paste and collection counts,
+  and token API requests on the previous UTC day, remain bucketed.
   Paste and collection totals use the instance's usage counters and can lag behind writes.
 - Bucketed process memory in MiB and uptime in hours, for the replica sending the report.
 - Booleans for GitHub sign-in, Google sign-in, SMTP, Slack, Discord and the support assistant.
 
-Every count uses the buckets `0`, `1`, `2-10`, `11-100`, `101-1000` and `1001+`.
+Schema 2 reports also include exact `totalAccounts`, `activeAccounts1d`, `activeAccounts7d`,
+`activeAccounts30d`, `creates7d`, `edits7d`, `reads7d`, and `workflow7d` counts. `reportDay` is the
+previous UTC day, expressed as days since the Unix epoch. Activity windows end on that day and
+exclude today's partial activity. One account counts once in each active-account window, even
+when it uses several workflows or performs many actions. These are accounts, not unique people
+across installations. The collector also accepts schema 1 reports from older versions.
+
+Activity means a successful paste creation or content replacement, an authenticated app paste
+read, an explicit authenticated share-page view or reveal, or an explicit token API/MCP paste
+read. Anonymous visitors, searches, background jobs and failed or rolled-back mutations do not
+make an account active. `workflow7d` splits the number of those actions into `web`, `api`, `cli`
+and `mcp`. Extensions using the token API without a CLI/MCP client marker count under `api`.
+
+Account IDs and per-day activity rows stay in your database. Rows expire after 90 days and are
+removed when an account is deleted. Reads use a bounded one-second process buffer; an abrupt
+shutdown can lose pending reads, and a full buffer can omit new account/day/workflow keys.
+Committed creates and edits are counted in their own transaction. Demo instances send no reports.
+
+`activitySinceDay` records the start of observation. Reenabling telemetry after starting with it
+off resets this date. Windows starting on or before that date have partial coverage and must not
+be presented as complete weekly or monthly counts. Use the same telemetry setting on every replica.
+`activationDay` records the first paste creation and remains after that paste is deleted.
+Existing pastes establish historical activation when the migration runs; historical active-account
+counts cannot be reconstructed.
+
+For adoption totals, take the latest schema 2 report per installation received within seven days,
+then sum account counts. Never sum daily snapshots from one installation. A reporting installation
+is reachable; an installation with active accounts has observed use. Missing reports do not prove
+an uninstall.
+
+For observed week-1 retention, look for authenticated activity on days 7 through 13 after
+activation. Week-4 uses days 28 through 34. Exclude installations activated before observation,
+wait until each window ends, and treat an incompletely reported window without a return as
+unknown. Report retained, fully observed eligible, and unknown counts together. This measures
+observed installation use, not individual-person retention.
+
+The remaining size and process measurements use the buckets `0`, `1`, `2-10`, `11-100`,
+`101-1000` and `1001+`.
 No paste content, titles, slugs, account identifiers, instance addresses, credentials or raw logs
 are included. The collector receives the network source IP as part of HTTPS transport, uses an
 HMAC of it for rate limiting, and does not forward it or request headers to PostHog. Hosting access

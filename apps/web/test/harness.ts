@@ -1,10 +1,12 @@
 import path from "node:path"
 import { migrateDb } from "@workspace/db/migrate"
 import {
+  accountActivityDay,
   analyticsRollup,
   analyticsSalt,
   authRateLimit,
   collection,
+  instanceActivity,
   moderationEvent,
   paste,
   pasteFile,
@@ -16,6 +18,7 @@ import {
 import { eq } from "drizzle-orm"
 import { resetMeter } from "@/lib/api/meter"
 import { getDb } from "@/lib/db"
+import { flushAccountReads } from "@/lib/instance-activity"
 import { hashPassword } from "@/lib/pastes/passwords"
 import type { Visibility } from "@/lib/pastes/types"
 import { unlockCookieName, unlockToken } from "@/lib/pastes/unlock"
@@ -51,6 +54,15 @@ export async function resetDatabase() {
   if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required for database cleanup.")
   // Everything else cascades from the accounts.
   await getDb().delete(moderationEvent)
+  await flushAccountReads()
+  await getDb().delete(accountActivityDay)
+  await getDb()
+    .update(instanceActivity)
+    .set({
+      activationDay: null,
+      tracking: false,
+      observedSinceDay: Math.floor(Date.now() / 86400000),
+    })
   await getDb().delete(user)
   await getDb().delete(rateLimit)
   await getDb().delete(authRateLimit)

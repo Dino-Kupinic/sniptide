@@ -2,6 +2,7 @@ import "server-only"
 
 import { ZodError } from "zod"
 import { clientAddress } from "@/lib/client-ip"
+import { activitySurface } from "@/lib/instance-activity"
 import { bearerChallenge } from "@/lib/oauth/metadata"
 import type { PasteOrigin } from "@/lib/pastes/mutations"
 import { hit, type Limit, quotaHeaders, requestQuotas } from "@/lib/rate-limit"
@@ -114,7 +115,14 @@ export async function withToken(
         )
         return response
       }
-      return await handler(owner)
+      const client = request.headers.get("x-sniptide-client")
+      const surface =
+        new URL(request.url).pathname === "/api/mcp"
+          ? "mcp"
+          : client === "cli" || client === "mcp"
+            ? client
+            : "api"
+      return await activitySurface.run(surface, () => handler(owner))
     } catch (error) {
       if (isAdmissionError(error))
         return failure(error.status, error.message, error.retryAfterSeconds)

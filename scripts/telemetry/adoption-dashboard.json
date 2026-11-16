@@ -1,0 +1,89 @@
+{
+  "name": "Self-hosted adoption",
+  "description": "Reporting installations, registered and active accounts, workflow use, and observed retention. Counts cover reporting installations and keep incomplete observation windows separate.",
+  "insights": [
+    {
+      "name": "Accounts across reporting installations",
+      "description": "Latest reports within seven days. Active-account totals include only installations with complete observation windows.",
+      "query": {
+        "kind": "DataVisualizationNode",
+        "display": "ActionsTable",
+        "source": {
+          "kind": "HogQLQuery",
+          "query": "WITH snapshots AS (SELECT distinct_id, timestamp, toInt(properties.schema) AS schema,\n    coalesce(toInt(properties.reportDay), -1) AS report_day,\n    coalesce(toInt(properties.activitySinceDay), -1) AS since_day,\n    coalesce(toInt(properties.activationDay), -1) AS activation_day,\n    coalesce(toInt(properties.totalAccounts), -1) AS accounts,\n    coalesce(toInt(properties.activeAccounts1d), -1) AS daily,\n    coalesce(toInt(properties.activeAccounts7d), -1) AS weekly,\n    coalesce(toInt(properties.activeAccounts30d), -1) AS monthly,\n    coalesce(toInt(properties.creates7d), -1) AS creates,\n    coalesce(toInt(properties.edits7d), -1) AS edits,\n    coalesce(toInt(properties.reads7d), -1) AS reads,\n    coalesce(toInt(properties.workflow7d.web), -1) AS web,\n    coalesce(toInt(properties.workflow7d.api), -1) AS api,\n    coalesce(toInt(properties.workflow7d.cli), -1) AS cli,\n    coalesce(toInt(properties.workflow7d.mcp), -1) AS mcp\n  FROM events WHERE event = 'self_hosted_instance_report' AND timestamp >= now() - INTERVAL 120 DAY), latest AS (SELECT distinct_id, argMax(report_day, timestamp) AS report_day, argMax(since_day, timestamp) AS since_day, argMax(activation_day, timestamp) AS activation_day, argMax(accounts, timestamp) AS accounts, argMax(daily, timestamp) AS daily, argMax(weekly, timestamp) AS weekly, argMax(monthly, timestamp) AS monthly, argMax(creates, timestamp) AS creates, argMax(edits, timestamp) AS edits, argMax(reads, timestamp) AS reads, argMax(web, timestamp) AS web, argMax(api, timestamp) AS api, argMax(cli, timestamp) AS cli, argMax(mcp, timestamp) AS mcp FROM snapshots WHERE schema = 2 AND timestamp >= now() - INTERVAL 7 DAY GROUP BY distinct_id)\nSELECT (SELECT count(DISTINCT distinct_id) FROM snapshots WHERE timestamp >= now() - INTERVAL 7 DAY) AS reporting_installations,\n count() AS installations_with_account_counts,\n if(count() = 0, NULL, sum(accounts)) AS registered_accounts,\n countIf(report_day - 6 > since_day) AS installations_with_full_week,\n if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(weekly, report_day - 6 > since_day)) AS weekly_active_accounts,\n countIf(report_day - 29 > since_day) AS installations_with_full_month,\n if(countIf(report_day - 29 > since_day) = 0, NULL, sumIf(monthly, report_day - 29 > since_day)) AS monthly_active_accounts\n FROM latest"
+        }
+      }
+    },
+    {
+      "name": "Activation and meaningful use",
+      "description": "Current reporting installations with a first paste and completed-day activity.",
+      "query": {
+        "kind": "DataVisualizationNode",
+        "display": "ActionsTable",
+        "source": {
+          "kind": "HogQLQuery",
+          "query": "WITH snapshots AS (SELECT distinct_id, timestamp, toInt(properties.schema) AS schema,\n    coalesce(toInt(properties.reportDay), -1) AS report_day,\n    coalesce(toInt(properties.activitySinceDay), -1) AS since_day,\n    coalesce(toInt(properties.activationDay), -1) AS activation_day,\n    coalesce(toInt(properties.totalAccounts), -1) AS accounts,\n    coalesce(toInt(properties.activeAccounts1d), -1) AS daily,\n    coalesce(toInt(properties.activeAccounts7d), -1) AS weekly,\n    coalesce(toInt(properties.activeAccounts30d), -1) AS monthly,\n    coalesce(toInt(properties.creates7d), -1) AS creates,\n    coalesce(toInt(properties.edits7d), -1) AS edits,\n    coalesce(toInt(properties.reads7d), -1) AS reads,\n    coalesce(toInt(properties.workflow7d.web), -1) AS web,\n    coalesce(toInt(properties.workflow7d.api), -1) AS api,\n    coalesce(toInt(properties.workflow7d.cli), -1) AS cli,\n    coalesce(toInt(properties.workflow7d.mcp), -1) AS mcp\n  FROM events WHERE event = 'self_hosted_instance_report' AND timestamp >= now() - INTERVAL 120 DAY), latest AS (SELECT distinct_id, argMax(report_day, timestamp) AS report_day, argMax(since_day, timestamp) AS since_day, argMax(activation_day, timestamp) AS activation_day, argMax(accounts, timestamp) AS accounts, argMax(daily, timestamp) AS daily, argMax(weekly, timestamp) AS weekly, argMax(monthly, timestamp) AS monthly, argMax(creates, timestamp) AS creates, argMax(edits, timestamp) AS edits, argMax(reads, timestamp) AS reads, argMax(web, timestamp) AS web, argMax(api, timestamp) AS api, argMax(cli, timestamp) AS cli, argMax(mcp, timestamp) AS mcp FROM snapshots WHERE schema = 2 AND timestamp >= now() - INTERVAL 7 DAY GROUP BY distinct_id)\nSELECT countIf(activation_day >= 0) AS activated_installations,\n countIf(daily > 0 AND report_day > since_day) AS installations_active_yesterday,\n if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(creates, report_day - 6 > since_day)) AS pastes_created_7d,\n if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(edits, report_day - 6 > since_day)) AS paste_edits_7d,\n if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(reads, report_day - 6 > since_day)) AS authenticated_reads_7d\n FROM latest"
+        }
+      }
+    },
+    {
+      "name": "Reporting and active installations",
+      "description": "One latest report per installation per day. Activity requires an authenticated paste action.",
+      "query": {
+        "kind": "DataVisualizationNode",
+        "display": "ActionsLineGraph",
+        "source": {
+          "kind": "HogQLQuery",
+          "query": "WITH snapshots AS (SELECT distinct_id, timestamp, toInt(properties.schema) AS schema,\n    coalesce(toInt(properties.reportDay), -1) AS report_day,\n    coalesce(toInt(properties.activitySinceDay), -1) AS since_day,\n    coalesce(toInt(properties.activationDay), -1) AS activation_day,\n    coalesce(toInt(properties.totalAccounts), -1) AS accounts,\n    coalesce(toInt(properties.activeAccounts1d), -1) AS daily,\n    coalesce(toInt(properties.activeAccounts7d), -1) AS weekly,\n    coalesce(toInt(properties.activeAccounts30d), -1) AS monthly,\n    coalesce(toInt(properties.creates7d), -1) AS creates,\n    coalesce(toInt(properties.edits7d), -1) AS edits,\n    coalesce(toInt(properties.reads7d), -1) AS reads,\n    coalesce(toInt(properties.workflow7d.web), -1) AS web,\n    coalesce(toInt(properties.workflow7d.api), -1) AS api,\n    coalesce(toInt(properties.workflow7d.cli), -1) AS cli,\n    coalesce(toInt(properties.workflow7d.mcp), -1) AS mcp\n  FROM events WHERE event = 'self_hosted_instance_report' AND timestamp >= now() - INTERVAL 120 DAY), latest AS (SELECT distinct_id, argMax(report_day, timestamp) AS report_day, argMax(since_day, timestamp) AS since_day, argMax(activation_day, timestamp) AS activation_day, argMax(accounts, timestamp) AS accounts, argMax(daily, timestamp) AS daily, argMax(weekly, timestamp) AS weekly, argMax(monthly, timestamp) AS monthly, argMax(creates, timestamp) AS creates, argMax(edits, timestamp) AS edits, argMax(reads, timestamp) AS reads, argMax(web, timestamp) AS web, argMax(api, timestamp) AS api, argMax(cli, timestamp) AS cli, argMax(mcp, timestamp) AS mcp FROM snapshots WHERE schema = 2 AND timestamp >= now() - INTERVAL 7 DAY GROUP BY distinct_id)\n, daily_reports AS (SELECT distinct_id, toStartOfDay(timestamp) AS date,\n argMax(schema, timestamp) AS schema, argMax(daily, timestamp) AS daily,\n argMax(report_day, timestamp) AS report_day, argMax(since_day, timestamp) AS since_day\n FROM snapshots WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY distinct_id, date)\n SELECT date, count() AS reporting_installations,\n countIf(schema = 2 AND daily > 0 AND report_day > since_day) AS installations_with_activity\n FROM daily_reports GROUP BY date ORDER BY date"
+        },
+        "chartSettings": {
+          "xAxis": {
+            "column": "date"
+          },
+          "yAxis": [
+            {
+              "column": "reporting_installations"
+            },
+            {
+              "column": "installations_with_activity"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Workflows used this week",
+      "description": "Actions from complete seven-day windows, using one latest report per installation.",
+      "query": {
+        "kind": "DataVisualizationNode",
+        "display": "ActionsBar",
+        "source": {
+          "kind": "HogQLQuery",
+          "query": "WITH snapshots AS (SELECT distinct_id, timestamp, toInt(properties.schema) AS schema,\n    coalesce(toInt(properties.reportDay), -1) AS report_day,\n    coalesce(toInt(properties.activitySinceDay), -1) AS since_day,\n    coalesce(toInt(properties.activationDay), -1) AS activation_day,\n    coalesce(toInt(properties.totalAccounts), -1) AS accounts,\n    coalesce(toInt(properties.activeAccounts1d), -1) AS daily,\n    coalesce(toInt(properties.activeAccounts7d), -1) AS weekly,\n    coalesce(toInt(properties.activeAccounts30d), -1) AS monthly,\n    coalesce(toInt(properties.creates7d), -1) AS creates,\n    coalesce(toInt(properties.edits7d), -1) AS edits,\n    coalesce(toInt(properties.reads7d), -1) AS reads,\n    coalesce(toInt(properties.workflow7d.web), -1) AS web,\n    coalesce(toInt(properties.workflow7d.api), -1) AS api,\n    coalesce(toInt(properties.workflow7d.cli), -1) AS cli,\n    coalesce(toInt(properties.workflow7d.mcp), -1) AS mcp\n  FROM events WHERE event = 'self_hosted_instance_report' AND timestamp >= now() - INTERVAL 120 DAY), latest AS (SELECT distinct_id, argMax(report_day, timestamp) AS report_day, argMax(since_day, timestamp) AS since_day, argMax(activation_day, timestamp) AS activation_day, argMax(accounts, timestamp) AS accounts, argMax(daily, timestamp) AS daily, argMax(weekly, timestamp) AS weekly, argMax(monthly, timestamp) AS monthly, argMax(creates, timestamp) AS creates, argMax(edits, timestamp) AS edits, argMax(reads, timestamp) AS reads, argMax(web, timestamp) AS web, argMax(api, timestamp) AS api, argMax(cli, timestamp) AS cli, argMax(mcp, timestamp) AS mcp FROM snapshots WHERE schema = 2 AND timestamp >= now() - INTERVAL 7 DAY GROUP BY distinct_id)\nSELECT 'Web' AS workflow, if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(web, report_day - 6 > since_day)) AS actions FROM latest\nUNION ALL\nSELECT 'CLI' AS workflow, if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(cli, report_day - 6 > since_day)) AS actions FROM latest\nUNION ALL\nSELECT 'MCP' AS workflow, if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(mcp, report_day - 6 > since_day)) AS actions FROM latest\nUNION ALL\nSELECT 'API and extensions' AS workflow, if(countIf(report_day - 6 > since_day) = 0, NULL, sumIf(api, report_day - 6 > since_day)) AS actions FROM latest"
+        },
+        "chartSettings": {
+          "xAxis": {
+            "column": "workflow"
+          },
+          "yAxis": [
+            {
+              "column": "actions"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Observed installation retention",
+      "description": "Week-1 and week-4 returns after first paste. Missing observation is unknown; rates exclude unknown windows.",
+      "query": {
+        "kind": "DataVisualizationNode",
+        "display": "ActionsTable",
+        "source": {
+          "kind": "HogQLQuery",
+          "query": "WITH snapshots AS (SELECT distinct_id, timestamp, toInt(properties.schema) AS schema,\n    coalesce(toInt(properties.reportDay), -1) AS report_day,\n    coalesce(toInt(properties.activitySinceDay), -1) AS since_day,\n    coalesce(toInt(properties.activationDay), -1) AS activation_day,\n    coalesce(toInt(properties.totalAccounts), -1) AS accounts,\n    coalesce(toInt(properties.activeAccounts1d), -1) AS daily,\n    coalesce(toInt(properties.activeAccounts7d), -1) AS weekly,\n    coalesce(toInt(properties.activeAccounts30d), -1) AS monthly,\n    coalesce(toInt(properties.creates7d), -1) AS creates,\n    coalesce(toInt(properties.edits7d), -1) AS edits,\n    coalesce(toInt(properties.reads7d), -1) AS reads,\n    coalesce(toInt(properties.workflow7d.web), -1) AS web,\n    coalesce(toInt(properties.workflow7d.api), -1) AS api,\n    coalesce(toInt(properties.workflow7d.cli), -1) AS cli,\n    coalesce(toInt(properties.workflow7d.mcp), -1) AS mcp\n  FROM events WHERE event = 'self_hosted_instance_report' AND timestamp >= now() - INTERVAL 120 DAY),\n days AS (SELECT distinct_id, report_day, argMax(activation_day, timestamp) AS activation_day,\n argMax(since_day, timestamp) AS since_day, argMax(daily, timestamp) AS daily\n FROM snapshots WHERE schema = 2 GROUP BY distinct_id, report_day),\n cohorts AS (SELECT distinct_id, max(report_day) AS last_day, max(activation_day) AS first_activation_day,\n uniqExactIf(report_day, report_day BETWEEN activation_day + 7 AND activation_day + 13 AND since_day <= activation_day) AS week1_days,\n max(if(report_day BETWEEN activation_day + 7 AND activation_day + 13 AND since_day <= activation_day AND daily > 0, 1, 0)) AS week1_returned,\n uniqExactIf(report_day, report_day BETWEEN activation_day + 28 AND activation_day + 34 AND since_day <= activation_day) AS week4_days,\n max(if(report_day BETWEEN activation_day + 28 AND activation_day + 34 AND since_day <= activation_day AND daily > 0, 1, 0)) AS week4_returned\n FROM days WHERE activation_day >= 0 GROUP BY distinct_id)\n SELECT countIf(last_day >= first_activation_day + 13 AND week1_returned = 1) AS week1_retained,\n countIf(last_day >= first_activation_day + 13 AND (week1_days = 7 OR week1_returned = 1)) AS week1_eligible,\n countIf(last_day >= first_activation_day + 13 AND week1_days < 7 AND week1_returned = 0) AS week1_unknown,\n week1_retained / nullIf(week1_eligible, 0) AS week1_retention,\n countIf(last_day >= first_activation_day + 34 AND week4_returned = 1) AS week4_retained,\n countIf(last_day >= first_activation_day + 34 AND (week4_days = 7 OR week4_returned = 1)) AS week4_eligible,\n countIf(last_day >= first_activation_day + 34 AND week4_days < 7 AND week4_returned = 0) AS week4_unknown,\n week4_retained / nullIf(week4_eligible, 0) AS week4_retention FROM cohorts"
+        }
+      }
+    }
+  ]
+}

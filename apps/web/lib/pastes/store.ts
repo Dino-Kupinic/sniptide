@@ -39,6 +39,7 @@ import {
 } from "@/components/shell/sidebar-state"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
+import { recordAccountRead } from "@/lib/instance-activity"
 import { recordNotifications } from "@/lib/notifications/record"
 import { agentClientOf } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
@@ -480,7 +481,9 @@ export const getPaste = cache(async (slug: string, revisionPage = 1) => {
   if (!viewer) return null
   const [record] = await getDb().select().from(pasteTable).where(appPasteWhere(slug, viewer))
   if (!record) return null
-  return hydrate(record, viewer, revisionPage)
+  const loaded = await hydrate(record, viewer, revisionPage)
+  if (loaded) recordAccountRead(viewer, "web")
+  return loaded
 })
 
 // Apply the same app access and moderation rules as the history page.
@@ -676,6 +679,7 @@ export async function readSharedPaste(
   )
   const { countedId, ...read } = result
   if (countedId) await recordPasteEvent(countedId, "view")
+  if (options.visit && viewer && read.status === "ok") recordAccountRead(viewer, "web")
   return read
 }
 
@@ -710,6 +714,7 @@ export async function revealSharedPaste(
   )
   const { countedId, ...read } = result
   if (countedId) await recordPasteEvent(countedId, "view")
+  if (viewer && read.status === "ok") recordAccountRead(viewer, "web")
   return read
 }
 

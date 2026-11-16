@@ -38,6 +38,8 @@ export async function setUpClientIp() {
 }
 
 export async function startBackgroundJobs() {
+  const { configureActivityTracking } = await import("@/lib/instance-activity")
+  await configureActivityTracking()
   const { registerAdmissionPressure, runMaintenanceWork } = await import("@/lib/request-admission")
   const { drainVisits, scheduleVisitDrain, visitQueuePressure } = await import(
     "@/lib/pastes/visits"
