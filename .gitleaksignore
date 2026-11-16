@@ -1,4 +1,8 @@
 # Documentation idempotency UUID, not an authentication credential.
+# Synthetic config-validation input; never used to authenticate a service. Historical commit
+# retained by the full-history scan; the current fixture constructs a repeated test character.
+742e2417f43d5430aadc6980be0e29b3773676a5:apps/web/test/config.test.ts:generic-api-key:34
+
 a0290d9437cd410b14299048843082bf7294478d:apps/docs/content/docs/api-reliability.mdx:generic-api-key:44
 
 # Dummy snpt_12345678901 token for the local MCP installation test.

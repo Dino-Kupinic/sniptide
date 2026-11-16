@@ -247,6 +247,15 @@ first question of the period. A report that repeats an open issue,
 the same kind of report from the same page with the same opening words, becomes a comment on that
 issue. Failures are logged as `support:` lines in the server log.
 
+## Abuse reporting
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ABUSE_REPORTS_ENABLED` | `false` | Enables anonymous abuse and appeal intake at `/abuse`, the report link on shared pastes, and `POST /api/abuse`. Requires `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` of at least 32 characters. Assign reviewers and confirm reporting, privacy and retention procedures before enabling. No external screening or email delivery is enabled. |
+
+The restricted queue uses the instance database and authorized host commands. See
+[Report abuse and appeal decisions](/abuse) for activation, review, decisions and retention limits.
+
 ## Build-time settings
 
 These are Docker build arguments for people building the image themselves, not runtime settings.

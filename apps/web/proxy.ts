@@ -52,7 +52,7 @@ function route(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
   const appPath =
-    /^\/(?:api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|oauth|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|trash|welcome)(?:\/|$)/.test(
+    /^\/(?:abuse|api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|oauth|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|trash|welcome)(?:\/|$)/.test(
       path,
     )
   const markdown = (request.headers.get("accept") ?? "").split(",").some((range) => {

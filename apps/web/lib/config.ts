@@ -125,6 +125,7 @@ const schema = z.object({
   MIGRATIONS_DIR: z.string().optional(),
 
   BETTER_AUTH_SECRET: z.string().optional(),
+  ABUSE_REPORTS_ENABLED: flag.default(false),
   ENV_SECRETS_KEY: z.string().min(32, { message: "must be at least 32 characters." }).optional(),
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
@@ -235,6 +236,14 @@ function parseConfig(env: Record<string, string | undefined>) {
   }
   const value = parsed.data
   if (
+    value.ABUSE_REPORTS_ENABLED &&
+    (!value.BETTER_AUTH_URL || !value.BETTER_AUTH_SECRET || value.BETTER_AUTH_SECRET.length < 32)
+  ) {
+    throw new Error(
+      "Invalid configuration: ABUSE_REPORTS_ENABLED requires BETTER_AUTH_URL and BETTER_AUTH_SECRET (at least 32 characters).",
+    )
+  }
+  if (
     value.DATABASE_POOL_SIZE > 2 &&
     value.DATABASE_PROBE_RESERVE + value.DATABASE_MAINTENANCE_RESERVE >= value.DATABASE_POOL_SIZE
   )
@@ -325,6 +334,7 @@ function parseConfig(env: Record<string, string | undefined>) {
     },
     // Who runs this instance and the documents sign-up points to. Each is optional, so a private
     // self-hosted server can leave them all unset.
+    abuseReportsEnabled: value.ABUSE_REPORTS_ENABLED,
     legal: {
       termsUrl: value.TERMS_URL,
       privacyUrl: value.PRIVACY_URL,
