@@ -1,6 +1,6 @@
 # Restrict a paste from the host
 
-This is WRK-330's manual enforcement foundation. It does not detect prohibited material, accept abuse reports, or preserve evidence. Before using it for an incident, establish the lawful reporting and preservation procedure with the service operator. The policy drafts are in [PR #111](https://github.com/Dino-Kupinic/sniptide/pull/111).
+This is WRK-330's manual enforcement foundation. It does not detect prohibited material or preserve evidence. Optional report intake and an audited host review queue are described in the [reporting guide](../../apps/docs/content/docs/abuse.mdx). Before using these controls for an incident, establish the lawful reporting and preservation procedure with the service operator. The policy drafts are in [PR #111](https://github.com/Dino-Kupinic/sniptide/pull/111).
 
 ## Prepare the deployment
 
@@ -76,7 +76,7 @@ Before operational activation, establish an audit retention and disposal schedul
 - Confirm Austria-specific operator and legal requirements. Austria is the user-confirmed operating country; the legal entity and monitored abuse contact remain unconfirmed.
 - Assign the primary responder and a backup or documented external escalation arrangement. No responder is assigned by this change.
 - Implement and verify lawful preservation, restricted evidence access, hold release and disposal, and backup restoration behavior.
-- Complete reporting, review, notices, and appeals under WRK-331.
+- Activate and exercise report intake and the host review queue after assigning operators. Complete account suspension and the permitted decision-notice procedure under WRK-331.
 - Evaluate automated screening and processor privacy terms under WRK-332.
 - Complete the operational monitoring and deployment exercise under WRK-333.
 

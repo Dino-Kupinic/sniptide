@@ -1,6 +1,8 @@
 import path from "node:path"
 import { migrateDb } from "@workspace/db/migrate"
 import {
+  abuseReport,
+  abuseReviewEvent,
   analyticsRollup,
   analyticsSalt,
   authRateLimit,
@@ -50,6 +52,8 @@ export async function migrate() {
 export async function resetDatabase() {
   if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required for database cleanup.")
   // Everything else cascades from the accounts.
+  await getDb().delete(abuseReviewEvent)
+  await getDb().delete(abuseReport)
   await getDb().delete(moderationEvent)
   await getDb().delete(user)
   await getDb().delete(rateLimit)

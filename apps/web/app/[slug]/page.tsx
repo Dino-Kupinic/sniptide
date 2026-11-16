@@ -13,6 +13,7 @@ import { RevealPaste } from "@/components/paste/reveal-paste"
 import { SharedPasteView, sharedViewerProps } from "@/components/paste/shared-paste-view"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
+import { getConfig } from "@/lib/config"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
 import { slugFromRoute } from "@/lib/pastes/links"
@@ -118,6 +119,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 }
 
 function Shell({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
+  const t = useTranslations("Abuse")
   return (
     <div className="relative isolate flex min-h-svh flex-col">
       {/* The auth screens' Game of Life as a quiet backdrop: a sparse field at a quarter of their
@@ -133,6 +135,14 @@ function Shell({ signedIn, children }: { signedIn: boolean; children: React.Reac
       <PublicHeader signedIn={signedIn} languageMenu={false} />
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 lg:gap-6 lg:pt-12">
         {children}
+        {getConfig().abuseReportsEnabled ? (
+          <a
+            href={`${getAppOrigin()}/abuse`}
+            className="mt-4 text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t("reportLink")}
+          </a>
+        ) : null}
       </main>
     </div>
   )

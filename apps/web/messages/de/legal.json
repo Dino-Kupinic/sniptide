@@ -16,5 +16,27 @@
     "counterBody": "Wenn deine Paste entfernt wurde und du das für einen Irrtum oder eine Verwechslung hältst, schick eine Gegendarstellung an dieselbe Adresse. Sie enthält deine Unterschrift, den Link zur entfernten Paste, die Erklärung unter Strafandrohung wegen Meineids, dass sie irrtümlich oder durch Verwechslung entfernt wurde, deinen Namen, deine Postanschrift und Telefonnummer sowie deine Zustimmung zur Zuständigkeit des US-Bundesbezirksgerichts für deine Adresse oder, wenn du außerhalb der USA wohnst, jedes Gerichtsbezirks, in dem der Betreiber zu finden ist. Die Paste kann 10 bis 14 Werktage, nachdem die Gegendarstellung die meldende Person erreicht hat, wiederhergestellt werden, sofern diese nicht vor Gericht geht.",
     "repeat": "Konten, die wiederholt Urheberrechte verletzen, werden geschlossen.",
     "falseClaims": "Wer in einer Meldung oder Gegendarstellung wissentlich falsche Angaben macht, kann nach 17 U.S.C. § 512(f) schadenersatzpflichtig werden."
+  },
+  "Abuse": {
+    "title": "Missbrauch melden oder Einspruch einlegen",
+    "instructions": "Gib den Link zum Paste an und beschreibe dein Anliegen. Bei Verdacht auf Kindesausbeutung nur den Fundort angeben. Verdächtiges Material nicht herunterladen, kopieren, zitieren oder hochladen. Bei unmittelbarer Gefahr für ein Kind den örtlichen Notruf kontaktieren.",
+    "privacy": "Link, Erklärung und optionale E-Mail-Adresse werden für autorisierte Prüfer dieser Instanz gespeichert. Keine Passwörter, Verschlüsselungsschlüssel oder Paste-Inhalte angeben. Meldungen entfernen Inhalte nicht automatisch. Eine E-Mail-Adresse ermöglicht Rückfragen, garantiert aber keine Antwortzeit.",
+    "received": "Deine Meldung ist zur Prüfung eingegangen.",
+    "invalid": "Prüfe den Link und die Pflichtfelder und sende erneut.",
+    "failed": "Die Meldung konnte nicht empfangen werden. Prüfe die Felder und versuche es erneut.",
+    "url": "Paste-URL dieser Instanz",
+    "category": "Grund",
+    "explanation": "Erklärung (10 bis 2.000 Zeichen)",
+    "contact": "E-Mail (optional)",
+    "submit": "Zur Prüfung senden",
+    "child_exploitation": "Verdacht auf Kindesausbeutung (dringend)",
+    "sexual_content": "Sexuelle Inhalte",
+    "graphic_violence": "Explizite Gewalt",
+    "malware": "Schadsoftware",
+    "harassment": "Belästigung",
+    "other": "Anderes Anliegen",
+    "appeal": "Einspruch gegen eine Moderationsentscheidung",
+    "reportLink": "Missbrauch melden",
+    "limited": "Zu viele Meldungen von dieser Adresse. Versuche es in einer Stunde erneut."
   }
 }

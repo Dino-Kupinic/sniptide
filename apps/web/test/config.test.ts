@@ -24,6 +24,17 @@ describe("parseSize", () => {
 })
 
 describe("getConfig", () => {
+  test("keeps abuse intake off unless its required server settings are valid", () => {
+    expect(getConfig({}).abuseReportsEnabled).toBe(false)
+    expect(() => getConfig({ ABUSE_REPORTS_ENABLED: "true" })).toThrow("ABUSE_REPORTS_ENABLED")
+    expect(
+      getConfig({
+        ABUSE_REPORTS_ENABLED: "true",
+        BETTER_AUTH_URL: "https://app.example",
+        BETTER_AUTH_SECRET: "synthetic-secret-with-at-least-32-characters",
+      }).abuseReportsEnabled,
+    ).toBe(true)
+  })
   test("points the account menu's resource links at the project by default", () => {
     expect(getConfig({}).resourceLinks).toEqual({
       homepage: "https://sniptide.com",
