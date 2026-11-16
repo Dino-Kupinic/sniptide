@@ -6,17 +6,11 @@ import { collectionExists } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { formatLimit } from "@/lib/format"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
+import { fetchImport, importSource, importTitle, readImportFiles } from "@/lib/integrations/imports"
+import type { ImportOwner } from "@/lib/integrations/types"
 import { revalidateWorkspace } from "@/lib/live/changes"
 import { changePreferences, readPreferences } from "@/lib/preference-store"
 import { getSiteOrigin } from "@/lib/site"
-import {
-  fetchGist,
-  type GistOwner,
-  gistDescription,
-  gistTitle,
-  parseGistId,
-  readGistFiles,
-} from "./gist"
 import { detectLanguage } from "./languages"
 import { limited, limits } from "./limits"
 import { passwordIntent } from "./password-intent"
@@ -432,9 +426,9 @@ export async function emptyTrash() {
   await revalidateWorkspace(user)
 }
 
-export type GistPreview = {
+export type ImportPreview = {
   id: string
-  owner: GistOwner | null
+  owner: ImportOwner | null
   title: string
   // The paste size limit, in bytes and as the label the UI shows ("1 MB").
   limitBytes: number
@@ -442,35 +436,37 @@ export type GistPreview = {
   defaults: { visibility: Visibility; expiry: Expiry }
   files: { name: string; size: number; skipped: string | null; sensitive: boolean }[]
 }
-export type GistPreviewResult = { ok: true; gist: GistPreview } | { ok: false; error: string }
+export type ImportPreviewResult = { ok: true; item: ImportPreview } | { ok: false; error: string }
 
-// Reads a public GitHub gist (a gist URL or its id) and describes its files. Saves nothing.
-export async function previewGist(input: string): Promise<GistPreviewResult> {
+// Reads an item at an integration (for GitHub, a gist URL or its id) and describes its files.
+// Saves nothing.
+export async function previewImport(provider: string, input: string): Promise<ImportPreviewResult> {
   const user = await assertSignedIn()
 
-  const id = parseGistId(input)
-  if (!id) return { ok: false, error: await actionError("gistLink") }
+  const source = importSource(provider)
+  const id = source?.parseId(input)
+  if (!source || !id) return { ok: false, error: await actionError("gistLink") }
 
   const tooOften = await limited(limits.gist(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const result = await fetchGist(id)
+  const result = await fetchImport(provider, user, id)
   if (!result.ok) return { ok: false, error: await translateActionError(result.error) }
 
   const { maxPasteBytes } = getConfig()
-  const { gist } = result
+  const { item } = result
   const preferences = await readPreferences(user)
   return {
     ok: true,
-    gist: {
-      id: gist.id,
-      owner: gist.owner,
-      title: gist.description ?? gist.files[0]?.name ?? "Imported gist",
+    item: {
+      id: item.id,
+      owner: item.owner,
+      title: importTitle(source, item, item.files[0]?.name),
       limitBytes: maxPasteBytes,
       limitLabel: formatLimit(maxPasteBytes),
       defaults: { visibility: preferences.defaultVisibility, expiry: preferences.defaultExpiry },
       files: await Promise.all(
-        gist.files.map(async ({ name, size, skipped, content }) => ({
+        item.files.map(async ({ name, size, skipped, content }) => ({
           name,
           size,
           skipped: skipped ? await translateActionError(skipped) : null,
@@ -482,7 +478,8 @@ export async function previewGist(input: string): Promise<GistPreviewResult> {
 }
 
 const importSchema = z.object({
-  id: z.string().regex(/^[0-9a-f]{20,40}$/i),
+  provider: z.string(),
+  id: z.string().max(200),
   visibility: z.enum(VISIBILITIES).optional(),
   expiry: z.enum(EXPIRIES).optional(),
   files: z
@@ -491,40 +488,43 @@ const importSchema = z.object({
     .max(10, "A paste can hold up to 10 files."),
 })
 
-// Copies the chosen files of a public GitHub gist into a new paste. The gist is read again, so
-// what's saved is what GitHub has now, and it goes through the same checks as a paste saved in
-// the editor.
-export async function importGist(input: z.input<typeof importSchema>): Promise<SavePasteResult> {
+// Copies the chosen files of an item at an integration into a new paste. The item is read again,
+// so what's saved is what the provider has now, and it goes through the same checks as a paste
+// saved in the editor.
+export async function importPaste(input: z.input<typeof importSchema>): Promise<SavePasteResult> {
   const user = await assertSignedIn()
 
   const choice = importSchema.safeParse(input)
-  if (!choice.success) {
+  const source = choice.success ? importSource(choice.data.provider) : null
+  // The id goes into the provider's API path, so only an id the adapter recognizes gets there.
+  const id = choice.success ? source?.parseId(choice.data.id) : null
+  if (!choice.success || !source || !id) {
     return {
       ok: false,
       error: await translateActionError(
-        choice.error.issues[0]?.message ?? "Check the import and try again.",
+        choice.error?.issues[0]?.message ?? "Check the import and try again.",
       ),
     }
   }
-  const { id, files: names } = choice.data
+  const { provider, files: names } = choice.data
 
   const tooOften = await limited(limits.create(user))
   if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
 
-  const result = await fetchGist(id)
+  const result = await fetchImport(provider, user, id)
   if (!result.ok) return { ok: false, error: await translateActionError(result.error) }
-  const { gist } = result
+  const { item } = result
 
-  const read = await readGistFiles(gist, names)
+  const read = await readImportFiles(item, names)
   if (!read.ok) return { ok: false, error: await translateActionError(read.error) }
   const preferences = await readPreferences(user)
-  const visibility = gist.files.some((file) => names.includes(file.name) && file.content === null)
+  const visibility = item.files.some((file) => names.includes(file.name) && file.content === null)
     ? "private"
     : suggestedVisibility(read.files, choice.data.visibility ?? preferences.defaultVisibility)
 
   const parsed = pasteSchema.safeParse({
-    title: gistTitle(gist, read.files[0]?.name),
-    description: gistDescription(gist),
+    title: importTitle(source, item, read.files[0]?.name),
+    description: source.describe(item),
     files: read.files,
     visibility,
     expiry: choice.data.expiry ?? preferences.defaultExpiry,

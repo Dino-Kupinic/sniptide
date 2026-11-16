@@ -48,6 +48,8 @@
     "pickFile": "Pick at least one file.",
     "checkImport": "Check the import and try again.",
     "gistImport": "That gist couldn't be imported.",
+    "integrationUnavailable": "That integration isn't set up on this server.",
+    "importSource": "That import source isn't available.",
     "pasteBudget": "You've reached your paste limit. Permanently delete some pastes to create another.",
     "storageBudget": "You've reached your storage limit. Permanently delete some pastes or reduce their size.",
     "rateLimit": "You're doing that too often. Try again in {minutes} {minutes, plural, one {minute} other {minutes}}.",

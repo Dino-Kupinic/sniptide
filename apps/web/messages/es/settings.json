@@ -134,6 +134,15 @@
     "disconnect": "Desconectar",
     "couldnTConnect": "No se pudo contactar con el proveedor. Vuelve a intentarlo.",
     "accountDisconnected": "{provider} desconectado",
+    "integrations": "Integraciones",
+    "integrationsDescription": "Cuentas de otros servicios desde las que Sniptide importa. Conectar una no cambia cómo inicias sesión.",
+    "integrationConnected": "Conectado como {account} el {date}",
+    "integrationNotSetUp": "Este servidor no tiene una app OAuth de {provider}.",
+    "integrationDenied": "Cancelaste en el proveedor, así que no se conectó nada.",
+    "integrationFailed": "No se pudo conectar. Inténtalo de nuevo.",
+    "integrationAbout": {
+      "github": "Muestra tus gists en la importación, incluidos los secretos. El permiso de gists de GitHub también permite escribir, y Sniptide solo lee."
+    },
     "sessions": "Sesiones",
     "sessionsDescription": "Dispositivos con sesión iniciada en tu cuenta. Cierra la sesión en los que no reconozcas.",
     "sessionsDemo": "Las sesiones no se muestran en la demo.",

@@ -48,6 +48,8 @@
     "pickFile": "请至少选择一个文件。",
     "checkImport": "请检查导入内容，然后重试。",
     "gistImport": "无法导入该 Gist。",
+    "integrationUnavailable": "此服务器尚未配置该集成。",
+    "importSource": "该导入来源不可用。",
     "pasteBudget": "你已达到代码片段数量上限，请永久删除一些代码片段后再创建新的。",
     "storageBudget": "你已达到存储空间上限，请永久删除一些代码片段或减小其大小。",
     "rateLimit": "操作过于频繁，请在 {minutes} 分钟后重试。",

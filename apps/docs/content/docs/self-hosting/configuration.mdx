@@ -30,7 +30,7 @@ templates pass selected variables through to the container. See
 | `ALLOW_SIGN_UP` | `true` | `false` closes sign-up for everyone, and `first` closes it once the first account exists. Existing accounts keep signing in. It wins over `ALLOWED_EMAILS`. The install script and the Coolify template set `first`. |
 | `ALLOWED_EMAILS` | unset | Comma-separated emails that may sign up (invite-only). New password accounts need SMTP email verification before signing in; without SMTP, only verified OAuth identities can join. Existing accounts keep signing in. |
 | `HOME_URL` | unset | The logo on the sign-in screens links here, for example to your landing page. Unset, the logo is not a link. |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in. Until both are set the button shows as disabled. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in and the GitHub integration in **Settings**. Until both are set the sign-in button shows as disabled and the integration as not set up. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. The integration comes back to a path below it, so one OAuth app serves both. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
 | `COOKIE_DOMAIN` | unset | Share the session cookie with other subdomains. Leave unset on one domain. |
@@ -64,9 +64,9 @@ A private server can leave all of these unset.
 | `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. |
 | `SHARE_URL` | unset | Domain share links use when it differs from the app's. Leave unset to serve everything on one domain. |
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
-| `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
+| `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports by accounts that haven't connected GitHub. Without it they share GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
-| `ENV_SECRETS_KEY` | unset | Secret of at least 32 characters from which Sniptide derives the encryption key for env group values. When unset, Sniptide derives the key from `BETTER_AUTH_SECRET`. |
+| `ENV_SECRETS_KEY` | unset | Secret of at least 32 characters from which Sniptide derives the encryption keys for env group values and for the tokens of connected integrations. When unset, Sniptide derives them from `BETTER_AUTH_SECRET`. |
 
 ### Rotate the auth secret
 
@@ -80,6 +80,9 @@ To retire the old encryption secret, have each group owner save a secure copy of
 before changing the key, for example with [the CLI](/cli#sync-env-files). After deploying the
 new key, push the saved groups again and verify that their values can be read. A database dump
 contains encrypted values, so keep the original secret with any backups taken before the change.
+
+Integration tokens use the same secret. After it changes, a connected GitHub account shows as not
+connected, and its owner connects it again in **Settings**.
 
 ### Separate share domain
 

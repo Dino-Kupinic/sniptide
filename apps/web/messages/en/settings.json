@@ -134,6 +134,15 @@
     "disconnect": "Disconnect",
     "couldnTConnect": "Couldn't reach the provider. Try again.",
     "accountDisconnected": "{provider} disconnected",
+    "integrations": "Integrations",
+    "integrationsDescription": "Accounts at other services that Sniptide imports from. Connecting one doesn't change how you sign in.",
+    "integrationConnected": "Connected as {account} on {date}",
+    "integrationNotSetUp": "This server has no {provider} OAuth app.",
+    "integrationDenied": "You cancelled at the provider, so nothing was connected.",
+    "integrationFailed": "Couldn't connect. Try again.",
+    "integrationAbout": {
+      "github": "Lists your gists in the import sheet, secret ones included. GitHub's gist permission also allows writing, and Sniptide only reads."
+    },
     "sessions": "Sessions",
     "sessionsDescription": "Devices signed in to your account. Sign out any you don't recognize.",
     "sessionsDemo": "Sessions aren't shown in the demo.",

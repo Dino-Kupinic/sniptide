@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
-import { fetchGist, gistTitle, parseGistId, readGistFiles } from "@/lib/pastes/gist"
+import { github } from "@/lib/integrations/github"
+import { importTitle, readImportFiles } from "@/lib/integrations/imports"
 
-// Reading public gists, for the import sheet and for "Open in editor". No database needed: only
-// GitHub's answers are faked.
+// Reading gists through the GitHub adapter, for the import sheet and for "Open in editor". No
+// database needed: only GitHub's answers are faked.
+
+const source = github.imports
+if (!source) throw new Error("The GitHub adapter imports gists.")
+const fetchGist = (id: string, token: string | null = null) => source.fetch(id, token)
 
 const ID = "aa11bb22cc33dd44ee55"
 const realFetch = globalThis.fetch
@@ -24,18 +29,18 @@ afterEach(() => {
   delete process.env.MAX_PASTE_SIZE
 })
 
-describe("parseGistId", () => {
+describe("parseId", () => {
   test("reads gist URLs and bare ids", () => {
-    expect(parseGistId(`https://gist.github.com/octocat/${ID}`)).toBe(ID)
-    expect(parseGistId(`gist.github.com/octocat/${ID}/`)).toBe(ID)
-    expect(parseGistId(`  ${ID}  `)).toBe(ID)
-    expect(parseGistId(`https://gist.github.com/${ID}#file-a-ts`)).toBe(ID)
+    expect(source.parseId(`https://gist.github.com/octocat/${ID}`)).toBe(ID)
+    expect(source.parseId(`gist.github.com/octocat/${ID}/`)).toBe(ID)
+    expect(source.parseId(`  ${ID}  `)).toBe(ID)
+    expect(source.parseId(`https://gist.github.com/${ID}#file-a-ts`)).toBe(ID)
   })
 
   test("refuses everything else", () => {
-    expect(parseGistId("")).toBeNull()
-    expect(parseGistId("https://example.com/octocat")).toBeNull()
-    expect(parseGistId("abc123")).toBeNull()
+    expect(source.parseId("")).toBeNull()
+    expect(source.parseId("https://example.com/octocat")).toBeNull()
+    expect(source.parseId("abc123")).toBeNull()
   })
 })
 
@@ -55,35 +60,35 @@ describe("fetchGist", () => {
       }),
     )
     const result = await fetchGist(ID)
-    expect(result.ok && result.gist.owner).toEqual({
+    expect(result.ok && result.item.owner).toEqual({
       login: "octo cat",
       avatarUrl: "https://avatars.githubusercontent.com/u/1?v=4",
       url: "https://github.com/octo%20cat",
     })
-    expect(result.ok && result.gist.description).toBe("React hooks")
+    expect(result.ok && result.item.description).toBe("React hooks")
   })
 
   test("drops an avatar that isn't served from GitHub's avatar host", async () => {
     serve(gist({ login: "octocat", avatar_url: "https://example.com/me.png" }))
     const result = await fetchGist(ID)
-    expect(result.ok && result.gist.owner?.avatarUrl).toBeNull()
+    expect(result.ok && result.item.owner?.avatarUrl).toBeNull()
   })
 
   test("copes with an anonymous gist", async () => {
     serve(gist(null))
     const result = await fetchGist(ID)
-    expect(result.ok && result.gist.owner).toBeNull()
+    expect(result.ok && result.item.owner).toBeNull()
   })
 })
 
-describe("readGistFiles", () => {
+describe("readImportFiles", () => {
   const RAW = "https://gist.githubusercontent.com/octocat/aa11bb22cc33dd44ee55/raw/log.txt"
 
   async function load(files: Record<string, unknown>, raw: Record<string, string> = {}) {
     serve({ description: null, owner: null, files }, raw)
     const result = await fetchGist(ID)
     if (!result.ok) throw new Error(result.error)
-    return result.gist
+    return result.item
   }
 
   test("returns the chosen files in the order asked, once each", async () => {
@@ -91,7 +96,7 @@ describe("readGistFiles", () => {
       "a.ts": { filename: "a.ts", content: "a" },
       "b.ts": { filename: "b.ts", content: "b" },
     })
-    const result = await readGistFiles(gist, ["b.ts", "a.ts", "b.ts"])
+    const result = await readImportFiles(gist, ["b.ts", "a.ts", "b.ts"])
     expect(result).toEqual({
       ok: true,
       files: [
@@ -116,17 +121,17 @@ describe("readGistFiles", () => {
       },
       { [RAW]: full },
     )
-    const result = await readGistFiles(gist, ["log.txt"])
+    const result = await readImportFiles(gist, ["log.txt"])
     expect(result).toEqual({ ok: true, files: [{ name: "log.txt", content: full }] })
   })
 
   test("says when a file is gone or can't be imported", async () => {
     const gist = await load({ "a.ts": { filename: "a.ts", content: "a" } })
-    expect((await readGistFiles(gist, ["nope.ts"])).ok).toBe(false)
+    expect((await readImportFiles(gist, ["nope.ts"])).ok).toBe(false)
 
     process.env.MAX_PASTE_SIZE = "1KB"
     const big = await load({ "big.txt": { filename: "big.txt", content: "x".repeat(2048) } })
-    expect(await readGistFiles(big, ["big.txt"])).toEqual({
+    expect(await readImportFiles(big, ["big.txt"])).toEqual({
       ok: false,
       error: "big.txt: Over the 1 KB limit.",
     })
@@ -158,7 +163,7 @@ describe("readGistFiles", () => {
           { headers: { "content-length": "1" } },
         ),
     ) as unknown as typeof fetch
-    expect(await readGistFiles(gist, ["log.txt"])).toEqual({
+    expect(await readImportFiles(gist, ["log.txt"])).toEqual({
       ok: false,
       error: "log.txt couldn't be read from GitHub.",
     })
@@ -182,7 +187,7 @@ describe("readGistFiles", () => {
           }),
         ),
     ) as unknown as typeof fetch
-    expect(await readGistFiles(gist, ["log.txt"])).toEqual({
+    expect(await readImportFiles(gist, ["log.txt"])).toEqual({
       ok: true,
       files: [{ name: "log.txt", content: "A😀éB" }],
     })
@@ -211,7 +216,7 @@ describe("readGistFiles", () => {
           ),
         ),
     ) as unknown as typeof fetch
-    expect(await readGistFiles(gist, ["log.txt", "inline.ts"])).toEqual({
+    expect(await readImportFiles(gist, ["log.txt", "inline.ts"])).toEqual({
       ok: false,
       error: "Pastes are limited to 1 KB.",
     })
@@ -242,7 +247,7 @@ describe("readGistFiles", () => {
       await gate
       return new Response("x")
     }) as unknown as typeof fetch
-    const result = readGistFiles(gist, ["3.txt", "2.txt", "1.txt", "0.txt"])
+    const result = readImportFiles(gist, ["3.txt", "2.txt", "1.txt", "0.txt"])
     await ready
     expect(calls).toHaveLength(2)
     release()
@@ -253,7 +258,7 @@ describe("readGistFiles", () => {
   })
 })
 
-describe("gistTitle", () => {
+describe("importTitle", () => {
   test("prefers the description, then the first file, within the title limit", async () => {
     serve({
       description: "d".repeat(500),
@@ -261,11 +266,11 @@ describe("gistTitle", () => {
       files: { "a.ts": { filename: "a.ts", content: "a" } },
     })
     const described = await fetchGist(ID)
-    expect(described.ok && gistTitle(described.gist, "a.ts")).toHaveLength(120)
+    expect(described.ok && importTitle(source, described.item, "a.ts")).toHaveLength(120)
 
     serve({ description: null, owner: null, files: { "a.ts": { filename: "a.ts", content: "a" } } })
     const bare = await fetchGist(ID)
-    expect(bare.ok && gistTitle(bare.gist, "a.ts")).toBe("a.ts")
-    expect(bare.ok && gistTitle(bare.gist)).toBe("Imported gist")
+    expect(bare.ok && importTitle(source, bare.item, "a.ts")).toBe("a.ts")
+    expect(bare.ok && importTitle(source, bare.item)).toBe("Imported gist")
   })
 })

@@ -3,13 +3,7 @@ import { PasteEditor } from "@/components/paste/paste-editor"
 import { getPreferences, getSession } from "@/lib/auth"
 import { listCollections } from "@/lib/collections/store"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
-import {
-  fetchGist,
-  gistDescription,
-  gistTitle,
-  parseGistId,
-  readGistFiles,
-} from "@/lib/pastes/gist"
+import { fetchImport, importSource, importTitle, readImportFiles } from "@/lib/integrations/imports"
 import { limited, limits } from "@/lib/pastes/limits"
 import { suggestedVisibility } from "@/lib/pastes/smart-defaults"
 import { getPaste } from "@/lib/pastes/store"
@@ -26,35 +20,37 @@ type Draft = {
   files: { name: string; content: string }[]
 }
 
-// The chosen files of a public gist, for the import sheet's "Open in editor". Only the gist id
+// The chosen files of a gist, for the import sheet's "Open in editor". Only the gist id
 // and the file names travel in the URL; the text is read here, and nothing is saved.
 async function gistDraft(
   link: string,
   names: string[],
 ): Promise<{ draft: Draft } | { error: string }> {
   const session = await getSession()
-  const id = parseGistId(link)
-  if (!session || !id || names.length === 0) return { error: await actionError("gistUnreadable") }
+  const source = importSource("github")
+  const id = source?.parseId(link)
+  if (!session || !source || !id || names.length === 0)
+    return { error: await actionError("gistUnreadable") }
 
   const tooOften = await limited(limits.gist(session.user.id))
   if (tooOften) return { error: await translateActionError(tooOften) }
 
-  const result = await fetchGist(id)
+  const result = await fetchImport("github", session.user.id, id)
   if (!result.ok) return { error: await translateActionError(result.error) }
-  const read = await readGistFiles(result.gist, names)
+  const read = await readImportFiles(result.item, names)
   if (!read.ok) return { error: await translateActionError(read.error) }
 
   return {
     draft: {
-      title: gistTitle(result.gist, read.files[0]?.name),
-      description: gistDescription(result.gist),
+      title: importTitle(source, result.item, read.files[0]?.name),
+      description: source.describe(result.item),
       files: read.files,
     },
   }
 }
 
 // `?from=<slug>` starts from a copy of an existing paste (the Duplicate action).
-// `?gist=<id>&file=<name>…` starts from files of a public gist (the import sheet).
+// `?gist=<id>&file=<name>…` starts from files of a gist (the import sheet).
 // `?template=<name>` starts from a template on the marketing site (Use template on its page).
 export default async function Page({ searchParams }: PageProps<"/new">) {
   const { from, gist, file, template } = await searchParams

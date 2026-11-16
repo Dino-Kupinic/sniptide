@@ -134,6 +134,15 @@
     "disconnect": "Trennen",
     "couldnTConnect": "Der Anbieter ist nicht erreichbar. Versuche es erneut.",
     "accountDisconnected": "{provider} getrennt",
+    "integrations": "Integrationen",
+    "integrationsDescription": "Konten bei anderen Diensten, aus denen Sniptide importiert. Eine Verbindung ändert nichts an deiner Anmeldung.",
+    "integrationConnected": "Verbunden als {account} am {date}",
+    "integrationNotSetUp": "Dieser Server hat keine OAuth-App für {provider}.",
+    "integrationDenied": "Du hast beim Anbieter abgebrochen, deshalb wurde nichts verbunden.",
+    "integrationFailed": "Verbinden fehlgeschlagen. Versuch es noch einmal.",
+    "integrationAbout": {
+      "github": "Zeigt deine Gists im Import an, auch die geheimen. Die Gist-Berechtigung von GitHub erlaubt auch das Schreiben, Sniptide liest nur."
+    },
     "sessions": "Sitzungen",
     "sessionsDescription": "Geräte, die bei deinem Konto angemeldet sind. Melde alle ab, die du nicht kennst.",
     "sessionsDemo": "In der Demo werden keine Sitzungen angezeigt.",

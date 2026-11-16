@@ -1929,6 +1929,9 @@ export const internalRoutes = [
   "/api/analytics",
   "/api/analytics/[...path]",
   "/api/auth/[...all]",
+  // Where a provider sends the browser back after a user connects an integration.
+  "/api/auth/callback/github/integration",
+  "/api/integrations/[provider]/callback",
   "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",

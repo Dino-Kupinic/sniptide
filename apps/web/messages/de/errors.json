@@ -48,6 +48,8 @@
     "pickFile": "Wähle mindestens eine Datei.",
     "checkImport": "Prüfe den Import und versuche es erneut.",
     "gistImport": "Dieser Gist konnte nicht importiert werden.",
+    "integrationUnavailable": "Diese Integration ist auf diesem Server nicht eingerichtet.",
+    "importSource": "Diese Importquelle ist nicht verfügbar.",
     "pasteBudget": "Du hast dein Paste-Limit erreicht. Lösche einige Pastes endgültig, um einen neuen zu erstellen.",
     "storageBudget": "Du hast dein Speicherlimit erreicht. Lösche einige Pastes endgültig oder verkleinere sie.",
     "rateLimit": "Du führst diese Aktion zu oft aus. Versuche es in {minutes} {minutes, plural, one {Minute} other {Minuten}} erneut.",

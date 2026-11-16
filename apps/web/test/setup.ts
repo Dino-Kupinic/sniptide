@@ -72,6 +72,7 @@ mock.module("next/headers", () => ({
       return value === undefined ? undefined : { name, value }
     },
     set: (name: string, value: string) => void request.cookies.set(name, value),
+    delete: (name: string) => void request.cookies.delete(name),
   }),
   headers: async () => request.headers,
 }))

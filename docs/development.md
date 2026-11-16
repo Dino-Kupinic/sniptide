@@ -76,6 +76,7 @@ when both matrix jobs pass.
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
 | Database schema and migrations | `packages/db/src/schema`, `packages/db/migrations` | Web integration tests and migration tests |
 | Authentication | `packages/auth/src`, `apps/web/lib/auth.ts` | Web auth tests and browser auth tests |
+| Integrations and gist import | `apps/web/lib/integrations`, with one adapter per service | `apps/web/test/integrations.test.ts`, `gist.test.ts` |
 | Shared components and theme | `packages/ui/src` | Typecheck, browser checks, and package consumer checks |
 | Routes and API documentation | `apps/web/lib/openapi.ts` | `apps/web/test/openapi.test.ts` |
 | Translations | `apps/web/messages`, `apps/web/lib/i18n` | `apps/web/test/i18n.test.ts`, `action-errors.test.ts` |
@@ -135,7 +136,7 @@ sidebar order.
 | When you change | Update |
 | --- | --- |
 | Paste, collection, sharing, expiry, burn, revision, secret, or analytics behavior | The matching page in `core-concepts/` |
-| Settings screens or paste defaults | `settings.mdx` |
+| Settings screens, paste defaults or integrations | `settings.mdx` |
 | Routes, scopes, limits, or errors under `/api/v1` | `api-tokens.mdx`, `api-reliability.mdx`, and `apps/web/lib/openapi.ts` |
 | MCP tools, prompts, or the OAuth flow | `mcp.mdx` and `oauth.mdx` |
 | CLI commands or options | `cli.mdx` and `packages/cli/API.md` |
@@ -183,6 +184,32 @@ Keep migrations additive (new tables and columns) where possible: the old contai
 serving until the new one is healthy, and it runs against the migrated database.
 Migration rules (transactional statements only, never editing a released migration) are in
 [CONTRIBUTING.md](../CONTRIBUTING.md#database-migrations).
+
+## Add an integration
+
+An integration is an external service a user connects in **Settings**, then **Integrations**.
+`apps/web/lib/integrations` holds the framework: the OAuth flow with PKCE (`oauth.ts`), the
+connections and their encrypted tokens (`store.ts`), the callback (`callback.ts`), and importing
+through a connection (`imports.ts`). GitHub (`github.ts`) is the adapter to copy from.
+
+To add a service:
+
+1. Write an adapter that satisfies `IntegrationProvider` in `types.ts`: its OAuth endpoints and
+   scopes, where its client id and secret come from, `account` to name who connected, and `revoke`
+   when the service can end a token. Add `imports` to read from it.
+2. List the adapter in `providers.ts`.
+3. Register `<BETTER_AUTH_URL>/api/integrations/<id>/callback` as the redirect URI of the
+   service's OAuth app. Set `callbackPath` only when the service restricts redirects the way
+   GitHub does.
+4. Add the row's description as `Settings.integrationAbout.<id>` in every language, and a logo to
+   `icons` in `components/settings/integrations-section.tsx`. Without them the row shows the name
+   and a plug icon.
+
+Connecting, renewing expired tokens, disconnecting and the Settings row need no further code.
+`previewImport` and `importPaste` in `lib/pastes/actions.ts` take the provider's id, and the
+import sheet in `components/lists/import-gist.tsx` is the one piece still written for gists.
+`ExportTarget` in `types.ts` is the contract for writing a paste to a service, and no adapter
+implements it yet.
 
 ## Account usage
 
