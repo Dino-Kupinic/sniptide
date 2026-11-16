@@ -38,6 +38,7 @@
         "claude_code": "Claude Code",
         "codex": "Codex",
         "cursor": "Cursor",
+        "grok": "Grok",
         "other": "その他"
       },
       "steps": {
@@ -45,6 +46,8 @@
         "authenticate": "Claude Codeで<code>/mcp</code>を実行し、Authenticateを選択",
         "addServer": "リモートMCPサーバーとして追加",
         "addToCursor": "Cursorに追加",
+        "openGrok": "Grokのコネクタを開く",
+        "grokCustom": "New Connector、Customの順に選び、このアドレスを貼り付け",
         "allow": "ブラウザでアクセスを許可"
       },
       "yourAgent": "エージェント",

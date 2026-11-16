@@ -1,6 +1,6 @@
 ---
 title: MCP server
-description: Connect Claude Code, Codex, Cursor or another MCP client to Sniptide so an agent can search, read and save your snippets and apply collections.
+description: Connect Claude Code, Codex, Cursor, Grok or another MCP client to Sniptide so an agent can search, read and save your snippets and apply collections.
 ---
 
 The Sniptide MCP server lets a coding agent search your snippets, read them, fetch a collection
@@ -51,7 +51,7 @@ Run the command for your client. The client opens Sniptide in your browser, wher
 access. On a self-hosted instance, replace `https://app.sniptide.com` with your instance's
 address.
 
-<Tabs items={["Claude Code", "Codex", "Cursor"]} groupId="agent" persist>
+<Tabs items={["Claude Code", "Codex", "Cursor", "Grok"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 ```bash
@@ -73,6 +73,17 @@ codex mcp add sniptide --url https://app.sniptide.com/api/mcp
 
 Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no headers, or use
 **Add to Cursor** in the app's welcome setup or on the dashboard.
+
+</Tab>
+<Tab value="Grok">
+
+Open [grok.com/connectors](https://grok.com/connectors), select **New Connector**, choose
+**Custom** and enter `https://app.sniptide.com/api/mcp` as the server URL. Grok then opens the
+Sniptide consent screen. On a Grok Business or Enterprise team, an admin adds the same URL in the
+xAI console under **Grok Business** > **Connectors** > **Add Connector** > **Other**.
+
+Grok calls the server from xAI's servers, so a self-hosted instance has to be reachable at a public
+`https` address. Grok rejects `localhost` and private network addresses.
 
 </Tab>
 </Tabs>
