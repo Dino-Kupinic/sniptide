@@ -57,6 +57,14 @@ when both matrix jobs pass.
   theme. Published to npm for the website repo; see `packages/ui/README.md`
 - `packages/typescript`: shared TypeScript configuration
 
+## Raycast tooling
+
+The main workspace uses Biome. The standalone Raycast extension uses ESLint 10 and Raycast's
+configuration for its extension rules and publishing checks. Type checking uses TypeScript 7
+through the `@typescript/native` alias; ESLint loads the TypeScript 6 API through the
+`typescript` alias. Keep both aliases: TypeScript 7 does not provide the compiler API required
+by the lint configuration. Node types stay on major version 24 to match Docker and CI.
+
 ## Find the owner
 
 | Change | Start here | Related checks |
