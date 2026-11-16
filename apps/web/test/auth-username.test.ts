@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { createAuth } from "@workspace/auth"
 import { toUsername } from "@workspace/auth/username"
 import { getDb } from "@/lib/db"
+import { toGeneratedUsername } from "../../../packages/auth/src/generate-username"
 import { hasDatabase, resetDatabase } from "./harness"
 
 // GitHub and Google sign-ups have no username field to fill in, so the account gets one picked
@@ -23,6 +24,16 @@ describe("toUsername", () => {
     expect(toUsername("Al")).toBeNull()
     expect(toUsername("")).toBeNull()
     expect(toUsername(undefined)).toBeNull()
+  })
+})
+
+describe("provider name transliteration", () => {
+  test("turns names in other scripts into valid usernames", () => {
+    expect(toGeneratedUsername("גל בר")).toBe("gl-br")
+    expect(toGeneratedUsername("李小龍")).toBe("li-xiao-long")
+    expect(toGeneratedUsername("Алексей")).toBe("aleksey")
+    expect(toGeneratedUsername("José Núñez")).toBe("jose-nunez")
+    expect(toGeneratedUsername("😀")).toBeNull()
   })
 })
 
@@ -71,9 +82,10 @@ describeDb("usernames for accounts created without one", () => {
     expect((await create("three@example.com", "dino kupinic")).username).toBe("dino-kupinic-3")
   })
 
-  test("a name without usable letters falls back to user", async () => {
-    expect((await create("li@example.com", "李小龍")).username).toBe("user")
-    expect((await create("li2@example.com", "李")).username).toBe("user-2")
+  test("a name in another script gets a transliterated username", async () => {
+    expect((await create("li@example.com", "李小龍")).username).toBe("li-xiao-long")
+    expect((await create("li2@example.com", "李小龍")).username).toBe("li-xiao-long-2")
+    expect((await create("emoji@example.com", "😀")).username).toBe("user")
   })
 
   test("a GitHub sign-up keeps its login, and falls back to the name once the login is taken", async () => {
