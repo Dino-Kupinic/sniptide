@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { getConfig, parseSize } from "@/lib/config"
+import { hasFeature, isCloud } from "@/lib/edition"
 
 describe("parseSize", () => {
   test("reads human units, binary like the sizes the app shows", () => {
@@ -19,6 +20,24 @@ describe("parseSize", () => {
   test("refuses anything else", () => {
     for (const value of ["", "MB", "1 PB", "ten", "-1MB", "0", "0KB", "1MB!"]) {
       expect(parseSize(value)).toBeNull()
+    }
+  })
+})
+
+describe("edition", () => {
+  test("defaults to self-host and validates the edition", () => {
+    expect(getConfig({}).edition).toBe("selfhost")
+    expect(getConfig({ SNIPTIDE_EDITION: "" }).edition).toBe("selfhost")
+    expect(() => getConfig({ SNIPTIDE_EDITION: "hosted" })).toThrow(/SNIPTIDE_EDITION/)
+  })
+
+  test("identifies cloud features for each edition", () => {
+    for (const edition of ["selfhost", "cloud"] as const) {
+      const config = getConfig({ SNIPTIDE_EDITION: edition })
+      expect(isCloud(config)).toBe(edition === "cloud")
+      for (const feature of ["discovery", "gallery", "shortLinks"] as const) {
+        expect(hasFeature(feature, config)).toBe(edition === "cloud")
+      }
     }
   })
 })
