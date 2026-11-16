@@ -31,7 +31,7 @@ describe("getConfig", () => {
       getConfig({
         ABUSE_REPORTS_ENABLED: "true",
         BETTER_AUTH_URL: "https://app.example",
-        BETTER_AUTH_SECRET: "synthetic-secret-with-at-least-32-characters",
+        BETTER_AUTH_SECRET: "a".repeat(32),
       }).abuseReportsEnabled,
     ).toBe(true)
   })
