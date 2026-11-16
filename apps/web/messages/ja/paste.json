@@ -233,6 +233,18 @@
     "decrypt": "復号する",
     "checkKey": "鍵を確認",
     "encryptedLinkHasKey": "エンドツーエンドで暗号化されています。ここでコピーするリンクには鍵が含まれ、リンクを持つ人はペーストを読めます。",
-    "encryptedLinkNoKey": "エンドツーエンドで暗号化されています。このブラウザーには鍵がないため、ここでコピーするリンクだけではペーストを開けません。"
+    "encryptedLinkNoKey": "エンドツーエンドで暗号化されています。このブラウザーには鍵がないため、ここでコピーするリンクだけではペーストを開けません。",
+    "sendToService": "{service} に送信",
+    "connectServiceToSend": "このペーストをチャンネルに送信するには、<link>設定で {service} を接続</link>してください。",
+    "channel": "チャンネル",
+    "loadingChannels": "チャンネルを読み込み中…",
+    "pickAChannel": "チャンネルを選択",
+    "searchChannels": "チャンネルを検索",
+    "noChannelsFound": "チャンネルが見つかりません。",
+    "send": "送信",
+    "sendsTitleLanguageAndLink": "タイトル、言語、リンクを送信します。アプリは公開チャンネルと、招待されたプライベートチャンネルに投稿できます。",
+    "sendsLinkOnly": "このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを送信します。",
+    "sentToChannel": "#{channel} に送信しました",
+    "couldnTLoadDestinations": "{service} のチャンネルを読み込めませんでした。1 分後にもう一度お試しください。"
   }
 }

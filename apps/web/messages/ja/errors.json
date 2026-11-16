@@ -94,7 +94,12 @@
     "unlinkFailed": "連携を解除できませんでした。もう一度お試しください。",
     "demoLocked": "この機能はデモでは利用できません。",
     "signInFresh": "安全のため、一度ログアウトして再度ログインしてから、もう一度お試しください。",
-    "encryptedPasteSize": "このペーストは暗号化するには大きすぎます。暗号化したペーストに入るのは上限 {limit} の約 3 分の 2 です。"
+    "encryptedPasteSize": "このペーストは暗号化するには大きすぎます。暗号化したペーストに入るのは上限 {limit} の約 3 分の 2 です。",
+    "slackUnavailable": "Slack から応答がありません。1 分後にもう一度お試しください。",
+    "slackNotInChannel": "Sniptide はそのチャンネルに投稿できません。Sniptide アプリをチャンネルに招待してから、もう一度お試しください。",
+    "integrationDisconnected": "その接続は機能しなくなりました。設定で再接続してください。",
+    "exportUnavailable": "そのペーストはどこにも送信できません。",
+    "exportDestination": "送信先のチャンネルを選択してください。"
   },
   "ServerError": {
     "title": "問題が発生しました",

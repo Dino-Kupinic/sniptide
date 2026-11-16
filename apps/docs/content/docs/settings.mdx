@@ -78,12 +78,15 @@ emails for that event only.
 
 ## Connect integrations
 
-**Integrations** lists the services Sniptide can import from. GitHub is the one available today:
-with it connected, [Import gist](/getting-started/import-gist#pick-from-your-own-gists) lists
-your own gists, secret ones included.
+**Integrations** lists the services Sniptide imports from or sends pastes to:
 
-Select **Connect** to approve access at the service. The row then shows the account you connected
-and the date. Sniptide stores the access token encrypted, and uses it only on the server.
+| Service | With it connected |
+| --- | --- |
+| GitHub | [Import gist](/getting-started/import-gist#pick-from-your-own-gists) lists your own gists, secret ones included. |
+| Slack | **Share** sends a paste to a channel in the workspace you connected. See [Send to a Slack channel](/core-concepts/sharing#send-to-a-slack-channel). |
+
+Select **Connect** to approve access at the service. The row then shows the account you connected,
+or the workspace for Slack, and the date. Sniptide stores the access token encrypted, and uses it only on the server.
 
 Select **Disconnect** to remove the connection. Sniptide deletes the token and asks the service to
 revoke it. Pastes you already imported stay.
@@ -93,9 +96,9 @@ doesn't add GitHub sign-in, and disconnecting it doesn't remove it. A connection
 itself when the service stops accepting its token, for example after you revoke Sniptide's access
 on GitHub.
 
-On a self-hosted instance, GitHub shows as not set up until the administrator sets
-`GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`. See
-[Configuration](/self-hosting/configuration).
+On a self-hosted instance, a service shows as not set up until the administrator sets its OAuth
+app: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` for GitHub, `SLACK_CLIENT_ID` and
+`SLACK_CLIENT_SECRET` for Slack. See [Configuration](/self-hosting/configuration).
 
 ## Create API tokens
 

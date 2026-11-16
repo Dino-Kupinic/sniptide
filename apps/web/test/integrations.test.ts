@@ -167,6 +167,8 @@ describeDb("integrations", () => {
         available: true,
         connection: { account: "octocat", connectedAt: expect.any(Number) },
       },
+      // Listed for every server, and unavailable until it has a Slack app.
+      { id: "slack", name: "Slack", available: false, connection: null },
     ])
     expect((await listIntegrations("other"))[0]?.connection).toBeNull()
   })

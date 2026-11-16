@@ -34,6 +34,7 @@ the app. The Coolify template lists the common ones; see
 | `HOME_URL` | unset | The logo on the sign-in screens links here, for example to your landing page. Unset, the logo is not a link. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in and the GitHub integration in **Settings**. Until both are set the sign-in button shows as disabled and the integration as not set up. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. The integration comes back to a path below it, so one OAuth app serves both. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
+| `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` | unset | Turn on the Slack integration in **Settings**, which sends pastes to channels. Until both are set it shows as not set up. See [Set up the Slack integration](#set-up-the-slack-integration). |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
 | `COOKIE_DOMAIN` | unset | Share the session cookie with other subdomains. Leave unset on one domain. |
 | `COOKIE_PREFIX` | `better-auth` | Prefix for the auth cookies' names (letters, digits, `-`, `_`). Set a different one on a deployment that shares a parent domain with another one (a preview next to production). Changing it signs everyone out. |
@@ -69,6 +70,23 @@ A private server can leave all of these unset.
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports by accounts that haven't connected GitHub. Without it they share GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
 | `ENV_SECRETS_KEY` | unset | Secret of at least 32 characters from which Sniptide derives the encryption keys for env group values and for the tokens of connected integrations. When unset, Sniptide derives them from `BETTER_AUTH_SECRET`. |
+
+### Set up the Slack integration
+
+The Slack integration needs a Slack app of your own, because a Slack app's redirect URLs belong
+to one server.
+
+1. Create an app at [api.slack.com/apps](https://api.slack.com/apps), from scratch, in any
+   workspace. Under **Manage Distribution**, allow installs in other workspaces if your users
+   work in more than one.
+2. Under **OAuth & Permissions**, add the redirect URL
+   `<BETTER_AUTH_URL>/api/integrations/slack/callback`. Slack requires HTTPS.
+3. Add the bot token scopes `chat:write`, `chat:write.public`, `channels:read` and `groups:read`.
+4. Copy the **Client ID** and **Client Secret** from **Basic Information** into
+   `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET`, and restart Sniptide.
+
+Leave PKCE off for the app. Sniptide keeps the client secret on the server, and Slack accepts
+PKCE only from apps that give it up.
 
 ### Rotate the auth secret
 

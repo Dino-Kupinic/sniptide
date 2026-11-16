@@ -135,13 +135,14 @@
     "couldnTConnect": "Couldn't reach the provider. Try again.",
     "accountDisconnected": "{provider} disconnected",
     "integrations": "Integrations",
-    "integrationsDescription": "Accounts at other services that Sniptide imports from. Connecting one doesn't change how you sign in.",
+    "integrationsDescription": "Accounts at other services that Sniptide imports from or sends pastes to. Connecting one doesn't change how you sign in.",
     "integrationConnected": "Connected as {account} on {date}",
     "integrationNotSetUp": "This server has no {provider} OAuth app.",
     "integrationDenied": "You cancelled at the provider, so nothing was connected.",
     "integrationFailed": "Couldn't connect. Try again.",
     "integrationAbout": {
-      "github": "Lists your gists in the import sheet, secret ones included. GitHub's gist permission also allows writing, and Sniptide only reads."
+      "github": "Lists your gists in the import sheet, secret ones included. GitHub's gist permission also allows writing, and Sniptide only reads.",
+      "slack": "Sends pastes to channels from the Share dialog. Sniptide posts the link, and the title and language when the paste is open to everyone with the link."
     },
     "sessions": "Sessions",
     "sessionsDescription": "Devices signed in to your account. Sign out any you don't recognize.",

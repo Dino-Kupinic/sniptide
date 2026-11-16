@@ -5,7 +5,7 @@ import { z } from "zod"
 import { seal, unseal } from "@/lib/sealed"
 import type { IntegrationProvider, OAuthCredentials } from "./types"
 
-// The OAuth 2 authorization code flow with PKCE that connects an external account. What must
+// The OAuth 2 authorization code flow, with PKCE where the provider allows it, that connects an external account. What must
 // survive the trip to the provider and back (the state, the PKCE verifier and who started it)
 // travels in an encrypted, HttpOnly cookie, so nothing is stored until the connection exists.
 
@@ -42,14 +42,19 @@ export function startAuthorization(
   const state = randomBytes(24).toString("base64url")
   const verifier = randomBytes(32).toString("base64url")
   const url = new URL(provider.oauth.authorizeUrl)
+  const pkce = provider.oauth.pkce !== false
   url.search = new URLSearchParams({
     response_type: "code",
     client_id: credentials.clientId,
     redirect_uri: callbackUrl(provider, origin),
-    scope: provider.oauth.scopes.join(" "),
+    scope: provider.oauth.scopes.join(provider.oauth.scopeSeparator ?? " "),
     state,
-    code_challenge: createHash("sha256").update(verifier).digest("base64url"),
-    code_challenge_method: "S256",
+    ...(pkce
+      ? {
+          code_challenge: createHash("sha256").update(verifier).digest("base64url"),
+          code_challenge_method: "S256",
+        }
+      : {}),
   }).toString()
   const pending: z.infer<typeof pendingSchema> = {
     state,
@@ -133,7 +138,7 @@ export async function finishAuthorization(
     grant_type: "authorization_code",
     code,
     redirect_uri: callbackUrl(provider, origin),
-    code_verifier: pending.verifier,
+    ...(provider.oauth.pkce !== false ? { code_verifier: pending.verifier } : {}),
   })
 }
 

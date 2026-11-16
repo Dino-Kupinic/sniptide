@@ -76,7 +76,7 @@ when both matrix jobs pass.
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
 | Database schema and migrations | `packages/db/src/schema`, `packages/db/migrations` | Web integration tests and migration tests |
 | Authentication | `packages/auth/src`, `apps/web/lib/auth.ts` | Web auth tests and browser auth tests |
-| Integrations and gist import | `apps/web/lib/integrations`, with one adapter per service | `apps/web/test/integrations.test.ts`, `gist.test.ts` |
+| Integrations, gist import and Slack share | `apps/web/lib/integrations`, with one adapter per service | `apps/web/test/integrations.test.ts`, `slack.test.ts`, `gist.test.ts` |
 | Shared components and theme | `packages/ui/src` | Typecheck, browser checks, and package consumer checks |
 | Routes and API documentation | `apps/web/lib/openapi.ts` | `apps/web/test/openapi.test.ts` |
 | Translations | `apps/web/messages`, `apps/web/lib/i18n` | `apps/web/test/i18n.test.ts`, `action-errors.test.ts` |
@@ -189,14 +189,16 @@ Migration rules (transactional statements only, never editing a released migrati
 
 An integration is an external service a user connects in **Settings**, then **Integrations**.
 `apps/web/lib/integrations` holds the framework: the OAuth flow with PKCE (`oauth.ts`), the
-connections and their encrypted tokens (`store.ts`), the callback (`callback.ts`), and importing
-through a connection (`imports.ts`). GitHub (`github.ts`) is the adapter to copy from.
+connections and their encrypted tokens (`store.ts`), the callback (`callback.ts`), importing
+through a connection (`imports.ts`) and sending a paste through one (`exports.ts`). GitHub
+(`github.ts`) is the adapter to copy for importing, and Slack (`slack.ts`) for sending.
 
 To add a service:
 
 1. Write an adapter that satisfies `IntegrationProvider` in `types.ts`: its OAuth endpoints and
    scopes, where its client id and secret come from, `account` to name who connected, and `revoke`
-   when the service can end a token. Add `imports` to read from it.
+   when the service can end a token. Add `imports` to read from it, and `exports` to send pastes
+   to it. Set `scopeSeparator` and `pkce: false` when the service needs them, as Slack does.
 2. List the adapter in `providers.ts`.
 3. Register `<BETTER_AUTH_URL>/api/integrations/<id>/callback` as the redirect URI of the
    service's OAuth app. Set `callbackPath` only when the service restricts redirects the way
@@ -208,8 +210,11 @@ To add a service:
 Connecting, renewing expired tokens, disconnecting and the Settings row need no further code.
 `previewImport` and `importPaste` in `lib/pastes/actions.ts` take the provider's id, and the
 import sheet in `components/lists/import-gist.tsx` is the one piece still written for gists.
-`ExportTarget` in `types.ts` is the contract for writing a paste to a service, and no adapter
-implements it yet.
+An adapter with `exports` gets a **Send to** row in the Share dialog
+(`components/paste/integration-share.tsx`) that lists its `destinations` and calls `send`. What a
+destination receives comes from `exportReveal` in `exports.ts`: the title and language only for a
+paste anyone with the link can read, the link alone otherwise, and nothing for an encrypted paste.
+An adapter never sees more than that.
 
 ## Account usage
 

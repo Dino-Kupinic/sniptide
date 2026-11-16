@@ -233,6 +233,18 @@
     "decrypt": "解密",
     "checkKey": "检查密钥",
     "encryptedLinkHasKey": "已端到端加密。你在此复制的链接包含密钥，持有该链接的人都能阅读此粘贴。",
-    "encryptedLinkNoKey": "已端到端加密。此浏览器没有密钥，因此你在此复制的链接无法单独打开该粘贴。"
+    "encryptedLinkNoKey": "已端到端加密。此浏览器没有密钥，因此你在此复制的链接无法单独打开该粘贴。",
+    "sendToService": "发送到 {service}",
+    "connectServiceToSend": "<link>在设置中连接 {service}</link>，即可将此粘贴发送到频道。",
+    "channel": "频道",
+    "loadingChannels": "正在加载频道…",
+    "pickAChannel": "选择频道",
+    "searchChannels": "搜索频道",
+    "noChannelsFound": "未找到频道。",
+    "send": "发送",
+    "sendsTitleLanguageAndLink": "发送标题、语言和链接。应用可以在公开频道以及邀请它加入的私有频道中发帖。",
+    "sendsLinkOnly": "仅发送链接，因为此粘贴的标题并未向所有持有链接的人开放。",
+    "sentToChannel": "已发送到 #{channel}",
+    "couldnTLoadDestinations": "无法加载你的 {service} 频道。请在一分钟后重试。"
   }
 }

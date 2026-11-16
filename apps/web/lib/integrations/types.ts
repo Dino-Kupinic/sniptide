@@ -62,12 +62,27 @@ export interface ImportSource {
   describe(item: ImportItem): string
 }
 
-// Writing a paste to the service. No adapter implements it yet.
+// Somewhere a paste can be sent, such as a Slack channel.
+export interface ExportDestination {
+  id: string
+  name: string
+  // True when only invited members can see it, such as a private channel.
+  private: boolean
+}
+
+// What a destination receives. `title` and `language` are null when the content policy in
+// ./exports.ts only allows the link, so an adapter can't reveal more than the policy decided.
+export interface ExportPaste {
+  url: string
+  title: string | null
+  language: string | null
+}
+
+// Sending a paste to the service. The Share dialog lists `destinations` for the user to pick
+// from, then calls `send` with the chosen one.
 export interface ExportTarget {
-  create(
-    token: string,
-    paste: { title: string; public: boolean; files: { name: string; content: string }[] },
-  ): Promise<{ ok: true; url: string } | Failure>
+  destinations(token: string): Promise<{ ok: true; destinations: ExportDestination[] } | Failure>
+  send(token: string, destination: string, paste: ExportPaste): Promise<{ ok: true } | Failure>
 }
 
 export interface IntegrationProvider {
@@ -82,6 +97,11 @@ export interface IntegrationProvider {
     credentials(): OAuthCredentials | null
     // Where the service sends the user back. Defaults to /api/integrations/<id>/callback.
     callbackPath?: string
+    // How the service separates scopes in the authorization URL. Defaults to a space.
+    scopeSeparator?: string
+    // False for services that only accept PKCE from public clients, such as Slack. The state
+    // cookie still ties the redirect to the user who started it.
+    pkce?: boolean
   }
   // Who the token belongs to, or null when the service doesn't say.
   account(token: string): Promise<{ id: string; name: string } | null>

@@ -94,7 +94,12 @@
     "unlinkFailed": "无法取消关联该账户，请重试。",
     "demoLocked": "演示中不提供此功能。",
     "signInFresh": "为了安全，请先退出并重新登录，然后重试。",
-    "encryptedPasteSize": "此粘贴过大，无法加密。加密的粘贴约可容纳 {limit} 上限的三分之二。"
+    "encryptedPasteSize": "此粘贴过大，无法加密。加密的粘贴约可容纳 {limit} 上限的三分之二。",
+    "slackUnavailable": "Slack 没有响应。请在一分钟后重试。",
+    "slackNotInChannel": "Sniptide 无法在该频道发帖。请先邀请 Sniptide 应用加入该频道，然后重试。",
+    "integrationDisconnected": "该连接已失效。请在设置中重新连接。",
+    "exportUnavailable": "该粘贴无法发送到任何地方。",
+    "exportDestination": "请选择要发送到的频道。"
   },
   "ServerError": {
     "title": "出了点问题",

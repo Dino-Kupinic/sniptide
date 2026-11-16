@@ -233,6 +233,18 @@
     "decrypt": "Decrypt",
     "checkKey": "Check key",
     "encryptedLinkHasKey": "End-to-end encrypted. The link you copy here includes the key, and whoever has it can read the paste.",
-    "encryptedLinkNoKey": "End-to-end encrypted. This browser doesn't have the key, so the link you copy here can't open the paste on its own."
+    "encryptedLinkNoKey": "End-to-end encrypted. This browser doesn't have the key, so the link you copy here can't open the paste on its own.",
+    "sendToService": "Send to {service}",
+    "connectServiceToSend": "<link>Connect {service} in Settings</link> to send this paste to a channel.",
+    "channel": "Channel",
+    "loadingChannels": "Loading channels…",
+    "pickAChannel": "Pick a channel",
+    "searchChannels": "Search channels",
+    "noChannelsFound": "No channels found.",
+    "send": "Send",
+    "sendsTitleLanguageAndLink": "Sends the title, language and link. The app can post to public channels and to private ones it was invited to.",
+    "sendsLinkOnly": "Sends the link only, because this paste's title is not open to everyone with the link.",
+    "sentToChannel": "Sent to #{channel}",
+    "couldnTLoadDestinations": "Couldn't load your {service} channels. Try again in a minute."
   }
 }

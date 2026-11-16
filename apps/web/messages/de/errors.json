@@ -94,7 +94,12 @@
     "unlinkFailed": "Das Konto konnte nicht getrennt werden. Versuche es erneut.",
     "demoLocked": "Das ist in der Demo nicht verfügbar.",
     "signInFresh": "Melde dich zur Sicherheit ab und wieder an und versuche es dann erneut.",
-    "encryptedPasteSize": "Dieser Paste ist zu groß zum Verschlüsseln. Ein verschlüsselter Paste fasst etwa zwei Drittel des Limits von {limit}."
+    "encryptedPasteSize": "Dieser Paste ist zu groß zum Verschlüsseln. Ein verschlüsselter Paste fasst etwa zwei Drittel des Limits von {limit}.",
+    "slackUnavailable": "Slack hat nicht geantwortet. Versuche es in einer Minute erneut.",
+    "slackNotInChannel": "Sniptide kann in diesem Kanal nicht posten. Lade die Sniptide-App in den Kanal ein und versuche es erneut.",
+    "integrationDisconnected": "Diese Verbindung funktioniert nicht mehr. Verbinde sie in den Einstellungen erneut.",
+    "exportUnavailable": "Dieser Paste kann nirgendwohin gesendet werden.",
+    "exportDestination": "Wähle einen Kanal zum Senden aus."
   },
   "ServerError": {
     "title": "Etwas ist schiefgelaufen",

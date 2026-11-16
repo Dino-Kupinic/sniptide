@@ -233,6 +233,18 @@
     "decrypt": "Descifrar",
     "checkKey": "Comprobar la clave",
     "encryptedLinkHasKey": "Cifrado de extremo a extremo. El enlace que copias aquí incluye la clave, y quien lo tenga puede leer el paste.",
-    "encryptedLinkNoKey": "Cifrado de extremo a extremo. Este navegador no tiene la clave, así que el enlace que copias aquí no abre el paste por sí solo."
+    "encryptedLinkNoKey": "Cifrado de extremo a extremo. Este navegador no tiene la clave, así que el enlace que copias aquí no abre el paste por sí solo.",
+    "sendToService": "Enviar a {service}",
+    "connectServiceToSend": "<link>Conecta {service} en Ajustes</link> para enviar este paste a un canal.",
+    "channel": "Canal",
+    "loadingChannels": "Cargando canales…",
+    "pickAChannel": "Elige un canal",
+    "searchChannels": "Buscar canales",
+    "noChannelsFound": "No se encontraron canales.",
+    "send": "Enviar",
+    "sendsTitleLanguageAndLink": "Envía el título, el lenguaje y el enlace. La app puede publicar en canales públicos y en los privados a los que la invitaron.",
+    "sendsLinkOnly": "Envía solo el enlace, porque el título de este paste no está abierto a todos los que tienen el enlace.",
+    "sentToChannel": "Enviado a #{channel}",
+    "couldnTLoadDestinations": "No se pudieron cargar tus canales de {service}. Inténtalo de nuevo en un minuto."
   }
 }

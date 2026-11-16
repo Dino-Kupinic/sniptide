@@ -32,6 +32,7 @@ import { LinkCopyContent, useCopyLink } from "./copy-button"
 import { EmbedShare } from "./embed-share"
 import { EncryptionNote } from "./encryption-note"
 import { ExpiredNotice, usePasteExpired } from "./expiry-status"
+import { IntegrationShare, type ShareDestinationProvider } from "./integration-share"
 import { useNativeShare } from "./paste-actions"
 import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
 import { WebhookShare } from "./webhook-share"
@@ -58,6 +59,8 @@ export function ShareDialog({
   trigger,
   webhookTargets = [],
   webhookAllowed = false,
+  shareProviders = [],
+  shareReveal = "link",
   embedCode,
 }: {
   expiresAt: number | null
@@ -72,6 +75,9 @@ export function ShareDialog({
   trigger: "button" | "icon"
   webhookTargets?: WebhookTarget[]
   webhookAllowed?: boolean
+  // Connected services such as Slack, and what they may receive of this paste.
+  shareProviders?: ShareDestinationProvider[]
+  shareReveal?: "details" | "link"
   // The iframe code for /<slug>/embed; without it the section says why the paste can't embed.
   embedCode?: string
 }) {
@@ -243,13 +249,20 @@ export function ShareDialog({
           ))}
         </ul>
 
-        {/* A webhook and an embed are both rendered by the server, which can't read the paste. */}
+        {/* A webhook, a service such as Slack and an embed all get the link from the server, which
+            can't read the paste or its key. */}
         {encryptionKeyId ? null : (
           <>
             <WebhookShare
               slug={slug}
               targets={webhookTargets}
               allowed={webhookAllowed && !expired}
+              unavailableReason={expired ? t("expiredSharingHelp") : undefined}
+            />
+            <IntegrationShare
+              slug={slug}
+              providers={shareProviders}
+              reveal={shareReveal}
               unavailableReason={expired ? t("expiredSharingHelp") : undefined}
             />
             <EmbedShare

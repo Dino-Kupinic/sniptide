@@ -94,7 +94,12 @@
     "unlinkFailed": "Couldn't disconnect that account. Try again.",
     "demoLocked": "This isn't available in the demo.",
     "signInFresh": "For your safety, sign out and back in, then try again.",
-    "encryptedPasteSize": "This paste is too large to encrypt. An encrypted paste holds about two thirds of the {limit} limit."
+    "encryptedPasteSize": "This paste is too large to encrypt. An encrypted paste holds about two thirds of the {limit} limit.",
+    "slackUnavailable": "Slack didn't answer. Try again in a minute.",
+    "slackNotInChannel": "Sniptide can't post in that channel. Invite the Sniptide app to it, then try again.",
+    "integrationDisconnected": "That connection stopped working. Connect it again in Settings.",
+    "exportUnavailable": "That paste can't be sent anywhere.",
+    "exportDestination": "Pick a channel to send to."
   },
   "ServerError": {
     "title": "Something went wrong",

@@ -155,6 +155,26 @@ to post the paste's link to that channel. Everyone in the channel receives the l
 - A failed or timed-out post shows an error and isn't retried. Check the channel before you try
   again, because the message may have arrived.
 
+## Send to a Slack channel
+
+With Slack connected in [Settings](/settings#connect-integrations), **Share** offers **Send to
+Slack**. Pick a channel in the workspace you connected, then select **Send**. The list holds the
+workspace's public channels and the private channels the Sniptide app was invited to.
+
+What the message holds depends on who can open the paste:
+
+| Paste | Message |
+| --- | --- |
+| Public or unlisted, without a password or burn after read | The title as a link, and the language |
+| Private, password-protected or burn after read | The link only |
+| End-to-end encrypted | Not offered, because the link would need its key |
+
+- Only the paste's owner can send it, 20 times an hour per account.
+- Slack shows a link to a public or unlisted paste with its own preview. A link-only message
+  turns that preview off.
+- Sniptide can't post in a private channel until someone invites the app there. The error says
+  so.
+
 ## Views
 
 The paste's **Views** row shows how many times its share page was opened. Your own visits,

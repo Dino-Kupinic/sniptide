@@ -8,13 +8,14 @@ import { getConfig } from "@/lib/config"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { limited } from "@/lib/pastes/limits"
 import type { Limit } from "@/lib/rate-limit"
-import { getRequestOrigin } from "@/lib/site"
+import { getRequestOrigin, getSiteOrigin } from "@/lib/site"
 import { HOUR_SECONDS } from "@/lib/time"
+import { listDestinations, sendPaste } from "./exports"
 import { listImports } from "./imports"
 import { STATE_COOKIE, STATE_SECONDS, startAuthorization } from "./oauth"
 import { getProvider } from "./providers"
 import { removeConnection } from "./store"
-import type { ImportSummary } from "./types"
+import type { ExportDestination, ImportSummary } from "./types"
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -30,6 +31,13 @@ const connectLimit = (user: string): Limit => ({
 const listLimit = (user: string): Limit => ({
   key: `integration:list:${user}`,
   max: 240,
+  windowSeconds: HOUR_SECONDS,
+})
+
+// Each send posts a message in someone's workspace, so it shares the cap of the channel webhooks.
+const sendLimit = (user: string): Limit => ({
+  key: `integration:send:${user}`,
+  max: 20,
   windowSeconds: HOUR_SECONDS,
 })
 
@@ -98,4 +106,35 @@ export async function listImportable(providerId: string, page = 1): Promise<Impo
     connected: false,
     available: !isDemoMode() && Boolean(getProvider(providerId)?.oauth.credentials()),
   }
+}
+
+export type DestinationsResult =
+  | { ok: true; destinations: ExportDestination[] }
+  | { ok: false; error: string }
+
+// Where the connected account can send a paste, such as its Slack channels.
+export async function listExportDestinations(providerId: string): Promise<DestinationsResult> {
+  const session = await getSession()
+  if (!session) return { ok: false, error: await actionError("signInAccount") }
+  const tooOften = await limited(listLimit(session.user.id))
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
+  const result = await listDestinations(providerId, session.user.id)
+  return result.ok ? result : { ok: false, error: await translateActionError(result.error) }
+}
+
+// Sends one of the viewer's pastes to a destination from `listExportDestinations`.
+export async function sendToDestination(
+  providerId: string,
+  slug: string,
+  destination: string,
+): Promise<Result> {
+  const session = await getSession()
+  if (!session) return { ok: false, error: await actionError("signInShare") }
+  if (!destination || destination.length > 200)
+    return { ok: false, error: await actionError("exportDestination") }
+  const tooOften = await limited(sendLimit(session.user.id))
+  if (tooOften) return { ok: false, error: await translateActionError(tooOften) }
+  const origin = (await getSiteOrigin()).origin
+  const result = await sendPaste(providerId, session.user.id, slug, destination, origin)
+  return result.ok ? result : { ok: false, error: await translateActionError(result.error) }
 }

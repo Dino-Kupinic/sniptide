@@ -233,6 +233,18 @@
     "decrypt": "Entschlüsseln",
     "checkKey": "Schlüssel prüfen",
     "encryptedLinkHasKey": "Ende-zu-Ende-verschlüsselt. Der hier kopierte Link enthält den Schlüssel, und wer ihn hat, kann den Paste lesen.",
-    "encryptedLinkNoKey": "Ende-zu-Ende-verschlüsselt. Dieser Browser hat den Schlüssel nicht, daher öffnet der hier kopierte Link den Paste nicht von allein."
+    "encryptedLinkNoKey": "Ende-zu-Ende-verschlüsselt. Dieser Browser hat den Schlüssel nicht, daher öffnet der hier kopierte Link den Paste nicht von allein.",
+    "sendToService": "An {service} senden",
+    "connectServiceToSend": "<link>Verbinde {service} in den Einstellungen</link>, um diesen Paste in einen Kanal zu senden.",
+    "channel": "Kanal",
+    "loadingChannels": "Kanäle werden geladen…",
+    "pickAChannel": "Kanal auswählen",
+    "searchChannels": "Kanäle durchsuchen",
+    "noChannelsFound": "Keine Kanäle gefunden.",
+    "send": "Senden",
+    "sendsTitleLanguageAndLink": "Sendet Titel, Sprache und Link. Die App kann in öffentlichen Kanälen posten und in privaten, zu denen sie eingeladen wurde.",
+    "sendsLinkOnly": "Sendet nur den Link, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.",
+    "sentToChannel": "An #{channel} gesendet",
+    "couldnTLoadDestinations": "Deine {service}-Kanäle konnten nicht geladen werden. Versuche es in einer Minute erneut."
   }
 }

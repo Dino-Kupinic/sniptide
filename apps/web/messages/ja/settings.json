@@ -135,13 +135,14 @@
     "couldnTConnect": "プロバイダーに接続できませんでした。もう一度お試しください。",
     "accountDisconnected": "{provider} の連携を解除しました",
     "integrations": "連携サービス",
-    "integrationsDescription": "Sniptide がインポート元として使う外部サービスのアカウントです。連携してもログイン方法は変わりません。",
+    "integrationsDescription": "Sniptide がインポート元やペーストの送信先として使う外部サービスのアカウントです。連携してもログイン方法は変わりません。",
     "integrationConnected": "{date} に {account} として連携",
     "integrationNotSetUp": "このサーバーには {provider} の OAuth アプリがありません。",
     "integrationDenied": "プロバイダー側でキャンセルしたため、連携されませんでした。",
     "integrationFailed": "連携できませんでした。もう一度お試しください。",
     "integrationAbout": {
-      "github": "インポート画面に、シークレットを含むあなたの gist を一覧表示します。GitHub の gist 権限は書き込みも許可しますが、Sniptide は読み取りだけを行います。"
+      "github": "インポート画面に、シークレットを含むあなたの gist を一覧表示します。GitHub の gist 権限は書き込みも許可しますが、Sniptide は読み取りだけを行います。",
+      "slack": "共有ダイアログからペーストをチャンネルに送信します。Sniptide はリンクを投稿し、ペーストがリンクを知っている全員に公開されている場合はタイトルと言語も投稿します。"
     },
     "sessions": "セッション",
     "sessionsDescription": "あなたのアカウントにログインしているデバイスです。心当たりのないものはログアウトしてください。",
