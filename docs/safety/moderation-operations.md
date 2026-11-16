@@ -17,7 +17,7 @@ Run the commands from a checkout with dependencies installed. The production sta
 Obtain the immutable paste UUID from an authorized operational record. The command accepts a UUID, not a share slug. Restriction follows that UUID even if the slug changes.
 
 ```sh
-bun --filter @workspace/db run moderation inspect <paste-uuid>
+bun --filter @workspace/db moderation inspect <paste-uuid>
 ```
 
 The JSON response contains only `pasteId`, `contentVersion`, `moderationVersion`, and `state`. A missing paste returns `null`. It does not print the title, filenames, body, owner email, or password hash.
@@ -27,7 +27,7 @@ The JSON response contains only `pasteId`, `contentVersion`, `moderationVersion`
 Choose a new command UUID and an opaque case UUID. Keep both in the restricted operational case record. Use the two versions returned by inspection.
 
 ```sh
-bun --filter @workspace/db run moderation transition '{
+bun --filter @workspace/db moderation transition '{
   "commandId": "11111111-1111-4111-8111-111111111111",
   "pasteId": "22222222-2222-4222-8222-222222222222",
   "expectedContentVersion": 123,

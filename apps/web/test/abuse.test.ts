@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test"
+import path from "node:path"
 import {
   inspectAbuseReport,
   listAbuseReports,
@@ -61,6 +62,21 @@ describeDb("restricted abuse intake", () => {
     expect(queue[0]?.category).toBe("child_exploitation")
     expect(JSON.stringify(queue)).not.toContain(report.explanation)
     expect(await getDb().select().from(abuseReviewEvent)).toHaveLength(1)
+  })
+
+  test("the documented host queue command works without exposing report text", async () => {
+    const created = await submitAbuseReport(getDb(), report, "a".repeat(64))
+    const command = Bun.spawn(["bun", "--filter", "@workspace/db", "moderation", "reports"], {
+      cwd: path.join(import.meta.dir, "../../.."),
+      env: process.env,
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    const stdout = await new Response(command.stdout).text()
+    const stderr = await new Response(command.stderr).text()
+    expect({ exit: await command.exited, stderr }).toMatchObject({ exit: 0 })
+    expect(stdout).toContain(created.id)
+    expect(stdout).not.toContain(report.explanation)
   })
 
   test("audits explicit detail access and resolution without copying report text", async () => {

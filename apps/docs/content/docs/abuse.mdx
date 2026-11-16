@@ -52,8 +52,8 @@ proxy; otherwise visitors can share a quota. See [Configuration](/self-hosting/c
 From an authorized operations checkout with `DATABASE_URL` pointing at the intended database:
 
 ```sh
-bun --filter @workspace/db run moderation reports
-bun --filter @workspace/db run moderation report <report-uuid>
+bun --filter @workspace/db moderation reports
+bun --filter @workspace/db moderation report <report-uuid>
 ```
 
 The queue lists at most 100 unresolved cases, with suspected child exploitation first and then
@@ -69,7 +69,7 @@ paste version and apply a restriction or release. Set the transition's `caseRefe
 report UUID. Then close the report with the command UUID of that decision:
 
 ```sh
-bun --filter @workspace/db run moderation resolve-report '{
+bun --filter @workspace/db moderation resolve-report '{
   "id": "11111111-1111-4111-8111-111111111111",
   "outcome": "quarantined",
   "decisionCommandId": "22222222-2222-4222-8222-222222222222"
