@@ -83,6 +83,7 @@
     "someone": "誰か",
     "notificationShared": "{name}が「{title}」をあなたに共有しました",
     "notificationSharedDetail": "「共有されたスニペット」から開けます",
+    "notificationSharedBurnDetail": "封印されたスニペットを開く",
     "notificationBurned": "「{title}」が閲覧されました",
     "notificationBurnedDetail": "閲覧後に削除されました。保持するにはゴミ箱から復元してください",
     "notificationNeverExpires": "「{title}」は無期限になりました",

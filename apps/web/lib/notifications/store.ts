@@ -32,6 +32,7 @@ export async function listNotifications(
         readAt: notification.readAt,
         title: paste.title,
         slug: paste.slug,
+        burnAfterRead: paste.burnAfterRead,
         expiresAt: paste.expiresAt,
         actor: user.name,
       })
@@ -69,6 +70,7 @@ export async function listNotifications(
           count: row.count,
           title: row.title,
           slug: row.slug,
+          burnAfterRead: row.burnAfterRead,
           expiresAt: row.expiresAt?.getTime() ?? null,
           actor: row.actor,
         },
