@@ -76,6 +76,7 @@ services:
       - path: .env
         required: false
     environment:
+      SNIPTIDE_EDITION: ${SNIPTIDE_EDITION:-selfhost}
       DATABASE_URL: postgres://sniptide:${POSTGRES_PASSWORD:-sniptide}@db:5432/sniptide
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32) in .env}
       # The public address: BETTER_AUTH_URL when set, otherwise https://<SNIPTIDE_DOMAIN>, otherwise

@@ -106,6 +106,7 @@ export const DEFAULT_ACCOUNT_STORAGE_BYTES = 100 * 1024 ** 2
 export const DEFAULT_ACCOUNT_PASTES = 1000
 
 const schema = z.object({
+  SNIPTIDE_EDITION: z.enum(["selfhost", "cloud"]).default("selfhost"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
   SMTP_SECURE: flag.optional(),
@@ -269,6 +270,7 @@ function parseConfig(env: Record<string, string | undefined>) {
   const smtpPort = value.SMTP_PORT ?? (smtpSecure ? 465 : 587)
 
   return {
+    edition: value.SNIPTIDE_EDITION,
     smtp:
       smtpPresent && value.SMTP_HOST && value.SMTP_FROM
         ? {
