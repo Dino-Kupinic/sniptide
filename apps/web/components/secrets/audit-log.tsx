@@ -1,26 +1,52 @@
 "use client"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
+import { cn } from "@sniptide/ui/lib/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { ShareAvatar } from "@/components/paste/share-people"
+import { useSiteOrigin } from "@/components/site-host"
 import type { AuditEntry, AuditPerson } from "@/lib/env/audit"
+import { profilePath } from "@/lib/profile-path"
 
 const code = (chunks: ReactNode) => <span className="font-mono text-[13px]">{chunks}</span>
 
-// A person named in an entry: their avatar and display name on a muted chip, with the handle on
-// hover. An account that no longer exists reads as plain text.
+// A person named in an entry: their profile picture, or initials without one, and display name on
+// a muted chip, with the handle on hover. The chip links to the person's public profile when they
+// have one. An entry with no account at all reads as plain text.
 function PersonChip({ person, fallback }: { person: AuditPerson | null; fallback: string }) {
+  const origin = useSiteOrigin()
   if (!person) return <span className="text-muted-foreground">{fallback}</span>
-  return (
-    <span
-      title={person.handle}
-      className="inline-flex max-w-full items-center gap-1 rounded-md bg-muted py-px pr-1.5 pl-0.5 align-middle font-medium"
-    >
-      <ShareAvatar person={person} className="size-4 rounded-sm text-[7px] ring-1 ring-border" />
+  const content = (
+    <>
+      <Avatar className="size-4 rounded-sm font-heading text-[7px] font-bold">
+        {person.image ? <AvatarImage src={person.image} alt="" /> : null}
+        <AvatarFallback>{person.initials}</AvatarFallback>
+      </Avatar>
       <span className="truncate" dir="auto">
         {person.name}
       </span>
-    </span>
+    </>
+  )
+  const chip =
+    "inline-flex max-w-full items-center gap-1 rounded-md bg-muted py-px pr-1.5 pl-0.5 align-middle font-medium"
+  if (!person.profile) {
+    return (
+      <span title={person.handle} className={chip}>
+        {content}
+      </span>
+    )
+  }
+  return (
+    <a
+      href={`${origin}${profilePath(person.profile)}`}
+      title={person.handle}
+      className={cn(
+        chip,
+        "outline-none hover:bg-accent hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
+      )}
+    >
+      {content}
+    </a>
   )
 }
 

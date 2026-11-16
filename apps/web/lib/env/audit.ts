@@ -4,6 +4,7 @@ import type { Database } from "@workspace/db"
 import { apiToken, type EnvAuditDetail, envAudit, oauthClient, user } from "@workspace/db/schema"
 import { and, desc, eq, inArray } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { DEMO_USER_ID } from "@/lib/demo/guest"
 import { initials } from "@/lib/format"
 import type { AuditFilter } from "./inputs"
 
@@ -124,10 +125,14 @@ export interface AuditPerson {
   name: string
   handle: string
   initials: string
+  image: string | null
+  // The handle of the account's public profile, when it has one.
+  profile: string | null
 }
 
-// The people an entry names, with their current display names. Someone whose account is gone
-// keeps the handle the entry recorded.
+// The people an entry names, with their current display names and profile pictures. Someone whose
+// account is gone keeps the handle the entry recorded. Like the profile pages, pending invitations
+// and the demo guest link to no profile.
 async function findPeople(ids: string[]) {
   const unique = [...new Set(ids)]
   if (!unique.length) return new Map<string, AuditPerson>()
@@ -138,6 +143,8 @@ async function findPeople(ids: string[]) {
       email: user.email,
       username: user.username,
       displayUsername: user.displayUsername,
+      image: user.image,
+      pendingInvitation: user.pendingInvitation,
     })
     .from(user)
     .where(inArray(user.id, unique))
@@ -146,7 +153,12 @@ async function findPeople(ids: string[]) {
       const username = row.displayUsername ?? row.username
       const handle = username ? `@${username}` : row.email
       const name = row.name.trim() || handle
-      return [row.id, { id: row.id, name, handle, initials: initials(name) }]
+      const profile =
+        row.username && !row.pendingInvitation && row.id !== DEMO_USER_ID ? row.username : null
+      return [
+        row.id,
+        { id: row.id, name, handle, initials: initials(name), image: row.image, profile },
+      ]
     }),
   )
 }
@@ -159,6 +171,13 @@ function person(
   const found = id ? people.get(id) : undefined
   if (found) return found
   if (!handle) return null
-  return { id: id ?? handle, name: handle, handle, initials: initials(handle.replace(/^@/, "")) }
+  return {
+    id: id ?? handle,
+    name: handle,
+    handle,
+    initials: initials(handle.replace(/^@/, "")),
+    image: null,
+    profile: null,
+  }
 }
 export type AuditEntry = Awaited<ReturnType<typeof listAudit>>["entries"][number]

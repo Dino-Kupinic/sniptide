@@ -318,6 +318,8 @@ describeDb("secret audit log", () => {
       name: "ada",
       handle: "ada@example.com",
       initials: "AD",
+      image: null,
+      profile: null,
     })
     expect(grant?.person).toMatchObject({ id: "bob", name: "bob" })
     expect((await listAudit("ada", { filter: "reads" })).entries).toHaveLength(1)
@@ -327,20 +329,30 @@ describeDb("secret audit log", () => {
     expect((await listAudit("ada", { limit: 3, page: 1 })).entries).toHaveLength(1)
   })
 
-  test("names people by their current display name, and by the recorded handle once they're gone", async () => {
+  test("names people by their current name, picture and profile, and by the recorded handle once they're gone", async () => {
     const id = await create()
     await grantAccess("ada", id, "bob", "read")
-    await getDb().update(user).set({ name: "Bob Builder" }).where(eq(user.id, "bob"))
+    await getDb()
+      .update(user)
+      .set({ name: "Bob Builder", username: "bob", image: "https://example.com/bob.png" })
+      .where(eq(user.id, "bob"))
     let [grant] = (await listAudit("ada", { filter: "access" })).entries
     expect(grant?.person).toEqual({
       id: "bob",
       name: "Bob Builder",
-      handle: "bob@example.com",
+      handle: "@bob",
       initials: "BB",
+      image: "https://example.com/bob.png",
+      profile: "bob",
     })
     await getDb().delete(user).where(eq(user.id, "bob"))
     ;[grant] = (await listAudit("ada", { filter: "access" })).entries
-    expect(grant?.person).toMatchObject({ name: "bob@example.com", handle: "bob@example.com" })
+    expect(grant?.person).toMatchObject({
+      name: "bob@example.com",
+      handle: "bob@example.com",
+      image: null,
+      profile: null,
+    })
   })
 
   test("the database refuses to change or delete an entry while its account exists", async () => {
