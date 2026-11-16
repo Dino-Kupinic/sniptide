@@ -54,12 +54,11 @@ export const reportSchema = z.strictObject({
 type Report = z.infer<typeof reportSchema>
 
 export function installationId(config: Config) {
-  return (
-    config.instanceTelemetry.id ??
-    createHmac("sha256", config.authSecret ?? "")
-      .update("sniptide:instance-telemetry:v1")
-      .digest("hex")
-  )
+  if (config.instanceTelemetry.id) return config.instanceTelemetry.id
+  if (!config.authSecret) throw new Error("An installation identity needs the auth secret.")
+  return createHmac("sha256", config.authSecret)
+    .update("sniptide:instance-telemetry:v1")
+    .digest("hex")
 }
 
 async function collect(config: Config): Promise<Report> {
@@ -112,6 +111,8 @@ const defaults = {
 
 export async function sendInstanceReport(config: Config, deps = defaults): Promise<JobOutcome> {
   if (!config.instanceTelemetry.enabled) return "completed"
+  // Configuration-only tools and unconfigured development servers have no installation identity.
+  if (!config.authSecret && !config.instanceTelemetry.id) return "completed"
   try {
     if (!(await deps.claim())) return "contended"
     const report = reportSchema.parse(await deps.collect(config))

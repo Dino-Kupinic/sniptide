@@ -6,6 +6,7 @@ image="${1:?Usage: bash scripts/test-compose.sh IMAGE}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 work="$(mktemp -d)"
 cd "$root"
+export TELEMETRY=off
 export SNIPTIDE_IMAGE="$image" SNIPTIDE_PORT=3987 POSTGRES_PORT=55987
 export BETTER_AUTH_SECRET="compose-smoke-test-secret-at-least-32-characters"
 

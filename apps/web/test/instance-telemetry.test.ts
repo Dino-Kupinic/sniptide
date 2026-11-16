@@ -2,8 +2,8 @@ import { expect, test } from "bun:test"
 import { getConfig } from "@/lib/config"
 import { bucket, installationId, reportSchema, sendInstanceReport } from "@/lib/instance-telemetry"
 
-test("instance telemetry is off by default and validates the switch", () => {
-  expect(getConfig({}).instanceTelemetry.enabled).toBe(false)
+test("instance telemetry is on by default and accepts an explicit opt-out", () => {
+  expect(getConfig({}).instanceTelemetry.enabled).toBe(true)
   expect(getConfig({ TELEMETRY: "off" }).instanceTelemetry.enabled).toBe(false)
   expect(() => getConfig({ TELEMETRY: "maybe" })).toThrow("TELEMETRY")
 })
@@ -141,5 +141,15 @@ test("closed schema rejects unknown nested fields and identifying release string
   ).toBe(false)
   expect(reportSchema.safeParse({ ...example, release: "private.example" }).success).toBe(false)
   expect(reportSchema.safeParse({ ...example, users: 5 }).success).toBe(false)
-  expect(() => getConfig({ TELEMETRY: "on" })).toThrow("TELEMETRY")
+  expect(getConfig({ TELEMETRY: "on" }).instanceTelemetry.enabled).toBe(true)
+})
+
+test("unconfigured tools skip reports instead of sharing an empty-secret identity", async () => {
+  const fail = async () => {
+    throw new Error("must not run")
+  }
+  expect(() => installationId(getConfig({}))).toThrow("identity")
+  expect(await sendInstanceReport(getConfig({}), { claim: fail, collect: fail, fetch: fail })).toBe(
+    "completed",
+  )
 })

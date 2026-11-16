@@ -179,7 +179,7 @@ const schema = z.object({
   OPERATOR_ADDRESS: z.string().max(500).optional(),
   COPYRIGHT_EMAIL: z.string().email().optional(),
 
-  TELEMETRY: z.enum(["on", "off"]).default("off"),
+  TELEMETRY: z.enum(["on", "off"]).default("on"),
   TELEMETRY_ID: z.uuid().optional(),
   TELEMETRY_DEPLOYMENT: z.enum(["docker", "coolify", "other"]).default("other"),
 
@@ -238,8 +238,6 @@ function parseConfig(env: Record<string, string | undefined>) {
     throw new Error(`Invalid configuration:\n  ${problems.join("\n  ")}`)
   }
   const value = parsed.data
-  if (value.TELEMETRY === "on" && !value.TELEMETRY_ID && !value.BETTER_AUTH_SECRET)
-    throw new Error("Invalid configuration: TELEMETRY=on needs BETTER_AUTH_SECRET or TELEMETRY_ID.")
   if (
     value.DATABASE_POOL_SIZE > 2 &&
     value.DATABASE_PROBE_RESERVE + value.DATABASE_MAINTENANCE_RESERVE >= value.DATABASE_POOL_SIZE

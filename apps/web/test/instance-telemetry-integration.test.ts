@@ -29,7 +29,7 @@ describeDb("instance reporting and collection", () => {
       sent.push({ url: String(url), init })
       return new Response(null, { status: 204 })
     }) as typeof fetch
-    process.env.TELEMETRY = "on"
+    delete process.env.TELEMETRY
     process.env.BETTER_AUTH_SECRET = "test-secret-".repeat(4)
     process.env.BETTER_AUTH_URL = "https://private.example"
     process.env.DEPLOYMENT_VERSION = "private-release-label"
@@ -64,7 +64,10 @@ describeDb("instance reporting and collection", () => {
         day: Math.floor(Date.now() / 86400000) - 1,
         requests: 50,
       })
+    delete process.env.POSTHOG_KEY
     const config = getConfig()
+    expect(config.instanceTelemetry.enabled).toBe(true)
+    expect(config.analytics).toBeUndefined()
     const results = await Promise.all(Array.from({ length: 5 }, () => sendInstanceReport(config)))
     expect(results.filter((r) => r === "completed")).toHaveLength(1)
     expect(await sendInstanceReport(config)).toBe("contended")

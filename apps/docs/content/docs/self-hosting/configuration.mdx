@@ -202,15 +202,20 @@ is sent anywhere else.
 
 ### Instance telemetry
 
-Instance reports to Sniptide are **off by default**. To share a daily report, set `TELEMETRY=on`
-and restart the app. Set `TELEMETRY=off` and restart to stop reports. This setting controls instance
-reports independently of `POSTHOG_KEY`, which controls your own product analytics and error tracking.
+Instance reports are **on by default** and go to Sniptide's hosted collector and PostHog project.
+You do not need to set `POSTHOG_KEY` or any reporting credentials on your instance.
+To stop reports, set `TELEMETRY=off` and restart the app. Set `TELEMETRY=on` and restart to resume.
+This setting controls instance reports independently of `POSTHOG_KEY`, which controls your own
+product analytics and error tracking.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `TELEMETRY` | `off` | `on` opts into instance reports. `off` skips collection and delivery. |
+| `TELEMETRY` | `on` | Sends daily instance reports to Sniptide. `off` skips collection and delivery. |
 | `TELEMETRY_ID` | derived from the auth secret | Optional random UUID for the installation identity. Generate one with `node -e 'console.log(crypto.randomUUID())'`. Changing it resets the identity for future reports. Use the same value on every replica. |
 | `TELEMETRY_DEPLOYMENT` | `other` | Deployment label: `docker`, `coolify` or `other`. The official image sets `docker`; the Coolify template sets `coolify`. |
+
+Reports need an installation identity: the configured auth secret or `TELEMETRY_ID`. Without
+either, configuration-only tools and unconfigured development servers skip reports.
 
 The server checks at startup and hourly, and attempts delivery at most once per 24 hours across
 replicas and restarts sharing a database. Failed attempts wait for the next window. Delivery has
@@ -241,13 +246,13 @@ resetting the ID does not delete earlier reports.
 
 The collector accepts only this bounded schema, returns `404` outside the hosted app or without
 PostHog configuration, and limits incoming submissions to 60 per source address per hour. Reports
-are unauthenticated and describe participating installations, so their totals are approximate.
+are unauthenticated and can be disabled, so their totals are approximate.
 
 ### Error tracking
 
 With `POSTHOG_KEY` set, the server also sends its exceptions to PostHog error tracking in the same
 project: errors in pages, route handlers, server actions and the proxy, and failures in the
-maintenance jobs, the visit queue and the demo reset. Without a key nothing is sent, and
+maintenance jobs, the visit queue and the demo reset. Without a key no exceptions are sent, and
 exceptions only reach the server log as before. Preview deployments and `localhost` never report.
 
 Each exception carries the route file (such as `app/[slug]/page`, never the visited path), the
@@ -270,7 +275,7 @@ spiking triggers, and send them to Slack, Linear, GitHub or a webhook.
 ## Support and feedback
 
 **Feedback** in the account menu works without any of these settings: it opens a prefilled
-GitHub issue at `HELP_URL`, and the instance sends nothing anywhere. Set the Linear variables to
+GitHub issue at `HELP_URL`, and no report is sent automatically. Set the Linear variables to
 receive reports in your own tracker, and an Anthropic key to add the support assistant. See
 [Get help and report a bug](/support) for what people see and what each report contains.
 
