@@ -180,6 +180,10 @@ const schema = z.object({
   OPERATOR_ADDRESS: z.string().max(500).optional(),
   COPYRIGHT_EMAIL: z.string().email().optional(),
 
+  TELEMETRY: z.enum(["on", "off"]).default("on"),
+  TELEMETRY_ID: z.uuid().optional(),
+  TELEMETRY_DEPLOYMENT: z.enum(["docker", "coolify", "other"]).default("other"),
+
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
 
@@ -355,6 +359,11 @@ function parseConfig(env: Record<string, string | undefined>) {
             }
           : undefined,
       assistant: supportAssistant(value),
+    },
+    instanceTelemetry: {
+      enabled: value.TELEMETRY === "on",
+      id: value.TELEMETRY_ID,
+      deployment: value.TELEMETRY_DEPLOYMENT,
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

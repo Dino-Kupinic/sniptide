@@ -1923,6 +1923,8 @@ export const openApiDocument = {
 } as const
 
 export const internalRoutes = [
+  "/api/instance-telemetry",
+
   "/api/abuse",
   "/.well-known/openai-apps-challenge",
   "/.well-known/api-catalog",

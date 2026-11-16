@@ -12,6 +12,7 @@ import {
   user,
 } from "@workspace/db/schema"
 import { and, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { activitySurface, recordAccountActivity } from "@/lib/instance-activity"
 import type { AgentClient } from "@/lib/onboarding"
 import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
@@ -213,6 +214,13 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
       }
     }
   }
+  await recordAccountActivity(
+    tx,
+    owner,
+    "creates",
+    request.kind === "editor" ? "web" : (request.origin?.via ?? "api"),
+    now,
+  )
   return { id, slug, createdAt: now }
 }
 
@@ -322,6 +330,13 @@ export async function replacePaste(
       .values({ pasteId: record.id, message, snapshot, createdAt: stamp })
     await pruneSnapshots(tx, record.id)
   }
+  await recordAccountActivity(
+    tx,
+    request.actor.userId,
+    "edits",
+    request.kind === "editor" ? "web" : (activitySurface.getStore() ?? "api"),
+    now,
+  )
   return {
     id: record.id,
     slug,

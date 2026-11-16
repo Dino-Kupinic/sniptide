@@ -1,6 +1,7 @@
 import "server-only"
 import { type SniptideBackend, ToolError } from "@sniptide/mcp"
 import { ZodError } from "zod"
+import { recordAccountRead } from "@/lib/instance-activity"
 import { createApiCollection, listApiCollections } from "./collections"
 import { ApiError } from "./http"
 import { meterReads } from "./meter"
@@ -46,6 +47,7 @@ export function mcpBackend(owner: TokenOwner): SniptideBackend {
         const page = await collectionCaptures(owner.userId, slug, cursor)
         if (!page) throw new ApiError(404, "No collection with that name.")
         meterReads(page.pastes.map((paste) => paste.id))
+        for (const _paste of page.pastes) recordAccountRead(owner.userId, "mcp")
         return { ...page, pastes: page.pastes.map((paste) => ({ ...paste })) }
       }),
     create: (input) =>

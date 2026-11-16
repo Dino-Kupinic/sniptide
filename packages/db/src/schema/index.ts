@@ -2,6 +2,7 @@ import { authRelations } from "./auth"
 
 export * from "./abuse"
 export * from "./acquisition"
+export * from "./activity"
 export * from "./analytics"
 export * from "./auth"
 export * from "./collections"

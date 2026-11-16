@@ -4,6 +4,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 dir=$(mktemp -d)
 export COMPOSE_PROJECT_NAME="sniptide-pg-upgrade-$$"
+export TELEMETRY=off
 export BETTER_AUTH_SECRET="postgres-upgrade-test-secret-at-least-32-characters"
 export POSTGRES_PORT=0
 cleanup() {
