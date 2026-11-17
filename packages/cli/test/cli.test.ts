@@ -184,6 +184,16 @@ describe("built Node CLI", () => {
     expect((await cli(["push", "src/query.sql", "--lines", "1:4", "--dry-run"])).code).toBe(2)
   })
 
+  test("keeps the selected final newline without adding a phantom line", async () => {
+    await fixture("notes.txt", "first\n🌊\r\n")
+    const capture = (range: string) =>
+      cli(["push", "notes.txt", "--lines", range, "--dry-run", "--json"])
+    const result = await capture("2:2")
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout).data.files[0].content).toBe("🌊\r\n")
+    expect((await capture("3:3")).code).toBe(2)
+  })
+
   test("captures commit, sanitized remote, and dirty state", async () => {
     await fixture()
     await exec("git", ["init", "-q"], { cwd: source })

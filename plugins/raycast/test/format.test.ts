@@ -19,6 +19,11 @@ describe("fileMarkdown", () => {
     expect(markdown.endsWith("\n````")).toBe(true)
   })
 
+  test("handles a large paste with many separate backtick runs", () => {
+    const content = "`x".repeat(200_000) + "`````"
+    expect(fileMarkdown({ content, language: "text" })).toBe("``````\n" + content + "\n``````")
+  })
+
   test("drops a language name that could break the fence", () => {
     expect(fileMarkdown({ content: "x", language: "weird lang`" })).toBe("```\nx\n```")
   })

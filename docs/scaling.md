@@ -8,8 +8,9 @@ before increasing replicas or introducing a separate analytics service.
 
 Lists return ten summaries without file bodies. Adjacent navigation uses a cursor containing
 sort value and UUID; numbered jumps still use OFFSET. Access filters are applied on every query.
-Malformed or mismatched cursors fall back to numbered pagination. Counts remain exact; unfiltered
-requests reuse the same count query. Counts and language facets still scan the authorized scope,
+Malformed or mismatched cursors fall back to numbered pagination. The list groups the authorized rows by language once to produce both the language options and
+the exact overall total. Filtered lists issue a separate matching count. These aggregates still
+scan the authorized scope,
 while language filtering uses the database-maintained first-language projection. List summaries
 and trash totals use stored byte totals without reading file contents. The file trigger maintains
 both fields for every writer, including older app versions. Substring title/slug search uses ILIKE with literal wildcards
@@ -29,6 +30,45 @@ Files of 2 KiB or more also keep their result in the `highlight_cache` table, so
 another replica doesn't tokenize them again. A row is found by a hash of the grammar and the code
 and holds run lengths and colour numbers, never the code itself. The cleanup run removes rows
 after 30 days, and the next view rebuilds them. On a local run, 1,155 rows took 872 kB.
+
+## Paste count and list performance
+
+A local PostgreSQL 14.20 measurement on Apple Silicon compared the query shapes used for slug
+lookup and owner lists. One owner held 10% of the rows to expose the cost of a large tenant.
+A second owner held exactly 100 rows at every size. The large tenant exceeds the default quota.
+
+| Metadata query, median execution time | 100,000 pastes | 1 million | 10 million |
+| --- | ---: | ---: | ---: |
+| Look up one paste by slug | 0.036 ms | 0.035 ms | 0.046 ms |
+| First ten rows for the large owner, newest first | 0.030 ms | 0.033 ms | 0.037 ms |
+| Exact count for the fixed 100-paste owner | 0.080 ms | 0.081 ms | 0.098 ms |
+| Exact count for the 10% owner | 3.73 ms | 30.4 ms | 434 ms |
+| Ten rows halfway through that owner, cursor with timestamp bound | 0.036 ms | 0.037 ms | 0.031 ms |
+| Same cursor without the timestamp bound | 1.77 ms | 16.4 ms | 246 ms |
+
+At 10 million rows the bound cut the deep cursor query from 77,256 shared buffer accesses to
+six. The timestamp range lets PostgreSQL enter the existing owner/update-time/UUID index at the
+cursor. The strict timestamp comparison and UUID tie-breaker select the correct rows.
+
+The exact totals and language options still depend on the owner's collection size. With one
+million pastes in that account, the combined language/count query took 392 ms and touched
+143,677 buffers. Separate count and distinct-language queries each touched 143,661 buffers.
+Numbered page jumps still use OFFSET. For deployments that allow accounts this large, measure
+aggregates and deep jumps separately from the ten displayed rows.
+
+**Method.** A disposable unlogged table held UUID, slug, owner, title, update/deletion timestamps,
+moderation state and first language. It had the unique slug index and the partial owner/update-time/UUID
+index from the application. Rows had distinct second-resolution update times, five languages,
+allowed moderation state and no deletions. Each population was vacuumed and analyzed. Values
+are the median of five serial executions after one warmup, using EXPLAIN (ANALYZE, BUFFERS,
+TIMING OFF) with 128 MiB shared buffers. The fixture excludes file bodies, revisions, traffic
+concurrency, full production indexes and storage overhead.
+
+**Capacity evidence.** The [100,000-paste HTTP baseline](load-testing/baseline.md) exercised
+20 mixed reads per second for one minute. End-to-end capacity at one million and ten million
+pastes remains unverified. Before committing to either size, repeat the HTTP workload on the
+deployment's PostgreSQL version with representative file bytes, tenant sizes, searches, writes
+and visit ingestion. Track route p95/p99, pool wait, database I/O and visit backlog together.
 
 ## Storage and write behavior
 

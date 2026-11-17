@@ -8,6 +8,16 @@ import {
   editorLineCount,
   isLargeEditorContent,
 } from "@/lib/highlight/editor-limits"
+import { editorGrammar } from "@/lib/highlight/use-highlight"
+
+test("requests a grammar only for nonempty code within the live highlighting limits", () => {
+  expect(editorGrammar("", "code.ts")).toBeUndefined()
+  expect(editorGrammar("hello", "notes.txt")).toBeUndefined()
+  expect(editorGrammar("x".repeat(EDITOR_MAX_LENGTH + 1), "code.ts")).toBeUndefined()
+  expect(editorGrammar("\n".repeat(EDITOR_MAX_LINES), "code.ts")).toBeUndefined()
+  expect(editorGrammar("const x = 1", "code.ts")).toBe("typescript")
+  expect(editorGrammar("<p />", "view.tsx")).toBe("tsx")
+})
 
 describe("editor plain fallback", () => {
   test("keeps empty and trailing lines in the count", () => {
