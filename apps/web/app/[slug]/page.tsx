@@ -14,6 +14,7 @@ import { SharedPasteView, sharedViewerProps } from "@/components/paste/shared-pa
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
 import { getConfig } from "@/lib/config"
+import { hasFeature } from "@/lib/edition"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
 import { slugFromRoute } from "@/lib/pastes/links"
@@ -30,8 +31,10 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 
   return {
     title: `${meta.title} · Sniptide`,
-    // Unlisted pastes are reachable by link only, so keep them out of search engines.
-    robots: meta.visibility === "public" ? undefined : { index: false, follow: false },
+    robots:
+      meta.visibility === "public" && hasFeature("discovery")
+        ? undefined
+        : { index: false, follow: false },
   }
 }
 

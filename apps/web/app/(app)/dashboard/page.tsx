@@ -3,11 +3,10 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { listConnectedAgents } from "@/lib/agents"
 import { requireSession } from "@/lib/auth"
-import { getConfig } from "@/lib/config"
 import { availableLayout, DEFAULT_LAYOUT } from "@/lib/dashboard/widgets"
 import { shouldOnboard } from "@/lib/onboarding-server"
 import { getDashboardData } from "@/lib/pastes/dashboard"
-import { templateCatalog } from "@/lib/pastes/templates"
+import { gallerySource, templateCatalog } from "@/lib/pastes/templates"
 import { readPreferences } from "@/lib/preference-store"
 import { getAppOrigin, getRequestOrigin, getSiteOrigin } from "@/lib/site"
 import { firstName, viewerFromUser } from "@/lib/viewer"
@@ -35,7 +34,7 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
     redirect(`/welcome${marker}`)
   }
   const preferences = await readPreferences(session.user.id)
-  const { templatesUrl } = getConfig()
+  const templatesUrl = gallerySource()
   const layout = availableLayout(preferences.dashboard ?? DEFAULT_LAYOUT, {
     templates: Boolean(templatesUrl),
   })

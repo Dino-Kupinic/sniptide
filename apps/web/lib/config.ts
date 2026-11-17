@@ -1,6 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
+import { EDITIONS, shareUrlForEdition } from "@/lib/edition"
 import { isWebhookUrl } from "@/lib/pastes/webhook-url"
 import { DEFAULT_RESOURCE_LINKS } from "@/lib/resource-links"
 
@@ -106,7 +107,7 @@ export const DEFAULT_ACCOUNT_STORAGE_BYTES = 100 * 1024 ** 2
 export const DEFAULT_ACCOUNT_PASTES = 1000
 
 const schema = z.object({
-  SNIPTIDE_EDITION: z.enum(["selfhost", "cloud"]).default("selfhost"),
+  SNIPTIDE_EDITION: z.enum(EDITIONS).default("selfhost"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
   SMTP_SECURE: flag.optional(),
@@ -317,7 +318,7 @@ function parseConfig(env: Record<string, string | undefined>) {
     cookiePrefix: value.COOKIE_PREFIX,
     allowSignUp: value.ALLOW_SIGN_UP,
     allowedEmails: value.ALLOWED_EMAILS,
-    shareUrl: value.SHARE_URL,
+    shareUrl: shareUrlForEdition(value.SHARE_URL, { edition: value.SNIPTIDE_EDITION }),
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
     templatesUrl: value.TEMPLATES_URL,

@@ -40,6 +40,18 @@ describe("edition", () => {
       }
     }
   })
+
+  test("reserves the Sniptide share domain for Cloud and accepts independent share domains", () => {
+    expect(getConfig({ SHARE_URL: "https://sniptide.com" }).shareUrl).toBeUndefined()
+    expect(getConfig({ SHARE_URL: "https://WWW.SNIPTIDE.COM./" }).shareUrl).toBeUndefined()
+    expect(getConfig({ SHARE_URL: "https://share.example" }).shareUrl).toBe("https://share.example")
+    expect(
+      getConfig({
+        SHARE_URL: "https://sniptide.com",
+        SNIPTIDE_EDITION: "cloud",
+      }).shareUrl,
+    ).toBe("https://sniptide.com")
+  })
 })
 
 describe("getConfig", () => {

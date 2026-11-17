@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/people/user-avatar"
 import { ActivityGrid } from "@/components/profile/activity-grid"
 import { ProfileFilters } from "@/components/profile/profile-filters"
 import { PublicHeader } from "@/components/public-header"
+import { hasFeature } from "@/lib/edition"
 import { formatBytes, formatMonthYear, timeAgo } from "@/lib/format"
 import { getLanguage } from "@/lib/pastes/languages"
 import { profilePath } from "@/lib/profile-path"
@@ -58,16 +59,20 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!profile) return { title: "Sniptide", robots: { index: false, follow: false } }
 
   const t = await getTranslations("Profile")
-  const { origin } = await getSiteOrigin()
   const who = { name: profile.name, handle: profile.displayUsername }
+  const discovery = hasFeature("discovery")
   return {
     title: t("metaTitle", who),
     description: t("metaDescription", who),
     // Searches and filters are views of the same list, so they point at the plain page.
-    alternates: { canonical: `${origin}${hrefOf(profile.username, { page: profile.page })}` },
+    alternates: discovery
+      ? {
+          canonical: `${(await getSiteOrigin()).origin}${hrefOf(profile.username, { page: profile.page })}`,
+        }
+      : undefined,
     // Profiles stay out of search results until moderation tooling can act on a whole account.
     // Their public pastes are indexable on their own pages, so crawlers may follow the links.
-    robots: { index: false, follow: true },
+    robots: { index: false, follow: discovery },
   }
 }
 

@@ -2,8 +2,7 @@ import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { PageHeader } from "@/components/page-header"
 import { TemplateCatalog } from "@/components/templates/template-catalog"
-import { getConfig } from "@/lib/config"
-import { templateCatalog } from "@/lib/pastes/templates"
+import { gallerySource, templateCatalog } from "@/lib/pastes/templates"
 
 export async function generateMetadata() {
   const t = await getTranslations("Workspace")
@@ -14,10 +13,9 @@ function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
 
-// Every template from TEMPLATES_URL, filtered by department and searched like the website's
-// directory. An instance without TEMPLATES_URL has no such page.
+// Cloud instances with a template source offer a searchable gallery.
 export default async function Page({ searchParams }: PageProps<"/templates">) {
-  if (!getConfig().templatesUrl) notFound()
+  if (!gallerySource()) notFound()
   const [templates, query, t] = await Promise.all([
     templateCatalog(),
     searchParams,

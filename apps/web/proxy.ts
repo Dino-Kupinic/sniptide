@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { RETURN_TO_HEADER } from "@/lib/auth-redirect"
+import { hasFeature, shareUrlForEdition } from "@/lib/edition"
 import { ROUTE_SEPARATOR } from "@/lib/pastes/links"
 
 // Custom links live at /@<handle>/<name>, and the paste pages below them at /@<handle>/<name>/raw
@@ -14,14 +15,14 @@ function customLinkRoute(path: string, prefix: "" | "/pastes") {
   return `${prefix}/${match[1].toLowerCase()}${ROUTE_SEPARATOR}${match[2]}${match[3] ?? ""}`
 }
 
-// A demo instance (DEMO_MODE) holds one shared guest account with example data that resets on a
-// schedule, so none of its pages belong in search results. The header is set here because the
-// flag is read when the server starts, after next.config.ts headers were fixed at build time.
+// Demo data resets on a schedule. Self-hosted shares stay out of search results by default.
+// The flags are read at runtime, after next.config.ts headers are fixed at build time.
 const demoFlag = /^(?:true|1|yes|on)$/i
 
 export function proxy(request: NextRequest) {
   const response = route(request)
-  if (demoFlag.test(process.env.DEMO_MODE?.trim() ?? ""))
+  if (!hasFeature("discovery")) response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
+  else if (demoFlag.test(process.env.DEMO_MODE?.trim() ?? ""))
     response.headers.set("X-Robots-Tag", "noindex, nofollow")
   return response
 }
@@ -31,6 +32,10 @@ export function proxy(request: NextRequest) {
 // (BETTER_AUTH_URL). Without SHARE_URL, or when both are the same domain, nothing changes.
 function route(request: NextRequest) {
   const path = request.nextUrl.pathname
+  if (path === "/templates" && !hasFeature("gallery")) {
+    return new NextResponse("Not found", { status: 404 })
+  }
+
   // Public profiles live at /@<handle>. A folder named @handle would be a parallel route slot, so
   // the page sits at the internal /_profile/<handle> and only the /@ address is served.
   const profile = /^\/(?:@|%40)([^/]+)$/i.exec(path)
@@ -52,7 +57,7 @@ function route(request: NextRequest) {
     return NextResponse.redirect(url, 308)
   }
   const appPath =
-    /^\/(?:abuse|api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|oauth|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|trash|welcome)(?:\/|$)/.test(
+    /^\/(?:abuse|api|\.well-known|_next|_site|analytics|collections|dashboard|demo|dev|docs|forgot-password|new|oauth|pastes|reset-password|secrets|secret-share|settings|shared|sign-in|sign-up|starred|templates|trash|welcome)(?:\/|$)/.test(
       path,
     )
   const markdown = (request.headers.get("accept") ?? "").split(",").some((range) => {
@@ -95,14 +100,14 @@ function route(request: NextRequest) {
   }
   if (
     path !== "/" &&
-    !/^\/(?:sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|oauth|pastes|settings|shared|starred|trash|collections|secrets|welcome)(?:\/|$)/.test(
+    !/^\/(?:sign-in|sign-up|forgot-password|reset-password|dashboard|analytics|new|oauth|pastes|settings|shared|starred|templates|trash|collections|secrets|welcome)(?:\/|$)/.test(
       path,
     ) &&
     !path.startsWith("/api/auth/")
   )
     return next()
-  const shareUrl = process.env.SHARE_URL
-  const appUrl = process.env.BETTER_AUTH_URL
+  const shareUrl = shareUrlForEdition(process.env.SHARE_URL)
+  const appUrl = process.env.BETTER_AUTH_URL?.trim()
   if (!shareUrl || !appUrl) return next()
 
   const shareHost = new URL(shareUrl).host

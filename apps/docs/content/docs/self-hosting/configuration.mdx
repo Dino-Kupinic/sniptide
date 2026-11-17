@@ -29,7 +29,11 @@ the app. The Coolify template lists the common ones; see
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SNIPTIDE_EDITION` | `selfhost` | Selects `selfhost` or `cloud`. This setting identifies the deployment edition; it does not change features on its own. |
+| `SNIPTIDE_EDITION` | `selfhost` | In `selfhost`, pages and raw share links send `X-Robots-Tag: noindex, nofollow, noarchive`. `cloud` allows public pastes to appear in search and enables the template gallery when `TEMPLATES_URL` is set. |
+
+Self-hosted public links can still be opened by anyone who has the address. Search engines can
+fetch the pages to read the noindex directive. Use a [private paste](/core-concepts/sharing#choose-a-visibility)
+to control who can open a link.
 
 ## Sign-in and sign-up
 
@@ -58,7 +62,7 @@ above.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` | The Sniptide project's site, docs and issue tracker | Where the **Homepage**, **Documentation** and **Help** links under **Resources** in the account menu go. They open in a new tab. |
-| `TEMPLATES_URL` | unset | Where [`/new?template=<name>`](/core-concepts/pastes#start-from-a-template) reads a template's files, as `<TEMPLATES_URL>/<name>.json`, and where the dashboard's [Paste templates widget](/getting-started/dashboard#widgets) and the Paste templates page read their list, as `<TEMPLATES_URL>.json`. Set it to `https://sniptide.com/templates` to use the public templates. Without it the parameter is ignored, the widget is left out and `/templates` returns 404. |
+| `TEMPLATES_URL` | unset | Cloud reads the [gallery](/core-concepts/pastes#browse-the-templates) from `<TEMPLATES_URL>.json` and each template from `<TEMPLATES_URL>/<name>.json`. The hosted service uses `https://sniptide.com/templates`. Self-hosted instances leave the gallery and its dashboard widget out, and the editor ignores the `template` parameter. |
 | `TERMS_URL`, `PRIVACY_URL` | unset | Turn "Terms" and "Privacy Policy" under the sign-in and sign-up forms into links. Without them that line is left out. |
 | `OPERATOR_NAME`, `OPERATOR_ADDRESS` | unset | Sign the foot of every email with who sends it and a postal address. |
 | `COPYRIGHT_EMAIL` | unset | Publishes `/copyright`, which explains how to send a copyright takedown notice or counter-notice to this address, with `OPERATOR_NAME` and `OPERATOR_ADDRESS` as the agent. |
@@ -70,7 +74,7 @@ A private server can leave all of these unset.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. |
-| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Leave unset to serve everything on one domain. |
+| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Use a domain you control or leave it unset to serve everything on one domain. The `sniptide.com` share domain belongs to Cloud. |
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
