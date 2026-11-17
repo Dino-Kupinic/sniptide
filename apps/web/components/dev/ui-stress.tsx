@@ -2,7 +2,7 @@
 
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { CollectionsView } from "@/components/collections/collections-view"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { PasteList } from "@/components/lists/paste-list"
@@ -51,24 +51,31 @@ export function UiStress({
   const host = "paste.platform-infrastructure.example.com"
   const origin = `https://${host}`
   const start = (pagination.page - 1) * 10
-  const starred = data.pastes.filter((row) => row.starred)
+  // One promise per dataset, so the shell reads it without suspending again on every render.
+  const shell = useMemo(
+    () =>
+      Promise.resolve({
+        sidebar: {
+          counts: {
+            pastes: data.pastes.length,
+            starred: data.pastes.filter((row) => row.starred).length,
+            shared: data.rows.length,
+          },
+          recent: data.pastes.slice(0, 8).map((row) => ({ ...row, owned: true })),
+          starred: data.pastes
+            .filter((row) => row.starred)
+            .slice(0, 3)
+            .map((row) => ({ ...row, owned: true })),
+        },
+        collections: data.collections,
+        trashCount: data.trash.length,
+      }),
+    [data],
+  )
   return (
     <SiteHostProvider host={host}>
       <div className="pb-48">
-        <AppShell
-          viewer={data.viewer}
-          initialSidebar={defaultSidebarState}
-          collections={data.collections}
-          data={{
-            counts: {
-              pastes: data.pastes.length,
-              starred: starred.length,
-              shared: data.rows.length,
-            },
-            recent: data.pastes.slice(0, 8).map((row) => ({ ...row, owned: true })),
-            starred: starred.slice(0, 3).map((row) => ({ ...row, owned: true })),
-          }}
-        >
+        <AppShell viewer={data.viewer} initialSidebar={defaultSidebarState} data={shell}>
           {screen === "dashboard" ? (
             <Dashboard
               data={data.dashboard}

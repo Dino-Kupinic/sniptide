@@ -1,10 +1,10 @@
 "use client"
 
 import { PlusIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import type { ViewerSummary } from "@/lib/viewer"
 import { type MoreCounts, MoreSheet } from "./more-sheet"
 import { isActivePath, mobileTabs, moreTab } from "./nav-config"
@@ -14,7 +14,14 @@ const tabClass =
 
 // Bottom tab bar below lg. "More" opens the More sheet with everything the sidebar holds beyond
 // the three main tabs, and lights up on the pages it leads to.
-export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: MoreCounts }) {
+export function TabBar({
+  viewer,
+  counts,
+}: {
+  viewer: ViewerSummary
+  // For a page outside the app shell. Inside it the More sheet counts from the shell's data.
+  counts?: MoreCounts
+}) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = React.useState(false)

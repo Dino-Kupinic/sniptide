@@ -31,7 +31,13 @@ import {
 } from "@/lib/dashboard/widgets"
 import { runAction } from "@/lib/feedback"
 import { AgentArea } from "./agent-area"
-import { type DashboardSource, DataWidget, useWidgetName, WidgetFallback } from "./widgets"
+import {
+  type DashboardSource,
+  DataWidget,
+  MeasuredWidget,
+  useWidgetName,
+  WidgetFallback,
+} from "./widgets"
 
 // The layout on screen, saved after every change. Removing a widget or switching templates can be
 // taken back from the toast.
@@ -239,7 +245,9 @@ export function WidgetBoard({
               </div>
             ) : (
               <React.Suspense fallback={<WidgetFallback id={widget} />}>
-                <DataWidget id={widget} data={data} origin={origin} />
+                <MeasuredWidget id={widget}>
+                  <DataWidget id={widget} data={data} origin={origin} />
+                </MeasuredWidget>
               </React.Suspense>
             )}
           </SortableWidget>

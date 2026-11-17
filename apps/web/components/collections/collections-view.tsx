@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import {
   type SortDirection,
   Table,
@@ -22,9 +23,11 @@ import {
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
 import { PlusIcon, Trash2Icon } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
+import { SkeletonTableRows } from "@/components/lists/list-skeleton"
 import {
   SelectAllHead,
   SelectCell,
@@ -32,16 +35,18 @@ import {
   useRowSelection,
 } from "@/components/lists/selection"
 import { ListHeader } from "@/components/lists/toolbar"
-import { NavigationLink as Link } from "@/components/navigation-link"
-import { useSidebarUpdate } from "@/components/shell/app-shell"
+import { LoadingStatus } from "@/components/loading/status"
+import { useSidebarState, useSidebarUpdate } from "@/components/shell/app-shell"
+import { useSettledShellData } from "@/components/shell/shell-data"
 import { showUndo } from "@/components/undo-toast"
 import { deleteCollections, restoreCollections } from "@/lib/collections/actions"
 import type { Collection } from "@/lib/collections/types"
 import { runAction } from "@/lib/feedback"
-import { formatNumber } from "@/lib/format"
+import { formatNumber, timeAgo } from "@/lib/format"
 import { CollectionMenu } from "./collection-menu"
 import { CollectionIcon } from "./icon"
 import { NewCollectionDialog } from "./new-collection"
+import { orderCollections } from "./order"
 
 type CollectionSort = "name" | "pastes" | "updated"
 
@@ -64,7 +69,10 @@ function compare(a: Collection, b: Collection, sort: CollectionSort) {
 export function CollectionsView({
   collections,
   updatedLabels,
+  loading,
 }: {
+  // While the collections load: how many rows to hold room for.
+  loading?: number
   collections: Collection[]
   // "3 days ago" per collection slug, worked out on the server so both renders agree.
   updatedLabels: Record<string, string>
@@ -108,12 +116,33 @@ export function CollectionsView({
     }))
   }
 
+  const tableHead = (
+    <TableHeader>
+      <TableRow className="hover:bg-transparent">
+        <SelectAllHead selection={selection} />
+        <TableSortHead {...headProps("name")} className="pl-0">
+          {t("collection")}
+        </TableSortHead>
+        <TableSortHead {...headProps("pastes")} className="w-28" alignEnd>
+          {t("pastes")}
+        </TableSortHead>
+        <TableSortHead {...headProps("updated")} className="w-[160px]">
+          {t("last_updated")}
+        </TableSortHead>
+        <TablePinnedHead className="w-16">
+          <span className="sr-only">{t("actions")}</span>
+        </TablePinnedHead>
+      </TableRow>
+    </TableHeader>
+  )
+
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         headerActions={null}
         title={t("collections")}
-        count={collections.length}
+        count={loading === undefined ? collections.length : undefined}
+        topBar={loading === undefined}
         description={t("group_related_pastes_under_one_name")}
         actions={
           <Button size="lg" onClick={() => setCreating(true)}>
@@ -133,7 +162,29 @@ export function CollectionsView({
         }
       />
 
-      {collections.length === 0 ? (
+      {loading !== undefined ? (
+        <>
+          <ul
+            aria-hidden="true"
+            className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border lg:hidden"
+          >
+            {Array.from({ length: loading }, (_, index) => (
+              <li key={index} className="flex h-[60px] items-center gap-3 px-4 sm:h-12">
+                <Skeleton className="size-4 shrink-0" />
+                <Skeleton className="h-3.5 w-40 max-w-full" />
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-hidden rounded-lg border border-border lg:block">
+            <Table className="min-w-[720px] table-fixed">
+              {tableHead}
+              <TableBody>
+                <SkeletonTableRows rows={loading} cells={["ml-auto w-6", "w-20"]} icon />
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      ) : collections.length === 0 ? (
         <div className="rounded-lg flex flex-col items-center gap-3 border border-border px-4 py-14 text-center text-sm text-muted-foreground">
           {t("no_collections_yet")}
           <button
@@ -178,23 +229,7 @@ export function CollectionsView({
           </ul>
           <div className="hidden overflow-hidden rounded-lg border border-border lg:block">
             <Table className="min-w-[720px] table-fixed">
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <SelectAllHead selection={selection} />
-                  <TableSortHead {...headProps("name")} className="pl-0">
-                    {t("collection")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("pastes")} className="w-28" alignEnd>
-                    {t("pastes")}
-                  </TableSortHead>
-                  <TableSortHead {...headProps("updated")} className="w-[160px]">
-                    {t("last_updated")}
-                  </TableSortHead>
-                  <TablePinnedHead className="w-16">
-                    <span className="sr-only">{t("actions")}</span>
-                  </TablePinnedHead>
-                </TableRow>
-              </TableHeader>
+              {tableHead}
               <TableBody>
                 {sorted.map((collection) => {
                   const index = ordered.indexOf(collection)
@@ -329,5 +364,33 @@ function DeleteSelected({ collections }: { collections: Collection[] }) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+// The Collections page before its own data arrives. The shell already lists the collections, so
+// once it has them this is the finished page. Before that it holds a row for each collection the
+// sidebar last listed.
+export function CollectionsLoading() {
+  const locale = useLocale()
+  const sidebar = useSidebarState()
+  const shell = useSettledShellData()
+  if (!shell) {
+    return (
+      <>
+        <LoadingStatus />
+        <CollectionsView loading={sidebar.shape.collections} collections={[]} updatedLabels={{}} />
+      </>
+    )
+  }
+  const now = Date.now()
+  return (
+    <CollectionsView
+      collections={orderCollections(shell.collections, sidebar)}
+      updatedLabels={Object.fromEntries(
+        shell.collections.flatMap((item) =>
+          item.updatedAt === null ? [] : [[item.slug, timeAgo(item.updatedAt, now, locale)]],
+        ),
+      )}
+    />
   )
 }

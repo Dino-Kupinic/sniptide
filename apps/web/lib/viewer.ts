@@ -36,3 +36,8 @@ export function viewerFromUser(user: SessionUser): ViewerSummary {
     ...viewerStorage,
   }
 }
+
+// The name a greeting uses: the first word of the display name.
+export function firstName(name: string) {
+  return name.split(/[\s._-]/)[0] || "there"
+}

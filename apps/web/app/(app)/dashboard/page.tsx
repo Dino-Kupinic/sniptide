@@ -8,7 +8,7 @@ import { shouldOnboard } from "@/lib/onboarding-server"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { readPreferences } from "@/lib/preference-store"
 import { getAppOrigin, getRequestOrigin, getSiteOrigin } from "@/lib/site"
-import { viewerFromUser } from "@/lib/viewer"
+import { firstName, viewerFromUser } from "@/lib/viewer"
 
 export async function generateMetadata() {
   const t = await getTranslations("Core")
@@ -41,7 +41,6 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
     // The MCP server lives with the app, not on the share-link domain.
     getAppOrigin() || getRequestOrigin().then((request) => request.origin),
   ])
-  const firstName = viewerFromUser(session.user).name.split(/[\s._-]/)[0] || "there"
 
   return (
     <Dashboard
@@ -49,7 +48,7 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
       layout={layout}
       sizes={preferences.dashboardSizes}
       agents={agents}
-      firstName={firstName}
+      firstName={firstName(viewerFromUser(session.user).name)}
       origin={origin}
       appOrigin={appOrigin}
     />

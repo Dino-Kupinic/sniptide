@@ -16,6 +16,7 @@ import {
 } from "@sniptide/ui/components/dropdown-menu"
 import { Logo } from "@sniptide/ui/components/logo"
 import { Reveal } from "@sniptide/ui/components/reveal"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   ChartColumnIcon,
@@ -37,6 +38,7 @@ import {
   Trash2Icon,
   UsersIcon,
 } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
@@ -45,33 +47,47 @@ import { CollectionIconPicker } from "@/components/collections/icon-picker"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistSheet } from "@/components/lists/import-gist"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { UserAvatar } from "@/components/people/user-avatar"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import type { Collection } from "@/lib/collections/types"
 import { setStarred } from "@/lib/pastes/actions"
-import type { SidebarData, SidebarPaste } from "@/lib/pastes/types"
+import type { SidebarPaste } from "@/lib/pastes/types"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 import { isActivePath } from "./nav-config"
 import { PasteMenu } from "./paste-menu"
+import { useSettledShellData, useShellData } from "./shell-data"
 import {
   type CollectionSort,
   completeSidebarOrder,
+  firstPageRows,
   isFiltered,
   type PasteSectionView,
   type SectionId,
   SIDEBAR_LIMITS,
   SIDEBAR_SORTS,
   SIDEBAR_VISIBILITIES,
+  type SidebarShape,
   type SidebarViews,
 } from "./sidebar-state"
 import { SidebarToggle } from "./top-bar"
 
 export interface SidebarProps {
   viewer: ViewerSummary
-  data: SidebarData
-  collections: Collection[]
+}
+
+interface SidebarLayoutProps {
+  views: SidebarViews
+  onChangeViews: (views: SidebarViews) => void
+  closed: SectionId[]
+  sectionOrder: SectionId[]
+  collectionOrder: string[]
+  onReorderSections: (order: SectionId[]) => void
+  onReorderCollections: (order: string[]) => void
+  onToggleSection: (section: SectionId) => void
+  // What the lists held last time, which their placeholder copies until they arrive.
+  shape: SidebarShape
+  onShape: (shape: SidebarShape) => void
 }
 
 const rowClass =
@@ -84,49 +100,16 @@ const revealClass =
 const iconButtonClass =
   "relative z-10 flex size-6 shrink-0 rounded-md items-center justify-center text-foreground/75 outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-foreground/10 [&_svg]:size-3.5"
 
+// The frame renders at once: logo, search, New paste, the main links and the account menu. The
+// lists between them wait for the shell's data behind a placeholder of the same shape.
 export function Sidebar({
   viewer,
-  data,
-  collections,
-  closed,
-  sectionOrder,
-  collectionOrder,
-  onReorderSections,
-  onReorderCollections,
-  onToggleSection,
   onToggleSidebar,
-  views,
-  onChangeViews,
-}: SidebarProps & {
-  views: SidebarViews
-  onChangeViews: (views: SidebarViews) => void
-  closed: SectionId[]
-  sectionOrder: SectionId[]
-  collectionOrder: string[]
-  onReorderSections: (order: SectionId[]) => void
-  onReorderCollections: (order: string[]) => void
-  onToggleSection: (section: SectionId) => void
-  onToggleSidebar: () => void
-}) {
+  ...layout
+}: SidebarProps & SidebarLayoutProps & { onToggleSidebar: () => void }) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const { open: openCommandMenu } = useCommandMenu()
-  const [creating, setCreating] = React.useState(false)
-  const { counts } = data
-  // Starred shows while there are stars at all, so a filter that matches none can be cleared.
-  const visibleSections = sectionOrder.filter((id) => id !== "starred" || counts.starred > 0)
-  const byName = views.collections.sort === "name"
-  const orderedSlugs = byName
-    ? [...collections]
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-        .map((item) => item.slug)
-    : completeSidebarOrder(
-        collectionOrder,
-        collections.map((item) => item.slug),
-      )
-  const setPasteView = (section: "pastes" | "starred", patch: Partial<PasteSectionView>) =>
-    onChangeViews({ ...views, [section]: { ...views[section], ...patch } })
-  const collectionsBySlug = new Map(collections.map((item) => [item.slug, item]))
 
   return (
     <div className="flex h-full flex-col gap-3 px-2 py-3">
@@ -179,12 +162,102 @@ export function Sidebar({
           <KeyRoundIcon />
           {t("secrets")}
         </NavLink>
-        <MoreMenu pathname={pathname} shared={counts.shared} />
+        <MoreMenu pathname={pathname} />
       </nav>
 
+      <React.Suspense
+        fallback={
+          <SidebarListsPlaceholder
+            closed={layout.closed}
+            sectionOrder={layout.sectionOrder}
+            shape={layout.shape}
+          />
+        }
+      >
+        <SidebarLists {...layout} pathname={pathname} />
+      </React.Suspense>
+
+      {/* A hairline across the full sidebar width separates the account menu from the lists. */}
+      <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
+            <UserAvatar person={{ id: viewer.id, image: viewer.image }} className="size-6" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{viewer.name}</span>
+            <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" className="w-(--anchor-width) min-w-60">
+            <AccountMenuItems name={viewer.name} email={viewer.email} username={viewer.username} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  )
+}
+
+const listsClass =
+  "-mx-2 flex min-h-0 flex-1 scroll-fade scrollbar-subtle flex-col gap-3 overflow-y-auto px-2"
+
+function SidebarLists({
+  pathname,
+  closed,
+  sectionOrder,
+  collectionOrder,
+  onReorderSections,
+  onReorderCollections,
+  onToggleSection,
+  views,
+  onChangeViews,
+  shape,
+  onShape,
+}: SidebarLayoutProps & { pathname: string }) {
+  const t = useTranslations("Workspace")
+  const { sidebar: data, collections, trashCount } = useShellData()
+  const [creating, setCreating] = React.useState(false)
+  const { counts } = data
+  // Starred shows while there are stars at all, so a filter that matches none can be cleared.
+  const visibleSections = sectionOrder.filter((id) => id !== "starred" || counts.starred > 0)
+  const byName = views.collections.sort === "name"
+  const orderedSlugs = byName
+    ? [...collections]
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+        .map((item) => item.slug)
+    : completeSidebarOrder(
+        collectionOrder,
+        collections.map((item) => item.slug),
+      )
+  const setPasteView = (section: "pastes" | "starred", patch: Partial<PasteSectionView>) =>
+    onChangeViews({ ...views, [section]: { ...views[section], ...patch } })
+  const collectionsBySlug = new Map(collections.map((item) => [item.slug, item]))
+
+  // An empty section still shows one line of text.
+  const next: SidebarShape = {
+    starred: counts.starred > 0 ? Math.max(1, data.starred.length) : null,
+    pastes: Math.max(1, data.recent.length),
+    collections: collections.length,
+    viewAll: [
+      ...(counts.starred > data.starred.length ? (["starred"] as const) : []),
+      ...(counts.pastes > data.recent.length ? (["pastes"] as const) : []),
+    ],
+    pages: {
+      pastes: firstPageRows(counts.pastes),
+      starred: firstPageRows(counts.starred),
+      shared: firstPageRows(counts.shared),
+      trash: firstPageRows(trashCount),
+    },
+    widgets: shape.widgets,
+  }
+  const changed = JSON.stringify(next) !== JSON.stringify(shape)
+  const latest = React.useRef(next)
+  latest.current = next
+  React.useEffect(() => {
+    if (changed) onShape(latest.current)
+  }, [changed, onShape])
+
+  return (
+    <>
       {/* Only the lists scroll, so the account menu stays pinned to the bottom however many
           items there are. The negative margin keeps focus rings at the edges from clipping. */}
-      <div className="-mx-2 flex min-h-0 flex-1 scroll-fade scrollbar-subtle flex-col gap-3 overflow-y-auto px-2">
+      <div className={listsClass}>
         <DragDropProvider
           onDragEnd={(event) => {
             if (event.canceled) return
@@ -374,23 +447,53 @@ export function Sidebar({
         open={creating}
         onOpenChange={setCreating}
       />
+    </>
+  )
+}
 
-      {/* A hairline across the full sidebar width separates the account menu from the lists. */}
-      <div className="-mx-2 shrink-0 border-t border-border px-2 pt-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted">
-            <UserAvatar person={{ id: viewer.id, image: viewer.image }} className="size-6" />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">{viewer.name}</span>
-            <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" className="w-(--anchor-width) min-w-60">
-            <AccountMenuItems name={viewer.name} email={viewer.email} username={viewer.username} />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+// The lists' stand-in: the same headings in the same order, and as many rows as each section
+// held last time.
+function SidebarListsPlaceholder({
+  closed,
+  sectionOrder,
+  shape,
+}: Pick<SidebarLayoutProps, "closed" | "sectionOrder" | "shape">) {
+  const t = useTranslations("Workspace")
+  const rows = { starred: shape.starred ?? 0, pastes: shape.pastes, collections: shape.collections }
+  return (
+    <div className={listsClass}>
+      {sectionOrder.map((id) =>
+        id === "starred" && shape.starred === null ? null : (
+          <section key={id} aria-busy="true" className="flex shrink-0 flex-col gap-0.5">
+            <div className="flex h-7 shrink-0 items-center gap-1 pr-1 pl-2 text-xs font-medium text-muted-foreground">
+              {t(id)}
+              <ChevronDownIcon
+                className={cn("size-3 shrink-0", closed.includes(id) && "-rotate-90")}
+              />
+            </div>
+            {closed.includes(id) ? null : (
+              <div className="flex flex-col gap-0.5">
+                {Array.from({ length: rows[id] }, (_, index) => (
+                  <div key={index} className="flex h-8 shrink-0 items-center gap-1.5 px-2">
+                    {id === "collections" ? <Skeleton className="size-4 shrink-0" /> : null}
+                    <Skeleton className="h-3.5" style={{ width: `${rowWidths[index % 5]}%` }} />
+                  </div>
+                ))}
+                {shape.viewAll.includes(id) ? (
+                  <div className="flex h-7 shrink-0 items-center px-2">
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </section>
+        ),
+      )}
     </div>
   )
 }
+
+const rowWidths = [58, 72, 46, 80, 64]
 
 // A top-level page under the logo: icon and label, marked while on that page or below it.
 function NavLink({
@@ -417,8 +520,9 @@ function NavLink({
 }
 
 // "More" under Analytics: the pages that used to be top-level, in a dropdown.
-function MoreMenu({ pathname, shared }: { pathname: string; shared: number }) {
+function MoreMenu({ pathname }: { pathname: string }) {
   const t = useTranslations("Workspace")
+  const shared = useSettledShellData()?.sidebar.counts.shared ?? 0
   // The import sheet lives outside the menu, which unmounts its items when it closes.
   const [importing, setImporting] = React.useState(false)
   // On one of its pages, the row reads as that page instead of "More".

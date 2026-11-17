@@ -1,13 +1,17 @@
-/* Feedback is reserved in layout immediately, but fast reads never flash a placeholder.
-   Only loading elements get this delay; real content is never held back or animated in. */
+/* A placeholder holds its space from the first frame and becomes visible after a short wait,
+   so a fast read swaps straight to its content without a flash of grey. Real content is never
+   held back or animated in. */
+[data-slot="skeleton"],
 .loading-feedback,
-.loading-feedback-measured [skullet-layer],
-.navigation-feedback {
-  animation: loading-feedback-appear 1ms step-end 300ms both;
+.loading-feedback-measured [skullet-layer] {
+  animation: loading-feedback-appear 1ms step-end 150ms both;
 }
 
-.loading-feedback [data-slot="skeleton"] {
-  animation: none;
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="skeleton"] {
+    opacity: 0;
+    animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 150ms infinite;
+  }
 }
 
 @keyframes loading-feedback-appear {
@@ -16,5 +20,15 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }

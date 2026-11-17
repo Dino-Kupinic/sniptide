@@ -4,17 +4,25 @@ import { Badge } from "@sniptide/ui/components/badge"
 import { Button } from "@sniptide/ui/components/button"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { HistoryIcon, PlusIcon } from "lucide-react"
+import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { ListHeader, SearchField } from "@/components/lists/toolbar"
-import { NavigationLink as Link } from "@/components/navigation-link"
+import { LoadingStatus } from "@/components/loading/status"
 import type { SecretSummary } from "@/lib/env/web-store"
 import { ENVIRONMENTS, type Environment } from "./client"
 
 export type SecretListItem = SecretSummary & { updated: string }
 
 // Every secret group, grouped by project, with an environment switch and a filter.
-export function SecretList({ groups }: { groups: SecretListItem[] }) {
+export function SecretList({
+  groups,
+  loading = false,
+}: {
+  groups: SecretListItem[]
+  // The page before its groups arrive: the title and the create action, with the list to follow.
+  loading?: boolean
+}) {
   const t = useTranslations("Secrets")
   const [environment, setEnvironment] = useState<Environment | "all">("all")
   const [filter, setFilter] = useState("")
@@ -59,12 +67,15 @@ export function SecretList({ groups }: { groups: SecretListItem[] }) {
       <ListHeader
         headerActions={null}
         title={t("title")}
-        count={groups.length}
+        count={loading ? undefined : groups.length}
+        topBar={!loading}
         description={t("list_description")}
         actions={create}
       />
       <div className="flex flex-wrap gap-2 lg:hidden">{create}</div>
-      {groups.length === 0 ? (
+      {loading ? (
+        <LoadingStatus />
+      ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-border px-4 py-14 text-center text-sm text-muted-foreground">
           {t("empty_list")}
           <Link href="/secrets/new" className="font-medium text-link hover:underline">
@@ -134,4 +145,8 @@ export function SecretList({ groups }: { groups: SecretListItem[] }) {
       )}
     </div>
   )
+}
+
+export function SecretListLoading() {
+  return <SecretList groups={[]} loading />
 }

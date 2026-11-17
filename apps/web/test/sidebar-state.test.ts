@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   completeSidebarOrder,
+  dayPart,
   defaultSidebarState,
   defaultSidebarViews,
   parseSidebarState,
@@ -49,6 +50,54 @@ describe("sidebar preferences", () => {
         }),
       ),
     ).toMatchObject({ closed: ["pastes"], sectionOrder: ["collections", "starred", "pastes"] })
+  })
+
+  test("the remembered shape survives serialization and drops what no list could hold", () => {
+    const shape: SidebarState["shape"] = {
+      starred: 3,
+      pastes: 8,
+      collections: 4,
+      viewAll: ["starred", "pastes"],
+      pages: { pastes: 10, starred: 3, shared: 0, trash: null },
+      widgets: { recent_pastes: 420, starred: 196 },
+    }
+    expect(parseSidebarState(cookie({ shape })).shape).toEqual(shape)
+    expect(
+      parseSidebarState(
+        cookie({
+          shape: {
+            starred: -1,
+            pastes: "many",
+            collections: 4.5,
+            viewAll: ["unknown", "pastes"],
+            pages: { pastes: 500, starred: "x" },
+            widgets: { recent_pastes: 0, unknown: 300, starred: 99999, popular: 240.5 },
+          },
+        }),
+      ).shape,
+    ).toEqual({
+      ...defaultSidebarState.shape,
+      viewAll: ["pastes"],
+      pages: { ...defaultSidebarState.shape.pages, pastes: 10 },
+    })
+    expect(parseSidebarState(cookie({ width: 288 })).shape).toEqual(defaultSidebarState.shape)
+  })
+
+  test("the time zone survives serialization and anything else is dropped", () => {
+    expect(parseSidebarState(cookie({ timeZone: "Europe/Vienna" })).timeZone).toBe("Europe/Vienna")
+    expect(parseSidebarState(cookie({ timeZone: "Etc/GMT+5" })).timeZone).toBe("Etc/GMT+5")
+    for (const timeZone of [5, "", "a b", "<script>", "x".repeat(65)]) {
+      expect(parseSidebarState(cookie({ timeZone })).timeZone).toBeNull()
+    }
+  })
+
+  test("the part of the day follows the time zone", () => {
+    const noonUtc = new Date("2026-06-01T12:00:00Z")
+    expect(dayPart(noonUtc, "UTC")).toBe("afternoon")
+    expect(dayPart(noonUtc, "America/Los_Angeles")).toBe("morning")
+    expect(dayPart(noonUtc, "Asia/Tokyo")).toBe("evening")
+    expect(dayPart(new Date("2026-06-01T03:00:00Z"), "UTC")).toBe("evening")
+    expect(dayPart(noonUtc, "Not/AZone")).toBeNull()
   })
 
   test("new collections append and deleted collections disappear without resetting the order", () => {
