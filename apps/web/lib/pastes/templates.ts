@@ -2,6 +2,7 @@ import "server-only"
 
 import { z } from "zod"
 import { getConfig } from "@/lib/config"
+import { hasFeature } from "@/lib/edition"
 import {
   isTemplateCategory,
   isTemplateDepartment,
@@ -11,13 +12,18 @@ import {
 
 // Templates are pages on the marketing site (sniptide.com/templates/<name>), whose files are also
 // served as JSON at /templates/<name>.json. `/new?template=<name>` reads that JSON and opens the
-// editor with its files, so the person saves an ordinary paste of their own. TEMPLATES_URL turns
+// editor with its files, so the person saves an ordinary paste of their own. In Cloud, TEMPLATES_URL turns
 // this on; without it the parameter is ignored and the editor opens empty.
 
 export type TemplateDraft = {
   title: string
   description: string
   files: { name: string; content: string }[]
+}
+
+export function gallerySource() {
+  const config = getConfig()
+  if (hasFeature("gallery", config)) return config.templatesUrl
 }
 
 // Template names are the page's slug. Anything else never reaches the network.
@@ -48,7 +54,7 @@ export function parseTemplate(value: unknown): TemplateDraft | null {
 // The template's files, or null for an unknown name, a site that doesn't answer in time or a body
 // that isn't a template. Responses are cached for an hour, as long as the site caches them.
 export async function templateDraft(name: string): Promise<TemplateDraft | null> {
-  const base = getConfig().templatesUrl
+  const base = gallerySource()
   const url = base ? templateJsonUrl(base, name) : null
   if (!url) return null
   try {
@@ -162,7 +168,7 @@ function resolveArtwork(visual: TemplateVisual, base: string): TemplateVisual | 
 // The templates for the dashboard, or an empty list when the site doesn't answer in time or sends
 // something else, including when TEMPLATES_URL is unset.
 export async function templateCatalog(): Promise<TemplateSummary[]> {
-  const base = getConfig().templatesUrl
+  const base = gallerySource()
   if (!base) return []
   const url = templateCatalogUrl(base)
   try {
