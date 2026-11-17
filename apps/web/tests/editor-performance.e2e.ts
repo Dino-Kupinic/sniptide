@@ -49,3 +49,21 @@ test("large files remain visible and editable with bounded editor markup", async
   expect(restored.focused).toBe(true)
   expect(restored.selection).toBe(restored.length)
 })
+
+test("loads syntax colours when an oversized TypeScript file becomes small", async ({
+  app,
+  browser,
+  screen,
+}) => {
+  await app.open("/new")
+  await screen.getByRole("button", "Add file").tap()
+  await screen.getByLabel("File name").fill("example.ts")
+  await screen.getByLabel("File name").press("Enter")
+  const editor = screen.getByLabel("Contents of example.ts")
+  await editor.fill("const line = 1\n".repeat(1501))
+  const keywords = browser.locator('div[aria-hidden="true"] span[class*="syntax-keyword"]')
+  await expect(keywords).toHaveCount(0)
+  await editor.fill("const answer = 42")
+  await expect(keywords).toHaveCount(1)
+  await expect(editor).toHaveValue("const answer = 42")
+})

@@ -695,3 +695,7 @@ The browser compares at most 250,000 pairs of lines when displaying revision his
 Within that budget, matching leading lines bypass the score table. Comparing against an
 empty file also skips the table. Larger comparisons list the old lines as removed and the
 new lines as added. Run `bun test apps/web/test/revision-diff.test.ts` to check line ordering.
+
+The revision viewer and paste editor load the browser syntax highlighter on demand. Empty
+files, plain text, and files over the live highlighting limits skip the engine and grammar
+download. Switching to a supported file loads its grammar.
