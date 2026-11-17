@@ -3,8 +3,15 @@ import { messages } from "./messages"
 
 // A fence longer than any run of backticks in the code, so the code can't close it early.
 function fence(content: string) {
-  const longest = Math.max(0, ...(content.match(/`+/g) ?? []).map((run) => run.length))
-  return "`".repeat(Math.max(3, longest + 1))
+  let length = 3
+  let start = content.indexOf("```")
+  while (start !== -1) {
+    let end = start + 3
+    while (content[end] === "`") end++
+    length = Math.max(length, end - start + 1)
+    start = content.indexOf("```", end)
+  }
+  return "`".repeat(length)
 }
 
 // Raycast highlights a fenced block by the name after the fence. Plain text gets none.
@@ -25,8 +32,9 @@ export function pasteMarkdown(paste: Pick<Paste, "files">) {
 }
 
 export function lineCount(content: string) {
-  if (!content) return 0
-  return content.replace(/\n$/, "").split("\n").length
+  let count = content.length && !content.endsWith("\n") ? 1 : 0
+  for (let at = content.indexOf("\n"); at !== -1; at = content.indexOf("\n", at + 1)) count++
+  return count
 }
 
 const VISIBILITY = {

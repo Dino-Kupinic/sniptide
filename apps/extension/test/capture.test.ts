@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  blockPreview,
   captureFromSelection,
   extensionFromHints,
   fileNameFor,
@@ -44,6 +45,14 @@ describe("fileNameFor", () => {
     expect(fileNameFor("{ not json", [])).toBe("snippet.txt")
     expect(fileNameFor("A sentence from an article.", [])).toBe("snippet.txt")
   })
+})
+
+test("previews the first nonblank line with its indentation and counts all lines", () => {
+  expect(blockPreview("\n \t\r\n  🐚 first\r\nsecond\n")).toEqual({
+    firstLine: "  🐚 first\r",
+    lines: 5,
+  })
+  expect(blockPreview("")).toEqual({ firstLine: "", lines: 1 })
 })
 
 describe("titleFor", () => {

@@ -699,3 +699,10 @@ new lines as added. Run `bun test apps/web/test/revision-diff.test.ts` to check 
 The revision viewer and paste editor load the browser syntax highlighter on demand. Empty
 files, plain text, and files over the live highlighting limits skip the engine and grammar
 download. Switching to a supported file loads its grammar.
+
+## Scanning paste text
+
+CLI line-range capture validates the full file as UTF-8 and scans for newlines through the
+requested end line. The web viewer stops counting once a collapsed preview exceeds its limit.
+The browser extension computes each code block preview once when it reads the page.
+Raycast scans Markdown for backtick runs of three or more to choose a safe fence.

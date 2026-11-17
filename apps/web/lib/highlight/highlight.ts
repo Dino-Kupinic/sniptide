@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import type { PasteFile } from "@/lib/pastes/types"
 import { observe, recordMetric } from "@/lib/telemetry"
+import { editorLineCount } from "./editor-limits"
 import { grammarFor } from "./grammars"
 import { loadGrammar, tokenize } from "./shiki"
 import { type HighlightedLines, highlightRoles } from "./types"
@@ -119,7 +120,7 @@ async function tokenizeFile(file: PasteFile): Promise<HighlightedLines | undefin
 
   // Same trailing-newline handling as the code view, so the lines line up.
   const code = file.content.replace(/\n$/, "")
-  if (Buffer.byteLength(code, "utf8") > maxBytes || code.split("\n").length > maxLines)
+  if (Buffer.byteLength(code, "utf8") > maxBytes || editorLineCount(code, maxLines) > maxLines)
     return undefined
   const key = `${rendererVersion}:${grammar}:${createHash("sha256").update(code).digest("hex")}`
   const cached = entries.get(key)

@@ -7,7 +7,7 @@ import { CopyIcon, DownloadIcon, FileCodeIcon, PrinterIcon, WrapTextIcon } from 
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { navigateTabs } from "@/components/tab-navigation"
-import { byteLength, formatBytes } from "@/lib/format"
+import { byteLength, formatBytes, lineCount } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { getLanguage } from "@/lib/pastes/languages"
 import { CodeBlock } from "./code-block"
@@ -111,8 +111,8 @@ export function FileViewer({
   const wrap = wrapChoice ?? (collapseAt !== undefined && !desktop)
 
   const rawHref = `/${slug}/raw?file=${encodeURIComponent(active.name)}`
-  const lines = active.content.replace(/\n$/, "").split("\n").length
-  const collapsed = collapseAt !== undefined && !expanded && lines > collapseAt
+  const collapsed =
+    collapseAt !== undefined && !expanded && lineCount(active.content, collapseAt) > collapseAt
 
   return (
     <div
