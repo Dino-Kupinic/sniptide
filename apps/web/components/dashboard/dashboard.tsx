@@ -13,7 +13,13 @@ import { track } from "@/lib/analytics"
 import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import { firstName } from "@/lib/viewer"
-import { AddWidgetMenu, TemplateMenu, useDashboardLayout, WidgetBoard } from "./widget-board"
+import {
+  AddWidgetMenu,
+  type DashboardTemplates,
+  TemplateMenu,
+  useDashboardLayout,
+  WidgetBoard,
+} from "./widget-board"
 import { type DashboardSource, useDashboardData } from "./widgets"
 
 // Greets in the viewer's own time of day. The server goes by the time zone the browser left in
@@ -55,6 +61,7 @@ export function Dashboard({
   layout,
   sizes,
   agents,
+  templates,
   firstName: name,
   origin,
   appOrigin,
@@ -63,12 +70,13 @@ export function Dashboard({
   layout: WidgetId[]
   sizes?: WidgetSizes
   agents: ConnectedAgent[]
+  templates: DashboardTemplates
   firstName: string
   // The share-link origin for row links, and the app's own origin for the MCP server address.
   origin: string
   appOrigin: string
 }) {
-  const dashboard = useDashboardLayout(layout, sizes)
+  const dashboard = useDashboardLayout(layout, sizes, { templates: templates !== null })
   const [editing, setEditing] = React.useState(false)
 
   // Once per visit with what the page loaded with; later changes are their own events.
@@ -104,6 +112,7 @@ export function Dashboard({
         editing={editing}
         data={data}
         agents={agents}
+        templates={templates}
         origin={origin}
         appOrigin={appOrigin}
       />

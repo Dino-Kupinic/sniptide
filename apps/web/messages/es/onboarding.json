@@ -68,6 +68,10 @@
         "title": "Guarda un fragmento",
         "body": "Un fragmento contiene código, notas o un prompt en uno o varios archivos, y tiene su propio enlace para compartir."
       },
+      "templates": {
+        "title": "Empieza con una plantilla",
+        "body": "Abre un archivo listo para usar, como un CLAUDE.md o una configuración de Docker Compose, en el editor y guárdalo como tu propio paste."
+      },
       "search": {
         "title": "Encuentra lo que buscas",
         "body": "La búsqueda abarca tus fragmentos, tus colecciones y todas las acciones de la aplicación."

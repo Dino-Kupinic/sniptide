@@ -68,6 +68,10 @@
         "title": "Paste speichern",
         "body": "Ein Paste enthält Code, Notizen oder einen Prompt in einer oder mehreren Dateien und bekommt einen eigenen Link zum Teilen."
       },
+      "templates": {
+        "title": "Mit einer Vorlage beginnen",
+        "body": "Öffne eine fertige Datei, etwa eine CLAUDE.md oder ein Docker-Compose-Setup, im Editor und speichere sie als deinen eigenen Paste."
+      },
       "search": {
         "title": "Alles finden",
         "body": "Die Suche umfasst deine Pastes, deine Sammlungen und jede Aktion in der App."

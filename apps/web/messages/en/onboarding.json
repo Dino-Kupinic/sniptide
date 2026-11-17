@@ -68,6 +68,10 @@
         "title": "Save a paste",
         "body": "A paste holds code, notes or a prompt in one or more files, and it gets its own link to share."
       },
+      "templates": {
+        "title": "Start from a template",
+        "body": "Open a ready-made file, such as a CLAUDE.md or a Docker Compose setup, in the editor and save it as your own paste."
+      },
       "search": {
         "title": "Find anything",
         "body": "Search covers your pastes, your collections and every action in the app."
