@@ -399,6 +399,8 @@
     "templates_no_match": "No templates match “{query}”.",
     "templates_no_department": "No templates in this department yet.",
     "templates_clear": "Clear filters",
+    "templates_use": "Use template",
+    "templates_use_label": "Use the {title}",
     "templates_intro": "Open a template in the editor and save it as your own paste."
   },
   "Secrets": {

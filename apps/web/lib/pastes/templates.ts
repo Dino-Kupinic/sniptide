@@ -81,10 +81,15 @@ export type TemplateSummary = {
   department: TemplateDepartment | null
   files: string[]
   visual: TemplateVisual | null
+  // The first lines of the main file as plain text, which the card's cover shows blurred behind
+  // the visual.
+  preview: string | null
 }
 
 // The whole directory for the catalog page, with room to grow. The widget shows the first few.
 const CATALOG_LIMIT = 100
+// Lines the cover shows before it runs off the bottom edge, like the website's cards.
+const PREVIEW_LINES = 10
 
 const catalogEntry = z.object({
   name: z.string().regex(templateName),
@@ -110,6 +115,12 @@ const catalogEntry = z.object({
     ])
     .nullable()
     .catch(null),
+  preview: z
+    .string()
+    .transform((value) => value.split("\n").slice(0, PREVIEW_LINES).join("\n").slice(0, 2000))
+    .nullish()
+    .catch(null)
+    .transform((value) => value ?? null),
 })
 
 // The list sits next to the template pages: https://sniptide.com/templates becomes

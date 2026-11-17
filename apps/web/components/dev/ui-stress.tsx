@@ -40,6 +40,7 @@ const STRESS_TEMPLATES = {
       department: "engineering" as const,
       files: [".github/workflows/sehr-langer-workflow-name.yml", "CONTRIBUTING.md", "README.md"],
       visual: null,
+      preview: null,
     })),
   ),
 }

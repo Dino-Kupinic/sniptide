@@ -3,7 +3,7 @@
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { TemplateCell, useTemplateLabels } from "@/components/dashboard/templates-widget"
+import { TemplateCard, useTemplateLabels } from "@/components/dashboard/templates-widget"
 import { SearchField } from "@/components/lists/toolbar"
 import type { TemplateSummary } from "@/lib/pastes/templates"
 import {
@@ -104,20 +104,11 @@ export function TemplateCatalog({
       </p>
 
       {visible.length > 0 ? (
-        // Each cell draws its right and bottom hairline, and the frame clips the outer ones, so a
-        // last row that isn't full leaves the canvas instead of a filled gap.
-        <div className="overflow-hidden rounded-lg border border-border">
-          <ul className="-mr-px -mb-px grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {visible.map((template) => (
-              <TemplateCell
-                key={template.name}
-                template={template}
-                from="catalog"
-                className="border-r border-b border-border"
-              />
-            ))}
-          </ul>
-        </div>
+        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {visible.map((template) => (
+            <TemplateCard key={template.name} template={template} from="catalog" />
+          ))}
+        </ul>
       ) : (
         <div className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 lg:p-5">
           <p className="text-sm leading-5 text-muted-foreground">

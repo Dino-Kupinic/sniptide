@@ -399,6 +399,8 @@
     "templates_no_match": "Keine Vorlage passt zu „{query}“.",
     "templates_no_department": "In diesem Bereich gibt es noch keine Vorlagen.",
     "templates_clear": "Filter zurücksetzen",
+    "templates_use": "Vorlage verwenden",
+    "templates_use_label": "{title} verwenden",
     "templates_intro": "Öffne eine Vorlage im Editor und speichere sie als deinen eigenen Paste."
   },
   "Secrets": {

@@ -114,6 +114,7 @@ describe("template catalog", () => {
       category: "something-new",
       department: "engineering",
       visual: { kind: "icon", src: "/i/robots.svg", mark: "robots.txt" },
+      preview: Array.from({ length: 14 }, (_, line) => `line ${line + 1}`).join("\n"),
     }
     expect(parseTemplateCatalog({ templates: [entry, icon] }, catalogUrl)).toEqual([
       {
@@ -124,6 +125,7 @@ describe("template catalog", () => {
         department: null,
         files: ["CLAUDE.md"],
         visual: { kind: "logo", src: "https://sniptide.com/logos/claude.svg", ratio: 4.5 },
+        preview: null,
       },
       {
         name: "robots-txt",
@@ -133,6 +135,7 @@ describe("template catalog", () => {
         department: "engineering",
         files: ["CLAUDE.md"],
         visual: { kind: "icon", src: "https://sniptide.com/i/robots.svg", mark: "robots.txt" },
+        preview: Array.from({ length: 10 }, (_, line) => `line ${line + 1}`).join("\n"),
       },
     ])
   })
@@ -145,12 +148,13 @@ describe("template catalog", () => {
           { ...entry, files: [] },
           { ...entry, visual: { kind: "logo", src: "javascript:alert(1)", ratio: 1 } },
           { ...entry, visual: { kind: "logo", src: "http://example.com/a.svg", ratio: 1 } },
-          { ...entry, visual: "nope" },
+          { ...entry, visual: "nope", preview: 42 },
         ],
       },
       catalogUrl,
     )
     expect(list.map((template) => template.visual)).toEqual([null, null, null])
+    expect(list.map((template) => template.preview)).toEqual([null, null, null])
     expect(parseTemplateCatalog({ templates: Array(120).fill(entry) }, catalogUrl)).toHaveLength(
       100,
     )

@@ -399,6 +399,8 @@
     "templates_no_match": "Ninguna plantilla coincide con «{query}».",
     "templates_no_department": "Todavía no hay plantillas en esta área.",
     "templates_clear": "Borrar filtros",
+    "templates_use": "Usar plantilla",
+    "templates_use_label": "Usar {title}",
     "templates_intro": "Abre una plantilla en el editor y guárdala como tu propio paste."
   },
   "Secrets": {

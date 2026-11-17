@@ -1,6 +1,8 @@
 "use client"
 
+import { Button } from "@sniptide/ui/components/button"
 import { cn } from "@sniptide/ui/lib/utils"
+import { SquarePenIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import type * as React from "react"
@@ -16,7 +18,7 @@ const SINGLE_COLUMN = 3
 
 // Logos share one height, so wordmarks of different widths read as peers. The artwork is a mask
 // filled with the text color, so it follows light and dark like the app's other icons.
-const LOGO_HEIGHT = 16
+const LOGO_HEIGHT = 26
 
 function Visual({ visual }: { visual: TemplateVisual }) {
   if (visual.kind === "logo") {
@@ -26,15 +28,17 @@ function Visual({ visual }: { visual: TemplateVisual }) {
       maskImage: `url("${visual.src}")`,
       maskSize: "contain",
       maskRepeat: "no-repeat",
-      maskPosition: "left center",
+      maskPosition: "center",
     }
-    return <span aria-hidden className="block max-w-full shrink-0 bg-foreground" style={style} />
+    return <span aria-hidden className="block max-w-full bg-foreground" style={style} />
   }
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <img src={visual.src} alt="" width={16} height={16} className="size-4 shrink-0" />
-      <span className="truncate text-[13px] leading-4 font-semibold">{visual.mark}</span>
-    </span>
+    <>
+      <img src={visual.src} alt="" width={28} height={28} className="size-7 shrink-0" />
+      <span className="truncate font-heading text-xl leading-7 font-bold tracking-[-0.02em]">
+        {visual.mark}
+      </span>
+    </>
   )
 }
 
@@ -63,59 +67,87 @@ export function useTemplateLabels() {
   }
 }
 
-// One template: its logo and category, title, description and file names. The whole cell opens
-// the editor filled with the template's files, and the person saves an ordinary paste of their
-// own.
-export function TemplateCell({
+// One template as the website's directory draws it: a cover with the tool's logo over a blurred
+// glimpse of the main file, then the category, title and description, and a footer with the file
+// count and Use template. The whole card opens the editor filled with the template's files, and
+// the person saves an ordinary paste of their own.
+export function TemplateCard({
   template,
   from,
   className,
 }: {
   template: TemplateSummary
-  // Where the cell sits, for the analytics event.
+  // Where the card sits, for the analytics event.
   from: "dashboard" | "catalog"
   className?: string
 }) {
+  const t = useTranslations("Workspace")
+  const tPaste = useTranslations("Paste")
   const labels = useTemplateLabels()
   const category = labels.category(template.category)
+  const href = `/new?template=${encodeURIComponent(template.name)}`
+  const open = () => track("template_opened", { template: template.name, from })
   return (
     <li
       className={cn(
-        "relative flex min-w-0 flex-col gap-1.5 bg-background px-4 pt-3.5 pb-4 hover:bg-muted/50",
+        "relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-background",
         className,
       )}
     >
-      <div className="mb-1 flex h-5 min-w-0 items-center gap-3 text-foreground">
-        {template.visual ? <Visual visual={template.visual} /> : null}
-        {category ? (
-          <span className="ml-auto shrink-0 text-xs leading-4 text-muted-foreground">
-            {category}
-          </span>
+      <div className="relative flex h-44 items-center justify-center overflow-hidden border-b border-border bg-sidebar">
+        {template.preview ? (
+          <pre
+            aria-hidden
+            className="absolute inset-0 overflow-hidden px-3.5 pt-2.5 font-mono text-xs leading-5 whitespace-pre text-muted-foreground opacity-50 blur-[3px] select-none"
+          >
+            {template.preview}
+          </pre>
         ) : null}
+        <div className="relative flex h-14 max-w-[80%] min-w-0 items-center gap-2.5 rounded-lg border border-border bg-background px-5 text-foreground">
+          {template.visual ? (
+            <Visual visual={template.visual} />
+          ) : (
+            <span className="truncate font-heading text-xl leading-7 font-bold tracking-[-0.02em]">
+              {template.files[0]?.split("/").pop()}
+            </span>
+          )}
+        </div>
       </div>
-      <Link
-        href={`/new?template=${encodeURIComponent(template.name)}`}
-        onClick={() => track("template_opened", { template: template.name, from })}
-        className="min-w-0 truncate text-sm leading-5 font-medium outline-none after:absolute after:inset-0 focus-visible:underline"
-      >
-        {template.title}
-      </Link>
-      <p className="line-clamp-2 text-[13px] leading-[18px] text-muted-foreground">
-        {template.description}
-      </p>
-      <p className="mt-auto truncate pt-1.5 font-mono text-xs leading-4 text-muted-foreground">
-        {template.files.map((file) => (
-          <span key={file} className="mr-3 last:mr-0">
-            {file}
+      <div className="flex flex-1 flex-col px-5 pt-4 pb-5">
+        {category ? (
+          <span className="text-[13px] leading-[18px] text-muted-foreground">{category}</span>
+        ) : null}
+        <Link
+          href={href}
+          onClick={open}
+          className="mt-1.5 line-clamp-2 font-heading text-xl leading-7 font-bold tracking-[-0.02em] text-balance [overflow-wrap:anywhere] outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-ring"
+        >
+          {template.title}
+        </Link>
+        <p className="mt-2 line-clamp-2 text-sm leading-5 text-pretty text-muted-foreground">
+          {template.description}
+        </p>
+        <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+          <span className="min-w-0 truncate text-[13px] leading-[18px] text-muted-foreground tabular-nums">
+            {tPaste("fileCount", { count: template.files.length })}
           </span>
-        ))}
-      </p>
+          <Button
+            size="sm"
+            className="relative z-10 shrink-0"
+            nativeButton={false}
+            render={<Link href={href} onClick={open} />}
+            aria-label={t("templates_use_label", { title: template.title })}
+          >
+            <SquarePenIcon aria-hidden />
+            {t("templates_use")}
+          </Button>
+        </div>
+      </div>
     </li>
   )
 }
 
-// The first templates on the dashboard, as cells on hairlines inside the widget's frame rather
-// than as cards of their own.
+// The first templates on the dashboard, as the same cards as the catalog page.
 export function TemplatesGrid({
   templates,
   size,
@@ -124,9 +156,9 @@ export function TemplatesGrid({
   size: WidgetSize
 }) {
   return (
-    <ul className="grid grid-cols-1 gap-px bg-border @xl/widget:grid-cols-2 @4xl/widget:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-4 p-4 @xl/widget:grid-cols-2 @4xl/widget:grid-cols-3">
       {templates.slice(0, SHOWN[size]).map((template, index) => (
-        <TemplateCell
+        <TemplateCard
           key={template.name}
           template={template}
           from="dashboard"
