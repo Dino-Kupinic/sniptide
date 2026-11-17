@@ -1,7 +1,9 @@
 "use client"
 
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, KeyRoundIcon } from "lucide-react"
+import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
@@ -12,9 +14,9 @@ import {
   PasteTable,
 } from "@/components/lists/paste-table"
 import { LoadingRegion } from "@/components/loading/region"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { LanguageIcon } from "@/components/paste/language-icon"
+import { useSidebarState, useSidebarUpdate } from "@/components/shell/app-shell"
 import { navigateTabs } from "@/components/tab-navigation"
 import type { AgentActivity } from "@/lib/agents"
 import type { WidgetId } from "@/lib/dashboard/widgets"
@@ -111,14 +113,67 @@ function PasteListRow({ row, value }: { row: PasteRow; value: React.ReactNode })
   )
 }
 
-function WidgetLoading({ id }: { id: WidgetId }) {
-  const t = useTranslations("Workspace")
+// Wraps a loaded widget to remember its height in the sidebar cookie. A widget that loads again,
+// on a navigation or a fresh request, holds that height, so the ones below it stay in place.
+export function MeasuredWidget({ id, children }: { id: WidgetId; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null)
+  const update = useSidebarUpdate()
+  React.useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    let timer: ReturnType<typeof setTimeout>
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer)
+      // A resize reports many sizes; only the one it settles on is worth a cookie write.
+      timer = setTimeout(() => {
+        const height = element.offsetHeight
+        if (height === 0) return
+        update((state) =>
+          state.shape.widgets[id] === height
+            ? state
+            : {
+                ...state,
+                shape: { ...state.shape, widgets: { ...state.shape.widgets, [id]: height } },
+              },
+        )
+      }, 300)
+    })
+    observer.observe(element)
+    return () => {
+      clearTimeout(timer)
+      observer.disconnect()
+    }
+  }, [id, update])
   return (
-    <ListWidget id={id}>
-      <LoadingRegion className="px-4 py-8 text-sm text-muted-foreground">
-        <span>{t("loading")}</span>
-      </LoadingRegion>
-    </ListWidget>
+    <div ref={ref} className="flex min-w-0 flex-col [&>*]:flex-1">
+      {children}
+    </div>
+  )
+}
+
+// A widget before its rows arrive: its frame and name, and rows the size of a list row. It takes
+// the height the widget last had, when this browser has seen it.
+function WidgetLoading({ id }: { id: WidgetId }) {
+  const height = useSidebarState().shape.widgets[id]
+  return (
+    <div
+      style={{ height }}
+      className="flex min-w-0 flex-col [&>section]:min-h-0 [&>section]:flex-1"
+    >
+      <ListWidget id={id}>
+        <LoadingRegion>
+          <ul className="flex flex-col divide-y divide-border">
+            {[52, 68, 44, 60, 36].map((width) => (
+              <li key={width} className="flex h-12 items-center gap-3 px-4">
+                <Skeleton className="size-4 shrink-0" />
+                <Skeleton className="h-3.5" style={{ width: `${width}%` }} />
+                <Skeleton className="ml-auto h-3.5 w-12 shrink-0" />
+              </li>
+            ))}
+          </ul>
+        </LoadingRegion>
+      </ListWidget>
+    </div>
   )
 }
 

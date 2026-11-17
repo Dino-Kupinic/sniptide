@@ -79,28 +79,15 @@ function StorageMeter({ used, limit }: { used: number; limit: number | null }) {
 
 // Desktop shows the sections as tabs. On phones /settings is a list of section rows, and
 // /settings?tab=… opens one section on its own screen with a back button.
-export function SettingsView({
-  profile,
-  preferences,
-  emailAvailable,
-  pasteCount,
-  storage,
-  api,
-  security,
-  usage,
+// The settings page around its sections: the title, the tab strip on desktop and the section
+// list on phones. None of it needs account data, so the loading state draws it as it is.
+function SettingsFrame({
+  mobileFooter,
+  children,
 }: {
-  usage: React.ReactNode
-  profile: ProfileState
-  preferences: Preferences
-  emailAvailable: boolean
-  security: AccountSecurity & {
-    providers: SocialProvider[]
-    linkError: string | null
-    demo: boolean
-  }
-  pasteCount: number
-  storage: { used: number; limit: number | null } | null
-  api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
+  // Shown under the phone's section list.
+  mobileFooter?: React.ReactNode
+  children: (tab: SettingsTab) => React.ReactNode
 }) {
   const t = useTranslations("Settings")
   const panelId = React.useId()
@@ -112,7 +99,6 @@ export function SettingsView({
     { value: "api", label: t("apiTokens"), icon: KeyRoundIcon },
     { value: "usage", label: t("usage"), icon: ChartColumnIcon },
   ]
-  const router = useRouter()
   // The tab lives in the URL, so it survives a reload, can be linked to, and the phone back
   // gesture closes an open section. pushState and replaceState update useSearchParams.
   const opened = parseTab(useSearchParams().get("tab"))
@@ -187,19 +173,7 @@ export function SettingsView({
               </a>
             ))}
           </nav>
-          {storage ? <StorageMeter used={storage.used} limit={storage.limit} /> : null}
-          <Button
-            variant="outline"
-            size="xl"
-            className="w-full"
-            onClick={async () => {
-              await signOutAccount()
-              router.replace("/sign-in")
-              router.refresh()
-            }}
-          >
-            {t("signOut")}
-          </Button>
+          {mobileFooter}
         </div>
       )}
 
@@ -242,49 +216,115 @@ export function SettingsView({
         aria-labelledby={`${panelId}-tab-${tab}`}
         className={cn("flex flex-col", !opened && "max-lg:hidden")}
       >
-        {tab === "general" ? (
-          <>
-            <ProfileSection profile={profile} />
-            <SettingsSection title={t("language")} description={t("languageDescription")}>
-              <LanguageSwitcher />
-            </SettingsSection>
-            <EditorSection initial={preferences} />
-          </>
-        ) : null}
-        {tab === "account" ? (
-          <>
-            <EmailSection
-              email={profile.email}
-              emailVerified={profile.emailVerified}
-              hasPassword={security.hasPassword}
-              emailAvailable={emailAvailable}
-            />
-            <PasswordSection hasPassword={security.hasPassword} />
-            <ConnectedAccountsSection
-              linked={security.linked}
-              available={security.providers}
-              linkError={security.linkError}
-            />
-            <SessionsSection sessions={security.sessions} demo={security.demo} />
-            <DeleteAccountSection pasteCount={pasteCount} hasPassword={security.hasPassword} />
-          </>
-        ) : null}
-        {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
-        {tab === "notifications" ? (
-          <NotificationSection
-            initial={preferences.notifications}
-            emailAvailable={emailAvailable}
-            emailVerified={profile.emailVerified}
-          />
-        ) : null}
-        {tab === "api" ? (
-          <>
-            <ApiTokensSection tokens={api.tokens} origin={api.origin} />
-            <EnvGroupsSection groups={api.envGroups} />
-          </>
-        ) : null}
-        {tab === "usage" ? usage : null}
+        {children(tab)}
       </div>
     </div>
+  )
+}
+
+function SignOutButton() {
+  const t = useTranslations("Settings")
+  const router = useRouter()
+  return (
+    <Button
+      variant="outline"
+      size="xl"
+      className="w-full"
+      onClick={async () => {
+        await signOutAccount()
+        router.replace("/sign-in")
+        router.refresh()
+      }}
+    >
+      {t("signOut")}
+    </Button>
+  )
+}
+
+// Settings before the account's data arrives. The sections follow under the frame.
+export function SettingsLoading() {
+  return <SettingsFrame>{() => null}</SettingsFrame>
+}
+
+export function SettingsView({
+  profile,
+  preferences,
+  emailAvailable,
+  pasteCount,
+  storage,
+  api,
+  security,
+  usage,
+}: {
+  usage: React.ReactNode
+  profile: ProfileState
+  preferences: Preferences
+  emailAvailable: boolean
+  security: AccountSecurity & {
+    providers: SocialProvider[]
+    linkError: string | null
+    demo: boolean
+  }
+  pasteCount: number
+  storage: { used: number; limit: number | null } | null
+  api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
+}) {
+  const t = useTranslations("Settings")
+  return (
+    <SettingsFrame
+      mobileFooter={
+        <>
+          {storage ? <StorageMeter used={storage.used} limit={storage.limit} /> : null}
+          <SignOutButton />
+        </>
+      }
+    >
+      {(tab) => (
+        <>
+          {tab === "general" ? (
+            <>
+              <ProfileSection profile={profile} />
+              <SettingsSection title={t("language")} description={t("languageDescription")}>
+                <LanguageSwitcher />
+              </SettingsSection>
+              <EditorSection initial={preferences} />
+            </>
+          ) : null}
+          {tab === "account" ? (
+            <>
+              <EmailSection
+                email={profile.email}
+                emailVerified={profile.emailVerified}
+                hasPassword={security.hasPassword}
+                emailAvailable={emailAvailable}
+              />
+              <PasswordSection hasPassword={security.hasPassword} />
+              <ConnectedAccountsSection
+                linked={security.linked}
+                available={security.providers}
+                linkError={security.linkError}
+              />
+              <SessionsSection sessions={security.sessions} demo={security.demo} />
+              <DeleteAccountSection pasteCount={pasteCount} hasPassword={security.hasPassword} />
+            </>
+          ) : null}
+          {tab === "defaults" ? <DefaultsSection initial={preferences} /> : null}
+          {tab === "notifications" ? (
+            <NotificationSection
+              initial={preferences.notifications}
+              emailAvailable={emailAvailable}
+              emailVerified={profile.emailVerified}
+            />
+          ) : null}
+          {tab === "api" ? (
+            <>
+              <ApiTokensSection tokens={api.tokens} origin={api.origin} />
+              <EnvGroupsSection groups={api.envGroups} />
+            </>
+          ) : null}
+          {tab === "usage" ? usage : null}
+        </>
+      )}
+    </SettingsFrame>
   )
 }

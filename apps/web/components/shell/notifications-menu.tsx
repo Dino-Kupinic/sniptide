@@ -31,6 +31,7 @@ import {
   type NotificationFeed,
   type NotificationKind,
 } from "@/lib/notifications/types"
+import { createStore, type Store, useStore } from "./store"
 
 const icons: Record<NotificationKind, LucideIcon> = {
   shared: Share2Icon,
@@ -42,8 +43,7 @@ const icons: Record<NotificationKind, LucideIcon> = {
 type Feed = NotificationFeed | "error" | null
 
 interface Notifications {
-  feed: Feed
-  unread: number
+  feed: Store<Feed>
   load: () => Promise<void>
   markOne: (id: string) => void
   remove: (id: string) => void
@@ -55,7 +55,9 @@ const NotificationsContext = React.createContext<Notifications | null>(null)
 function useNotifications() {
   const value = React.useContext(NotificationsContext)
   if (!value) throw new Error("useNotifications needs a NotificationsProvider")
-  return value
+  const feed = useStore(value.feed)
+  const unread = typeof feed === "object" && feed !== null ? feed.unread : 0
+  return { ...value, feed, unread }
 }
 
 // The account's notifications from /api/notifications, shared by the desktop bell and the mobile
@@ -64,7 +66,9 @@ function useNotifications() {
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const locale = useLocale()
   const t = useTranslations("Workspace")
-  const [feed, setFeed] = React.useState<Feed>(null)
+  // The feed arrives while a screen can still be streaming, so it lives in a store and the
+  // context value stays the same.
+  const [feed] = React.useState(() => createStore<Feed>(null))
   const currentLocale = React.useRef(locale)
   currentLocale.current = locale
   const [reader] = React.useState(
@@ -78,8 +82,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
           if (!response.ok) throw new Error(String(response.status))
           return (await response.json()) as NotificationFeed
         },
-        publish: setFeed,
-        failed: () => setFeed((current) => (current === null ? "error" : current)),
+        publish: feed.set,
+        failed: () => {
+          if (feed.get() === null) feed.set("error")
+        },
       }),
   )
   const load = React.useCallback(() => reader.load(), [reader])
@@ -101,65 +107,62 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, [load, locale, reader])
 
-  const loaded = typeof feed === "object" && feed !== null ? feed : null
-  const unread = loaded?.unread ?? 0
+  // The same object until the locale changes, so a new feed never re-renders the screen.
+  const actions = React.useMemo<Notifications>(() => {
+    // Marks locally first, so the badge and the list answer right away, then tells the server and
+    // asks for the real state.
+    function mark(
+      change: (current: NotificationFeed) => NotificationFeed,
+      save: () => Promise<{ ok: boolean }>,
+    ) {
+      const current = feed.get()
+      if (typeof current === "object" && current !== null) feed.set(change(current))
+      reader
+        .mutate(async () => {
+          const result = await save()
+          if (!result.ok) throw new Error("not saved")
+        })
+        .catch(() => {
+          toast.error(t("couldnt_update_notifications_try_again"))
+        })
+    }
 
-  // Marks locally first, so the badge and the list answer right away, then tells the server and
-  // asks for the real state.
-  function mark(
-    change: (current: NotificationFeed) => NotificationFeed,
-    save: () => Promise<{ ok: boolean }>,
-  ) {
-    setFeed((current) =>
-      typeof current === "object" && current !== null ? change(current) : current,
-    )
-    reader
-      .mutate(async () => {
-        const result = await save()
-        if (!result.ok) throw new Error("not saved")
-      })
-      .catch(() => {
-        toast.error(t("couldnt_update_notifications_try_again"))
-      })
-  }
+    const markOne = (id: string) =>
+      mark(
+        (current) => {
+          const target = current.items.find((item) => item.id === id)
+          if (!target || target.read) return current
+          return {
+            unread: Math.max(0, current.unread - 1),
+            items: current.items.map((item) => (item.id === id ? { ...item, read: true } : item)),
+          }
+        },
+        () => markRead(id),
+      )
 
-  const markOne = (id: string) =>
-    mark(
-      (current) => {
-        const target = current.items.find((item) => item.id === id)
-        if (!target || target.read) return current
-        return {
-          unread: Math.max(0, current.unread - 1),
-          items: current.items.map((item) => (item.id === id ? { ...item, read: true } : item)),
-        }
-      },
-      () => markRead(id),
-    )
+    const remove = (id: string) =>
+      mark(
+        (current) => {
+          const target = current.items.find((item) => item.id === id)
+          if (!target) return current
+          return {
+            unread: target.read ? current.unread : Math.max(0, current.unread - 1),
+            items: current.items.filter((item) => item.id !== id),
+          }
+        },
+        () => dismiss(id),
+      )
 
-  const remove = (id: string) =>
-    mark(
-      (current) => {
-        const target = current.items.find((item) => item.id === id)
-        if (!target) return current
-        return {
-          unread: target.read ? current.unread : Math.max(0, current.unread - 1),
-          items: current.items.filter((item) => item.id !== id),
-        }
-      },
-      () => dismiss(id),
-    )
+    const markAll = () =>
+      mark(
+        (current) => ({ unread: 0, items: current.items.map((item) => ({ ...item, read: true })) }),
+        markAllRead,
+      )
 
-  const markAll = () =>
-    mark(
-      (current) => ({ unread: 0, items: current.items.map((item) => ({ ...item, read: true })) }),
-      markAllRead,
-    )
+    return { feed, load, markOne, remove, markAll }
+  }, [feed, load, reader, t])
 
-  return (
-    <NotificationsContext value={{ feed, unread, load, markOne, remove, markAll }}>
-      {children}
-    </NotificationsContext>
-  )
+  return <NotificationsContext value={actions}>{children}</NotificationsContext>
 }
 
 function UnreadBadge({ unread }: { unread: number }) {

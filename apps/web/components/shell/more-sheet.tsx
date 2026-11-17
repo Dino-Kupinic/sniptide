@@ -19,16 +19,17 @@ import {
   UserIcon,
   UsersIcon,
 } from "lucide-react"
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { UserAvatar } from "@/components/people/user-avatar"
 import { useSiteOrigin } from "@/components/site-host"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import { profilePath } from "@/lib/profile-path"
 import type { ViewerSummary } from "@/lib/viewer"
 import { isActivePath } from "./nav-config"
+import { useSettledShellData } from "./shell-data"
 
 export interface MoreCounts {
   collections: number
@@ -42,13 +43,22 @@ export function MoreSheet({
   open,
   onOpenChange,
   viewer,
-  counts,
+  counts: given,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   viewer: ViewerSummary
-  counts: MoreCounts
+  counts?: MoreCounts
 }) {
+  // Inside the app shell the counts join their rows once the shell's data has arrived.
+  const shell = useSettledShellData()
+  const counts =
+    given ??
+    (shell && {
+      collections: shell.collections.length,
+      shared: shell.sidebar.counts.shared,
+      trash: shell.trashCount,
+    })
   const t = useTranslations("Workspace")
   const origin = useSiteOrigin()
   const locale = useLocale()
@@ -60,10 +70,20 @@ export function MoreSheet({
 
   const pages: { href: string; label: string; icon: LucideIcon; count?: number }[] = [
     { href: "/analytics", label: t("analytics"), icon: ChartColumnIcon },
-    { href: "/collections", label: t("collections"), icon: FolderIcon, count: counts.collections },
+    {
+      href: "/collections",
+      label: t("collections"),
+      icon: FolderIcon,
+      count: counts?.collections,
+    },
     { href: "/secrets", label: t("secrets"), icon: KeyRoundIcon },
-    { href: "/shared", label: t("shared_with_me"), icon: UsersIcon, count: counts.shared },
-    { href: "/trash", label: t("trash"), icon: Trash2Icon, count: counts.trash },
+    {
+      href: "/shared",
+      label: t("shared_with_me"),
+      icon: UsersIcon,
+      count: counts?.shared,
+    },
+    { href: "/trash", label: t("trash"), icon: Trash2Icon, count: counts?.trash },
   ]
 
   async function signOut() {

@@ -11,6 +11,7 @@ import {
 } from "@sniptide/ui/components/alert-dialog"
 import { Button } from "@sniptide/ui/components/button"
 import { FormError } from "@sniptide/ui/components/form-error"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import {
   Table,
   TableBody,
@@ -42,6 +43,7 @@ import {
 } from "@/lib/pastes/list-query"
 import type { TrashRow } from "@/lib/pastes/rows"
 import { TrashBulkActions } from "./bulk-actions"
+import { SkeletonListFooter, SkeletonMobileRows, SkeletonTableRows } from "./list-skeleton"
 import { ActionSheet } from "./row-menu"
 import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
 import { ListHeader, Pagination, SearchField } from "./toolbar"
@@ -188,7 +190,10 @@ export function TrashList({
   host,
   query: serverQuery,
   pagination,
+  loading,
 }: {
+  // While the page's data loads: how many rows to hold room for.
+  loading?: number
   rows: TrashRow[]
   sizeLabel: string
   host: string
@@ -244,7 +249,8 @@ export function TrashList({
     <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         title={t("trash")}
-        count={pagination.totalAll}
+        count={loading === undefined ? pagination.totalAll : undefined}
+        topBar={loading === undefined}
         actions={emptyButton("desktop")}
         mobileActions={empty ? null : emptyButton("mobile")}
       />
@@ -293,6 +299,9 @@ export function TrashList({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading !== undefined ? (
+                  <SkeletonTableRows rows={loading} cells={["w-20", "w-20", "w-[120px]"]} detail />
+                ) : null}
                 {rows.map((row) => (
                   <TableRow key={row.slug} data-selected={selection.has(row.slug)}>
                     <SelectCell selection={selection} rowKey={row.slug} name={row.title} />
@@ -348,6 +357,7 @@ export function TrashList({
               </TableBody>
             </Table>
 
+            {loading !== undefined ? <SkeletonMobileRows rows={loading} /> : null}
             <ul className="flex flex-col lg:hidden">
               {rows.map((row) => (
                 <li key={row.slug} className="flex items-center gap-3 border-b border-border py-3">
@@ -370,13 +380,21 @@ export function TrashList({
               ))}
             </ul>
 
-            <p className="hidden border-t border-border px-4 py-3 text-[13px] text-muted-foreground lg:block">
-              {t("paste_count", { count: pagination.totalAll })} · {sizeLabel}
-            </p>
+            <div className="hidden border-t border-border px-4 py-3 text-[13px] text-muted-foreground lg:block">
+              {loading === undefined ? (
+                `${t("paste_count", { count: pagination.totalAll })} · ${sizeLabel}`
+              ) : (
+                <Skeleton className="my-[3px] h-3.5 w-32" />
+              )}
+            </div>
           </>
         )}
       </div>
-      {pagination.total > 0 ? (
+      {loading !== undefined ? (
+        pagination.total > 0 ? (
+          <SkeletonListFooter paged={pagination.pageCount > 1} />
+        ) : null
+      ) : pagination.total > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 text-[13px] text-muted-foreground">
           <span>
             {t("pagination_summary", {

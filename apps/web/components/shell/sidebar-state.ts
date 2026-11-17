@@ -2,6 +2,7 @@
 // renders it the way it was left and nothing jumps on load. Shared by the server layout and the
 // client shell, so it stays free of server-only imports.
 
+import { WIDGETS, type WidgetId } from "@/lib/dashboard/widgets"
 import { SIDEBAR_RECENT, SIDEBAR_STARRED } from "@/lib/pastes/types"
 
 export const SIDEBAR_COOKIE = "sidebar"
@@ -77,6 +78,79 @@ export function isFiltered(view: PasteSectionView) {
   return view.visibility !== "all" || view.sort !== "updated"
 }
 
+// What the sidebar's lists held when they last loaded. The server reads it to draw their
+// placeholder with the same sections and row counts, so nothing moves when the lists arrive.
+export interface SidebarShape {
+  // Rows in each section. Starred is null while there are no stars, which hides the section.
+  starred: number | null
+  pastes: number
+  collections: number
+  // Sections that ended in a "View all" link.
+  viewAll: SectionId[]
+  // Rows on the first page of each list page, or null while that is unknown.
+  pages: Record<ListPage, number | null>
+  // The height in pixels each dashboard widget last had in this browser.
+  widgets: Partial<Record<WidgetId, number>>
+}
+
+export const LIST_PAGES = ["pastes", "starred", "shared", "trash"] as const
+export type ListPage = (typeof LIST_PAGES)[number]
+// A list page shows this many rows at most, the page size of lib/pastes/list-query.ts.
+const LIST_PAGE_ROWS = 10
+
+// Rows a list page of `total` items opens with.
+export const firstPageRows = (total: number) => Math.min(total, LIST_PAGE_ROWS)
+
+const defaultSidebarShape: SidebarShape = {
+  starred: null,
+  pastes: 1,
+  collections: 0,
+  viewAll: [],
+  pages: { pastes: null, starred: null, shared: null, trash: null },
+  widgets: {},
+}
+
+// Row counts stay within what a section can list.
+function parseRows(value: unknown, max: number) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? Math.min(value, max)
+    : null
+}
+
+function parseWidgetHeights(raw: unknown) {
+  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const heights: SidebarShape["widgets"] = {}
+  for (const widget of WIDGETS) {
+    const height = value[widget]
+    if (typeof height === "number" && Number.isInteger(height) && height > 0 && height <= 4000) {
+      heights[widget] = height
+    }
+  }
+  return heights
+}
+
+function parseSidebarShape(raw: unknown): SidebarShape {
+  const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const limit = SIDEBAR_LIMITS[SIDEBAR_LIMITS.length - 1] ?? 15
+  const pages =
+    value.pages && typeof value.pages === "object" ? (value.pages as Record<string, unknown>) : {}
+  return {
+    starred: parseRows(value.starred, limit),
+    pastes: parseRows(value.pastes, limit) ?? defaultSidebarShape.pastes,
+    collections: parseRows(value.collections, 50) ?? defaultSidebarShape.collections,
+    viewAll: Array.isArray(value.viewAll)
+      ? SECTIONS.filter((section) => (value.viewAll as unknown[]).includes(section))
+      : [],
+    pages: {
+      pastes: parseRows(pages.pastes, LIST_PAGE_ROWS),
+      starred: parseRows(pages.starred, LIST_PAGE_ROWS),
+      shared: parseRows(pages.shared, LIST_PAGE_ROWS),
+      trash: parseRows(pages.trash, LIST_PAGE_ROWS),
+    },
+    widgets: parseWidgetHeights(value.widgets),
+  }
+}
+
 export interface SidebarState {
   width: number
   collapsed: boolean
@@ -85,6 +159,9 @@ export interface SidebarState {
   sectionOrder: SectionId[]
   collectionOrder: string[]
   views: SidebarViews
+  shape: SidebarShape
+  // The browser's time zone, so the server greets by the viewer's time of day.
+  timeZone: string | null
 }
 
 export const defaultSidebarState: SidebarState = {
@@ -94,6 +171,8 @@ export const defaultSidebarState: SidebarState = {
   sectionOrder: [...SECTIONS],
   collectionOrder: [],
   views: defaultSidebarViews,
+  shape: defaultSidebarShape,
+  timeZone: null,
 }
 
 // Keep the saved order for surviving items and append newly available ones. This also makes
@@ -135,6 +214,11 @@ export function parseSidebarState(value: string | undefined): SidebarState {
           ].slice(0, 50)
         : [],
       views: parseSidebarViews(raw.views),
+      shape: parseSidebarShape(raw.shape),
+      timeZone:
+        typeof raw.timeZone === "string" && /^[\w+\-/]{1,64}$/.test(raw.timeZone)
+          ? raw.timeZone
+          : null,
     }
   } catch {
     return defaultSidebarState
@@ -145,4 +229,25 @@ export function writeSidebarState(state: SidebarState) {
   const value = encodeURIComponent(JSON.stringify(state))
   // biome-ignore lint/suspicious/noDocumentCookie: one small preference cookie; no store needed.
   document.cookie = `${SIDEBAR_COOKIE}=${value}; path=/; max-age=31536000; samesite=lax`
+}
+
+export type DayPart = "morning" | "afternoon" | "evening"
+
+// The part of the day at `date` in a time zone, or in the runtime's own zone without one. An
+// unknown zone gives null.
+export function dayPart(date: Date, timeZone?: string): DayPart | null {
+  let hour: number
+  try {
+    hour = timeZone
+      ? Number(
+          new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone }).format(
+            date,
+          ),
+        )
+      : date.getHours()
+  } catch {
+    return null
+  }
+  if (!Number.isInteger(hour)) return null
+  return hour < 5 ? "evening" : hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"
 }

@@ -3,7 +3,7 @@ import { expect } from "e2e"
 import { databaseUrl } from "./environment"
 import { test } from "./fixtures"
 
-test("slow page navigation keeps the outgoing screen and its header stable", async ({
+test("slow page navigation shows the next screen's frame at once and fills it in place", async ({
   account,
   app,
   browser,
@@ -15,45 +15,41 @@ test("slow page navigation keeps the outgoing screen and its header stable", asy
   await screen.getByLabel("Contents of untitled.txt").fill("const ready = true")
   await screen.getByRole("button", /^Create paste/).tap()
   await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
+  // Remembers how many rows the list has, the way a returning visit does.
+  await app.open("/pastes")
+  await expect(
+    screen.getByRole("link", "Navigation fixture", { visible: true }).last(),
+  ).toBeVisible()
   await app.open("/dashboard")
   await expect(screen.getByRole("heading", "Connect an agent")).toBeVisible()
-  await expect(browser.locator("main [aria-busy=true]")).toHaveCount(0)
-  const before = await browser.evaluate(
-    () => document.querySelector("main")?.getBoundingClientRect().top ?? null,
-  )
+  const tableTop = () =>
+    browser.evaluate(
+      () => document.querySelector("main table thead")?.getBoundingClientRect().top ?? null,
+    )
   const db = createDb(databaseUrl())
   try {
+    let loading: number | null = null
     await db.$client.begin(async (tx) => {
       await tx.unsafe("LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE")
       await screen
         .getByRole("region", "Recent pastes")
         .getByRole("link", "View all", { exact: true })
         .tap()
-      await expect(browser.locator(".navigation-feedback")).toBeVisible()
-      await expect
-        .poll(() =>
-          browser.evaluate(() => {
-            const indicator = document.querySelector(".navigation-feedback")
-            return indicator ? getComputedStyle(indicator).opacity : null
-          }),
-        )
-        .toBe("1")
-      await expect(screen.getByRole("heading", "Connect an agent")).toBeVisible()
-      await expect(
-        browser.locator("main [data-slot=skeleton], main [skullet-loading]"),
-      ).toHaveCount(0)
-      expect(
-        await browser.evaluate(
-          () => document.querySelector("main")?.getBoundingClientRect().top ?? null,
-        ),
-      ).toBe(before)
-      await app.screenshot("navigation-retains-dashboard")
+      // The list's own title, view switch and column headers are there before any row is.
+      // The account has one paste, so one row waits for it.
+      await expect(browser.locator("main tbody tr [data-slot=skeleton]").first()).toBeVisible()
+      await expect(browser.locator("main tbody tr")).toHaveCount(1)
+      await expect(screen.getByRole("radio", "Grid", { visible: true })).toBeVisible()
+      await expect(screen.getByRole("heading", "Connect an agent")).toHaveCount(0)
+      loading = await tableTop()
+      await app.screenshot("navigation-shows-list-frame")
     })
-    await expect(browser).toHaveURL("/pastes")
     await expect(
       screen.getByRole("link", "Navigation fixture", { visible: true }).last(),
     ).toBeVisible()
-    await expect(screen.getByRole("radio", "Grid", { visible: true })).toBeVisible()
+    await expect(browser.locator("main [data-slot=skeleton]")).toHaveCount(0)
+    expect(loading).not.toBeNull()
+    expect(await tableTop()).toBe(loading)
   } finally {
     await db.$client.end()
   }

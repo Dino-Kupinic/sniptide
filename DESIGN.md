@@ -254,6 +254,11 @@ Mono 12px on an inverted fill with 8px by 4px padding.
 
 A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and Collections as collapsible sections, with Shared with me and Trash in a "More" menu below the Dashboard link. Take the tour and Feedback sit in the account menu, below Keyboard shortcuts. Feedback opens the support dialog. Dragging below 200px collapses it, like the header button does. Its width and folded sections persist in the `sidebar` cookie, so the server renders it without a jump. Below 1024px the sidebar becomes a sheet and a bottom tab bar appears, with the new-paste action as a 48px by 40px blue block.
 
+### Loading states
+**Role:** What a screen shows before its data arrives.
+
+The shell, the page title and every control that needs no data render at once, and only the data waits. A list draws its real toolbar and column headers over skeleton rows, the sidebar draws its section names over skeleton rows, and the dashboard draws its greeting and actions over widget frames. A skeleton is a `Skeleton` block in `bg-muted-foreground/15` with `rounded-md` corners, sized like the text or control it stands for and placed in the same wrapper, so the content lands where the skeleton was. It holds its space from the first frame, becomes visible after 150ms and then pulses, and it stays still under reduced motion. The `sidebar` cookie remembers how many rows each list had and how tall each dashboard widget was, so the server draws the same shape on the next visit. It also keeps the browser's time zone, so the dashboard greets by the right time of day from the first frame. A screen with nothing certain to draw gets no skeleton, and its content appears when it is ready. Assistive technology hears one "Loading" status per screen, and the skeletons are hidden from it. The loading state is inert, because the screen replaces its controls when it arrives, so a press or a key waits for the real control. Each route's `loading.tsx` renders its screen's loading state, which lives next to the screen's component.
+
 ### Paste side panel
 **Role:** Settings and history next to a paste.
 
