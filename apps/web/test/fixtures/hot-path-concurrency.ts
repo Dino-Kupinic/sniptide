@@ -261,7 +261,7 @@ if (scenario === "hydrate") {
   }))
   const { default: Page } =
     scenario === "list"
-      ? await import("../../app/(app)/pastes/page")
+      ? await import("../../app/(app)/pastes/(index)/page")
       : await import("../../app/(app)/trash/page")
   const pending = Page({ searchParams: Promise.resolve({}), params: Promise.resolve({}) })
   await tick()

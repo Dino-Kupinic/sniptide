@@ -214,3 +214,58 @@ test("loading labels follow the locale and skeletons respect dark mode and reduc
     release()
   }
 })
+
+test("opening a collection or a paste shows its own loading state and never the list's", async ({
+  account,
+  app,
+  browser,
+  screen,
+}) => {
+  void account
+  await app.open("/collections")
+  await screen.getByRole("button", "New collection", { visible: true }).first().tap()
+  await screen.getByLabel("Name").fill("Examples")
+  await screen.getByRole("button", "Create collection").tap()
+  await expect(browser).toHaveURL(/\/collections\/[^/]+$/)
+  await app.open("/new")
+  await screen.getByLabel("Title").fill("Detail fixture")
+  await screen.getByLabel("Contents of untitled.txt").fill("const ready = true")
+  await screen.getByRole("button", /^Create paste/).tap()
+  await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
+
+  // Holds the click's server response, so the screen shows what the router drew from its
+  // prefetch alone. Prefetches pass, because the router draws from them.
+  const holdNavigation = async (path: RegExp) => {
+    const state = { prefetched: false, release: () => {} }
+    const released = new Promise<void>((resolve) => {
+      state.release = resolve
+    })
+    await browser.route(path, async (route) => {
+      const { headers } = route.request
+      if (headers["next-router-prefetch"]) state.prefetched = true
+      else if (headers.rsc) await released
+      await route.fallback()
+    })
+    return state
+  }
+  const titles = () =>
+    browser.evaluate(() =>
+      [...document.querySelectorAll("main h1")].map((heading) => heading.textContent?.trim() ?? ""),
+    )
+
+  for (const target of [
+    { link: "Examples", path: /\/collections\/examples/, list: "Collections" },
+    { link: "Detail fixture", path: /\/pastes\/[^/?]+\?/, list: "My pastes" },
+  ]) {
+    const navigation = await holdNavigation(target.path)
+    await app.open("/dashboard")
+    // A person sees a link for a moment before clicking it, and the router prefetches it then.
+    await expect.poll(() => navigation.prefetched).toBe(true)
+    await screen.getByRole("link", target.link, { visible: true }).first().tap()
+    await expect(browser.locator("main [data-slot=loading]").first()).toBeAttached()
+    expect(await titles()).not.toContain(target.list)
+    navigation.release()
+    await expect(screen.getByRole("heading", target.link)).toBeVisible()
+    await browser.unroute(target.path)
+  }
+})

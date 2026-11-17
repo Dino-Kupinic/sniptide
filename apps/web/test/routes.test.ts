@@ -7,7 +7,7 @@ import {
 import {
   default as DetailPage,
   generateMetadata as detailMetadata,
-} from "@/app/(app)/pastes/[slug]/page"
+} from "@/app/(app)/pastes/[slug]/(view)/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { hasDatabase, marker, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
