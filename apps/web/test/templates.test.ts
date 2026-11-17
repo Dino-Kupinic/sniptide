@@ -7,6 +7,7 @@ import {
   templateDraft,
   templateJsonUrl,
 } from "@/lib/pastes/templates"
+import { matchesTemplateQuery } from "@/lib/template-filter"
 
 // /new?template=<name> reads <TEMPLATES_URL>/<name>.json from the marketing site and opens the
 // editor with its files.
@@ -110,6 +111,8 @@ describe("template catalog", () => {
     const icon = {
       ...entry,
       name: "robots-txt",
+      category: "something-new",
+      department: "engineering",
       visual: { kind: "icon", src: "/i/robots.svg", mark: "robots.txt" },
     }
     expect(parseTemplateCatalog({ templates: [entry, icon] }, catalogUrl)).toEqual([
@@ -117,6 +120,8 @@ describe("template catalog", () => {
         name: "claude-md",
         title: "CLAUDE.md template",
         description: "A CLAUDE.md template for Claude Code.",
+        category: "agents",
+        department: null,
         files: ["CLAUDE.md"],
         visual: { kind: "logo", src: "https://sniptide.com/logos/claude.svg", ratio: 4.5 },
       },
@@ -124,6 +129,8 @@ describe("template catalog", () => {
         name: "robots-txt",
         title: "CLAUDE.md template",
         description: "A CLAUDE.md template for Claude Code.",
+        category: null,
+        department: "engineering",
         files: ["CLAUDE.md"],
         visual: { kind: "icon", src: "https://sniptide.com/i/robots.svg", mark: "robots.txt" },
       },
@@ -144,7 +151,9 @@ describe("template catalog", () => {
       catalogUrl,
     )
     expect(list.map((template) => template.visual)).toEqual([null, null, null])
-    expect(parseTemplateCatalog({ templates: Array(20).fill(entry) }, catalogUrl)).toHaveLength(12)
+    expect(parseTemplateCatalog({ templates: Array(120).fill(entry) }, catalogUrl)).toHaveLength(
+      100,
+    )
     expect(parseTemplateCatalog("not json", catalogUrl)).toEqual([])
   })
 
@@ -157,5 +166,20 @@ describe("template catalog", () => {
     expect(fetched).toEqual([catalogUrl])
     serve(() => new Response("Bad gateway", { status: 502 }))
     expect(await templateCatalog()).toEqual([])
+  })
+})
+
+describe("template search", () => {
+  const template = {
+    title: "CLAUDE.md template",
+    description: "Rules for Claude Code.",
+    files: [".claude/settings.json"],
+  }
+
+  test("matches every word across title, description, labels and file names", () => {
+    expect(matchesTemplateQuery(template, ["Agent files"], "")).toBe(true)
+    expect(matchesTemplateQuery(template, ["Agent files"], "claude settings")).toBe(true)
+    expect(matchesTemplateQuery(template, ["Agent files"], "AGENT rules")).toBe(true)
+    expect(matchesTemplateQuery(template, ["Agent files"], "claude docker")).toBe(false)
   })
 })

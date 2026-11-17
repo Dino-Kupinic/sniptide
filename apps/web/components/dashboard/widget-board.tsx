@@ -44,12 +44,9 @@ import {
   WidgetFallback,
 } from "./widgets"
 
-// The templates the Paste templates widget lists, and the page they come from. Null on an instance
-// without TEMPLATES_URL, which never shows or offers the widget.
-export type DashboardTemplates = {
-  list: Promise<TemplateSummary[]>
-  url: string
-} | null
+// The templates the Paste templates widget lists. Null on an instance without TEMPLATES_URL, which
+// never shows or offers the widget.
+export type DashboardTemplates = { list: Promise<TemplateSummary[]> } | null
 
 // The layout on screen, saved after every change. Removing a widget or switching templates can be
 // taken back from the toast. Widgets the instance can't show are left out of templates and the
@@ -305,7 +302,7 @@ function TemplatesWidget({
       data-tour={list.length > 0 ? "templates" : undefined}
       className="flex min-w-0 flex-col rounded-lg"
     >
-      <ListWidget id="templates" href={templates.url}>
+      <ListWidget id="templates" href="/templates">
         {list.length > 0 ? (
           <TemplatesGrid templates={list} size={size} />
         ) : (

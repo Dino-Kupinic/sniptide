@@ -2,6 +2,12 @@ import "server-only"
 
 import { z } from "zod"
 import { getConfig } from "@/lib/config"
+import {
+  isTemplateCategory,
+  isTemplateDepartment,
+  type TemplateCategory,
+  type TemplateDepartment,
+} from "@/lib/template-filter"
 
 // Templates are pages on the marketing site (sniptide.com/templates/<name>), whose files are also
 // served as JSON at /templates/<name>.json. `/new?template=<name>` reads that JSON and opens the
@@ -69,17 +75,29 @@ export type TemplateSummary = {
   name: string
   title: string
   description: string
+  // The website's category and department keys (lib/template-filter.ts), or null for one this
+  // version doesn't know yet.
+  category: TemplateCategory | null
+  department: TemplateDepartment | null
   files: string[]
   visual: TemplateVisual | null
 }
 
-// More than any widget shows, so a change to the widget's size never needs another request.
-const CATALOG_LIMIT = 12
+// The whole directory for the catalog page, with room to grow. The widget shows the first few.
+const CATALOG_LIMIT = 100
 
 const catalogEntry = z.object({
   name: z.string().regex(templateName),
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(280).default(""),
+  category: z
+    .unknown()
+    .optional()
+    .transform((value) => (isTemplateCategory(value) ? value : null)),
+  department: z
+    .unknown()
+    .optional()
+    .transform((value) => (isTemplateDepartment(value) ? value : null)),
   files: z.array(z.string().trim().min(1).max(120)).min(1).max(10),
   visual: z
     .discriminatedUnion("kind", [

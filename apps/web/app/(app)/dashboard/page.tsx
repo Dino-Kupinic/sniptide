@@ -54,7 +54,7 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
       sizes={preferences.dashboardSizes}
       agents={agents}
       // Streams in like the widgets' rows, so a slow templates site never holds up the page.
-      templates={templatesUrl ? { list: templateCatalog(), url: templatesUrl } : null}
+      templates={templatesUrl ? { list: templateCatalog() } : null}
       firstName={firstName(viewerFromUser(session.user).name)}
       origin={origin}
       appOrigin={appOrigin}

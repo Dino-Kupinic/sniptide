@@ -38,7 +38,7 @@ export function useWidgetName() {
   return (widget: WidgetId) =>
     ({
       agents: t("widget_agents"),
-      templates: t("widget_templates"),
+      templates: t("paste_templates"),
       agent_activity: t("widget_agent_activity"),
       agent_pastes: t("widget_agent_pastes"),
       recent_pastes: t("recent_pastes"),
