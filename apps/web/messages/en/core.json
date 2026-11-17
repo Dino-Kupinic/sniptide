@@ -83,6 +83,7 @@
     "someone": "Someone",
     "notificationShared": "{name} shared “{title}” with you",
     "notificationSharedDetail": "Open it from Shared with me",
+    "notificationSharedBurnDetail": "Open the sealed paste",
     "notificationBurned": "“{title}” was read",
     "notificationBurnedDetail": "It burned after reading. Restore it from the trash to keep it",
     "notificationNeverExpires": "“{title}” no longer expires",

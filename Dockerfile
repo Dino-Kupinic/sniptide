@@ -38,6 +38,7 @@ RUN --mount=type=secret,id=server_actions_key \
 FROM node:24-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production \
+    TELEMETRY_DEPLOYMENT=docker \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \

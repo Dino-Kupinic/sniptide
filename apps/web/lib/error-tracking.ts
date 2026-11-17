@@ -6,7 +6,8 @@ import { toExceptionList } from "@/lib/error-scrub"
 import { deploymentVersion } from "@/lib/support/server"
 
 // Server exceptions go to PostHog error tracking, in the same project as product analytics. Off
-// unless POSTHOG_KEY is set, so a self-hosted instance sends nothing. Preview deployments and
+// unless POSTHOG_KEY is set, so a self-hosted instance sends no exceptions without a key.
+// Preview deployments and
 // local development stay quiet for the same reason as their analytics (isAnalyticsHost).
 //
 // Events carry the scrubbed exception (lib/error-scrub.ts) and a fixed set of tags: the route

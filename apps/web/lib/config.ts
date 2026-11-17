@@ -125,6 +125,7 @@ const schema = z.object({
   MIGRATIONS_DIR: z.string().optional(),
 
   BETTER_AUTH_SECRET: z.string().optional(),
+  ABUSE_REPORTS_ENABLED: flag.default(false),
   ENV_SECRETS_KEY: z.string().min(32, { message: "must be at least 32 characters." }).optional(),
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
@@ -178,6 +179,10 @@ const schema = z.object({
   OPERATOR_NAME: z.string().max(200).optional(),
   OPERATOR_ADDRESS: z.string().max(500).optional(),
   COPYRIGHT_EMAIL: z.string().email().optional(),
+
+  TELEMETRY: z.enum(["on", "off"]).default("on"),
+  TELEMETRY_ID: z.uuid().optional(),
+  TELEMETRY_DEPLOYMENT: z.enum(["docker", "coolify", "other"]).default("other"),
 
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
@@ -234,6 +239,14 @@ function parseConfig(env: Record<string, string | undefined>) {
     throw new Error(`Invalid configuration:\n  ${problems.join("\n  ")}`)
   }
   const value = parsed.data
+  if (
+    value.ABUSE_REPORTS_ENABLED &&
+    (!value.BETTER_AUTH_URL || !value.BETTER_AUTH_SECRET || value.BETTER_AUTH_SECRET.length < 32)
+  ) {
+    throw new Error(
+      "Invalid configuration: ABUSE_REPORTS_ENABLED requires BETTER_AUTH_URL and BETTER_AUTH_SECRET (at least 32 characters).",
+    )
+  }
   if (
     value.DATABASE_POOL_SIZE > 2 &&
     value.DATABASE_PROBE_RESERVE + value.DATABASE_MAINTENANCE_RESERVE >= value.DATABASE_POOL_SIZE
@@ -325,6 +338,7 @@ function parseConfig(env: Record<string, string | undefined>) {
     },
     // Who runs this instance and the documents sign-up points to. Each is optional, so a private
     // self-hosted server can leave them all unset.
+    abuseReportsEnabled: value.ABUSE_REPORTS_ENABLED,
     legal: {
       termsUrl: value.TERMS_URL,
       privacyUrl: value.PRIVACY_URL,
@@ -345,6 +359,11 @@ function parseConfig(env: Record<string, string | undefined>) {
             }
           : undefined,
       assistant: supportAssistant(value),
+    },
+    instanceTelemetry: {
+      enabled: value.TELEMETRY === "on",
+      id: value.TELEMETRY_ID,
+      deployment: value.TELEMETRY_DEPLOYMENT,
     },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }

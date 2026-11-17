@@ -12,6 +12,15 @@ import { HOUR, MINUTE } from "@/lib/time"
 import { createJobRunner, type JobOutcome } from "./jobs/runner"
 
 const definitions = {
+  telemetry: {
+    intervalMs: HOUR,
+    enabled: () => getConfig().instanceTelemetry.enabled,
+    run: () =>
+      runMaintenanceWork(async () => {
+        const { sendInstanceReport } = await import("@/lib/instance-telemetry")
+        return sendInstanceReport(getConfig())
+      }),
+  },
   purge: {
     intervalMs: HOUR,
     run: () =>

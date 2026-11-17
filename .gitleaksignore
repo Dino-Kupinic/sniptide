@@ -1,4 +1,8 @@
 # Documentation idempotency UUID, not an authentication credential.
+# Synthetic config-validation input; never used to authenticate a service. Historical commit
+# retained by the full-history scan; the current fixture constructs a repeated test character.
+742e2417f43d5430aadc6980be0e29b3773676a5:apps/web/test/config.test.ts:generic-api-key:34
+
 a0290d9437cd410b14299048843082bf7294478d:apps/docs/content/docs/api-reliability.mdx:generic-api-key:44
 
 # Dummy snpt_12345678901 token for the local MCP installation test.
@@ -22,3 +26,6 @@ a415cf98c208fe866449152e61d06a0569806f18:apps/web/lib/openapi.ts:generic-api-key
 # commit on the pull request branch, the second the squash merge on main.
 0c2cd01bd1982d6182e813f945208a1a63c4cb2c:apps/docs/content/docs/core-concepts/encrypted-pastes.mdx:generic-api-key:32
 5e8018874ac52bf6146bcd472aa7859d126f63d3:apps/docs/content/docs/core-concepts/encrypted-pastes.mdx:generic-api-key:32
+
+# Synthetic auth secret used only to validate abuse-intake configuration in a historical test.
+742e2417f43d5430aadc6980be0e29b3773676a5:apps/web/test/config.test.ts:generic-api-key:34

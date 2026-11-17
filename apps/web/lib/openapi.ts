@@ -1923,6 +1923,9 @@ export const openApiDocument = {
 } as const
 
 export const internalRoutes = [
+  "/api/instance-telemetry",
+
+  "/api/abuse",
   "/.well-known/openai-apps-challenge",
   "/.well-known/api-catalog",
   // OAuth follows its RFCs and is discovered from these metadata documents instead (lib/oauth).
@@ -1943,6 +1946,7 @@ export const internalRoutes = [
   "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",
+  "/api/notifications/[id]/open",
   "/demo",
   "/api/live",
   "/api/locale",

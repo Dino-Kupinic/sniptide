@@ -166,6 +166,7 @@ export function resetPassword(input: Common & { url: string }): EmailContent {
 export function notificationEmail(
   input: Common & {
     kind: NotificationKind
+    sharedBurn?: boolean
     url: string
     settingsUrl: string
     unsubscribeUrl: string
@@ -173,7 +174,7 @@ export function notificationEmail(
 ): EmailContent {
   const locale = input.locale ?? defaultLocale
   const t = translator(locale)
-  const { kind } = input
+  const kind = input.sharedBurn ? "sharedBurn" : input.kind
   const subject = t(`notification.${kind}.subject`)
   return {
     ...shared(t, { ...input, locale }),

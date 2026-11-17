@@ -12,6 +12,7 @@ import {
 } from "@sniptide/contracts"
 import type { Database } from "@workspace/db"
 import { allowedParent, allowedPaste } from "@workspace/db/moderation"
+import { recordAccountRead } from "@/lib/instance-activity"
 
 export {
   type ApiPaste,
@@ -270,7 +271,10 @@ export async function getCapture(
       ),
     )
   if (!record || record.files.length === 0) return null
-  if (countRead) meterReads([record.id])
+  if (countRead) {
+    meterReads([record.id])
+    recordAccountRead(owner)
+  }
   return { ...toSummaryFields(record, origin), files: record.files }
 }
 
