@@ -104,11 +104,13 @@ export function TemplateCatalog({
       </p>
 
       {visible.length > 0 ? (
-        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((template) => (
-            <TemplateCard key={template.name} template={template} from="catalog" />
-          ))}
-        </ul>
+        <div className="@container">
+          <ul className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
+            {visible.map((template) => (
+              <TemplateCard key={template.name} template={template} from="catalog" />
+            ))}
+          </ul>
+        </div>
       ) : (
         <div className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 lg:p-5">
           <p className="text-sm leading-5 text-muted-foreground">

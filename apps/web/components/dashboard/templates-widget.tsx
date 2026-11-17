@@ -11,9 +11,9 @@ import type { WidgetSize } from "@/lib/dashboard/widgets"
 import type { TemplateSummary, TemplateVisual } from "@/lib/pastes/templates"
 import type { TemplateCategory, TemplateDepartment } from "@/lib/template-filter"
 
-// How many templates each size lists: two rows of three when large, two rows of two when small.
+// How many templates each size lists: two rows of four when large, two rows of two when small.
 // A single column, as on a phone, stops after three so the widgets below stay in reach.
-const SHOWN: Record<WidgetSize, number> = { large: 6, small: 4 }
+const SHOWN: Record<WidgetSize, number> = { large: 8, small: 4 }
 const SINGLE_COLUMN = 3
 
 // Logos share one height, so wordmarks of different widths read as peers. The artwork is a mask
@@ -156,7 +156,7 @@ export function TemplatesGrid({
   size: WidgetSize
 }) {
   return (
-    <ul className="grid grid-cols-1 gap-4 p-4 @xl/widget:grid-cols-2 @4xl/widget:grid-cols-3">
+    <ul className="grid grid-cols-1 gap-4 p-4 @xl/widget:grid-cols-2 @5xl/widget:grid-cols-4">
       {templates.slice(0, SHOWN[size]).map((template, index) => (
         <TemplateCard
           key={template.name}
