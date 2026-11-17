@@ -27,6 +27,22 @@ import { timeAgo } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, PasteListQuery } from "@/lib/pastes/list-query"
 
+// Long titles, descriptions and file names, and an entry without artwork, for the Paste templates
+// widget. One promise for the module, so the widget reads it once.
+const STRESS_TEMPLATES = {
+  url: "https://sniptide.com/templates",
+  list: Promise.resolve(
+    Array.from({ length: 6 }, (_, index) => ({
+      name: `stress-${index}`,
+      title: "Benachrichtigungseinstellungen für sehr lange Vorlagennamen",
+      description:
+        "Eine Beschreibung, die länger ist als zwei Zeilen, damit die Zelle zeigt, wo sie abschneidet und wie die Dateinamen darunter stehen.",
+      files: [".github/workflows/sehr-langer-workflow-name.yml", "CONTRIBUTING.md", "README.md"],
+      visual: null,
+    })),
+  ),
+}
+
 export function UiStress({
   dataset,
   screen,
@@ -81,6 +97,7 @@ export function UiStress({
               data={data.dashboard}
               layout={[...WIDGETS]}
               agents={data.agents}
+              templates={STRESS_TEMPLATES}
               firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
               origin={origin}
               appOrigin={origin}

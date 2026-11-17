@@ -380,7 +380,9 @@
     "an_agent": "un agente",
     "created_with_cli": "Creado con la CLI",
     "created_with_mcp": "Creado mediante el servidor MCP",
-    "created_with_api": "Creado con la API"
+    "created_with_api": "Creado con la API",
+    "widget_templates": "Plantillas de paste",
+    "widget_templates_empty": "No se pudieron cargar las plantillas. Abre Ver todos para verlas en el sitio web."
   },
   "Secrets": {
     "title": "Secretos",

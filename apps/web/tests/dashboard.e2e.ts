@@ -126,6 +126,8 @@ test("every widget has saved small and large sizes and templates can undo sizes"
   screen,
 }) => {
   const db = createDb(databaseUrl())
+  // Browser tests run without TEMPLATES_URL, so the Paste templates widget is never offered.
+  const shown = WIDGETS.filter((widget) => widget !== "templates")
   const names = [
     "Agents",
     "Agent activity",
@@ -143,7 +145,7 @@ test("every widget has saved small and large sizes and templates can undo sizes"
       .from(user)
       .where(eq(user.email, account.email))
     const sizes = JSON.parse(owner?.preferences ?? "{}").dashboardSizes ?? {}
-    return Object.fromEntries(WIDGETS.map((widget) => [widget, widgetSize(widget, sizes)]))
+    return Object.fromEntries(shown.map((widget) => [widget, widgetSize(widget, sizes)]))
   }
   const spans = () =>
     browser.evaluate(() =>
@@ -162,9 +164,9 @@ test("every widget has saved small and large sizes and templates can undo sizes"
     for (const name of names) {
       await screen.getByRole("radiogroup", `Size of ${name}`).getByRole("radio", "Small").tap()
     }
-    const small = Object.fromEntries(WIDGETS.map((widget) => [widget, "small"]))
+    const small = Object.fromEntries(shown.map((widget) => [widget, "small"]))
     await expect.poll(savedSizes).toEqual(small)
-    await expect.poll(spans).toEqual(WIDGETS.map(() => "auto"))
+    await expect.poll(spans).toEqual(shown.map(() => "auto"))
     expect(
       await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true)
@@ -179,10 +181,10 @@ test("every widget has saved small and large sizes and templates can undo sizes"
     }
     await expect
       .poll(savedSizes)
-      .toEqual(Object.fromEntries(WIDGETS.map((widget) => [widget, "large"])))
-    await expect.poll(spans).toEqual(WIDGETS.map(() => "span 2"))
+      .toEqual(Object.fromEntries(shown.map((widget) => [widget, "large"])))
+    await expect.poll(spans).toEqual(shown.map(() => "span 2"))
     await browser.setViewport({ width: 360, height: 780 })
-    await expect.poll(spans).toEqual(WIDGETS.map(() => "auto"))
+    await expect.poll(spans).toEqual(shown.map(() => "auto"))
     expect(
       await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true)
@@ -203,7 +205,7 @@ test("every widget has saved small and large sizes and templates can undo sizes"
       screen.getByRole("radiogroup", "Size of Collections").getByRole("radio", "Large"),
     ).toBeChecked()
     await browser.reload()
-    await expect.poll(spans).toEqual(["auto", ...WIDGETS.slice(1).map(() => "span 2")])
+    await expect.poll(spans).toEqual(["auto", ...shown.slice(1).map(() => "span 2")])
   } finally {
     await db.$client.end()
   }

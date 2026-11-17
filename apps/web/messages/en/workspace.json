@@ -380,7 +380,9 @@
     "an_agent": "an agent",
     "created_with_cli": "Created with the CLI",
     "created_with_mcp": "Created through the MCP server",
-    "created_with_api": "Created with the API"
+    "created_with_api": "Created with the API",
+    "widget_templates": "Paste templates",
+    "widget_templates_empty": "The templates couldn't load. Open View all to browse them on the website."
   },
   "Secrets": {
     "title": "Secrets",

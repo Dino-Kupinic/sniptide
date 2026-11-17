@@ -380,7 +380,9 @@
     "an_agent": "エージェント",
     "created_with_cli": "CLI で作成",
     "created_with_mcp": "MCP サーバー経由で作成",
-    "created_with_api": "API で作成"
+    "created_with_api": "API で作成",
+    "widget_templates": "ペーストテンプレート",
+    "widget_templates_empty": "テンプレートを読み込めませんでした。「すべて表示」からウェブサイトで確認できます。"
   },
   "Secrets": {
     "title": "シークレット",

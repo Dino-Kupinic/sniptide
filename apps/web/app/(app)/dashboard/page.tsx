@@ -3,9 +3,11 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { listConnectedAgents } from "@/lib/agents"
 import { requireSession } from "@/lib/auth"
-import { DEFAULT_LAYOUT } from "@/lib/dashboard/widgets"
+import { getConfig } from "@/lib/config"
+import { availableLayout, DEFAULT_LAYOUT } from "@/lib/dashboard/widgets"
 import { shouldOnboard } from "@/lib/onboarding-server"
 import { getDashboardData } from "@/lib/pastes/dashboard"
+import { templateCatalog } from "@/lib/pastes/templates"
 import { readPreferences } from "@/lib/preference-store"
 import { getAppOrigin, getRequestOrigin, getSiteOrigin } from "@/lib/site"
 import { firstName, viewerFromUser } from "@/lib/viewer"
@@ -33,7 +35,10 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
     redirect(`/welcome${marker}`)
   }
   const preferences = await readPreferences(session.user.id)
-  const layout = preferences.dashboard ?? [...DEFAULT_LAYOUT]
+  const { templatesUrl } = getConfig()
+  const layout = availableLayout(preferences.dashboard ?? DEFAULT_LAYOUT, {
+    templates: Boolean(templatesUrl),
+  })
   const data = getDashboardData(locale, layout)
   const [agents, appOrigin] = await Promise.all([
     // Loaded even without the agent widget, since one added later starts from this list.
@@ -48,6 +53,8 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
       layout={layout}
       sizes={preferences.dashboardSizes}
       agents={agents}
+      // Streams in like the widgets' rows, so a slow templates site never holds up the page.
+      templates={templatesUrl ? { list: templateCatalog(), url: templatesUrl } : null}
       firstName={firstName(viewerFromUser(session.user).name)}
       origin={origin}
       appOrigin={appOrigin}

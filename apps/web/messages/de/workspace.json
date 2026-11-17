@@ -380,7 +380,9 @@
     "an_agent": "einem Agenten",
     "created_with_cli": "Mit der CLI erstellt",
     "created_with_mcp": "Über den MCP-Server erstellt",
-    "created_with_api": "Mit der API erstellt"
+    "created_with_api": "Mit der API erstellt",
+    "widget_templates": "Paste-Vorlagen",
+    "widget_templates_empty": "Die Vorlagen konnten nicht geladen werden. Unter Alle anzeigen findest du sie auf der Website."
   },
   "Secrets": {
     "title": "Geheimnisse",

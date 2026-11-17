@@ -38,6 +38,7 @@ export function useWidgetName() {
   return (widget: WidgetId) =>
     ({
       agents: t("widget_agents"),
+      templates: t("widget_templates"),
       agent_activity: t("widget_agent_activity"),
       agent_pastes: t("widget_agent_pastes"),
       recent_pastes: t("recent_pastes"),
@@ -63,7 +64,7 @@ function ViewAll({ href }: { href: string }) {
 }
 
 // A list widget: a bordered panel with its name, a link to the full page and a short list.
-function ListWidget({
+export function ListWidget({
   id,
   href,
   children,
@@ -89,7 +90,7 @@ function ListWidget({
   )
 }
 
-function ListEmpty({ children }: { children: React.ReactNode }) {
+export function ListEmpty({ children }: { children: React.ReactNode }) {
   return <p className="px-4 py-8 text-sm leading-5 text-muted-foreground">{children}</p>
 }
 
@@ -184,7 +185,7 @@ export function DataWidget({
   data: source,
   origin,
 }: {
-  id: Exclude<WidgetId, "agents">
+  id: Exclude<WidgetId, "agents" | "templates">
   data: DashboardSource
   origin: string
 }) {
