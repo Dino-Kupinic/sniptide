@@ -6,7 +6,6 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
-import { LoadingStatus } from "@/components/loading/status"
 import { useSidebarState, useViewer } from "@/components/shell/app-shell"
 import { dayPart } from "@/components/shell/sidebar-state"
 import type { ConnectedAgent } from "@/lib/agents"
@@ -143,7 +142,9 @@ function DashboardHeader({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
+        // The loading state draws these before the page can answer a press. Until then they are
+        // inert, so a press waits for the real buttons and is never lost.
+        <div className="flex items-center gap-2" inert={onEditing === undefined}>
           <Button
             variant="outline"
             size="lg"
@@ -178,7 +179,6 @@ export function DashboardLoading() {
   const viewer = useViewer()
   return (
     <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
-      <LoadingStatus />
       <DashboardHeader firstName={firstName(viewer.name)} />
     </div>
   )

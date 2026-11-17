@@ -1,5 +1,10 @@
 import { DashboardLoading } from "@/components/dashboard/dashboard"
+import { LoadingScreen } from "@/components/loading/status"
 
 export default function Loading() {
-  return <DashboardLoading />
+  return (
+    <LoadingScreen>
+      <DashboardLoading />
+    </LoadingScreen>
+  )
 }

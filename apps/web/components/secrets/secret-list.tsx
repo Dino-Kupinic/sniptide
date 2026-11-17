@@ -8,7 +8,6 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { ListHeader, SearchField } from "@/components/lists/toolbar"
-import { LoadingStatus } from "@/components/loading/status"
 import type { SecretSummary } from "@/lib/env/web-store"
 import { ENVIRONMENTS, type Environment } from "./client"
 
@@ -73,9 +72,7 @@ export function SecretList({
         actions={create}
       />
       <div className="flex flex-wrap gap-2 lg:hidden">{create}</div>
-      {loading ? (
-        <LoadingStatus />
-      ) : groups.length === 0 ? (
+      {loading ? null : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-border px-4 py-14 text-center text-sm text-muted-foreground">
           {t("empty_list")}
           <Link href="/secrets/new" className="font-medium text-link hover:underline">

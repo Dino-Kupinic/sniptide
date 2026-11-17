@@ -6,7 +6,6 @@ import { useParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { PageHeader } from "@/components/page-header"
 import { useSettledShellData } from "@/components/shell/shell-data"
-import { LoadingStatus } from "./status"
 
 // Placeholders for the screens that are one composed view instead of a list. Each keeps the
 // wrappers and sizes of the screen it stands in for, so the loaded screen lands in place.
@@ -85,7 +84,6 @@ export function PasteLoading() {
     : undefined
   return (
     <div className="flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] lg:gap-5 lg:p-7 lg:pb-7">
-      <LoadingStatus />
       <PhoneTopBar />
       <div className="flex min-w-0 flex-col gap-1.5 px-4 lg:px-0">
         {known ? (
@@ -126,7 +124,6 @@ export function PasteLoading() {
 export function EditorLoading() {
   return (
     <div className="flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7">
-      <LoadingStatus />
       <PhoneTopBar />
       <div aria-hidden="true" className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
         <div className="flex h-9 items-center lg:h-[38px]">
@@ -183,7 +180,6 @@ export function AnalyticsLoading() {
   const t = useTranslations("Core")
   return (
     <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
-      <LoadingStatus />
       <PageHeader
         title={t("analytics")}
         actions={
@@ -232,5 +228,5 @@ export function AnalyticsLoading() {
 
 // A screen with no placeholder of its own: the shell stays, and the screen appears when ready.
 export function BlankLoading() {
-  return <LoadingStatus />
+  return null
 }

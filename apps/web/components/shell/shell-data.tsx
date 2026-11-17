@@ -3,6 +3,7 @@
 import * as React from "react"
 import type { Collection } from "@/lib/collections/types"
 import type { SidebarData } from "@/lib/pastes/types"
+import { createStore, type Store, useStore } from "./store"
 
 // What the shell lists and counts. The layout starts these reads and hands over the promise, so
 // the frame renders before they finish.
@@ -13,7 +14,7 @@ export interface ShellData {
 }
 
 const PromiseContext = React.createContext<Promise<ShellData> | null>(null)
-const SettledContext = React.createContext<ShellData | null>(null)
+const SettledContext = React.createContext<Store<ShellData | null> | null>(null)
 
 export function ShellDataProvider({
   data,
@@ -23,19 +24,19 @@ export function ShellDataProvider({
   children: React.ReactNode
 }) {
   // The last data that arrived. A refresh keeps it until the next read finishes.
-  const [settled, setSettled] = React.useState<ShellData | null>(null)
+  const [settled] = React.useState(() => createStore<ShellData | null>(null))
   React.useEffect(() => {
     let current = true
     data.then(
       (value) => {
-        if (current) setSettled(value)
+        if (current) settled.set(value)
       },
       () => {},
     )
     return () => {
       current = false
     }
-  }, [data])
+  }, [data, settled])
 
   return (
     <PromiseContext.Provider value={data}>
@@ -55,5 +56,7 @@ export function useShellData() {
 // The data once it has arrived, and null before. For dialogs, menus and loading states, which
 // work without it and never hold up the frame.
 export function useSettledShellData() {
-  return React.useContext(SettledContext)
+  const settled = React.useContext(SettledContext)
+  if (!settled) throw new Error("useSettledShellData must be used inside ShellDataProvider")
+  return useStore(settled)
 }

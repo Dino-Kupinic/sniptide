@@ -26,6 +26,7 @@ import {
   sidebarMaxWidth,
   writeSidebarState,
 } from "./sidebar-state"
+import { createStore, type Store, useStore } from "./store"
 import { TabBar } from "./tab-bar"
 import { TopBar } from "./top-bar"
 
@@ -50,13 +51,13 @@ export function useViewer() {
   return viewer
 }
 
-const SidebarStateContext = React.createContext<SidebarState | null>(null)
+const SidebarStateContext = React.createContext<Store<SidebarState> | null>(null)
 
 // The sidebar's layout as it stands now, for screens that follow its order.
 export function useSidebarState() {
   const state = React.useContext(SidebarStateContext)
   if (!state) throw new Error("useSidebarState must be used inside AppShell")
-  return state
+  return useStore(state)
 }
 
 export function AppShell({
@@ -79,17 +80,20 @@ export function AppShell({
   const pathname = usePathname()
   const router = useRouter()
   const chrome = mobileChrome(pathname)
-  const [layout, setLayout] = React.useState(initialSidebar)
+  const [sidebarState] = React.useState(() => createStore(initialSidebar))
+  const layout = useStore(sidebarState)
   // While the edge is being dragged: the width under the pointer, which can go below the minimum.
   const [dragWidth, setDragWidth] = React.useState<number | null>(null)
 
-  const update = React.useCallback((change: (state: SidebarState) => SidebarState) => {
-    setLayout((state) => {
-      const next = change(state)
+  const update = React.useCallback(
+    (change: (state: SidebarState) => SidebarState) => {
+      const next = change(sidebarState.get())
+      if (next === sidebarState.get()) return
       writeSidebarState(next)
-      return next
-    })
-  }, [])
+      sidebarState.set(next)
+    },
+    [sidebarState],
+  )
 
   const toggleSidebar = React.useCallback(
     () => update((state) => ({ ...state, collapsed: !state.collapsed })),
@@ -158,7 +162,7 @@ export function AppShell({
 
   return (
     <SidebarUpdateContext.Provider value={update}>
-      <SidebarStateContext.Provider value={layout}>
+      <SidebarStateContext.Provider value={sidebarState}>
         <ViewerContext.Provider value={sidebarProps.viewer}>
           <ShellDataProvider data={data}>
             <TooltipProvider delay={300}>
@@ -213,9 +217,7 @@ export function AppShell({
                                       JSON.stringify(layout.views.starred)
                                   // Write the cookie before refreshing, so the server lists what the filter
                                   // asks for.
-                                  const next = { ...layout, views }
-                                  writeSidebarState(next)
-                                  setLayout(next)
+                                  update((state) => ({ ...state, views }))
                                   if (refetch) router.refresh()
                                 }}
                               />

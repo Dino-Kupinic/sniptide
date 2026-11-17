@@ -2,7 +2,6 @@
 
 import { useParams, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
-import { LoadingStatus } from "@/components/loading/status"
 import { useSidebarState } from "@/components/shell/app-shell"
 import { useSettledShellData } from "@/components/shell/shell-data"
 import { firstPageRows, type ListPage } from "@/components/shell/sidebar-state"
@@ -70,23 +69,20 @@ export function PasteListLoading({
     mode === "mine" ? t("pastes") : mode === "starred" ? t("starred") : (current?.name ?? "")
 
   return (
-    <>
-      <LoadingStatus />
-      <PasteList
-        loading={list.rows}
-        title={title}
-        mode={mode}
-        rows={[]}
-        origin=""
-        collections={shell?.collections ?? []}
-        collection={collection}
-        actions={mode === "collection" ? undefined : <ImportGistButton />}
-        mobileActions={mode === "collection" ? undefined : <ImportGistButton compact />}
-        query={query}
-        pagination={list.pagination}
-        languageOptions={[]}
-      />
-    </>
+    <PasteList
+      loading={list.rows}
+      title={title}
+      mode={mode}
+      rows={[]}
+      origin=""
+      collections={shell?.collections ?? []}
+      collection={collection}
+      actions={mode === "collection" ? undefined : <ImportGistButton />}
+      mobileActions={mode === "collection" ? undefined : <ImportGistButton compact />}
+      query={query}
+      pagination={list.pagination}
+      languageOptions={[]}
+    />
   )
 }
 
@@ -95,20 +91,17 @@ export function SharedListLoading() {
   const query = parseSharedListQuery(useRequestedQuery())
   const list = useKnownList("shared", total, query.page)
   return (
-    <>
-      <LoadingStatus />
-      <SharedList
-        loading={list.rows}
-        rows={[]}
-        query={query}
-        pagination={list.pagination}
-        languageOptions={[]}
-        ownerOptions={[]}
-        peopleCount={0}
-        origin=""
-        host=""
-      />
-    </>
+    <SharedList
+      loading={list.rows}
+      rows={[]}
+      query={query}
+      pagination={list.pagination}
+      languageOptions={[]}
+      ownerOptions={[]}
+      peopleCount={0}
+      origin=""
+      host=""
+    />
   )
 }
 
@@ -117,17 +110,14 @@ export function TrashListLoading() {
   const query = parsePasteListQuery(useRequestedQuery())
   const list = useKnownList("trash", total, query.page)
   return (
-    <>
-      <LoadingStatus />
-      <TrashList
-        loading={list.rows}
-        rows={[]}
-        sizeLabel=""
-        host=""
-        query={query}
-        pagination={list.pagination}
-      />
-    </>
+    <TrashList
+      loading={list.rows}
+      rows={[]}
+      sizeLabel=""
+      host=""
+      query={query}
+      pagination={list.pagination}
+    />
   )
 }
 

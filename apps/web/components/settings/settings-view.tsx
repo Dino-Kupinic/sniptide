@@ -18,7 +18,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
-import { LoadingStatus } from "@/components/loading/status"
 import { navigateTabs } from "@/components/tab-navigation"
 import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
@@ -244,7 +243,7 @@ function SignOutButton() {
 
 // Settings before the account's data arrives. The sections follow under the frame.
 export function SettingsLoading() {
-  return <SettingsFrame>{() => <LoadingStatus />}</SettingsFrame>
+  return <SettingsFrame>{() => null}</SettingsFrame>
 }
 
 export function SettingsView({

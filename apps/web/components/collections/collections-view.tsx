@@ -35,7 +35,6 @@ import {
   useRowSelection,
 } from "@/components/lists/selection"
 import { ListHeader } from "@/components/lists/toolbar"
-import { LoadingStatus } from "@/components/loading/status"
 import { useSidebarState, useSidebarUpdate } from "@/components/shell/app-shell"
 import { useSettledShellData } from "@/components/shell/shell-data"
 import { showUndo } from "@/components/undo-toast"
@@ -376,10 +375,7 @@ export function CollectionsLoading() {
   const shell = useSettledShellData()
   if (!shell) {
     return (
-      <>
-        <LoadingStatus />
-        <CollectionsView loading={sidebar.shape.collections} collections={[]} updatedLabels={{}} />
-      </>
+      <CollectionsView loading={sidebar.shape.collections} collections={[]} updatedLabels={{}} />
     )
   }
   const now = Date.now()
