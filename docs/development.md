@@ -688,3 +688,10 @@ The test creates and removes its own containers and network, without using host 
 existing database.
 
 For dedicated load tests, use the [read-load suite](../apps/web/load/README.md).
+
+## Revision comparison performance
+
+The browser compares at most 250,000 pairs of lines when displaying revision history.
+Within that budget, matching leading lines bypass the score table. Comparing against an
+empty file also skips the table. Larger comparisons list the old lines as removed and the
+new lines as added. Run `bun test apps/web/test/revision-diff.test.ts` to check line ordering.
