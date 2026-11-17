@@ -142,9 +142,7 @@ function DashboardHeader({
           </Button>
         </div>
       ) : (
-        // The loading state draws these before the page can answer a press. Until then they are
-        // inert, so a press waits for the real buttons and is never lost.
-        <div className="flex items-center gap-2" inert={onEditing === undefined}>
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="lg"
