@@ -183,7 +183,9 @@ export function PasteList({
         title={title}
         count={loading === undefined ? pagination.totalAll : undefined}
         topBar={loading === undefined || mode === "collection"}
-        headerActions={mode === "collection" ? actions : null}
+        // Only a collection's menu goes to the top bar. The view toggle is in the bar already, and
+        // `null` (never `undefined`, which falls back to `actions`) keeps it from rendering twice.
+        headerActions={mode === "collection" ? (actions ?? null) : null}
         actions={
           <>
             <ViewToggle value={view} onChange={setView} />
