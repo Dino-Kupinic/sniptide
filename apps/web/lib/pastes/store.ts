@@ -60,7 +60,7 @@ import {
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 
 import { recordPasteEvent } from "./events"
-import { isLive, openToAnyone, restoredFields, unexpiredWhere } from "./lifecycle"
+import { isLive, liveWhere, openToAnyone, restoredFields, unexpiredWhere } from "./lifecycle"
 import { type PasswordField, passwordIntent } from "./password-intent"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
@@ -818,66 +818,75 @@ export async function readSharedMeta(slug: string) {
   return metadata ?? null
 }
 
-// Card data for link previews of public and unlisted pastes: whoever has an unlisted link can read
-// the paste already, and the unfurler only has the link. It ignores sessions and unlock cookies, so
-// even the owner cannot expose a private or protected paste through the unauthenticated image URL.
-// No views, events or burn claims.
+// Preview and embed queries check access in the same snapshot as the file contents.
+function publicPasteWhere(slug: string) {
+  return and(
+    eq(pasteTable.slug, slug),
+    allowedPaste(),
+    liveWhere(),
+    inArray(pasteTable.visibility, ["public", "unlisted"]),
+    isNull(pasteTable.passwordHash),
+    eq(pasteTable.burnAfterRead, false),
+    isNull(pasteTable.encryptionKeyId),
+  )
+}
+
+// Link previews ignore sessions and unlock cookies and never count a view.
 export async function readPublicPreview(slug: string): Promise<PastePreview | null> {
-  const record = await findSharedRecord(slug)
-  if (!record || !openToAnyone(record)) return null
-  const [file] = await getDb()
+  const [preview] = await getDb()
     .select({
+      slug: pasteTable.slug,
+      title: pasteTable.title,
+      unlisted: sql<boolean>`${pasteTable.visibility} = 'unlisted'`,
       name: pasteFile.name,
       language: pasteFile.language,
       content: sql<string>`left(${pasteFile.content}, 4000)`,
     })
-    .from(pasteFile)
-    .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
+    .from(pasteTable)
+    .innerJoin(pasteFile, eq(pasteFile.pasteId, pasteTable.id))
+    .where(publicPasteWhere(slug))
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)
-  if (!file) return null
-  return {
-    slug: record.slug,
-    title: record.title,
-    unlisted: record.visibility === "unlisted",
-    ...file,
-  }
+  return preview ?? null
 }
 
 // The embed view runs inside other sites' pages, so like the preview card it ignores sessions and
 // unlock cookies: a private, protected or one-time paste never opens there, even for its owner.
 // Unlisted pastes do, since whoever has the link may already read them. No views or burn claims.
 export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> {
-  const record = await findSharedRecord(slug)
-  if (!record || !openToAnyone(record)) return null
-  const db = getDb()
-  const [files, [author]] = await Promise.all([
-    db
-      .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
-      .from(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      .orderBy(pasteFile.position, pasteFile.id),
-    db
-      .select({
+  const rows = await getDb()
+    .select({
+      paste: {
+        slug: pasteTable.slug,
+        title: pasteTable.title,
+        updatedAt: pasteTable.updatedAt,
+        expiresAt: pasteTable.expiresAt,
+        views: pasteTable.views,
+        allowRaw: pasteTable.allowRaw,
+      },
+      file: { name: pasteFile.name, language: pasteFile.language, content: pasteFile.content },
+      author: {
         id: user.id,
         name: user.name,
         username: user.username,
         displayUsername: user.displayUsername,
         image: user.image,
-      })
-      .from(user)
-      .where(eq(user.id, record.ownerId)),
-  ])
+      },
+    })
+    .from(pasteTable)
+    .leftJoin(pasteFile, eq(pasteFile.pasteId, pasteTable.id))
+    .leftJoin(user, eq(user.id, pasteTable.ownerId))
+    .where(publicPasteWhere(slug))
+    .orderBy(pasteFile.position, pasteFile.id)
+  const [first] = rows
+  if (!first) return null
   return {
-    slug: record.slug,
-    title: record.title,
-    files,
-    author: pasteAuthor(author),
-    updatedAt: ms(record.updatedAt),
-    expiresAt: ms(record.expiresAt),
-    views: record.views,
+    ...first.paste,
+    files: rows.flatMap(({ file }) => (file ? [file] : [])),
+    author: pasteAuthor(first.author ?? undefined),
+    updatedAt: ms(first.paste.updatedAt),
+    expiresAt: ms(first.paste.expiresAt),
     burnAfterRead: false,
-    allowRaw: record.allowRaw,
     encryptionKeyId: null,
   }
 }
