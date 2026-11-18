@@ -14,8 +14,8 @@ claude plugin install sniptide@sniptide
 
 ## Sign in
 
-Start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**. Claude Code opens
-Sniptide in your browser and signs you in through OAuth.
+Start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate** to sign in to
+Sniptide Cloud in your browser.
 
 To use a [personal API token](https://docs.sniptide.com/api-tokens) instead, enter it in the
 **Sniptide API token** plugin setting. Claude Code keeps it in its credential store, and the

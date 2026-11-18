@@ -6,7 +6,7 @@ description: Connect an agent to Sniptide over MCP when the user asks to set up 
 # Set up Sniptide MCP
 
 1. Inspect the agent's existing MCP configuration and follow its current client documentation. Preserve other servers and the user's choice of project or personal configuration.
-2. Append `/api/mcp` to the user's instance URL, preserving any path prefix. Use Streamable HTTP, not legacy SSE.
+2. For Sniptide Cloud, use `https://app.sniptide.com/api/mcp`. For a self-hosted instance, append `/api/mcp` to the user's instance URL, preserving any path prefix. Use Streamable HTTP.
 3. Preserve the user's requested authentication method when repairing a connection. For a new connection, prefer OAuth if the client supports it. Configure the endpoint without an `Authorization` header and let the user complete browser sign-in and consent. Otherwise, use a personal API token from **Settings → API tokens** as an `Authorization: Bearer` header. Start with read access; enable write access only when the requested work needs it.
 4. Store tokens through the client's supported secret mechanism or private configuration. Environment expansion depends on the client; verify support before using `${SNIPTIDE_TOKEN}`. Never put a real token in tracked files, command arguments, chat, or logs. A browser session cookie does not authenticate MCP.
 5. Reload the connection as required by the client. Verify tool discovery, then call `list_collections` as a read-only check. An empty result is a successful connection. Do not create a sample snippet or change sharing settings to test setup.

@@ -151,7 +151,7 @@ sidebar order.
 | The browser extension in `apps/extension` | `browser-extension.mdx` |
 | The VS Code extension in `apps/vscode` | `vscode-extension.mdx` and `apps/vscode/README.md`, which is the extension's Marketplace page |
 | The Raycast extension in `plugins/raycast` | `raycast-extension.mdx` |
-| Skills or the agent plugin in `skills/` | `mcp.mdx#use-the-included-agent-skills` |
+| Skills or the agent plugin in `skills/` | `mcp.mdx#install-the-agent-plugin` |
 | Variables in `apps/web/.env.example` | `self-hosting/configuration.mdx` |
 | The image, `docker-compose.yml`, or `deploy/` | The matching page in `self-hosting/` |
 | A new failure a reader can hit | A row in `troubleshooting.mdx` |

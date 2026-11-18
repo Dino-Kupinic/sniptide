@@ -10,9 +10,9 @@ docs.
 ## Sign in
 
 Run **Sniptide: Sign In** from the Command Palette, or select **Sign In to Sniptide** in the
-Sniptide view. Choose **Use a self-hosted instance**, enter its address and allow access in
-your browser. You can also paste an API token. The editor keeps the connection in secret storage
-protected by your operating system’s keychain.
+Sniptide view. Choose **Sign in with your browser** for Sniptide Cloud or **Use a self-hosted
+instance** to enter your own address. You can also paste an API token. The editor keeps the
+connection in secret storage protected by your operating system’s keychain.
 
 ## Share a selection
 

@@ -18,6 +18,8 @@ multi-file pastes, then choose who can open each link and when it expires.
 Group snippets you reuse in collections, sync a project’s `.env` file, and give coding agents
 access to your snippets through the MCP server.
 
+Open [Sniptide Cloud](https://app.sniptide.com) to get started, or run Sniptide on your own server.
+
 ## Self-host Sniptide
 
 ### Install with one command
@@ -65,10 +67,11 @@ The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/snip
 
 ## Connect a coding agent
 
-Add the MCP server to Claude Code. Replace `https://paste.example.com` with your instance address.
+Add the MCP server to Claude Code. For Sniptide Cloud, use the address below. For a self-hosted
+instance, replace `https://app.sniptide.com` with your instance address.
 
 ```bash
-claude mcp add --transport http sniptide https://paste.example.com/api/mcp
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
 Then start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate** to open the browser.

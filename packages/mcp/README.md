@@ -13,7 +13,8 @@ It runs in two ways with the same tools:
 
 ## Connect a client
 
-Add the remote server. Replace `https://paste.example.com` with your instance address.
+For Sniptide Cloud, use `https://app.sniptide.com/api/mcp`. For your own instance, append
+`/api/mcp` to its address.
 
 ```sh
 claude mcp add --transport http sniptide https://paste.example.com/api/mcp

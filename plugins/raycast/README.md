@@ -8,7 +8,7 @@ you're working in, and share your clipboard or selection as a link.
 1. In Sniptide, open **Settings** > **API tokens** and create a token. Searching needs **Read**
    access, and the commands that create pastes need **Write** access.
 2. Run any Sniptide command in Raycast and paste the token into **API Token**.
-3. Set **Instance Address** to the address you use to open Sniptide, such as
+3. **Instance Address** defaults to Sniptide Cloud. If you run your own instance, enter its address, such as
    `https://paste.example.com`.
 
 Raycast keeps the token in a password preference, and the extension sends it only to the instance

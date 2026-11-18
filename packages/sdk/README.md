@@ -15,6 +15,7 @@ Requires Node.js 18 or later. The package uses ES modules and includes TypeScrip
 Create a token in **Settings** > **API tokens** on your instance. Enable **Write access** if
 your application creates or changes data. Keep the token on the server and out of source
 control. Replace `https://paste.example.com` with your instance address.
+For Sniptide Cloud, omit the second argument to use `https://app.sniptide.com`.
 
 ```ts
 import { SniptideClient } from "@sniptide/sdk"

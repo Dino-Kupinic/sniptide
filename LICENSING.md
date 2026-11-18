@@ -12,3 +12,6 @@ includes its license notice.
 
 Existing published package versions are unchanged. New releases built from this source use
 the package licenses described above.
+
+Sniptide Cloud runs the same open-source core. The licenses above cover the code in this
+repository. See the [Cloud terms](https://sniptide.com/terms) for use of the hosted service.

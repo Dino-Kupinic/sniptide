@@ -59,11 +59,16 @@ returns `401` when you aren't signed in.
 
 ## Exclude your browser from PostHog
 
-This section applies only when the administrator set `POSTHOG_KEY`, which turns on PostHog
-product analytics for the app. These product events go to the operator's PostHog project only
-when that key is set. Separate [instance reports](/self-hosting/configuration#instance-telemetry)
-go to Sniptide by default and can be disabled with `TELEMETRY=off`. See
-[Configuration](/self-hosting/configuration#monitoring).
+On Sniptide Cloud, allowing **Analytics** can link selected events, such as signing up, to
+your visit to the website. The app uses cookieless product analytics when it has no consent
+or visitor ID. To change your consent, open **Cookies** in the footer of
+[sniptide.com](https://sniptide.com).
+
+Self-hosted instances send product analytics to the operator’s PostHog project when
+`POSTHOG_KEY` is set. Operators can manage separate daily
+[instance reports](/self-hosting/configuration#instance-telemetry) with `TELEMETRY`.
+
+To exclude your browser from product analytics on either edition:
 
 1. Open `/_site/analytics` on the instance.
 2. Select **Exclude this browser**.

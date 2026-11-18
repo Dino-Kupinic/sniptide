@@ -112,6 +112,9 @@ The public token API carries its major version in the path, `/api/v1`.
   path.
 - Security fixes can restrict unsafe behavior at once.
 
+On Sniptide Cloud, API removals get at least 90 days’ notice in the docs and release notes.
+During that period, affected responses include a `Deprecation` header and a `Sunset` date.
+
 The OpenAPI document's `info.version` describes the API contract, independently of the app, CLI
 and MCP package versions. MCP protocol versions follow MCP's own negotiation. The unversioned
 session API that the web app uses is internal and has no compatibility guarantee.

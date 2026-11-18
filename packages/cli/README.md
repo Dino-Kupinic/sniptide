@@ -21,6 +21,8 @@ Create a personal API token in **Settings** > **API tokens**. A read-only token 
 `list`, `search`, `skill`, `env list`, `env pull` and `env run`. `push`, `env push` and `env delete`
 need **Write access**.
 
+The CLI defaults to Sniptide Cloud at `https://app.sniptide.com`.
+
 Pipe the token to `login` to keep it out of the process list. Set `--base-url` to your instance
 address.
 

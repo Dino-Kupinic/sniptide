@@ -11,7 +11,8 @@ Sniptide instance at `/api/mcp`.
 
 ## Connect an agent
 
-Replace `https://paste.example.com` in the examples with the address you use to open Sniptide.
+Use `https://app.sniptide.com/api/mcp` for Sniptide Cloud. For a self-hosted instance, append
+`/api/mcp` to the address you use to open Sniptide. The examples below use `paste.example.com`.
 When your client opens the consent page, review the access it requests and approve the connection.
 
 <Tabs items={["Claude Code", "Codex", "Cursor", "Grok Bot"]} groupId="agent" persist>
@@ -204,13 +205,36 @@ and to follow only your instructions. Give an agent write access only when it ne
 review what it saves.
 </Callout>
 
-## Use the included agent skills
+## Install the agent plugin
 
 The repository includes skills for connecting an agent, reusing or saving snippets, applying a
-collection and integrating the SDK. The bundled MCP entries in the plugin manifests use a
-fixed server address. To use the skills with your own instance, configure the client with your
-instance’s [MCP address](#connect-an-agent). Check that the selected connection lists your
-collections before you use a skill.
+collection and integrating the SDK. The Claude Code plugin and Gemini CLI extension include
+a Sniptide Cloud connection.
+
+<Tabs items={["Claude Code", "Gemini CLI"]} groupId="agent-plugin">
+<Tab value="Claude Code">
+
+```bash
+claude plugin marketplace add Dino-Kupinic/sniptide
+claude plugin install sniptide@sniptide
+```
+
+Start Claude Code, open `/mcp`, select `sniptide` and choose **Authenticate**.
+
+</Tab>
+<Tab value="Gemini CLI">
+
+```bash
+gemini extensions install https://github.com/Dino-Kupinic/sniptide
+```
+
+Start Gemini CLI and run `/mcp auth sniptide`.
+
+</Tab>
+</Tabs>
+
+To use the skills with your own instance, [add its MCP address](#connect-an-agent). Ask the
+agent to list your collections to confirm it is using the account you intend.
 
 ## Limits and errors
 
