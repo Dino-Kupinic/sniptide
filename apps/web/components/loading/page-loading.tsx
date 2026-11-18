@@ -4,6 +4,7 @@ import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { cn } from "@sniptide/ui/lib/utils"
 import { useParams } from "next/navigation"
 import { useTranslations } from "next-intl"
+import * as React from "react"
 import { PageHeader } from "@/components/page-header"
 import { useSettledShellData } from "@/components/shell/shell-data"
 
@@ -26,21 +27,29 @@ function CodeLines({ lines }: { lines: number }) {
   )
 }
 
-// The side panel's single-line rows.
-function PanelRows({ rows, first }: { rows: number; first?: string }) {
+// The side panel's single-line rows. `open` is the height in pixels of the content under the first
+// row, which the editor's panel opens by default.
+function PanelRows({ rows, first, open }: { rows: number; first?: string; open?: number }) {
   return (
     <div
       aria-hidden="true"
       className="hidden w-[272px] shrink-0 flex-col divide-y divide-border overflow-hidden rounded-lg border border-border lg:flex xl:w-[300px]"
     >
       {Array.from({ length: rows }, (_, row) => (
-        <div
-          key={row}
-          className={cn("flex h-11 items-start gap-2.5 px-3 pt-3.5", row === 0 && first)}
-        >
-          <Skeleton className="size-4 shrink-0" />
-          <Skeleton className="h-4 w-28" />
-        </div>
+        <React.Fragment key={row}>
+          <div className={cn("flex h-11 items-start gap-2.5 px-3 pt-3.5", row === 0 && first)}>
+            <Skeleton className="size-4 shrink-0" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          {row === 0 && open ? (
+            <div className="flex flex-col gap-3 px-3 pt-1" style={{ height: open }}>
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-3.5 w-4/5" />
+              <Skeleton className="mt-3 h-3.5 w-20" />
+              <Skeleton className="mt-auto mb-4 h-6 w-full" />
+            </div>
+          ) : null}
+        </React.Fragment>
       ))}
     </div>
   )
@@ -87,12 +96,12 @@ export function PasteLoading() {
       <PhoneTopBar />
       <div className="flex min-w-0 flex-col gap-1.5 px-4 lg:px-0">
         {known ? (
-          <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-[32px] lg:leading-[38px]">
+          <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
             {known.title}
           </h1>
         ) : (
-          <div aria-hidden="true" className="flex h-9 items-center lg:h-[38px]">
-            <Skeleton className="h-7 w-72 max-w-full" />
+          <div aria-hidden="true" className="flex h-8 items-center">
+            <Skeleton className="h-5.5 w-72 max-w-full" />
           </div>
         )}
         <div aria-hidden="true" className="mt-1 flex h-5 items-center gap-3">
@@ -121,7 +130,7 @@ export function PasteLoading() {
 }
 
 // The editor before the paste or the account's defaults arrive.
-export function EditorLoading() {
+export function EditorLoading({ editing = false }: { editing?: boolean }) {
   return (
     <div className="flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7">
       <PhoneTopBar />
@@ -147,7 +156,7 @@ export function EditorLoading() {
             <Skeleton className="h-3 w-32" />
           </div>
         </div>
-        <PanelRows rows={4} />
+        <PanelRows rows={4} open={editing ? 226 : 204} />
       </div>
       <PhoneBars sticky />
     </div>
