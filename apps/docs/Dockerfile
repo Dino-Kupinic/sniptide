@@ -5,7 +5,7 @@
 
 # Node runs Next (as in development); Bun only installs packages and runs scripts.
 FROM node:24-slim AS build
-COPY --from=oven/bun:1.3.13 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 

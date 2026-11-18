@@ -10,7 +10,7 @@
     "start": "next start --port 3001",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && bun check --no-script",
     "test": "bun test"
   },
   "dependencies": {

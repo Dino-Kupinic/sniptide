@@ -21,7 +21,7 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "peerDependencies": {
     "react": "^19.2.0",

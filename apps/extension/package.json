@@ -10,7 +10,7 @@
     "dev": "bun scripts/build.ts --watch",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-script",
     "test": "bun test ./test"
   },
   "dependencies": {
