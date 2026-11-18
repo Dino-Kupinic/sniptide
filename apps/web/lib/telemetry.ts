@@ -83,7 +83,45 @@ export function recordMaintenance(values: Record<string, number | boolean>) {
   // Merged, because the purge and the analytics rollup each report their own keys.
   telemetry.maintenance = { ...telemetry.maintenance, ...values }
 }
-function route(path = "/") {
+const API_ROUTES = new Set([
+  "/api/analytics",
+  "/api/favicon",
+  "/api/live",
+  "/api/locale",
+  "/api/mcp",
+  "/api/notifications",
+  "/api/notifications/unsubscribe",
+  "/api/oauth/authorize",
+  "/api/oauth/register",
+  "/api/oauth/revoke",
+  "/api/oauth/token",
+  "/api/openapi.json",
+  "/api/search",
+  "/api/stats",
+  "/api/support/chat",
+  "/api/support/report",
+  "/api/v1/batch",
+  "/api/v1/collections",
+  "/api/v1/env",
+  "/api/v1/me",
+  "/api/v1/pastes",
+  "/api/v1/usage",
+])
+// The token API and MCP carry agent traffic, so each of their routes gets its own name. An
+// unknown path under /api shares one name, which keeps a scanner from filling the metric table.
+function apiRoute(pathname: string) {
+  if (API_ROUTES.has(pathname)) return pathname
+  if (/^\/api\/v1\/pastes\/[^/]+$/.test(pathname)) return "/api/v1/pastes/[id]"
+  if (/^\/api\/v1\/collections\/[^/]+\/pastes$/.test(pathname))
+    return "/api/v1/collections/[slug]/pastes"
+  if (/^\/api\/v1\/env\/[^/]+$/.test(pathname)) return "/api/v1/env/[group]"
+  if (pathname.startsWith("/api/analytics/")) return "/api/analytics/[...path]"
+  if (pathname.startsWith("/api/agent-share/")) return "/api/agent-share/[...path]"
+  return "/api/*"
+}
+// The name a request is logged and measured under: its route with slugs, ids and the query
+// string removed.
+export function routeName(path = "/") {
   const pathname = path.split("?")[0] ?? "/"
   if (/^\/secret-share(?:\/|$)/.test(pathname))
     return pathname.endsWith("/reveal") ? "/secret-share/[token]/reveal" : "/secret-share/[token]"
@@ -95,6 +133,8 @@ function route(path = "/") {
   if (pathname.startsWith("/api/auth/")) return "/api/auth/[...all]"
   if (pathname.startsWith("/api/jobs/")) return "/api/jobs/[name]"
   if (pathname.startsWith("/_next/")) return "/_next/*"
+  if (pathname === "/api/health" || pathname === "/api/metrics") return pathname
+  if (pathname.startsWith("/api/")) return apiRoute(pathname)
   if (
     [
       "/",
@@ -109,8 +149,6 @@ function route(path = "/") {
       "/sign-in",
       "/sign-up",
       "/welcome",
-      "/api/health",
-      "/api/metrics",
     ].includes(pathname)
   )
     return pathname
@@ -119,8 +157,18 @@ function route(path = "/") {
   if (pathname.endsWith("/reveal")) return "/[slug]/reveal"
   return "/[slug]"
 }
+// REQUEST_LOG chooses which requests get a log line: `all` (the default), `errors` for 5xx and
+// aborted responses only, or `off`. Metrics count every request whatever it says. A line is a
+// synchronous write, about 5% of the CPU of a token API read.
+export function requestLogMode() {
+  const value = process.env.REQUEST_LOG?.trim().toLowerCase() || "all"
+  if (value !== "all" && value !== "errors" && value !== "off")
+    throw new Error("Invalid configuration: REQUEST_LOG must be all, errors or off.")
+  return value
+}
 export function startTelemetry() {
   if (telemetry.started) return
+  const requestLog = requestLogMode()
   telemetry.started = true
   telemetry.loop.enable()
   const original = Server.prototype.emit
@@ -134,13 +182,15 @@ export function startTelemetry() {
     const finish = () => {
       if (completed) return
       completed = true
-      const name = route(request.url)
+      const name = routeName(request.url)
       const durationMs = performance.now() - started
       recordMetric(
         `http:${name}`,
         durationMs,
         response.statusCode >= 500 || !response.writableFinished,
       )
+      const failed = response.statusCode >= 500 || !response.writableFinished
+      if (requestLog === "off" || (requestLog === "errors" && !failed)) return
       console.info(
         JSON.stringify({
           event: "request",

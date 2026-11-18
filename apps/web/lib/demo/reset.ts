@@ -8,6 +8,7 @@ import {
   apiToken,
   apiTokenUsageDay,
   collection,
+  envAudit,
   envGroup,
   notification,
   oauthClient,
@@ -20,6 +21,7 @@ import { hashPassword } from "better-auth/crypto"
 import { eq, sql } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
+import { captureServerError } from "@/lib/error-tracking"
 import { insertPaste } from "@/lib/pastes/insert"
 import { DAY, HOUR, MINUTE } from "@/lib/time"
 import { DEMO_EMAIL, DEMO_NAME, DEMO_USER_ID, DEMO_USERNAME, demoPassword } from "./guest"
@@ -47,7 +49,7 @@ const globalJobs = globalThis as typeof globalThis & {
 }
 
 // How often the guest account goes back to the example data (DEMO_RESET_MINUTES, hourly).
-export function demoResetMinutes() {
+function demoResetMinutes() {
   return envInteger("DEMO_RESET_MINUTES", 60, 5, 1440)
 }
 
@@ -105,6 +107,9 @@ export async function resetDemo(db: Database, secret: string, now = new Date()) 
     await tx.delete(apiToken).where(eq(apiToken.ownerId, DEMO_USER_ID))
     await tx.delete(apiTokenUsageDay).where(eq(apiTokenUsageDay.ownerId, DEMO_USER_ID))
     await tx.delete(envGroup).where(eq(envGroup.ownerId, DEMO_USER_ID))
+    // The audit log refuses deletes outside a transaction that sets this (the env_audit migration).
+    await tx.execute(sql`select set_config('sniptide.env_audit_purge', 'on', true)`)
+    await tx.delete(envAudit).where(eq(envAudit.ownerId, DEMO_USER_ID))
 
     await tx.insert(collection).values(
       DEMO_COLLECTIONS.map((entry, index) => ({
@@ -202,6 +207,7 @@ export function scheduleDemoReset() {
       console.info(JSON.stringify({ event: "demo_reset", reset }))
     } catch (error) {
       console.error("Demo reset failed", error)
+      await captureServerError(error, { source: "job", job: "demo_reset" })
     }
   }
   void run()

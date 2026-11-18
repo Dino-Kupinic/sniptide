@@ -1,6 +1,6 @@
 import { createHighlighterCore, type HighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
-import { grammarLoaders } from "./grammars"
+import { grammarLoaders } from "./grammar-loaders"
 import { roleOf, theme, themeName } from "./theme"
 import type { HighlightedLines, HighlightedToken, HighlightRole } from "./types"
 
@@ -10,7 +10,7 @@ import type { HighlightedLines, HighlightedToken, HighlightRole } from "./types"
 let highlighter: Promise<HighlighterCore> | undefined
 const loading = new Map<string, Promise<void>>()
 
-export function getHighlighter() {
+function getHighlighter() {
   highlighter ??= createHighlighterCore({
     themes: [theme],
     langs: [],

@@ -10,6 +10,10 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: chore(deps)
+    # Types must match the Node 24 runtime used in Docker and CI.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       better-auth:
         patterns:
@@ -28,3 +32,17 @@ updates:
         update-types:
           - minor
           - patch
+  - package-ecosystem: npm
+    directory: /plugins/raycast
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Vienna
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      raycast:
+        patterns:
+          - "*"

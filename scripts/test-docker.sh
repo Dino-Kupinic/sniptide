@@ -22,7 +22,7 @@ trap cleanup EXIT
 docker network create "$network" >/dev/null
 docker run -d --name "$database" --network "$network" --network-alias db \
   -e POSTGRES_USER=sniptide -e POSTGRES_PASSWORD=sniptide -e POSTGRES_DB=sniptide \
-  postgres:17-alpine >/dev/null
+  postgres:18-alpine >/dev/null
 
 wait_for_database() {
   for ((attempt = 0; attempt < 60; attempt++)); do
@@ -54,11 +54,13 @@ wait_for_database
 # DATABASE_URL and the auth secret are all the app needs to boot. BETTER_AUTH_URL is what lets
 # browsers sign in (the auth origin check compares against it), so the sign-up below needs it.
 docker run -d --name "$app" --network "$network" \
+  -e TELEMETRY=off \
   -e DATABASE_URL=postgres://sniptide:sniptide@db:5432/sniptide \
   -e BETTER_AUTH_SECRET=docker-smoke-test-secret-at-least-32-characters \
   -e BETTER_AUTH_URL=http://localhost:3000 \
   "$image" >/dev/null
 wait_for_app
+docker exec "$app" node /app/healthcheck.cjs
 
 # Check a rendered page, the copied static assets and a write through the migrated auth schema.
 docker exec -i "$app" node --input-type=module <<'JS'

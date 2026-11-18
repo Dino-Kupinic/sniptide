@@ -1,7 +1,7 @@
 // Auto-save folds edits close together into one revision. An edit that rewrites most of a paste is
 // worth its own entry in the history, so this measures how much one save changed.
-export const LARGE_EDIT_SHARE = 0.5
-export const LARGE_EDIT_MIN_CHARS = 300
+const LARGE_EDIT_SHARE = 0.5
+const LARGE_EDIT_MIN_CHARS = 300
 
 type Text = { name: string; content: string }
 

@@ -14,6 +14,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Link2,
+  LockKeyhole,
   Rocket,
   Server,
   Share2,
@@ -64,6 +65,7 @@ export function getMDXComponents(components?: MDXComponents) {
     KeyRoundIcon: KeyRound,
     LayoutDashboardIcon: LayoutDashboard,
     Link2Icon: Link2,
+    LockKeyholeIcon: LockKeyhole,
     RocketIcon: Rocket,
     ServerIcon: Server,
     Share2Icon: Share2,
@@ -75,8 +77,6 @@ export function getMDXComponents(components?: MDXComponents) {
     ...components,
   } satisfies MDXComponents
 }
-
-export const useMDXComponents = getMDXComponents
 
 declare global {
   type MDXProvidedComponents = ReturnType<typeof getMDXComponents>

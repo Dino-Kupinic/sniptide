@@ -3,27 +3,12 @@ import "server-only"
 import type { Database } from "@workspace/db"
 import { accountUsage, apiTokenUsageDay } from "@workspace/db/schema"
 import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm"
-import type { TokenOwner } from "@/lib/api/tokens"
+import { flushMeter } from "@/lib/api/meter"
 import { getDb } from "@/lib/db"
 import { DAY } from "@/lib/time"
 
 export const USAGE_HISTORY_DAYS = 30
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
-
-export async function recordApiRequest(owner: TokenOwner, now = new Date()) {
-  await getDb()
-    .insert(apiTokenUsageDay)
-    .values({
-      ownerId: owner.userId,
-      tokenId: owner.tokenId,
-      day: Math.floor(now.getTime() / DAY),
-      requests: 1,
-    })
-    .onConflictDoUpdate({
-      target: [apiTokenUsageDay.ownerId, apiTokenUsageDay.day, apiTokenUsageDay.tokenId],
-      set: { requests: sql`${apiTokenUsageDay.requests} + 1` },
-    })
-}
 
 // The trigger-kept counters that limits are enforced against, so the Usage tab and the phone
 // settings meter show the same numbers.
@@ -40,6 +25,9 @@ export async function getAccountTotals(owner: string) {
 }
 
 export async function getAccountUsage(owner: string, now = new Date()) {
+  // Requests counted in this process since the last flush belong in the answer, including the
+  // request that is asking.
+  await flushMeter()
   const today = Math.floor(now.getTime() / DAY)
   const [totals, apiRequests] = await Promise.all([
     getAccountTotals(owner),

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { z } from "zod"
+import { EDITIONS, shareUrlForEdition } from "@/lib/edition"
 import { isWebhookUrl } from "@/lib/pastes/webhook-url"
 import { DEFAULT_RESOURCE_LINKS } from "@/lib/resource-links"
 
@@ -106,9 +107,10 @@ export const DEFAULT_ACCOUNT_STORAGE_BYTES = 100 * 1024 ** 2
 export const DEFAULT_ACCOUNT_PASTES = 1000
 
 const schema = z.object({
+  SNIPTIDE_EDITION: z.enum(EDITIONS).default("selfhost"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
-  SMTP_SECURE: flag.default(false),
+  SMTP_SECURE: flag.optional(),
   SMTP_REQUIRE_TLS: flag.default(true),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
@@ -124,6 +126,7 @@ const schema = z.object({
   MIGRATIONS_DIR: z.string().optional(),
 
   BETTER_AUTH_SECRET: z.string().optional(),
+  ABUSE_REPORTS_ENABLED: flag.default(false),
   ENV_SECRETS_KEY: z.string().min(32, { message: "must be at least 32 characters." }).optional(),
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
@@ -178,6 +181,10 @@ const schema = z.object({
   OPERATOR_ADDRESS: z.string().max(500).optional(),
   COPYRIGHT_EMAIL: z.string().email().optional(),
 
+  TELEMETRY: z.enum(["on", "off"]).default("on"),
+  TELEMETRY_ID: z.uuid().optional(),
+  TELEMETRY_DEPLOYMENT: z.enum(["docker", "coolify", "other"]).default("other"),
+
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: origin.default("https://us.i.posthog.com"),
 
@@ -211,7 +218,18 @@ function oauth(clientId?: string, clientSecret?: string) {
   return clientId && clientSecret ? { clientId, clientSecret } : undefined
 }
 
-export function getConfig(env: Record<string, string | undefined> = process.env) {
+// A running server's environment never changes, so production validates it once: every request
+// reads the configuration, and validating the whole environment each time took about 7% of the
+// CPU of a token API read. Development and tests validate on every call, because `next dev`
+// reloads env files and tests set variables between calls.
+let validated: Config | undefined
+export function getConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env !== process.env || process.env.NODE_ENV !== "production") return parseConfig(env)
+  validated ??= parseConfig(env)
+  return validated
+}
+
+function parseConfig(env: Record<string, string | undefined>) {
   // `FOO=` in an env file is "unset", not an empty value.
   const present = Object.fromEntries(
     Object.entries(env).filter(([, value]) => value !== undefined && value.trim() !== ""),
@@ -222,6 +240,14 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     throw new Error(`Invalid configuration:\n  ${problems.join("\n  ")}`)
   }
   const value = parsed.data
+  if (
+    value.ABUSE_REPORTS_ENABLED &&
+    (!value.BETTER_AUTH_URL || !value.BETTER_AUTH_SECRET || value.BETTER_AUTH_SECRET.length < 32)
+  ) {
+    throw new Error(
+      "Invalid configuration: ABUSE_REPORTS_ENABLED requires BETTER_AUTH_URL and BETTER_AUTH_SECRET (at least 32 characters).",
+    )
+  }
   if (
     value.DATABASE_POOL_SIZE > 2 &&
     value.DATABASE_PROBE_RESERVE + value.DATABASE_MAINTENANCE_RESERVE >= value.DATABASE_POOL_SIZE
@@ -241,7 +267,6 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
   if (
     smtpPresent &&
     (!value.SMTP_HOST ||
-      !value.SMTP_PORT ||
       !value.SMTP_FROM ||
       !value.BETTER_AUTH_URL ||
       !value.BETTER_AUTH_SECRET ||
@@ -249,18 +274,24 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
       Boolean(value.SMTP_USER) !== Boolean(value.SMTP_PASSWORD))
   ) {
     throw new Error(
-      "Invalid configuration: SMTP requires SMTP_HOST, SMTP_PORT, SMTP_FROM, BETTER_AUTH_URL, BETTER_AUTH_SECRET (at least 32 characters), and paired SMTP_USER/SMTP_PASSWORD credentials.",
+      "Invalid configuration: SMTP requires SMTP_HOST, SMTP_FROM, BETTER_AUTH_URL, BETTER_AUTH_SECRET (at least 32 characters), and paired SMTP_USER/SMTP_PASSWORD credentials.",
     )
   }
 
+  // Port and TLS mode follow each other, so most servers need neither: implicit TLS is the norm
+  // on 465 and STARTTLS on 587, the submission port every provider offers.
+  const smtpSecure = value.SMTP_SECURE ?? value.SMTP_PORT === 465
+  const smtpPort = value.SMTP_PORT ?? (smtpSecure ? 465 : 587)
+
   return {
+    edition: value.SNIPTIDE_EDITION,
     smtp:
-      smtpPresent && value.SMTP_HOST && value.SMTP_PORT && value.SMTP_FROM
+      smtpPresent && value.SMTP_HOST && value.SMTP_FROM
         ? {
             host: value.SMTP_HOST,
-            port: value.SMTP_PORT,
+            port: smtpPort,
             from: value.SMTP_FROM,
-            secure: value.SMTP_SECURE,
+            secure: smtpSecure,
             requireTLS: value.SMTP_REQUIRE_TLS,
             auth:
               value.SMTP_USER && value.SMTP_PASSWORD
@@ -287,7 +318,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     cookiePrefix: value.COOKIE_PREFIX,
     allowSignUp: value.ALLOW_SIGN_UP,
     allowedEmails: value.ALLOWED_EMAILS,
-    shareUrl: value.SHARE_URL,
+    shareUrl: shareUrlForEdition(value.SHARE_URL, { edition: value.SNIPTIDE_EDITION }),
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
     templatesUrl: value.TEMPLATES_URL,
@@ -308,6 +339,7 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     },
     // Who runs this instance and the documents sign-up points to. Each is optional, so a private
     // self-hosted server can leave them all unset.
+    abuseReportsEnabled: value.ABUSE_REPORTS_ENABLED,
     legal: {
       termsUrl: value.TERMS_URL,
       privacyUrl: value.PRIVACY_URL,
@@ -329,10 +361,15 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
           : undefined,
       assistant: supportAssistant(value),
     },
+    instanceTelemetry: {
+      enabled: value.TELEMETRY === "on",
+      id: value.TELEMETRY_ID,
+      deployment: value.TELEMETRY_DEPLOYMENT,
+    },
     analytics: value.POSTHOG_KEY
       ? { key: value.POSTHOG_KEY, host: value.POSTHOG_HOST.replace(/\/$/, "") }
       : undefined,
   }
 }
 
-export type Config = ReturnType<typeof getConfig>
+export type Config = ReturnType<typeof parseConfig>

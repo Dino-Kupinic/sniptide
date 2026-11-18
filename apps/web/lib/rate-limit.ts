@@ -42,19 +42,41 @@ export function quotaHeaders(quotas: Iterable<Quota>) {
   }
 }
 
+// Turns counted hits into the verdict, and records each named quota for the response headers.
+export function settle(counted: { limit: Limit; count: number; left: number }[]): Hit {
+  let retryAfterSeconds = 0
+  const quotas: Quota[] = []
+  for (const { limit, count, left } of counted) {
+    if (limit.policy) {
+      const quota = {
+        policy: limit.policy,
+        limit: limit.max,
+        remaining: Math.max(0, limit.max - count),
+        resetSeconds: Math.max(1, left),
+        windowSeconds: Number(limit.windowSeconds),
+      }
+      quotas.push(quota)
+      requestQuotas.getStore()?.set(limit.policy, quota)
+    }
+    if (count > limit.max) retryAfterSeconds = Math.max(retryAfterSeconds, left, 1)
+  }
+  return retryAfterSeconds > 0
+    ? { allowed: false, retryAfterSeconds, quotas }
+    : { allowed: true, quotas }
+}
+
 // Counts one hit against every limit and says whether all of them still have room. The hit is
 // counted even when it is refused, so retrying while limited doesn't earn extra attempts.
 export async function hit(limits: Limit[]): Promise<Hit> {
   const db = getDb()
-  let retryAfterSeconds = 0
-  const quotas: Quota[] = []
+  const counted: Parameters<typeof settle>[0] = []
 
-  for (const { key, max, windowSeconds, policy } of limits) {
-    const window = Number(windowSeconds)
+  for (const limit of limits) {
+    const window = Number(limit.windowSeconds)
     const fresh = sql`${rateLimit.windowStart} <= now() - make_interval(secs => ${window}::int)`
     const [row] = await db
       .insert(rateLimit)
-      .values({ key, count: 1 })
+      .values({ key: limit.key, count: 1 })
       .onConflictDoUpdate({
         target: rateLimit.key,
         set: {
@@ -67,23 +89,10 @@ export async function hit(limits: Limit[]): Promise<Hit> {
         left: sql<number>`ceil(extract(epoch from (${rateLimit.windowStart} + make_interval(secs => ${window}::int) - now())))::int`,
       })
     if (!row) throw new Error("The rate-limit counter wasn't returned.")
-    if (policy) {
-      const quota = {
-        policy,
-        limit: max,
-        remaining: Math.max(0, max - row.count),
-        resetSeconds: Math.max(1, row.left),
-        windowSeconds: window,
-      }
-      quotas.push(quota)
-      requestQuotas.getStore()?.set(policy, quota)
-    }
-    if (row.count > max) retryAfterSeconds = Math.max(retryAfterSeconds, row.left, 1)
+    counted.push({ limit, ...row })
   }
 
-  return retryAfterSeconds > 0
-    ? { allowed: false, retryAfterSeconds, quotas }
-    : { allowed: true, quotas }
+  return settle(counted)
 }
 
 // Gives back one hit, for an attempt that turned out to be fine (a correct password).

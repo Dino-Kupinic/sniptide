@@ -7,7 +7,7 @@ import { CopyIcon, DownloadIcon, FileCodeIcon, PrinterIcon, WrapTextIcon } from 
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { navigateTabs } from "@/components/tab-navigation"
-import { byteLength, formatBytes } from "@/lib/format"
+import { byteLength, formatBytes, lineCount } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { getLanguage } from "@/lib/pastes/languages"
 import { CodeBlock } from "./code-block"
@@ -39,22 +39,6 @@ export function ActiveFileProvider({ children }: { children: React.ReactNode }) 
 
 export function useActiveFile() {
   return React.useContext(ActiveFileContext)?.file ?? null
-}
-
-const desktopQuery = "(min-width: 1024px)"
-function subscribeDesktop(onChange: () => void) {
-  const query = window.matchMedia(desktopQuery)
-  query.addEventListener("change", onChange)
-  return () => query.removeEventListener("change", onChange)
-}
-
-// Whether the lg layout is showing. The server renders the desktop answer.
-function useDesktop() {
-  return React.useSyncExternalStore(
-    subscribeDesktop,
-    () => window.matchMedia(desktopQuery).matches,
-    () => true,
-  )
 }
 
 // Code card on the paste pages, styled like the editor's (FileTabs and its status bar): file
@@ -97,22 +81,19 @@ export function FileViewer({
   const locale = useLocale()
   const panelId = React.useId()
   const [activeName, setActiveName] = React.useState(files[0]?.name ?? "")
-  // null until the toggle is used: a card that collapses on phones wraps there and not on desktop.
-  const [wrapChoice, setWrapChoice] = React.useState<boolean | null>(null)
+  const [wrap, setWrap] = React.useState(false)
   const [expanded, setExpanded] = React.useState(false)
   const { copied, copy } = useCopy()
-  const desktop = useDesktop()
   const report = React.useContext(ActiveFileContext)?.setFile
   const active = files.find((file) => file.name === activeName) ?? files[0]
   React.useEffect(() => {
     if (active) report?.({ name: active.name, content: active.content })
   }, [active, report])
   if (!active) return null
-  const wrap = wrapChoice ?? (collapseAt !== undefined && !desktop)
 
   const rawHref = `/${slug}/raw?file=${encodeURIComponent(active.name)}`
-  const lines = active.content.replace(/\n$/, "").split("\n").length
-  const collapsed = collapseAt !== undefined && !expanded && lines > collapseAt
+  const collapsed =
+    collapseAt !== undefined && !expanded && lineCount(active.content, collapseAt) > collapseAt
 
   return (
     <div
@@ -180,7 +161,7 @@ export function FileViewer({
               type="button"
               aria-label={t("wrapLines")}
               aria-pressed={wrap}
-              onClick={() => setWrapChoice(!wrap)}
+              onClick={() => setWrap(!wrap)}
               className={panelToolClass}
             >
               <WrapTextIcon />
@@ -243,7 +224,7 @@ export function FileViewer({
         tabIndex={0}
         content={active.content}
         highlighted={active.lines}
-        wrap={wrapChoice ?? (collapseAt !== undefined && "mobile")}
+        wrap={wrap}
         mobileMaxLines={collapsed ? collapseAt : undefined}
         lineNumbers={lineNumbers}
         className={cn(

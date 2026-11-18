@@ -51,6 +51,8 @@ or revoked. The endpoints under `/api/v1` don't accept session cookies.
 
 A token reaches only **your own** live pastes. It can't read other people's pastes, pastes shared
 with you, the trash or expired pastes, and it never deletes a paste for good.
+[Encrypted pastes](/core-concepts/encrypted-pastes) are left out as well, because the key that
+reads them never leaves the browser.
 
 ## Endpoints
 
@@ -86,6 +88,8 @@ Behavior to know before you write data:
 - `PUT` replaces the title and the whole file list. Read the paste first and send every file you
   want to keep. The previous version stays in the paste's [revisions](/core-concepts/revisions).
 - `PUT /env/{group}` replaces every variable in the group.
+- Reading, replacing and deleting an env group each add an entry to its
+  [activity log](/core-concepts/secrets#review-who-read-and-changed-a-group) under the token's name.
 - `GET /pastes` returns summaries without file contents, newest first. `limit` is 1 to 100 and
   defaults to 20. Pass `nextCursor` back as `cursor` for the next page, and stop when it is `null`.
 - `q` matches when every word appears in the title, link, description, tags, a file path or the

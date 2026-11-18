@@ -13,13 +13,8 @@ import {
   NOTIFICATION_LIMIT,
 } from "@/lib/notifications/store"
 import { purgeStaleData } from "@/lib/pastes/purge"
-import {
-  leaveShare,
-  readSharedPaste,
-  revealSharedPaste,
-  sharePaste,
-  unsharePaste,
-} from "@/lib/pastes/store"
+import { leaveShare, sharePaste, unsharePaste } from "@/lib/pastes/shares"
+import { readSharedPaste, revealSharedPaste } from "@/lib/pastes/store"
 import { drainVisits } from "@/lib/pastes/visits"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -127,6 +122,19 @@ describeDb("notifications", () => {
     })
     expect(await kinds("owner")).toEqual([])
   })
+
+  test.each(["private", "unlisted"] as const)(
+    "a %s burn invitation opens a sealed paste",
+    async (visibility) => {
+      await seedPaste({ slug: "sealed", owner: "owner", visibility, burnAfterRead: true })
+      signInAs("owner")
+      expect(await sharePaste("sealed", "friend", "view")).toEqual({ status: "ok" })
+      const feed = await feedFor("friend")
+      expect(feed.items[0]?.href).toBe("/sealed")
+      expect((await readSharedPaste("sealed")).status).toBe("sealed")
+      expect((await revealSharedPaste("sealed")).status).toBe("ok")
+    },
+  )
 
   test("removing the share, or leaving it, takes the notification with it", async () => {
     await seedPaste({ slug: "shared", owner: "owner", visibility: "private" })

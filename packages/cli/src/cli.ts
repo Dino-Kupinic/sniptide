@@ -65,7 +65,7 @@ const allowed: Record<string, string[]> = {
 }
 const globalOptions = ["base-url", "json", "help", "version"]
 
-export const help = `Sniptide CLI (Node.js 24+)
+const help = `Sniptide CLI (Node.js 24+)
 
   sniptide login --token-stdin       Save a token after checking it with the instance
   sniptide logout                    Remove saved credentials

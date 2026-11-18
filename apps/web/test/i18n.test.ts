@@ -71,6 +71,7 @@ test("notification sentences use the locale and preserve the paste title", () =>
         count: null,
         title: "my-config.ts",
         slug: "config",
+        burnAfterRead: false,
         expiresAt: null,
         actor: "Alice",
       },
@@ -170,6 +171,30 @@ test("all five catalogs have the same messages and valid ICU arguments", async (
       }
     }
   }
+})
+
+// Keys the code assembles while it runs, so no source file spells them out.
+const ASSEMBLED_KEYS = [/^Workspace\.template_/, /^Copyright\.notice\d+$/]
+
+test("every message is used by the app", async () => {
+  const root = path.join(import.meta.dir, "..")
+  const glob = new Bun.Glob("{app,components,emails,i18n,lib}/**/*.{ts,tsx}")
+  let code = ""
+  for await (const file of glob.scan(root)) code += await Bun.file(path.join(root, file)).text()
+  const words = new Set(code.match(/[\w$]+/g))
+
+  const unused: string[] = []
+  for (const file of await readdir(path.join(root, "messages/en"))) {
+    const messages = flattenMessages(await Bun.file(path.join(root, "messages/en", file)).json())
+    for (const [key, message] of Object.entries(messages)) {
+      if (words.has(key.split(".").at(-1) ?? "")) continue
+      if (ASSEMBLED_KEYS.some((pattern) => pattern.test(key))) continue
+      // translateActionError finds an error's key by the English sentence the server returned.
+      if (key.startsWith("Errors.") && code.includes(message)) continue
+      unused.push(`${file}: ${key}`)
+    }
+  }
+  expect(unused).toEqual([])
 })
 
 test("secret endpoints translate safe errors and prevent caching", async () => {

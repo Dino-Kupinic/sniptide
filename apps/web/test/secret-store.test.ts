@@ -20,6 +20,7 @@ import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
 process.env.ENV_SECRETS_KEY = "fake-wrk110-encryption-key-for-tests-only"
 const describeDb = hasDatabase ? describe : describe.skip
+const cli = { via: "web", userId: "ada" } as const
 const marker = "fake-wrk110-secret-value"
 const password = "fake-share-password-110"
 const input = (entries = [{ name: "API_KEY", value: marker }], revision?: number) =>
@@ -155,13 +156,13 @@ describeDb("encrypted web secrets", () => {
   })
   test("keeps CLI slugs and metadata while stale web writes conflict", async () => {
     const id = await create()
-    await writeGroup("ada", "project-dev", [{ name: "CLI", value: "fake-cli-value" }])
+    await writeGroup("ada", "project-dev", [{ name: "CLI", value: "fake-cli-value" }], cli)
     const detail = await secretDetail("ada", id)
     expect(detail?.project).toBe("Example")
     expect(detail?.environment).toBe("dev")
     expect(detail?.revision).toBe(2)
     expect(await saveSecret("ada", id, input([], 1))).toEqual({ status: "conflict" })
-    expect((await readGroup("ada", "project-dev"))?.variables).toEqual([
+    expect((await readGroup("ada", "project-dev", cli))?.variables).toEqual([
       { name: "CLI", value: "fake-cli-value" },
     ])
     const results = await Promise.all([
@@ -171,7 +172,7 @@ describeDb("encrypted web secrets", () => {
     expect(results.map((result) => result.status).sort()).toEqual(["conflict", "ok"])
   })
   test("supports assigning project and environment to an existing CLI group", async () => {
-    await writeGroup("ada", "project-dev", [{ name: "CLI", value: marker }])
+    await writeGroup("ada", "project-dev", [{ name: "CLI", value: marker }], cli)
     const [group] = await getDb().select().from(envGroup)
     if (!group) throw new Error("Fixture failed.")
     expect(await saveSecret("ada", group.id, input([], 0))).toEqual({ status: "ok", id: group.id })
@@ -191,7 +192,7 @@ describeDb("encrypted web secrets", () => {
       status: "ok",
       entries: [{ name: "API_KEY", value: marker }],
     })
-    await writeGroup("ada", "project-dev", [{ name: "NEW", value: "fake-updated-value" }])
+    await writeGroup("ada", "project-dev", [{ name: "NEW", value: "fake-updated-value" }], cli)
     expect(await revealSharedSecret(token, password, "reader")).toEqual({
       status: "ok",
       entries: [{ name: "NEW", value: "fake-updated-value" }],

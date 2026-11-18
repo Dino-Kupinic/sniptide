@@ -3,7 +3,7 @@ import type { Visibility } from "@/lib/pastes/types"
 // The example data a demo instance starts with and returns to on every reset. Slugs are fixed so
 // links to the examples keep working across resets.
 
-export interface DemoFile {
+interface DemoFile {
   name: string
   language: string
   content: string
@@ -160,7 +160,7 @@ LIMIT 20;
         language: "yaml",
         content: `services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_PASSWORD: example
     healthcheck:

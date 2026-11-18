@@ -45,19 +45,14 @@ import { getDashboardData } from "@/lib/pastes/dashboard"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage, listSharedPage, trashTotals } from "@/lib/pastes/lists"
 import { parseSharedListQuery } from "@/lib/pastes/shared-list-query"
+import { getShare, listPasteShares, restoreShare, sharePaste } from "@/lib/pastes/shares"
 import {
   deleteForever,
   getPaste,
   getPasteMeta,
-  getShare,
   getUnlockHash,
   isSlugAvailable,
   isStarred,
-  listOwnPastes,
-  listPasteShares,
-  listShared,
-  listStarred,
-  listTrash,
   navCounts,
   readPublicPreview,
   readRawFile,
@@ -67,13 +62,11 @@ import {
   renamePaste,
   restorePaste,
   restoreRevision,
-  restoreShare,
   revealSharedPaste,
   sealRevision,
   searchOwnPastes,
   setPasteCollection,
   setStarred,
-  sharePaste,
   sidebarData,
   starredSlugs,
   trashPaste,
@@ -90,6 +83,7 @@ import {
   signInAs,
   unlock,
 } from "./harness"
+import { listOwnPastes, listShared, listStarred, listTrash } from "./lists"
 
 const describeDb = hasDatabase ? describe : describe.skip
 const restricted = ["pending", "quarantined", "removed"] as const
@@ -516,14 +510,14 @@ describeDb("host moderation", () => {
       return pending
     })
     const [apiPage, collectionPage, webPage] = await Promise.all(reads)
-    expect(apiPage.pastes).toHaveLength(50)
-    expect(apiPage.nextCursor).toBeTruthy()
+    // The API list is one statement, so it reads its snapshot once the lock clears: the page it
+    // returns is whole, and holds only what moderation left.
+    expect(apiPage.pastes.map((item) => item.slug)).toEqual(["snapshot-50"])
+    expect(apiPage.nextCursor).toBeNull()
     expect(collectionPage?.pastes).toHaveLength(50)
     expect(collectionPage?.nextCursor).toBeTruthy()
     expect(webPage.pastes).toHaveLength(10)
     expect("nextCursor" in webPage.pagination && webPage.pagination.nextCursor).toBeTruthy()
-    const nextApi = await listCaptures("owner", { ...apiQuery, cursor: apiPage.nextCursor })
-    expect(nextApi.pastes.map((item) => item.slug)).toEqual(["snapshot-50"])
     const nextCollection = await collectionCaptures(
       "owner",
       "examples",

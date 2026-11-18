@@ -2,7 +2,7 @@ export const NOTIFICATION_KINDS = ["shared", "burned", "expiring", "views"] as c
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
 
 // A notification as the bell lists it: the text is already written and the link already built.
-export interface NotificationItem {
+interface NotificationItem {
   id: string
   kind: NotificationKind
   title: string

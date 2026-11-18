@@ -1,0 +1,1 @@
+ALTER TABLE "abuse_report" ADD COLUMN "paste_id" uuid;

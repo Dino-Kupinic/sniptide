@@ -2,13 +2,11 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { paste, pasteRevision, user } from "@workspace/db/schema"
 import { eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { leaveShare, sharePaste, unsharePaste } from "@/lib/pastes/shares"
 import {
-  leaveShare,
   restoreRevision,
   sealRevision,
-  sharePaste,
   trashPaste,
-  unsharePaste,
   updatePaste,
   updateSharing,
 } from "@/lib/pastes/store"

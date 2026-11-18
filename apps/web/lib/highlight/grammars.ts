@@ -11,10 +11,6 @@ const byExtension: Record<string, Record<string, string>> = {
   docker: { yml: "yaml", yaml: "yaml" },
 }
 
-// Each of Shiki's grammars is its own dynamic import (./grammar-loaders.ts), so the bundler splits
-// every one into a chunk and the editor downloads a grammar only when a file needs it.
-export { grammarLoaders } from "./grammar-loaders"
-
 export function grammarFor(file: Pick<PasteFile, "name" | "language">): string | undefined {
   const language = getLanguage(file.language)
   if (language.id === "text") return undefined

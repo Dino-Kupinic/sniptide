@@ -23,7 +23,9 @@ the full details.
 | Sharing says the paste has expired | Check the paste's expiry. **Starred** does not extend it, even if you can still open the paste yourself. | Set a new expiry or choose **Never**, then retry the invitation, access change, or undo. See [Set an expiry](/core-concepts/sharing#set-an-expiry). |
 | You're asked for your own paste's password | You opened the share link, which shows readers' view. | Open the paste from your pastes in the app instead. |
 | Copy buttons or password unlocks don't work | Check whether the address starts with `http://` on something other than `localhost`. | Serve the instance over HTTPS. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). |
-| **Share via…** or **Embed** isn't offered | The paste must be public or unlisted, without a password or burn after read. Slack and Discord also need a webhook set by the administrator. | Change the paste's settings, or ask the administrator. |
+| A paste shows "Key needed" | The paste is end-to-end encrypted and the link has no `#key=` part, or this browser never held the key. | Open or paste the full link. Without the key the paste can't be recovered. See [Where the key is kept](/core-concepts/encrypted-pastes#where-the-key-is-kept). |
+| An encrypted paste has no **Edit**, **Duplicate** or **Public** option, or is missing from the API, CLI or an agent | The server can't read an encrypted paste. | Create a new paste to change the content. See [What an encrypted paste gives up](/core-concepts/encrypted-pastes#what-an-encrypted-paste-gives-up). |
+| **Share via…** or **Embed** isn't offered | The paste must be public or unlisted, without a password, burn after read or end-to-end encryption. Slack and Discord also need a webhook set by the administrator. | Change the paste's settings, or ask the administrator. |
 
 ## API, SDKs and CLI
 

@@ -9,7 +9,7 @@ import { byteLength, formatLimit } from "@/lib/format"
 const GIST_LINK = /([0-9a-f]{20,40})\/?(?:#.*)?$/i
 const RAW_HOST = "gist.githubusercontent.com"
 const AVATAR_HOST = "avatars.githubusercontent.com"
-export const MAX_NAME = 120
+const MAX_NAME = 120
 
 // The id in a gist URL, or a bare id. Null for anything else.
 export function parseGistId(input: string) {
@@ -32,7 +32,7 @@ const gistSchema = z.object({
   ),
 })
 
-export type GistFile = {
+type GistFile = {
   name: string
   size: number
   // Inline text, when GitHub sent the whole file.

@@ -13,7 +13,7 @@ import { DAY } from "@/lib/time"
 
 export const PROFILE_PAGE_SIZE = 20
 
-export interface ProfilePaste {
+interface ProfilePaste {
   slug: string
   title: string
   language: string
@@ -22,6 +22,7 @@ export interface ProfilePaste {
 }
 
 export interface Profile {
+  id: string
   // The normalized handle in the URL, and the one the owner chose to display.
   username: string
   displayUsername: string
@@ -45,7 +46,7 @@ export interface Profile {
 // The pastes a profile lists: the ones anyone could already find and open with no link, session,
 // password or reveal step. Unlisted, private, password-protected and burn-after-read pastes stay
 // off it, and so do trashed, expired and moderated ones.
-export function profilePastesWhere(ownerId: string, now = new Date()) {
+function profilePastesWhere(ownerId: string, now = new Date()) {
   return and(
     eq(paste.ownerId, ownerId),
     eq(paste.visibility, "public"),
@@ -147,6 +148,7 @@ export const readProfile = cache(
     const pageCount = Math.max(1, Math.ceil(total / PROFILE_PAGE_SIZE))
     if (page > pageCount) return null
     return {
+      id: owner.id,
       username: owner.username,
       displayUsername: owner.displayUsername ?? owner.username,
       name: owner.name,

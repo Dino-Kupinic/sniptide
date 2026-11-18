@@ -13,7 +13,7 @@ export interface DocPage {
   body: string
 }
 
-export function docsDirectory() {
+function docsDirectory() {
   // The server runs from apps/web, in development and in the image alike.
   return path.join(process.cwd(), "../docs/content/docs")
 }

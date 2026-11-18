@@ -38,6 +38,7 @@
         "claude_code": "Claude Code",
         "codex": "Codex",
         "cursor": "Cursor",
+        "grok_bot": "Grok Bot",
         "other": "Other"
       },
       "steps": {
@@ -45,6 +46,8 @@
         "authenticate": "In Claude Code, run <code>/mcp</code> and choose Authenticate",
         "addServer": "Add as a remote MCP server",
         "addToCursor": "Add to Cursor",
+        "openGrokBot": "Open Grok Bot connectors",
+        "grokBotCustom": "Choose New Connector, then Custom, and paste this address",
         "allow": "Allow access in your browser"
       },
       "yourAgent": "your agent",
@@ -53,6 +56,35 @@
       "connectedOther": "Your agent is connected and can save pastes now.",
       "skipForNow": "Skip for now",
       "finish": "Go to dashboard"
+    }
+  },
+  "Tour": {
+    "progress": "{current} of {total}",
+    "skip": "Skip tour",
+    "next": "Next",
+    "done": "Done",
+    "steps": {
+      "new_paste": {
+        "title": "Save a paste",
+        "body": "A paste holds code, notes or a prompt in one or more files, and it gets its own link to share."
+      },
+      "templates": {
+        "title": "Start from a template",
+        "body": "Open a ready-made file, such as a CLAUDE.md or a Docker Compose setup, in the editor and save it as your own paste."
+      },
+      "search": {
+        "title": "Find anything",
+        "body": "Search covers your pastes, your collections and every action in the app."
+      },
+      "collections": {
+        "title": "Group pastes in collections",
+        "body": "A collection keeps related pastes together, and your agent can fetch all of it at once.",
+        "bodyMore": "Collections are under More. A collection keeps related pastes together, and your agent can fetch all of it at once."
+      },
+      "agent": {
+        "title": "Connect your agent",
+        "body": "Run this setup once, and your agent saves pastes and reads them back for you."
+      }
     }
   }
 }

@@ -49,13 +49,11 @@
     "today": "Hoy",
     "tomorrow": "mañana",
     "yourAccess": "Tu acceso",
-    "accessFrom": "{access} · de {name}",
     "expiresLabel": "Caduca",
     "viewsLabel": "Visitas",
     "revisions": "Versiones",
     "editPermission": "Puedes editar este fragmento. Solo {name} puede compartirlo y eliminarlo.",
     "viewPermission": "Puedes leer y copiar este fragmento. Solo {name} puede modificarlo.",
-    "gistError": "No se pudo abrir ese gist.",
     "metricViews": "Visitas",
     "metricUnique": "Visitantes únicos",
     "metricCopies": "Copias de código",
@@ -85,6 +83,7 @@
     "someone": "Alguien",
     "notificationShared": "{name} ha compartido «{title}» contigo",
     "notificationSharedDetail": "Ábrelo en Compartidos conmigo",
+    "notificationSharedBurnDetail": "Abrir el contenido sellado",
     "notificationBurned": "Se ha leído «{title}»",
     "notificationBurnedDetail": "Se eliminó tras su lectura. Restáuralo de la papelera para conservarlo",
     "notificationNeverExpires": "«{title}» ya no caduca",
@@ -94,7 +93,8 @@
     "notificationViews": "«{title}» ha alcanzado {count, number} visitas",
     "notificationViewsDetail": "Consulta su origen en Estadísticas",
     "snapshotUnavailable": "Snapshot unavailable",
-    "expired": "Caducado"
+    "expired": "Caducado",
+    "endToEndEncrypted": "Cifrado de extremo a extremo"
   },
   "Profile": {
     "metaTitle": "{name} (@{handle}) · Sniptide",

@@ -20,6 +20,7 @@ import {
   SheetTrigger,
   sheetRowClass,
 } from "@sniptide/ui/components/sheet"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { Spinner } from "@sniptide/ui/components/spinner"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
@@ -534,7 +535,11 @@ export function ListHeader({
   actions,
   mobileActions = actions,
   headerActions = actions,
+  topBar = true,
 }: {
+  // False while the list loads: the top bar keeps the title it already shows for the route.
+  topBar?: boolean
+  // Empty while the title is still loading, which holds its place with a placeholder.
   title: string
   count?: number
   description?: React.ReactNode
@@ -545,19 +550,25 @@ export function ListHeader({
   const locale = useLocale()
   return (
     <div className="flex flex-col gap-1">
-      <HeaderTitle>
-        <TruncatedText className="max-w-80">{title}</TruncatedText>
-        {count !== undefined ? (
-          <span className="rounded-sm shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
-            {formatNumber(count, locale)}
-          </span>
-        ) : null}
-      </HeaderTitle>
+      {topBar ? (
+        <HeaderTitle>
+          {title ? (
+            <TruncatedText className="max-w-80">{title}</TruncatedText>
+          ) : (
+            <Skeleton className="h-3.5 w-32" />
+          )}
+          {count !== undefined ? (
+            <span className="rounded-sm shrink-0 bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
+              {formatNumber(count, locale)}
+            </span>
+          ) : null}
+        </HeaderTitle>
+      ) : null}
       {headerActions ? <HeaderActions>{headerActions}</HeaderActions> : null}
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-baseline gap-3">
           <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
-            {title}
+            {title || <Skeleton className="my-1.5 h-6 w-56 lg:my-2" />}
           </h1>
           {count !== undefined ? (
             <span className="shrink-0 text-sm text-muted-foreground tabular-nums lg:hidden">
@@ -574,17 +585,4 @@ export function ListHeader({
       ) : null}
     </div>
   )
-}
-
-export function usePaged<T>(items: T[], page: number, pageSize: number) {
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize))
-  const current = Math.min(page, pageCount)
-  const start = (current - 1) * pageSize
-
-  return {
-    page: current,
-    pageCount,
-    items: items.slice(start, start + pageSize),
-    range: items.length === 0 ? "0" : `${start + 1}–${Math.min(start + pageSize, items.length)}`,
-  }
 }

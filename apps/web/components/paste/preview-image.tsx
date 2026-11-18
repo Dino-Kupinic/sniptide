@@ -7,7 +7,7 @@ import type { HighlightRole } from "@/lib/highlight/types"
 import { getLanguage } from "@/lib/pastes/languages"
 import { type PastePreview, previewLines } from "@/lib/pastes/preview"
 
-export const previewSize = { width: 1200, height: 630 }
+const previewSize = { width: 1200, height: 630 }
 
 // The Night card from the brand file (Brand, "OG v3 · Paste"): the sidebar black with the logo,
 // the paste title and its first lines of code in a panel that runs off the bottom edge.

@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import { execFile } from "node:child_process"
-import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
@@ -37,7 +37,8 @@ beforeAll(async () => {
   await exec("bun", ["run", "build"], { cwd: path.resolve(import.meta.dir, "..") })
 })
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "sniptide-cli-"))
+  // The CLI reports real paths, and on macOS the temp directory is a symlink into /private.
+  root = await realpath(await mkdtemp(path.join(tmpdir(), "sniptide-cli-")))
   source = path.join(root, "source")
   target = path.join(root, "target")
   await mkdir(source)
@@ -181,6 +182,16 @@ describe("built Node CLI", () => {
     })
     expect(requests).toHaveLength(0)
     expect((await cli(["push", "src/query.sql", "--lines", "1:4", "--dry-run"])).code).toBe(2)
+  })
+
+  test("keeps the selected final newline without adding a phantom line", async () => {
+    await fixture("notes.txt", "first\n🌊\r\n")
+    const capture = (range: string) =>
+      cli(["push", "notes.txt", "--lines", range, "--dry-run", "--json"])
+    const result = await capture("2:2")
+    expect(result.code).toBe(0)
+    expect(JSON.parse(result.stdout).data.files[0].content).toBe("🌊\r\n")
+    expect((await capture("3:3")).code).toBe(2)
   })
 
   test("captures commit, sanitized remote, and dirty state", async () => {

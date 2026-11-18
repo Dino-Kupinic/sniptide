@@ -14,6 +14,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { EyeIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon, UsersIcon, XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useSiteOrigin } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
@@ -24,14 +25,16 @@ import {
   type ShareResult,
   setShareAccess,
 } from "@/lib/pastes/actions"
+import { useKeyedUrl } from "@/lib/pastes/keyring"
 import type { SharePerson, Visibility } from "@/lib/pastes/types"
 import type { WebhookTarget } from "@/lib/pastes/webhook-url"
 import { profilePath } from "@/lib/profile-path"
 import { LinkCopyContent, useCopyLink } from "./copy-button"
 import { EmbedShare } from "./embed-share"
+import { EncryptionNote } from "./encryption-note"
 import { ExpiredNotice, usePasteExpired } from "./expiry-status"
 import { useNativeShare } from "./paste-actions"
-import { AccessMenu, InviteField, ShareAvatar } from "./share-people"
+import { AccessMenu, InviteField } from "./share-people"
 import { WebhookShare } from "./webhook-share"
 
 const visibilityNote: Record<Visibility, { icon: typeof LockIcon; text: string }> = {
@@ -49,6 +52,7 @@ export function ShareDialog({
   slug,
   title,
   url,
+  encryptionKeyId,
   visibility,
   owner,
   people: initialPeople,
@@ -61,8 +65,10 @@ export function ShareDialog({
   slug: string
   title: string
   url: string
+  // Set on an encrypted paste: Copy and Share hand out the link with its key.
+  encryptionKeyId?: string | null
   visibility: Visibility
-  owner: { id: string; name: string; handle: string; initials: string }
+  owner: { id: string; name: string; handle: string; image: string | null }
   people: SharePerson[]
   trigger: "button" | "icon"
   webhookTargets?: WebhookTarget[]
@@ -196,7 +202,13 @@ export function ShareDialog({
             </DialogClose>
           </div>
           <ExpiredNotice expiresAt={expiresAt} />
-          <ShareLinkRow url={url} title={title} expired={expired} />
+          <ShareLinkRow
+            url={url}
+            encryptionKeyId={encryptionKeyId}
+            title={title}
+            expired={expired}
+          />
+          {encryptionKeyId ? <EncryptionNote keyId={encryptionKeyId} /> : null}
           <InviteField
             disabled={expired}
             onInvite={invite}
@@ -212,13 +224,13 @@ export function ShareDialog({
 
         <ul className="flex max-h-[40svh] flex-col divide-y divide-border overflow-y-auto">
           <li className="flex items-center gap-3 px-4 py-2.5 lg:px-6">
-            <ShareAvatar person={owner} className="size-8 text-[10px]" />
+            <UserAvatar person={owner} className="size-8" />
             <PersonName name={t("ownerYou", { name: owner.name })} handle={owner.handle} />
             <span className="text-[13px] text-muted-foreground">{t("owner")}</span>
           </li>
           {people.map((person) => (
             <li key={person.id} className="flex items-center gap-3 px-4 py-2.5 lg:px-6">
-              <ShareAvatar person={person} className="size-8 text-[10px]" />
+              <UserAvatar person={person} className="size-8" />
               <PersonName name={person.name} handle={person.handle} />
               <AccessMenu
                 value={person.access}
@@ -232,16 +244,21 @@ export function ShareDialog({
           ))}
         </ul>
 
-        <WebhookShare
-          slug={slug}
-          targets={webhookTargets}
-          allowed={webhookAllowed && !expired}
-          unavailableReason={expired ? t("expiredSharingHelp") : undefined}
-        />
-        <EmbedShare
-          code={expired ? undefined : embedCode}
-          unavailableReason={expired ? t("expiredSharingHelp") : undefined}
-        />
+        {/* A webhook and an embed are both rendered by the server, which can't read the paste. */}
+        {encryptionKeyId ? null : (
+          <>
+            <WebhookShare
+              slug={slug}
+              targets={webhookTargets}
+              allowed={webhookAllowed && !expired}
+              unavailableReason={expired ? t("expiredSharingHelp") : undefined}
+            />
+            <EmbedShare
+              code={expired ? undefined : embedCode}
+              unavailableReason={expired ? t("expiredSharingHelp") : undefined}
+            />
+          </>
+        )}
         <div className="flex items-center justify-between gap-3 border-t border-border bg-sidebar px-4 py-3 max-lg:flex-col max-lg:items-stretch lg:px-6">
           <span className="flex items-center gap-2 text-[13px]">
             <note.icon className="size-3.5 shrink-0" />
@@ -274,12 +291,24 @@ function PersonName({ name, handle }: { name: string; handle: string }) {
 }
 
 // Keep the link visible; offer native sharing on phones where the browser supports it.
-function ShareLinkRow({ url, title, expired }: { url: string; title: string; expired: boolean }) {
+function ShareLinkRow({
+  url,
+  encryptionKeyId,
+  title,
+  expired,
+}: {
+  url: string
+  encryptionKeyId?: string | null
+  title: string
+  expired: boolean
+}) {
   const t = useTranslations("Paste")
-  const { state, props } = useCopyLink(url, () =>
+  // The field shows the bare link; what is copied or shared carries the key.
+  const keyed = useKeyedUrl(url, encryptionKeyId)
+  const { state, props } = useCopyLink(keyed, () =>
     track("share_link_copied", { from: "share_dialog" }),
   )
-  const { share } = useNativeShare(url, title, "share_dialog")
+  const { share } = useNativeShare(keyed, title, "share_dialog")
   const [canShare, setCanShare] = React.useState(false)
   React.useEffect(() => setCanShare(typeof navigator.share === "function"), [])
   return (

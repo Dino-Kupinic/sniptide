@@ -2,22 +2,22 @@ import "server-only"
 
 import { createHash, randomBytes } from "node:crypto"
 import { apiToken, oauthClient, user } from "@workspace/db/schema"
-import { and, asc, eq, isNull, lt, or, sql } from "drizzle-orm"
+import { and, asc, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { type AgentClient, agentClientFromName } from "@/lib/onboarding"
-import { DAY } from "@/lib/time"
+import type { Hit, Limit } from "@/lib/rate-limit"
+import { DAY, HOUR_SECONDS } from "@/lib/time"
+import { meterRequest, meterTokenUse } from "./meter"
 import { SCOPES, type Scope } from "./scopes"
 
 // Personal API tokens (packages/db/src/schema/tokens.ts). A token acts for the account that made
 // it, limited to its scopes: `read` lists and pulls pastes and env groups, `write` creates them.
 // Only a hash is stored, so a lost token can't be shown again; it's revoked and replaced.
 
-export { SCOPES, type Scope } from "./scopes"
-
 export const TOKEN_PREFIX = "snpt_"
 export const MAX_TOKENS = 25
-export const TOKEN_EXPIRIES = ["30d", "90d", "1y", "never"] as const
+const TOKEN_EXPIRIES = ["30d", "90d", "1y", "never"] as const
 export type TokenExpiry = (typeof TOKEN_EXPIRIES)[number]
 const EXPIRY_DAYS: Record<Exclude<TokenExpiry, "never">, number> = {
   "30d": 30,
@@ -47,7 +47,7 @@ export interface TokenOwner {
   agent?: AgentClient | null
 }
 
-export const tokenInputSchema = z.object({
+const tokenInputSchema = z.object({
   name: z.string().trim().min(1, "Name the token.").max(60, "Use at most 60 characters."),
   // Writing without reading back what you wrote isn't useful, so write always comes with read.
   write: z.boolean(),
@@ -138,14 +138,26 @@ export async function revokeToken(owner: string, id: string) {
   return rows.length > 0
 }
 
+// The limit every request with a valid token counts against, so a leaked token or a looping agent
+// can't hammer the server.
+export function tokenRequestLimit(tokenId: string): Limit {
+  return {
+    policy: "api-token",
+    key: `${TOKEN_LIMIT_PREFIX}${tokenId}`,
+    max: 3600,
+    windowSeconds: HOUR_SECONDS,
+  }
+}
+const TOKEN_LIMIT_PREFIX = "api:token:"
+
 // The account and scopes behind a request's `Authorization: Bearer <token>`, or null for a
-// missing, malformed, unknown, revoked or expired token.
+// missing, malformed, unknown, revoked or expired token. A token whose last-used time is stale
+// is marked for the next meter flush, so looking a token up writes nothing.
 export async function authenticate(request: Request): Promise<TokenOwner | null> {
   const header = request.headers.get("authorization") ?? ""
   const match = /^Bearer ([A-Za-z0-9_-]{16,128})$/.exec(header.trim())
   if (!match?.[1]?.startsWith(TOKEN_PREFIX)) return null
-  const db = getDb()
-  const [row] = await db
+  const [row] = await getDb()
     .select({
       id: apiToken.id,
       ownerId: apiToken.ownerId,
@@ -158,23 +170,22 @@ export async function authenticate(request: Request): Promise<TokenOwner | null>
     .leftJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
     .where(eq(apiToken.hash, hashToken(match[1])))
   if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
-  const now = new Date()
-  const threshold = new Date(now.getTime() - LAST_USED_GRANULARITY_MS)
-  if (!row.lastUsedAt || row.lastUsedAt < threshold) {
-    await db
-      .update(apiToken)
-      .set({ lastUsedAt: now })
-      .where(
-        and(
-          eq(apiToken.id, row.id),
-          or(isNull(apiToken.lastUsedAt), lt(apiToken.lastUsedAt, threshold)),
-        ),
-      )
-  }
+  if (!row.lastUsedAt || row.lastUsedAt.getTime() < Date.now() - LAST_USED_GRANULARITY_MS)
+    meterTokenUse(row.id)
   return {
     tokenId: row.id,
     userId: row.ownerId,
     scopes: scopesOf(row.scopes),
     agent: row.client === null ? null : agentClientFromName(row.client),
   }
+}
+
+// `authenticate` for a request that is about to be served: it also counts the request in the
+// account's usage and against the token's rate limit, and returns that verdict.
+export async function admitToken(
+  request: Request,
+  now = new Date(),
+): Promise<{ owner: TokenOwner; quota: Hit } | null> {
+  const owner = await authenticate(request)
+  return owner ? { owner, quota: await meterRequest(owner, now) } : null
 }

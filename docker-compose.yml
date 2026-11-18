@@ -11,8 +11,8 @@
 # and the client-IP settings behind it, and COMPOSE_PROFILES=proxy turns that proxy on. Without a
 # domain, set BETTER_AUTH_URL=http://<server-ip>:3000 to check startup; copy buttons, password
 # unlocks and CLI/MCP clients need HTTPS. Keep the secret: sessions depend on it. Add
-# ALLOW_SIGN_UP=first to close sign-up once your own account exists. See .env.example for the
-# settings this file forwards to the app.
+# ALLOW_SIGN_UP=first to close sign-up once your own account exists. Every other setting in .env
+# reaches the app as it is; .env.example lists the common ones.
 #
 # Local development: start only the database and run the app with `bun dev`:
 #   docker compose up -d db
@@ -28,7 +28,17 @@ x-logging: &logging
 
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
+    # The 17 volume has PG_VERSION at its root. Refuse to initialize an empty 18 cluster over it.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        if [ -f /var/lib/postgresql/PG_VERSION ]; then
+          echo "PostgreSQL 17 data detected. Follow the PostgreSQL upgrade guide before starting." >&2
+          exit 1
+        fi
+        exec docker-entrypoint.sh postgres
     restart: unless-stopped
     mem_limit: ${POSTGRES_MEMORY:-0}
     logging: *logging
@@ -39,7 +49,7 @@ services:
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - ${POSTGRES_VOLUME:-postgres}:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sniptide -d sniptide"]
       interval: 5s
@@ -59,78 +69,26 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Every setting in .env reaches the app, so any option from apps/web/.env.example works by
+    # adding it there. The values below are the ones this file derives or must check, and they win
+    # over the same names in .env.
+    env_file:
+      - path: .env
+        required: false
     environment:
-      NODE_OPTIONS: ${NODE_OPTIONS:-}
+      SNIPTIDE_EDITION: ${SNIPTIDE_EDITION:-selfhost}
+      TELEMETRY: ${TELEMETRY:-on}
       DATABASE_URL: postgres://sniptide:${POSTGRES_PASSWORD:-sniptide}@db:5432/sniptide
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (openssl rand -hex 32) in .env}
       # The public address: BETTER_AUTH_URL when set, otherwise https://<SNIPTIDE_DOMAIN>, otherwise
       # http://localhost:3000.
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-${SNIPTIDE_DOMAIN:+https://}${SNIPTIDE_DOMAIN:-http://localhost:3000}}
-      # "first" closes sign-up once the first account (yours) exists; the install script sets it.
-      ALLOW_SIGN_UP: ${ALLOW_SIGN_UP:-true}
-      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
-      DEMO_MODE: ${DEMO_MODE:-false}
-      DEMO_RESET_MINUTES: ${DEMO_RESET_MINUTES:-60}
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      ENV_SECRETS_KEY: ${ENV_SECRETS_KEY:-}
-      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
-      SHARE_URL: ${SHARE_URL:-}
-      HOME_URL: ${HOME_URL:-}
-      HOMEPAGE_URL: ${HOMEPAGE_URL:-}
-      DOCS_URL: ${DOCS_URL:-}
-      HELP_URL: ${HELP_URL:-}
-      TEMPLATES_URL: ${TEMPLATES_URL:-}
-      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
-      COOKIE_PREFIX: ${COOKIE_PREFIX:-}
-      SHARE_PROXY_SECRET: ${SHARE_PROXY_SECRET:-}
-      MAX_PASTE_SIZE: ${MAX_PASTE_SIZE:-}
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
-      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-}
-      SMTP_FROM: ${SMTP_FROM:-}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_SECURE: ${SMTP_SECURE:-}
-      SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS:-}
-      POSTHOG_KEY: ${POSTHOG_KEY:-}
-      POSTHOG_HOST: ${POSTHOG_HOST:-}
-      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
-      HTTP_ADMISSION_LIMIT: ${HTTP_ADMISSION_LIMIT:-64}
-      PROBE_ADMISSION_LIMIT: ${PROBE_ADMISSION_LIMIT:-2}
-      LIVE_ADMISSION_LIMIT: ${LIVE_ADMISSION_LIMIT:-128}
-      DATABASE_PROBE_RESERVE: ${DATABASE_PROBE_RESERVE:-1}
-      DATABASE_MAINTENANCE_RESERVE: ${DATABASE_MAINTENANCE_RESERVE:-1}
-      DATABASE_ADMISSION_QUEUE_LIMIT: ${DATABASE_ADMISSION_QUEUE_LIMIT:-64}
-      VISIT_DRAIN_BATCH_SIZE: ${VISIT_DRAIN_BATCH_SIZE:-500}
-      VISIT_QUEUE_MAX_LAG_MS: ${VISIT_QUEUE_MAX_LAG_MS:-30000}
-      VISIT_QUEUE_MAX_BACKLOG: ${VISIT_QUEUE_MAX_BACKLOG:-10000}
-      DATABASE_CONNECT_TIMEOUT_SECONDS: ${DATABASE_CONNECT_TIMEOUT_SECONDS:-10}
-      DATABASE_IDLE_TIMEOUT_SECONDS: ${DATABASE_IDLE_TIMEOUT_SECONDS:-20}
-      DATABASE_MAX_LIFETIME_SECONDS: ${DATABASE_MAX_LIFETIME_SECONDS:-1800}
-      DATABASE_STATEMENT_TIMEOUT_MS: ${DATABASE_STATEMENT_TIMEOUT_MS:-10000}
-      DATABASE_LOCK_TIMEOUT_MS: ${DATABASE_LOCK_TIMEOUT_MS:-3000}
-      DATABASE_IDLE_TRANSACTION_TIMEOUT_MS: ${DATABASE_IDLE_TRANSACTION_TIMEOUT_MS:-15000}
-      ACCOUNT_STORAGE_BYTES: ${ACCOUNT_STORAGE_BYTES:-}
-      ACCOUNT_PASTE_LIMIT: ${ACCOUNT_PASTE_LIMIT:-}
-      VIEW_HISTORY_RETENTION_DAYS: ${VIEW_HISTORY_RETENTION_DAYS:-90}
-      ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-180}
-      PURGE_BATCH_SIZE: ${PURGE_BATCH_SIZE:-500}
-      PURGE_TIME_BUDGET_MS: ${PURGE_TIME_BUDGET_MS:-2000}
-      HIGHLIGHT_CACHE_BYTES: ${HIGHLIGHT_CACHE_BYTES:-33554432}
-      SLOW_QUERY_MS: ${SLOW_QUERY_MS:-500}
-      METRICS_TOKEN: ${METRICS_TOKEN:-}
       # Where rate limits get the visitor's IP (see .env.example). With SNIPTIDE_DOMAIN set, the
       # bundled proxy is in front, so the defaults read X-Forwarded-For from private addresses.
       # Without it, "direct": people reach the app's port itself. Behind Cloudflare only, use
       # cloudflare.
       CLIENT_IP_SOURCE: ${CLIENT_IP_SOURCE:-${SNIPTIDE_DOMAIN:+x-forwarded-for}}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-${SNIPTIDE_DOMAIN:+private}}
-      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-}
     # Set SNIPTIDE_BIND=127.0.0.1 when the proxy (or another one on this host) is the only way in.
     ports:
       - "${SNIPTIDE_BIND:-0.0.0.0}:${SNIPTIDE_PORT:-3000}:3000"
@@ -158,5 +116,6 @@ services:
 
 volumes:
   postgres:
+  postgres18:
   caddy-data:
   caddy-config:

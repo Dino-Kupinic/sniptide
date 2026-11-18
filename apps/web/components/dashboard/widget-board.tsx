@@ -20,6 +20,7 @@ import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
 import { saveDashboardLayout } from "@/lib/dashboard/actions"
 import {
+  availableLayout,
   TEMPLATE_IDS,
   TEMPLATES,
   type TemplateId,
@@ -30,12 +31,31 @@ import {
   widgetSize,
 } from "@/lib/dashboard/widgets"
 import { runAction } from "@/lib/feedback"
+import type { TemplateSummary } from "@/lib/pastes/templates"
 import { AgentArea } from "./agent-area"
-import { type DashboardSource, DataWidget, useWidgetName, WidgetFallback } from "./widgets"
+import { TemplatesGrid } from "./templates-widget"
+import {
+  type DashboardSource,
+  DataWidget,
+  ListEmpty,
+  ListWidget,
+  MeasuredWidget,
+  useWidgetName,
+  WidgetFallback,
+} from "./widgets"
+
+// The templates the Paste templates widget lists. Null on an instance without TEMPLATES_URL, which
+// never shows or offers the widget.
+export type DashboardTemplates = { list: Promise<TemplateSummary[]> } | null
 
 // The layout on screen, saved after every change. Removing a widget or switching templates can be
-// taken back from the toast.
-export function useDashboardLayout(initial: WidgetId[], sizes: WidgetSizes = {}) {
+// taken back from the toast. Widgets the instance can't show are left out of templates and the
+// Add widget menu.
+export function useDashboardLayout(
+  initial: WidgetId[],
+  sizes: WidgetSizes = {},
+  available = { templates: true },
+) {
   const t = useTranslations("Workspace")
   const coreT = useTranslations("Core")
   const name = useWidgetName()
@@ -79,6 +99,7 @@ export function useDashboardLayout(initial: WidgetId[], sizes: WidgetSizes = {})
 
   return {
     ...state,
+    available,
     resize(widget: WidgetId, size: WidgetSize) {
       track("dashboard_widget_resized", { widget, size })
       void save({ ...current.current, sizes: { ...current.current.sizes, [widget]: size } })
@@ -101,7 +122,7 @@ export function useDashboardLayout(initial: WidgetId[], sizes: WidgetSizes = {})
     applyTemplate(template: TemplateId) {
       track("dashboard_template_applied", { template })
       void undoable(
-        { layout: [...TEMPLATES[template]], sizes: {} },
+        { layout: availableLayout(TEMPLATES[template], available), sizes: {} },
         t("template_applied", { name: t(`template_${template}`) }),
       )
     },
@@ -120,7 +141,9 @@ export function AddWidgetMenu({
 }) {
   const t = useTranslations("Workspace")
   const name = useWidgetName()
-  const missing = WIDGETS.filter((widget) => !dashboard.layout.includes(widget))
+  const missing = availableLayout(WIDGETS, dashboard.available).filter(
+    (widget) => !dashboard.layout.includes(widget),
+  )
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -175,6 +198,7 @@ export function WidgetBoard({
   editing,
   data,
   agents,
+  templates,
   origin,
   appOrigin,
 }: {
@@ -182,6 +206,7 @@ export function WidgetBoard({
   editing: boolean
   data: DashboardSource
   agents: ConnectedAgent[]
+  templates: DashboardTemplates
   origin: string
   appOrigin: string
 }) {
@@ -230,20 +255,61 @@ export function WidgetBoard({
             onRemove={() => dashboard.remove(widget)}
           >
             {widget === "agents" ? (
-              <AgentArea
-                agents={agents}
-                origin={appOrigin}
-                onRemove={editing ? undefined : () => dashboard.remove("agents")}
-              />
+              <div data-tour="agent" className="rounded-lg">
+                <AgentArea
+                  agents={agents}
+                  origin={appOrigin}
+                  onRemove={editing ? undefined : () => dashboard.remove("agents")}
+                />
+              </div>
+            ) : widget === "templates" ? (
+              templates && (
+                <React.Suspense fallback={<WidgetFallback id={widget} />}>
+                  <MeasuredWidget id={widget}>
+                    <TemplatesWidget
+                      templates={templates}
+                      size={widgetSize(widget, dashboard.sizes)}
+                    />
+                  </MeasuredWidget>
+                </React.Suspense>
+              )
             ) : (
               <React.Suspense fallback={<WidgetFallback id={widget} />}>
-                <DataWidget id={widget} data={data} origin={origin} />
+                <MeasuredWidget id={widget}>
+                  <DataWidget id={widget} data={data} origin={origin} />
+                </MeasuredWidget>
               </React.Suspense>
             )}
           </SortableWidget>
         ))}
       </div>
     </DragDropProvider>
+  )
+}
+
+// The Paste templates widget. The tour points at it once its templates are on screen.
+function TemplatesWidget({
+  templates,
+  size,
+}: {
+  templates: NonNullable<DashboardTemplates>
+  size: WidgetSize
+}) {
+  const t = useTranslations("Workspace")
+  const list = React.use(templates.list)
+  return (
+    <div
+      data-tour={list.length > 0 ? "templates" : undefined}
+      className="flex min-w-0 flex-col rounded-lg"
+    >
+      <ListWidget id="templates" href="/templates">
+        {list.length > 0 ? (
+          <TemplatesGrid templates={list} size={size} />
+        ) : (
+          <ListEmpty>{t("widget_templates_empty")}</ListEmpty>
+        )}
+      </ListWidget>
+    </div>
   )
 }
 

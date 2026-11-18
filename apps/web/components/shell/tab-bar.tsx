@@ -1,10 +1,10 @@
 "use client"
 
 import { PlusIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import type { ViewerSummary } from "@/lib/viewer"
 import { type MoreCounts, MoreSheet } from "./more-sheet"
 import { isActivePath, mobileTabs, moreTab } from "./nav-config"
@@ -14,7 +14,14 @@ const tabClass =
 
 // Bottom tab bar below lg. "More" opens the More sheet with everything the sidebar holds beyond
 // the three main tabs, and lights up on the pages it leads to.
-export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: MoreCounts }) {
+export function TabBar({
+  viewer,
+  counts,
+}: {
+  viewer: ViewerSummary
+  // For a page outside the app shell. Inside it the More sheet counts from the shell's data.
+  counts?: MoreCounts
+}) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = React.useState(false)
@@ -36,6 +43,7 @@ export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: More
         <Link
           href="/new"
           aria-label={t("new_paste")}
+          data-tour="new-paste-tab"
           className="flex w-15 justify-center outline-none focus-visible:[&>span]:ring-2 focus-visible:[&>span]:ring-ring/40 focus-visible:[&>span]:ring-offset-2"
         >
           <span className="flex h-10 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -56,7 +64,9 @@ export function TabBar({ viewer, counts }: { viewer: ViewerSummary; counts: More
           // Marks the button like the current tab while on one of the pages the sheet leads to.
           aria-current={moreActive ? "page" : undefined}
           onClick={() => setMoreOpen(true)}
-          className={tabClass}
+          data-tour="more-tab"
+          // The tab reaches the screen edge, so the tour's outline sits inside it.
+          className={`${tabClass} data-tour-current:-outline-offset-2`}
         >
           <moreTab.icon className="size-[22px]" />
           {t(moreTab.label)}

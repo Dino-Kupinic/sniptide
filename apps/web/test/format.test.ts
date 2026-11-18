@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { formatDateTime, initials } from "@/lib/format"
+import { formatDateTime, initials, lineCount } from "@/lib/format"
 
 describe("date and time display", () => {
   test("shows a one-hour expiry across midnight in the viewer's timezone", () => {
@@ -56,4 +56,13 @@ describe("initials", () => {
     expect(initials("Sam Lee Jr.")).toBe("SL")
     expect(initials("  Sam   Lee ")).toBe("SL")
   })
+})
+
+test("counts displayed lines and stops once the preview limit is exceeded", () => {
+  expect(lineCount("")).toBe(1)
+  expect(lineCount("\n")).toBe(1)
+  expect(lineCount("a\r\n\n")).toBe(2)
+  expect(lineCount("a\nb\n", 2)).toBe(2)
+  expect(lineCount("a\nb\nc\nd\n", 2)).toBe(3)
+  expect(lineCount("a\nb\nc\nd", 2)).toBe(3)
 })

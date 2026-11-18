@@ -1,10 +1,22 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
-import { parseTemplate, templateDraft, templateJsonUrl } from "@/lib/pastes/templates"
+import { NextRequest } from "next/server"
+import TemplatesPage from "@/app/(app)/templates/page"
+import {
+  parseTemplate,
+  parseTemplateCatalog,
+  templateCatalog,
+  templateCatalogUrl,
+  templateDraft,
+  templateJsonUrl,
+} from "@/lib/pastes/templates"
+import { matchesTemplateQuery } from "@/lib/template-filter"
+import { proxy } from "@/proxy"
 
 // /new?template=<name> reads <TEMPLATES_URL>/<name>.json from the marketing site and opens the
 // editor with its files.
 
 const realFetch = globalThis.fetch
+const edition = process.env.SNIPTIDE_EDITION
 const body = {
   name: "claude-md",
   title: "CLAUDE.md template",
@@ -15,6 +27,8 @@ const body = {
 afterEach(() => {
   globalThis.fetch = realFetch
   delete process.env.TEMPLATES_URL
+  if (edition === undefined) delete process.env.SNIPTIDE_EDITION
+  else process.env.SNIPTIDE_EDITION = edition
 })
 
 function serve(response: () => Response) {
@@ -58,12 +72,14 @@ describe("template bodies", () => {
 
 describe("templateDraft", () => {
   test("does nothing without TEMPLATES_URL", async () => {
+    process.env.SNIPTIDE_EDITION = "cloud"
     const fetched = serve(() => Response.json(body))
     expect(await templateDraft("claude-md")).toBeNull()
     expect(fetched).toEqual([])
   })
 
   test("reads the template from TEMPLATES_URL", async () => {
+    process.env.SNIPTIDE_EDITION = "cloud"
     process.env.TEMPLATES_URL = "https://sniptide.com/templates"
     const fetched = serve(() => Response.json(body))
     expect((await templateDraft("claude-md"))?.files).toEqual([
@@ -73,6 +89,7 @@ describe("templateDraft", () => {
   })
 
   test("an unknown template or a failing site opens an empty editor", async () => {
+    process.env.SNIPTIDE_EDITION = "cloud"
     process.env.TEMPLATES_URL = "https://sniptide.com/templates"
     serve(() => new Response("Not found", { status: 404 }))
     expect(await templateDraft("nope")).toBeNull()
@@ -80,5 +97,124 @@ describe("templateDraft", () => {
       throw new Error("offline")
     }) as unknown as typeof fetch
     expect(await templateDraft("claude-md")).toBeNull()
+  })
+})
+
+// The dashboard's Paste templates widget lists <TEMPLATES_URL>.json.
+const catalogUrl = "https://sniptide.com/templates.json"
+const entry = {
+  name: "claude-md",
+  title: "CLAUDE.md template",
+  description: "A CLAUDE.md template for Claude Code.",
+  category: "agents",
+  files: ["CLAUDE.md"],
+  visual: { kind: "logo", src: "/logos/claude.svg", ratio: 4.5 },
+}
+
+describe("template catalog", () => {
+  test("self-host denies the route and skips catalog and draft requests even with a URL", async () => {
+    process.env.SNIPTIDE_EDITION = "selfhost"
+    process.env.TEMPLATES_URL = "https://sniptide.com/templates"
+    const fetched = serve(() => Response.json({ templates: [entry] }))
+    expect(proxy(new NextRequest("https://paste.example/templates")).status).toBe(404)
+    expect(await templateCatalog()).toEqual([])
+    expect(await templateDraft("claude-md")).toBeNull()
+    await expect(
+      TemplatesPage({ searchParams: Promise.resolve({}), params: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404")
+    expect(fetched).toEqual([])
+  })
+
+  test("the cloud gallery is an app page even when requesting Markdown", () => {
+    process.env.SNIPTIDE_EDITION = "cloud"
+    const request = new NextRequest("https://app.sniptide.com/templates", {
+      headers: { accept: "text/markdown" },
+    })
+    expect(proxy(request).headers.get("x-middleware-next")).toBe("1")
+  })
+
+  test("sits next to the template pages", () => {
+    expect(templateCatalogUrl("https://sniptide.com/templates/")).toBe(catalogUrl)
+  })
+
+  test("keeps the site's order and resolves artwork against the list", () => {
+    const icon = {
+      ...entry,
+      name: "robots-txt",
+      category: "something-new",
+      department: "engineering",
+      visual: { kind: "icon", src: "/i/robots.svg", mark: "robots.txt" },
+      preview: Array.from({ length: 14 }, (_, line) => `line ${line + 1}`).join("\n"),
+    }
+    expect(parseTemplateCatalog({ templates: [entry, icon] }, catalogUrl)).toEqual([
+      {
+        name: "claude-md",
+        title: "CLAUDE.md template",
+        description: "A CLAUDE.md template for Claude Code.",
+        category: "agents",
+        department: null,
+        files: ["CLAUDE.md"],
+        visual: { kind: "logo", src: "https://sniptide.com/logos/claude.svg", ratio: 4.5 },
+        preview: null,
+      },
+      {
+        name: "robots-txt",
+        title: "CLAUDE.md template",
+        description: "A CLAUDE.md template for Claude Code.",
+        category: null,
+        department: "engineering",
+        files: ["CLAUDE.md"],
+        visual: { kind: "icon", src: "https://sniptide.com/i/robots.svg", mark: "robots.txt" },
+        preview: Array.from({ length: 10 }, (_, line) => `line ${line + 1}`).join("\n"),
+      },
+    ])
+  })
+
+  test("skips entries it can't use and drops artwork that isn't https", () => {
+    const list = parseTemplateCatalog(
+      {
+        templates: [
+          { ...entry, name: "../x" },
+          { ...entry, files: [] },
+          { ...entry, visual: { kind: "logo", src: "javascript:alert(1)", ratio: 1 } },
+          { ...entry, visual: { kind: "logo", src: "http://example.com/a.svg", ratio: 1 } },
+          { ...entry, visual: "nope", preview: 42 },
+        ],
+      },
+      catalogUrl,
+    )
+    expect(list.map((template) => template.visual)).toEqual([null, null, null])
+    expect(list.map((template) => template.preview)).toEqual([null, null, null])
+    expect(parseTemplateCatalog({ templates: Array(120).fill(entry) }, catalogUrl)).toHaveLength(
+      100,
+    )
+    expect(parseTemplateCatalog("not json", catalogUrl)).toEqual([])
+  })
+
+  test("is empty without TEMPLATES_URL or when the site fails", async () => {
+    process.env.SNIPTIDE_EDITION = "cloud"
+    const fetched = serve(() => Response.json({ templates: [entry] }))
+    expect(await templateCatalog()).toEqual([])
+    expect(fetched).toEqual([])
+    process.env.TEMPLATES_URL = "https://sniptide.com/templates"
+    expect((await templateCatalog()).map((template) => template.name)).toEqual(["claude-md"])
+    expect(fetched).toEqual([catalogUrl])
+    serve(() => new Response("Bad gateway", { status: 502 }))
+    expect(await templateCatalog()).toEqual([])
+  })
+})
+
+describe("template search", () => {
+  const template = {
+    title: "CLAUDE.md template",
+    description: "Rules for Claude Code.",
+    files: [".claude/settings.json"],
+  }
+
+  test("matches every word across title, description, labels and file names", () => {
+    expect(matchesTemplateQuery(template, ["Agent files"], "")).toBe(true)
+    expect(matchesTemplateQuery(template, ["Agent files"], "claude settings")).toBe(true)
+    expect(matchesTemplateQuery(template, ["Agent files"], "AGENT rules")).toBe(true)
+    expect(matchesTemplateQuery(template, ["Agent files"], "claude docker")).toBe(false)
   })
 })

@@ -11,13 +11,8 @@ import {
 import { eq, sql } from "drizzle-orm"
 import { POST as createRoute } from "@/app/api/v1/pastes/route"
 import { GET as usageRoute } from "@/app/api/v1/usage/route"
-import {
-  getAccountUsage,
-  reconcileAccountUsage,
-  reconcileUsageBatch,
-  recordApiRequest,
-} from "@/lib/account/usage"
-import { createToken, revokeToken } from "@/lib/api/tokens"
+import { getAccountUsage, reconcileAccountUsage, reconcileUsageBatch } from "@/lib/account/usage"
+import { admitToken, createToken, revokeToken } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
 import { restoreRevision, savePaste, trashPaste } from "@/lib/pastes/actions"
 import { getPaste } from "@/lib/pastes/store"
@@ -204,10 +199,13 @@ describeDb("account usage", () => {
   test("records daily token counts atomically at UTC midnight and preserves revoked history", async () => {
     const token = await createToken("ada", { name: "Usage", write: false, expiry: "never" })
     if (!token.ok) throw new Error(token.error)
-    const owner = { userId: "ada", tokenId: token.summary.id, scopes: ["read" as const] }
+    const owner = { tokenId: token.summary.id }
+    const request = new Request("http://localhost/api/v1/me", {
+      headers: { authorization: `Bearer ${token.token}` },
+    })
     const now = new Date("2026-10-25T00:00:00Z")
-    await recordApiRequest(owner, new Date(now.getTime() - 1))
-    await Promise.all(Array.from({ length: 20 }, () => recordApiRequest(owner, now)))
+    await admitToken(request, new Date(now.getTime() - 1))
+    await Promise.all(Array.from({ length: 20 }, () => admitToken(request, now)))
     const usage = await getAccountUsage("ada", now)
     expect(usage.apiRequests).toEqual([
       { tokenId: owner.tokenId, day: Math.floor(now.getTime() / DAY) - 1, requests: 1 },

@@ -60,7 +60,9 @@ returns `401` when you aren't signed in.
 ## Exclude your browser from PostHog
 
 This section applies only when the administrator set `POSTHOG_KEY`, which turns on PostHog
-product analytics for the app. A self-hosted instance sends nothing to PostHog by default. See
+product analytics for the app. These product events go to the operator's PostHog project only
+when that key is set. Separate [instance reports](/self-hosting/configuration#instance-telemetry)
+go to Sniptide by default and can be disabled with `TELEMETRY=off`. See
 [Configuration](/self-hosting/configuration#monitoring).
 
 On the hosted app at `app.sniptide.com`, accepting **Analytics** in the website's cookie settings
@@ -68,6 +70,8 @@ lets PostHog connect selected app events, such as signing up, to your visit to t
 uses the website's anonymous visitor ID in memory. It uses cookieless measurement when that ID
 or your consent is missing. You can change consent from **Cookies** in the footer of `sniptide.com`.
 The app does not record sessions or automatically capture clicks.
+Cookieless events carry only the country that the CDN in front of the app reports, and never
+your IP address or city.
 
 1. Open `/_site/analytics` on the instance.
 2. Select **Exclude this browser**.

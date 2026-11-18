@@ -37,6 +37,7 @@ import {
   setStarred,
   trashPaste,
 } from "@/lib/pastes/actions"
+import { keyedUrl, useKeyedUrl } from "@/lib/pastes/keyring"
 import { CopyFeedbackLabel, LinkCopyContent, reportCopy, useCopy, useCopyLink } from "./copy-button"
 import { usePasteExpired } from "./expiry-status"
 import { useActiveFile } from "./file-viewer"
@@ -81,16 +82,20 @@ export function StarButton({
 }
 
 export function CopyLinkButton({
-  url,
+  url: bareUrl,
+  encryptionKeyId,
   expiresAt,
   className,
 }: {
   url: string
+  // Set on an encrypted paste: the copied link carries the key when this browser holds it.
+  encryptionKeyId?: string | null
   expiresAt: number | null
   className?: string
 }) {
   const expired = usePasteExpired(expiresAt)
   const t = useTranslations("Paste")
+  const url = useKeyedUrl(bareUrl, encryptionKeyId)
   const { state, props } = useCopyLink(url, () => track("share_link_copied", { from: "paste" }))
 
   return (
@@ -129,17 +134,20 @@ export function useNativeShare(url: string, title: string, from: string) {
 
 export function ShareButton({
   expiresAt,
-  url,
+  url: bareUrl,
+  encryptionKeyId,
   title,
   className,
 }: {
   url: string
+  encryptionKeyId?: string | null
   title: string
   expiresAt: number | null
   className?: string
 }) {
   const expired = usePasteExpired(expiresAt)
   const t = useTranslations("Paste")
+  const url = useKeyedUrl(bareUrl, encryptionKeyId)
   const { copied, share } = useNativeShare(url, title, "share_button")
   return (
     <Button
@@ -225,10 +233,13 @@ export function PasteOverflowMenu({
   canLeave,
   rawAllowed,
   url,
+  encryptionKeyId,
   className,
 }: {
   slug: string
   title: string
+  // Set on an encrypted paste, which has no copy to duplicate and no print page.
+  encryptionKeyId?: string | null
   canTrash: boolean
   expiresAt: number | null
   // Shared with the viewer, so they can drop it from Shared with me.
@@ -259,17 +270,19 @@ export function PasteOverflowMenu({
         <MoreHorizontalIcon className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem render={<Link href={`/new?from=${slug}`} />}>
-          <CopyIcon />
-          {t("duplicate")}
-        </DropdownMenuItem>
+        {encryptionKeyId ? null : (
+          <DropdownMenuItem render={<Link href={`/new?from=${slug}`} />}>
+            <CopyIcon />
+            {t("duplicate")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           disabled={expired}
           title={expired ? t("expiredSharingHelp") : undefined}
           onClick={async () => {
             if (expired) return
             track("share_link_copied", { from: "overflow_menu" })
-            if (await copy(url)) toast.success(t("linkCopied"))
+            if (await copy(keyedUrl(url, encryptionKeyId))) toast.success(t("linkCopied"))
           }}
         >
           <LinkIcon />
@@ -287,10 +300,12 @@ export function PasteOverflowMenu({
             </DropdownMenuItem>
           </>
         ) : null}
-        <DropdownMenuItem render={<a href={`/${slug}/print`} target="_blank" rel="noopener" />}>
-          <PrinterIcon />
-          {t("print")}
-        </DropdownMenuItem>
+        {encryptionKeyId ? null : (
+          <DropdownMenuItem render={<a href={`/${slug}/print`} target="_blank" rel="noopener" />}>
+            <PrinterIcon />
+            {t("print")}
+          </DropdownMenuItem>
+        )}
         {canLeave ? (
           <>
             <DropdownMenuSeparator />

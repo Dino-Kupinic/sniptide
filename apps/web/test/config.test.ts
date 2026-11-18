@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { getConfig, parseSize } from "@/lib/config"
+import { hasFeature, isCloud } from "@/lib/edition"
 
 describe("parseSize", () => {
   test("reads human units, binary like the sizes the app shows", () => {
@@ -23,7 +24,48 @@ describe("parseSize", () => {
   })
 })
 
+describe("edition", () => {
+  test("defaults to self-host and validates the edition", () => {
+    expect(getConfig({}).edition).toBe("selfhost")
+    expect(getConfig({ SNIPTIDE_EDITION: "" }).edition).toBe("selfhost")
+    expect(() => getConfig({ SNIPTIDE_EDITION: "hosted" })).toThrow(/SNIPTIDE_EDITION/)
+  })
+
+  test("identifies cloud features for each edition", () => {
+    for (const edition of ["selfhost", "cloud"] as const) {
+      const config = getConfig({ SNIPTIDE_EDITION: edition })
+      expect(isCloud(config)).toBe(edition === "cloud")
+      for (const feature of ["discovery", "gallery", "shortLinks"] as const) {
+        expect(hasFeature(feature, config)).toBe(edition === "cloud")
+      }
+    }
+  })
+
+  test("reserves the Sniptide share domain for Cloud and accepts independent share domains", () => {
+    expect(getConfig({ SHARE_URL: "https://sniptide.com" }).shareUrl).toBeUndefined()
+    expect(getConfig({ SHARE_URL: "https://WWW.SNIPTIDE.COM./" }).shareUrl).toBeUndefined()
+    expect(getConfig({ SHARE_URL: "https://share.example" }).shareUrl).toBe("https://share.example")
+    expect(
+      getConfig({
+        SHARE_URL: "https://sniptide.com",
+        SNIPTIDE_EDITION: "cloud",
+      }).shareUrl,
+    ).toBe("https://sniptide.com")
+  })
+})
+
 describe("getConfig", () => {
+  test("keeps abuse intake off unless its required server settings are valid", () => {
+    expect(getConfig({}).abuseReportsEnabled).toBe(false)
+    expect(() => getConfig({ ABUSE_REPORTS_ENABLED: "true" })).toThrow("ABUSE_REPORTS_ENABLED")
+    expect(
+      getConfig({
+        ABUSE_REPORTS_ENABLED: "true",
+        BETTER_AUTH_URL: "https://app.example",
+        BETTER_AUTH_SECRET: "a".repeat(32),
+      }).abuseReportsEnabled,
+    ).toBe(true)
+  })
   test("points the account menu's resource links at the project by default", () => {
     expect(getConfig({}).resourceLinks).toEqual({
       homepage: "https://sniptide.com",
@@ -153,14 +195,24 @@ describe("optional SMTP configuration", () => {
       }).smtp,
     ).toMatchObject({ secure: true, requireTLS: false, auth: { user: "user", pass: "password" } })
   })
+  test("port and implicit TLS default from each other", () => {
+    const { SMTP_PORT: _, ...noPort } = complete
+    expect(getConfig(noPort).smtp).toMatchObject({ port: 587, secure: false })
+    expect(getConfig({ ...noPort, SMTP_SECURE: "true" }).smtp).toMatchObject({
+      port: 465,
+      secure: true,
+    })
+    expect(getConfig({ ...complete, SMTP_PORT: "465" }).smtp).toMatchObject({
+      port: 465,
+      secure: true,
+    })
+    expect(getConfig({ ...complete, SMTP_PORT: "465", SMTP_SECURE: "false" }).smtp).toMatchObject({
+      port: 465,
+      secure: false,
+    })
+  })
   test("incomplete SMTP, unpaired credentials and short signing secret are rejected", () => {
-    for (const key of [
-      "SMTP_HOST",
-      "SMTP_PORT",
-      "SMTP_FROM",
-      "BETTER_AUTH_URL",
-      "BETTER_AUTH_SECRET",
-    ])
+    for (const key of ["SMTP_HOST", "SMTP_FROM", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"])
       expect(() => getConfig({ ...complete, [key]: "" })).toThrow(/SMTP requires/)
     expect(() => getConfig({ ...complete, SMTP_USER: "user" })).toThrow(/paired SMTP_USER/)
     expect(() => getConfig({ ...complete, SMTP_PASSWORD: "password" })).toThrow(/paired SMTP_USER/)
@@ -201,5 +253,42 @@ describe("legal settings", () => {
   test("reject a malformed address or link", () => {
     expect(() => getConfig({ COPYRIGHT_EMAIL: "nope" })).toThrow(/COPYRIGHT_EMAIL/)
     expect(() => getConfig({ TERMS_URL: "terms" })).toThrow(/TERMS_URL/)
+  })
+})
+
+describe("getConfig", () => {
+  const env = process.env as Record<string, string | undefined>
+  const mode = env.NODE_ENV
+  const shareUrl = env.SHARE_URL
+  function restore() {
+    env.NODE_ENV = mode
+    if (shareUrl === undefined) delete env.SHARE_URL
+    else env.SHARE_URL = shareUrl
+  }
+
+  test("validates the environment on every call outside production", () => {
+    try {
+      env.SHARE_URL = "https://one.example"
+      expect(getConfig().shareUrl).toBe("https://one.example")
+      env.SHARE_URL = "https://two.example"
+      expect(getConfig().shareUrl).toBe("https://two.example")
+    } finally {
+      restore()
+    }
+  })
+
+  test("validates the environment once in production", () => {
+    try {
+      env.NODE_ENV = "production"
+      env.SHARE_URL = "https://one.example"
+      const first = getConfig()
+      env.SHARE_URL = "https://two.example"
+      expect(getConfig()).toBe(first)
+      expect(getConfig().shareUrl).toBe("https://one.example")
+      // An explicit environment is always read as given.
+      expect(getConfig({ ...env }).shareUrl).toBe("https://two.example")
+    } finally {
+      restore()
+    }
   })
 })

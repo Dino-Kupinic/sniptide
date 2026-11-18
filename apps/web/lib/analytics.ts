@@ -2,7 +2,9 @@ import type { PostHog } from "posthog-js"
 import { isAnalyticsExcluded } from "@/lib/analytics-preference"
 
 // Product analytics with PostHog. Off unless the server has POSTHOG_KEY (lib/config.ts), so a
-// self-hosted instance sends nothing. sniptide.com reports to the same project as its website;
+// self-hosted instance sends no product events to an operator project without a key.
+// Instance reports use a separate hosted collector (instance-telemetry.ts).
+// sniptide.com reports to the same project as its website;
 // events from here carry surface=app.
 //
 // Events never hold paste content, titles, file names or slugs: only the counts and settings
@@ -11,7 +13,25 @@ import { isAnalyticsExcluded } from "@/lib/analytics-preference"
 // Same-origin path PostHog talks to; app/api/analytics forwards it to the PostHog region.
 export const ANALYTICS_PATH = "/api/analytics"
 
-export type AnalyticsConfig = { key: string; uiHost: string }
+export type AnalyticsConfig = { key: string; uiHost: string; country?: string | null }
+
+// PostHog removes the IP from cookieless events before its GeoIP lookup runs, so those events
+// would have no location. The server passes the country its CDN reported (app/api/analytics), and
+// this adds it under PostHog's own GeoIP property names so web analytics and breakdowns use it.
+// Only the country is sent, never an address or a city. Events with consent keep PostHog's lookup.
+export function withCountry(
+  properties: Record<string, unknown>,
+  country: string | null | undefined,
+) {
+  if (!country || properties.$cookieless_mode !== true || properties.$geoip_country_code) return
+  properties.$geoip_country_code = country
+  try {
+    const name = new Intl.DisplayNames(["en"], { type: "region" }).of(country)
+    if (name && name !== country) properties.$geoip_country_name = name
+  } catch {
+    // An unknown region code still records the code.
+  }
+}
 
 let client: PostHog | undefined
 let starting: Promise<void> | undefined
@@ -37,7 +57,7 @@ function readMarketingVisitor(key: string) {
   }
 }
 
-export async function startAnalytics({ key, uiHost }: AnalyticsConfig) {
+export async function startAnalytics({ key, uiHost, country }: AnalyticsConfig) {
   if (client || isAnalyticsExcluded()) return
   if (starting) return starting
   starting = import("posthog-js").then(({ default: posthog }) => {
@@ -91,6 +111,7 @@ export async function startAnalytics({ key, uiHost }: AnalyticsConfig) {
         )
           return null
         event.properties.surface = "app"
+        withCountry(event.properties, country)
         scrubProperties(event.properties)
         scrubProperties(event.$set)
         scrubProperties(event.$set_once)
@@ -223,7 +244,7 @@ function scrubProperties(properties: Record<string, unknown> | undefined) {
   }
 }
 
-export function isSecretPath(value: string) {
+function isSecretPath(value: string) {
   try {
     const path = new URL(value, "https://analytics.invalid").pathname
     return /^\/(?:secrets|secret-share)(?:\/|$)/.test(path)

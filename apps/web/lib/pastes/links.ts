@@ -12,7 +12,7 @@ const EXPIRY_MS: Record<Exclude<Expiry, "never">, number> = {
 
 // The name part of a custom link. Names only have to be unique within their owner's handle, so
 // one character is enough.
-export const LINK_NAME_PATTERN = /^[A-Za-z0-9_-]{1,40}$/
+const LINK_NAME_PATTERN = /^[A-Za-z0-9_-]{1,40}$/
 
 // Custom links live under their owner's handle: sniptide.com/@<handle>/<name>. The "@" keeps the
 // first path segment free for generated slugs and app routes. The slug column stores

@@ -3,6 +3,7 @@
 
 export const WIDGETS = [
   "agents",
+  "templates",
   "agent_activity",
   "agent_pastes",
   "recent_pastes",
@@ -20,6 +21,7 @@ export type WidgetSizes = Partial<Record<WidgetId, WidgetSize>>
 // Default widths preserve existing dashboards; every widget can override its size.
 const WIDE_WIDGETS: ReadonlySet<WidgetId> = new Set([
   "agents",
+  "templates",
   "agent_activity",
   "agent_pastes",
   "recent_pastes",
@@ -40,7 +42,7 @@ export function cleanWidgetSizes(value: unknown): WidgetSizes {
 }
 
 export const TEMPLATES = {
-  agents: ["agents", "agent_activity", "agent_pastes", "recent_pastes"],
+  agents: ["agents", "templates", "agent_activity", "agent_pastes", "recent_pastes"],
   sharing: ["recent_pastes", "popular", "expiring"],
   secrets: ["agents", "secrets", "collections", "recent_pastes"],
   blank: [],
@@ -49,10 +51,20 @@ export const TEMPLATES = {
 export type TemplateId = keyof typeof TEMPLATES
 export const TEMPLATE_IDS = Object.keys(TEMPLATES) as TemplateId[]
 
-// A dashboard nobody has arranged yet starts from the Agents template.
+// A dashboard nobody has arranged yet starts from the Agents template, so a new account sees the
+// agent setup and the paste templates first.
 export const DEFAULT_LAYOUT: readonly WidgetId[] = TEMPLATES.agents
 
-export function isWidget(value: unknown): value is WidgetId {
+// Widgets that need something the instance may not have. The Paste templates widget lists the
+// templates at TEMPLATES_URL, so an instance without it never shows or offers the widget.
+export function availableLayout(
+  layout: readonly WidgetId[],
+  { templates }: { templates: boolean },
+): WidgetId[] {
+  return templates ? [...layout] : layout.filter((widget) => widget !== "templates")
+}
+
+function isWidget(value: unknown): value is WidgetId {
   return typeof value === "string" && (WIDGETS as readonly string[]).includes(value)
 }
 

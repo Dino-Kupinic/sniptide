@@ -7,10 +7,10 @@ import { GET as listEnv } from "@/app/api/v1/env/route"
 import { GET as me } from "@/app/api/v1/me/route"
 import { GET as getPaste, PUT as updatePaste } from "@/app/api/v1/pastes/[id]/route"
 import { POST as createPaste, GET as listPastes } from "@/app/api/v1/pastes/route"
+import { flushMeter } from "@/lib/api/meter"
 import { createApiToken, deleteEnvGroup, revokeApiToken } from "@/lib/api/token-actions"
 import { authenticate, createToken, hashToken, listTokens } from "@/lib/api/tokens"
 import { getDb } from "@/lib/db"
-import { telemetrySnapshot } from "@/lib/telemetry"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
 // The token API under /api/v1 against a real Postgres: who a token reaches, what each scope
@@ -83,6 +83,7 @@ describeDb("token API", () => {
       const data = await body(response)
       expect(data.user.id).toBe("ada")
       expect(data.scopes).toEqual(["read", "write"])
+      await flushMeter()
       const [used] = await getDb().select().from(apiToken)
       expect(used?.lastUsedAt).toBeInstanceOf(Date)
     })
@@ -91,17 +92,20 @@ describeDb("token API", () => {
       const token = await tokenFor("ada")
       const request = call("me", token)
       await authenticate(request)
+      await flushMeter()
       const [first] = await getDb().select().from(apiToken)
       expect(first?.lastUsedAt).toBeInstanceOf(Date)
-      const updates = telemetrySnapshot().metrics["db:update"]?.count ?? 0
       await authenticate(request)
-      expect(telemetrySnapshot().metrics["db:update"]?.count ?? 0).toBe(updates)
+      await flushMeter()
+      const [second] = await getDb().select().from(apiToken)
+      expect(second?.lastUsedAt).toEqual(first?.lastUsedAt)
       const old = new Date(Date.now() - 120_000)
       await getDb()
         .update(apiToken)
         .set({ lastUsedAt: old })
         .where(eq(apiToken.hash, hashToken(token)))
       await authenticate(request)
+      await flushMeter()
       const [updated] = await getDb().select().from(apiToken)
       expect(updated?.lastUsedAt?.getTime()).toBeGreaterThan(old.getTime())
     })

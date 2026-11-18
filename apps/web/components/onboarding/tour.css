@@ -1,0 +1,10 @@
+/* The element the tour's current step points at. The outline uses the focus color, and an element
+   without corners of its own gets the small radius. */
+[data-tour-current] {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+:where([data-tour-current]) {
+  border-radius: var(--radius-md);
+}

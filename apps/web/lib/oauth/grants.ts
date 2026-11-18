@@ -35,14 +35,14 @@ export type AuthorizationCheck =
 
 // Read, write or both. Write always comes with read, as on tokens made in Settings. No scope
 // asks for read.
-export function parseScopes(value: string | null): Scope[] | null {
+function parseScopes(value: string | null): Scope[] | null {
   const requested = (value ?? "").split(" ").filter(Boolean)
   if (requested.some((scope) => !SCOPES.includes(scope as Scope))) return null
   return requested.includes("write") ? ["read", "write"] : ["read"]
 }
 
 // A resource indicator (RFC 8707) must name this app: its origin or a path on it, like /api/mcp.
-export function checkResource(value: string | null, origin: string) {
+function checkResource(value: string | null, origin: string) {
   if (!value) return true
   try {
     const url = new URL(value)

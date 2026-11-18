@@ -61,6 +61,18 @@ describeDb("bounded paste reads", () => {
     expect((await listPastePage({ mode: "mine" }, query({ page: "999" }))).pagination.page).toBe(3)
   })
 
+  test("an empty owner list reads totals and language options together", async () => {
+    const selections = () => {
+      const { metrics } = telemetrySnapshot()
+      return (metrics["db:select"]?.count ?? 0) + (metrics["db:selectDistinct"]?.count ?? 0)
+    }
+    const before = selections()
+    const result = await listPastePage({ mode: "mine" }, query())
+    expect(result.pagination).toMatchObject({ total: 0, totalAll: 0 })
+    expect(result.languageOptions).toEqual([])
+    expect(selections() - before).toBe(2)
+  })
+
   test("search is a literal substring, and facets describe the full scope", async () => {
     const one = await seedPaste({
       slug: "one",
@@ -123,6 +135,7 @@ describeDb("bounded paste reads", () => {
   })
 
   test("a flipped direction reverses the order and cursors walk it page by page", async () => {
+    const updated = Date.now()
     for (let i = 0; i < 25; i++) {
       const seeded = await seedPaste({
         slug: `dir-${String(i).padStart(2, "0")}`,
@@ -132,7 +145,7 @@ describeDb("bounded paste reads", () => {
       })
       await getDb()
         .update(paste)
-        .set({ views: i % 5, updatedAt: new Date(Date.now() - i * DAY) })
+        .set({ views: i % 5, updatedAt: new Date(updated - (i % 2) * DAY) })
         .where(eq(paste.id, seeded.id))
     }
     for (const sort of ["updated", "views", "expires", "title", "language", "visibility"] as const)
@@ -149,6 +162,12 @@ describeDb("bounded paste reads", () => {
           offset.push(...(await slugs(page)).pastes.map((p) => p.slug))
           const result = await slugs(page, next)
           walked.push(...result.pastes.map((p) => p.slug))
+          if (sort === "updated" && page > 1 && "previousCursor" in result.pagination) {
+            const previous = await slugs(page - 1, result.pagination.previousCursor)
+            expect(previous.pastes.map((p) => p.slug)).toEqual(
+              offset.slice((page - 2) * 10, (page - 1) * 10),
+            )
+          }
           next = "nextCursor" in result.pagination ? result.pagination.nextCursor : undefined
         }
         expect(walked, `${sort} ${dir}`).toEqual(offset)

@@ -63,6 +63,7 @@ export function stressData(dataset: Dataset) {
       language: ["typescript", "objective-c", "text", "python"][index % 4] ?? "text",
       visibility: (["public", "unlisted", "private"] as const)[index % 3] ?? "private",
       burnAfterRead: index % 4 === 3,
+      encryptionKeyId: null,
       views: dataset === "one" ? 1 : worst ? ([0, 1, 1284, 1000000, 12345678][index % 5] ?? 0) : 12,
       expiresLabel:
         index % 4 === 3
@@ -81,7 +82,8 @@ export function stressData(dataset: Dataset) {
         username: worst ? `platform-team-${index + 1}` : "jane",
         handle: worst ? `platform-team-${index + 1}` : "jane",
         initials: initials(name),
-        tone: "primary",
+        id: `stress-owner-${index}`,
+        image: null,
       },
       canEdit: index % 2 === 0,
       createdBy:
@@ -182,6 +184,7 @@ export function stressData(dataset: Dataset) {
           { name: "Cursor", client: "cursor", lastActiveAt: null, connectedAt: now },
         ]
   const viewer: ViewerSummary = {
+    id: "stress-viewer",
     name: worst ? "👩🏽‍💻 Aleksandra Wiśniewska-Kowalczyk" : "Jane Doe",
     email: worst
       ? "bartholomew.fitzgerald@northwind-industries-holdings.example.com"
@@ -224,6 +227,7 @@ export function stressData(dataset: Dataset) {
       id: row.slug,
       name: row.owner?.name ?? "",
       initials: row.owner?.initials ?? "?",
+      image: null,
       handle: index === 0 && worst ? viewer.email : `@${row.owner?.username}`,
     },
     access: row.access,

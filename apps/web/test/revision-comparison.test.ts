@@ -3,7 +3,8 @@ import { pasteRevision } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { savePaste } from "@/lib/pastes/actions"
-import { getComparisonRevisions, getPaste, sharePaste } from "@/lib/pastes/store"
+import { sharePaste } from "@/lib/pastes/shares"
+import { getComparisonRevisions, getPaste } from "@/lib/pastes/store"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
 const describeDb = hasDatabase ? describe : describe.skip

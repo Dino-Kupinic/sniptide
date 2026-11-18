@@ -11,27 +11,28 @@ import {
 } from "@/lib/pastes/actions"
 import { toSharedRows } from "@/lib/pastes/rows"
 import {
-  createPaste,
   findPerson,
-  getPaste,
-  getPasteMeta,
   getShare,
   leaveShare,
   listPasteShares,
-  listShared,
-  listStarred,
   markShareSeen,
+  sharePaste,
+  unsharePaste,
+} from "@/lib/pastes/shares"
+import {
+  createPaste,
+  getPaste,
+  getPasteMeta,
   navCounts,
   readRawFile,
   readSharedPaste,
   setStarred,
-  sharePaste,
   trashPaste,
-  unsharePaste,
   updatePaste,
 } from "@/lib/pastes/store"
 import type { PasteInput } from "@/lib/pastes/types"
 import { hasDatabase, marker, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
+import { listShared, listStarred } from "./lists"
 
 // Sharing a paste with specific accounts (WRK-127) and the recipient's Shared with me (WRK-128):
 // an invited person can open a private paste, everyone else still gets a 404, and taking access
@@ -398,7 +399,7 @@ describeDb("sharing", () => {
     expect(await updatePaste("priv", edit(), "Edited")).toBeNull()
   })
 
-  test("trashed, expired and burn-after-read pastes don't open through a share", async () => {
+  test("trashed and expired pastes stay unavailable, and burns only open through the sealed link", async () => {
     await seedPaste({ slug: "burn", owner: "owner", visibility: "private", burnAfterRead: true })
     await seedPaste({ slug: "old", owner: "owner", visibility: "private" })
     await seedPaste({ slug: "bin", owner: "owner", visibility: "private" })
@@ -415,10 +416,9 @@ describeDb("sharing", () => {
     signInAs("friend")
     expect(await listShared()).toEqual([])
     expect((await navCounts()).shared).toBe(0)
-    for (const slug of ["burn", "old", "bin"]) {
-      expect(await getPaste(slug)).toBeNull()
-      expect((await readSharedPaste(slug)).status).toBe("missing")
-    }
+    for (const slug of ["burn", "old", "bin"]) expect(await getPaste(slug)).toBeNull()
+    for (const slug of ["old", "bin"]) expect((await readSharedPaste(slug)).status).toBe("missing")
+    expect((await readSharedPaste("burn")).status).toBe("sealed")
   })
 
   test("a new paste can be shared as it's created", async () => {

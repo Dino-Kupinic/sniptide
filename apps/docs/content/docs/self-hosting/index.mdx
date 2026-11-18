@@ -3,10 +3,11 @@ title: Self-hosting
 description: Run Sniptide on your own server with Docker Compose, Docker or Coolify, and find the pages for configuration, proxies, backups and upgrades.
 ---
 
-Sniptide runs as one container next to a Postgres database. A self-hosted instance has the same
-app, API, CLI support and MCP server as the hosted one. Product analytics, external sign-in
-providers and email are off until you configure them. Importing a gist sends a request to GitHub
-even without a GitHub token.
+Sniptide runs as one container next to a Postgres database. You can use pastes, collections,
+secrets, the API, the CLI and MCP on your own instance. Public links use your domain and ask
+search engines to keep them out of results. The paste template gallery is available on Sniptide
+Cloud. Product analytics, external sign-in providers and email are off until you configure them.
+Importing a gist sends a request to GitHub even without a GitHub token.
 
 <SelfHostVisual />
 
@@ -14,7 +15,7 @@ even without a GitHub token.
 
 - A server with Docker, plus the Compose plugin for the Compose route. The image is
   `ghcr.io/dino-kupinic/sniptide`, for Linux AMD64 and ARM64.
-- Postgres 17, which Sniptide is built and tested against. Compose and the Coolify template run
+- Postgres 18, with Postgres 17 also tested. Compose and the Coolify template run
   their own.
 - Memory for the app and Postgres sized for your workload. See
   [Memory and resources](/self-hosting/memory) for what to monitor and how to set limits.

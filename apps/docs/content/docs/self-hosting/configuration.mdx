@@ -9,18 +9,31 @@ built into the image, so a change takes effect when you restart the container, f
 name when one is invalid, instead of falling back to a default. A variable that is set but empty
 counts as unset.
 
-The repository's `apps/web/.env.example` lists the app settings. The Docker Compose and Coolify
-templates pass selected variables through to the container. See
-[Docker Compose](/self-hosting/docker-compose#pass-through-an-extra-app-setting) or
-[Coolify](/self-hosting/coolify#change-settings) to add a setting the template doesn't list.
+Only `DATABASE_URL`, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` need a value, and the Docker
+Compose and Coolify templates fill in all three. Every other variable has a default that suits a
+small instance, so set one only to turn on a feature or change a limit. The repository's
+`apps/web/.env.example` lists the app settings. Docker Compose passes every setting in `.env` to
+the app. The Coolify template lists the common ones; see
+[Coolify](/self-hosting/coolify#change-settings) to add one it doesn't list.
 
 ## Required
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Postgres 17 is what Sniptide is tested against. Compose sets it for you. |
+| `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Sniptide tests Postgres 17 and 18. Compose runs Postgres 18 and sets this for you. |
+| `POSTGRES_VOLUME` | `postgres` | Compose database volume key. Set to `postgres18` when migrating a Postgres 17 installation. See [Upgrading](/self-hosting/upgrading#upgrade-postgres-17-to-18). |
 | `BETTER_AUTH_SECRET` | none | Signs sessions and supplies the default key for env group values. Generate with `openssl rand -hex 32` and keep it across restarts. Changing it signs everyone out. See [Rotate the auth secret](#rotate-the-auth-secret) if you store env groups. |
 | `BETTER_AUTH_URL` | none | The exact URL people open in the browser (`https://…` behind a proxy). The app boots without it, but sign-in and sign-up are rejected from any other origin ("Invalid origin"), and OAuth callbacks and printed links use it. |
+
+## Edition
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `SNIPTIDE_EDITION` | `selfhost` | In `selfhost`, pages and raw share links send `X-Robots-Tag: noindex, nofollow, noarchive`. `cloud` allows public pastes to appear in search and enables the template gallery when `TEMPLATES_URL` is set. |
+
+Self-hosted public links can still be opened by anyone who has the address. Search engines can
+fetch the pages to read the noindex directive. Use a [private paste](/core-concepts/sharing#choose-a-visibility)
+to control who can open a link.
 
 ## Sign-in and sign-up
 
@@ -49,7 +62,7 @@ above.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` | The Sniptide project's site, docs and issue tracker | Where the **Homepage**, **Documentation** and **Help** links under **Resources** in the account menu go. They open in a new tab. |
-| `TEMPLATES_URL` | unset | Where [`/new?template=<name>`](/core-concepts/pastes#start-from-a-template) reads a template's files, as `<TEMPLATES_URL>/<name>.json`. Set it to `https://sniptide.com/templates` to open the public templates. Without it the parameter is ignored. |
+| `TEMPLATES_URL` | unset | Cloud reads the [gallery](/core-concepts/pastes#browse-the-templates) from `<TEMPLATES_URL>.json` and each template from `<TEMPLATES_URL>/<name>.json`. The hosted service uses `https://sniptide.com/templates`. Self-hosted instances leave the gallery and its dashboard widget out, and the editor ignores the `template` parameter. |
 | `TERMS_URL`, `PRIVACY_URL` | unset | Turn "Terms" and "Privacy Policy" under the sign-in and sign-up forms into links. Without them that line is left out. |
 | `OPERATOR_NAME`, `OPERATOR_ADDRESS` | unset | Sign the foot of every email with who sends it and a postal address. |
 | `COPYRIGHT_EMAIL` | unset | Publishes `/copyright`, which explains how to send a copyright takedown notice or counter-notice to this address, with `OPERATOR_NAME` and `OPERATOR_ADDRESS` as the agent. |
@@ -61,7 +74,7 @@ A private server can leave all of these unset.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. |
-| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Leave unset to serve everything on one domain. |
+| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Use a domain you control or leave it unset to serve everything on one domain. The `sniptide.com` share domain belongs to Cloud. |
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports. Without it the server shares GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
@@ -95,7 +108,7 @@ opened there redirect to `BETTER_AUTH_URL`. Open a copied link to check that it 
 ## Email
 
 Notification emails are off until you configure SMTP. In-app notifications and password sign-in
-work without it. Set the host, port and sender together, plus `BETTER_AUTH_URL` and a
+work without it. Set the host and sender together, plus `BETTER_AUTH_URL` and a
 `BETTER_AUTH_SECRET` of at least 32 characters. Users verify their address and opt in per event in
 **Settings** > **Notifications**.
 
@@ -115,9 +128,10 @@ using when they turned on an email, and English before either happens.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` | unset | Server, port and sender address. All three are needed. |
+| `SMTP_HOST`, `SMTP_FROM` | unset | Server and sender address. Both are needed. |
+| `SMTP_PORT` | `587`, or `465` with `SMTP_SECURE=true` | The server's port. |
 | `SMTP_USER`, `SMTP_PASSWORD` | unset | Credentials; supply both or neither. |
-| `SMTP_SECURE` | `false` | `true` for implicit TLS (port 465). |
+| `SMTP_SECURE` | `true` on port 465, `false` otherwise | `true` for implicit TLS. |
 | `SMTP_REQUIRE_TLS` | `true` | Require STARTTLS otherwise. Only set `false` for a trusted local test server. |
 | `NOTIFICATION_EMAIL_CONCURRENCY` | `2` | How many notification emails are sent at once, 1 to 10. |
 
@@ -174,6 +188,7 @@ Invalid values stop the server with the allowed range.
 | `ANALYTICS_ROLLUP_TIME_BUDGET_MS` | `2000` | 100 to 60000 | How long one analytics rollup run may keep starting new batches. |
 | `HIGHLIGHT_CACHE_BYTES` | `33554432` | 0 to 256 MiB | Syntax-highlight cache per process; `0` turns it off. |
 | `SLOW_QUERY_MS` | `500` | 1 to 60000 | Threshold for slow-query log events. |
+| `REQUEST_LOG` | `all` | `all`, `errors`, `off` | Which requests get a JSON log line. `errors` logs 5xx and aborted responses only. Metrics count every request. |
 | `MIGRATIONS_DIR` | set by the image | n/a | Where migrations are read from at startup. Leave unset outside the image. |
 
 Set either account limit to `unlimited` or `0` to remove that limit. Trash and expired pastes are
@@ -183,16 +198,126 @@ removed after 30 days by a cleanup that runs at startup and hourly.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, and `email`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
-| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics, off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). |
+| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, `email`, and `telemetry`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics and server [error tracking](#error-tracking), off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. Cookieless events carry the visitor's country only when a CDN in front of the app sends one (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), because PostHog drops the IP of cookieless events before its GeoIP lookup. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). The key reaches the browser only on allowed hosts: preview deployments (`pr-NNN.sniptide.com`, `NN.sniptide.com`) and local development get no key, so they cannot report. |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing
 is sent anywhere else.
 
+### Instance telemetry
+
+Instance reports are **on by default** and go to Sniptide's hosted collector and PostHog project.
+You do not need to set `POSTHOG_KEY` or any reporting credentials on your instance.
+To stop reports, set `TELEMETRY=off` and restart the app. Set `TELEMETRY=on` and restart to resume.
+This setting controls instance reports independently of `POSTHOG_KEY`, which controls your own
+product analytics and error tracking.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `TELEMETRY` | `on` | Sends daily instance reports to Sniptide. `off` skips collection and delivery. |
+| `TELEMETRY_ID` | derived from the auth secret | Optional random UUID for the installation identity. Generate one with `node -e 'console.log(crypto.randomUUID())'`. Changing it resets the identity for future reports. Use the same value on every replica. |
+| `TELEMETRY_DEPLOYMENT` | `other` | Deployment label: `docker`, `coolify` or `other`. The official image sets `docker`; the Coolify template sets `coolify`. |
+
+Reports need an installation identity: the configured auth secret or `TELEMETRY_ID`. Without
+either, configuration-only tools and unconfigured development servers skip reports.
+
+The server checks at startup and hourly, and attempts delivery at most once per 24 hours across
+replicas and restarts sharing a database. Failed attempts wait for the next window. Delivery has
+a three-second timeout, follows no redirects, and never blocks an incoming request. Job status
+appears under `telemetry` in the protected metrics endpoint.
+
+Reports go to `https://app.sniptide.com/api/instance-telemetry`, which validates them and forwards
+them to Sniptide's PostHog project as `self_hosted_instance_report`. The report contains:
+
+- A schema version and installation ID, stable across restarts. Without `TELEMETRY_ID`, the ID is
+  an HMAC of a fixed purpose string under `BETTER_AUTH_SECRET`; the secret itself is never sent.
+  Reports from the same ID can be linked over time. A database clone with the same secret shares
+  that ID unless you set a different UUID.
+- Release version or commit hash, deployment label, operating system, CPU architecture and Node major version.
+  Custom release labels become `unknown`.
+- An exact registered-account total, excluding pending invitations. Paste and collection counts,
+  and token API requests on the previous UTC day, remain bucketed.
+  Paste and collection totals use the instance's usage counters and can lag behind writes.
+- Bucketed process memory in MiB and uptime in hours, for the replica sending the report.
+- Booleans for GitHub sign-in, Google sign-in, SMTP, Slack, Discord and the support assistant.
+
+Schema 2 reports also include exact `totalAccounts`, `activeAccounts1d`, `activeAccounts7d`,
+`activeAccounts30d`, `creates7d`, `edits7d`, `reads7d`, and `workflow7d` counts. `reportDay` is the
+previous UTC day, expressed as days since the Unix epoch. Activity windows end on that day and
+exclude today's partial activity. One account counts once in each active-account window, even
+when it uses several workflows or performs many actions. These are accounts, not unique people
+across installations. The collector also accepts schema 1 reports from older versions.
+
+Activity means a successful paste creation or content replacement, an authenticated app paste
+read, an explicit authenticated share-page view or reveal, or an explicit token API/MCP paste
+read. Anonymous visitors, searches, background jobs and failed or rolled-back mutations do not
+make an account active. `workflow7d` splits the number of those actions into `web`, `api`, `cli`
+and `mcp`. Extensions using the token API without a CLI/MCP client marker count under `api`.
+
+Account IDs and per-day activity rows stay in your database. Rows expire after 90 days and are
+removed when an account is deleted. Reads use a bounded one-second process buffer; an abrupt
+shutdown can lose pending reads, and a full buffer can omit new account/day/workflow keys.
+Committed creates and edits are counted in their own transaction. Demo instances send no reports.
+
+`activitySinceDay` records the start of observation. Reenabling telemetry after starting with it
+off resets this date. Windows starting on or before that date have partial coverage and must not
+be presented as complete weekly or monthly counts. Use the same telemetry setting on every replica.
+`activationDay` records the first paste creation and remains after that paste is deleted.
+Existing pastes establish historical activation when the migration runs; historical active-account
+counts cannot be reconstructed.
+
+For adoption totals, take the latest schema 2 report per installation received within seven days,
+then sum account counts. Never sum daily snapshots from one installation. A reporting installation
+is reachable; an installation with active accounts has observed use. Missing reports do not prove
+an uninstall.
+
+For observed week-1 retention, look for authenticated activity on days 7 through 13 after
+activation. Week-4 uses days 28 through 34. Exclude installations activated before observation,
+wait until each window ends, and treat an incompletely reported window without a return as
+unknown. Report retained, fully observed eligible, and unknown counts together. This measures
+observed installation use, not individual-person retention.
+
+The remaining size and process measurements use the buckets `0`, `1`, `2-10`, `11-100`,
+`101-1000` and `1001+`.
+No paste content, titles, slugs, account identifiers, instance addresses, credentials or raw logs
+are included. The collector receives the network source IP as part of HTTPS transport, uses an
+HMAC of it for rate limiting, and does not forward it or request headers to PostHog. Hosting access
+logs may still record connection metadata. Reports have no automatic expiry in Sniptide;
+retention and deletion are controlled in the receiving PostHog project. Turning telemetry off or
+resetting the ID does not delete earlier reports.
+
+The collector accepts only this bounded schema, returns `404` outside the hosted app or without
+PostHog configuration, and limits incoming submissions to 60 per source address per hour. Reports
+are unauthenticated and can be disabled, so their totals are approximate.
+
+### Error tracking
+
+With `POSTHOG_KEY` set, the server also sends its exceptions to PostHog error tracking in the same
+project: errors in pages, route handlers, server actions and the proxy, and failures in the
+maintenance jobs, the visit queue and the demo reset. Without a key no exceptions are sent, and
+exceptions only reach the server log as before. Preview deployments and `localhost` never report.
+
+Each exception carries the route file (such as `app/[slug]/page`, never the visited path), the
+release from `DEPLOYMENT_VERSION`, the runtime, the request method or the job's name, and Next's
+error digest. Before an exception leaves the server, Sniptide removes:
+
+- Quoted values in the message, which is where paste content, slugs and other input appear.
+- A failed query's parameters and Postgres key details.
+- Email addresses, API tokens, bearer credentials, JWTs and long random strings.
+- URL paths beyond their route, query strings and fragments, in the message and in stack frames.
+- Every other property of the error object, such as a request or a query.
+
+Each server process sends at most 30 exceptions a minute and waits at most 3 seconds for PostHog,
+so a failure loop can't flood the project or slow down responses. Errors in the browser are not
+sent.
+
+To get notified, add alerts in PostHog's error tracking settings on the issue created and issue
+spiking triggers, and send them to Slack, Linear, GitHub or a webhook.
+
 ## Support and feedback
 
 **Feedback** in the account menu works without any of these settings: it opens a prefilled
-GitHub issue at `HELP_URL`, and the instance sends nothing anywhere. Set the Linear variables to
+GitHub issue at `HELP_URL`, and no report is sent automatically. Set the Linear variables to
 receive reports in your own tracker, and an Anthropic key to add the support assistant. See
 [Get help and report a bug](/support) for what people see and what each report contains.
 
@@ -211,6 +336,15 @@ with each question limited to 300 characters. The daily count resets 24 hours af
 first question of the period. A report that repeats an open issue,
 the same kind of report from the same page with the same opening words, becomes a comment on that
 issue. Failures are logged as `support:` lines in the server log.
+
+## Abuse reporting
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ABUSE_REPORTS_ENABLED` | `false` | Enables anonymous abuse and appeal intake at `/abuse`, the report link on shared pastes, and `POST /api/abuse`. Requires `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` of at least 32 characters. Assign reviewers and confirm reporting, privacy and retention procedures before enabling. No external screening or email delivery is enabled. |
+
+The restricted queue uses the instance database and authorized host commands. See
+[Report abuse and appeal decisions](/abuse) for activation, review, decisions and retention limits.
 
 ## Build-time settings
 

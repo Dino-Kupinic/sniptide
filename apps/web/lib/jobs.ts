@@ -2,6 +2,7 @@ import "server-only"
 
 import { reconcileUsageBatch } from "@/lib/account/usage"
 import { getConfig } from "@/lib/config"
+import { captureServerError } from "@/lib/error-tracking"
 import { deliverNotificationEmails } from "@/lib/notifications/email"
 import { notifyExpiringPastes } from "@/lib/notifications/expiring"
 import { purgeStaleData } from "@/lib/pastes/purge"
@@ -11,6 +12,15 @@ import { HOUR, MINUTE } from "@/lib/time"
 import { createJobRunner, type JobOutcome } from "./jobs/runner"
 
 const definitions = {
+  telemetry: {
+    intervalMs: HOUR,
+    enabled: () => getConfig().instanceTelemetry.enabled,
+    run: () =>
+      runMaintenanceWork(async () => {
+        const { sendInstanceReport } = await import("@/lib/instance-telemetry")
+        return sendInstanceReport(getConfig())
+      }),
+  },
   purge: {
     intervalMs: HOUR,
     run: () =>
@@ -19,13 +29,15 @@ const definitions = {
         let failed = false
         try {
           purged = await purgeStaleData()
-        } catch {
+        } catch (error) {
           failed = true
+          await captureServerError(error, { source: "job", job: "purge" })
         }
         try {
           await notifyExpiringPastes()
-        } catch {
+        } catch (error) {
           failed = true
+          await captureServerError(error, { source: "job", job: "expiring" })
         }
         return failed ? "failed" : purged === null ? "contended" : "completed"
       }),
@@ -62,6 +74,7 @@ const state = globalThis as typeof globalThis & { __sniptideJobRunner?: ReturnTy
 function runner() {
   return createJobRunner(definitions, {
     report: (report) => console.info(JSON.stringify({ event: "maintenance_job", ...report })),
+    onError: (job, error) => captureServerError(error, { source: "job", job }),
   })
 }
 function jobs() {

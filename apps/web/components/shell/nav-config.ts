@@ -47,7 +47,7 @@ export function mobileChrome(pathname: string) {
 }
 
 // Titles for the top bar, keyed by the first path segment.
-export const pageTitles: Record<string, string> = {
+const pageTitles: Record<string, string> = {
   dashboard: "dashboard",
   analytics: "analytics",
   pastes: "my_pastes",
@@ -58,6 +58,7 @@ export const pageTitles: Record<string, string> = {
   settings: "settings",
   collections: "collections",
   secrets: "secrets",
+  templates: "paste_templates",
 }
 
 // The top bar's title for a route. Deeper routes (a paste, a collection) name themselves with

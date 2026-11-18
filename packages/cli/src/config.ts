@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
+import { DEFAULT_BASE_URL, normalizeBaseUrl as normalize } from "@sniptide/contracts/http"
 import { record, string } from "./contract"
 import { CliError, isMissing } from "./errors"
 
@@ -9,23 +10,8 @@ export interface Config {
   baseUrl: string
   token?: string
 }
-export const defaultBaseUrl = "https://app.sniptide.com"
-
 export function normalizeBaseUrl(value: string): string {
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    throw new CliError("The base URL must be an absolute URL.")
-  }
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
-  if (url.protocol !== "https:" && !(local && url.protocol === "http:")) {
-    throw new CliError("Use HTTPS, or HTTP on localhost for development.")
-  }
-  if (url.username || url.password || url.search || url.hash) {
-    throw new CliError("The base URL cannot contain credentials, a query, or a fragment.")
-  }
-  return url.href.replace(/\/+$/, "")
+  return normalize(value, CliError)
 }
 
 export function configPath(env: NodeJS.ProcessEnv): string {
@@ -35,7 +21,7 @@ export function configPath(env: NodeJS.ProcessEnv): string {
   )
 }
 
-export async function readConfig(env: NodeJS.ProcessEnv): Promise<Config | null> {
+async function readConfig(env: NodeJS.ProcessEnv): Promise<Config | null> {
   try {
     const data = record(JSON.parse(await readFile(configPath(env), "utf8")))
     return {
@@ -55,7 +41,7 @@ export async function readConfig(env: NodeJS.ProcessEnv): Promise<Config | null>
 export async function resolveConfig(env: NodeJS.ProcessEnv, baseUrl?: string): Promise<Config> {
   const saved = await readConfig(env)
   const resolvedUrl = normalizeBaseUrl(
-    baseUrl ?? env.SNIPTIDE_BASE_URL ?? saved?.baseUrl ?? defaultBaseUrl,
+    baseUrl ?? env.SNIPTIDE_BASE_URL ?? saved?.baseUrl ?? DEFAULT_BASE_URL,
   )
   // Saved credentials belong to exactly one instance, including its path prefix.
   const token =

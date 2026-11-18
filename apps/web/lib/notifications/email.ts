@@ -76,6 +76,7 @@ async function eligible(row: Claimed, now: Date) {
       preferences: user.preferences,
       ownerId: paste.ownerId,
       slug: paste.slug,
+      burnAfterRead: paste.burnAfterRead,
       deletedAt: paste.deletedAt,
       burnedAt: paste.burnedAt,
       expiresAt: paste.expiresAt,
@@ -153,7 +154,9 @@ export async function deliverNotificationEmails() {
           )
           const href =
             row.kind === "shared"
-              ? "/shared"
+              ? recipient.burnAfterRead
+                ? `/api/notifications/${row.id}/open`
+                : "/shared"
               : row.kind === "burned"
                 ? "/trash"
                 : row.kind === "views"
@@ -165,6 +168,7 @@ export async function deliverNotificationEmails() {
             const email = await renderEmail(
               notificationEmail({
                 kind: row.kind,
+                sharedBurn: row.kind === "shared" && recipient.burnAfterRead,
                 to: recipient.email,
                 url: destination,
                 settingsUrl: settings,

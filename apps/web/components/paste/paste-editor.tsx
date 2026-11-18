@@ -1,5 +1,12 @@
 "use client"
 
+import {
+  ENCRYPTED_FILE_NAME,
+  encryptPayload,
+  generateKey,
+  keyIdOf,
+  withKeyFragment,
+} from "@sniptide/contracts/encryption"
 import { Button } from "@sniptide/ui/components/button"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
@@ -70,6 +77,7 @@ import { useHighlight } from "@/lib/highlight/use-highlight"
 import type { Locale } from "@/lib/i18n/config"
 import { isOverlayOpen } from "@/lib/keyboard"
 import { autosavePaste, finishEditing, type SavePasteInput, savePaste } from "@/lib/pastes/actions"
+import { rememberKey } from "@/lib/pastes/keyring"
 import { detectLanguage, getLanguage, renameForLanguage } from "@/lib/pastes/languages"
 import { isCustomLink } from "@/lib/pastes/links"
 import { passwordField, storedPasswordField } from "@/lib/pastes/password-intent"
@@ -95,11 +103,15 @@ export interface EditorInitial {
 
 type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
+  // The end-to-end encryption switch, so a restored draft is still saved encrypted.
+  encrypted?: boolean
 }
+
+type EditSnapshot = { input: SavePasteInput; expirySelection: number }
 
 // What the draft on this device keeps: everything except the password, which never leaves memory.
 function forDraft(value: EditorDraft): SavePasteInput {
-  const { automatic: _automatic, ...paste } = value
+  const { automatic: _automatic, encrypted: _encrypted, ...paste } = value
   return { ...paste, password: value.password === null ? null : "" }
 }
 
@@ -255,12 +267,23 @@ export function PasteEditor({
   const [activeId, setActiveId] = React.useState(() => files[0]?.id ?? "")
   const [preview, setPreview] = React.useState(false)
   const [visibility, setVisibility] = React.useState(initial.visibility)
-  const [expiry, setExpiry] = React.useState(initial.expiry)
+  const [{ expiry, selection }, setExpiryChoice] = React.useState({
+    expiry: initial.expiry,
+    selection: 0,
+  })
+  function setExpiry(next: Expiry | "keep") {
+    setExpiryChoice((current) => ({ expiry: next, selection: current.selection + 1 }))
+  }
+  const expirySelection = editing && expiry !== "keep" ? selection : 0
   const [slug, setSlug] = React.useState(initial.slug)
   const [collection, setCollection] = React.useState(initial.collection)
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
   const [password, setPassword] = React.useState("")
   const [burnAfterRead, setBurnAfterRead] = React.useState(initial.burnAfterRead)
+  // New pastes only: the files are encrypted in this browser when the paste is created.
+  const [encrypted, setEncrypted] = React.useState(false)
+  const encryptedRef = React.useRef(encrypted)
+  encryptedRef.current = encrypted
   const [cursor, setCursor] = React.useState({ line: 1, column: 1 })
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
@@ -293,6 +316,7 @@ export function PasteEditor({
   const [savedSlug, setSavedSlug] = React.useState(editing ?? "")
   const [hasPassword, setHasPassword] = React.useState(initial.hasPassword)
   const [savedExpiresAt, setSavedExpiresAt] = React.useState(currentExpiresAt)
+  const savedExpirySelection = React.useRef(0)
   const expiryLabel =
     savedExpiresAt === undefined
       ? undefined
@@ -377,11 +401,15 @@ export function PasteEditor({
     password: storedPasswordField(initial.hasPassword),
     burnAfterRead: initial.burnAfterRead,
   }))
+  const snapshot = React.useMemo<EditSnapshot>(
+    () => ({ input: value, expirySelection }),
+    [value, expirySelection],
+  )
 
   // The newest version another tab or device saved, once we know about it.
   const conflictRef = React.useRef<PasteBroadcast | null>(null)
   const savedSlugRef = React.useRef(editing ?? "")
-  const autosaverRef = React.useRef<Autosaver<SavePasteInput> | null>(null)
+  const autosaverRef = React.useRef<Autosaver<EditSnapshot> | null>(null)
   const [changedElsewhere, setChangedElsewhere] = React.useState(false)
   const draftId = draftKey(draftScope, editing)
   const broadcast = useSaveBroadcast(draftId, (message) => {
@@ -391,8 +419,16 @@ export function PasteEditor({
     else setChangedElsewhere(true)
   })
 
-  async function saveEdit(sent: SavePasteInput): Promise<SaveOutcome<SavePasteInput>> {
-    const result = await autosavePaste(savedSlugRef.current, sent, versionRef.current)
+  async function saveEdit(sent: EditSnapshot): Promise<SaveOutcome<EditSnapshot>> {
+    // A relative expiry applies once. The selection identifies the action even if the slider
+    // moves away and back to the same duration while a save is in flight.
+    const expiry =
+      sent.expirySelection === savedExpirySelection.current ? "keep" : sent.input.expiry
+    const result = await autosavePaste(
+      savedSlugRef.current,
+      { ...sent.input, expiry },
+      versionRef.current,
+    )
     if (!result.ok) {
       if ("conflict" in result) {
         conflictRef.current = { slug: result.slug, version: result.version }
@@ -403,34 +439,35 @@ export function PasteEditor({
 
     versionRef.current = result.version
     savedSlugRef.current = result.slug
+    savedExpirySelection.current = sent.expirySelection
     broadcast({ slug: result.slug, version: result.version })
     setSavedSlug(result.slug)
     setHasPassword(result.hasPassword)
     setSavedExpiresAt(result.expiresAt)
-    // An expiry picked from the chips is relative to the save, so it must not be applied again by
-    // the next one. A password was hashed on the server; the field goes back to "keep".
-    setExpiry((current) => (current === sent.expiry ? "keep" : current))
-    if (sent.password) {
-      setPassword((current) => (current === sent.password ? "" : current))
-      setCommittedPassword((current) => (current === sent.password ? "" : current))
+    // The password is stored as a hash, so the edit field goes back to its stored state.
+    if (sent.input.password) {
+      setPassword((current) => (current === sent.input.password ? "" : current))
+      setCommittedPassword((current) => (current === sent.input.password ? "" : current))
     }
     return {
       ok: true,
       saved: {
         ...sent,
-        expiry: "keep",
-        slug: result.slug,
-        password: storedPasswordField(result.hasPassword),
+        input: {
+          ...sent.input,
+          slug: result.slug,
+          password: storedPasswordField(result.hasPassword),
+        },
       },
     }
   }
 
   const { autosaver, state } = useAutosave({
-    value,
-    initial: initialValue,
+    value: snapshot,
+    initial: { input: initialValue, expirySelection: 0 },
     save: saveEdit,
     validate: (next) => {
-      const reason = unsavable(next)
+      const reason = unsavable(next.input)
       return reason ? t(reason) : null
     },
     manual: !editing,
@@ -440,16 +477,19 @@ export function PasteEditor({
 
   // A backup of unsaved edits on this device, put back if the tab closed or the network dropped
   // before they reached the server.
+  const draftExpiry = editing && expirySelection === savedExpirySelection.current ? "keep" : expiry
   const draftValue = React.useMemo<EditorDraft>(
     () => ({
       ...forDraft(value),
+      expiry: draftExpiry,
       automatic: {
         title: automatic.current.title,
         visibility: automatic.current.visibility,
         filenames: files.map((file) => automatic.current.filenames.has(file.id)),
       },
+      encrypted,
     }),
-    [value, files],
+    [value, draftExpiry, files, encrypted],
   )
   const [draftReady, setDraftReady] = React.useState(false)
   const [draftNotice, setDraftNotice] = React.useState<
@@ -466,8 +506,8 @@ export function PasteEditor({
     dirty: unsaved,
     enabled: draftReady,
   })
-  const latestValue = React.useRef(value)
-  latestValue.current = value
+  const latestDraftValue = React.useRef(draftValue)
+  latestDraftValue.current = draftValue
   const draftChecked = React.useRef(false)
 
   function applyValue(next: EditorDraft) {
@@ -492,6 +532,7 @@ export function PasteEditor({
     setPassword("")
     setCommittedPassword("")
     setBurnAfterRead(next.burnAfterRead)
+    setEncrypted(!editing && Boolean(next.encrypted))
   }
 
   React.useEffect(() => {
@@ -506,7 +547,7 @@ export function PasteEditor({
     }
     // Typing before the draft arrived, or a draft made against an older version of the paste:
     // let the person pick instead of overwriting either.
-    const edited = JSON.stringify(forDraft(latestValue.current)) !== started
+    const edited = JSON.stringify(forDraft(latestDraftValue.current)) !== started
     if (edited || (editing && draft.baseVersion !== versionRef.current)) {
       return setDraftNotice({ kind: "choose", savedAt: draft.savedAt })
     }
@@ -534,7 +575,7 @@ export function PasteEditor({
   async function loadLatest() {
     const target = conflictRef.current?.slug ?? savedSlugRef.current
     // Nothing to protect any more, so leaving doesn't ask.
-    autosaver.rebase(value)
+    autosaver.rebase(snapshot)
     await discardDraft()
     window.location.assign(`/pastes/${target}/edit`)
   }
@@ -572,9 +613,21 @@ export function PasteEditor({
 
   function updateFiles(next: EditorFile[]) {
     setFiles(next)
+    // The title stays readable to the server, so an encrypted paste never takes one from its
+    // files, and it is never suggested as public.
+    if (encryptedRef.current) return
     if (automatic.current.title) setTitle(suggestedTitle(next))
     if (automatic.current.visibility) {
       setVisibility((current) => suggestedVisibility(next, current))
+    }
+  }
+
+  function changeEncrypted(on: boolean) {
+    setEncrypted(on)
+    if (automatic.current.title) setTitle(on ? t("encryptedPaste") : suggestedTitle(files))
+    if (on && visibility === "public") {
+      automatic.current.visibility = false
+      setVisibility("unlisted")
     }
   }
 
@@ -754,7 +807,26 @@ export function PasteEditor({
     }
 
     startTransition(async () => {
-      const result = await savePaste(value).catch(() => null)
+      // Encrypted: the server gets one ciphertext file and the key's public id. The description
+      // and the files' names and contents exist in the clear only in this browser.
+      const key = encrypted ? generateKey() : null
+      const sent: SavePasteInput = key
+        ? {
+            ...value,
+            description: "",
+            files: [
+              {
+                name: ENCRYPTED_FILE_NAME,
+                content: await encryptPayload(
+                  { description, files: files.map(({ name, content }) => ({ name, content })) },
+                  key,
+                ),
+              },
+            ],
+            encryption: { keyId: await keyIdOf(key) },
+          }
+        : value
+      const result = await savePaste(sent).catch(() => null)
 
       if (!result) {
         setError(t("couldnTSaveThePasteCheck"))
@@ -772,11 +844,16 @@ export function PasteEditor({
         password: passwordOn,
         custom_link: Boolean(slugForSave),
         invites: 0,
+        encrypted,
       })
       toast.success(t("pasteCreated"))
-      autosaver.rebase(value)
+      autosaver.rebase(snapshot)
       await discardDraft()
-      router.push(`/pastes/${result.slug}`)
+      // The paste's page finds the key in this browser's key ring. Where storage is blocked the
+      // key rides in the fragment instead, which is never sent to the server.
+      const remembered = key ? await rememberKey(key) : true
+      const path = `/pastes/${result.slug}`
+      router.push(key && !remembered ? withKeyFragment(path, key) : path)
     })
   }
 
@@ -858,10 +935,13 @@ export function PasteEditor({
                 automatic.current.visibility = false
                 setVisibility(next)
               }}
-              options={visibilityOptions.map((option) => ({
-                ...option,
-                label: t("visibilityValue", { value: option.value }),
-              }))}
+              options={visibilityOptions
+                // A public listing would show an encrypted paste without its key.
+                .filter((option) => !(encrypted && option.value === "public"))
+                .map((option) => ({
+                  ...option,
+                  label: t("visibilityValue", { value: option.value }),
+                }))}
               itemClassName={large ? "py-2 text-sm" : undefined}
             />
             <p className="text-xs text-muted-foreground">
@@ -916,9 +996,19 @@ export function PasteEditor({
         id: "protection",
         label: t("protection"),
         icon: LockIcon,
-        marked: passwordOn || burnAfterRead,
+        marked: passwordOn || burnAfterRead || encrypted,
         content: (
           <>
+            {editing ? null : (
+              <ToggleRow
+                label={t("endToEndEncryption")}
+                description={t("encryptedInThisBrowser")}
+                help={t("encryptionHelp")}
+                checked={encrypted}
+                onCheckedChange={changeEncrypted}
+                large={large}
+              />
+            )}
             <ToggleRow
               label={t("password")}
               description={t("visitorsMustEnterItToView")}
@@ -946,7 +1036,8 @@ export function PasteEditor({
   // The mobile settings chip names the state: "Unlisted · 1 week".
   const settingsSummary = t("settingsSummary", {
     visibility: t("visibilityValue", { value: visibility }),
-    expiry: expiry === "keep" ? (expiryLabel ?? t("keep")) : t("expiryLong", { value: expiry }),
+    expiry:
+      draftExpiry === "keep" ? (expiryLabel ?? t("keep")) : t("expiryLong", { value: expiry }),
   })
 
   return (
@@ -1145,7 +1236,6 @@ export function PasteEditor({
                 <CodeBlock
                   content={active?.content || " "}
                   highlighted={previewLines}
-                  wrap
                   lineNumbers={lineNumbers}
                   className="flex-1 bg-muted dark:bg-sidebar"
                 />
@@ -1263,7 +1353,7 @@ export function PasteEditor({
             onClick={() => setSettingsOpen(true)}
             className="h-auto min-h-[38px] min-w-0 flex-1 basis-[10rem] justify-start px-3 py-2"
           >
-            {passwordOn || burnAfterRead ? <LockIcon /> : <EyeIcon />}
+            {passwordOn || burnAfterRead || encrypted ? <LockIcon /> : <EyeIcon />}
             <span className="truncate">{settingsSummary}</span>
             <ChevronUpIcon className="ml-auto text-muted-foreground" />
           </Button>

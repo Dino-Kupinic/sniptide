@@ -10,8 +10,13 @@ import {
   SIGNUP_SOURCES,
   USE_CASES,
 } from "@/lib/onboarding"
-import { getAgentConnection, saveSignupSource, saveUseCase } from "@/lib/onboarding-actions"
-import { canOnboard, shouldOnboard } from "@/lib/onboarding-server"
+import {
+  getAgentConnection,
+  markTourSeen,
+  saveSignupSource,
+  saveUseCase,
+} from "@/lib/onboarding-actions"
+import { canOnboard, shouldOnboard, shouldStartTour } from "@/lib/onboarding-server"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
@@ -94,6 +99,34 @@ describeDb("onboarding answers", () => {
     expect(await getAgentConnection()).toBeNull()
   })
 
+  test("the tour starts by itself once, after the wizard", async () => {
+    const user = { id: "ada", createdAt: new Date() }
+    // Still in the wizard: the dashboard isn't reachable yet.
+    expect(await shouldStartTour(user)).toBe(false)
+    await saveSignupSource("skipped")
+    expect(await shouldStartTour(user)).toBe(true)
+
+    expect(await markTourSeen()).toEqual({ ok: true })
+    expect(await shouldStartTour(user)).toBe(false)
+    const [first] = await getDb().select().from(onboarding).where(eq(onboarding.userId, "ada"))
+    expect(first?.tourSeenAt).toBeInstanceOf(Date)
+
+    // A replay from the account menu keeps the first time.
+    expect(await markTourSeen()).toEqual({ ok: true })
+    const [second] = await getDb().select().from(onboarding).where(eq(onboarding.userId, "ada"))
+    expect(second?.tourSeenAt).toEqual(first?.tourSeenAt)
+  })
+
+  test("an older account and a signed-out request never get the tour unasked", async () => {
+    await saveSignupSource("x")
+    const old = { id: "ada", createdAt: new Date(Date.now() - (ONBOARDING_WINDOW_DAYS + 1) * DAY) }
+    expect(await shouldStartTour(old)).toBe(false)
+
+    signInAs(null)
+    expect((await markTourSeen()).ok).toBe(false)
+    expect(await shouldStartTour({ id: "ada", createdAt: new Date() })).toBe(true)
+  })
+
   test("deleting the account removes the answers", async () => {
     await saveSignupSource("x")
     await resetDatabase()
@@ -117,6 +150,7 @@ describe("onboarding", () => {
       "claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp",
     )
     expect(setup.codex).toBe("codex mcp add sniptide --url https://app.sniptide.com/api/mcp")
+    expect(setup.grokBotLink).toBe("https://grok.com/connectors")
     const link = new URL(setup.cursorLink)
     expect(link.protocol).toBe("cursor:")
     expect(link.searchParams.get("name")).toBe("sniptide")
@@ -129,6 +163,9 @@ describe("onboarding", () => {
     expect(agentClientFromName("Claude Code (sniptide)")).toBe("claude_code")
     expect(agentClientFromName("Codex")).toBe("codex")
     expect(agentClientFromName("Cursor")).toBe("cursor")
+    expect(agentClientFromName("Grok Bot")).toBe("grok_bot")
+    expect(agentClientFromName("xAI Connectors")).toBe("grok_bot")
+    expect(agentClientFromName("Maxai")).toBe("other")
     expect(agentClientFromName("<script>")).toBe("other")
   })
 

@@ -1,3 +1,4 @@
+import { normalizeBaseUrl as normalize, readJson } from "@sniptide/contracts/http"
 import {
   type Capture,
   type CollectionPage,
@@ -8,20 +9,8 @@ import {
   ToolError,
 } from "./server"
 
-export const defaultBaseUrl = "https://app.sniptide.com"
 export function normalizeBaseUrl(value: string) {
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    throw new ToolError("The base URL must be an absolute URL.")
-  }
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
-  if (url.protocol !== "https:" && !(local && url.protocol === "http:"))
-    throw new ToolError("Use HTTPS, or HTTP on localhost for development.")
-  if (url.username || url.password || url.search || url.hash)
-    throw new ToolError("The base URL cannot contain credentials, a query, or a fragment.")
-  return url.href.replace(/\/+$/, "")
+  return normalize(value, ToolError)
 }
 function record(value: unknown): Data {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -81,25 +70,7 @@ export class TokenApiBackend implements SniptideBackend {
       )
     }
     try {
-      if (!response.body) throw new Error()
-      const reader = response.body.getReader()
-      const chunks: Uint8Array[] = []
-      let bytes = 0
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          bytes += value.byteLength
-          if (bytes > 25 * 1024 * 1024) {
-            await reader.cancel()
-            throw new Error()
-          }
-          chunks.push(value)
-        }
-      } finally {
-        reader.releaseLock()
-      }
-      return record(JSON.parse(Buffer.concat(chunks).toString("utf8")))
+      return record(await readJson(response))
     } catch {
       throw new ToolError("Sniptide returned an invalid or oversized response.")
     }

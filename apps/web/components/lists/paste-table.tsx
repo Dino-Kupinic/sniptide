@@ -22,8 +22,8 @@ import {
   StarIcon,
   TerminalIcon,
 } from "lucide-react"
+import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { usePasteExpired } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
@@ -33,12 +33,13 @@ import { setStarred } from "@/lib/pastes/actions"
 import type { PasteSort, SortDirection } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { profilePath } from "@/lib/profile-path"
+import { SkeletonTableRows } from "./list-skeleton"
 import { RowMenu } from "./row-menu"
 import { type RowSelection, SelectAllHead, SelectCell } from "./selection"
 
 // Visibility as a quiet outlined label with an icon, so a column of them doesn't shout. Burn after
 // read keeps the blue, since it is the one that changes what happens to the paste.
-export function RowBadge({
+function RowBadge({
   row,
   short = false,
   className,
@@ -108,7 +109,7 @@ export function ExpiryLabel({ row, mobile = false }: { row: PasteRow; mobile?: b
 
 // The logo of the agent that created a paste, or a terminal or plug for the CLI and the API, named
 // for screen readers and on hover. Pastes from the web editor show nothing.
-export function CreatorMark({
+function CreatorMark({
   createdBy,
   className,
 }: {
@@ -157,10 +158,13 @@ export function PasteTable({
   className,
   selection,
   action = "menu",
+  loadingRows,
 }: {
   rows: PasteRow[]
   origin: string
   className?: string
+  // While the rows are loading: how many placeholder rows stand in for them.
+  loadingRows?: number
   sortHead?: (sort: PasteSort) => SortHeadProps
   selection?: RowSelection
   // Starred lists end each row in a filled star that unstars it.
@@ -205,6 +209,13 @@ export function PasteTable({
         </TableRow>
       </TableHeader>
       <TableBody>
+        {loadingRows !== undefined ? (
+          <SkeletonTableRows
+            rows={loadingRows}
+            cells={["w-20", "w-[72px]", "ml-auto w-8", "w-12", "w-20"]}
+            rowClassName="[&>td]:h-11"
+          />
+        ) : null}
         {rows.map((row) => (
           <TableRow
             key={row.slug}

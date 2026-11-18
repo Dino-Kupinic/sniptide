@@ -10,7 +10,7 @@ const exec = promisify(execFile)
 const maxBytes = 1024 * 1024
 const forbiddenDirectories = new Set([".git", "node_modules", ".next", ".turbo"])
 
-export function safeName(name: string): string {
+function safeName(name: string): string {
   const parts = name.split("/")
   if (
     !name ||
@@ -57,7 +57,7 @@ async function inspect(
   return null
 }
 
-export function detectLanguage(name: string): string {
+function detectLanguage(name: string): string {
   const base = path.posix.basename(name)
   const exact: Record<string, string> = {
     Dockerfile: "docker",
@@ -253,17 +253,18 @@ export async function collectFiles(
       const match = lines.match(/^(\d+):(\d+)$/)
       const start = Number(match?.[1])
       const end = Number(match?.[2])
-      const split = content.match(/[^\n]*\n|[^\n]+$/g) ?? []
-      if (
-        !Number.isSafeInteger(start) ||
-        !Number.isSafeInteger(end) ||
-        start < 1 ||
-        end < start ||
-        end > split.length
-      ) {
-        throw new CliError("--lines must be START:END within the file (1-based, inclusive).")
+      const rangeError = "--lines must be START:END within the file (1-based, inclusive)."
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start)
+        throw new CliError(rangeError)
+      let offset = 0
+      let from = 0
+      for (let line = 1; line <= end; line++) {
+        if (offset >= content.length) throw new CliError(rangeError)
+        if (line === start) from = offset
+        const newline = content.indexOf("\n", offset)
+        offset = newline === -1 ? content.length : newline + 1
       }
-      file.content = split.slice(start - 1, end).join("")
+      file.content = content.slice(from, offset)
       file.lines = { start, end }
     }
     bytes += Buffer.byteLength(file.content)

@@ -49,13 +49,11 @@
     "today": "Heute",
     "tomorrow": "morgen",
     "yourAccess": "Dein Zugriff",
-    "accessFrom": "{access} · von {name}",
     "expiresLabel": "Läuft ab",
     "viewsLabel": "Aufrufe",
     "revisions": "Versionen",
     "editPermission": "Du kannst dieses Snippet bearbeiten. Nur {name} kann es teilen und löschen.",
     "viewPermission": "Du kannst dieses Snippet lesen und kopieren. Nur {name} kann es ändern.",
-    "gistError": "Dieses Gist konnte nicht geöffnet werden.",
     "metricViews": "Aufrufe",
     "metricUnique": "Eindeutige Besucher",
     "metricCopies": "Code-Kopien",
@@ -85,6 +83,7 @@
     "someone": "Jemand",
     "notificationShared": "{name} hat „{title}“ mit dir geteilt",
     "notificationSharedDetail": "Öffne es unter Mit mir geteilt",
+    "notificationSharedBurnDetail": "Versiegeltes Snippet öffnen",
     "notificationBurned": "„{title}“ wurde gelesen",
     "notificationBurnedDetail": "Es wurde nach dem Lesen gelöscht. Stelle es aus dem Papierkorb wieder her, um es zu behalten",
     "notificationNeverExpires": "„{title}“ läuft nicht mehr ab",
@@ -94,7 +93,8 @@
     "notificationViews": "„{title}“ hat {count, number} Aufrufe erreicht",
     "notificationViewsDetail": "Sieh dir die Herkunft unter Statistiken an",
     "snapshotUnavailable": "Snapshot unavailable",
-    "expired": "Abgelaufen"
+    "expired": "Abgelaufen",
+    "endToEndEncrypted": "Ende-zu-Ende-verschlüsselt"
   },
   "Profile": {
     "metaTitle": "{name} (@{handle}) · Sniptide",

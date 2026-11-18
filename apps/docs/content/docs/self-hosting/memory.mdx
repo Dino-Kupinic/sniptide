@@ -13,7 +13,9 @@ increase the app's memory use.
 
 Set `SNIPTIDE_MEMORY` for the app container or `POSTGRES_MEMORY` for the database when you want
 an explicit ceiling. Both default to `0`, which leaves the template's ceiling unset. You can also
-supply Node flags through `NODE_OPTIONS`, including an explicit heap size when needed.
+supply Node flags through `NODE_OPTIONS`, including an explicit heap size when needed. With
+Docker Compose, add it to `.env`. With Coolify, add `- NODE_OPTIONS=${NODE_OPTIONS}` to the
+template's `environment` list first.
 
 Heap size is only part of the app's memory use. Leave room for native buffers, syntax highlighting,
 active requests and the database when choosing limits. Resource needs depend on your workload.

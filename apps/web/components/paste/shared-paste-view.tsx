@@ -1,7 +1,7 @@
-import { cn } from "@sniptide/ui/lib/utils"
-import { ClockIcon, EyeIcon, FlameIcon } from "lucide-react"
+import { ClockIcon, EyeIcon, FlameIcon, LockIcon } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
 import type * as React from "react"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { byteLength, formatBytes, lineCount, timeAgo, timeUntil } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import { profilePath } from "@/lib/profile-path"
@@ -15,8 +15,9 @@ export interface SharedPasteViewData {
     username: string
     // Links the name to the author's profile; null when the account has no handle.
     handle?: string | null
-    initials: string
-    tone?: "primary" | "foreground" | "muted"
+    // The account id, which picks the default picture's colour, and the uploaded picture.
+    id: string
+    image?: string | null
   }
   files: { name: string; language: string; content: string; lines?: HighlightedLines }[]
   updatedAt: number
@@ -24,12 +25,8 @@ export interface SharedPasteViewData {
   views: number
   burnAfterRead: boolean
   allowRaw: boolean
-}
-
-const avatarTone = {
-  primary: "bg-primary text-primary-foreground",
-  foreground: "bg-foreground text-background",
-  muted: "bg-muted text-foreground",
+  // Decrypted in this browser: the details line says so, since the server never saw the files.
+  encrypted?: boolean
 }
 
 // The public share page body: who shared it, the title, the details line, the actions and the
@@ -74,15 +71,7 @@ export function SharedPasteView({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
           <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <span
-              aria-hidden="true"
-              className={cn(
-                "flex size-7 items-center justify-center rounded-md font-heading text-[10px] font-bold",
-                avatarTone[author.tone ?? "foreground"],
-              )}
-            >
-              {author.initials}
-            </span>
+            <UserAvatar person={author} className="size-7" />
             {author.handle ? (
               <a
                 href={profilePath(author.handle)}
@@ -95,7 +84,7 @@ export function SharedPasteView({
             )}
             {t("sharedTime", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
           </p>
-          <h1 className="font-heading text-[32px] leading-10 font-bold tracking-[-0.03em] break-words lg:text-5xl lg:leading-[56px]">
+          <h1 className="font-heading text-2xl leading-8 font-bold tracking-[-0.02em] break-words">
             {paste.title}
           </h1>
           <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -117,17 +106,14 @@ export function SharedPasteView({
               <EyeIcon className="hidden size-3.5 lg:block" />
               {t("viewCount", { count: paste.views })}
             </span>
+            {paste.encrypted ? (
+              <span className="inline-flex items-center gap-1.5">
+                <LockIcon className="hidden size-3.5 lg:block" />
+                {t("endToEndEncrypted")}
+              </span>
+            ) : null}
           </p>
         </div>
-        {files.length === 1 && first ? (
-          <div className="hidden shrink-0 lg:block">
-            <ShareActions
-              slug={gone ? undefined : slug}
-              rawHref={rawHref}
-              content={first.content}
-            />
-          </div>
-        ) : null}
       </div>
 
       {notice}
@@ -136,7 +122,7 @@ export function SharedPasteView({
         <FileViewer
           slug={slug}
           files={files}
-          {...sharedViewerProps(files.length === 1, !gone)}
+          {...sharedViewerProps(!gone)}
           rawAllowed={rawAllowed}
         />
       )}
@@ -145,7 +131,7 @@ export function SharedPasteView({
       {first ? (
         <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-6 box-content flex h-14 flex-col justify-center border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
           <ShareActions
-            slug={gone ? undefined : slug}
+            slug={gone || paste.encrypted ? undefined : slug}
             rawHref={rawHref}
             content={first.content}
             compact
@@ -157,13 +143,8 @@ export function SharedPasteView({
 }
 
 // The code card's look on the share page, shared with the server page's streamed viewer.
-export function sharedViewerProps(single: boolean, printable: boolean) {
-  return {
-    collapseAt: 6,
-    printable,
-    headerClassName: single ? "lg:hidden" : undefined,
-    bodyClassName: cn("bg-sidebar", single && "lg:py-5"),
-  }
+export function sharedViewerProps(printable: boolean) {
+  return { collapseAt: 6, printable, bodyClassName: "bg-sidebar" }
 }
 
 // Above the code of a revealed burn-after-read paste: it's gone for good, so the reader knows to

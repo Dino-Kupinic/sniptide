@@ -3,7 +3,8 @@ import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { toRows } from "@/lib/pastes/rows"
-import { listOwnPastes, listStarred, navCounts, setStarred, sharePaste } from "@/lib/pastes/store"
+import { sharePaste } from "@/lib/pastes/shares"
+import { navCounts, setStarred } from "@/lib/pastes/store"
 import {
   hasDatabase,
   resetDatabase,
@@ -13,6 +14,7 @@ import {
   starCount,
   unlock,
 } from "./harness"
+import { listOwnPastes, listStarred } from "./lists"
 
 // A star lists the paste's title, slug and owner on the starrer's page, so it must never be a way
 // to learn about a paste the starrer can't open.

@@ -28,8 +28,8 @@ export function renderToken(token: HighlightedToken, index: number) {
 
 // Line-numbered code uses Paper Mono and plain ink unless the page passes `highlighted` lines
 // (see lib/highlight), then syntax-coloured. Each line is its own row so a wrapped line keeps its
-// number aligned with its first visual line. `wrap="mobile"` and `mobileMaxLines` only apply below
-// the lg breakpoint, so one render serves both layouts.
+// number aligned with its first visual line. `mobileMaxLines` only applies below the lg
+// breakpoint, so one render serves both layouts.
 export function CodeBlock({
   content,
   highlighted,
@@ -41,7 +41,7 @@ export function CodeBlock({
 }: {
   content: string
   highlighted?: HighlightedLines
-  wrap?: boolean | "mobile"
+  wrap?: boolean
   mobileMaxLines?: number
   lineNumbers?: boolean
 } & Omit<ComponentProps<"div">, "children">) {
@@ -53,7 +53,7 @@ export function CodeBlock({
       {...props}
       className={cn("overflow-x-auto p-4 font-mono text-[13px] leading-[22px]", className)}
     >
-      <ol className={cn("min-w-full", !wrap && "w-max", wrap === "mobile" && "lg:w-max")}>
+      <ol className={cn("min-w-full", !wrap && "w-max")}>
         {lines.map((line, index) => (
           <li
             key={index}
@@ -71,13 +71,7 @@ export function CodeBlock({
               {index + 1}
             </span>
             <code
-              className={cn(
-                "min-w-0",
-                wrap === true && "break-words whitespace-pre-wrap",
-                wrap === false && "whitespace-pre",
-                wrap === "mobile" &&
-                  "break-words whitespace-pre-wrap lg:break-normal lg:whitespace-pre",
-              )}
+              className={cn("min-w-0", wrap ? "break-words whitespace-pre-wrap" : "whitespace-pre")}
             >
               {typeof line === "string" ? line || " " : line.length ? line.map(renderToken) : " "}
             </code>

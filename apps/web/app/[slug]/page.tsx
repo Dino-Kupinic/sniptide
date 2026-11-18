@@ -6,12 +6,15 @@ import type * as React from "react"
 import { type ComponentProps, Suspense } from "react"
 import { LifeField } from "@/components/auth/life-field"
 import { LanguageMenu } from "@/components/language-switcher"
+import { EncryptedSharedPaste } from "@/components/paste/encrypted-paste"
 import { FileViewer } from "@/components/paste/file-viewer"
 import { GateLayout } from "@/components/paste/paste-gate"
 import { RevealPaste } from "@/components/paste/reveal-paste"
 import { SharedPasteView, sharedViewerProps } from "@/components/paste/shared-paste-view"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
+import { getConfig } from "@/lib/config"
+import { hasFeature } from "@/lib/edition"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
 import { slugFromRoute } from "@/lib/pastes/links"
@@ -28,8 +31,10 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 
   return {
     title: `${meta.title} · Sniptide`,
-    // Unlisted pastes are reachable by link only, so keep them out of search engines.
-    robots: meta.visibility === "public" ? undefined : { index: false, follow: false },
+    robots:
+      meta.visibility === "public" && hasFeature("discovery")
+        ? undefined
+        : { index: false, follow: false },
   }
 }
 
@@ -55,7 +60,12 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   if (read.status === "sealed") {
     return (
       <Shell signedIn={signedIn}>
-        <RevealPaste slug={slug} ownerHref={ownerHref} after={signUp} />
+        <RevealPaste
+          slug={slug}
+          ownerHref={ownerHref}
+          encryptionKeyId={read.encryptionKeyId}
+          after={signUp}
+        />
       </Shell>
     )
   }
@@ -71,12 +81,27 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
   }
 
   const { paste } = read
-  const single = paste.files.length === 1
+  const [sealedFile] = paste.files
+  if (paste.encryptionKeyId && sealedFile) {
+    // The server only has ciphertext: the browser decrypts it with the key from the link.
+    const { files: _files, ...details } = paste
+    return (
+      <Shell signedIn={signedIn}>
+        <EncryptedSharedPaste
+          slug={slug}
+          paste={details}
+          envelope={sealedFile.content}
+          keyId={paste.encryptionKeyId}
+          after={signUp}
+        />
+      </Shell>
+    )
+  }
   const viewerProps = {
     slug,
     files: paste.files,
     rawAllowed: paste.allowRaw,
-    ...sharedViewerProps(single, true),
+    ...sharedViewerProps(true),
   }
 
   return (
@@ -96,15 +121,33 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 }
 
 function Shell({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
+  const t = useTranslations("Abuse")
   return (
     <div className="relative isolate flex min-h-svh flex-col">
-      {/* The auth screens' Game of Life, faint and faded out before the paste column so it never
-          sits under text. Phones have no gutter for it. */}
-      <LifeField className="fixed -z-10 opacity-15 [mask-image:linear-gradient(to_right,black,transparent_calc(50%-480px),transparent_calc(50%+480px),black)] max-lg:hidden dark:opacity-25" />
+      {/* The auth screens' Game of Life as a quiet backdrop: a sparse field at a quarter of their
+          speed that ignores the pointer, faint and gone well before the paste column so motion
+          never pulls the eye from the text. Phones have no gutter for it. */}
+      <LifeField
+        density={0.09}
+        fps={20}
+        speed={1}
+        interactive={false}
+        className="fixed -z-10 opacity-15 [mask-image:linear-gradient(to_right,black,transparent_calc(50%-520px),transparent_calc(50%+520px),black)] max-lg:hidden dark:opacity-20"
+      />
       <PublicHeader signedIn={signedIn} languageMenu={false} />
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 lg:gap-6 lg:pt-12">
         {children}
       </main>
+      {getConfig().abuseReportsEnabled ? (
+        <footer className="flex justify-end px-4 pb-6 lg:px-10">
+          <a
+            href={`${getAppOrigin()}/abuse`}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t("reportLink")}
+          </a>
+        </footer>
+      ) : null}
     </div>
   )
 }

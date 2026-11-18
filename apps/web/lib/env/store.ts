@@ -3,21 +3,18 @@ import "server-only"
 import { envGroup, envVariable, user } from "@workspace/db/schema"
 import { and, asc, desc, eq, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
+import { type AuditSource, recordAudit } from "./audit"
 import { decryptValue, encryptValue } from "./crypto"
 
 // Env groups (packages/db/src/schema/env.ts): named sets of environment variables that
 // `sniptide env push` uploads from a .env file and `env pull` / `env run` bring back. Each group
-// belongs to one account and is only reached through that account's session or API tokens.
+// belongs to one account, and these functions reach it only through that account's session or
+// API tokens. Groups shared with an account are reached in the app (web-store.ts). A read of the
+// values and every change is recorded in the audit log under `source`.
 
 export {
   GROUP_SLUG,
-  groupSlugSchema,
-  MAX_GROUP_BYTES,
   MAX_GROUPS,
-  MAX_VALUE_BYTES,
-  MAX_VARIABLES,
-  type Variable,
-  variablesSchema,
 } from "./inputs"
 
 import { groupSlugSchema, MAX_GROUPS, type Variable, variablesSchema } from "./inputs"
@@ -60,18 +57,31 @@ export async function listGroups(owner: string): Promise<EnvGroupSummary[]> {
 }
 
 // A group with its values decrypted, or null when the owner has none by that name.
-export async function readGroup(owner: string, slug: string): Promise<EnvGroup | null> {
-  const db = getDb()
-  const [group] = await db
-    .select()
-    .from(envGroup)
-    .where(and(eq(envGroup.ownerId, owner), eq(envGroup.slug, slug)))
-  if (!group) return null
-  const rows = await db
-    .select()
-    .from(envVariable)
-    .where(eq(envVariable.groupId, group.id))
-    .orderBy(asc(envVariable.position))
+export async function readGroup(
+  owner: string,
+  slug: string,
+  source: AuditSource,
+): Promise<EnvGroup | null> {
+  return getDb().transaction(async (tx) => {
+    const [group] = await tx
+      .select()
+      .from(envGroup)
+      .where(and(eq(envGroup.ownerId, owner), eq(envGroup.slug, slug)))
+    if (!group) return null
+    const rows = await tx
+      .select()
+      .from(envVariable)
+      .where(eq(envVariable.groupId, group.id))
+      .orderBy(asc(envVariable.position))
+    await recordAudit(tx, group, "read", source)
+    return present(group, rows)
+  })
+}
+
+function present(
+  group: typeof envGroup.$inferSelect,
+  rows: (typeof envVariable.$inferSelect)[],
+): EnvGroup {
   return {
     slug: group.slug,
     updatedAt: group.updatedAt.getTime(),
@@ -95,6 +105,7 @@ export async function writeGroup(
   owner: string,
   slug: string,
   input: unknown,
+  source: AuditSource,
   expectedRevision?: number,
 ): Promise<WriteResult> {
   const name = groupSlugSchema.parse(slug)
@@ -130,6 +141,19 @@ export async function writeGroup(
     }
     if (!group) throw new Error("Couldn't create the env group.")
     const id = group.id
+    const previous = created
+      ? []
+      : await tx.select().from(envVariable).where(eq(envVariable.groupId, id))
+    const before = new Map(
+      previous.map((row) => [row.name, decryptValue(row.value, context(id, row.name))]),
+    )
+    const after = new Map(variables.map((variable) => [variable.name, variable.value]))
+    const touched = [
+      ...variables.filter(({ name, value }) => before.get(name) !== value).map(({ name }) => name),
+      ...[...before.keys()].filter((name) => !after.has(name)),
+    ]
+    if (created || touched.length)
+      await recordAudit(tx, group, created ? "create" : "edit", source, { variables: touched })
     await tx.delete(envVariable).where(eq(envVariable.groupId, id))
     if (variables.length)
       await tx.insert(envVariable).values(
@@ -152,10 +176,13 @@ export async function writeGroup(
   })
 }
 
-export async function deleteGroup(owner: string, slug: string) {
-  const rows = await getDb()
-    .delete(envGroup)
-    .where(and(eq(envGroup.ownerId, owner), eq(envGroup.slug, slug)))
-    .returning({ id: envGroup.id })
-  return rows.length > 0
+export async function deleteGroup(owner: string, slug: string, source: AuditSource) {
+  return getDb().transaction(async (tx) => {
+    const [group] = await tx
+      .delete(envGroup)
+      .where(and(eq(envGroup.ownerId, owner), eq(envGroup.slug, slug)))
+      .returning()
+    if (group) await recordAudit(tx, group, "delete", source)
+    return Boolean(group)
+  })
 }

@@ -10,7 +10,7 @@ import type { Expiry, Visibility } from "@/lib/pastes/types"
 export type NotificationChannel = "inApp" | "email"
 export type NotificationPreferences = Record<NotificationKind, Record<NotificationChannel, boolean>>
 
-export const defaultNotificationPreferences: NotificationPreferences = {
+const defaultNotificationPreferences: NotificationPreferences = {
   shared: { inApp: true, email: false },
   burned: { inApp: true, email: false },
   expiring: { inApp: true, email: false },

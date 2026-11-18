@@ -11,18 +11,20 @@ import {
   PlusIcon,
   SearchIcon,
 } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
+import * as React from "react"
 import { NewCollectionButton } from "@/components/collections/new-collection"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { ViewToggle } from "@/components/lists/toolbar"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { ShortcutKeys, useShortcutLabel } from "@/components/shortcuts/shortcut-keys"
 import { formatNumber } from "@/lib/format"
 import { isPasteScreen, pageTitle } from "./nav-config"
 import { NotificationsMenu } from "./notifications-menu"
 import { useHeaderSlotRefs, useListView } from "./page-header"
+import { useSettledShellData, useShellData } from "./shell-data"
 
 const iconButtonClass =
   "rounded-lg inline-flex size-9 shrink-0 items-center justify-center text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 [&_svg]:size-4"
@@ -34,15 +36,13 @@ const iconButtonClass =
 export function TopBar({
   onToggleSidebar,
   sidebarOpen,
-  counts,
 }: {
   onToggleSidebar: () => void
   sidebarOpen: boolean
-  counts: Record<string, number>
 }) {
   const t = useTranslations("Workspace")
   const secretsT = useTranslations("Secrets")
-  const locale = useLocale()
+  const collections = useSettledShellData()?.collections.length ?? 0
   const currentPath = usePathname()
   const pathname = currentPath.startsWith("/dev/ui-stress/")
     ? `/${currentPath.split("/").at(-1)}`
@@ -53,7 +53,6 @@ export function TopBar({
   const pasteList = pathname === "/pastes" || pathname === "/starred"
   const collection = /^\/collections\/[^/]+$/.test(pathname)
   const shared = pathname === "/shared"
-  const count = counts[pathname]
 
   return (
     <header className="group/header sticky top-0 z-30 hidden min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 lg:flex">
@@ -87,11 +86,10 @@ export function TopBar({
       >
         <div className="flex min-w-0 items-center gap-2.5 group-has-data-header-title/title:hidden">
           <span className="truncate">{pageTitle(pathname) ? t(pageTitle(pathname)) : ""}</span>
-          {count !== undefined && (
-            <span className="shrink-0 rounded-sm bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
-              {formatNumber(count, locale)}
-            </span>
-          )}
+          {/* The count joins the title when it arrives; nothing sits after it to move. */}
+          <React.Suspense fallback={null}>
+            <TitleCount pathname={pathname} />
+          </React.Suspense>
         </div>
       </div>
 
@@ -103,9 +101,7 @@ export function TopBar({
       >
         {(pasteList || shared || collection) && <ViewToggle value={view} onChange={setView} />}
         {pasteList && <ImportGistButton />}
-        {pathname === "/collections" && (
-          <NewCollectionButton existing={counts["/collections"] ?? 0} />
-        )}
+        {pathname === "/collections" && <NewCollectionButton existing={collections} />}
         {pathname === "/secrets" && (
           <Button size="lg" render={<Link href="/secrets/new" />} nativeButton={false}>
             <PlusIcon />
@@ -140,6 +136,26 @@ export function TopBar({
       />
       <NotificationsMenu className={`${iconButtonClass} border border-border`} />
     </header>
+  )
+}
+
+// How many items a list page holds, next to its title.
+function TitleCount({ pathname }: { pathname: string }) {
+  const locale = useLocale()
+  const { sidebar, collections, trashCount } = useShellData()
+  const counts: Record<string, number> = {
+    "/pastes": sidebar.counts.pastes,
+    "/starred": sidebar.counts.starred,
+    "/shared": sidebar.counts.shared,
+    "/collections": collections.length,
+    "/trash": trashCount,
+  }
+  const count = counts[pathname]
+  if (count === undefined) return null
+  return (
+    <span className="shrink-0 rounded-sm bg-muted px-1.5 py-px text-xs font-normal text-muted-foreground tabular-nums">
+      {formatNumber(count, locale)}
+    </span>
   )
 }
 

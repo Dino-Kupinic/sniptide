@@ -8,3 +8,18 @@ export const USERNAME_PATTERN = /^[a-z0-9_-]{3,30}$/
 export function isValidUsername(value: string) {
   return USERNAME_PATTERN.test(value)
 }
+
+// Turns a name from a sign-in provider ("Dino Kupinic", a GitHub login like "Dino-Kupinic") into a
+// username, or null when nothing usable is left, such as for a name written only in other scripts.
+export function toUsername(value: string | null | undefined) {
+  if (!value) return null
+  const slug = value
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .slice(0, 30)
+    .replace(/^[-_]+|[-_]+$/g, "")
+  return isValidUsername(slug) ? slug : null
+}

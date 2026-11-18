@@ -75,6 +75,10 @@ export const paste = pgTable(
     // scrypt hash ("salt:hash", hex), never the password itself.
     passwordHash: text("password_hash"),
     burnAfterRead: boolean("burn_after_read").notNull().default(false),
+    // Set on an end-to-end encrypted paste: a public fingerprint of the key its files were
+    // encrypted with in the browser. The key itself never reaches the server. The paste then has
+    // one file whose content is the ciphertext envelope (@sniptide/contracts/encryption).
+    encryptionKeyId: text("encryption_key_id"),
     allowRaw: boolean("allow_raw").notNull().default(true),
     collection: text("collection"),
     // Free-form labels for finding a paste again (`sniptide list --tag react`).
@@ -86,8 +90,8 @@ export const paste = pgTable(
     // so the owner can see which snippets their agents actually use. Views don't include these.
     agentReads: integer("agent_reads").notNull().default(0),
     createdVia: pasteCreatedVia("created_via").notNull().default("web"),
-    // The agent client that created it through an OAuth connection (claude_code, codex, cursor or
-    // other), judged once from the client's name. Null for the web and for personal tokens.
+    // The agent client that created it through an OAuth connection (claude_code, codex, cursor,
+    // grok_bot or other), judged once from the client's name. Null for the web and for personal tokens.
     createdByAgent: text("created_by_agent"),
     createdAt: time("created_at").notNull().defaultNow(),
     updatedAt: time("updated_at").notNull().defaultNow(),

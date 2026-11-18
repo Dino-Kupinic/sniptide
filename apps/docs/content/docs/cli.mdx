@@ -144,12 +144,15 @@ sniptide list --collection ui --cursor CURSOR
 
 `search` finds pastes where every word appears in the title, link, description, tags, a file path
 or the code. Both commands return one page. Pass the printed cursor to `--cursor` for the next
-one. `--limit` is 1 to 100. Only your own live pastes are listed.
+one. `--limit` is 1 to 100. Only your own live pastes are listed, without
+[encrypted pastes](/core-concepts/encrypted-pastes).
 
 ## Sync .env files
 
 Env groups hold a project's environment variables on your instance, encrypted at rest. Edit the
-same groups in the [Secrets](/core-concepts/secrets) page of the app.
+same groups in the [Secrets](/core-concepts/secrets) page of the app. The CLI reaches the groups
+your account owns, and each pull, run, push and delete is recorded in the group's
+[activity log](/core-concepts/secrets#review-who-read-and-changed-a-group) under the token's name.
 
 ```bash
 sniptide env push my-app              # upload ./.env, replacing the group's variables

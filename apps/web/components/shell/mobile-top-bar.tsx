@@ -1,6 +1,5 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
@@ -12,6 +11,7 @@ import { SearchIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { useCommandMenu } from "@/components/command-menu/command-menu"
+import { UserAvatar } from "@/components/people/user-avatar"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 import { NotificationsSheet } from "./notifications-menu"
@@ -30,7 +30,13 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
         <Logo className="min-w-0 max-w-full [&>span]:min-w-0 [&>span]:shrink [&>span>svg]:max-w-full" />
       </Link>
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <Button variant="outline" size="icon-lg" aria-label={t("search")} onClick={openCommandMenu}>
+        <Button
+          variant="outline"
+          size="icon-lg"
+          aria-label={t("search")}
+          onClick={openCommandMenu}
+          data-tour="search-mobile"
+        >
           <SearchIcon />
         </Button>
         <DropdownMenu>
@@ -38,10 +44,10 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             aria-label={t("account")}
             className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
-            <Avatar className="size-9 rounded-lg font-heading text-[13px] font-bold">
-              {viewer.image ? <AvatarImage src={viewer.image} alt="" /> : null}
-              <AvatarFallback>{viewer.initials}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              person={{ id: viewer.id, image: viewer.image }}
+              className="size-9 rounded-lg"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
             <AccountMenuItems

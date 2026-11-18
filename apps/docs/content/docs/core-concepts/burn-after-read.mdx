@@ -43,10 +43,15 @@ pastes in the app instead.
 - Only you can read the paste's raw files or print it.
 - It can't be embedded, posted to Slack or Discord, or shown in a link preview.
 - It isn't listed under **Shared with me** for people you invited. They read it once through its
-  link, like anyone else.
+  link, like anyone else. Their invitation notification opens the sealed page. If they enable
+  invitation emails, the email opens it after they sign in.
 
 ## Combine it with other settings
 
 A burn-after-read paste can also have a password, which the reader enters before the sealed page
 appears, and an expiry. A paste that expires before anyone reads it is removed like any other
 expired paste.
+
+Add [end-to-end encryption](/core-concepts/encrypted-pastes#combine-it-with-burn-after-read) when
+the server shouldn't be able to read the paste either. The reader's key is checked before the
+paste burns.

@@ -20,6 +20,7 @@ import {
   HouseIcon,
   KeyboardIcon,
   LogOutIcon,
+  MapIcon,
   MessageSquareIcon,
   MonitorIcon,
   MoonIcon,
@@ -32,6 +33,7 @@ import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import * as React from "react"
+import { useTour } from "@/components/onboarding/tour"
 import { useResourceLinks } from "@/components/shell/resource-links"
 import { useSupport } from "@/components/shell/support"
 import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
@@ -67,6 +69,7 @@ export function AccountMenuItems({
   const shortcuts = useShortcutsHelp()
   const links = useResourceLinks()
   const support = useSupport()
+  const tour = useTour()
   const tSupport = useTranslations("Support")
 
   const languageChoices = (
@@ -109,7 +112,7 @@ export function AccountMenuItems({
   // A phone has no room for a submenu, so it lists these inline like the languages.
   const resources = (
     <>
-      <ExternalItem href={links.homepage} icon={<HouseIcon />}>
+      <ExternalItem href={`${links.homepage}/home`} icon={<HouseIcon />}>
         {t("homepage")}
       </ExternalItem>
       <ExternalItem href={links.documentation} icon={<BookIcon />}>
@@ -153,6 +156,10 @@ export function AccountMenuItems({
         <KeyboardIcon />
         {t("keyboard_shortcuts")}
         <ShortcutKeys id="help" className="ml-auto bg-transparent text-muted-foreground" />
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={tour.start}>
+        <MapIcon />
+        {t("take_tour")}
       </DropdownMenuItem>
       {support ? (
         <DropdownMenuItem onClick={() => support.open()}>

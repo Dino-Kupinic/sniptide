@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { readAuthMarker, scrubPath, scrubUrl, withAuthMarker } from "@/lib/analytics"
-import { assetsHost, forwardToPostHog, uiHost, upstreamUrl } from "@/lib/analytics-proxy"
+import { GET as analyticsConfig } from "@/app/api/analytics/route"
+import { readAuthMarker, scrubPath, scrubUrl, withAuthMarker, withCountry } from "@/lib/analytics"
+import {
+  assetsHost,
+  forwardToPostHog,
+  isAnalyticsHost,
+  uiHost,
+  upstreamUrl,
+} from "@/lib/analytics-proxy"
 import { getConfig } from "@/lib/config"
 
 // PostHog: events must never carry slugs or query strings, and the proxy only runs with a key.
@@ -64,6 +71,52 @@ describe("PostHog hosts", () => {
   })
 })
 
+describe("analytics host gate", () => {
+  afterEach(() => {
+    delete process.env.POSTHOG_KEY
+  })
+
+  test("blocks previews, PR builds and local development", () => {
+    for (const host of [
+      "pr-110.sniptide.com",
+      "33.sniptide.com",
+      "PR-7.sniptide.com",
+      "localhost",
+      "127.0.0.1",
+      "::1",
+    ]) {
+      expect(isAnalyticsHost(host)).toBe(false)
+    }
+  })
+
+  test("keeps production and self-hosted hosts", () => {
+    for (const host of [
+      "app.sniptide.com",
+      "sniptide.com",
+      "www.sniptide.com",
+      "pastes.example.com",
+    ]) {
+      expect(isAnalyticsHost(host)).toBe(true)
+    }
+  })
+
+  test("the config route answers no key to a preview host", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = analyticsConfig(new Request("https://pr-10.sniptide.com/api/analytics"))
+    expect(response.status).toBe(204)
+    expect(analyticsConfig(new Request("https://app.sniptide.com/api/analytics")).status).toBe(200)
+  })
+
+  test("the proxy drops events from a preview host", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = await forwardToPostHog(
+      new Request("https://33.sniptide.com/api/analytics/e", { method: "POST", body: "{}" }),
+      ["e"],
+    )
+    expect(response.status).toBe(404)
+  })
+})
+
 describe("config", () => {
   test("analytics are off without a key", () => {
     expect(getConfig({}).analytics).toBeUndefined()
@@ -79,6 +132,50 @@ describe("config", () => {
       getConfig({ POSTHOG_KEY: "phc_x", POSTHOG_HOST: "https://eu.i.posthog.com/" }).analytics
         ?.host,
     ).toBe("https://eu.i.posthog.com")
+  })
+})
+
+describe("visitor country", () => {
+  afterEach(() => {
+    delete process.env.POSTHOG_KEY
+  })
+
+  test("the config carries the CDN's country and stays out of shared caches", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = analyticsConfig(
+      new Request("https://app.test/api/analytics", { headers: { "cf-ipcountry": "at" } }),
+    )
+    expect(response.headers.get("cache-control")).toBe("private, max-age=300")
+    expect(await response.json()).toMatchObject({ key: "phc_x", country: "AT" })
+  })
+
+  test("the config has no country without a CDN header", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    const response = analyticsConfig(new Request("https://app.test/api/analytics"))
+    expect((await response.json()).country).toBeNull()
+  })
+
+  test("adds the country to cookieless events only", () => {
+    const cookieless: Record<string, unknown> = { $cookieless_mode: true }
+    withCountry(cookieless, "AT")
+    expect(cookieless).toMatchObject({
+      $geoip_country_code: "AT",
+      $geoip_country_name: "Austria",
+    })
+
+    const consented: Record<string, unknown> = {}
+    withCountry(consented, "AT")
+    expect(consented.$geoip_country_code).toBeUndefined()
+  })
+
+  test("keeps a country PostHog already set and skips a missing one", () => {
+    const located: Record<string, unknown> = { $cookieless_mode: true, $geoip_country_code: "DE" }
+    withCountry(located, "AT")
+    expect(located.$geoip_country_code).toBe("DE")
+
+    const unknown: Record<string, unknown> = { $cookieless_mode: true }
+    withCountry(unknown, null)
+    expect(unknown.$geoip_country_code).toBeUndefined()
   })
 })
 

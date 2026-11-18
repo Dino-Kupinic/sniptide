@@ -24,7 +24,7 @@ export async function listApiCollections(owner: string) {
   return { collections: (await collectionsOf(owner)).map(toApiCollection) }
 }
 
-export const collectionInputSchema = z
+const collectionInputSchema = z
   .object({ name: z.string().trim().min(1).max(MAX_NAME_LENGTH) })
   .strict()
 

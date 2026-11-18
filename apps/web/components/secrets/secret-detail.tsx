@@ -37,8 +37,10 @@ import { useTranslations } from "next-intl"
 import { type ReactNode, useState } from "react"
 import { z } from "zod"
 import { ListHeader, SearchField } from "@/components/lists/toolbar"
+import type { AuditEntry } from "@/lib/env/audit"
 import type { SecretDetail as Detail } from "@/lib/env/web-store"
 import { copyText } from "@/lib/feedback"
+import { AuditLog } from "./audit-log"
 import {
   ENVIRONMENTS,
   type Environment,
@@ -47,6 +49,7 @@ import {
   useSecretValues,
 } from "./client"
 import { Panel } from "./panel"
+import { SecretAccess } from "./secret-access"
 import { SecretSharing } from "./secret-sharing"
 import { type DraftRow, draftRow, filledRows, VariableRows } from "./variable-rows"
 
@@ -59,8 +62,10 @@ type Change = {
 
 // One secret group, laid out like Vercel's environment variables page: a form to add variables
 // at the top, then every variable with its value masked, revealed or copied in place, edited
-// inline and deleted after a confirmation.
-export function SecretDetail({ group }: { group: Detail }) {
+// inline and deleted after a confirmation. Someone with view access gets the variables alone, and
+// edit access adds the form and the row menu. Settings, access, links, activity and deleting are
+// the owner's.
+export function SecretDetail({ group, activity }: { group: Detail; activity: AuditEntry[] }) {
   const t = useTranslations("Secrets")
   const coreT = useTranslations("Core")
   const secretRequest = useSecretRequest()
@@ -72,6 +77,8 @@ export function SecretDetail({ group }: { group: Detail }) {
   const [removing, setRemoving] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState("")
+  const isOwner = group.role === "owner"
+  const canWrite = group.role !== "read"
   const names = new Set(group.entries.map((entry) => entry.name))
   const visible = group.entries.filter((entry) =>
     entry.name.toLowerCase().includes(filter.trim().toLowerCase()),
@@ -156,40 +163,47 @@ export function SecretDetail({ group }: { group: Detail }) {
             group.environment ? t(group.environment) : t("no_environment")
           }`}
         />
+        {group.owner ? (
+          <p className="text-sm text-muted-foreground">
+            {t(canWrite ? "shared_write_notice" : "shared_read_notice", { owner: group.owner })}
+          </p>
+        ) : null}
       </div>
 
-      <Panel title={t("add_variables")}>
-        <form
-          autoComplete="off"
-          className="flex flex-col gap-4"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            const filled = filledRows(rows).map((row) => ({ ...row, name: row.name.trim() }))
-            if (filled.length === 0) return
-            const seen = new Set<string>()
-            for (const row of filled) {
-              if (names.has(row.name) || seen.has(row.name))
-                return setError(t("exists_error", { name: row.name }))
-              seen.add(row.name)
-            }
-            const saved = await save(
-              {
-                entries: filled.map(({ name, value }) => ({ name, value, replace: true })),
-              },
-              "add",
-              t("added", { count: filled.length }),
-            )
-            if (saved) setRows([draftRow()])
-          }}
-        >
-          <VariableRows rows={rows} onChange={setRows} disabled={busy === "add"} />
-          <div className="flex justify-end">
-            <Button type="submit" loading={busy === "add"} disabled={!filledRows(rows).length}>
-              {t("save")}
-            </Button>
-          </div>
-        </form>
-      </Panel>
+      {canWrite ? (
+        <Panel title={t("add_variables")}>
+          <form
+            autoComplete="off"
+            className="flex flex-col gap-4"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              const filled = filledRows(rows).map((row) => ({ ...row, name: row.name.trim() }))
+              if (filled.length === 0) return
+              const seen = new Set<string>()
+              for (const row of filled) {
+                if (names.has(row.name) || seen.has(row.name))
+                  return setError(t("exists_error", { name: row.name }))
+                seen.add(row.name)
+              }
+              const saved = await save(
+                {
+                  entries: filled.map(({ name, value }) => ({ name, value, replace: true })),
+                },
+                "add",
+                t("added", { count: filled.length }),
+              )
+              if (saved) setRows([draftRow()])
+            }}
+          >
+            <VariableRows rows={rows} onChange={setRows} disabled={busy === "add"} />
+            <div className="flex justify-end">
+              <Button type="submit" loading={busy === "add"} disabled={!filledRows(rows).length}>
+                {t("save")}
+              </Button>
+            </div>
+          </form>
+        </Panel>
+      ) : null}
 
       <FormError message={error} />
 
@@ -216,7 +230,11 @@ export function SecretDetail({ group }: { group: Detail }) {
         <div className="overflow-hidden rounded-lg border border-border">
           {group.entries.length === 0 || visible.length === 0 ? (
             <p className="px-4 py-14 text-center text-sm text-muted-foreground">
-              {group.entries.length === 0 ? t("no_variables") : t("no_variable_matches")}
+              {group.entries.length > 0
+                ? t("no_variable_matches")
+                : canWrite
+                  ? t("no_variables")
+                  : t("no_variables_read")}
             </p>
           ) : (
             <ul className="divide-y divide-border">
@@ -321,30 +339,32 @@ export function SecretDetail({ group }: { group: Detail }) {
                       >
                         <CopyIcon />
                       </IconButton>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          aria-label={t("actions_for", { name: entry.name })}
-                          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
-                        >
-                          <MoreHorizontalIcon className="size-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            disabled={busy === `edit:${entry.name}`}
-                            onClick={() => void edit(entry.name)}
+                      {canWrite ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            aria-label={t("actions_for", { name: entry.name })}
+                            className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted"
                           >
-                            <PencilIcon />
-                            {t("edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => setRemoving(entry.name)}
-                          >
-                            <Trash2Icon />
-                            {t("delete")}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <MoreHorizontalIcon className="size-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              disabled={busy === `edit:${entry.name}`}
+                              onClick={() => void edit(entry.name)}
+                            >
+                              <PencilIcon />
+                              {t("edit")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setRemoving(entry.name)}
+                            >
+                              <Trash2Icon />
+                              {t("delete")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
                     </div>
                   </li>
                 ),
@@ -354,17 +374,37 @@ export function SecretDetail({ group }: { group: Detail }) {
         </div>
       </section>
 
-      <GroupSettings
-        group={group}
-        busy={busy === "settings"}
-        onSave={(project, environment) =>
-          save({ project, environment }, "settings", t("settings_saved"))
-        }
-      />
-
-      <SecretSharing group={group} />
-
-      <DeleteGroup group={group} />
+      {isOwner ? (
+        <>
+          <GroupSettings
+            group={group}
+            busy={busy === "settings"}
+            onSave={(project, environment) =>
+              save({ project, environment }, "settings", t("settings_saved"))
+            }
+          />
+          <SecretAccess group={group} />
+          <SecretSharing group={group} />
+          <Panel title={t("audit_title")} description={t("audit_group_description")}>
+            <div className="flex flex-col gap-4">
+              {activity.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("audit_empty")}</p>
+              ) : (
+                <AuditLog entries={activity} />
+              )}
+              <Link
+                href={`/secrets/activity?group=${group.id}`}
+                className="w-fit text-sm font-medium text-link hover:underline"
+              >
+                {t("audit_view_all")}
+              </Link>
+            </div>
+          </Panel>
+          <DeleteGroup group={group} />
+        </>
+      ) : (
+        <LeaveGroup group={group} />
+      )}
 
       <AlertDialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
         <AlertDialogContent>
@@ -554,6 +594,65 @@ function DeleteGroup({ group }: { group: Detail }) {
               }}
             >
               {t("permanently_delete")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  )
+}
+
+function LeaveGroup({ group }: { group: Detail }) {
+  const t = useTranslations("Secrets")
+  const secretRequest = useSecretRequest()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+  return (
+    <section className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-sm font-medium">{t("leave")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t("leave_notice", { owner: group.owner ?? "" })}
+        </p>
+      </div>
+      <Button variant="outline" className="self-start sm:self-auto" onClick={() => setOpen(true)}>
+        {t("leave")}
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>{t("leave_title", { name: group.slug })}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("leave_notice", { owner: group.owner ?? "" })}
+          </AlertDialogDescription>
+          <FormError variant="inline" message={error} />
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" size="lg" />}>
+              {t("cancel")}
+            </AlertDialogClose>
+            <Button
+              size="lg"
+              variant="destructive"
+              loading={busy}
+              onClick={async () => {
+                setBusy(true)
+                try {
+                  await secretRequest({
+                    operation: "remove_access",
+                    id: group.id,
+                    userId: group.viewer,
+                  })
+                  toast.success(t("left", { name: group.slug }))
+                  router.push("/secrets")
+                  router.refresh()
+                } catch {
+                  setError(t("leave_error"))
+                  setBusy(false)
+                }
+              }}
+            >
+              {t("leave")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -84,7 +84,12 @@ describeDb("one-time reads", () => {
   test("share reads cannot reveal a burn paste, even with a legacy reveal option", async () => {
     // @ts-expect-error Revealing is no longer part of the share-read interface.
     const read = await readSharedPaste("burn", { visit: true, reveal: true })
-    expect(read).toEqual({ status: "sealed", owned: false, signedIn: false })
+    expect(read).toEqual({
+      status: "sealed",
+      owned: false,
+      signedIn: false,
+      encryptionKeyId: null,
+    })
     expect((await pasteRow("burn"))?.deletedAt).toBeNull()
     expect((await pasteRow("burn"))?.views).toBe(0)
     expect(await viewDayTotal("burn")).toBe(0)
@@ -112,6 +117,7 @@ describeDb("one-time reads", () => {
       "allowRaw",
       "author",
       "burnAfterRead",
+      "encryptionKeyId",
       "expiresAt",
       "files",
       "slug",
@@ -176,7 +182,12 @@ describeDb("one-time reads", () => {
   test("the owner's own link is sealed too, and their reveal burns it without notifying them", async () => {
     signInAs("owner")
     expect(await page("burn")).toBe("empty")
-    expect(await readSharedPaste("burn")).toEqual({ status: "sealed", owned: true, signedIn: true })
+    expect(await readSharedPaste("burn")).toEqual({
+      status: "sealed",
+      owned: true,
+      signedIn: true,
+      encryptionKeyId: null,
+    })
     expect(await reveal("burn")).toBe("content")
     expect(await reveal("burn")).toBe("404")
 
@@ -205,7 +216,8 @@ describeDb("one-time reads", () => {
     expect(body).toMatchObject({
       ok: true,
       title: "title-of-burnts",
-      author: { username: "owner" },
+      // The share page draws the author's picture, or the default picture coloured by their id.
+      author: { id: "owner", username: "owner", image: null },
       views: 1,
       burned: true,
     })

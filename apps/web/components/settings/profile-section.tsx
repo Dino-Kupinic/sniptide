@@ -1,6 +1,5 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@sniptide/ui/components/avatar"
 import { Button } from "@sniptide/ui/components/button"
 import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
@@ -9,6 +8,7 @@ import { isValidUsername, USERNAME_PATTERN } from "@workspace/auth/username"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { AutosaveStatus } from "@/components/autosave-status"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useSiteHost } from "@/components/site-host"
 import { authClient } from "@/lib/auth-client"
 import { useAutosave } from "@/lib/autosave/use-autosave"
@@ -16,12 +16,12 @@ import { updateAvatar, updateProfile } from "@/lib/settings-actions"
 import { SaveStatus, SettingsSection } from "./section"
 
 export interface ProfileState {
+  id: string
   name: string
   username: string
   email: string
   emailVerified: boolean
   image: string | null
-  initials: string
 }
 
 const AVATAR_SIZE = 160
@@ -128,10 +128,7 @@ export function ProfileSection({ profile }: { profile: ProfileState }) {
   return (
     <SettingsSection title={t("profile")} description={t("shownOnYourPublicPastesAnd")}>
       <div className="flex items-center gap-3">
-        <Avatar className="size-14 rounded-lg font-heading text-lg font-bold">
-          {image ? <AvatarImage src={image} alt="" /> : null}
-          <AvatarFallback>{profile.initials}</AvatarFallback>
-        </Avatar>
+        <UserAvatar person={{ id: profile.id, image }} className="size-14 rounded-lg" />
         <input
           ref={fileRef}
           type="file"
