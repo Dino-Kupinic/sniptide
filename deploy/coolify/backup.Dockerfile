@@ -5,3 +5,4 @@ ENV PATH="/usr/libexec/postgresql${POSTGRES_MAJOR}:${PATH}"
 COPY backup.sh /usr/local/bin/sniptide-backup
 RUN chmod 0755 /usr/local/bin/sniptide-backup
 ENTRYPOINT ["/usr/local/bin/sniptide-backup"]
+CMD ["schedule"]

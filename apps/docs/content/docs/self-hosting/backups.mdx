@@ -81,7 +81,8 @@ under one hour. Measure both during a [restore drill](#recover-a-lost-coolify-se
    backup container only the public `age1…` recipient printed by `age-keygen`.
 2. Create a private R2 Standard bucket. Use an [Object Read & Write R2 token](https://developers.cloudflare.com/r2/api/tokens/)
    scoped to that bucket, and store an independent Object Read only token for recovery. Copy the
-   bucket's S3 API endpoint. Keep public access disabled.
+   S3 API origin from the bucket settings, omitting the trailing bucket name. Keep public access
+   disabled.
 3. For each prefix, add both a [bucket lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
    and an [object lifecycle rule](https://developers.cloudflare.com/r2/buckets/object-lifecycles/)
    at the age below. Locks prevent the backup token from overwriting or deleting recovery points
@@ -113,7 +114,7 @@ under one hour. Measure both during a [restore drill](#recover-a-lost-coolify-se
    | Variable | Value |
    | --- | --- |
    | `BACKUP_BUCKET` | Private R2 bucket name |
-   | `BACKUP_R2_ENDPOINT` | HTTPS S3 API endpoint from the bucket settings |
+   | `BACKUP_R2_ENDPOINT` | HTTPS S3 API origin without the bucket name |
    | `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY` | Bucket-scoped R2 key ID and secret |
    | `BACKUP_AGE_RECIPIENT` | Public `age1…` recipient |
    | `BACKUP_HEARTBEAT_URL` | Private Healthchecks.io ping URL |
