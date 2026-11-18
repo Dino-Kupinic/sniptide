@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "catalog:runtime",

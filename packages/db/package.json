@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-script",
     "db:generate": "drizzle-kit generate",
     "moderation": "bun src/moderation-cli.ts",
     "db:migrate": "bun src/migrate-cli.ts"

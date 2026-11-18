@@ -21,7 +21,7 @@
     "build": "bun build src/bin.ts --target=node --outfile=dist/sniptide.js",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-script",
     "test": "bun test ./test"
   },
   "dependencies": {

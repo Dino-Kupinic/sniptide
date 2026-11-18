@@ -23,8 +23,8 @@ disabled. The callback URLs are `<BETTER_AUTH_URL>/api/auth/callback/github` and
 
 Open the app at `http://localhost:3000` and the docs at `http://localhost:3001`.
 
-CI runs integration tests against PostgreSQL 17 and 18. The required `Tests` check passes only
-when both matrix jobs pass.
+CI runs selected integration tests against PostgreSQL 17 and 18. When CI selects the integration
+suite, the required `Tests` check passes only when both matrix jobs pass.
 
 ## Workspace
 
@@ -271,9 +271,24 @@ For browser setup and focused browser tests, follow [the browser guide](../apps/
 Container smoke checks use `scripts/test-docker.sh` and `scripts/test-compose.sh` after building
 the image. They are separate from `bun run test`.
 
-`bun run format` writes files. Use `bun run check` when you only want diagnostics. CI uses
-`check`, CLI, MCP, and docs tests, database-backed web tests, production builds, and browser and
-container checks in separate jobs.
+`bun run format` writes files. Use `bun run check` when you only want diagnostics. It runs
+Biome and the workspace type checks. The Next workspaces generate route types before running
+`bun check --no-script`. Production builds run their own type checks.
+
+CI runs lint, type checks, builds, and tests in parallel. Pull requests compare the checked-out
+merge commit with its base. `scripts/ci-plan.mjs` selects suites for known isolated paths and
+includes downstream coverage, such as the web integration tests for CLI changes. It runs
+every suite on `main`, for shared or unclassified changes, or when it cannot read the diff.
+Documentation and release tooling tests and image build and smoke checks run for every pull
+request. The full container checks run together once the web image is built. Pull requests
+restore Docker build caches from main. Only main CI exports those caches, with a 90-second
+limit on each optional export.
+
+Browser tests are grouped by file. The planner adds the longest files first to the shard with
+the lowest total time, using the latest passing `main` CI reports. New files use the median
+recorded time, and all files get equal weights when history is unavailable. A change confined
+to browser specs selects those files. A change to shared browser test helpers selects the full
+browser suite.
 
 Run `bun run check:deps` after changes to dependencies or entry points. Knip checks runtime and
 development declarations across the workspaces. `knip.jsonc` includes the language generator and

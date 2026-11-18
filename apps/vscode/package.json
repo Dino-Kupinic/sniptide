@@ -55,7 +55,7 @@
     "package": "bun scripts/build.ts && bunx @vscode/vsce@3.9.2 package --no-dependencies",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-script",
     "test": "bun test ./test"
   },
   "devDependencies": {
