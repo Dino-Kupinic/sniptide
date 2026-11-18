@@ -66,13 +66,77 @@ to `./backups` (`BACKUP_DIR`), and deletes the ones older than `BACKUP_KEEP_DAYS
 Set the three in `.env`, or `COMPOSE_FILE=docker-compose.yml:docker-compose.backup.yml` so a plain
 `docker compose up -d` includes it. Check it with `docker compose logs backup`.
 
-For Coolify, paste the service from `deploy/coolify/backup-sidecar.yaml` under `services:` in the
-Sniptide template and redeploy. It does the same, into a `sniptide-backups` volume, with the
-same two settings.
+The Compose files stay on the database server. Copy them offsite on a schedule so a disk loss
+doesn't take both copies.
 
-**These files are on the same server as the database.** If the server's disk is lost, so are they.
-Copy them somewhere else on a schedule (`rsync`, `rclone`, your provider's snapshots or object
-storage). Sniptide doesn't do that for you.
+## Send Coolify backups offsite
+
+The backup container saves a private dump locally, encrypts a copy with `age`, and sends it to
+Cloudflare R2. It keeps local dumps for three days, attempts a backup once per UTC day, and retries
+failures every 15 minutes. Set a recovery point objective of 24 hours and a recovery time objective
+under one hour. Measure both during a [restore drill](#recover-a-lost-coolify-server).
+
+1. On a trusted workstation, run `age-keygen -o sniptide-backup.identity`. Put the identity,
+   `BETTER_AUTH_SECRET`, and `ENV_SECRETS_KEY` (if set) in your password manager. Give the
+   backup container only the public `age1…` recipient printed by `age-keygen`.
+2. Create a private R2 Standard bucket. Use an [Object Read & Write R2 token](https://developers.cloudflare.com/r2/api/tokens/)
+   scoped to that bucket, and store an independent Object Read only token for recovery. Copy the
+   S3 API origin from the bucket settings, omitting the trailing bucket name. Keep public access
+   disabled.
+3. For each prefix, add both a [bucket lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
+   and an [object lifecycle rule](https://developers.cloudflare.com/r2/buckets/object-lifecycles/)
+   at the age below. Locks prevent the backup token from overwriting or deleting recovery points
+   during retention. Lifecycle rules expire them after retention.
+
+   | Prefix | Recovery points | Lock and expiration age in days |
+   | --- | --- | --- |
+   | `daily/` | One per UTC day for a week | 7 |
+   | `weekly/` | One per ISO week for four weeks | 28 |
+   | `monthly/` | One per UTC month for about six months | 184 |
+   | `pre-deploy/` | On demand before migrations | 30 |
+
+4. Create a [Healthchecks.io check](https://healthchecks.io/docs/configuring_checks/) with a
+   24-hour period and a grace period long enough for the dump and upload. Connect an alert channel.
+   The container pings success after all copies due that day upload. A failed run sends `/fail`.
+   A stopped container produces a missed heartbeat.
+5. Build the backup image on the Docker host from a reviewed Sniptide checkout. Match the client
+   major to your database so a dump can be restored into that PostgreSQL major.
+
+   ```bash
+   docker build --build-arg POSTGRES_MAJOR=18 -t sniptide-backup:local \
+     -f deploy/coolify/backup.Dockerfile deploy/coolify
+   ```
+
+   For the Coolify Sniptide Compose template, use the `backup` service and top-level volume from
+   `deploy/coolify/backup-sidecar.yaml`. Replace any earlier `backup` service definition. Set the
+   following variables in Coolify and redeploy.
+
+   | Variable | Value |
+   | --- | --- |
+   | `BACKUP_BUCKET` | Private R2 bucket name |
+   | `BACKUP_R2_ENDPOINT` | HTTPS S3 API origin without the bucket name |
+   | `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY` | Bucket-scoped R2 key ID and secret |
+   | `BACKUP_AGE_RECIPIENT` | Public `age1…` recipient |
+   | `BACKUP_HEARTBEAT_URL` | Private Healthchecks.io ping URL |
+
+   For a standalone Coolify PostgreSQL resource, put those variables plus `PGHOST`, `PGPORT`,
+   `PGDATABASE`, `PGUSER`, and `PGPASSWORD` in a private file on the Docker host. Restrict the
+   file to mode `0600`. Use the database's internal hostname and an existing Docker network that
+   can reach it. Start the job without a published port.
+
+   ```bash
+   docker run -d --name sniptide-backup --restart unless-stopped \
+     --network "$BACKUP_NETWORK" --env-file /etc/sniptide/backup.env \
+     --mount source=sniptide-backups,target=/backups sniptide-backup:local
+   ```
+
+6. Check the container logs for `Uploaded daily/…`, the R2 bucket for the new `.dump.age` object,
+   and the monitor for a success ping. Keep the existing backup schedule until you have completed
+   an offsite restore drill. Test a missed heartbeat on a staging check with a shorter period.
+
+To take a fresh offsite snapshot before an upgrade, use `docker compose exec -T backup
+sniptide-backup pre-deploy` for Compose or `docker exec sniptide-backup sniptide-backup pre-deploy`
+for the standalone container. Record the `Uploaded pre-deploy/…` path after the command succeeds.
 
 ## Restore
 
@@ -164,6 +228,35 @@ bash scripts/restore.sh /path/to/sniptide-backup.dump --yes
 Sign in at `http://localhost:3999`, open a few pastes, and check an env group if you use them.
 Then, from the test directory, run `docker compose down -v` to remove the test containers and
 database volume for the project named in that directory's `.env`.
+
+## Recover a lost Coolify server
+
+Run these steps monthly against a throwaway instance. Start a timer before you retrieve the backup.
+
+1. With a read-only R2 key, download the newest daily object to a private directory on a trusted
+   machine. Retrieve the `age` identity and app secrets from your password manager. Decrypt the
+   object and check the dump with a `pg_restore` client at least as new as the one that made it.
+
+   ```bash
+   umask 077
+   age -d -i /secure/sniptide-backup.identity -o sniptide.dump sniptide.dump.age
+   pg_restore --list sniptide.dump > /dev/null
+   ```
+
+2. For a drill, restore the dump with `scripts/restore.sh` using the
+   [throwaway Compose setup](#check-a-backup-in-a-throwaway-copy). Pin `SNIPTIDE_IMAGE` to the
+   current production digest and use the original auth and encryption secrets. For PostgreSQL 17,
+   use the PostgreSQL 17 Compose configuration and a fresh volume. Set `TELEMETRY=off`, omit
+   outbound email credentials, and keep the drill on localhost.
+3. For a lost server, provision a replacement VPS and Coolify instance. Recreate the PostgreSQL
+   resource with the original major, and restore the dump into an empty database. Recreate the app
+   resource from the recorded production image digest. Reapply the database connection, app secrets,
+   domains, and any OAuth or mail settings from your saved configuration. Start the app and verify
+   it through a private route or local host override before pointing production DNS to the new VPS.
+   [Configure offsite backups](#send-coolify-backups-offsite) again on the replacement.
+4. Check `/api/health`, sign in, open several existing pastes, and verify that an env group decrypts.
+   Record the backup timestamp, app digest, elapsed time, and any manual fixes. For a drill, stop
+   the scratch project and remove its volumes and decrypted files.
 
 ## What a backup doesn't cover
 

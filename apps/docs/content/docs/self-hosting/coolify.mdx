@@ -62,9 +62,8 @@ above.
 
 ## Back up and upgrade
 
-The template doesn't schedule backups. Add the backup container from
-`deploy/coolify/backup-sidecar.yaml` to it, and copy the files off the server. See
-[Backups and restore](/self-hosting/backups).
+Add the backup container to take daily encrypted offsite copies. See
+[Send Coolify backups offsite](/self-hosting/backups#send-coolify-backups-offsite).
 
 Before moving a Postgres 17 deployment to Postgres 18, follow [Upgrade Postgres 17 to 18](/self-hosting/upgrading#upgrade-postgres-17-to-18). For other upgrades, take a backup, then redeploy the service so it pulls a newer image. See
 [Upgrading](/self-hosting/upgrading#upgrade-the-instance).

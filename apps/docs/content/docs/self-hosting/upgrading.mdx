@@ -133,8 +133,14 @@ docker pull "$image" &&
 </Tab>
 <Tab value="Coolify">
 
-Redeploy the service so it runs the newer image. If you run `latest`, make sure the redeploy pulls
-it; pinning a version tag in the service makes the change explicit.
+Pin the service to an exact image release or digest. Record the current and replacement references.
+If the upgrade adds migrations, [take an offsite pre-deploy snapshot](/self-hosting/backups#send-coolify-backups-offsite)
+and confirm it appears in your bucket before redeploying. Rehearse risky migrations with the
+new image and a copy of the latest backup. Redeploy during a quiet period.
+
+If a migration only added schema the previous image can still use, redeploy the previous image.
+If it changed data or schema the old image needs, stop all writers, restore the pre-deploy
+snapshot, and redeploy the previous image. Restoring discards writes made after the snapshot.
 
 </Tab>
 </Tabs>

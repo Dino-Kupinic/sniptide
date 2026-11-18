@@ -4,6 +4,7 @@ import { deployProduction } from "./deploy-production.mjs"
 
 const sha = "a".repeat(40)
 const digest = `sha256:${"b".repeat(64)}`
+const migrationsTree = "c".repeat(40)
 const receipt = {
   repository: "Owner/Repo",
   sha,
@@ -66,7 +67,10 @@ function mock(overrides = {}) {
         ...overrides.run,
       }
     else if (path.endsWith("/branches/main")) data = { commit: { sha: overrides.main ?? sha } }
-    else if (path.endsWith("/deployments/applications/app-1"))
+    else if (path.endsWith("/contents/packages/db")) {
+      assert.equal(new URL(url).searchParams.get("ref"), sha)
+      data = overrides.dbContents ?? [{ name: "migrations", type: "dir", sha: migrationsTree }]
+    } else if (path.endsWith("/deployments/applications/app-1"))
       data = {
         deployments: [
           {
@@ -113,6 +117,26 @@ test("deploys only the receipt digest, checks queue, identity and health", async
   })
   assert.ok(m.calls.some((call) => call.url.endsWith("/deployments")))
   assert.ok(m.calls.every((call) => call.redirect === "error"))
+})
+
+test("production stops before touching Coolify when migration approval is missing or differs", async () => {
+  for (const approval of ["", "d".repeat(40)]) {
+    const m = mock()
+    await assert.rejects(run(m, { ...config, approvedMigrationsTree: approval }), /migration/i)
+    assert.ok(m.calls.every((call) => new URL(call.url).hostname === "api.github.com"))
+  }
+  const missingTree = mock({ dbContents: [] })
+  await assert.rejects(
+    run(missingTree, { ...config, approvedMigrationsTree: migrationsTree }),
+    /migration/i,
+  )
+  noWrites(missingTree)
+})
+
+test("production accepts the exact migration tree approved for the running database", async () => {
+  const m = mock()
+  await run(m, { ...config, approvedMigrationsTree: migrationsTree })
+  assert.ok(m.calls.some((call) => call.method === "PATCH"))
 })
 
 test("uses the target's deployment history when Coolify hides the application ID", async () => {
