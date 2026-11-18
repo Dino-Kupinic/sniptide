@@ -280,7 +280,9 @@ merge commit with its base. `scripts/ci-plan.mjs` selects suites for known isola
 includes downstream coverage, such as the web integration tests for CLI changes. It runs
 every suite on `main`, for shared or unclassified changes, or when it cannot read the diff.
 Documentation and release tooling tests and image build and smoke checks run for every pull
-request. The full container checks run together once the web image is built.
+request. The full container checks run together once the web image is built. Pull requests
+restore Docker build caches from main. Only main CI exports those caches, with a 90-second
+limit on each optional export.
 
 Browser tests are grouped by file. The planner adds the longest files first to the shard with
 the lowest total time, using the latest passing `main` CI reports. New files use the median

@@ -197,7 +197,7 @@ jobs:
           cache-from: |
             type=gha,scope=ci-web
             type=gha,scope=docker-amd64
-          cache-to: type=gha,mode=max,scope=ci-web,ignore-error=true
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=ci-web,ignore-error=true,timeout=90s' || '' }}
 
       - name: Find the latest release image
         if: needs.plan.outputs.container == 'true'
@@ -361,7 +361,7 @@ jobs:
           load: true
           tags: sniptide-docs:ci
           cache-from: type=gha,scope=ci-docs
-          cache-to: type=gha,mode=max,scope=ci-docs,ignore-error=true
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=ci-docs,ignore-error=true,timeout=90s' || '' }}
 
       - name: Verify the docs Docker image
         run: bash scripts/test-docs-image.sh sniptide-docs:ci
