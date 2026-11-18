@@ -13,7 +13,7 @@ can both run it.
 - Node.js 24 or newer.
 - An [API token](/api-tokens). Use a read-only token for `pull`, `list`, `search`, `skill` and
   `env pull`. `push`, `env push` and `env delete` need **Write access**.
-- An HTTPS address for a self-hosted instance. The CLI allows plain HTTP only on `localhost`.
+- The HTTPS address of your instance. The CLI allows plain HTTP only on `localhost`.
 
 ## Install the CLI
 
@@ -35,11 +35,14 @@ sniptide --version
 
 Choose one way to give the CLI your token.
 
+The default address is `https://app.sniptide.com` for Sniptide Cloud. If you run your own
+instance, set `--base-url` or `SNIPTIDE_BASE_URL` to its address.
+
 <Tabs items={["Save the token", "Environment variables"]}>
 <Tab value="Save the token">
 
-Pipe the token to `login`, so it never appears in the process list. Add `--base-url` for a
-self-hosted instance:
+Pipe the token to `login` to keep it out of the process list. Set `--base-url` to the address
+you use to open Sniptide.
 
 ```bash
 printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin --base-url https://paste.example.com
@@ -61,8 +64,6 @@ address it was saved for. `sniptide logout` removes it.
 export SNIPTIDE_TOKEN='snpt_…'
 export SNIPTIDE_BASE_URL='https://paste.example.com'
 ```
-
-Leave `SNIPTIDE_BASE_URL` unset for the hosted app. It defaults to `https://app.sniptide.com`.
 
 </Tab>
 </Tabs>

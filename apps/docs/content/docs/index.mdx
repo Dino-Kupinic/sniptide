@@ -1,13 +1,16 @@
 ---
 title: Overview
-description: Use Sniptide to save code, share it with a link you control, and let coding agents reuse it, on sniptide.com or your own server.
+description: Save code and configs as pastes, choose who can open each link, and reuse your snippets across projects and coding agents.
 ---
 
-Sniptide saves code as pastes, shares each one with a link whose visibility, password and expiry
-you choose, and lets the CLI, the SDKs and coding agents read and save the same pastes. The hosted
-app runs at `app.sniptide.com`, and you can run the same app on your own server with Docker.
+Save a snippet, a config file or several related files in a paste. Share it for a quick review,
+or keep it in a collection so you and your coding agents can find it again. You choose who can
+open the link and when it expires.
 
 ## Start here
+
+Open [Sniptide Cloud](https://app.sniptide.com) or follow the self-hosting guide to set up
+an instance on your server.
 
 <FeatureCards>
   <FeatureCard art="paste" title="Make your first paste" href="/getting-started/first-paste" description="Create an account, save a paste, file it in a collection and share the link." />
@@ -15,6 +18,15 @@ app runs at `app.sniptide.com`, and you can run the same app on your own server 
   <FeatureCard art="server" title="Run your own Sniptide" href="/getting-started/self-hosted" description="Start the app and Postgres with Docker Compose and create your account." />
   <FeatureCard art="api" title="Call the API" href="/sdks" description="Save and read pastes from your own code with the TypeScript or Python SDK." />
 </FeatureCards>
+
+## Share and reuse your work
+
+- [Share a paste for review](/core-concepts/sharing). Invite specific people to view or edit it,
+  or send an expiring link.
+- [Organize snippets you reuse](/core-concepts/collections). Group related pastes and retrieve
+  them together from the CLI or an agent.
+- [Sync a project's environment variables](/cli#sync-env-files). Pull an encrypted env group
+  into a local project or run a command with its values.
 
 ## Choose how you work with Sniptide
 

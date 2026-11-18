@@ -15,7 +15,11 @@ cover the same operations, so pick the one that matches your runtime.
 ## Quick start
 
 Create a token in **Settings** > **API tokens** (see [API tokens](/api-tokens)) and export it as
-`SNIPTIDE_TOKEN`. Then check that it works with `me`, which reads your account and changes nothing:
+`SNIPTIDE_TOKEN`. Replace `https://paste.example.com` with your instance address, then call
+`me` to check your account and token scopes.
+
+The SDKs default to `https://app.sniptide.com` for Sniptide Cloud. You can omit the base URL
+when you use a Cloud token.
 
 <Tabs items={["TypeScript", "Python"]} groupId="sdk-language" persist>
 <Tab value="TypeScript">
@@ -27,7 +31,7 @@ npm install @sniptide/sdk
 ```ts
 import { SniptideClient } from "@sniptide/sdk"
 
-const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!)
+const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
 const { user, scopes } = await client.me()
 console.log(user.name, scopes)
 ```
@@ -43,7 +47,7 @@ python -m pip install sniptide
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
 account = client.me()
 print(account["user"]["name"], account["scopes"])
 ```
@@ -76,30 +80,10 @@ Both clients follow the same rules, so code ports between them with only the nam
 The SDKs don't wrap batch creates, OAuth sign-in or the browser session API. Use the
 [batch endpoint](/api-reliability#create-in-batches) directly when you need it.
 
-## Self-hosted instances
+## Test without using your account
 
-Point the client at your instance's address, including any path prefix it is served under. The
-default is `https://app.sniptide.com`.
-
-<Tabs items={["TypeScript", "Python"]} groupId="sdk-language" persist>
-<Tab value="TypeScript">
-
-```ts
-const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
-```
-
-</Tab>
-<Tab value="Python">
-
-```python
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
-```
-
-</Tab>
-</Tabs>
-
-For integration tests that write data, use a [separate test instance](/agent-sandbox) instead of
-your real account.
+For integration tests that write data, point your SDK at a
+[separate test instance](/agent-sandbox) with its own account and credentials.
 
 ## Errors
 

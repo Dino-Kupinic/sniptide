@@ -8,13 +8,12 @@ snippets one command away from the editor. A sidebar lists your recent snippets 
 collections, and you can insert or copy any of them without opening the browser.
 
 The extension works in VS Code and in the editors built on it, such as Cursor, Windsurf and
-VSCodium. It signs in with [OAuth](/oauth) or an [API token](/api-tokens), on app.sniptide.com or
-a self-hosted instance.
+VSCodium. Sign in to your instance using [OAuth](/oauth) or an [API token](/api-tokens).
 
 ## Before you begin
 
 - VS Code 1.90 or newer, or an editor built on that version or a newer one.
-- A Sniptide account on app.sniptide.com or on your own instance.
+- A Sniptide account and your instance address.
 - The extension isn't in the VS Code Marketplace or Open VSX yet. Until it is, you build it from
   the [repository](https://github.com/Dino-Kupinic/sniptide) with [Bun](https://bun.sh).
 
@@ -42,8 +41,8 @@ a self-hosted instance.
 
    | Choice | Use it when |
    | --- | --- |
-   | **Sign in with your browser** | Your account is on app.sniptide.com. |
-   | **Use a self-hosted instance** | You run your own instance. Enter its address, such as `paste.example.com`. |
+   | **Sign in with your browser** | Sign in to Sniptide Cloud. |
+   | **Use a self-hosted instance** | Enter the address of your instance, such as `paste.example.com`, to sign in through your browser. |
    | **Paste an API token** | The editor can't open your browser. Create a token with the `read` and `write` scopes in **Settings** > **API tokens**. |
 
 3. For the first two choices, your browser opens Sniptide's consent screen. Check that it names

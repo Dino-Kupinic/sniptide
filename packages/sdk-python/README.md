@@ -12,13 +12,16 @@ python -m pip install sniptide
 
 ## Connect your account
 
-Create a personal API token in [Sniptide Settings](https://app.sniptide.com/settings) with the scopes your application needs. Read operations require `read`; creating or changing data requires `write`. Keep tokens out of source control and logs.
+Create a token in **Settings** > **API tokens** on your instance. Enable **Write access** if
+your application creates or changes data. Keep the token out of source control and logs.
+Replace `https://paste.example.com` with your instance address.
+For Sniptide Cloud, omit `base_url` to use `https://app.sniptide.com`.
 
 ```python
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
 page = client.list_pastes(limit=20)
 
 created = client.create_paste({
@@ -46,7 +49,7 @@ if page["nextCursor"]:
 
 `write_env_group` replaces a group's variables. Environment group reads and writes return values that may contain secrets. Listing groups returns counts without exposing values.
 
-## Self-hosted instances
+## Client options
 
 Set `base_url` to your instance URL. A path prefix is supported.
 

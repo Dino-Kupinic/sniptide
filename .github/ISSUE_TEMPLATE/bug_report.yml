@@ -1,5 +1,5 @@
 name: Bug report or feedback
-description: Report a problem with Sniptide or suggest an improvement, on sniptide.com or a self-hosted instance.
+description: Report a problem with Sniptide or suggest an improvement.
 title: "Bug: "
 body:
   - type: markdown

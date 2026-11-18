@@ -28,11 +28,11 @@ once, and scripts using it start getting `401`.
 
 ## Check the token
 
-Send the token in the `Authorization` header. Use your own instance's address instead of
-`app.sniptide.com` when you self-host.
+Send the token in the `Authorization` header. Use `https://app.sniptide.com` for Sniptide Cloud,
+or replace `https://paste.example.com` with your instance address.
 
 ```bash
-curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" https://app.sniptide.com/api/v1/me
+curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" https://paste.example.com/api/v1/me
 ```
 
 ```json
@@ -76,9 +76,8 @@ Paths are relative to `/api/v1`. `{id}` accepts a paste's id or its link.
 | Read an env group's values | `GET /env/{group}` | read |
 | Replace or delete an env group | `PUT /env/{group}`, `DELETE /env/{group}` | write |
 
-Every instance serves the full request and response schemas at `/docs/api`, and the OpenAPI
-document at `/api/openapi.json`. For the hosted app, that is `app.sniptide.com/docs/api`, also
-linked in this site's top navigation.
+Open `/docs/api` on your instance for the full request and response schemas. Download the
+OpenAPI document from `/api/openapi.json`.
 
 Behavior to know before you write data:
 

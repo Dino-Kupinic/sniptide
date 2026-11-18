@@ -7,14 +7,12 @@ Sniptide for Raycast searches your pastes and collections from the launcher and 
 code into the app you're working in. It also saves your selection or clipboard as a paste and
 copies the link.
 
-The extension signs in with an [API token](/api-tokens) and works with app.sniptide.com and with a
-self-hosted instance. It is separate from the [MCP server](/mcp), which connects Sniptide to an AI
-agent.
+Connect the extension to your instance with an [API token](/api-tokens).
 
 ## Before you begin
 
 - [Raycast](https://www.raycast.com) on macOS or Windows.
-- A Sniptide account on app.sniptide.com or on your own instance.
+- A Sniptide account and your instance address.
 - The extension isn't in the Raycast Store yet. Until it is, you run it from the
   [repository](https://github.com/Dino-Kupinic/sniptide) with [Node.js](https://nodejs.org) 22.22
   or newer.
@@ -41,9 +39,8 @@ agent.
 3. Run any Sniptide command in Raycast. Raycast asks for the **API Token** the first time.
 4. Paste the token and continue.
 
-For a self-hosted instance, also set **Instance Address** to its address, such as
-`https://paste.example.com`. The address must use `https://`. Plain `http://` works only for
-`localhost`.
+**Instance Address** defaults to Sniptide Cloud. If you run your own instance, enter the
+address you open in the browser. Use HTTPS, or plain HTTP on `localhost`.
 
 ## Search your pastes
 
@@ -127,5 +124,5 @@ Open Raycast's settings, select **Extensions** and then **Sniptide**.
 | --- | --- |
 | **Sniptide rejected the API token.** | The token is wrong, expired or revoked. Create a new one and set it in the preferences. |
 | **This API token is read-only.** | Create a token with **Write** access and set it in the preferences. |
-| **Can't reach Sniptide.** | Check your connection. For a self-hosted instance, check that **Instance Address** is the address you open in the browser. |
+| **Can't reach Sniptide.** | Check your connection. Check that **Instance Address** matches the address you open in the browser. |
 | **Nothing is selected.** | Select text first. Some apps don't share their selection with Raycast, so copy the text and run **Share Clipboard** instead. |

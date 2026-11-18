@@ -12,14 +12,15 @@ using a personal [API token](/api-tokens).
 
 ## Connect a client
 
-Run the command for your client, then allow access in the browser tab that opens. On a self-hosted
-instance, replace `https://app.sniptide.com` with your instance's address.
+For Sniptide Cloud, use `https://app.sniptide.com`. For a self-hosted instance, use its address
+in place of `https://paste.example.com`. Add the server in your client, then review and allow
+access in the browser tab that opens.
 
 <Tabs items={["Claude Code", "Codex", "Cursor", "Grok Bot", "Other clients"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 ```bash
-claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
+claude mcp add --transport http sniptide https://paste.example.com/api/mcp
 ```
 
 This command only adds the server, so no browser opens yet. Start Claude Code, type `/mcp`, choose
@@ -29,26 +30,26 @@ This command only adds the server, so no browser opens yet. Start Claude Code, t
 <Tab value="Codex">
 
 ```bash
-codex mcp add sniptide --url https://app.sniptide.com/api/mcp
+codex mcp add sniptide --url https://paste.example.com/api/mcp
 ```
 
 </Tab>
 <Tab value="Cursor">
 
-Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no headers. The
+Add a remote MCP server with the URL `https://paste.example.com/api/mcp` and no headers. The
 welcome setup in the app also offers an **Add to Cursor** button that fills this in.
 
 </Tab>
 <Tab value="Grok Bot">
 
 Open [grok.com/connectors](https://grok.com/connectors), select **New Connector**, choose
-**Custom** and enter `https://app.sniptide.com/api/mcp`. The instance must be reachable at a
+**Custom** and enter `https://paste.example.com/api/mcp`. The instance must be reachable at a
 public `https` address, because Grok connects from xAI's servers.
 
 </Tab>
 <Tab value="Other clients">
 
-Add `https://app.sniptide.com/api/mcp` as a remote MCP server using Streamable HTTP, without an
+Add `https://paste.example.com/api/mcp` as a remote MCP server using Streamable HTTP, without an
 `Authorization` header. The client must support MCP authorization with OAuth.
 
 </Tab>
@@ -90,7 +91,7 @@ The first request without a token gets a `401` with a header that points the cli
 resource metadata:
 
 ```http
-WWW-Authenticate: Bearer resource_metadata="https://app.sniptide.com/.well-known/oauth-protected-resource/api/mcp"
+WWW-Authenticate: Bearer resource_metadata="https://paste.example.com/.well-known/oauth-protected-resource/api/mcp"
 ```
 
 The client reads that metadata, registers itself, sends you to the consent screen, and exchanges
@@ -133,8 +134,8 @@ Rate-limited responses carry `RateLimit` headers and `Retry-After`.
 
 ## Self-hosted instances
 
-OAuth works on a self-hosted instance with no extra setup. Set `BETTER_AUTH_URL` to the address
-people use, because the issuer and every endpoint above are built from it.
+Set `BETTER_AUTH_URL` to the address people use to open your instance. Sniptide uses it for
+the issuer and every endpoint above.
 
 Sniptide doesn't support OpenID Connect, client secrets, the device flow, or agent identity
 assertions such as ID-JAG.

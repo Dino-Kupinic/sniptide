@@ -7,7 +7,7 @@ This page covers commits, pull requests, releases, and database migration rules.
 
 Contributions are licensed under the license of the package they change. The app and UI use
 [AGPL-3.0-only](LICENSE). The client packages and shared contracts use MIT. See
-[Licensing](LICENSING.md) for the package boundaries and hosted services.
+[Licensing](LICENSING.md) for the package list.
 
 ## Conventional Commits
 
@@ -81,16 +81,9 @@ short post for readers above that list, which collapses under **Technical change
 description is the main source, so describe what changes for people who use Sniptide. The model
 fills fixed fields and the script lays them out the same way every time: a title that names the
 change, one short paragraph, a **What's new** or **What's fixed** list, and a **Self-hosting** list
-when operators have something to do. A maintenance release gets one sentence. The post sits
-between `sniptide-notes` markers that [sniptide.com/changelog](https://sniptide.com/changelog)
-reads, with `kind` set to `feature`, `fix` or `internal`.
-
-Only a featured release appears in the announcement bar on sniptide.com. Add the `featured` label
-to a feature PR before it merges, or run **Release notes** manually with the release tag and
-**featured** checked, which marks an existing post without rewriting it. The marker then reads
-`kind="feature" featured="true"`, and a rerun keeps it. To correct a post, edit the release on
-GitHub and keep the markers. To rewrite one release, or every release with the tag `all`, run
-**Release notes** manually.
+when operators have something to do. A maintenance release gets one sentence. To correct a
+post, edit the release on GitHub and keep the `sniptide-notes` markers. To regenerate one
+release, run **Release notes** manually with its tag. Use `all` to regenerate every release.
 
 The workflow needs an `ANTHROPIC_API_KEY` repository secret, which uses `claude-opus-5-5` at medium
 effort, or an `OPENAI_API_KEY` secret, which uses `gpt-6-luna` at medium reasoning effort.
@@ -103,8 +96,7 @@ what to do. Operators read the resulting policy in the docs, under Self-hosting,
 releases (`apps/docs/content/docs/self-hosting/versions.mdx`).
 
 If image publishing fails after the GitHub release was created, re-run the failed jobs or run
-**Publish Docker image** manually with that existing release tag. Coolify continues deploying
-`main` independently; publishing a release does not report a production deployment to GitHub.
+**Publish Docker image** manually with that existing release tag.
 
 The UI, CLI, and MCP npm packages release independently after the same CI gate. Packed contents
 are compared with npm, so unrelated app changes do not release a package. Relevant Conventional
