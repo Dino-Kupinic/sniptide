@@ -617,6 +617,39 @@ Before enabling the workflow:
    containing `/app/healthcheck.cjs` and the exact CMD health check above. Confirm its prior
    deployment is healthy and its logs are visible with the intended token. Configure the protected
    environment, then enable the variable. To stop automation, set it to `false` or remove it.
+   Initialize the approved migration tree before enabling it.
+
+#### Release a production migration
+
+Production CI compares the migration directory in its tested commit with the
+`COOLIFY_PRODUCTION_MIGRATIONS_TREE` variable in the `coolify-production` environment. It stops
+before contacting Coolify if the tree differs or the variable is unset. Demo and docs deployments
+use their own configuration.
+
+1. Initialize the variable from the commit whose migrations are already applied to production.
+   Match the running digest to its tested build and check the live database's migration records
+   before recording the tree. From a checkout with that commit, run:
+
+   ```bash
+   git rev-parse "$deployed_commit:packages/db/migrations"
+   ```
+
+2. For a migration release, record the currently running digest and the tested replacement digest
+   from main CI. Review the migration for rolling compatibility and schedule a quiet window. For
+   risky migrations, rehearse the new image on a private copy restored from the latest backup.
+3. On the Docker host, run `docker exec sniptide-backup sniptide-backup pre-deploy`. Confirm the
+   logged `pre-deploy/` object is present in the private bucket and record its key with both digests
+   in the release record. If either check fails, stop the release.
+4. Apply the tested digest manually in Coolify. Check the deployment log, `/api/health`, sign-in,
+   and the affected flows. After the migrations are applied and the release is healthy, set
+   `COOLIFY_PRODUCTION_MIGRATIONS_TREE` to the tree from that tested commit.
+5. For an additive migration compatible with the previous app, roll back by redeploying the
+   previous digest. The live schema stays expanded, so keep the approved tree for the applied
+   migrations. For an incompatible migration, block traffic and stop writers. Restore the
+   pre-deploy snapshot and redeploy the previous digest. The restore discards all writes made
+   after the snapshot. Set the approved tree to the one restored before resuming automation.
+
+See [Backups and restore](https://docs.sniptide.com/self-hosting/backups) for setup and recovery.
 
 The publisher records the tested registry digest in a run-specific receipt. The deploy workflow
 checks the originating CI workflow, run, attempt, commit and current `main`, then checks Coolify's
