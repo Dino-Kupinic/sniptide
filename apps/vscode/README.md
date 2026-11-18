@@ -10,9 +10,9 @@ docs.
 ## Sign in
 
 Run **Sniptide: Sign In** from the Command Palette, or select **Sign In to Sniptide** in the
-Sniptide view. Your browser opens a consent screen, and the editor is connected after you allow
-access. You can also use a self-hosted instance or paste an API token. The connection is kept in
-the editor's secret storage, which your operating system's keychain protects.
+Sniptide view. Choose **Use a self-hosted instance**, enter its address and allow access in
+your browser. You can also paste an API token. The editor keeps the connection in secret storage
+protected by your operating system’s keychain.
 
 ## Share a selection
 

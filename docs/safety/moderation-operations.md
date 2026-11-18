@@ -1,16 +1,19 @@
 # Restrict a paste from the host
 
-This is WRK-330's manual enforcement foundation. It does not detect prohibited material or preserve evidence. Optional report intake and an audited host review queue are described in the [reporting guide](../../apps/docs/content/docs/abuse.mdx). Before using these controls for an incident, establish the lawful reporting and preservation procedure with the service operator. The policy drafts are in [PR #111](https://github.com/Dino-Kupinic/sniptide/pull/111).
+Use these commands to restrict or restore access to a paste on an instance you operate.
+See the [reporting guide](../../apps/docs/content/docs/abuse.mdx) to enable intake and review
+reports. Establish your reporting, preservation and escalation procedures before using the
+commands for a real case.
 
 ## Prepare the deployment
 
-Deploy the additive database migration and update every serving replica before issuing restrictions. An older application version does not enforce the new state. Configure proxies and CDNs to respect the application's cache headers. Do not enable edge caching of paste pages, raw responses, or previews.
+Update every serving replica to a release that supports moderation before issuing restrictions. Configure proxies and CDNs to respect the application's cache headers. Do not enable edge caching of paste pages, raw responses, or previews.
 
 Use a trusted host account with the intended database credentials. The command requires `DATABASE_URL`; it has no default connection and does not apply migrations. Use the deployment's established secret-injection mechanism. Never paste a production connection string, content, passwords, or API tokens into a case record or issue.
 
 The command's authorization boundary is host and database access. Audit attribution uses the operating-system username and hostname. It is not a separately authenticated moderator identity. Containers that share an OS account require an external access log to identify the person responsible.
 
-Run the commands from a checkout with dependencies installed. The production standalone web image does not include the Bun operational command; use an authorized operations checkout with network access to the intended database.
+Run the commands from a checkout with dependencies installed. The standalone web image does not include the Bun operational command; use an authorized operations checkout with network access to the intended database.
 
 ## Inspect the target
 
@@ -70,14 +73,3 @@ Deleting a collection clears its associations even for restricted pastes, but ex
 The `moderation_event` table is independent of paste and account deletion. It contains command and paste UUIDs, host actor, state transition, reason code, case UUID, observed content version, moderation version, fingerprint, and timestamp. It contains no evidence copy. Treat case references and host identities as restricted operational metadata.
 
 Before operational activation, establish an audit retention and disposal schedule with an authorized owner. There is no automatic audit-expiry job in this foundation. Use a separately approved disposal procedure; never interpret the absence of automatic expiry as a policy of indefinite retention. Any database restore must be assessed for stale moderation decisions before serving traffic.
-
-## Open work
-
-- Confirm Austria-specific operator and legal requirements. Austria is the user-confirmed operating country; the legal entity and monitored abuse contact remain unconfirmed.
-- Assign the primary responder and a backup or documented external escalation arrangement. No responder is assigned by this change.
-- Implement and verify lawful preservation, restricted evidence access, hold release and disposal, and backup restoration behavior.
-- Activate and exercise report intake and the host review queue after assigning operators. Complete account suspension and the permitted decision-notice procedure under WRK-331.
-- Evaluate automated screening and processor privacy terms under WRK-332.
-- Complete the operational monitoring and deployment exercise under WRK-333.
-
-Keep WRK-330 open for its remaining preservation criteria after this foundation is reviewed.

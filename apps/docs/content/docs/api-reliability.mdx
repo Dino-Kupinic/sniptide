@@ -5,7 +5,7 @@ description: Read Sniptide's quota headers, retry creates safely with Idempotenc
 
 This page explains how to build a client that stays within its quotas, never creates duplicates
 when it retries, and keeps working as the API changes. It applies to the token API under
-`/api/v1` and to the hosted MCP server.
+`/api/v1` and to the MCP server.
 
 ## Read the quota headers
 
@@ -41,10 +41,10 @@ IP](/self-hosting/reverse-proxy)) skips this limit and sends no quota headers on
 
 Without a key, retrying a create after a timeout can create a second resource.
 `POST /api/v1/pastes` and `POST /api/v1/collections` accept an optional `Idempotency-Key` header
-that prevents this.
+that prevents this. Replace `https://paste.example.com` with your instance address.
 
 ```bash
-curl -X POST https://app.sniptide.com/api/v1/pastes \
+curl -X POST https://paste.example.com/api/v1/pastes \
   -H "Authorization: Bearer $SNIPTIDE_TOKEN" \
   -H "Idempotency-Key: 8f14e45f-ceea-467f-a8f5-1b2c3d4e5f60" \
   -H "Content-Type: application/json" \
@@ -111,10 +111,6 @@ The public token API carries its major version in the path, `/api/v1`.
 - Breaking changes to required fields, field meanings or supported operations need a new major
   path.
 - Security fixes can restrict unsafe behavior at once.
-
-Removals on the hosted API get at least 90 days' notice in the documentation and release notes.
-During that time, affected responses carry a `Deprecation` header and a `Sunset` date. No v1
-endpoint is deprecated today. Self-hosted operators choose when they upgrade.
 
 The OpenAPI document's `info.version` describes the API contract, independently of the app, CLI
 and MCP package versions. MCP protocol versions follow MCP's own negotiation. The unversioned

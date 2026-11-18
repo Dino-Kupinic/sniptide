@@ -17,13 +17,14 @@ It needs Python 3.9 or newer. The import name is `sniptide`, the same as the pac
 ## Authenticate
 
 Create a token in **Settings** > **API tokens** with the access your code needs (see
-[API tokens](/api-tokens)), put it in the environment, and pass it to the client:
+[API tokens](/api-tokens)), put it in the environment, and pass it with your instance address. Replace
+`https://paste.example.com` below with that address.
 
 ```python
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
 account = client.me()
 ```
 
@@ -153,7 +154,7 @@ To refuse a write when someone changed the group after you read it, pass the rev
 `write_env_group("my-app", variables, revision=group["revision"])`. A newer group fails with
 status 412 and stays as it was.
 
-## Self-hosted instances
+## Client options
 
 Set `base_url` to your instance's address, including any path prefix:
 

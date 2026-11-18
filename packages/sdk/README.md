@@ -12,12 +12,14 @@ Requires Node.js 18 or later. The package uses ES modules and includes TypeScrip
 
 ## Connect your account
 
-Create a personal API token in [Sniptide Settings](https://app.sniptide.com/settings) with the scopes your application needs. Read operations require `read`; creating or changing data requires `write`. Keep tokens on the server and out of browser bundles and source control.
+Create a token in **Settings** > **API tokens** on your instance. Enable **Write access** if
+your application creates or changes data. Keep the token on the server and out of source
+control. Replace `https://paste.example.com` with your instance address.
 
 ```ts
 import { SniptideClient } from "@sniptide/sdk"
 
-const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!)
+const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
 const page = await client.listPastes({ limit: 20 })
 
 const { paste } = await client.createPaste({
@@ -45,7 +47,7 @@ const nextPage = page.nextCursor
 
 `writeEnvGroup` replaces a group's variables. Environment group reads and writes return values that may contain secrets. Listing groups returns counts without exposing values.
 
-## Self-hosted instances
+## Client options
 
 Pass your instance URL as the second argument. A path prefix is supported.
 

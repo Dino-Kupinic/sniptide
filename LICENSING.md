@@ -12,15 +12,3 @@ includes its license notice.
 
 Existing published package versions are unchanged. New releases built from this source use
 the package licenses described above.
-
-## Hosted services
-
-Sniptide operates a hosted service on its own domain, including remote MCP and OAuth. Operating
-a service does not change the license of the underlying code. Hosted offerings may also include
-discovery and indexing, a template gallery, short links, and paid extras. These offerings are not
-a promise that every feature is currently available.
-
-## Future enterprise code
-
-Future enterprise code will live separately in an `ee/` directory under a separate commercial
-license. This directory does not exist yet. This document does not grant a commercial license.

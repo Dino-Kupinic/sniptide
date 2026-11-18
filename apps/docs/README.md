@@ -1,9 +1,7 @@
 # Sniptide docs
 
-The documentation site: Next.js with [Fumadocs](https://fumadocs.dev), served from the root of its
-own domain (docs.sniptide.com). It is a separate workspace from the app (`apps/web`) so it deploys
-and scales on its own; the app's API reference stays at `/docs/api` in the app and the docs nav
-links to it.
+This workspace builds the Sniptide user guide with Next.js and [Fumadocs](https://fumadocs.dev).
+The docs navigation links to the API reference at `/docs/api` on the configured Sniptide instance.
 
 ```bash
 bun run --filter docs dev     # http://localhost:3001

@@ -12,11 +12,7 @@ the paste's **Sharing** and **Access** rows and its **Share** button.
 | --- | --- | --- | --- |
 | **Private** | You and the accounts you invited. Everyone else gets a "not found" page, as if the link didn't exist. | Not indexed | None |
 | **Unlisted** | Anyone with the link | Told not to index it | Yes, unless it has a password or burns after read |
-| **Public** | Anyone with the link | May index it on Sniptide Cloud. Self-hosted instances request noindex. | Yes, unless it has a password or burns after read |
-
-On Sniptide Cloud, a public paste's canonical address is its `sniptide.com` share link.
-The app's `robots.txt` keeps crawlers out of `/api/` and lets them load the `/_next/` files
-they need to render a page.
+| **Public** | Anyone with the link. It can also appear on your public profile. | Self-hosted instances request noindex | Yes, unless it has a password or burns after read |
 
 Pastes you create in the web editor start unlisted until you change your
 [paste defaults](/settings#set-paste-defaults). With an unlisted paste the link itself is the
@@ -26,14 +22,12 @@ be public.
 
 ## Your public profile
 
-Your username has a profile page at `/@username` on your instance, such as
-`sniptide.com/@username` on the hosted service. Every account has one, including accounts created
-through GitHub or Google sign-in. Every `@username` on a share page, in **Shared
-with me** and in the **Share** dialog links to it. Open your own by selecting your name at the top
-of the account menu, or from **Your profile** under **More** on a phone. Handles match in any case, so `/@Dino` opens the same
-page as `/@dino`. Your
-[custom links](/core-concepts/pastes#custom-links) live under the same address, such as
-`sniptide.com/@dino/deploy-script`. When share links live on their own domain (`SHARE_URL`), profiles do too.
+Your public profile lives at `/@username` on your instance. Select your name in the account
+menu or open **More** > **Your profile** on a phone. Your username on a share page, in
+**Shared with me** and in the **Share** dialog also links to it. Handles are case-insensitive.
+Your [custom links](/core-concepts/pastes#custom-links) use the same address, such as
+`paste.example.com/@ada/deploy-script`. If your instance uses a separate share domain
+(`SHARE_URL`), your profile uses it too.
 
 The profile shows your display name, avatar and join month, a grid of how many public pastes you
 made each day over the last year, and your public pastes, newest first, 20 to a page. Visitors can
@@ -43,8 +37,7 @@ The profile lists only pastes that anyone could already open from their link: pu
 password and no burn after read. Unlisted and private pastes never appear, and neither do pastes
 in the trash, expired pastes or pastes withheld by moderation. To take a paste off your profile,
 make it unlisted or private. The activity grid counts the same pastes, so it shows nothing the
-list doesn't. Profiles ask search engines to leave them out of results. On Sniptide Cloud,
-public pastes can still be indexed on their own pages.
+list doesn't. Profiles ask search engines to leave them out of results.
 
 ## Protect a paste with a password
 
@@ -92,10 +85,10 @@ to the owner. Expired pastes are unavailable through raw links.
 
 A request for a paste's link with the header `Accept: text/markdown` returns the paste as Markdown,
 with the title as a heading and each file in a fenced code block. Coding agents that fetch a link
-get the code without the page around it.
+get the code without the page around it. Use the link you copied from the paste.
 
 ```bash
-curl -H "Accept: text/markdown" https://app.sniptide.com/k3j9xq
+curl -H "Accept: text/markdown" https://paste.example.com/k3j9xq2m
 ```
 
 The Markdown copy follows the same access rules as the share page. If the paste is still locked
