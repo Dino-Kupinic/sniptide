@@ -72,20 +72,22 @@ doesn't take both copies.
 ## Send Coolify backups offsite
 
 The backup container saves a private dump locally, encrypts a copy with `age`, and sends it to
-Backblaze B2. It keeps local dumps for three days, attempts a backup once per UTC day, and retries
+Cloudflare R2. It keeps local dumps for three days, attempts a backup once per UTC day, and retries
 failures every 15 minutes. Set a recovery point objective of 24 hours and a recovery time objective
 under one hour. Measure both during a [restore drill](#recover-a-lost-coolify-server).
 
 1. On a trusted workstation, run `age-keygen -o sniptide-backup.identity`. Put the identity,
    `BETTER_AUTH_SECRET`, and `ENV_SECRETS_KEY` (if set) in your password manager. Give the
    backup container only the public `age1…` recipient printed by `age-keygen`.
-2. Create a dedicated private B2 bucket and [a bucket-restricted write-only application key](https://www.backblaze.com/docs/cloud-storage-s3-compatible-app-keys).
-   Store an independent read-only key for recovery. Use the S3 endpoint listed for the bucket.
-3. Add [B2 lifecycle rules](https://www.backblaze.com/docs/cloud-storage-lifecycle-rules) by prefix.
-   Set **Days From Hiding To Deleting** to `1` for each rule. Cancel incomplete multipart uploads
-   after one day. B2 runs cleanup on its schedule.
+2. Create a private R2 Standard bucket. Use an [Object Read & Write R2 token](https://developers.cloudflare.com/r2/api/tokens/)
+   scoped to that bucket, and store an independent Object Read only token for recovery. Copy the
+   bucket's S3 API endpoint. Keep public access disabled.
+3. For each prefix, add both a [bucket lock](https://developers.cloudflare.com/r2/buckets/bucket-locks/)
+   and an [object lifecycle rule](https://developers.cloudflare.com/r2/buckets/object-lifecycles/)
+   at the age below. Locks prevent the backup token from overwriting or deleting recovery points
+   during retention. Lifecycle rules expire them after retention.
 
-   | Prefix | Recovery points | Days from upload to hiding |
+   | Prefix | Recovery points | Lock and expiration age in days |
    | --- | --- | --- |
    | `daily/` | One per UTC day for a week | 7 |
    | `weekly/` | One per ISO week for four weeks | 28 |
@@ -104,15 +106,15 @@ under one hour. Measure both during a [restore drill](#recover-a-lost-coolify-se
      -f deploy/coolify/backup.Dockerfile deploy/coolify
    ```
 
-   For the Coolify Sniptide Compose template, add the `backup` service and top-level volume from
-   `deploy/coolify/backup-sidecar.yaml`. Set the following variables in Coolify and redeploy.
+   For the Coolify Sniptide Compose template, use the `backup` service and top-level volume from
+   `deploy/coolify/backup-sidecar.yaml`. Replace any earlier `backup` service definition. Set the
+   following variables in Coolify and redeploy.
 
    | Variable | Value |
    | --- | --- |
-   | `BACKUP_BUCKET` | Private B2 bucket name |
-   | `BACKUP_B2_ENDPOINT` | B2 HTTPS S3 endpoint |
-   | `BACKUP_B2_REGION` | Region from the endpoint, such as `us-west-004` |
-   | `BACKUP_B2_KEY_ID`, `BACKUP_B2_APP_KEY` | Bucket-restricted writer key ID and secret |
+   | `BACKUP_BUCKET` | Private R2 bucket name |
+   | `BACKUP_R2_ENDPOINT` | HTTPS S3 API endpoint from the bucket settings |
+   | `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY` | Bucket-scoped R2 key ID and secret |
    | `BACKUP_AGE_RECIPIENT` | Public `age1…` recipient |
    | `BACKUP_HEARTBEAT_URL` | Private Healthchecks.io ping URL |
 
@@ -127,7 +129,7 @@ under one hour. Measure both during a [restore drill](#recover-a-lost-coolify-se
      --mount source=sniptide-backups,target=/backups sniptide-backup:local
    ```
 
-6. Check the container logs for `Uploaded daily/…`, the B2 bucket for the new `.dump.age` object,
+6. Check the container logs for `Uploaded daily/…`, the R2 bucket for the new `.dump.age` object,
    and the monitor for a success ping. Keep the existing backup schedule until you have completed
    an offsite restore drill. Test a missed heartbeat on a staging check with a shorter period.
 
@@ -230,7 +232,7 @@ database volume for the project named in that directory's `.env`.
 
 Run these steps monthly against a throwaway instance. Start a timer before you retrieve the backup.
 
-1. With a read-only B2 key, download the newest daily object to a private directory on a trusted
+1. With a read-only R2 key, download the newest daily object to a private directory on a trusted
    machine. Retrieve the `age` identity and app secrets from your password manager. Decrypt the
    object and check the dump with a `pg_restore` client at least as new as the one that made it.
 

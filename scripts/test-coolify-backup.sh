@@ -11,9 +11,8 @@ export BACKUP_DIRECTORY="$test_dir/backups"
 export BACKUP_BUCKET=sniptide-private
 export BACKUP_AGE_RECIPIENT=age1test
 export BACKUP_HEARTBEAT_URL=https://hc-ping.example/check
-export BACKUP_B2_ENDPOINT=https://s3.example
-export BACKUP_B2_REGION=us-west-004
-export BACKUP_B2_KEY_ID=test-id BACKUP_B2_APP_KEY=test-key
+export BACKUP_R2_ENDPOINT=https://s3.example
+export BACKUP_R2_ACCESS_KEY_ID=test-id BACKUP_R2_SECRET_ACCESS_KEY=test-key
 export CALLS="$test_dir/calls"
 export CLOCK='20261130T040000Z 2026-W49'
 
@@ -51,14 +50,14 @@ for tool in date flock pg_dump pg_restore age rclone curl; do
 done
 
 run() { sh "$script" "$@"; }
-assert_calls() { diff -u - "$CALLS"; }
+assert_calls() { diff -u - <(sed -E 's/\.[[:alnum:]]{8}\.dump\.age/.<id>.dump.age/' "$CALLS"); }
 
 touch -t 202001010000 "$BACKUP_DIRECTORY/sniptide-obsolete.dump"
 run scheduled
 assert_calls <<'EOF'
-upload offsite:sniptide-private/daily/20261130.dump.age
-upload offsite:sniptide-private/weekly/2026-W49.dump.age
-upload offsite:sniptide-private/monthly/202611.dump.age
+upload offsite:sniptide-private/daily/20261130T040000Z.<id>.dump.age
+upload offsite:sniptide-private/weekly/20261130T040000Z.<id>.dump.age
+upload offsite:sniptide-private/monthly/20261130T040000Z.<id>.dump.age
 ping https://hc-ping.example/check
 EOF
 test ! -e "$BACKUP_DIRECTORY/sniptide-obsolete.dump"
@@ -71,15 +70,15 @@ test ! -s "$CALLS"
 export CLOCK='20261201T041000Z 2026-W49'
 if FAIL_AT=monthly run scheduled; then exit 1; fi
 assert_calls <<'EOF'
-upload offsite:sniptide-private/daily/20261201.dump.age
-upload offsite:sniptide-private/monthly/202612.dump.age
+upload offsite:sniptide-private/daily/20261201T041000Z.<id>.dump.age
+upload offsite:sniptide-private/monthly/20261201T041000Z.<id>.dump.age
 ping https://hc-ping.example/check/fail
 EOF
 
 : > "$CALLS"
 run scheduled
 assert_calls <<'EOF'
-upload offsite:sniptide-private/monthly/202612.dump.age
+upload offsite:sniptide-private/monthly/20261201T041000Z.<id>.dump.age
 ping https://hc-ping.example/check
 EOF
 
@@ -101,7 +100,7 @@ test -z "$(find "$BACKUP_DIRECTORY" -name '.pending.*')"
 : > "$CALLS"
 if HEARTBEAT_STATUS=302 run scheduled; then exit 1; fi
 assert_calls <<'EOF'
-upload offsite:sniptide-private/daily/20261202.dump.age
+upload offsite:sniptide-private/daily/20261202T040000Z.<id>.dump.age
 ping https://hc-ping.example/check
 ping https://hc-ping.example/check/fail
 EOF

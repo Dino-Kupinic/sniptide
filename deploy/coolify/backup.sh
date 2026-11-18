@@ -8,17 +8,16 @@ case "$mode" in
   *) echo 'Usage: backup.sh [schedule|scheduled|pre-deploy]' >&2; exit 2 ;;
 esac
 
-: "${BACKUP_BUCKET:?Set the Backblaze B2 bucket name}"
+: "${BACKUP_BUCKET:?Set the Cloudflare R2 bucket name}"
 : "${BACKUP_AGE_RECIPIENT:?Set the public age recipient}"
-: "${BACKUP_B2_KEY_ID:?Set the Backblaze B2 key ID}"
-: "${BACKUP_B2_APP_KEY:?Set the Backblaze B2 application key}"
-: "${BACKUP_B2_REGION:?Set the region listed in the B2 endpoint}"
+: "${BACKUP_R2_ACCESS_KEY_ID:?Set the R2 access key ID}"
+: "${BACKUP_R2_SECRET_ACCESS_KEY:?Set the R2 secret access key}"
 case "$BACKUP_BUCKET" in
   *[!a-zA-Z0-9-]*) echo 'Set BACKUP_BUCKET to a bucket name without a prefix.' >&2; exit 2 ;;
 esac
-case "${BACKUP_B2_ENDPOINT:-}" in
+case "${BACKUP_R2_ENDPOINT:-}" in
   https://?*) ;;
-  *) echo 'Set BACKUP_B2_ENDPOINT to the HTTPS S3 endpoint.' >&2; exit 2 ;;
+  *) echo 'Set BACKUP_R2_ENDPOINT to the HTTPS S3 endpoint.' >&2; exit 2 ;;
 esac
 if [ "$mode" != pre-deploy ]; then
   case "${BACKUP_HEARTBEAT_URL:-}" in
@@ -73,10 +72,11 @@ trap 'exit 1' HUP INT TERM
 find "$directory" -maxdepth 1 -type d -name '.pending.*' -exec rm -rf {} +
 find "$directory" -maxdepth 1 -type f -name 'sniptide-*.dump' -mtime +2 -delete
 pending=$(mktemp -d "$directory/.pending.XXXXXXXX")
+snapshot="$stamp.${pending##*.}"
 if [ "$mode" = scheduled ]; then
   name=$day
 else
-  name="$stamp.${pending##*.}"
+  name=$snapshot
 fi
 dump="$directory/sniptide-$name.dump"
 encrypted="$pending/dump.age"
@@ -87,17 +87,16 @@ pg_restore --list "$pending/dump" >/dev/null
 mv "$pending/dump" "$dump"
 age -r "$BACKUP_AGE_RECIPIENT" -o "$encrypted" "$dump"
 
-export RCLONE_CONFIG_OFFSITE_TYPE=s3 RCLONE_CONFIG_OFFSITE_PROVIDER=Other
-export RCLONE_CONFIG_OFFSITE_ENDPOINT="$BACKUP_B2_ENDPOINT"
-export RCLONE_CONFIG_OFFSITE_REGION="$BACKUP_B2_REGION"
-export RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID="$BACKUP_B2_KEY_ID"
-export RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY="$BACKUP_B2_APP_KEY"
+export RCLONE_CONFIG_OFFSITE_TYPE=s3 RCLONE_CONFIG_OFFSITE_PROVIDER=Cloudflare
+export RCLONE_CONFIG_OFFSITE_ENDPOINT="$BACKUP_R2_ENDPOINT" RCLONE_CONFIG_OFFSITE_REGION=auto
+export RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID="$BACKUP_R2_ACCESS_KEY_ID"
+export RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY="$BACKUP_R2_SECRET_ACCESS_KEY"
 
 upload() {
-  object="$1/$2.dump.age"
-  # The writer's key cannot read objects or manage the bucket. rclone sends checksums with PUT.
+  # A retry after an interrupted upload needs a fresh key because bucket locks forbid overwrites.
+  object="$1/$snapshot.dump.age"
   if ! rclone copyto "$encrypted" "offsite:$BACKUP_BUCKET/$object" \
-      --no-check-dest --s3-no-check-bucket --s3-no-head \
+      --config /dev/null --no-check-dest --s3-no-check-bucket \
       --contimeout 15s --timeout 2m --retries 2; then
     echo "Upload failed for $object." >&2
     return 1
@@ -113,13 +112,13 @@ remember() {
 upload_slot() {
   marker=".uploaded-$1"
   if [ "$(cat "$directory/$marker" 2>/dev/null || true)" != "$2" ]; then
-    upload "$1" "$2"
+    upload "$1"
     remember "$marker" "$2"
   fi
 }
 
 if [ "$mode" = pre-deploy ]; then
-  upload pre-deploy "$name"
+  upload pre-deploy
 else
   upload_slot daily "$day"
   upload_slot weekly "$week"
