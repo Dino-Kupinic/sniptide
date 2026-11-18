@@ -125,6 +125,7 @@ jobs:
       - run: node --test scripts/test-ci-plan.mjs
       - run: bash scripts/test-ci-image-tag.sh
       - run: bash scripts/test-ci-containers-parallel.sh
+      - run: bash scripts/test-coolify-backup.sh
       - run: node --test scripts/test-deploy-production.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
@@ -222,6 +223,19 @@ jobs:
           FULL_CONTAINER_CHECKS: ${{ needs.plan.outputs.container }}
           PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
         run: bash scripts/test-ci-containers.sh sniptide:ci "$PREVIOUS_IMAGE"
+
+      - name: Build and check the Coolify backup image
+        if: needs.plan.outputs.container == 'true'
+        run: |
+          for major in 17 18; do
+            docker build --build-arg "POSTGRES_MAJOR=$major" -t "sniptide-backup:ci-$major" \
+              -f deploy/coolify/backup.Dockerfile deploy/coolify
+            docker run --rm --entrypoint /bin/sh "sniptide-backup:ci-$major" -ec '
+              pg_dump --version && pg_restore --version && age --version && rclone version
+              flock -w 1 /tmp/backup.lock /bin/true
+              date -u "+%G-W%V" | grep -Eq "^[0-9]{4}-W[0-9]{2}$"
+            '
+          done
 
       - name: Select a tag for trusted events
         id: image
