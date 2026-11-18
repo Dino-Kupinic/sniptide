@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import { embedCode, embedHeight } from "@/lib/pastes/embed"
-import { readEmbedPaste } from "@/lib/pastes/store"
+import { readEmbedPaste, readPublicPreview, updateSharing } from "@/lib/pastes/store"
 import nextConfig from "@/next.config"
 import {
   hasDatabase,
@@ -65,6 +65,19 @@ describeDb("embed access", () => {
     expect((await readEmbedPaste("open"))?.files[0]?.content).toBe("one")
     expect((await readEmbedPaste("link"))?.files[0]?.content).toBe("two")
     expect((await pasteRow("open"))?.views).toBe(0)
+  })
+
+  test("withdraws embed and preview content when a paste becomes private", async () => {
+    await seedPaste({ slug: "open", owner: "owner", visibility: "public", content: "sample" })
+    expect(await readEmbedPaste("open")).toMatchObject({ files: [{ content: "sample" }] })
+    expect(await readPublicPreview("open")).toMatchObject({ content: "sample" })
+
+    signInAs("owner")
+    expect(await updateSharing("open", { visibility: "private" })).toEqual({ slug: "open" })
+    signInAs(null)
+
+    expect(await readEmbedPaste("open")).toBeNull()
+    expect(await readPublicPreview("open")).toBeNull()
   })
 
   test("never serves a restricted paste, even to its owner or an unlocked visitor", async () => {

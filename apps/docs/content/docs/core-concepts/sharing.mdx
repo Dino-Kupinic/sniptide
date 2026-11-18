@@ -100,6 +100,9 @@ raw access is off, it returns the title and a note with no file contents. A past
 the reader returns `404`.
 Fetching the Markdown copy doesn't count as a view.
 
+Sniptide allows 120 Markdown paste requests per minute per visitor IP. If you receive
+`429 Too Many Requests`, wait the number of seconds in the `Retry-After` header before retrying.
+
 ## Embed or print a paste
 
 - **Embed** in the **Share** dialog gives you an `<iframe>` for `<domain>/<link>/embed`, which

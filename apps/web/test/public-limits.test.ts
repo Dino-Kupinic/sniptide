@@ -3,6 +3,7 @@ import { POST as copy } from "@/app/[slug]/copy/route"
 import { GET as preview } from "@/app/[slug]/preview/route"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { POST as reveal } from "@/app/[slug]/reveal/route"
+import { GET as markdown } from "@/app/api/agent-share/[...path]/route"
 import { hasDatabase, pasteRow, resetDatabase, seedPaste, seedUser } from "./harness"
 
 // The public routes that need no account count requests per visitor, so one address can't flood
@@ -73,6 +74,21 @@ describeDb("public route limits", () => {
     const send = () => preview(from("198.51.100.4"), params("missing"))
     expect((await statuses(60, send)).every((status) => status === 404)).toBe(true)
     expect((await send()).status).toBe(429)
+  })
+
+  test("Markdown paste reads return an uncached 429 with Retry-After at the per-visitor limit", async () => {
+    const send = (address: string, path: string) =>
+      markdown(from(address), { params: Promise.resolve({ path: [path] }) })
+    const address = "198.51.100.7"
+    const accepted = await statuses(120, () => send(address, "missing"))
+    expect(accepted.every((status) => status === 404)).toBe(true)
+
+    const refused = await send(address, "open")
+    expect(refused.status).toBe(429)
+    expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(0)
+    expect(refused.headers.get("cache-control")).toBe("private, no-store")
+    expect(await refused.text()).toBe("Too many requests\n")
+    expect((await send("198.51.100.8", "open")).status).toBe(200)
   })
 
   test("a refused reveal never burns the paste", async () => {
