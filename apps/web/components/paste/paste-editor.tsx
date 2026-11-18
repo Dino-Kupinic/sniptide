@@ -107,6 +107,8 @@ type EditorDraft = SavePasteInput & {
   encrypted?: boolean
 }
 
+type EditSnapshot = { input: SavePasteInput; expirySelection: number }
+
 // What the draft on this device keeps: everything except the password, which never leaves memory.
 function forDraft(value: EditorDraft): SavePasteInput {
   const { automatic: _automatic, encrypted: _encrypted, ...paste } = value
@@ -265,7 +267,14 @@ export function PasteEditor({
   const [activeId, setActiveId] = React.useState(() => files[0]?.id ?? "")
   const [preview, setPreview] = React.useState(false)
   const [visibility, setVisibility] = React.useState(initial.visibility)
-  const [expiry, setExpiry] = React.useState(initial.expiry)
+  const [{ expiry, selection }, setExpiryChoice] = React.useState({
+    expiry: initial.expiry,
+    selection: 0,
+  })
+  function setExpiry(next: Expiry | "keep") {
+    setExpiryChoice((current) => ({ expiry: next, selection: current.selection + 1 }))
+  }
+  const expirySelection = editing && expiry !== "keep" ? selection : 0
   const [slug, setSlug] = React.useState(initial.slug)
   const [collection, setCollection] = React.useState(initial.collection)
   const [passwordOn, setPasswordOn] = React.useState(initial.hasPassword)
@@ -307,6 +316,7 @@ export function PasteEditor({
   const [savedSlug, setSavedSlug] = React.useState(editing ?? "")
   const [hasPassword, setHasPassword] = React.useState(initial.hasPassword)
   const [savedExpiresAt, setSavedExpiresAt] = React.useState(currentExpiresAt)
+  const savedExpirySelection = React.useRef(0)
   const expiryLabel =
     savedExpiresAt === undefined
       ? undefined
@@ -391,11 +401,15 @@ export function PasteEditor({
     password: storedPasswordField(initial.hasPassword),
     burnAfterRead: initial.burnAfterRead,
   }))
+  const snapshot = React.useMemo<EditSnapshot>(
+    () => ({ input: value, expirySelection }),
+    [value, expirySelection],
+  )
 
   // The newest version another tab or device saved, once we know about it.
   const conflictRef = React.useRef<PasteBroadcast | null>(null)
   const savedSlugRef = React.useRef(editing ?? "")
-  const autosaverRef = React.useRef<Autosaver<SavePasteInput> | null>(null)
+  const autosaverRef = React.useRef<Autosaver<EditSnapshot> | null>(null)
   const [changedElsewhere, setChangedElsewhere] = React.useState(false)
   const draftId = draftKey(draftScope, editing)
   const broadcast = useSaveBroadcast(draftId, (message) => {
@@ -405,8 +419,16 @@ export function PasteEditor({
     else setChangedElsewhere(true)
   })
 
-  async function saveEdit(sent: SavePasteInput): Promise<SaveOutcome<SavePasteInput>> {
-    const result = await autosavePaste(savedSlugRef.current, sent, versionRef.current)
+  async function saveEdit(sent: EditSnapshot): Promise<SaveOutcome<EditSnapshot>> {
+    // A relative expiry applies once. The selection identifies the action even if the slider
+    // moves away and back to the same duration while a save is in flight.
+    const expiry =
+      sent.expirySelection === savedExpirySelection.current ? "keep" : sent.input.expiry
+    const result = await autosavePaste(
+      savedSlugRef.current,
+      { ...sent.input, expiry },
+      versionRef.current,
+    )
     if (!result.ok) {
       if ("conflict" in result) {
         conflictRef.current = { slug: result.slug, version: result.version }
@@ -417,34 +439,35 @@ export function PasteEditor({
 
     versionRef.current = result.version
     savedSlugRef.current = result.slug
+    savedExpirySelection.current = sent.expirySelection
     broadcast({ slug: result.slug, version: result.version })
     setSavedSlug(result.slug)
     setHasPassword(result.hasPassword)
     setSavedExpiresAt(result.expiresAt)
-    // An expiry picked from the chips is relative to the save, so it must not be applied again by
-    // the next one. A password was hashed on the server; the field goes back to "keep".
-    setExpiry((current) => (current === sent.expiry ? "keep" : current))
-    if (sent.password) {
-      setPassword((current) => (current === sent.password ? "" : current))
-      setCommittedPassword((current) => (current === sent.password ? "" : current))
+    // The password is stored as a hash, so the edit field goes back to its stored state.
+    if (sent.input.password) {
+      setPassword((current) => (current === sent.input.password ? "" : current))
+      setCommittedPassword((current) => (current === sent.input.password ? "" : current))
     }
     return {
       ok: true,
       saved: {
         ...sent,
-        expiry: "keep",
-        slug: result.slug,
-        password: storedPasswordField(result.hasPassword),
+        input: {
+          ...sent.input,
+          slug: result.slug,
+          password: storedPasswordField(result.hasPassword),
+        },
       },
     }
   }
 
   const { autosaver, state } = useAutosave({
-    value,
-    initial: initialValue,
+    value: snapshot,
+    initial: { input: initialValue, expirySelection: 0 },
     save: saveEdit,
     validate: (next) => {
-      const reason = unsavable(next)
+      const reason = unsavable(next.input)
       return reason ? t(reason) : null
     },
     manual: !editing,
@@ -454,9 +477,11 @@ export function PasteEditor({
 
   // A backup of unsaved edits on this device, put back if the tab closed or the network dropped
   // before they reached the server.
+  const draftExpiry = editing && expirySelection === savedExpirySelection.current ? "keep" : expiry
   const draftValue = React.useMemo<EditorDraft>(
     () => ({
       ...forDraft(value),
+      expiry: draftExpiry,
       automatic: {
         title: automatic.current.title,
         visibility: automatic.current.visibility,
@@ -464,7 +489,7 @@ export function PasteEditor({
       },
       encrypted,
     }),
-    [value, files, encrypted],
+    [value, draftExpiry, files, encrypted],
   )
   const [draftReady, setDraftReady] = React.useState(false)
   const [draftNotice, setDraftNotice] = React.useState<
@@ -481,8 +506,8 @@ export function PasteEditor({
     dirty: unsaved,
     enabled: draftReady,
   })
-  const latestValue = React.useRef(value)
-  latestValue.current = value
+  const latestDraftValue = React.useRef(draftValue)
+  latestDraftValue.current = draftValue
   const draftChecked = React.useRef(false)
 
   function applyValue(next: EditorDraft) {
@@ -522,7 +547,7 @@ export function PasteEditor({
     }
     // Typing before the draft arrived, or a draft made against an older version of the paste:
     // let the person pick instead of overwriting either.
-    const edited = JSON.stringify(forDraft(latestValue.current)) !== started
+    const edited = JSON.stringify(forDraft(latestDraftValue.current)) !== started
     if (edited || (editing && draft.baseVersion !== versionRef.current)) {
       return setDraftNotice({ kind: "choose", savedAt: draft.savedAt })
     }
@@ -550,7 +575,7 @@ export function PasteEditor({
   async function loadLatest() {
     const target = conflictRef.current?.slug ?? savedSlugRef.current
     // Nothing to protect any more, so leaving doesn't ask.
-    autosaver.rebase(value)
+    autosaver.rebase(snapshot)
     await discardDraft()
     window.location.assign(`/pastes/${target}/edit`)
   }
@@ -822,7 +847,7 @@ export function PasteEditor({
         encrypted,
       })
       toast.success(t("pasteCreated"))
-      autosaver.rebase(value)
+      autosaver.rebase(snapshot)
       await discardDraft()
       // The paste's page finds the key in this browser's key ring. Where storage is blocked the
       // key rides in the fragment instead, which is never sent to the server.
@@ -1011,7 +1036,8 @@ export function PasteEditor({
   // The mobile settings chip names the state: "Unlisted · 1 week".
   const settingsSummary = t("settingsSummary", {
     visibility: t("visibilityValue", { value: visibility }),
-    expiry: expiry === "keep" ? (expiryLabel ?? t("keep")) : t("expiryLong", { value: expiry }),
+    expiry:
+      draftExpiry === "keep" ? (expiryLabel ?? t("keep")) : t("expiryLong", { value: expiry }),
   })
 
   return (
