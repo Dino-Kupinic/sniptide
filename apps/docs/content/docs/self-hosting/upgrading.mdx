@@ -31,7 +31,10 @@ back. See [Backups and restore](/self-hosting/backups).
 Sniptide applies its own database migrations when it starts, before it serves requests. There is no
 separate migration command. Migrations are written to be additive (new tables and columns) where
 possible, so the old container keeps serving until the new one is healthy. All pending migrations
-run in one transaction under a lock, so two containers starting together take turns.
+run in one transaction under a lock, so two containers starting together take turns. Once a
+container starts migrating, it waits up to five seconds for each database lock it needs. A lock
+timeout rolls back the attempt and logs `migration_lock_retry` before one retry. If contention
+persists, clear the blocking transaction or retry the upgrade in a quieter window.
 
 Skipping releases is expected to work, since every migration the database is missing is applied in
 order. What CI exercises on every pull request is the step from the latest release to the next one
