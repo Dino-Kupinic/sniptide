@@ -97,12 +97,11 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
       </Shell>
     )
   }
-  const single = paste.files.length === 1
   const viewerProps = {
     slug,
     files: paste.files,
     rawAllowed: paste.allowRaw,
-    ...sharedViewerProps(single, true),
+    ...sharedViewerProps(true),
   }
 
   return (
