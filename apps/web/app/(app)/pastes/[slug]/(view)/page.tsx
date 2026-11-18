@@ -318,7 +318,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         {/* Title, description and code card sit where the editor puts them, so Edit doesn't jump. */}
         <div className="flex min-w-0 flex-col gap-1.5 px-4 lg:px-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-[32px] lg:leading-[38px]">
+            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
               {paste.title}
             </h1>
             <ExpiredBadge expiresAt={paste.expiresAt} />

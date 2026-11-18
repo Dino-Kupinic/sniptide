@@ -222,7 +222,7 @@ export function EncryptedSharedPaste({
           slug={slug}
           files={state.files}
           rawAllowed={false}
-          {...sharedViewerProps(state.files.length === 1, false)}
+          {...sharedViewerProps(false)}
         />
       }
       after={after}

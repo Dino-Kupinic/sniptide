@@ -1210,7 +1210,6 @@ export function PasteEditor({
                 <CodeBlock
                   content={active?.content || " "}
                   highlighted={previewLines}
-                  wrap
                   lineNumbers={lineNumbers}
                   className="flex-1 bg-muted dark:bg-sidebar"
                 />
