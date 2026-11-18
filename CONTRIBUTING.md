@@ -120,12 +120,16 @@ upgrade and restore databases safely:
 - **Only statements Postgres can roll back.** A failed upgrade must leave the database as it was.
   `CREATE INDEX CONCURRENTLY`, `ALTER TYPE … ADD VALUE`, `VACUUM` and the like can't run in a
   transaction. `apps/web/test/migrations.test.ts` fails if a migration file uses one.
-- **Additive where possible.** The previous version keeps serving while the new one starts. To
-  remove something, stop using it in one release and drop it in a later one.
+- **Expand, then contract.** Start with compatible additions such as nullable columns, tables, and
+  indexes. Deploy code that can work with both schemas. Stop using old schema before a later release
+  removes or renames it, changes its type, or makes a nullable column required. The migration test
+  rejects common destructive statements and rewrites. Put `-- destructive: approved` at the top
+  of the migration after review confirms the previous image can still run, or after operators plan
+  a maintenance window and a verified pre-deploy backup.
 - **Never edit a migration that has been released.** Databases record migrations by name; add a
   new one instead.
-- **Say so when it locks.** Adding an index or backfilling a large table blocks writes while it
-  runs. Mention it in the PR so the release notes can warn operators.
+- **Keep large backfills out of startup.** Run them in small batches and commit between batches so
+  locks release. Call out operations that block writes in the PR and release notes.
 
 Backups, restore and upgrades are covered by `scripts/test-upgrade.sh`, which CI runs against the
 latest release on every pull request. It seeds a stack on that release, backs it up, upgrades it to

@@ -1,6 +1,8 @@
+import { setTimeout as delay } from "node:timers/promises"
 import { sql } from "drizzle-orm"
 import { readMigrationFiles } from "drizzle-orm/migrator"
 import { migrate } from "drizzle-orm/postgres-js/migrator"
+import { PostgresError } from "postgres"
 import type { Database } from "./index"
 
 // Startup and the CLI share a transaction lock. Acquire it before Drizzle reads
@@ -35,17 +37,32 @@ async function recordedMigrations(tx: Pick<Database, "transaction">) {
 // holds for statements Postgres can roll back, which apps/web/test/migrations.test.ts enforces for
 // every migration file (no CREATE INDEX CONCURRENTLY and the like).
 export async function migrateDb(db: Database, migrationsFolder: string): Promise<MigrationReport> {
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`SET LOCAL statement_timeout = '5min'`)
-    await tx.execute(sql`SET LOCAL lock_timeout = '60s'`)
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK})`)
-    const known = readMigrationFiles({ migrationsFolder }).flatMap((m) => (m.name ? [m.name] : []))
-    const before = await recordedMigrations(tx)
-    await migrate(tx, { migrationsFolder })
-    const local = new Set(known)
-    return {
-      applied: known.filter((name) => !before.has(name)),
-      ahead: [...before].filter((name) => !local.has(name)),
-    }
-  })
+  const attempt = () =>
+    db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = '5min'`)
+      await tx.execute(sql`SET LOCAL lock_timeout = '60s'`)
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK})`)
+      await tx.execute(sql`SET LOCAL lock_timeout = '5s'`)
+      const known = readMigrationFiles({ migrationsFolder }).flatMap((m) =>
+        m.name ? [m.name] : [],
+      )
+      const before = await recordedMigrations(tx)
+      await migrate(tx, { migrationsFolder })
+      const local = new Set(known)
+      return {
+        applied: known.filter((name) => !before.has(name)),
+        ahead: [...before].filter((name) => !local.has(name)),
+      }
+    })
+
+  try {
+    return await attempt()
+  } catch (error) {
+    const cause =
+      error instanceof Error && error.cause instanceof PostgresError ? error.cause : error
+    if (!(cause instanceof PostgresError) || cause.code !== "55P03") throw error
+    console.warn(JSON.stringify({ event: "migration_lock_retry", retryDelayMs: 1000 }))
+    await delay(1000)
+    return attempt()
+  }
 }
