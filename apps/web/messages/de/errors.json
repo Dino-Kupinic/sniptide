@@ -48,6 +48,8 @@
     "pickFile": "Wähle mindestens eine Datei.",
     "checkImport": "Prüfe den Import und versuche es erneut.",
     "gistImport": "Dieser Gist konnte nicht importiert werden.",
+    "integrationUnavailable": "Diese Integration ist auf diesem Server nicht eingerichtet.",
+    "importSource": "Diese Importquelle ist nicht verfügbar.",
     "pasteBudget": "Du hast dein Paste-Limit erreicht. Lösche einige Pastes endgültig, um einen neuen zu erstellen.",
     "storageBudget": "Du hast dein Speicherlimit erreicht. Lösche einige Pastes endgültig oder verkleinere sie.",
     "rateLimit": "Du führst diese Aktion zu oft aus. Versuche es in {minutes} {minutes, plural, one {Minute} other {Minuten}} erneut.",
@@ -92,7 +94,16 @@
     "unlinkFailed": "Das Konto konnte nicht getrennt werden. Versuche es erneut.",
     "demoLocked": "Das ist in der Demo nicht verfügbar.",
     "signInFresh": "Melde dich zur Sicherheit ab und wieder an und versuche es dann erneut.",
-    "encryptedPasteSize": "Dieser Paste ist zu groß zum Verschlüsseln. Ein verschlüsselter Paste fasst etwa zwei Drittel des Limits von {limit}."
+    "encryptedPasteSize": "Dieser Paste ist zu groß zum Verschlüsseln. Ein verschlüsselter Paste fasst etwa zwei Drittel des Limits von {limit}.",
+    "slackUnavailable": "Slack hat nicht geantwortet. Versuche es in einer Minute erneut.",
+    "slackNotInChannel": "Sniptide kann in diesem Kanal nicht posten. Lade die Sniptide-App in den Kanal ein und versuche es erneut.",
+    "integrationDisconnected": "Diese Verbindung funktioniert nicht mehr. Verbinde sie in den Einstellungen erneut.",
+    "exportUnavailable": "Dieser Paste kann nirgendwohin gesendet werden.",
+    "exportDestination": "Wähle aus, wohin es gehen soll.",
+    "linearUnavailable": "Linear hat nicht geantwortet. Versuche es in einer Minute erneut.",
+    "linearNoIssue": "Linear hat dieses Issue nicht gefunden. Wähle ein anderes und versuche es erneut.",
+    "notionUnavailable": "Notion hat nicht geantwortet. Versuche es in einer Minute erneut.",
+    "notionNotShared": "Sniptide kann diese Seite nicht sehen. Teile sie in Notion mit Sniptide und versuche es erneut."
   },
   "ServerError": {
     "title": "Etwas ist schiefgelaufen",

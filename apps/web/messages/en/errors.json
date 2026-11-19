@@ -48,6 +48,8 @@
     "pickFile": "Pick at least one file.",
     "checkImport": "Check the import and try again.",
     "gistImport": "That gist couldn't be imported.",
+    "integrationUnavailable": "That integration isn't set up on this server.",
+    "importSource": "That import source isn't available.",
     "pasteBudget": "You've reached your paste limit. Permanently delete some pastes to create another.",
     "storageBudget": "You've reached your storage limit. Permanently delete some pastes or reduce their size.",
     "rateLimit": "You're doing that too often. Try again in {minutes} {minutes, plural, one {minute} other {minutes}}.",
@@ -92,7 +94,16 @@
     "unlinkFailed": "Couldn't disconnect that account. Try again.",
     "demoLocked": "This isn't available in the demo.",
     "signInFresh": "For your safety, sign out and back in, then try again.",
-    "encryptedPasteSize": "This paste is too large to encrypt. An encrypted paste holds about two thirds of the {limit} limit."
+    "encryptedPasteSize": "This paste is too large to encrypt. An encrypted paste holds about two thirds of the {limit} limit.",
+    "slackUnavailable": "Slack didn't answer. Try again in a minute.",
+    "slackNotInChannel": "Sniptide can't post in that channel. Invite the Sniptide app to it, then try again.",
+    "integrationDisconnected": "That connection stopped working. Connect it again in Settings.",
+    "exportUnavailable": "That paste can't be sent anywhere.",
+    "exportDestination": "Pick where to send it.",
+    "linearUnavailable": "Linear didn't answer. Try again in a minute.",
+    "linearNoIssue": "Linear couldn't find that issue. Pick another one and try again.",
+    "notionUnavailable": "Notion didn't answer. Try again in a minute.",
+    "notionNotShared": "Sniptide can't see that page. Share it with Sniptide in Notion, then try again."
   },
   "ServerError": {
     "title": "Something went wrong",

@@ -48,6 +48,8 @@
     "pickFile": "请至少选择一个文件。",
     "checkImport": "请检查导入内容，然后重试。",
     "gistImport": "无法导入该 Gist。",
+    "integrationUnavailable": "此服务器尚未配置该集成。",
+    "importSource": "该导入来源不可用。",
     "pasteBudget": "你已达到代码片段数量上限，请永久删除一些代码片段后再创建新的。",
     "storageBudget": "你已达到存储空间上限，请永久删除一些代码片段或减小其大小。",
     "rateLimit": "操作过于频繁，请在 {minutes} 分钟后重试。",
@@ -92,7 +94,16 @@
     "unlinkFailed": "无法取消关联该账户，请重试。",
     "demoLocked": "演示中不提供此功能。",
     "signInFresh": "为了安全，请先退出并重新登录，然后重试。",
-    "encryptedPasteSize": "此粘贴过大，无法加密。加密的粘贴约可容纳 {limit} 上限的三分之二。"
+    "encryptedPasteSize": "此粘贴过大，无法加密。加密的粘贴约可容纳 {limit} 上限的三分之二。",
+    "slackUnavailable": "Slack 没有响应。请在一分钟后重试。",
+    "slackNotInChannel": "Sniptide 无法在该频道发帖。请先邀请 Sniptide 应用加入该频道，然后重试。",
+    "integrationDisconnected": "该连接已失效。请在设置中重新连接。",
+    "exportUnavailable": "该粘贴无法发送到任何地方。",
+    "exportDestination": "请选择要发送到哪里。",
+    "linearUnavailable": "Linear 没有响应。请在一分钟后重试。",
+    "linearNoIssue": "Linear 找不到该 Issue。请选择另一个后重试。",
+    "notionUnavailable": "Notion 没有响应。请在一分钟后重试。",
+    "notionNotShared": "Sniptide 无法查看该页面。请在 Notion 中将其共享给 Sniptide，然后重试。"
   },
   "ServerError": {
     "title": "出了点问题",

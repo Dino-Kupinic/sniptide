@@ -134,6 +134,18 @@
     "disconnect": "取消关联",
     "couldnTConnect": "无法连接该服务，请重试。",
     "accountDisconnected": "已取消关联 {provider}",
+    "integrations": "集成",
+    "integrationsDescription": "Sniptide 用来导入内容或发送粘贴的其他服务账户。关联后不会改变你的登录方式。",
+    "integrationConnected": "已于 {date} 以 {account} 关联",
+    "integrationNotSetUp": "此服务器没有 {provider} 的 OAuth 应用。",
+    "integrationDenied": "你在服务方取消了授权，因此没有关联任何账户。",
+    "integrationFailed": "无法关联，请重试。",
+    "integrationAbout": {
+      "github": "在导入面板中列出你的 gist，包括私密 gist。GitHub 的 gist 权限也允许写入，而 Sniptide 只读取。",
+      "slack": "从共享对话框将粘贴发送到频道。Sniptide 会发布链接；当粘贴向所有持有链接的人开放时，还会发布标题和语言。",
+      "linear": "从共享对话框将粘贴附加到 Linear Issue。当粘贴向所有持有链接的人开放时，附件会显示标题和语言。",
+      "notion": "从共享对话框将粘贴保存为 Notion 页面，放在你在 Notion 中共享给 Sniptide 的页面里。当粘贴向所有持有链接的人开放时，页面包含文件，否则只包含链接。"
+    },
     "sessions": "会话",
     "sessionsDescription": "已登录你账户的设备。如有不认识的设备，请将其退出登录。",
     "sessionsDemo": "演示中不显示会话。",

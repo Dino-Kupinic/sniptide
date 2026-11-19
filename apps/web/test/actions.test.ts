@@ -5,8 +5,8 @@ import { getDb } from "@/lib/db"
 import { byteLength } from "@/lib/format"
 import {
   deleteForever,
-  importGist,
-  previewGist,
+  importPaste,
+  previewImport,
   restorePaste,
   type SavePasteInput,
   savePaste,
@@ -76,7 +76,7 @@ const input = (title: string): SavePasteInput => ({
   burnAfterRead: false,
 })
 
-const choose = (...files: string[]) => ({ id: GIST, files })
+const choose = (...files: string[]) => ({ provider: "github", id: GIST, files })
 
 async function pasteCount() {
   return (await getDb().select().from(paste)).length
@@ -95,14 +95,14 @@ describeDb("paste actions", () => {
     signInAs("owner")
   })
 
-  describe("previewGist", () => {
+  describe("previewImport", () => {
     test("describes the gist and its files without saving anything", async () => {
       serveGist(gist({ "a.ts": file("a.ts", "export {}"), "b.md": file("b.md", "# hi") }))
 
-      const result = await previewGist(`https://gist.github.com/octocat/${GIST}`)
+      const result = await previewImport("github", `https://gist.github.com/octocat/${GIST}`)
       expect(result).toEqual({
         ok: true,
-        gist: {
+        item: {
           id: GIST,
           owner: {
             login: "octocat",
@@ -124,19 +124,19 @@ describeDb("paste actions", () => {
 
     test("takes a bare gist id and falls back to the first file name as the title", async () => {
       serveGist(gist({ "a.ts": file("a.ts", "export {}") }, null))
-      const result = await previewGist(GIST)
-      expect(result.ok && result.gist.title).toBe("a.ts")
+      const result = await previewImport("github", GIST)
+      expect(result.ok && result.item.title).toBe("a.ts")
     })
 
     test("rejects text that isn't a gist link", async () => {
-      expect((await previewGist("not a gist")).ok).toBe(false)
+      expect((await previewImport("github", "not a gist")).ok).toBe(false)
       expect(fetched).toEqual([])
     })
 
     test("accepts a 710 KB file under the default 1 MB limit", async () => {
       serveGist(gist({ "big.txt": file("big.txt", "x".repeat(710 * KB)) }))
-      const result = await previewGist(GIST)
-      expect(result.ok && result.gist.files[0]?.skipped).toBeNull()
+      const result = await previewImport("github", GIST)
+      expect(result.ok && result.item.files[0]?.skipped).toBeNull()
     })
 
     test("leaves out a file over the limit and says why", async () => {
@@ -146,8 +146,8 @@ describeDb("paste actions", () => {
           "huge.json": truncated("huge.json", 2048 * KB),
         }),
       )
-      const result = await previewGist(GIST)
-      expect(result.ok && result.gist.files).toEqual([
+      const result = await previewImport("github", GIST)
+      expect(result.ok && result.item.files).toEqual([
         { name: "small.txt", size: 2, skipped: null, sensitive: false },
         { name: "huge.json", size: 2048 * KB, skipped: "Over the 1 MB limit.", sensitive: true },
       ])
@@ -158,27 +158,28 @@ describeDb("paste actions", () => {
     test("follows MAX_PASTE_SIZE", async () => {
       process.env.MAX_PASTE_SIZE = "512KB"
       serveGist(gist({ "big.txt": file("big.txt", "x".repeat(710 * KB)) }))
-      const result = await previewGist(GIST)
-      expect(result.ok && result.gist.limitLabel).toBe("512 KB")
-      expect(result.ok && result.gist.files[0]?.skipped).toBe("Over the 512 KB limit.")
+      const result = await previewImport("github", GIST)
+      expect(result.ok && result.item.limitLabel).toBe("512 KB")
+      expect(result.ok && result.item.files[0]?.skipped).toBe("Over the 512 KB limit.")
     })
 
     test("leaves out file names longer than the editor allows", async () => {
       const name = `${"n".repeat(200)}.txt`
       serveGist(gist({ [name]: file(name, "hi") }))
-      const result = await previewGist(GIST)
-      expect(result.ok && result.gist.files[0]?.skipped).toBe("Name is over 120 characters.")
+      const result = await previewImport("github", GIST)
+      expect(result.ok && result.item.files[0]?.skipped).toBe("Name is over 120 characters.")
     })
 
     test("is limited to 20 reads an hour", async () => {
       serveGist(gist({ "a.txt": file("a.txt", "hi") }))
-      for (let index = 0; index < 20; index++) expect((await previewGist(GIST)).ok).toBe(true)
-      expect((await previewGist(GIST)).ok).toBe(false)
+      for (let index = 0; index < 20; index++)
+        expect((await previewImport("github", GIST)).ok).toBe(true)
+      expect((await previewImport("github", GIST)).ok).toBe(false)
     })
 
     test("reports a missing gist and GitHub being unreachable instead of throwing", async () => {
       serveGist({}, {}, 404)
-      expect(await previewGist(GIST)).toEqual({
+      expect(await previewImport("github", GIST)).toEqual({
         ok: false,
         error: "That gist doesn't exist or isn't public.",
       })
@@ -186,14 +187,14 @@ describeDb("paste actions", () => {
       globalThis.fetch = mock(async () => {
         throw new DOMException("timed out", "TimeoutError")
       }) as unknown as typeof fetch
-      expect(await previewGist(GIST)).toEqual({
+      expect(await previewImport("github", GIST)).toEqual({
         ok: false,
         error: "GitHub didn't answer. Try again in a minute.",
       })
     })
   })
 
-  describe("importGist", () => {
+  describe("importPaste", () => {
     test("uses the account defaults and shows them before importing", async () => {
       await changePreferences("owner", (current) => ({
         ...current,
@@ -201,9 +202,9 @@ describeDb("paste actions", () => {
         defaultExpiry: "1d",
       }))
       serveGist(gist({ "hello.py": file("hello.py", "print('hello')") }))
-      const preview = await previewGist(GIST)
-      expect(preview.ok && preview.gist.defaults).toEqual({ visibility: "public", expiry: "1d" })
-      const result = await importGist(choose("hello.py"))
+      const preview = await previewImport("github", GIST)
+      expect(preview.ok && preview.item.defaults).toEqual({ visibility: "public", expiry: "1d" })
+      const result = await importPaste(choose("hello.py"))
       expect(result.ok).toBe(true)
       if (!result.ok) return
       const row = await pasteRow(result.slug)
@@ -214,7 +215,7 @@ describeDb("paste actions", () => {
 
     test("keeps the preview snapshot when account defaults change", async () => {
       serveGist(gist({ "hello.py": file("hello.py", "print('hello')") }))
-      const result = await importGist({
+      const result = await importPaste({
         ...choose("hello.py"),
         visibility: "private",
         expiry: "never",
@@ -229,14 +230,14 @@ describeDb("paste actions", () => {
     test("makes env files and files with secrets private even with public defaults", async () => {
       await changePreferences("owner", (current) => ({ ...current, defaultVisibility: "public" }))
       serveGist(gist({ ".env.production": file(".env.production", "DEBUG=true") }))
-      const preview = await previewGist(GIST)
-      expect(preview.ok && preview.gist.files[0]?.sensitive).toBe(true)
-      const result = await importGist({ ...choose(".env.production"), visibility: "public" })
+      const preview = await previewImport("github", GIST)
+      expect(preview.ok && preview.item.files[0]?.sensitive).toBe(true)
+      const result = await importPaste({ ...choose(".env.production"), visibility: "public" })
       expect(result.ok).toBe(true)
       if (!result.ok) return
       expect((await pasteRow(result.slug))?.visibility).toBe("private")
       serveGist(gist({ "key.txt": file("key.txt", "-----BEGIN PRIVATE KEY-----\nexample") }))
-      const secret = await importGist(choose("key.txt"))
+      const secret = await importPaste(choose("key.txt"))
       expect(secret.ok).toBe(true)
       if (secret.ok) expect((await pasteRow(secret.slug))?.visibility).toBe("private")
     })
@@ -246,9 +247,9 @@ describeDb("paste actions", () => {
       serveGist(gist({ "log.txt": truncated("log.txt", 20) }), {
         [`${RAW}/log.txt`]: "ordinary log",
       })
-      const preview = await previewGist(GIST)
-      expect(preview.ok && preview.gist.files[0]?.sensitive).toBe(true)
-      const result = await importGist(choose("log.txt"))
+      const preview = await previewImport("github", GIST)
+      expect(preview.ok && preview.item.files[0]?.sensitive).toBe(true)
+      const result = await importPaste(choose("log.txt"))
       expect(result.ok).toBe(true)
       if (result.ok) expect((await pasteRow(result.slug))?.visibility).toBe("private")
     })
@@ -262,7 +263,7 @@ describeDb("paste actions", () => {
         }),
       )
 
-      const result = await importGist({ id: GIST, files: ["a.ts", "b.md"] })
+      const result = await importPaste({ provider: "github", id: GIST, files: ["a.ts", "b.md"] })
       expect(result.ok).toBe(true)
       const [row] = await getDb().select().from(paste)
       expect(row?.title).toBe("A gist")
@@ -277,7 +278,7 @@ describeDb("paste actions", () => {
 
     test("a 710 KB gist imports under the default limit", async () => {
       serveGist(gist({ "big.txt": file("big.txt", "x".repeat(710 * KB)) }))
-      expect((await importGist(choose("big.txt"))).ok).toBe(true)
+      expect((await importPaste(choose("big.txt"))).ok).toBe(true)
       expect(await pasteCount()).toBe(1)
     })
 
@@ -285,18 +286,18 @@ describeDb("paste actions", () => {
       const big = "x".repeat(600 * KB)
       serveGist(gist({ "a.txt": file("a.txt", big), "b.txt": file("b.txt", big) }))
 
-      expect(await importGist(choose("a.txt", "b.txt"))).toEqual({
+      expect(await importPaste(choose("a.txt", "b.txt"))).toEqual({
         ok: false,
         error: "Pastes are limited to 1 MB.",
       })
       expect(await pasteCount()).toBe(0)
       // One of them on its own is fine.
-      expect((await importGist(choose("a.txt"))).ok).toBe(true)
+      expect((await importPaste(choose("a.txt"))).ok).toBe(true)
     })
 
     test("refuses a file over the limit, even if the caller asks for it", async () => {
       serveGist(gist({ "huge.json": truncated("huge.json", 2048 * KB) }))
-      expect(await importGist(choose("huge.json"))).toEqual({
+      expect(await importPaste(choose("huge.json"))).toEqual({
         ok: false,
         error: "huge.json: Over the 1 MB limit.",
       })
@@ -308,8 +309,8 @@ describeDb("paste actions", () => {
       // 600K characters, 1.2 MB of UTF-8: under the limit as text, over it as bytes.
       const big = "é".repeat(600 * KB)
       serveGist(gist({ "a.txt": file("a.txt", big) }))
-      const result = await previewGist(GIST)
-      expect(result.ok && result.gist.files[0]?.skipped).toBe("Over the 1 MB limit.")
+      const result = await previewImport("github", GIST)
+      expect(result.ok && result.item.files[0]?.skipped).toBe("Over the 1 MB limit.")
 
       const editor = input("utf8")
       editor.files = [{ name: "a.txt", content: big }]
@@ -324,7 +325,7 @@ describeDb("paste actions", () => {
         [`${RAW}/log.txt`]: full,
       })
 
-      expect((await importGist(choose("log.txt"))).ok).toBe(true)
+      expect((await importPaste(choose("log.txt"))).ok).toBe(true)
       const [saved] = await getDb().select().from(pasteFile)
       expect(saved?.content).toBe(full)
     })
@@ -336,7 +337,7 @@ describeDb("paste actions", () => {
         [elsewhere]: "gotcha",
       })
 
-      const result = await importGist(choose("log.txt"))
+      const result = await importPaste(choose("log.txt"))
       expect(result).toEqual({ ok: false, error: "log.txt: Couldn't be read." })
       expect(fetched).not.toContain(elsewhere)
     })
@@ -344,7 +345,7 @@ describeDb("paste actions", () => {
     test("reports a raw file that can't be fetched", async () => {
       process.env.MAX_PASTE_SIZE = "2MB"
       serveGist(gist({ "log.txt": truncated("log.txt", 1500 * KB) }))
-      expect(await importGist(choose("log.txt"))).toEqual({
+      expect(await importPaste(choose("log.txt"))).toEqual({
         ok: false,
         error: "log.txt couldn't be read from GitHub.",
       })
@@ -353,14 +354,14 @@ describeDb("paste actions", () => {
 
     test("asks to re-read a gist whose files changed", async () => {
       serveGist(gist({ "a.txt": file("a.txt", "hi") }))
-      const result = await importGist(choose("gone.txt"))
+      const result = await importPaste(choose("gone.txt"))
       expect(result.ok).toBe(false)
       expect(await pasteCount()).toBe(0)
     })
 
     test("needs at least one file", async () => {
       serveGist(gist({ "a.txt": file("a.txt", "hi") }))
-      expect((await importGist({ id: GIST, files: [] })).ok).toBe(false)
+      expect((await importPaste({ provider: "github", id: GIST, files: [] })).ok).toBe(false)
       expect(await pasteCount()).toBe(0)
     })
 
@@ -368,14 +369,14 @@ describeDb("paste actions", () => {
       const name = `${"n".repeat(200)}.txt`
       serveGist(gist({ [name]: file(name, "hi") }))
 
-      expect((await importGist(choose(name))).ok).toBe(false)
+      expect((await importPaste(choose(name))).ok).toBe(false)
       expect(await pasteCount()).toBe(0)
     })
 
     test("shortens a long description to the title limit", async () => {
       serveGist(gist({ "a.ts": file("a.ts", "export {}") }, "d".repeat(500)))
 
-      expect((await importGist(choose("a.ts"))).ok).toBe(true)
+      expect((await importPaste(choose("a.ts"))).ok).toBe(true)
       const [row] = await getDb().select().from(paste)
       expect(row?.title).toHaveLength(120)
     })
@@ -383,9 +384,9 @@ describeDb("paste actions", () => {
     test("creates at most 30 pastes an hour, like the editor", async () => {
       serveGist(gist({ "a.txt": file("a.txt", "hi") }))
       for (let index = 0; index < 30; index++)
-        expect((await importGist(choose("a.txt"))).ok).toBe(true)
+        expect((await importPaste(choose("a.txt"))).ok).toBe(true)
 
-      expect((await importGist(choose("a.txt"))).ok).toBe(false)
+      expect((await importPaste(choose("a.txt"))).ok).toBe(false)
       expect(await pasteCount()).toBe(30)
     })
 
@@ -393,7 +394,7 @@ describeDb("paste actions", () => {
       globalThis.fetch = mock(async () => {
         throw new DOMException("timed out", "TimeoutError")
       }) as unknown as typeof fetch
-      expect(await importGist(choose("a.txt"))).toEqual({
+      expect(await importPaste(choose("a.txt"))).toEqual({
         ok: false,
         error: "GitHub didn't answer. Try again in a minute.",
       })
@@ -458,8 +459,8 @@ describeDb("paste actions", () => {
     test("needs a signed-in account", async () => {
       signInAs(null)
       await expect(savePaste(input("anonymous"))).rejects.toThrow()
-      await expect(previewGist(GIST)).rejects.toThrow()
-      await expect(importGist(choose("a.txt"))).rejects.toThrow()
+      await expect(previewImport("github", GIST)).rejects.toThrow()
+      await expect(importPaste(choose("a.txt"))).rejects.toThrow()
     })
   })
 })

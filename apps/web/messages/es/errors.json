@@ -48,6 +48,8 @@
     "pickFile": "Elige al menos un archivo.",
     "checkImport": "Revisa la importación e inténtalo de nuevo.",
     "gistImport": "No se ha podido importar ese gist.",
+    "integrationUnavailable": "Esa integración no está configurada en este servidor.",
+    "importSource": "Esa fuente de importación no está disponible.",
     "pasteBudget": "Has alcanzado el límite de pastes. Elimina algunos de forma definitiva para crear otro.",
     "storageBudget": "Has alcanzado el límite de almacenamiento. Elimina algunos pastes de forma definitiva o reduce su tamaño.",
     "rateLimit": "Estás realizando esta acción con demasiada frecuencia. Inténtalo de nuevo en {minutes} {minutes, plural, one {minuto} other {minutos}}.",
@@ -92,7 +94,16 @@
     "unlinkFailed": "No se pudo desconectar esa cuenta. Vuelve a intentarlo.",
     "demoLocked": "Esto no está disponible en la demo.",
     "signInFresh": "Por seguridad, cierra la sesión, vuelve a entrar e inténtalo de nuevo.",
-    "encryptedPasteSize": "Este paste es demasiado grande para cifrarlo. Un paste cifrado admite unos dos tercios del límite de {limit}."
+    "encryptedPasteSize": "Este paste es demasiado grande para cifrarlo. Un paste cifrado admite unos dos tercios del límite de {limit}.",
+    "slackUnavailable": "Slack no respondió. Inténtalo de nuevo en un minuto.",
+    "slackNotInChannel": "Sniptide no puede publicar en ese canal. Invita la app de Sniptide al canal e inténtalo de nuevo.",
+    "integrationDisconnected": "Esa conexión dejó de funcionar. Vuelve a conectarla en Ajustes.",
+    "exportUnavailable": "Ese paste no se puede enviar a ningún sitio.",
+    "exportDestination": "Elige adónde enviarlo.",
+    "linearUnavailable": "Linear no respondió. Inténtalo de nuevo en un minuto.",
+    "linearNoIssue": "Linear no encontró esa incidencia. Elige otra e inténtalo de nuevo.",
+    "notionUnavailable": "Notion no respondió. Inténtalo de nuevo en un minuto.",
+    "notionNotShared": "Sniptide no puede ver esa página. Compártela con Sniptide en Notion e inténtalo de nuevo."
   },
   "ServerError": {
     "title": "Algo salió mal",

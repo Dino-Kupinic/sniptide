@@ -10,6 +10,7 @@ import {
   ChevronRightIcon,
   KeyRoundIcon,
   type LucideIcon,
+  PlugIcon,
   ShieldIcon,
   SlidersHorizontalIcon,
   UserIcon,
@@ -25,6 +26,7 @@ import type { SocialProvider } from "@/lib/auth"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import { formatBytes } from "@/lib/format"
+import type { IntegrationSummary } from "@/lib/integrations/store"
 import type { Preferences } from "@/lib/preferences"
 import {
   ConnectedAccountsSection,
@@ -34,12 +36,21 @@ import {
   SessionsSection,
 } from "./account-sections"
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
+import { IntegrationsSection } from "./integrations-section"
 import { NotificationSection } from "./notification-section"
 import { DefaultsSection, EditorSection } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
-const SETTINGS_TABS = ["general", "account", "defaults", "notifications", "api", "usage"] as const
+const SETTINGS_TABS = [
+  "general",
+  "account",
+  "defaults",
+  "notifications",
+  "integrations",
+  "api",
+  "usage",
+] as const
 export type SettingsTab = (typeof SETTINGS_TABS)[number]
 
 function parseTab(value: string | null): SettingsTab | null {
@@ -96,6 +107,7 @@ function SettingsFrame({
     { value: "account", label: t("account"), icon: ShieldIcon },
     { value: "defaults", label: t("pasteDefaults"), icon: SlidersHorizontalIcon },
     { value: "notifications", label: t("notifications"), icon: BellIcon },
+    { value: "integrations", label: t("integrations"), icon: PlugIcon },
     { value: "api", label: t("apiTokens"), icon: KeyRoundIcon },
     { value: "usage", label: t("usage"), icon: ChartColumnIcon },
   ]
@@ -253,6 +265,7 @@ export function SettingsView({
   pasteCount,
   storage,
   api,
+  integrations,
   security,
   usage,
 }: {
@@ -268,6 +281,7 @@ export function SettingsView({
   pasteCount: number
   storage: { used: number; limit: number | null } | null
   api: { tokens: TokenSummary[]; envGroups: EnvGroupSummary[]; origin: string }
+  integrations: { list: IntegrationSummary[]; error: string | null }
 }) {
   const t = useTranslations("Settings")
   return (
@@ -315,6 +329,9 @@ export function SettingsView({
               emailAvailable={emailAvailable}
               emailVerified={profile.emailVerified}
             />
+          ) : null}
+          {tab === "integrations" ? (
+            <IntegrationsSection integrations={integrations.list} error={integrations.error} />
           ) : null}
           {tab === "api" ? (
             <>

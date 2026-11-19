@@ -1,6 +1,6 @@
 ---
 title: Account settings
-description: Change your Sniptide profile, sign-in methods, paste defaults, notifications, language, API tokens and see your usage.
+description: Change your Sniptide profile, sign-in methods, paste defaults, notifications, language, integrations, API tokens and see your usage.
 ---
 
 Open **Settings** from the account menu, or press <Kbd>⌘,</Kbd> (<Kbd>Ctrl+,</Kbd>). On a phone, **Settings** opens
@@ -12,6 +12,7 @@ a list of the sections below.
 | **Account** | Email, password, connected GitHub and Google accounts, signed-in devices, account deletion |
 | **Paste defaults** | Visibility, expiry and burn after read for new pastes |
 | **Notifications** | In-app and email notifications per event |
+| **Integrations** | Accounts at other services that Sniptide imports from |
 | **API tokens** | Tokens for the CLI, SDKs and agents, and agent connections |
 | **Usage** | Storage, paste count and API requests |
 
@@ -74,6 +75,34 @@ In-app notifications are on and email is off by default. To turn on email, the i
 email and you must verify your address: select **Send verification email** in this section. You
 can request three verification emails an hour. Each notification email has a link that stops
 emails for that event only.
+
+## Connect integrations
+
+**Integrations** lists the services Sniptide imports from or sends pastes to:
+
+| Service | With it connected |
+| --- | --- |
+| GitHub | [Import gist](/getting-started/import-gist#pick-from-your-own-gists) lists your own gists, secret ones included. |
+| Slack | **Share** sends a paste to a channel in the workspace you connected, and links to pastes shared there get a preview. See [Send to a Slack channel](/core-concepts/sharing#send-to-a-slack-channel). |
+| Linear | **Share** attaches a paste to one of your open issues. See [Attach to a Linear issue](/core-concepts/sharing#attach-to-a-linear-issue). |
+| Notion | **Share** saves a paste as a page inside a page you shared with Sniptide. See [Save to Notion](/core-concepts/sharing#save-to-notion). |
+
+Select **Connect** to approve access at the service. The row then shows the account you connected,
+or the workspace for Slack, Linear and Notion, and the date. Sniptide stores the access token encrypted, and uses it only on the server.
+
+Select **Disconnect** to remove the connection. Sniptide deletes the token and asks the service to
+revoke it. Pastes you already imported stay.
+
+An integration is separate from the sign-in methods in **Account**. Connecting GitHub here
+doesn't add GitHub sign-in, and disconnecting it doesn't remove it. A connection also ends by
+itself when the service stops accepting its token, for example after you revoke Sniptide's access
+on GitHub.
+
+On a self-hosted instance, a service shows as not set up until the administrator sets its OAuth
+app: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` for GitHub, `SLACK_CLIENT_ID` and
+`SLACK_CLIENT_SECRET` for Slack, `LINEAR_CLIENT_ID` and `LINEAR_CLIENT_SECRET` for Linear, and
+`NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET` for Notion. See
+[Configuration](/self-hosting/configuration).
 
 ## Create API tokens
 

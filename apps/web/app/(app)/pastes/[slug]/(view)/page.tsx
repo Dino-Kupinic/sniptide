@@ -35,6 +35,8 @@ import { listCollections } from "@/lib/collections/store"
 import { getConfig } from "@/lib/config"
 import { formatNumber, lineCount, timeAgo } from "@/lib/format"
 import { highlightFiles } from "@/lib/highlight/highlight"
+import { exportTarget } from "@/lib/integrations/exports"
+import { listIntegrations } from "@/lib/integrations/store"
 import { embedCode } from "@/lib/pastes/embed"
 import { slugFromRoute } from "@/lib/pastes/links"
 import { getShare, listPasteShares, markShareSeen } from "@/lib/pastes/shares"
@@ -78,6 +80,14 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
       paste.encryptionKeyId ? [] : highlightFiles(paste.files),
     ])
   if (share && !share.seen) await markShareSeen(slug)
+  // Services the owner can send this paste to, such as Slack, when the server has their app.
+  const shareProviders =
+    owned && session && !paste.encryptionKeyId
+      ? (await listIntegrations(session.user.id)).flatMap(({ id, name, available, connection }) => {
+          const target = available ? exportTarget(id) : null
+          return target ? [{ id, name, kind: target.kind, connected: connection !== null }] : []
+        })
+      : []
 
   const { encryptionKeyId } = paste
   const envelope = encryptionKeyId ? paste.files[0]?.content : undefined
@@ -119,6 +129,13 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         trigger={trigger}
         webhookTargets={WEBHOOK_TARGETS.filter((target) => Boolean(getConfig().webhooks[target]))}
         webhookAllowed={linkShareable}
+        shareProviders={shareProviders}
+        // Mirrors exportReveal in lib/integrations/exports.ts, which checks again on send.
+        shareReveal={
+          paste.visibility !== "private" && !paste.password && !paste.burnAfterRead
+            ? "details"
+            : "link"
+        }
         embedCode={
           linkShareable && first
             ? embedCode(url, paste.title, lineCount(first.content), files.length)

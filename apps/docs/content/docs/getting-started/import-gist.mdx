@@ -1,14 +1,16 @@
 ---
 title: Import a GitHub gist
-description: Copy the files of a public GitHub gist into a new Sniptide paste, with your default visibility and expiry.
+description: Copy the files of a GitHub gist into a new Sniptide paste, by its link or picked from your connected GitHub account.
 ---
 
-Import a public gist when your snippets already live on GitHub. Sniptide copies the files you
-choose into a new paste, so later changes to the gist don't reach it.
+Import a gist when your snippets already live on GitHub. Sniptide copies the files you choose
+into a new paste, so later changes to the gist don't reach it.
 
 ## Before you begin
 
-- The gist must be public. Sniptide can't read secret gists.
+- To import by link, the gist must be public.
+- To pick from your own gists, secret ones included, [connect GitHub](#pick-from-your-own-gists)
+  first.
 - The usual paste limits apply: at most 10 files, 120 characters per file name and 1 MB per paste
   by default.
 
@@ -39,6 +41,34 @@ Select **Import now**.
 </Step>
 </Steps>
 
+## Pick from your own gists
+
+Connect your GitHub account to choose a gist from a list instead of pasting its link.
+
+<Steps>
+<Step>
+
+Open **Settings**, then **Integrations**, and select **Connect** next to GitHub. GitHub asks you
+to approve access to your gists.
+
+</Step>
+<Step>
+
+Select **Import gist**. **Your gists** lists the account's gists, newest first, with each one's
+file count, whether it is public or secret, and when it last changed.
+
+</Step>
+<Step>
+
+Select a gist, choose its files and select **Import now**.
+
+</Step>
+</Steps>
+
+GitHub's gist permission also allows creating and editing gists, because GitHub has no read-only
+one. Sniptide only reads them. See [Connect integrations](/settings#connect-integrations) for how
+the connection is stored and removed.
+
 ## Check the result
 
 The new paste opens. Its title is the gist's description, or the first file's name when the gist
@@ -54,8 +84,9 @@ Edit the paste to change its title, visibility, expiry or collection like any ot
 | Limit | Value |
 | --- | --- |
 | Gist reads | 20 an hour per account |
+| Listing your gists | 240 an hour per account |
 | New pastes | An import counts toward the 30 new pastes an hour per account |
-| GitHub quota on a self-hosted instance | 60 requests an hour for the whole server, unless the administrator sets `GITHUB_TOKEN` |
+| GitHub quota on a self-hosted instance | 60 requests an hour for the whole server, unless the administrator sets `GITHUB_TOKEN`. Reads by an account with GitHub connected use that account's own quota |
 
 When a gist doesn't exist or isn't public, Sniptide says so and saves nothing. An administrator
 can raise the GitHub quota by setting `GITHUB_TOKEN` to a token with no scopes. See

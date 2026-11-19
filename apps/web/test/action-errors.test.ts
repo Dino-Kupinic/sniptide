@@ -4,7 +4,7 @@ import { createApiToken } from "@/lib/api/token-actions"
 import { createCollection } from "@/lib/collections/actions"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { localeCookie, locales } from "@/lib/i18n/config"
-import { findPerson, previewGist, savePaste } from "@/lib/pastes/actions"
+import { findPerson, previewImport, savePaste } from "@/lib/pastes/actions"
 import { shareToWebhook } from "@/lib/pastes/webhook-actions"
 import { updateAvatar, updateProfile } from "@/lib/settings-actions"
 import de from "@/messages/de/errors.json"
@@ -129,7 +129,7 @@ describe("localized action errors", () => {
       ok: false,
       error: "Gib eine E-Mail-Adresse oder einen Benutzernamen ein.",
     })
-    expect(await previewGist("invalid")).toEqual({
+    expect(await previewImport("github", "invalid")).toEqual({
       ok: false,
       error: "Füge einen Gist-Link wie gist.github.com/you/1a2b3c… ein.",
     })

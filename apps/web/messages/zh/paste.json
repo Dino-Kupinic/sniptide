@@ -233,6 +233,18 @@
     "decrypt": "解密",
     "checkKey": "检查密钥",
     "encryptedLinkHasKey": "已端到端加密。你在此复制的链接包含密钥，持有该链接的人都能阅读此粘贴。",
-    "encryptedLinkNoKey": "已端到端加密。此浏览器没有密钥，因此你在此复制的链接无法单独打开该粘贴。"
+    "encryptedLinkNoKey": "已端到端加密。此浏览器没有密钥，因此你在此复制的链接无法单独打开该粘贴。",
+    "sendToService": "{kind, select, page {保存到 {service}} issue {附加到 {service}} other {发送到 {service}}}",
+    "connectServiceToSend": "{kind, select, page {<link>在设置中连接 {service}</link>，即可将此粘贴保存为页面。} issue {<link>在设置中连接 {service}</link>，即可将此粘贴附加到 Issue。} other {<link>在设置中连接 {service}</link>，即可将此粘贴发送到频道。}}",
+    "destination": "{kind, select, page {页面} issue {Issue} other {频道}}",
+    "loadingDestinations": "{kind, select, page {正在加载页面…} issue {正在加载 Issue…} other {正在加载频道…}}",
+    "pickADestination": "{kind, select, page {选择页面} issue {选择 Issue} other {选择频道}}",
+    "searchDestinations": "{kind, select, page {搜索页面} issue {搜索 Issue} other {搜索频道}}",
+    "noDestinationsFound": "{kind, select, page {未找到页面。在 Notion 中将页面共享给 Sniptide 后，它会显示在这里。} issue {没有分配给你或由你创建的未完成 Issue。} other {未找到频道。}}",
+    "sendAction": "{kind, select, page {保存} issue {附加} other {发送}}",
+    "sendsDetails": "{kind, select, page {将标题、文件和链接保存为所选页面中的新页面。只会列出你在 Notion 中共享给 Sniptide 的页面。} issue {将标题、语言和链接附加到 Issue。会列出分配给你或由你创建的未完成 Issue。} other {发送标题、语言和链接。应用可以在公开频道以及邀请它加入的私有频道中发帖。}}",
+    "sendsLinkOnly": "{kind, select, page {仅保存链接，因为此粘贴的标题和内容并未向所有持有链接的人开放。} issue {仅以“Sniptide paste”附加链接，因为此粘贴的标题并未向所有持有链接的人开放。} other {仅发送链接，因为此粘贴的标题并未向所有持有链接的人开放。}}",
+    "sentToDestination": "{kind, select, page {已保存到“{name}”} issue {已附加到 {name}} other {已发送到 #{name}}}",
+    "couldnTLoadDestinations": "{kind, select, page {无法加载你的 {service} 页面。请在一分钟后重试。} issue {无法加载你的 {service} Issue。请在一分钟后重试。} other {无法加载你的 {service} 频道。请在一分钟后重试。}}"
   }
 }

@@ -19,11 +19,14 @@ import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowUpRightIcon, DownloadIcon } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
-import { formatBytes } from "@/lib/format"
-import { type GistPreview, importGist, previewGist } from "@/lib/pastes/actions"
+import { formatBytes, formatDate } from "@/lib/format"
+import { type ImportableResult, listImportable } from "@/lib/integrations/actions"
+import type { ImportSummary } from "@/lib/integrations/types"
+import { type ImportPreview, importPaste, previewImport } from "@/lib/pastes/actions"
 
 // Same shape the server accepts: a gist URL or its id, so reading can start as soon as one is
 // pasted.
@@ -34,7 +37,7 @@ const READ_DELAY = 600
 type Step = "link" | "reading" | "files"
 
 // What's selected by default: the files that can be imported, in order, until the paste is full.
-function defaultSelection(gist: GistPreview) {
+function defaultSelection(gist: ImportPreview) {
   const selected = new Set<string>()
   let total = 0
   for (const file of gist.files) {
@@ -71,7 +74,7 @@ export function ImportGistSheet({
   const [step, setStep] = React.useState<Step>("link")
   const [link, setLink] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
-  const [gist, setGist] = React.useState<GistPreview | null>(null)
+  const [gist, setGist] = React.useState<ImportPreview | null>(null)
   const [selected, setSelected] = React.useState<Set<string>>(new Set())
   const [busy, setBusy] = React.useState<"import" | "editor" | null>(null)
   const [importError, setImportError] = React.useState<string | null>(null)
@@ -99,15 +102,15 @@ export function ImportGistSheet({
     setError(null)
     setStep("reading")
 
-    const result = await previewGist(value).catch(() => null)
+    const result = await previewImport("github", value).catch(() => null)
     if (current !== attempt.current) return
     if (!result?.ok) {
       setError(result?.error ?? t("something_went_wrong_try_again"))
       setStep("link")
       return
     }
-    setGist(result.gist)
-    setSelected(defaultSelection(result.gist))
+    setGist(result.item)
+    setSelected(defaultSelection(result.item))
     setStep("files")
   }
 
@@ -131,7 +134,8 @@ export function ImportGistSheet({
     if (!gist || !canImport) return
     setBusy("import")
     setImportError(null)
-    const result = await importGist({
+    const result = await importPaste({
+      provider: "github",
       id: gist.id,
       files: chosen.map((file) => file.name),
       visibility: importVisibility,
@@ -246,6 +250,15 @@ export function ImportGistSheet({
               />
             </form>
           )}
+          {step === "link" ? (
+            <OwnGists
+              onPick={(id) => {
+                const value = `gist.github.com/${id}`
+                setLink(value)
+                read(value)
+              }}
+            />
+          ) : null}
         </div>
 
         {/* The actions wrap under Cancel when a narrow screen or a long translation can't fit them. */}
@@ -324,6 +337,95 @@ export function ImportGistButton({ compact = false }: { compact?: boolean }) {
   )
 }
 
+// The connected GitHub account's gists, so one can be picked instead of pasting its link. Without
+// a connection it points to where GitHub gets connected, and it shows nothing on a server that
+// can't connect GitHub.
+function OwnGists({ onPick }: { onPick: (id: string) => void }) {
+  const t = useTranslations("Workspace")
+  const locale = useLocale()
+  const [gists, setGists] = React.useState<ImportSummary[]>([])
+  const [state, setState] = React.useState<ImportableResult | null>(null)
+  const [loading, setLoading] = React.useState(false)
+
+  const load = React.useCallback(async (page: number) => {
+    setLoading(true)
+    const result = await listImportable("github", page).catch(() => null)
+    setLoading(false)
+    if (!result) return
+    setState(result)
+    if (result.ok && result.connected)
+      setGists((previous) => (page === 1 ? result.items : [...previous, ...result.items]))
+  }, [])
+
+  React.useEffect(() => {
+    void load(1)
+  }, [load])
+
+  if (!state) return null
+  if (!state.ok)
+    return <FormError variant="inline" message={state.error} className="text-xs leading-4" />
+  if (!state.connected) {
+    return state.available ? (
+      <p className="text-xs leading-4 text-muted-foreground">
+        {t.rich("connect_github_to_pick", {
+          link: (chunks) => (
+            <Link
+              href="/settings?tab=integrations"
+              className="text-link underline-offset-2 hover:underline"
+            >
+              {chunks}
+            </Link>
+          ),
+        })}
+      </p>
+    ) : null
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-[13px] leading-[18px] font-medium">{t("your_gists")}</h3>
+      {gists.length === 0 ? (
+        <p className="text-xs leading-4 text-muted-foreground">{t("no_gists")}</p>
+      ) : (
+        <ul className="overflow-hidden rounded-lg flex flex-col border">
+          {gists.map((gist) => (
+            <li key={gist.id} className="border-b last:border-b-0">
+              <button
+                type="button"
+                onClick={() => onPick(gist.id)}
+                className="flex min-h-11 w-full flex-col gap-0.5 px-3 py-2.5 text-left outline-none hover:bg-muted/40 focus-visible:bg-muted"
+              >
+                <span className="w-full truncate text-[13px] leading-[18px] font-medium">
+                  {gist.title}
+                </span>
+                <span className="text-xs leading-4 text-muted-foreground">
+                  {t("gist_summary", {
+                    files: gist.files,
+                    visibility: gist.public ? t("public") : t("secret"),
+                    updated: gist.updatedAt ? formatDate(Date.parse(gist.updatedAt), locale) : "",
+                  })}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {state.nextPage ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start max-lg:h-10"
+          loading={loading}
+          onClick={() => load(state.nextPage ?? 1)}
+        >
+          {t("show_more")}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 function LinkBox({ link, status }: { link: string; status: "reading" | "read" }) {
   return (
     <div className="rounded-lg flex h-10 shrink-0 items-center justify-between gap-3 border px-3">
@@ -372,7 +474,7 @@ function FilesStep({
   visibility,
 }: {
   link: string
-  gist: GistPreview
+  gist: ImportPreview
   selected: Set<string>
   onSelect: (name: string, checked: boolean) => void
   chosenBytes: number

@@ -233,6 +233,18 @@
     "decrypt": "Entschlüsseln",
     "checkKey": "Schlüssel prüfen",
     "encryptedLinkHasKey": "Ende-zu-Ende-verschlüsselt. Der hier kopierte Link enthält den Schlüssel, und wer ihn hat, kann den Paste lesen.",
-    "encryptedLinkNoKey": "Ende-zu-Ende-verschlüsselt. Dieser Browser hat den Schlüssel nicht, daher öffnet der hier kopierte Link den Paste nicht von allein."
+    "encryptedLinkNoKey": "Ende-zu-Ende-verschlüsselt. Dieser Browser hat den Schlüssel nicht, daher öffnet der hier kopierte Link den Paste nicht von allein.",
+    "sendToService": "{kind, select, page {In {service} speichern} issue {An {service} anhängen} other {An {service} senden}}",
+    "connectServiceToSend": "{kind, select, page {<link>Verbinde {service} in den Einstellungen</link>, um diesen Paste als Seite zu speichern.} issue {<link>Verbinde {service} in den Einstellungen</link>, um diesen Paste an ein Issue anzuhängen.} other {<link>Verbinde {service} in den Einstellungen</link>, um diesen Paste in einen Kanal zu senden.}}",
+    "destination": "{kind, select, page {Seite} issue {Issue} other {Kanal}}",
+    "loadingDestinations": "{kind, select, page {Seiten werden geladen…} issue {Issues werden geladen…} other {Kanäle werden geladen…}}",
+    "pickADestination": "{kind, select, page {Seite auswählen} issue {Issue auswählen} other {Kanal auswählen}}",
+    "searchDestinations": "{kind, select, page {Seiten durchsuchen} issue {Issues durchsuchen} other {Kanäle durchsuchen}}",
+    "noDestinationsFound": "{kind, select, page {Keine Seiten gefunden. Teile eine Seite in Notion mit Sniptide, damit sie hier erscheint.} issue {Keine offenen Issues, die dir zugewiesen sind oder die du erstellt hast.} other {Keine Kanäle gefunden.}}",
+    "sendAction": "{kind, select, page {Speichern} issue {Anhängen} other {Senden}}",
+    "sendsDetails": "{kind, select, page {Speichert Titel, Dateien und Link als neue Seite in der gewählten Seite. Nur Seiten, die du in Notion mit Sniptide geteilt hast, werden angezeigt.} issue {Hängt Titel, Sprache und Link an das Issue an. Angezeigt werden offene Issues, die dir zugewiesen sind oder die du erstellt hast.} other {Sendet Titel, Sprache und Link. Die App kann in öffentlichen Kanälen posten und in privaten, zu denen sie eingeladen wurde.}}",
+    "sendsLinkOnly": "{kind, select, page {Speichert nur den Link, weil Titel und Inhalt dieses Pastes nicht für alle mit dem Link offen sind.} issue {Hängt nur den Link als „Sniptide paste“ an, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.} other {Sendet nur den Link, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.}}",
+    "sentToDestination": "{kind, select, page {In „{name}“ gespeichert} issue {An {name} angehängt} other {An #{name} gesendet}}",
+    "couldnTLoadDestinations": "{kind, select, page {Deine {service}-Seiten konnten nicht geladen werden. Versuche es in einer Minute erneut.} issue {Deine {service}-Issues konnten nicht geladen werden. Versuche es in einer Minute erneut.} other {Deine {service}-Kanäle konnten nicht geladen werden. Versuche es in einer Minute erneut.}}"
   }
 }
