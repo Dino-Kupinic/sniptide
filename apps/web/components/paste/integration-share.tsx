@@ -12,21 +12,23 @@ import {
 } from "@sniptide/ui/components/combobox"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { toast } from "@sniptide/ui/components/toast"
-import { ChevronDownIcon, HashIcon, LockIcon } from "lucide-react"
+import { ChevronDownIcon, CircleDotIcon, FileTextIcon, HashIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { listExportDestinations, sendToDestination } from "@/lib/integrations/actions"
-import type { ExportDestination } from "@/lib/integrations/types"
+import type { DestinationKind, ExportDestination } from "@/lib/integrations/types"
 
 export interface ShareDestinationProvider {
   id: string
   name: string
+  kind: DestinationKind
   connected: boolean
 }
 
-// "Send to Slack" and any other service a paste can be sent to, in the Share dialog. A connected
-// service lists its destinations when the row opens; an unconnected one points to Settings.
+// "Send to Slack", "Attach to Linear", "Save to Notion" and any other service a paste can be sent
+// to, in the Share dialog. A connected service lists its destinations when the row opens; an
+// unconnected one points to Settings.
 export function IntegrationShare({
   slug,
   providers,
@@ -62,6 +64,7 @@ function ProviderRow({
   unavailableReason?: string
 }) {
   const t = useTranslations("Paste")
+  const kind = provider.kind
   const [destinations, setDestinations] = React.useState<ExportDestination[] | null>(null)
   const [chosen, setChosen] = React.useState<ExportDestination | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -77,7 +80,7 @@ function ProviderRow({
         if (result.ok) setDestinations(result.destinations)
         else setError(result.error)
       } catch {
-        setError(t("couldnTLoadDestinations", { service: provider.name }))
+        setError(t("couldnTLoadDestinations", { kind, service: provider.name }))
       }
     })
   }
@@ -88,7 +91,8 @@ function ProviderRow({
     startSending(async () => {
       try {
         const result = await sendToDestination(provider.id, slug, chosen.id)
-        if (result.ok) toast.success(t("sentToChannel", { channel: chosen.name }))
+        if (result.ok)
+          toast.success(t("sentToDestination", { kind, name: chosen.detail ?? chosen.name }))
         else setError(result.error)
       } catch {
         setError(t("couldnTConfirmDeliveryCheckThe"))
@@ -104,12 +108,13 @@ function ProviderRow({
       }}
     >
       <summary className="cursor-pointer text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
-        {t("sendToService", { service: provider.name })}
+        {t("sendToService", { kind, service: provider.name })}
       </summary>
       <div className="flex flex-col gap-3 pt-3">
         {!provider.connected ? (
           <p className="text-xs text-muted-foreground">
             {t.rich("connectServiceToSend", {
+              kind,
               service: provider.name,
               link: (chunks) => (
                 <Link
@@ -128,33 +133,40 @@ function ProviderRow({
                 items={destinations ?? []}
                 value={chosen}
                 onValueChange={(value: ExportDestination | null) => setChosen(value)}
-                itemToStringLabel={(item: ExportDestination) => item.name}
+                itemToStringLabel={(item: ExportDestination) =>
+                  item.detail ? `${item.detail} ${item.name}` : item.name
+                }
                 autoHighlight
               >
                 <ComboboxTrigger
-                  aria-label={t("channel")}
+                  aria-label={t("destination", { kind })}
                   disabled={!destinations || Boolean(unavailableReason)}
                   className="inline-flex h-9 min-w-0 flex-1 items-center max-lg:flex-none gap-2 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none select-none focus-visible:border-primary disabled:opacity-50 data-popup-open:border-foreground/40 max-lg:h-10"
                 >
                   {chosen ? (
-                    <DestinationLabel destination={chosen} />
+                    <DestinationLabel kind={kind} destination={chosen} />
                   ) : (
                     <span className="truncate text-muted-foreground">
-                      {loading ? t("loadingChannels") : t("pickAChannel")}
+                      {loading
+                        ? t("loadingDestinations", { kind })
+                        : t("pickADestination", { kind })}
                     </span>
                   )}
                   <ChevronDownIcon className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
                 </ComboboxTrigger>
-                <ComboboxContent aria-label={t("channel")}>
+                <ComboboxContent
+                  aria-label={t("destination", { kind })}
+                  className="w-(--anchor-width) min-w-60"
+                >
                   <ComboboxSearch
-                    placeholder={t("searchChannels")}
-                    aria-label={t("searchChannels")}
+                    placeholder={t("searchDestinations", { kind })}
+                    aria-label={t("searchDestinations", { kind })}
                   />
-                  <ComboboxEmpty>{t("noChannelsFound")}</ComboboxEmpty>
+                  <ComboboxEmpty>{t("noDestinationsFound", { kind })}</ComboboxEmpty>
                   <ComboboxList>
                     {(item: ExportDestination) => (
                       <ComboboxItem key={item.id} value={item}>
-                        <DestinationLabel destination={item} />
+                        <DestinationLabel kind={kind} destination={item} />
                       </ComboboxItem>
                     )}
                   </ComboboxList>
@@ -166,12 +178,12 @@ function ProviderRow({
                 loading={sending}
                 onClick={send}
               >
-                {t("send")}
+                {t("sendAction", { kind })}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
               {unavailableReason ??
-                (reveal === "details" ? t("sendsTitleLanguageAndLink") : t("sendsLinkOnly"))}
+                (reveal === "details" ? t("sendsDetails", { kind }) : t("sendsLinkOnly", { kind }))}
             </p>
           </>
         )}
@@ -181,11 +193,25 @@ function ProviderRow({
   )
 }
 
-function DestinationLabel({ destination }: { destination: ExportDestination }) {
-  const Icon = destination.private ? LockIcon : HashIcon
+const kindIcons = { channel: HashIcon, issue: CircleDotIcon, page: FileTextIcon }
+
+function DestinationLabel({
+  kind,
+  destination,
+}: {
+  kind: DestinationKind
+  destination: ExportDestination
+}) {
+  // A lock marks a private channel. Issues and pages keep their own icon.
+  const Icon = kind === "channel" && destination.private ? LockIcon : kindIcons[kind]
   return (
     <>
       <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      {destination.detail ? (
+        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+          {destination.detail}
+        </span>
+      ) : null}
       <span className="min-w-0 flex-1 truncate text-left">{destination.name}</span>
     </>
   )

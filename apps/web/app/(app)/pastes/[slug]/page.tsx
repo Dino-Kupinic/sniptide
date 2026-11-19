@@ -83,9 +83,10 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
   // Services the owner can send this paste to, such as Slack, when the server has their app.
   const shareProviders =
     owned && session && !paste.encryptionKeyId
-      ? (await listIntegrations(session.user.id))
-          .filter((integration) => integration.available && exportTarget(integration.id))
-          .map(({ id, name, connection }) => ({ id, name, connected: connection !== null }))
+      ? (await listIntegrations(session.user.id)).flatMap(({ id, name, available, connection }) => {
+          const target = available ? exportTarget(id) : null
+          return target ? [{ id, name, kind: target.kind, connected: connection !== null }] : []
+        })
       : []
 
   const { encryptionKeyId } = paste

@@ -99,7 +99,11 @@
     "slackNotInChannel": "Sniptide no puede publicar en ese canal. Invita la app de Sniptide al canal e inténtalo de nuevo.",
     "integrationDisconnected": "Esa conexión dejó de funcionar. Vuelve a conectarla en Ajustes.",
     "exportUnavailable": "Ese paste no se puede enviar a ningún sitio.",
-    "exportDestination": "Elige un canal al que enviarlo."
+    "exportDestination": "Elige adónde enviarlo.",
+    "linearUnavailable": "Linear no respondió. Inténtalo de nuevo en un minuto.",
+    "linearNoIssue": "Linear no encontró esa incidencia. Elige otra e inténtalo de nuevo.",
+    "notionUnavailable": "Notion no respondió. Inténtalo de nuevo en un minuto.",
+    "notionNotShared": "Sniptide no puede ver esa página. Compártela con Sniptide en Notion e inténtalo de nuevo."
   },
   "ServerError": {
     "title": "Algo salió mal",

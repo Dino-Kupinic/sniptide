@@ -76,7 +76,7 @@ when both matrix jobs pass.
 | Autosave and drafts | `apps/web/lib/autosave`, `apps/web/components/paste/paste-editor.tsx` | Web autosave tests and browser editor tests |
 | Database schema and migrations | `packages/db/src/schema`, `packages/db/migrations` | Web integration tests and migration tests |
 | Authentication | `packages/auth/src`, `apps/web/lib/auth.ts` | Web auth tests and browser auth tests |
-| Integrations, gist import and Slack share | `apps/web/lib/integrations`, with one adapter per service | `apps/web/test/integrations.test.ts`, `slack.test.ts`, `gist.test.ts` |
+| Integrations, gist import, and sending to Slack, Linear and Notion | `apps/web/lib/integrations`, with one adapter per service | `apps/web/test/integrations.test.ts`, `slack.test.ts`, `linear.test.ts`, `notion.test.ts`, `gist.test.ts` |
 | Shared components and theme | `packages/ui/src` | Typecheck, browser checks, and package consumer checks |
 | Routes and API documentation | `apps/web/lib/openapi.ts` | `apps/web/test/openapi.test.ts` |
 | Translations | `apps/web/messages`, `apps/web/lib/i18n` | `apps/web/test/i18n.test.ts`, `action-errors.test.ts` |
@@ -191,14 +191,16 @@ An integration is an external service a user connects in **Settings**, then **In
 `apps/web/lib/integrations` holds the framework: the OAuth flow with PKCE (`oauth.ts`), the
 connections and their encrypted tokens (`store.ts`), the callback (`callback.ts`), importing
 through a connection (`imports.ts`) and sending a paste through one (`exports.ts`). GitHub
-(`github.ts`) is the adapter to copy for importing, and Slack (`slack.ts`) for sending.
+(`github.ts`) is the adapter to copy for importing. For sending, Slack (`slack.ts`) posts a link,
+Linear (`linear.ts`) attaches one and Notion (`notion.ts`) copies the files into a page.
 
 To add a service:
 
 1. Write an adapter that satisfies `IntegrationProvider` in `types.ts`: its OAuth endpoints and
    scopes, where its client id and secret come from, `account` to name who connected, and `revoke`
    when the service can end a token. Add `imports` to read from it, and `exports` to send pastes
-   to it. Set `scopeSeparator` and `pkce: false` when the service needs them, as Slack does.
+   to it. Set `scopeSeparator` and `pkce: false` when the service needs them, as Slack does, and
+   `tokenRequest: "basic-json"` and `authorizeParams` for a token endpoint like Notion's.
 2. List the adapter in `providers.ts`.
 3. Register `<BETTER_AUTH_URL>/api/integrations/<id>/callback` as the redirect URI of the
    service's OAuth app. Set `callbackPath` only when the service restricts redirects the way
@@ -210,11 +212,18 @@ To add a service:
 Connecting, renewing expired tokens, disconnecting and the Settings row need no further code.
 `previewImport` and `importPaste` in `lib/pastes/actions.ts` take the provider's id, and the
 import sheet in `components/lists/import-gist.tsx` is the one piece still written for gists.
-An adapter with `exports` gets a **Send to** row in the Share dialog
-(`components/paste/integration-share.tsx`) that lists its `destinations` and calls `send`. What a
-destination receives comes from `exportReveal` in `exports.ts`: the title and language only for a
-paste anyone with the link can read, the link alone otherwise, and nothing for an encrypted paste.
-An adapter never sees more than that.
+An adapter with `exports` gets a row in the Share dialog
+(`components/paste/integration-share.tsx`) that lists its `destinations` and calls `send`. Its
+`kind` (`channel`, `issue` or `page`) picks the row's wording and icons, so a new kind needs its
+branch in the `Paste` messages that select on `kind`. What a destination receives comes from
+`exportReveal` in `exports.ts`: the title and language only for a paste anyone with the link can
+read, the link alone otherwise, and nothing for an encrypted paste. The files come along only when
+the target sets `content`, as Notion does, and only for a paste anyone with the link can read. An
+adapter never sees more than that.
+
+Slack link previews arrive as signed events at `/api/integrations/slack/events`
+(`slack-unfurl.ts`). The handler finds the workspace's token with `accountToken` in `store.ts`
+and applies the same `exportReveal` policy.
 
 ## Account usage
 

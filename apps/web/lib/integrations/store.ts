@@ -1,7 +1,7 @@
 import "server-only"
 
 import { integrationConnection } from "@workspace/db/schema"
-import { and, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { seal, unseal } from "@/lib/sealed"
 import { refreshTokens, type Tokens } from "./oauth"
@@ -101,6 +101,24 @@ export async function accessToken(userId: string, providerId: string): Promise<s
     await getDb().delete(integrationConnection).where(eq(integrationConnection.id, row.id))
     return null
   }
+}
+
+// A token for an external account any user connected, for events the service sends about that
+// account, such as a link shared in a Slack workspace. The most recently connected user's
+// connection wins.
+export async function accountToken(providerId: string, accountId: string) {
+  const [row] = await getDb()
+    .select({ userId: integrationConnection.userId })
+    .from(integrationConnection)
+    .where(
+      and(
+        eq(integrationConnection.provider, providerId),
+        eq(integrationConnection.accountId, accountId),
+      ),
+    )
+    .orderBy(desc(integrationConnection.updatedAt))
+    .limit(1)
+  return row ? accessToken(row.userId, providerId) : null
 }
 
 export interface IntegrationSummary {

@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import { createHmac } from "node:crypto"
 import { integrationConnection, paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { GET as callback } from "@/app/api/integrations/[provider]/callback/route"
@@ -11,6 +12,7 @@ import {
 } from "@/lib/integrations/actions"
 import { exportReveal } from "@/lib/integrations/exports"
 import { slackMessage } from "@/lib/integrations/slack"
+import { handleSlackEvent, slugFromLink, validSignature } from "@/lib/integrations/slack-unfurl"
 import { listIntegrations } from "@/lib/integrations/store"
 import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
@@ -66,6 +68,7 @@ function serveSlack(options: { post?: string; pages?: number } = {}) {
         response_metadata: { next_cursor: last ? "" : String(page + 1) },
       })
     }
+    if (method === "chat.unfurl") return Response.json({ ok: true })
     if (method === "chat.postMessage")
       return Response.json(options.post ? { ok: false, error: options.post } : { ok: true })
     return Response.json({ ok: false, error: "unknown_method" })
@@ -114,15 +117,41 @@ describe("what a destination receives", () => {
         url: "https://s.test/a",
         title: "<!channel> & <https://x|y>",
         language: "ts",
+        files: null,
       }),
     ).toEqual({
       text: "<https://s.test/a|&lt;!channel&gt; &amp; &lt;https://x|y&gt;> · ts",
       unfurl_links: "true",
     })
-    expect(slackMessage({ url: "https://s.test/a", title: null, language: null })).toEqual({
+    expect(
+      slackMessage({ url: "https://s.test/a", title: null, language: null, files: null }),
+    ).toEqual({
       text: "<https://s.test/a>",
       unfurl_links: "false",
     })
+  })
+})
+
+describe("Slack link previews", () => {
+  test("only a fresh request signed with the signing secret is accepted", () => {
+    const now = 1_800_000_000_000
+    const timestamp = String(now / 1000)
+    const sign = (body: string, secret = "signing") =>
+      `v0=${createHmac("sha256", secret).update(`v0:${timestamp}:${body}`).digest("hex")}`
+    expect(validSignature("signing", timestamp, "{}", sign("{}"), now)).toBe(true)
+    expect(validSignature("signing", timestamp, "{}", sign("{}", "other"), now)).toBe(false)
+    expect(validSignature("signing", timestamp, '{"a":1}', sign("{}"), now)).toBe(false)
+    expect(validSignature("signing", timestamp, "{}", sign("{}"), now + 6 * 60_000)).toBe(false)
+    expect(validSignature("signing", null, "{}", sign("{}"), now)).toBe(false)
+  })
+
+  test("reads paste slugs from links on this server only", () => {
+    expect(slugFromLink(`${ORIGIN}/k7Qe2x`, ORIGIN)).toBe("k7Qe2x")
+    expect(slugFromLink(`${ORIGIN}/@ada/notes`, ORIGIN)).toBe("@ada/notes")
+    expect(slugFromLink(`${ORIGIN}/%40ada/notes`, ORIGIN)).toBe("@ada/notes")
+    expect(slugFromLink("https://elsewhere.test/k7Qe2x", ORIGIN)).toBeNull()
+    expect(slugFromLink(`${ORIGIN}/settings/tokens`, ORIGIN)).toBeNull()
+    expect(slugFromLink("not a link", ORIGIN)).toBeNull()
   })
 })
 
@@ -132,6 +161,7 @@ describeDb("Slack", () => {
     globalThis.fetch = realFetch
     delete process.env.SLACK_CLIENT_ID
     delete process.env.SLACK_CLIENT_SECRET
+    delete process.env.SLACK_SIGNING_SECRET
   })
   beforeEach(async () => {
     process.env.SLACK_CLIENT_ID = "slack-client"
@@ -147,7 +177,7 @@ describeDb("Slack", () => {
     const authorize = await connect()
     expect(`${authorize.origin}${authorize.pathname}`).toBe("https://slack.com/oauth/v2/authorize")
     expect(authorize.searchParams.get("scope")).toBe(
-      "chat:write,chat:write.public,channels:read,groups:read",
+      "chat:write,chat:write.public,channels:read,groups:read,links:read,links:write",
     )
     expect(authorize.searchParams.get("redirect_uri")).toBe(
       `${ORIGIN}/api/integrations/slack/callback`,
@@ -250,5 +280,94 @@ describeDb("Slack", () => {
     const revoke = calls.find((call) => call.method === "auth.revoke")
     expect(revoke?.authorization).toBe(`Bearer ${TOKEN}`)
     expect(await getDb().select().from(integrationConnection)).toHaveLength(0)
+  })
+
+  describe("link previews", () => {
+    function event(body: unknown, secret = "signing") {
+      const text = JSON.stringify(body)
+      const timestamp = String(Math.floor(Date.now() / 1000))
+      const signature = `v0=${createHmac("sha256", secret).update(`v0:${timestamp}:${text}`).digest("hex")}`
+      return new Request(`${ORIGIN}/api/integrations/slack/events`, {
+        method: "POST",
+        headers: { "x-slack-request-timestamp": timestamp, "x-slack-signature": signature },
+        body: text,
+      })
+    }
+
+    async function share(links: string[], team = "T123") {
+      const tasks: Promise<void>[] = []
+      const response = await handleSlackEvent(
+        event({
+          type: "event_callback",
+          team_id: team,
+          event: {
+            type: "link_shared",
+            channel: "C2",
+            message_ts: "1.2",
+            unfurl_id: "U1",
+            source: "conversations_history",
+            links: links.map((url) => ({ url, domain: "localhost" })),
+          },
+        }),
+        (task) => {
+          tasks.push(task())
+        },
+      )
+      await Promise.all(tasks)
+      return response
+    }
+
+    test("answer Slack's URL check only when the request is signed", async () => {
+      process.env.SLACK_SIGNING_SECRET = "signing"
+      const ok = await handleSlackEvent(event({ type: "url_verification", challenge: "abc" }))
+      expect(await ok.json()).toEqual({ challenge: "abc" })
+      const forged = await handleSlackEvent(
+        event({ type: "url_verification", challenge: "abc" }, "guess"),
+      )
+      expect(forged.status).toBe(401)
+      delete process.env.SLACK_SIGNING_SECRET
+      const off = await handleSlackEvent(event({ type: "url_verification", challenge: "abc" }))
+      expect(off.status).toBe(404)
+    })
+
+    test("preview a paste open to anyone with the link, and nothing else", async () => {
+      process.env.SLACK_SIGNING_SECRET = "signing"
+      const calls = serveSlack()
+      await connect()
+      await seedPaste({ slug: "notes", owner: "other", title: "Deploy notes" })
+      await getDb().update(paste).set({ firstLanguage: "shell" }).where(eq(paste.slug, "notes"))
+      await seedPaste({ slug: "mine", owner: "other", visibility: "private", title: "Salaries" })
+
+      const response = await share([
+        `${ORIGIN}/notes`,
+        `${ORIGIN}/mine`,
+        `${ORIGIN}/missing`,
+        "https://elsewhere.test/notes",
+      ])
+      expect(response.status).toBe(204)
+      const unfurls = calls.filter((call) => call.method === "chat.unfurl")
+      expect(unfurls).toHaveLength(1)
+      expect(unfurls[0]?.authorization).toBe(`Bearer ${TOKEN}`)
+      expect(unfurls[0]?.body.get("unfurl_id")).toBe("U1")
+      expect(JSON.parse(unfurls[0]?.body.get("unfurls") ?? "{}")).toEqual({
+        [`${ORIGIN}/notes`]: {
+          title: "Deploy notes",
+          title_link: `${ORIGIN}/notes`,
+          text: "Shell",
+          footer: "Sniptide",
+        },
+      })
+    })
+
+    test("send nothing for a workspace nobody connected or a link without a preview", async () => {
+      process.env.SLACK_SIGNING_SECRET = "signing"
+      const calls = serveSlack()
+      await connect()
+      await seedPaste({ slug: "notes", owner: "other" })
+      await seedPaste({ slug: "mine", owner: "other", visibility: "private" })
+      await share([`${ORIGIN}/notes`], "T999")
+      await share([`${ORIGIN}/mine`])
+      expect(calls.filter((call) => call.method === "chat.unfurl")).toHaveLength(0)
+    })
   })
 })

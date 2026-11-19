@@ -99,7 +99,11 @@
     "slackNotInChannel": "Sniptide 无法在该频道发帖。请先邀请 Sniptide 应用加入该频道，然后重试。",
     "integrationDisconnected": "该连接已失效。请在设置中重新连接。",
     "exportUnavailable": "该粘贴无法发送到任何地方。",
-    "exportDestination": "请选择要发送到的频道。"
+    "exportDestination": "请选择要发送到哪里。",
+    "linearUnavailable": "Linear 没有响应。请在一分钟后重试。",
+    "linearNoIssue": "Linear 找不到该 Issue。请选择另一个后重试。",
+    "notionUnavailable": "Notion 没有响应。请在一分钟后重试。",
+    "notionNotShared": "Sniptide 无法查看该页面。请在 Notion 中将其共享给 Sniptide，然后重试。"
   },
   "ServerError": {
     "title": "出了点问题",

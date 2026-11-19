@@ -142,7 +142,9 @@
     "integrationFailed": "Couldn't connect. Try again.",
     "integrationAbout": {
       "github": "Lists your gists in the import sheet, secret ones included. GitHub's gist permission also allows writing, and Sniptide only reads.",
-      "slack": "Sends pastes to channels from the Share dialog. Sniptide posts the link, and the title and language when the paste is open to everyone with the link."
+      "slack": "Sends pastes to channels from the Share dialog. Sniptide posts the link, and the title and language when the paste is open to everyone with the link.",
+      "linear": "Attaches pastes to Linear issues from the Share dialog. The attachment shows the title and language when the paste is open to everyone with the link.",
+      "notion": "Saves pastes as Notion pages from the Share dialog, inside pages you share with Sniptide in Notion. The page holds the files when the paste is open to everyone with the link, and only the link otherwise."
     },
     "sessions": "Sessions",
     "sessionsDescription": "Devices signed in to your account. Sign out any you don't recognize.",

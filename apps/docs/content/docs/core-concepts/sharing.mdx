@@ -169,11 +169,45 @@ What the message holds depends on who can open the paste:
 | Private, password-protected or burn after read | The link only |
 | End-to-end encrypted | Not offered, because the link would need its key |
 
-- Only the paste's owner can send it, 20 times an hour per account.
+- Only the paste's owner can send it, 20 times an hour per account across Slack, Linear and
+  Notion.
 - Slack shows a link to a public or unlisted paste with its own preview. A link-only message
   turns that preview off.
 - Sniptide can't post in a private channel until someone invites the app there. The error says
   so.
+
+When the administrator turned on link previews, a link to a public or unlisted paste without a
+password or burn after read gets a preview with its title and language in any workspace that
+connected Sniptide. Links to other pastes get no preview from Sniptide.
+
+## Attach to a Linear issue
+
+With Linear connected in [Settings](/settings#connect-integrations), **Share** offers **Attach to
+Linear**. Pick one of your open issues, the ones assigned to you or created by you, then select
+**Attach**. The paste shows in the issue's attachments, and attaching it again updates the same
+attachment.
+
+| Paste | Attachment |
+| --- | --- |
+| Public or unlisted, without a password or burn after read | The title, the language and the link |
+| Private, password-protected or burn after read | The link, titled "Sniptide paste" |
+| End-to-end encrypted | Not offered, because the link would need its key |
+
+## Save to Notion
+
+With Notion connected in [Settings](/settings#connect-integrations), **Share** offers **Save to
+Notion**. Pick a page, then select **Save**. Sniptide creates a new page inside it. The list holds
+the pages you shared with Sniptide when you connected; to add more, connect again or share a page
+with Sniptide in Notion.
+
+| Paste | New page |
+| --- | --- |
+| Public or unlisted, without a password or burn after read | The title, a link to the paste, and each file under its name as a code block |
+| Private, password-protected or burn after read | "Sniptide paste" with the link only |
+| End-to-end encrypted | Not offered, because the link would need its key |
+
+The Notion page is a copy. Editing the paste later doesn't change it, and anyone who can open the
+Notion page can read the files.
 
 ## Views
 

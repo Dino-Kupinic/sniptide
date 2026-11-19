@@ -1,11 +1,15 @@
 import "server-only"
 
+import { pasteFile } from "@workspace/db/schema"
+import { asc, eq } from "drizzle-orm"
+import { getDb } from "@/lib/db"
+
 import { getLanguage } from "@/lib/pastes/languages"
 import { isLive, openToAnyone } from "@/lib/pastes/lifecycle"
 import { findOwned } from "@/lib/pastes/records"
 import { getProvider } from "./providers"
 import { accessToken, removeConnection } from "./store"
-import type { ExportDestination, ExportPaste, ExportTarget, Failure } from "./types"
+import type { ExportDestination, ExportFile, ExportPaste, ExportTarget, Failure } from "./types"
 
 // Sending a paste out of Sniptide: the content policy, and the calls to a provider's exports with
 // the user's connection. Every destination copies data to a service with its own access rules, so
@@ -33,6 +37,15 @@ interface PolicyFields {
 export function exportReveal(paste: PolicyFields): "details" | "link" | null {
   if (paste.encryptionKeyId) return null
   return openToAnyone(paste) ? "details" : "link"
+}
+
+async function readFiles(pasteId: string): Promise<ExportFile[]> {
+  const rows = await getDb()
+    .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
+    .from(pasteFile)
+    .where(eq(pasteFile.pasteId, pasteId))
+    .orderBy(asc(pasteFile.position))
+  return rows.map((row) => ({ ...row, language: getLanguage(row.language).name }))
 }
 
 export function exportTarget(provider: string): ExportTarget | null {
@@ -75,12 +88,14 @@ export async function sendPaste(
   if (!record || !isLive(record)) return unavailable
   const reveal = exportReveal(record)
   if (!reveal) return unavailable
+  const target = exportTarget(provider)
+  const details = reveal === "details"
   const paste: ExportPaste = {
     url: `${origin}/${encodeURIComponent(record.slug)}`,
-    title: reveal === "details" ? record.title : null,
+    title: details ? record.title : null,
     // The display name, such as "Markdown", rather than the stored id.
-    language:
-      reveal === "details" && record.firstLanguage ? getLanguage(record.firstLanguage).name : null,
+    language: details && record.firstLanguage ? getLanguage(record.firstLanguage).name : null,
+    files: details && target?.content ? await readFiles(record.id) : null,
   }
   return withToken(provider, userId, (target, token) => target.send(token, destination, paste))
 }

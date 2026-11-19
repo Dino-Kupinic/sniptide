@@ -169,6 +169,8 @@ describeDb("integrations", () => {
       },
       // Listed for every server, and unavailable until it has a Slack app.
       { id: "slack", name: "Slack", available: false, connection: null },
+      { id: "linear", name: "Linear", available: false, connection: null },
+      { id: "notion", name: "Notion", available: false, connection: null },
     ])
     expect((await listIntegrations("other"))[0]?.connection).toBeNull()
   })

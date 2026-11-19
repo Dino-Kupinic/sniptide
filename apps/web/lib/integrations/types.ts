@@ -62,25 +62,41 @@ export interface ImportSource {
   describe(item: ImportItem): string
 }
 
-// Somewhere a paste can be sent, such as a Slack channel.
+// What a provider's destinations are, which names the picker and its icon.
+export type DestinationKind = "channel" | "issue" | "page"
+
+// Somewhere a paste can be sent, such as a Slack channel or a Linear issue.
 export interface ExportDestination {
   id: string
   name: string
+  // A second line in the picker, such as the issue's identifier or a page's workspace.
+  detail?: string
   // True when only invited members can see it, such as a private channel.
   private: boolean
 }
 
+export interface ExportFile {
+  name: string
+  language: string
+  content: string
+}
+
 // What a destination receives. `title` and `language` are null when the content policy in
 // ./exports.ts only allows the link, so an adapter can't reveal more than the policy decided.
+// `files` is set only for a target that asks for content, and only when the policy allows it.
 export interface ExportPaste {
   url: string
   title: string | null
   language: string | null
+  files: ExportFile[] | null
 }
 
 // Sending a paste to the service. The Share dialog lists `destinations` for the user to pick
 // from, then calls `send` with the chosen one.
 export interface ExportTarget {
+  kind: DestinationKind
+  // True when `send` copies the files, as a Notion page does. The rest only post the link.
+  content?: boolean
   destinations(token: string): Promise<{ ok: true; destinations: ExportDestination[] } | Failure>
   send(token: string, destination: string, paste: ExportPaste): Promise<{ ok: true } | Failure>
 }
@@ -102,6 +118,12 @@ export interface IntegrationProvider {
     // False for services that only accept PKCE from public clients, such as Slack. The state
     // cookie still ties the redirect to the user who started it.
     pkce?: boolean
+    // How the token endpoint takes the client and grant. "form" (the default) posts a form with
+    // client_id and client_secret. "basic-json" sends them as HTTP Basic auth and the grant as
+    // JSON, as Notion requires.
+    tokenRequest?: "form" | "basic-json"
+    // Extra fixed parameters for the authorization URL, such as Notion's `owner=user`.
+    authorizeParams?: Record<string, string>
   }
   // Who the token belongs to, or null when the service doesn't say.
   account(token: string): Promise<{ id: string; name: string } | null>

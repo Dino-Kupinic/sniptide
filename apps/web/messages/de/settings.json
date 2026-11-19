@@ -142,7 +142,9 @@
     "integrationFailed": "Verbinden fehlgeschlagen. Versuch es noch einmal.",
     "integrationAbout": {
       "github": "Zeigt deine Gists im Import an, auch die geheimen. Die Gist-Berechtigung von GitHub erlaubt auch das Schreiben, Sniptide liest nur.",
-      "slack": "Sendet Pastes aus dem Teilen-Dialog in Kanäle. Sniptide postet den Link, und Titel und Sprache, wenn der Paste für alle mit dem Link offen ist."
+      "slack": "Sendet Pastes aus dem Teilen-Dialog in Kanäle. Sniptide postet den Link, und Titel und Sprache, wenn der Paste für alle mit dem Link offen ist.",
+      "linear": "Hängt Pastes aus dem Teilen-Dialog an Linear-Issues an. Der Anhang zeigt Titel und Sprache, wenn der Paste für alle mit dem Link offen ist.",
+      "notion": "Speichert Pastes aus dem Teilen-Dialog als Notion-Seiten, in Seiten, die du in Notion mit Sniptide teilst. Die Seite enthält die Dateien, wenn der Paste für alle mit dem Link offen ist, und sonst nur den Link."
     },
     "sessions": "Sitzungen",
     "sessionsDescription": "Geräte, die bei deinem Konto angemeldet sind. Melde alle ab, die du nicht kennst.",

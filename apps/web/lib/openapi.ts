@@ -1932,6 +1932,8 @@ export const internalRoutes = [
   // Where a provider sends the browser back after a user connects an integration.
   "/api/auth/callback/github/integration",
   "/api/integrations/[provider]/callback",
+  // Slack's signed link_shared events, for link previews (lib/integrations/slack-unfurl.ts).
+  "/api/integrations/[provider]/events",
   "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",

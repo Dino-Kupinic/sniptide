@@ -142,7 +142,9 @@
     "integrationFailed": "No se pudo conectar. Inténtalo de nuevo.",
     "integrationAbout": {
       "github": "Muestra tus gists en la importación, incluidos los secretos. El permiso de gists de GitHub también permite escribir, y Sniptide solo lee.",
-      "slack": "Envía pastes a canales desde el diálogo Compartir. Sniptide publica el enlace, y el título y el lenguaje cuando el paste está abierto a todos los que tienen el enlace."
+      "slack": "Envía pastes a canales desde el diálogo Compartir. Sniptide publica el enlace, y el título y el lenguaje cuando el paste está abierto a todos los que tienen el enlace.",
+      "linear": "Adjunta pastes a incidencias de Linear desde el diálogo Compartir. El adjunto muestra el título y el lenguaje cuando el paste está abierto a todos los que tienen el enlace.",
+      "notion": "Guarda pastes como páginas de Notion desde el diálogo Compartir, dentro de las páginas que compartes con Sniptide en Notion. La página contiene los archivos cuando el paste está abierto a todos los que tienen el enlace, y solo el enlace en otro caso."
     },
     "sessions": "Sesiones",
     "sessionsDescription": "Dispositivos con sesión iniciada en tu cuenta. Cierra la sesión en los que no reconozcas.",

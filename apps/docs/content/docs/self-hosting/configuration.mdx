@@ -35,6 +35,9 @@ the app. The Coolify template lists the common ones; see
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | unset | Turn on GitHub sign-in and the GitHub integration in **Settings**. Until both are set the sign-in button shows as disabled and the integration as not set up. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/github`. The integration comes back to a path below it, so one OAuth app serves both. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | unset | Turn on Google sign-in. Callback URL: `<BETTER_AUTH_URL>/api/auth/callback/google`. |
 | `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` | unset | Turn on the Slack integration in **Settings**, which sends pastes to channels. Until both are set it shows as not set up. See [Set up the Slack integration](#set-up-the-slack-integration). |
+| `SLACK_SIGNING_SECRET` | unset | Turns on previews of Sniptide links shared in a Slack workspace that connected Sniptide. Without it the events URL answers 404. See [Set up the Slack integration](#set-up-the-slack-integration). |
+| `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET` | unset | Turn on the Linear integration in **Settings**, which attaches pastes to issues. See [Set up the Linear integration](#set-up-the-linear-integration). |
+| `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET` | unset | Turn on the Notion integration in **Settings**, which saves pastes as pages. See [Set up the Notion integration](#set-up-the-notion-integration). |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
 | `COOKIE_DOMAIN` | unset | Share the session cookie with other subdomains. Leave unset on one domain. |
 | `COOKIE_PREFIX` | `better-auth` | Prefix for the auth cookies' names (letters, digits, `-`, `_`). Set a different one on a deployment that shares a parent domain with another one (a preview next to production). Changing it signs everyone out. |
@@ -81,12 +84,48 @@ to one server.
    work in more than one.
 2. Under **OAuth & Permissions**, add the redirect URL
    `<BETTER_AUTH_URL>/api/integrations/slack/callback`. Slack requires HTTPS.
-3. Add the bot token scopes `chat:write`, `chat:write.public`, `channels:read` and `groups:read`.
+3. Add the bot token scopes `chat:write`, `chat:write.public`, `channels:read`, `groups:read`,
+   `links:read` and `links:write`.
 4. Copy the **Client ID** and **Client Secret** from **Basic Information** into
    `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET`, and restart Sniptide.
 
 Leave PKCE off for the app. Sniptide keeps the client secret on the server, and Slack accepts
 PKCE only from apps that give it up.
+
+To preview Sniptide links in Slack, also do the following.
+
+1. Copy the **Signing Secret** from **Basic Information** into `SLACK_SIGNING_SECRET` and
+   restart Sniptide.
+2. Under **Event Subscriptions**, turn events on and set the request URL to
+   `<BETTER_AUTH_URL>/api/integrations/slack/events`. Slack checks it right away.
+3. Under **App unfurl domains**, add the domain of your share links: the host of `SHARE_URL`, or
+   of `BETTER_AUTH_URL` when it is unset.
+4. Subscribe to the bot event `link_shared`.
+
+A workspace connected before you added the link scopes has to connect again in **Settings**
+before its links get previews.
+
+### Set up the Linear integration
+
+1. Create an OAuth application under **Settings**, **API** in Linear.
+2. Add the callback URL `<BETTER_AUTH_URL>/api/integrations/linear/callback`.
+3. Copy the client ID and client secret into `LINEAR_CLIENT_ID` and `LINEAR_CLIENT_SECRET`, and
+   restart Sniptide.
+
+Sniptide asks for the `read` and `issues:create` scopes. It reads the open issues a user is
+assigned to or created, and creates attachments on them.
+
+### Set up the Notion integration
+
+1. Create a public integration at
+   [notion.so/profile/integrations](https://www.notion.so/profile/integrations).
+2. Add the redirect URI `<BETTER_AUTH_URL>/api/integrations/notion/callback`.
+3. Under **Capabilities**, allow reading and inserting content.
+4. Copy the OAuth client ID and client secret into `NOTION_CLIENT_ID` and
+   `NOTION_CLIENT_SECRET`, and restart Sniptide.
+
+When a user connects, Notion asks which pages Sniptide may use. Sniptide only sees those pages
+and saves new pages inside them.
 
 ### Rotate the auth secret
 
@@ -101,8 +140,8 @@ before changing the key, for example with [the CLI](/cli#sync-env-files). After 
 new key, push the saved groups again and verify that their values can be read. A database dump
 contains encrypted values, so keep the original secret with any backups taken before the change.
 
-Integration tokens use the same secret. After it changes, a connected GitHub account shows as not
-connected, and its owner connects it again in **Settings**.
+Integration tokens use the same secret. After it changes, connected integrations show as not
+connected, and their owners connect them again in **Settings**.
 
 ### Separate share domain
 

@@ -99,7 +99,11 @@
     "slackNotInChannel": "Sniptide kann in diesem Kanal nicht posten. Lade die Sniptide-App in den Kanal ein und versuche es erneut.",
     "integrationDisconnected": "Diese Verbindung funktioniert nicht mehr. Verbinde sie in den Einstellungen erneut.",
     "exportUnavailable": "Dieser Paste kann nirgendwohin gesendet werden.",
-    "exportDestination": "Wähle einen Kanal zum Senden aus."
+    "exportDestination": "Wähle aus, wohin es gehen soll.",
+    "linearUnavailable": "Linear hat nicht geantwortet. Versuche es in einer Minute erneut.",
+    "linearNoIssue": "Linear hat dieses Issue nicht gefunden. Wähle ein anderes und versuche es erneut.",
+    "notionUnavailable": "Notion hat nicht geantwortet. Versuche es in einer Minute erneut.",
+    "notionNotShared": "Sniptide kann diese Seite nicht sehen. Teile sie in Notion mit Sniptide und versuche es erneut."
   },
   "ServerError": {
     "title": "Etwas ist schiefgelaufen",

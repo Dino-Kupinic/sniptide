@@ -99,7 +99,11 @@
     "slackNotInChannel": "Sniptide はそのチャンネルに投稿できません。Sniptide アプリをチャンネルに招待してから、もう一度お試しください。",
     "integrationDisconnected": "その接続は機能しなくなりました。設定で再接続してください。",
     "exportUnavailable": "そのペーストはどこにも送信できません。",
-    "exportDestination": "送信先のチャンネルを選択してください。"
+    "exportDestination": "送信先を選択してください。",
+    "linearUnavailable": "Linear から応答がありません。1 分後にもう一度お試しください。",
+    "linearNoIssue": "Linear でその Issue が見つかりませんでした。別の Issue を選んで、もう一度お試しください。",
+    "notionUnavailable": "Notion から応答がありません。1 分後にもう一度お試しください。",
+    "notionNotShared": "Sniptide はそのページを参照できません。Notion でページを Sniptide と共有してから、もう一度お試しください。"
   },
   "ServerError": {
     "title": "問題が発生しました",

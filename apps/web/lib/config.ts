@@ -154,6 +154,11 @@ const schema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
+  SLACK_SIGNING_SECRET: z.string().optional(),
+  LINEAR_CLIENT_ID: z.string().optional(),
+  LINEAR_CLIENT_SECRET: z.string().optional(),
+  NOTION_CLIENT_ID: z.string().optional(),
+  NOTION_CLIENT_SECRET: z.string().optional(),
 
   GITHUB_TOKEN: z.string().optional(),
   SLACK_WEBHOOK_URL: z
@@ -316,6 +321,9 @@ function parseConfig(env: Record<string, string | undefined>) {
     github: oauth(value.GITHUB_CLIENT_ID, value.GITHUB_CLIENT_SECRET),
     google: oauth(value.GOOGLE_CLIENT_ID, value.GOOGLE_CLIENT_SECRET),
     slack: oauth(value.SLACK_CLIENT_ID, value.SLACK_CLIENT_SECRET),
+    slackSigningSecret: value.SLACK_SIGNING_SECRET,
+    linear: oauth(value.LINEAR_CLIENT_ID, value.LINEAR_CLIENT_SECRET),
+    notion: oauth(value.NOTION_CLIENT_ID, value.NOTION_CLIENT_SECRET),
     githubToken: value.GITHUB_TOKEN,
     webhooks: { slack: value.SLACK_WEBHOOK_URL, discord: value.DISCORD_WEBHOOK_URL },
     maxPasteBytes: value.MAX_PASTE_SIZE,

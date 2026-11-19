@@ -47,7 +47,11 @@ export function startAuthorization(
     response_type: "code",
     client_id: credentials.clientId,
     redirect_uri: callbackUrl(provider, origin),
-    scope: provider.oauth.scopes.join(provider.oauth.scopeSeparator ?? " "),
+    // Notion grants access per page in its own picker and takes no scopes.
+    ...(provider.oauth.scopes.length > 0
+      ? { scope: provider.oauth.scopes.join(provider.oauth.scopeSeparator ?? " ") }
+      : {}),
+    ...provider.oauth.authorizeParams,
     state,
     ...(pkce
       ? {
@@ -78,14 +82,23 @@ async function requestTokens(
   credentials: OAuthCredentials,
   grant: Record<string, string>,
 ): Promise<Tokens | null> {
+  const basic = provider.oauth.tokenRequest === "basic-json"
   const response = await fetch(provider.oauth.tokenUrl, {
     method: "POST",
-    headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: credentials.clientId,
-      client_secret: credentials.clientSecret,
-      ...grant,
-    }),
+    headers: basic
+      ? {
+          accept: "application/json",
+          "content-type": "application/json",
+          authorization: `Basic ${Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString("base64")}`,
+        }
+      : { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
+    body: basic
+      ? JSON.stringify(grant)
+      : new URLSearchParams({
+          client_id: credentials.clientId,
+          client_secret: credentials.clientSecret,
+          ...grant,
+        }),
     signal: AbortSignal.timeout(10_000),
   }).catch(() => null)
   if (!response?.ok) return null

@@ -51,7 +51,7 @@ const channelsSchema = z.object({
 const accountSchema = z.object({ team_id: z.string(), team: z.string() })
 
 // Slack answers 200 with `ok: false` for most errors, so the body decides.
-async function call(
+export async function slackCall(
   method: string,
   token: string,
   body: Record<string, string>,
@@ -78,7 +78,7 @@ async function call(
 }
 
 // Slack reads &, < and > as markup, so a paste title can't turn into a mention or a link.
-function escapeText(text: string) {
+export function escapeText(text: string) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
@@ -94,7 +94,7 @@ async function destinations(
   const found: ExportDestination[] = []
   let cursor: string | undefined
   for (let page = 0; page < MAX_PAGES; page++) {
-    const result = await call("conversations.list", token, {
+    const result = await slackCall("conversations.list", token, {
       types: "public_channel,private_channel",
       exclude_archived: "true",
       limit: String(PAGE_SIZE),
@@ -121,26 +121,35 @@ export const slack: IntegrationProvider = {
     authorizeUrl: "https://slack.com/oauth/v2/authorize",
     tokenUrl: `${API}/oauth.v2.access`,
     // chat:write.public posts to public channels the app hasn't joined. groups:read lists the
-    // private channels it was invited to.
-    scopes: ["chat:write", "chat:write.public", "channels:read", "groups:read"],
+    // private channels it was invited to. links:read and links:write preview Sniptide links
+    // shared in the workspace; see ./slack-unfurl.ts.
+    scopes: [
+      "chat:write",
+      "chat:write.public",
+      "channels:read",
+      "groups:read",
+      "links:read",
+      "links:write",
+    ],
     scopeSeparator: ",",
     // Slack only takes PKCE from apps switched to public clients, which can't keep a secret.
     pkce: false,
     credentials: () => getConfig().slack ?? null,
   },
   async account(token) {
-    const result = await call("auth.test", token, {})
+    const result = await slackCall("auth.test", token, {})
     if (!result.ok) return null
     const account = accountSchema.safeParse(result.data)
     return account.success ? { id: account.data.team_id, name: account.data.team } : null
   },
   async revoke(token) {
-    await call("auth.revoke", token, {})
+    await slackCall("auth.revoke", token, {})
   },
   exports: {
+    kind: "channel",
     destinations,
     async send(token, destination, paste) {
-      const result = await call("chat.postMessage", token, {
+      const result = await slackCall("chat.postMessage", token, {
         channel: destination,
         ...slackMessage(paste),
       })
