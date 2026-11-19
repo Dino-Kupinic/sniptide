@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "54fe9c38-87e0-4e72-9044-fafc08687488",
+  "prevIds": [
+    "3bc34b27-06f4-4dc3-82d9-8058a53b446c"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "abuse_report",
+        "paste_id"
+      ],
+      "writes": [
+        "s|col|public.abuse_report.paste_id",
+        "n|col|public.abuse_report.paste_id",
+        "e|col|public.abuse_report.paste_id"
+      ],
+      "reads": [
+        "n|tbl|public.abuse_report",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "abuse_report",
+        "name": "paste_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

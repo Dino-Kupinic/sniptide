@@ -7,9 +7,10 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
+    "lint:ci": "biome ci --error-on-warnings .",
     "format": "turbo format",
     "typecheck": "turbo typecheck",
-    "check": "biome ci --error-on-warnings . && bun run typecheck",
+    "check": "bun run lint:ci && bun run typecheck",
     "verify": "bun run check && bun run check:unused && bun run test && bun --filter docs build",
     "check:unused": "knip",
     "check:deps": "knip --include dependencies,unlisted,binaries",
@@ -28,9 +29,6 @@
     "test:extension": "bun --filter @workspace/oauth-client test && bun --filter extension test",
     "test:vscode": "bun --filter sniptide-vscode test",
     "test:raycast": "cd plugins/raycast && (test -d node_modules || npm ci --no-audit --no-fund) && npm run check",
-    "load:seed": "bun apps/web/load/seed.ts",
-    "load:run": "bun apps/web/load/run.ts",
-    "load:agents": "bun apps/web/load/agents.ts",
     "test:e2e": "bun --filter web test:e2e",
     "test:sdk": "bun --filter @sniptide/sdk test && cd packages/sdk-python && python3 -m unittest discover -s tests"
   },
@@ -51,7 +49,7 @@
       "drizzle-orm": "1.0.0-rc.5",
       "next": "16.4.6",
       "next-themes": "^0.4.6",
-      "postgres": "^3.4.7",
+      "postgres": "^4.1.1",
       "posthog-js": "^1.447.3",
       "react": "19.3.1",
       "react-dom": "19.3.1",
@@ -78,7 +76,7 @@
       "@types/node": "^24.19.2",
       "@types/react": "^19",
       "@types/react-dom": "^19",
-      "dotenv": "^17.4.2",
+      "dotenv": "^18.0.10",
       "drizzle-kit": "1.0.0-rc.5",
       "husky": "^9.1.7",
       "knip": "6.45.1",
@@ -101,9 +99,10 @@
   "overrides": {
     "glob": "14.0.3",
     "minimatch": "11.0.3",
+    "next": "16.4.6",
     "zod": "4.6.7"
   },
-  "packageManager": "bun@1.3.13",
+  "packageManager": "bun@1.4.4",
   "engines": {
     "node": ">=24.8.0"
   },

@@ -13,11 +13,12 @@ import {
   TableSortHead,
 } from "@sniptide/ui/components/table"
 import { cn } from "@sniptide/ui/lib/utils"
+import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { ExpiredBadge } from "@/components/paste/expiry-status"
 import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { UserAvatar } from "@/components/people/user-avatar"
 import { useListView } from "@/components/shell/page-header"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, SortDirection } from "@/lib/pastes/list-query"
@@ -31,6 +32,12 @@ import {
 } from "@/lib/pastes/shared-list-query"
 import type { Person } from "@/lib/pastes/types"
 import { SharedBulkActions } from "./bulk-actions"
+import {
+  SkeletonCards,
+  SkeletonListFooter,
+  SkeletonMobileRows,
+  SkeletonTableRows,
+} from "./list-skeleton"
 import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
 import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
@@ -44,33 +51,6 @@ import {
   SortMenu,
 } from "./toolbar"
 import { useListQuery } from "./use-list-query"
-
-const toneClass: Record<Person["tone"], string> = {
-  primary: "bg-primary text-primary-foreground",
-  foreground: "bg-foreground text-background",
-  muted: "bg-muted text-foreground",
-}
-
-export function PersonAvatar({
-  person,
-  className,
-}: {
-  person: Pick<Person, "initials" | "tone">
-  className?: string
-}) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "flex size-6 shrink-0 items-center justify-center rounded-md font-heading text-[9px] font-bold",
-        toneClass[person.tone],
-        className,
-      )}
-    >
-      {person.initials}
-    </span>
-  )
-}
 
 function AccessBadge({ access }: { access: SharedRow["access"] }) {
   const t = useTranslations("Workspace")
@@ -95,7 +75,10 @@ export function SharedList({
   origin,
   host,
   previews,
+  loading,
 }: {
+  // While the page's data loads: how many rows to hold room for.
+  loading?: number
   rows: SharedRow[]
   // The first highlighted lines of each paste, by slug, for the grid view's cards.
   previews?: Record<string, HighlightedLines>
@@ -133,7 +116,8 @@ export function SharedList({
     <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         title={t("shared_with_me")}
-        count={pagination.totalAll}
+        count={loading === undefined ? pagination.totalAll : undefined}
+        topBar={loading === undefined}
         // The grid view is desktop only.
         mobileActions={null}
       />
@@ -207,7 +191,7 @@ export function SharedList({
                 value: person.id,
                 label: (
                   <span className="flex items-center gap-2">
-                    <PersonAvatar person={person} className="size-5" />
+                    <UserAvatar person={person} className="size-5" />
                     {person.name}
                   </span>
                 ),
@@ -267,6 +251,8 @@ export function SharedList({
                 </Button>
               </div>
             )
+          ) : view === "grid" && loading !== undefined ? (
+            <SkeletonCards count={loading} />
           ) : view === "grid" ? (
             <ul className="hidden grid-cols-2 gap-4 xl:grid-cols-3 lg:grid">
               {rows.map((row) => (
@@ -279,7 +265,7 @@ export function SharedList({
                   label={
                     row.owner ? (
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <PersonAvatar person={row.owner} className="size-4 text-[8px]" />
+                        <UserAvatar person={row.owner} className="size-4 rounded-sm" />
                         <span dir="auto" className="truncate">
                           {row.owner.name || row.owner.username}
                         </span>
@@ -316,6 +302,13 @@ export function SharedList({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading !== undefined ? (
+                  <SkeletonTableRows
+                    rows={loading}
+                    cells={["w-20", "w-28", "w-16", "w-20"]}
+                    detail
+                  />
+                ) : null}
                 {rows.map((row) => (
                   <TableRow
                     key={row.slug}
@@ -348,7 +341,7 @@ export function SharedList({
                     <TableCell className="text-[13px]">
                       {row.owner ? (
                         <span className="flex min-w-0 items-start gap-2">
-                          <PersonAvatar person={row.owner} />
+                          <UserAvatar person={row.owner} />
                           <span
                             dir="auto"
                             title={row.owner.name || row.owner.username}
@@ -375,7 +368,9 @@ export function SharedList({
             </Table>
           )}
 
-          {pagination.total > 0 ? (
+          {loading !== undefined && pagination.total > 0 ? (
+            <SkeletonMobileRows rows={loading} />
+          ) : pagination.total > 0 ? (
             <ul className="flex flex-col lg:hidden">
               {rows.map((row) => (
                 <li
@@ -413,7 +408,11 @@ export function SharedList({
           ) : null}
         </div>
 
-        {pagination.total > 0 ? (
+        {loading !== undefined ? (
+          pagination.total > 0 ? (
+            <SkeletonListFooter paged={pagination.pageCount > 1} />
+          ) : null
+        ) : pagination.total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:py-0">
             <span className="text-[13px] text-muted-foreground">
               {t("shared_summary", {

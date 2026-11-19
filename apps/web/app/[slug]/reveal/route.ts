@@ -40,7 +40,12 @@ export async function POST(request: Request, { params }: RouteContext<"/[slug]/r
       ok: true,
       title: paste.title,
       files,
-      author: { username: paste.author.username, initials: paste.author.initials },
+      author: {
+        id: paste.author.id,
+        username: paste.author.username,
+        handle: paste.author.handle,
+        image: paste.author.image,
+      },
       updatedAt: paste.updatedAt,
       expiresAt: paste.expiresAt,
       views: paste.views,

@@ -7,13 +7,12 @@ Sniptide for Chrome saves the text you select on a web page as a paste and copie
 can save from the context menu, with a keyboard shortcut, or from the extension's popup, where you
 choose the title, visibility, collection and expiry first.
 
-The extension signs in with [OAuth](/oauth), so no token is pasted anywhere, and it works with
-app.sniptide.com and with a self-hosted instance.
+Sign in to your instance through the browser using [OAuth](/oauth).
 
 ## Before you begin
 
 - Chrome 127 or newer, or another Chromium browser of the same age.
-- A Sniptide account on app.sniptide.com or on your own instance.
+- A Sniptide account and your instance address.
 - The extension isn't in the Chrome Web Store yet. Until it is, you build it from the
   [repository](https://github.com/Dino-Kupinic/sniptide) with [Bun](https://bun.sh).
 
@@ -35,8 +34,9 @@ app.sniptide.com and with a self-hosted instance.
 ## Sign in
 
 1. Select the **Sniptide** button in the toolbar.
-2. For a self-hosted instance, select **Use a self-hosted instance** and enter its address, such
-   as `paste.example.com`. Chrome asks you to allow the extension to reach that address.
+2. For Sniptide Cloud, continue with the default address. For your own server, select
+   **Use a self-hosted instance** and enter its address. Chrome asks you to allow the
+   extension to reach that address.
 3. Select **Sign in to Sniptide**. A window opens with Sniptide's consent screen.
 4. Check that the screen names **Sniptide for Chrome**, then select **Allow access**.
 
@@ -111,7 +111,7 @@ Select the gear in the popup.
 | `contextMenus` | Adds **Save selection to Sniptide**. |
 | `identity` | Opens the sign-in window and receives its answer. |
 | `storage` | Keeps the connection's tokens, your settings and the unsaved draft in Chrome's local extension storage. |
-| `https://app.sniptide.com` | Calls the Sniptide API. A self-hosted address is requested when you sign in to it. |
+| `https://app.sniptide.com` | The extension requests permission for this default API origin at install. It asks for your instance address when you sign in to it. |
 
 The extension reads no page until you act on it, sends nothing anywhere but your Sniptide
 instance, and has no analytics. The access token lasts an hour and renews itself, as

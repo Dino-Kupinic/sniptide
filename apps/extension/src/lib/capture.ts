@@ -123,10 +123,27 @@ function clip(value: string, max: number) {
   return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
 }
 
+function firstContentLine(text: string) {
+  const first = text.search(/\S/)
+  if (first === -1) return ""
+  const start = text.lastIndexOf("\n", first) + 1
+  const end = text.indexOf("\n", first)
+  return text.slice(start, end === -1 ? text.length : end)
+}
+
+export function blockPreview(text: string) {
+  let lines = 1
+  for (let at = text.indexOf("\n"); at !== -1; at = text.indexOf("\n", at + 1)) lines++
+  return { firstLine: firstContentLine(text), lines }
+}
+
 // The page's title, or the selection's first line on a page without one.
 export function titleFor(selection: Pick<PageSelection, "title" | "text">) {
-  const firstLine = selection.text.split("\n").find((line) => line.trim()) ?? ""
-  return clip(selection.title, MAX_TITLE) || clip(firstLine, 60) || "Untitled selection"
+  return (
+    clip(selection.title, MAX_TITLE) ||
+    clip(firstContentLine(selection.text), 60) ||
+    "Untitled selection"
+  )
 }
 
 // "From <address>", without the fragment and only for web pages. An address too long for the

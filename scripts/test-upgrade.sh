@@ -24,6 +24,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 work="$(mktemp -d)"
 cd "$root"
 
+export TELEMETRY=off
 export BETTER_AUTH_SECRET="upgrade-test-secret-at-least-32-characters-long"
 # Not the defaults, so a developer's own stack can keep running.
 export SNIPTIDE_PORT=3988 POSTGRES_PORT=55988

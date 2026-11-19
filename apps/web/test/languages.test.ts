@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { existsSync } from "node:fs"
 import path from "node:path"
-import { grammarLoaders } from "@/lib/highlight/grammars"
+import { grammarLoaders } from "@/lib/highlight/grammar-loaders"
 import {
   detectLanguage,
   getLanguage,

@@ -12,13 +12,13 @@
 
 # Sniptide
 
-Sniptide is an open-source, self-hostable pastebin for code snippets, configs and secrets, best for
-developers and small teams who want to share code from their own server and give coding agents
-access to it through a CLI or MCP server.
+Sniptide is an open-source pastebin you can run on your own server. Share code and configs in
+multi-file pastes, then choose who can open each link and when it expires.
 
-Share multi-file pastes with passwords, expiry or burn-after-read links.
-Organize reusable snippets in collections, sync `.env` files, and connect coding agents through the CLI or MCP server.
-Use the hosted app at [app.sniptide.com](https://app.sniptide.com) or run your own instance.
+Group snippets you reuse in collections, sync a project’s `.env` file, and give coding agents
+access to your snippets through the MCP server.
+
+Open [Sniptide Cloud](https://app.sniptide.com) to get started, or run Sniptide on your own server.
 
 ## Self-host Sniptide
 
@@ -67,7 +67,8 @@ The official Docker image supports AMD64 and ARM64 at `ghcr.io/dino-kupinic/snip
 
 ## Connect a coding agent
 
-Add the MCP server to Claude Code, which signs you in to Sniptide in the browser through OAuth:
+Add the MCP server to Claude Code. For Sniptide Cloud, use the address below. For a self-hosted
+instance, replace `https://app.sniptide.com` with your instance address.
 
 ```bash
 claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
@@ -77,26 +78,13 @@ Then start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**
 
 For a client without OAuth, create a token in **Settings** > **API tokens** and pass it with `--header "Authorization: Bearer $SNIPTIDE_TOKEN"`.
 
-Use `<your-instance-url>/api/mcp` on a self-hosted instance.
 The [MCP guide](https://docs.sniptide.com/mcp) covers Cursor and a local server, and the [CLI](https://docs.sniptide.com/cli) installs a collection as an agent skill.
-This repository is also an [Agent Plugin](https://agent-plugins.org): `plugin.json` bundles the MCP servers in `mcp.json` with the skills in `skills/`.
-
-To install the MCP server and the skills as a plugin, run one of these. The Claude Code plugin lives in `plugins/claude/`.
-
-```bash
-# Claude Code
-claude plugin marketplace add Dino-Kupinic/sniptide
-claude plugin install sniptide@sniptide
-
-# Gemini CLI
-gemini extensions install https://github.com/Dino-Kupinic/sniptide
-```
-
 ## Documentation
 
 - [User guide](https://docs.sniptide.com)
 - [CLI](https://docs.sniptide.com/cli), [MCP server](https://docs.sniptide.com/mcp) and [SDKs](https://docs.sniptide.com/sdks)
 - [Self-hosting](https://docs.sniptide.com/self-hosting)
+- [Security and threat model](https://docs.sniptide.com/security) and [vulnerability reporting](SECURITY.md)
 - [Development](docs/development.md) and [contributing](CONTRIBUTING.md)
 - [Operations and scaling](docs/scaling.md)
 
@@ -105,5 +93,4 @@ The API reference is available at `/docs/api` on your instance.
 ## License
 
 The app and UI are licensed under [AGPL-3.0-only](LICENSE). The client packages and shared
-contracts are licensed under MIT. See [Licensing](LICENSING.md) for the
-open-source core and hosted services.
+contracts are licensed under MIT. See [Licensing](LICENSING.md) for the package list.

@@ -23,6 +23,9 @@ every change. In short: test the behavior, update the documentation in the same 
   instead of loosening the check.
 - Report what you verified and what you couldn't, such as database tests without
   `TEST_DATABASE_URL`. State a claim you couldn't verify as unverified rather than guessing.
+- Use expand/contract for schema changes. Add compatible schema first and remove old schema in a
+  later release. Follow the [migration rules](CONTRIBUTING.md#database-migrations) for approved
+  destructive SQL and batched backfills.
 
 # Context discipline
 

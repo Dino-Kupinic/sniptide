@@ -6,9 +6,9 @@ import { Spinner } from "@sniptide/ui/components/spinner"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon, PlusIcon, XIcon } from "lucide-react"
+import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { AgentSetupSteps } from "@/components/onboarding/agent-step"
 import { getConnectedAgents } from "@/lib/agent-actions"
@@ -205,7 +205,7 @@ function ConnectSteps({
           ),
         }))}
         // Two rows in narrow widgets, so every client keeps its logo and full name.
-        className="grid w-full grid-cols-2 @3xl/widget:flex @3xl/widget:w-auto @3xl/widget:self-start"
+        className="grid w-full grid-cols-3 @3xl/widget:flex @3xl/widget:w-auto @3xl/widget:self-start"
         itemClassName="whitespace-nowrap px-2 py-[9px] @3xl/widget:px-3 lg:py-[5px]"
       />
 

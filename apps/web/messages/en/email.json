@@ -44,6 +44,13 @@
         "action": "Open Shared with me",
         "event": "shared pastes"
       },
+      "sharedBurn": {
+        "subject": "A paste was shared with you",
+        "preview": "Sign in to open the sealed paste.",
+        "body": "Someone shared a burn-after-read paste with your Sniptide account. Open the sealed page to choose when to read it.",
+        "action": "Open sealed paste",
+        "event": "shared pastes"
+      },
       "burned": {
         "subject": "Your burn after read paste was read",
         "preview": "It moved to your trash, where you can restore it for 30 days.",

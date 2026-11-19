@@ -1,9 +1,9 @@
 "use client"
 
 import { cn } from "@sniptide/ui/lib/utils"
+import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
-import { NavigationLink as Link } from "@/components/navigation-link"
 import { LanguageLabel } from "@/components/paste/language-icon"
 import { useListView } from "@/components/shell/page-header"
 import type { Collection } from "@/lib/collections/types"
@@ -22,6 +22,7 @@ import {
 } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { PasteBulkActions } from "./bulk-actions"
+import { SkeletonCards, SkeletonListFooter, SkeletonMobileRows } from "./list-skeleton"
 import { PasteCard } from "./paste-card"
 import { PasteMobileList, PasteTable } from "./paste-table"
 import { SelectionBar, useRowSelection } from "./selection"
@@ -53,7 +54,11 @@ export function PasteList({
   pagination,
   languageOptions,
   previews,
+  loading,
 }: {
+  // While the page's data loads: how many rows to hold room for. The title, filters and column
+  // headers render as usual, and placeholders stand in for the rows and the summary.
+  loading?: number
   title: string
   rows: PasteRow[]
   // The first highlighted lines of each paste, by slug, for the grid view's cards.
@@ -176,8 +181,11 @@ export function PasteList({
     <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
       <ListHeader
         title={title}
-        count={pagination.totalAll}
-        headerActions={mode === "collection" ? actions : null}
+        count={loading === undefined ? pagination.totalAll : undefined}
+        topBar={loading === undefined || mode === "collection"}
+        // Only a collection's menu goes to the top bar. The view toggle is in the bar already, and
+        // `null` (never `undefined`, which falls back to `actions`) keeps it from rendering twice.
+        headerActions={mode === "collection" ? (actions ?? null) : null}
         actions={
           <>
             <ViewToggle value={view} onChange={setView} />
@@ -237,7 +245,22 @@ export function PasteList({
             view !== "grid" && "lg:overflow-hidden lg:rounded-lg lg:border lg:border-border",
           )}
         >
-          {pagination.total === 0 ? (
+          {loading !== undefined ? (
+            <>
+              {view === "grid" ? (
+                <SkeletonCards count={loading} />
+              ) : (
+                <PasteTable
+                  rows={rows}
+                  origin={origin}
+                  sortHead={headProps}
+                  selection={selection}
+                  loadingRows={loading}
+                />
+              )}
+              <SkeletonMobileRows rows={loading} />
+            </>
+          ) : pagination.total === 0 ? (
             <EmptyState filtering={filtering} mode={mode} />
           ) : view === "grid" ? (
             <ul className="hidden grid-cols-2 gap-4 xl:grid-cols-3 lg:grid">
@@ -256,10 +279,14 @@ export function PasteList({
           )}
 
           {/* Mobile list */}
-          {pagination.total > 0 ? <PasteMobileList rows={rows} origin={origin} /> : null}
+          {loading === undefined && pagination.total > 0 ? (
+            <PasteMobileList rows={rows} origin={origin} />
+          ) : null}
         </div>
 
-        {pagination.total > 0 ? (
+        {loading !== undefined ? (
+          <SkeletonListFooter paged={pagination.pageCount > 1} />
+        ) : pagination.total > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-3 lg:py-0">
             <span className="text-[13px] text-muted-foreground">
               {t("pagination_summary", { range, total: formatNumber(pagination.total, locale) })}

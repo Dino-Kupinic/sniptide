@@ -84,6 +84,24 @@ export async function deployProduction(
     const main = await github("/branches/main")
     if (main.commit?.sha !== sha) throw new Error("Main has moved since CI")
   }
+  const { approvedMigrationsTree } = config
+  if (approvedMigrationsTree !== undefined) {
+    if (!shaPattern.test(approvedMigrationsTree)) {
+      throw new Error("Set COOLIFY_PRODUCTION_MIGRATIONS_TREE to the running migration tree")
+    }
+    const dbContents = await github(`/contents/packages/db?ref=${sha}`)
+    if (
+      !Array.isArray(dbContents) ||
+      !dbContents.some(
+        (entry) =>
+          entry.name === "migrations" &&
+          entry.type === "dir" &&
+          entry.sha === approvedMigrationsTree,
+      )
+    ) {
+      throw new Error("Migration tree changed. Follow the production migration checklist")
+    }
+  }
   const image = `ghcr.io/${repo.toLowerCase()}${kind === "docs" ? "-docs" : ""}`
   const app = await coolify(`/applications/${appId}`)
   if (
@@ -202,6 +220,7 @@ if (import.meta.main) {
         coolifyToken: e.COOLIFY_TOKEN,
         appId: e.COOLIFY_APP_ID,
         kind: e.DEPLOYMENT_KIND || "app",
+        approvedMigrationsTree: e.APPROVED_PRODUCTION_MIGRATIONS_TREE,
       })
     })
     .catch((error) => {

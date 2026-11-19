@@ -87,8 +87,14 @@ describeDb("public preview access", () => {
       robots: { index: false, follow: false },
       openGraph: { images: [{ url: expect.stringContaining("/unlisted/preview") }] },
     })
+  })
+
+  test("keeps self-hosted public pastes out of search without losing link previews", async () => {
     await seedPaste({ slug: "listed", owner: "owner", visibility: "public" })
-    expect(await generateMetadata(params("listed"))).not.toHaveProperty("robots")
+    expect(await generateMetadata(params("listed"))).toMatchObject({
+      robots: { index: false, follow: false },
+      openGraph: { images: [{ url: expect.stringContaining("/listed/preview") }] },
+    })
   })
 
   test("never exposes restricted content, even to its owner or an unlocked visitor", async () => {

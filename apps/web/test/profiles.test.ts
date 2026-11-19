@@ -185,8 +185,8 @@ describeDb("public profiles", () => {
 
     const metadata = await generateMetadata(props("dino"))
     expect(metadata.title).toBe("dino (@Dino) · Sniptide")
-    expect(String(metadata.alternates?.canonical)).toEndWith("/@dino")
-    expect(metadata.robots).toEqual({ index: false, follow: true })
+    expect(metadata.alternates).toBeUndefined()
+    expect(metadata.robots).toEqual({ index: false, follow: false })
     expect((await generateMetadata(props("nobody"))).robots).toEqual({
       index: false,
       follow: false,

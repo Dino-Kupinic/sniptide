@@ -38,6 +38,7 @@
         "claude_code": "Claude Code",
         "codex": "Codex",
         "cursor": "Cursor",
+        "grok_bot": "Grok Bot",
         "other": "Other"
       },
       "steps": {
@@ -45,6 +46,8 @@
         "authenticate": "In Claude Code, run <code>/mcp</code> and choose Authenticate",
         "addServer": "Add as a remote MCP server",
         "addToCursor": "Add to Cursor",
+        "openGrokBot": "Open Grok Bot connectors",
+        "grokBotCustom": "Choose New Connector, then Custom, and paste this address",
         "allow": "Allow access in your browser"
       },
       "yourAgent": "your agent",
@@ -64,6 +67,10 @@
       "new_paste": {
         "title": "Save a paste",
         "body": "A paste holds code, notes or a prompt in one or more files, and it gets its own link to share."
+      },
+      "templates": {
+        "title": "Start from a template",
+        "body": "Open a ready-made file, such as a CLAUDE.md or a Docker Compose setup, in the editor and save it as your own paste."
       },
       "search": {
         "title": "Find anything",

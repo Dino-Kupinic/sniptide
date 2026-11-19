@@ -27,7 +27,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "bun test test",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "devDependencies": {
     "typescript": "catalog:tooling"

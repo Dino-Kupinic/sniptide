@@ -16,7 +16,7 @@
     "build": "bun build src/bin.ts --target=node --external=@modelcontextprotocol/sdk --external=zod --outfile=dist/sniptide-mcp.js",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check --no-script",
     "test": "bun test ./test"
   },
   "dependencies": {

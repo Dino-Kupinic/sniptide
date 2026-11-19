@@ -4,6 +4,7 @@ import { createAuth } from "@workspace/auth"
 import { createDb } from "@workspace/db"
 import { onboarding, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { expect } from "e2e"
 import { databaseUrl } from "./environment"
 
 // A new account goes through the welcome wizard first and then gets the tour. Tests start on a
@@ -16,9 +17,28 @@ async function skipOnboarding(db: ReturnType<typeof createDb>, email: string) {
     .values({ userId: created.id, source: "skipped", tourSeenAt: new Date() })
 }
 
-// Seed through Better Auth, then install its real session cookie. This keeps screenshots
-// available for editor failures and leaves the sign-in UI to its own regression test.
-export const test = base.extend<{ account: { email: string } }>({
+// A route's screen streams in after the shell and hydrates on its own, so it can show before
+// React handles input on it, and a key pressed then is lost. Opening a page therefore waits until
+// the loading state is gone and every element shown in the main area belongs to React.
+function screenReady() {
+  const shown = (element: Element) => element.checkVisibility()
+  if ([...document.querySelectorAll("[data-slot=loading] *")].some(shown)) return false
+  return [...document.querySelectorAll("main *")]
+    .filter(shown)
+    .every((element) => Object.keys(element).some((key) => key.startsWith("__reactFiber$")))
+}
+
+export const test = base.extend<{ account: { email: string }; hydratedOpen: undefined }>({
+  hydratedOpen: async ({ app, browser }, use) => {
+    const open = app.open.bind(app)
+    app.open = async (path?: string) => {
+      await open(path)
+      await expect.poll(() => browser.evaluate(screenReady)).toBe(true)
+    }
+    await use(undefined)
+  },
+  // Seed through Better Auth, then install its real session cookie. This keeps screenshots
+  // available for editor failures and leaves the sign-in UI to its own regression test.
   account: async ({ app, browser }, use) => {
     const db = createDb(databaseUrl())
     const username = `e2e-${randomUUID().slice(0, 16)}`

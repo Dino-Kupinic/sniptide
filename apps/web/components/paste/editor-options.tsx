@@ -100,7 +100,7 @@ export function ExpiryChips({
         onValueChange={onChange}
         options={all}
       />
-      {currentExpiry && value === "keep" ? (
+      {currentExpiry ? (
         <p className="text-xs text-muted-foreground">
           {t("currentExpiry", { expiry: currentExpiry })}
         </p>

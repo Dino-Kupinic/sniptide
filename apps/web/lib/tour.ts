@@ -15,7 +15,7 @@ interface TourTarget {
 }
 
 export interface TourStep {
-  id: "new_paste" | "collections" | "search" | "agent"
+  id: "new_paste" | "templates" | "collections" | "search" | "agent"
   targets: readonly TourTarget[]
 }
 
@@ -27,6 +27,8 @@ export const TOUR_STEPS: readonly TourStep[] = [
       { name: "new-paste-tab", side: "top" },
     ],
   },
+  // The Paste templates widget, right after New paste: the other way to make a first paste.
+  { id: "templates", targets: [{ name: "templates", side: "top" }] },
   {
     id: "search",
     targets: [
@@ -50,8 +52,8 @@ export interface ResolvedTourStep {
 }
 
 // The steps the current screen can show: each one with the first of its targets that is on
-// screen, and without the steps that have none, such as the agent step after the widget was
-// removed from the dashboard.
+// screen, and without the steps that have none, such as the agent or templates step after its
+// widget was removed from the dashboard.
 export function resolveTourSteps(
   isOnScreen: (name: string) => boolean,
   steps: readonly TourStep[] = TOUR_STEPS,

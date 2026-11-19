@@ -96,7 +96,9 @@ test("an encrypted paste reaches the server as ciphertext and opens only with it
   await app.open(`/${slug}`)
   await expect(screen.getByRole("heading", "Key needed")).toBeVisible()
   await expect(browser.locator("body")).not.toContainText(content)
-  await screen.getByLabel("Link or key").fill(`${key.slice(0, -1)}${key.endsWith("A") ? "B" : "A"}`)
+  // The first character changes: the last one carries spare bits, so another letter there can
+  // stand for the same key.
+  await screen.getByLabel("Link or key").fill(`${key.startsWith("A") ? "B" : "A"}${key.slice(1)}`)
   await screen.getByRole("button", "Decrypt").tap()
   await expect(screen.getByRole("alert").filter({ hasText: "key" })).toBeVisible()
   await expect(browser.locator("body")).not.toContainText(content)

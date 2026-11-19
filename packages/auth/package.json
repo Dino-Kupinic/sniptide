@@ -7,13 +7,14 @@
   "scripts": {
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun check --no-script"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "catalog:runtime",
     "@workspace/db": "workspace:*",
     "better-auth": "catalog:runtime",
     "drizzle-orm": "catalog:runtime",
+    "transliteration": "^2.7.0",
     "zod": "catalog:runtime"
   },
   "devDependencies": {

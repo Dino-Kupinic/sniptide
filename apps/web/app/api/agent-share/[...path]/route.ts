@@ -1,8 +1,23 @@
 import { readSharedPaste } from "@/lib/pastes/store"
+import { retryAfterSeconds } from "@/lib/public-limits"
 
 export const dynamic = "force-dynamic"
 
-export async function GET(_request: Request, context: { params: Promise<{ path: string[] }> }) {
+const headers = {
+  "content-type": "text/markdown; charset=utf-8",
+  "cache-control": "private, no-store",
+  vary: "Accept, Cookie",
+  "x-content-type-options": "nosniff",
+}
+
+export async function GET(request: Request, context: { params: Promise<{ path: string[] }> }) {
+  const retryAfter = await retryAfterSeconds(request, "markdown")
+  if (retryAfter)
+    return new Response("Too many requests\n", {
+      status: 429,
+      headers: { ...headers, "retry-after": String(retryAfter) },
+    })
+
   const { path } = await context.params
   const read =
     // One segment for a generated link, two for a custom link (/@<handle>/<name>).
@@ -36,11 +51,6 @@ export async function GET(_request: Request, context: { params: Promise<{ path: 
   }
   return new Response(body, {
     status: read.status === "missing" ? 404 : 200,
-    headers: {
-      "content-type": "text/markdown; charset=utf-8",
-      "cache-control": "private, no-store",
-      vary: "Accept, Cookie",
-      "x-content-type-options": "nosniff",
-    },
+    headers,
   })
 }

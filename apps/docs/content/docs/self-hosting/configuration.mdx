@@ -25,6 +25,16 @@ the app. The Coolify template lists the common ones; see
 | `BETTER_AUTH_SECRET` | none | Signs sessions and supplies the default key for env group values. Generate with `openssl rand -hex 32` and keep it across restarts. Changing it signs everyone out. See [Rotate the auth secret](#rotate-the-auth-secret) if you store env groups. |
 | `BETTER_AUTH_URL` | none | The exact URL people open in the browser (`https://…` behind a proxy). The app boots without it, but sign-in and sign-up are rejected from any other origin ("Invalid origin"), and OAuth callbacks and printed links use it. |
 
+## Edition
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `SNIPTIDE_EDITION` | `selfhost` | Leave this set to `selfhost` for your own instance. Pages and raw share links send `X-Robots-Tag: noindex, nofollow, noarchive`. Sniptide Cloud uses `cloud`, which enables public discovery and supports the template gallery. |
+
+Self-hosted public links can still be opened by anyone who has the address. Search engines can
+fetch the pages to read the noindex directive. Use a [private paste](/core-concepts/sharing#choose-a-visibility)
+to control who can open a link.
+
 ## Sign-in and sign-up
 
 | Variable | Default | What it does |
@@ -56,7 +66,7 @@ above.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `HOMEPAGE_URL`, `DOCS_URL`, `HELP_URL` | The Sniptide project's site, docs and issue tracker | Where the **Homepage**, **Documentation** and **Help** links under **Resources** in the account menu go. They open in a new tab. |
-| `TEMPLATES_URL` | unset | Where [`/new?template=<name>`](/core-concepts/pastes#start-from-a-template) reads a template's files, as `<TEMPLATES_URL>/<name>.json`. Set it to `https://sniptide.com/templates` to open the public templates. Without it the parameter is ignored. |
+| `TEMPLATES_URL` | unset | Template catalog address for the `cloud` edition. Leave unset when self-hosting. See [Start from a template](/core-concepts/pastes#start-from-a-template). |
 | `TERMS_URL`, `PRIVACY_URL` | unset | Turn "Terms" and "Privacy Policy" under the sign-in and sign-up forms into links. Without them that line is left out. |
 | `OPERATOR_NAME`, `OPERATOR_ADDRESS` | unset | Sign the foot of every email with who sends it and a postal address. |
 | `COPYRIGHT_EMAIL` | unset | Publishes `/copyright`, which explains how to send a copyright takedown notice or counter-notice to this address, with `OPERATOR_NAME` and `OPERATOR_ADDRESS` as the agent. |
@@ -68,7 +78,7 @@ A private server can leave all of these unset.
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. |
-| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Leave unset to serve everything on one domain. |
+| `SHARE_URL` | unset | Domain share links use when it differs from the app's. Use a domain you control or leave it unset to serve everything on one domain. |
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports by accounts that haven't connected GitHub. Without it they share GitHub's unauthenticated quota of 60 requests an hour. |
 | `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL` | unset | Incoming webhooks that **Share via…** posts paste links to. One channel per provider. Every paste owner on the instance can post to it, 20 times an hour per account. Keep the URLs secret. |
@@ -248,17 +258,53 @@ removed after 30 days by a cleanup that runs at startup and hourly.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, and `email`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
-| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics and server [error tracking](#error-tracking), off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. Cookieless events carry the visitor's country only when a CDN in front of the app sends one (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), because PostHog drops the IP of cookieless events before its GeoIP lookup. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). The key reaches the browser only on allowed hosts: preview deployments (`pr-NNN.sniptide.com`, `NN.sniptide.com`) and local development get no key, so they cannot report. |
+| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, `email`, and `telemetry`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics and server [error tracking](#error-tracking), off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. Cookieless events carry the visitor's country only when a CDN in front of the app sends one (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), because PostHog drops the IP of cookieless events before its GeoIP lookup. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). Preview deployments and local development get no browser key. |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing
 is sent anywhere else.
+
+### Instance telemetry
+
+Your instance sends a daily usage report to Sniptide by default. To stop collection and delivery,
+set `TELEMETRY=off` and restart every replica. Your own product analytics and error tracking
+use the separate `POSTHOG_KEY` setting.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `TELEMETRY` | `on` | Sends daily instance reports to Sniptide. `off` skips collection and delivery. |
+| `TELEMETRY_ID` | derived from the auth secret | Optional random UUID for the installation identity. Generate one with `node -e 'console.log(crypto.randomUUID())'`. Changing it resets the identity for future reports. Use the same value on every replica. |
+| `TELEMETRY_DEPLOYMENT` | `other` | Deployment label: `docker`, `coolify` or `other`. The official image sets `docker`; the Coolify template sets `coolify`. |
+
+Reports go to `https://app.sniptide.com/api/instance-telemetry` and are stored in Sniptide's
+PostHog project. Delivery is attempted at most once per day for replicas sharing a database and
+has a three-second timeout. Check the `telemetry` job in the protected metrics endpoint for status.
+Demo instances skip reporting.
+
+Each report includes:
+
+- A stable installation ID. Without `TELEMETRY_ID`, the app derives it from
+  `BETTER_AUTH_SECRET` without sending the secret. Set a new ID for a cloned instance if you
+  want its reports to be treated separately.
+- The release, deployment type, operating system, architecture and Node.js major version.
+- Account totals and active-account counts, grouped activity totals for web, API, CLI and MCP,
+  and the dates when observation and paste creation began.
+- Bucketed paste, collection, API request, memory and uptime counts, plus flags for configured
+  sign-in providers, email, Slack, Discord and the support assistant.
+
+Account identifiers and individual activity rows stay in your database. Reports omit paste
+content, titles, links, credentials, raw logs and your instance address. Sniptide receives the
+source IP as part of the HTTPS connection and uses an HMAC of it for rate limiting. It does not
+forward the IP or request headers to PostHog. Delivery logs can include connection metadata.
+
+The receiving PostHog project controls retention. Turning off telemetry or changing the
+installation ID does not delete reports already sent.
 
 ### Error tracking
 
 With `POSTHOG_KEY` set, the server also sends its exceptions to PostHog error tracking in the same
 project: errors in pages, route handlers, server actions and the proxy, and failures in the
-maintenance jobs, the visit queue and the demo reset. Without a key nothing is sent, and
+maintenance jobs, the visit queue and the demo reset. Without a key no exceptions are sent, and
 exceptions only reach the server log as before. Preview deployments and `localhost` never report.
 
 Each exception carries the route file (such as `app/[slug]/page`, never the visited path), the
@@ -281,14 +327,14 @@ spiking triggers, and send them to Slack, Linear, GitHub or a webhook.
 ## Support and feedback
 
 **Feedback** in the account menu works without any of these settings: it opens a prefilled
-GitHub issue at `HELP_URL`, and the instance sends nothing anywhere. Set the Linear variables to
+GitHub issue at `HELP_URL`, and no report is sent automatically. Set the Linear variables to
 receive reports in your own tracker, and an Anthropic key to add the support assistant. See
 [Get help and report a bug](/support) for what people see and what each report contains.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `LINEAR_API_KEY` | unset | A Linear API key that can create issues and upload files. With `LINEAR_TEAM_ID`, reports are sent from the server and filed as Linear issues. |
-| `LINEAR_TEAM_ID` | unset | The team to file in, by key (`WRK`) or ID. Reports land in the team's Triage state when triage is on, with its `Bug` or `Feedback` label when one exists. Bugs start at Medium priority and feedback without one. |
+| `LINEAR_TEAM_ID` | unset | The team to file in, by key or ID. Reports land in the team's Triage state when triage is on, with its `Bug` or `Feedback` label when one exists. Bugs start at Medium priority and feedback without one. |
 | `LINEAR_PROJECT_ID` | unset | The ID of a project to add every report to. |
 | `ANTHROPIC_API_KEY` | unset | Turns on the **Ask** tab with Claude. Each question sends the docs, the conversation and the report details to Anthropic's API, billed to this key. With the Linear settings, the assistant can also file reports. |
 | `OPENAI_API_KEY` | unset | Turns on the **Ask** tab with an OpenAI model instead. It sends the same data to OpenAI's API, billed to this key, and needs `SUPPORT_MODEL`. |
@@ -300,6 +346,15 @@ with each question limited to 300 characters. The daily count resets 24 hours af
 first question of the period. A report that repeats an open issue,
 the same kind of report from the same page with the same opening words, becomes a comment on that
 issue. Failures are logged as `support:` lines in the server log.
+
+## Abuse reporting
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ABUSE_REPORTS_ENABLED` | `false` | Enables anonymous abuse and appeal intake at `/abuse`, the report link on shared pastes, and `POST /api/abuse`. Requires `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` of at least 32 characters. Assign reviewers and confirm reporting, privacy and retention procedures before enabling. No external screening or email delivery is enabled. |
+
+The restricted queue uses the instance database and authorized host commands. See
+[Report abuse and appeal decisions](/abuse) for activation, review, decisions and retention limits.
 
 ## Build-time settings
 

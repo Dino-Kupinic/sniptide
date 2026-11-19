@@ -49,3 +49,12 @@ test("bounds work for large files without losing content", () => {
       .join("\n"),
   ).toBe(b)
 })
+
+test("prefers removals on a tie following an unchanged prefix", () => {
+  expect(diffLines("prefix\na\nb", "prefix\nb\na")).toEqual([
+    { kind: "same", text: "prefix" },
+    { kind: "removed", text: "a" },
+    { kind: "same", text: "b" },
+    { kind: "added", text: "a" },
+  ])
+})

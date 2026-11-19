@@ -6,13 +6,14 @@ const isDev = process.env.NODE_ENV === "development"
 
 // Without nonces, so pages stay as they render today; Next's inline bootstrap scripts need
 // 'unsafe-inline', and React needs 'unsafe-eval' in development only. img-src allows https for
-// the avatars GitHub and Google hand over at sign-up.
+// the avatars GitHub and Google hand over at sign-up and for template artwork, plus a templates
+// site on localhost in development.
 const contentSecurityPolicy = (frameAncestors: string) =>
   [
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' blob: data: https:",
+    `img-src 'self' blob: data: https:${isDev ? " http://localhost:*" : ""}`,
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

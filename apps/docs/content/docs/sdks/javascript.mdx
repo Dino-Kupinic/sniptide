@@ -19,7 +19,8 @@ loads the page.
 ## Authenticate
 
 Create a token in **Settings** > **API tokens** with the access your code needs (see
-[API tokens](/api-tokens)), put it in your server's environment, and pass it to the client:
+[API tokens](/api-tokens)), put it in your server's environment, and pass it with your instance address. Replace
+`https://paste.example.com` below with that address.
 
 ```ts
 import { SniptideClient } from "@sniptide/sdk"
@@ -27,7 +28,7 @@ import { SniptideClient } from "@sniptide/sdk"
 const token = process.env.SNIPTIDE_TOKEN
 if (!token) throw new Error("Set SNIPTIDE_TOKEN in the server environment.")
 
-const client = new SniptideClient(token)
+const client = new SniptideClient(token, "https://paste.example.com")
 const { user, scopes } = await client.me()
 ```
 
@@ -152,7 +153,7 @@ To refuse a write when someone changed the group after you read it, pass the rev
 `writeEnvGroup("my-app", variables, { revision: group.revision })`. A newer group fails with
 status 412 and stays as it was.
 
-## Self-hosted instances
+## Client options
 
 Pass your instance's address as the second argument, including any path prefix:
 

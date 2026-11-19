@@ -1,0 +1,104 @@
+---
+title: Report abuse and appeal decisions
+description: Report a paste without an account and operate the restricted manual review queue on your own instance.
+---
+
+An instance can accept abuse reports and appeals at `/abuse`. No account is required.
+The operator must enable this feature; it is off by default.
+
+## Send a report
+
+1. Open **Report abuse** at the bottom-right of a shared paste page, or open `/abuse` on the instance.
+2. Enter the paste URL, choose a reason, and explain your concern in 10 to 2,000 characters.
+3. Optionally enter an email address so a reviewer can contact you.
+4. Select **Send for review**. A confirmation means the report was stored for review.
+
+For suspected child exploitation, provide its location only. Do not download, copy, quote or
+upload suspected material. The form accepts no attachments. If a child is in immediate danger,
+contact local emergency services.
+
+To challenge a moderation decision, select **Appeal a moderation decision** and explain why you
+believe it should be reconsidered. An appeal does not automatically restore access. Decision
+notices and email replies are handled manually by the operator; this feature sends no emails.
+
+The form accepts URLs on the configured app or share origin. Query parameters and fragments are
+discarded because they can carry passwords or encryption keys. Do not put paste contents or
+credentials in the explanation. Reports about missing, private and restricted pastes receive the
+same confirmation, so reporting does not reveal whether a paste exists.
+
+## Understand report handling
+
+Reports stay in the instance's database for authorized host operators. They are not forwarded to
+Linear, an AI provider or a public issue tracker. Reviewers see report text only when they
+explicitly open a case. Report text is untrusted and may itself contain sensitive material.
+
+The instance accepts at most 10 submissions per address per hour. Duplicate submissions with
+the same normalized fields on the same UTC day share one case. Neither the case ID nor duplicate
+status is exposed publicly. Report counts do not change moderation state.
+
+If the form says too many reports were sent, wait an hour before retrying. A failed submission
+does not confirm receipt; check the fields and retry. A request body over 12 KiB is refused.
+
+## Enable manual review
+
+Before enabling intake, assign a primary reviewer and backup, confirm reporting and preservation
+requirements, and establish a restricted case register, notice procedure and retention/disposal
+schedule. Test the queue and the incident escalation with harmless synthetic reports.
+
+Set `ABUSE_REPORTS_ENABLED=true`, `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` (at least 32
+characters), then restart every serving replica. Configure `CLIENT_IP_SOURCE` for the trusted
+proxy; otherwise visitors can share a quota. See [Configuration](/self-hosting/configuration).
+
+From an authorized operations checkout with `DATABASE_URL` pointing at the intended database:
+
+```sh
+bun --filter @workspace/db moderation reports
+bun --filter @workspace/db moderation report <report-uuid>
+```
+
+The queue lists at most 100 unresolved cases, with suspected child exploitation first and then
+oldest first. It shows only the case UUID, category and receipt time. Opening a case shows its
+location, immutable paste UUID when known, explanation, optional contact and disposition.
+These commands audit the host username, hostname, action, case UUID when applicable, and time.
+They require trusted host and database access; there is no public queue or browser admin endpoint.
+
+## Record a decision
+
+Use the existing `moderation inspect` and `moderation transition` commands to assess the current
+paste version and apply a restriction or release. Set the transition's `caseReference` to the
+report UUID. Then close the report with the command UUID of that decision:
+
+```sh
+bun --filter @workspace/db moderation resolve-report '{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "outcome": "quarantined",
+  "decisionCommandId": "22222222-2222-4222-8222-222222222222"
+}'
+```
+
+These are synthetic UUIDs. Replace them with the actual case and moderation command IDs.
+`quarantined`, `removed` and `restored` outcomes require an audit event for that case and the
+same immutable paste, with the matching resulting state. `restored` matches `allowed`.
+`no_action` and `duplicate` close a case without a moderation command. Resolution is audited and
+cannot be applied twice. It records a completed decision; it does not itself change paste state.
+
+Use the confirmed incident procedure for urgent allegations. Keep suspected material out of
+ordinary logs, email, chat and issue trackers. Send any permitted decision notice through the
+operator's approved channel. Do not promise evidence preservation: restrictions and report
+records do not preserve paste contents.
+
+## Retention and limitations
+
+Report records and reviewer audit events survive paste and account deletion. There is no automatic
+report-disposal job in this foundation. Keep intake off until an authorized owner has approved
+the retention and disposal procedure, including backups and review access. The report queue is
+not an evidence repository.
+
+Setting `ABUSE_REPORTS_ENABLED=false` hides the form and report links and rejects new submissions.
+Existing cases remain available through the host commands. Disabling intake does not dispose of
+records or change paste restrictions.
+
+This workflow provides intake, an audited host queue and manual case resolution. Account
+suspension, automated decision notices, verified preservation, external escalation delivery,
+automated screening and backlog alerts remain separate work. No claim of complete detection or
+legal certification is made.

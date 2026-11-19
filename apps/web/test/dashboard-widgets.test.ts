@@ -3,6 +3,7 @@ import { paste } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { saveDashboardLayout } from "@/lib/dashboard/actions"
 import {
+  availableLayout,
   cleanLayout,
   DEFAULT_LAYOUT,
   TEMPLATES,
@@ -31,6 +32,16 @@ describe("dashboard layout", () => {
     expect(parsePreferences(JSON.stringify({ dashboard: "agents" })).dashboard).toBeUndefined()
     expect(parsePreferences("{}").dashboard).toBeUndefined()
     expect(DEFAULT_LAYOUT).toEqual(TEMPLATES.agents)
+  })
+
+  test("a new account sees paste templates right after the agent setup", () => {
+    expect(DEFAULT_LAYOUT.slice(0, 2)).toEqual(["agents", "templates"])
+    expect(widgetSize("templates", {})).toBe("large")
+  })
+
+  test("an instance without TEMPLATES_URL leaves the Paste templates widget out", () => {
+    expect(availableLayout(DEFAULT_LAYOUT, { templates: false })).not.toContain("templates")
+    expect(availableLayout(DEFAULT_LAYOUT, { templates: true })).toEqual([...DEFAULT_LAYOUT])
   })
 
   test("every widget supports both sizes while existing dashboards keep their widths", () => {

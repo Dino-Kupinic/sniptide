@@ -2,7 +2,9 @@ import type { PostHog } from "posthog-js"
 import { isAnalyticsExcluded } from "@/lib/analytics-preference"
 
 // Product analytics with PostHog. Off unless the server has POSTHOG_KEY (lib/config.ts), so a
-// self-hosted instance sends nothing. sniptide.com reports to the same project as its website;
+// self-hosted instance sends no product events to an operator project without a key.
+// Instance reports use a separate hosted collector (instance-telemetry.ts).
+// sniptide.com reports to the same project as its website;
 // events from here carry surface=app.
 //
 // Events never hold paste content, titles, file names or slugs: only the counts and settings

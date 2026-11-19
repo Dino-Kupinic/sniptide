@@ -6,6 +6,7 @@ import { useTheme } from "next-themes"
 import * as React from "react"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import { ImportGistSheet } from "@/components/lists/import-gist"
+import { useSettledShellData } from "@/components/shell/shell-data"
 import { useIsDesktop } from "@/components/shell/use-media-query"
 import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import type { Collection } from "@/lib/collections/types"
@@ -31,6 +32,9 @@ export function useCommandMenu() {
   return React.useContext(CommandMenuContext)
 }
 
+const noPastes: SidebarPaste[] = []
+const noCollections: Collection[] = []
+
 // How long the first key of a sequence (G, T) waits for the key that completes it.
 const CHORD_MS = 1200
 
@@ -42,16 +46,12 @@ const LEADERS = new Set<string | undefined>(SEQUENCES.map((item) => item.keys[0]
 
 // Owns the menu for the whole app shell: the ⌘K / Ctrl K and / shortcuts, the G-then-key chords on
 // the Go to rows, and the dialogs its actions open (New collection, Import gist).
-export function CommandMenuProvider({
-  recent,
-  collections,
-  children,
-}: {
-  recent: SidebarPaste[]
-  collections: Collection[]
-  children: React.ReactNode
-}) {
+export function CommandMenuProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Workspace")
+  // Empty until the shell's data arrives; the menu's commands and search work without it.
+  const shell = useSettledShellData()
+  const recent = shell?.sidebar.recent ?? noPastes
+  const collections = shell?.collections ?? noCollections
   const router = useRouter()
   const shortcuts = useShortcutsHelp()
   const { resolvedTheme, setTheme } = useTheme()

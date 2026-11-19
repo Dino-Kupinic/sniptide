@@ -1,17 +1,22 @@
 import type { Database } from "@workspace/db"
 import { user } from "@workspace/db/schema"
 import { eq, inArray, or, sql } from "drizzle-orm"
+import { transliterate } from "transliteration"
 import { toUsername } from "./username"
 
 // Used when no candidate gives a valid username.
 const FALLBACK = "user"
+
+export function toGeneratedUsername(value: string | null | undefined) {
+  return value ? toUsername(transliterate(value)) : null
+}
 
 // Picks a free username for an account created without one, which is every GitHub or Google
 // sign-up. The first candidate that is free wins; otherwise the first usable one gets the lowest
 // free numbered suffix ("dino-2"). Email addresses never serve as a candidate, since the username
 // shows on the public profile.
 export async function generateUsername(db: Database, candidates: (string | null | undefined)[]) {
-  const usable = [...new Set(candidates.map(toUsername).filter((value) => value !== null))]
+  const usable = [...new Set(candidates.map(toGeneratedUsername).filter((value) => value !== null))]
   if (usable.length) {
     const taken = new Set(
       (

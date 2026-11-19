@@ -57,6 +57,53 @@ describeDb("migration coordination", () => {
       await db.$client.end()
     }
   })
+
+  test("a blocked DDL statement releases the migration lock and retries the upgrade", async () => {
+    const name = "99991231235959_lock_retry"
+    const pending = folderWith({
+      [name]: "ALTER TABLE migration_lock_test ADD COLUMN retried boolean;",
+    })
+    try {
+      await onFreshDatabase(async (db) => {
+        await migrateDb(db, folder)
+        await db.$client`CREATE TABLE migration_lock_test (id integer)`
+        const ready = Promise.withResolvers<void>()
+        const release = Promise.withResolvers<void>()
+        const blocker = db.$client.begin(async (tx) => {
+          await tx`LOCK TABLE migration_lock_test IN ACCESS SHARE MODE`
+          ready.resolve()
+          await release.promise
+        })
+        await Promise.race([ready.promise, blocker])
+        const migration = migrateDb(db, pending)
+        void migration.catch(() => {})
+        try {
+          let waited = false
+          let released = false
+          const deadline = Date.now() + 6500
+          while (!released && Date.now() < deadline) {
+            const [row] = await db.$client`
+              SELECT exists(
+                SELECT 1 FROM pg_locks
+                WHERE relation = 'migration_lock_test'::regclass
+                  AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+                  AND mode = 'AccessExclusiveLock' AND NOT granted
+              ) AS waiting`
+            released = waited && !row?.waiting
+            waited ||= row?.waiting === true
+            if (!released) await Bun.sleep(25)
+          }
+          expect(released).toBe(true)
+        } finally {
+          release.resolve()
+          await blocker
+          expect((await migration).applied).toEqual([name])
+        }
+      })
+    } finally {
+      fs.rmSync(pending, { recursive: true, force: true })
+    }
+  }, 15_000)
 })
 
 // Statements Postgres can't roll back, or won't run inside a transaction. Every pending migration
@@ -68,6 +115,28 @@ const NON_TRANSACTIONAL = [
   /^\s*(vacuum|cluster|reindex\s+(database|system)|create\s+database|drop\s+database|alter\s+system)\b/im,
   /\bcreate\s+tablespace\b/i,
 ]
+
+const ROLLING_INCOMPATIBLE = [
+  /\b(drop|rename|truncate)\b/i,
+  /\balter\s+(?:column\s+)?[a-z_][\w$]*\s+(?:set\s+data\s+)?type\b/i,
+  /\bset\s+(?:not\s+null|logged|unlogged|tablespace|access\s+method|expression\s+as)\b/i,
+  /\badd\b[^;]*\bgenerated\s+always\s+as\s*\([^;]*\bstored\b/i,
+]
+
+// These released migrations predate the rolling-upgrade check. Their SQL is immutable.
+const LEGACY_ROLLING_INCOMPATIBLE = new Set([
+  "20261010172500_collection_icons",
+  "20261019205307_paste_version",
+])
+
+function rollingIncompatibleSql(sql: string) {
+  if (/^\s*-- destructive: approved(?:\r?\n|$)/.test(sql)) return undefined
+  const statements = sql.replace(
+    /--[^\n]*|\/\*[\s\S]*?\*\/|\bE'(?:\\[\s\S]|''|[^'\\])*'|'(?:''|[^'])*'|"(?:[^"]|"")*"/gi,
+    (token) => (token.startsWith('"') ? " identifier " : " "),
+  )
+  return ROLLING_INCOMPATIBLE.find((pattern) => pattern.test(statements))
+}
 
 describe("migration files", () => {
   const migrations = fs
@@ -87,7 +156,35 @@ describe("migration files", () => {
       const forbidden = NON_TRANSACTIONAL.find((pattern) => pattern.test(migration.sql))
       expect(forbidden, `${migration.name} uses a non-transactional statement`).toBeUndefined()
     })
+    if (!LEGACY_ROLLING_INCOMPATIBLE.has(migration.name)) {
+      test(`${migration.name} is safe for a rolling upgrade or explicitly approved`, () => {
+        expect(
+          rollingIncompatibleSql(migration.sql),
+          `${migration.name} needs an expand/contract release. Add -- destructive: approved after review.`,
+        ).toBeUndefined()
+      })
+    }
   }
+
+  test("requires approval for statements that remove or rewrite live schema", () => {
+    for (const sql of [
+      'ALTER TABLE paste DROP COLUMN "old";',
+      'ALTER TABLE paste RENAME "old" TO "new";',
+      'ALTER TABLE paste ALTER COLUMN "count" TYPE bigint;',
+      "ALTER TABLE paste ALTER count SET DATA TYPE bigint;",
+      "ALTER TABLE paste ALTER count SET NOT NULL;",
+      "ALTER TABLE paste SET LOGGED;",
+      "ALTER TABLE paste ADD COLUMN computed int GENERATED ALWAYS AS (count + 1) STORED;",
+      "TRUNCATE TABLE paste;",
+    ]) {
+      expect(rollingIncompatibleSql(sql)).toBeDefined()
+      expect(rollingIncompatibleSql(`-- destructive: approved\n${sql}`)).toBeUndefined()
+    }
+    expect(
+      rollingIncompatibleSql(`-- We can DROP the old column later.\nALTER TABLE paste
+        ADD COLUMN "rename" text DEFAULT 'drop' /* SET NOT NULL */;`),
+    ).toBeUndefined()
+  })
 })
 
 // A copy of the real migrations plus extra ones, in a throwaway folder.

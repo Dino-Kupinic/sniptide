@@ -1249,7 +1249,7 @@ export const openApiDocument = {
         tags: ["Env"],
         summary: "Read an env group",
         description:
-          "The group's variables with their values, in the order they were pushed. `sniptide env pull` and `env run` read this.",
+          "The group's variables with their values, in the order they were pushed. `sniptide env pull` and `env run` read this. Each read is recorded in the group's activity log under the token's name.",
         ...tokenAccess("read"),
         parameters: [envGroupParameter],
         responses: {
@@ -1748,8 +1748,19 @@ export const openApiDocument = {
           },
           author: {
             type: "object",
-            required: ["username", "initials"],
-            properties: { username: { type: "string" }, initials: { type: "string" } },
+            required: ["id", "username", "handle", "image"],
+            properties: {
+              id: { type: "string", description: "The account id." },
+              username: { type: "string" },
+              handle: {
+                type: ["string", "null"],
+                description: "The profile handle, or null when the account has no profile.",
+              },
+              image: {
+                type: ["string", "null"],
+                description: "The profile picture as a data URL, or null when there is none.",
+              },
+            },
           },
           updatedAt: { type: "number", description: "Milliseconds since the epoch." },
           expiresAt: {
@@ -1912,6 +1923,9 @@ export const openApiDocument = {
 } as const
 
 export const internalRoutes = [
+  "/api/instance-telemetry",
+
+  "/api/abuse",
   "/.well-known/openai-apps-challenge",
   "/.well-known/api-catalog",
   // OAuth follows its RFCs and is discovered from these metadata documents instead (lib/oauth).
@@ -1937,6 +1951,7 @@ export const internalRoutes = [
   "/api/favicon",
   "/api/notifications",
   "/api/notifications/unsubscribe",
+  "/api/notifications/[id]/open",
   "/demo",
   "/api/live",
   "/api/locale",

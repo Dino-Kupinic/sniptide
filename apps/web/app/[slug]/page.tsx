@@ -13,6 +13,8 @@ import { RevealPaste } from "@/components/paste/reveal-paste"
 import { SharedPasteView, sharedViewerProps } from "@/components/paste/shared-paste-view"
 import { UnlockForm } from "@/components/paste/unlock-form"
 import { PublicHeader } from "@/components/public-header"
+import { getConfig } from "@/lib/config"
+import { hasFeature } from "@/lib/edition"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
 import { slugFromRoute } from "@/lib/pastes/links"
@@ -29,8 +31,10 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
 
   return {
     title: `${meta.title} · Sniptide`,
-    // Unlisted pastes are reachable by link only, so keep them out of search engines.
-    robots: meta.visibility === "public" ? undefined : { index: false, follow: false },
+    robots:
+      meta.visibility === "public" && hasFeature("discovery")
+        ? undefined
+        : { index: false, follow: false },
   }
 }
 
@@ -93,12 +97,11 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
       </Shell>
     )
   }
-  const single = paste.files.length === 1
   const viewerProps = {
     slug,
     files: paste.files,
     rawAllowed: paste.allowRaw,
-    ...sharedViewerProps(single, true),
+    ...sharedViewerProps(true),
   }
 
   return (
@@ -118,6 +121,7 @@ export default async function Page({ params }: PageProps<"/[slug]">) {
 }
 
 function Shell({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
+  const t = useTranslations("Abuse")
   return (
     <div className="relative isolate flex min-h-svh flex-col">
       {/* The auth screens' Game of Life as a quiet backdrop: a sparse field at a quarter of their
@@ -134,6 +138,16 @@ function Shell({ signedIn, children }: { signedIn: boolean; children: React.Reac
       <main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 lg:gap-6 lg:pt-12">
         {children}
       </main>
+      {getConfig().abuseReportsEnabled ? (
+        <footer className="flex justify-end px-4 pb-6 lg:px-10">
+          <a
+            href={`${getAppOrigin()}/abuse`}
+            className="text-sm text-muted-foreground underline underline-offset-4"
+          >
+            {t("reportLink")}
+          </a>
+        </footer>
+      ) : null}
     </div>
   )
 }

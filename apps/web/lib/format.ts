@@ -1,6 +1,7 @@
 // Display helpers for paste metadata. Relative times can be computed once per server render
 // and handed to client components as strings.
 
+import { editorLineCount } from "@/lib/highlight/editor-limits"
 import type { Locale } from "@/lib/i18n/config"
 import { DAY, HOUR, MINUTE } from "@/lib/time"
 
@@ -134,6 +135,7 @@ export function initials(name: string) {
   return letters.toUpperCase() || "?"
 }
 
-export function lineCount(text: string) {
-  return text.replace(/\n$/, "").split("\n").length
+export function lineCount(text: string, limit = Number.POSITIVE_INFINITY) {
+  const trailing = text.endsWith("\n") ? 1 : 0
+  return editorLineCount(text, limit + trailing) - trailing
 }

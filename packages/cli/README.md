@@ -3,7 +3,7 @@
 Capture files from one project into a Sniptide paste with their folder structure, restore them in
 another project, install a collection as an agent skill, and sync a project's `.env` file. The
 `sniptide` command prints JSON on request and never prompts, so people and coding agents can both
-run it. It works with Sniptide Cloud and self-hosted instances.
+run it.
 
 ## Install
 
@@ -21,8 +21,10 @@ Create a personal API token in **Settings** > **API tokens**. A read-only token 
 `list`, `search`, `skill`, `env list`, `env pull` and `env run`. `push`, `env push` and `env delete`
 need **Write access**.
 
-Pipe the token to `login` so that it never appears in the process list. Add `--base-url` for a
-self-hosted instance:
+The CLI defaults to Sniptide Cloud at `https://app.sniptide.com`.
+
+Pipe the token to `login` to keep it out of the process list. Set `--base-url` to your instance
+address.
 
 ```sh
 printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin --base-url https://paste.example.com
@@ -37,8 +39,7 @@ Logged in to https://paste.example.com.
 file is readable only by you, and `SNIPTIDE_CONFIG` picks another one. A saved token is used only
 for the exact address it was saved for. `sniptide logout` deletes it.
 
-You can also skip `login` and export `SNIPTIDE_TOKEN`, plus `SNIPTIDE_BASE_URL` for a self-hosted
-instance. The environment takes precedence over saved values, and `--base-url` takes precedence over
+You can also skip `login` and export `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`. The environment takes precedence over saved values, and `--base-url` takes precedence over
 the environment. The address must use HTTPS, except on `localhost`, and can include a path prefix.
 The CLI refuses redirects, so the token never leaves the instance you chose.
 

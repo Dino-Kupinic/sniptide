@@ -39,6 +39,7 @@ import {
 } from "@/components/shell/sidebar-state"
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
+import { recordAccountRead } from "@/lib/instance-activity"
 import { recordNotifications } from "@/lib/notifications/record"
 import { agentClientOf } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
@@ -59,7 +60,7 @@ import {
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0]
 
 import { recordPasteEvent } from "./events"
-import { isLive, openToAnyone, restoredFields, unexpiredWhere } from "./lifecycle"
+import { isLive, liveWhere, openToAnyone, restoredFields, unexpiredWhere } from "./lifecycle"
 import { type PasswordField, passwordIntent } from "./password-intent"
 import { hashPassword } from "./passwords"
 import type { PastePreview } from "./preview"
@@ -142,6 +143,7 @@ async function summarize(
         name: user.name,
         username: user.username,
         displayUsername: user.displayUsername,
+        image: user.image,
       })
       .from(user)
       .where(inArray(user.id, [...new Set(records.map((record) => record.ownerId))])),
@@ -154,7 +156,10 @@ function summariesOf(
   records: PasteRecord[],
   viewer: string | null,
   days: (typeof pasteViewDay.$inferSelect)[],
-  authors: Pick<typeof user.$inferSelect, "id" | "name" | "username" | "displayUsername">[],
+  authors: Pick<
+    typeof user.$inferSelect,
+    "id" | "name" | "username" | "displayUsername" | "image"
+  >[],
   withHistory: boolean,
   firstDay: number,
 ): PasteSummary[] {
@@ -166,7 +171,8 @@ function summariesOf(
         handle: author.username,
         name: author.name,
         initials: initials(author.name),
-        tone: "foreground",
+        id: author.id,
+        image: author.image,
       },
     ]),
   )
@@ -191,7 +197,8 @@ function summariesOf(
         handle: null,
         name: "Unknown",
         initials: "?",
-        tone: "muted",
+        id: record.ownerId,
+        image: null,
       }
 
       return {
@@ -284,6 +291,7 @@ async function hydrate(
           name: user.name,
           username: user.username,
           displayUsername: user.displayUsername,
+          image: user.image,
         })
         .from(user)
         .where(eq(user.id, record.ownerId)),
@@ -473,7 +481,9 @@ export const getPaste = cache(async (slug: string, revisionPage = 1) => {
   if (!viewer) return null
   const [record] = await getDb().select().from(pasteTable).where(appPasteWhere(slug, viewer))
   if (!record) return null
-  return hydrate(record, viewer, revisionPage)
+  const loaded = await hydrate(record, viewer, revisionPage)
+  if (loaded) recordAccountRead(viewer, "web")
+  return loaded
 })
 
 // Apply the same app access and moderation rules as the history page.
@@ -544,7 +554,7 @@ async function canOpenLink(
 ) {
   const owned = record.ownerId === viewer
   if (owned && (record.visibility === "private" || !options.asVisitor)) return "ok" as const
-  if (!owned && (await isSharedWith(record, viewer, db))) return "ok" as const
+  if (!owned && (await isSharedWith(record, viewer, db, options.asVisitor))) return "ok" as const
   if (record.visibility === "private") return "missing" as const
   if (record.passwordHash) {
     const cookie = (await cookies()).get(unlockCookieName(record.slug))?.value
@@ -601,7 +611,13 @@ async function loadSharedPaste(tx: Transaction, record: PasteRecord): Promise<Sh
       .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
       .orderBy(pasteFile.position, pasteFile.id),
     tx
-      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
+      .select({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        displayUsername: user.displayUsername,
+        image: user.image,
+      })
       .from(user)
       .where(eq(user.id, record.ownerId)),
   ])
@@ -663,6 +679,7 @@ export async function readSharedPaste(
   )
   const { countedId, ...read } = result
   if (countedId) await recordPasteEvent(countedId, "view")
+  if (options.visit && viewer && read.status === "ok") recordAccountRead(viewer, "web")
   return read
 }
 
@@ -697,11 +714,20 @@ export async function revealSharedPaste(
   )
   const { countedId, ...read } = result
   if (countedId) await recordPasteEvent(countedId, "view")
+  if (viewer && read.status === "ok") recordAccountRead(viewer, "web")
   return read
 }
 
 function pasteAuthor(
-  author: { name: string; username: string | null; displayUsername: string | null } | undefined,
+  author:
+    | {
+        id: string
+        name: string
+        username: string | null
+        displayUsername: string | null
+        image: string | null
+      }
+    | undefined,
 ): SharedPaste["author"] {
   return author
     ? {
@@ -709,9 +735,17 @@ function pasteAuthor(
         username: author.displayUsername ?? author.username ?? author.name,
         handle: author.username,
         initials: initials(author.name),
-        tone: "foreground",
+        id: author.id,
+        image: author.image,
       }
-    : { name: "Unknown", username: "unknown", handle: null, initials: "?", tone: "muted" }
+    : {
+        name: "Unknown",
+        username: "unknown",
+        handle: null,
+        initials: "?",
+        id: "unknown",
+        image: null,
+      }
 }
 
 const sharedAccess = cache(async (slug: string) => {
@@ -784,60 +818,75 @@ export async function readSharedMeta(slug: string) {
   return metadata ?? null
 }
 
-// Card data for link previews of public and unlisted pastes: whoever has an unlisted link can read
-// the paste already, and the unfurler only has the link. It ignores sessions and unlock cookies, so
-// even the owner cannot expose a private or protected paste through the unauthenticated image URL.
-// No views, events or burn claims.
+// Preview and embed queries check access in the same snapshot as the file contents.
+function publicPasteWhere(slug: string) {
+  return and(
+    eq(pasteTable.slug, slug),
+    allowedPaste(),
+    liveWhere(),
+    inArray(pasteTable.visibility, ["public", "unlisted"]),
+    isNull(pasteTable.passwordHash),
+    eq(pasteTable.burnAfterRead, false),
+    isNull(pasteTable.encryptionKeyId),
+  )
+}
+
+// Link previews ignore sessions and unlock cookies and never count a view.
 export async function readPublicPreview(slug: string): Promise<PastePreview | null> {
-  const record = await findSharedRecord(slug)
-  if (!record || !openToAnyone(record)) return null
-  const [file] = await getDb()
+  const [preview] = await getDb()
     .select({
+      slug: pasteTable.slug,
+      title: pasteTable.title,
+      unlisted: sql<boolean>`${pasteTable.visibility} = 'unlisted'`,
       name: pasteFile.name,
       language: pasteFile.language,
       content: sql<string>`left(${pasteFile.content}, 4000)`,
     })
-    .from(pasteFile)
-    .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
+    .from(pasteTable)
+    .innerJoin(pasteFile, eq(pasteFile.pasteId, pasteTable.id))
+    .where(publicPasteWhere(slug))
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)
-  if (!file) return null
-  return {
-    slug: record.slug,
-    title: record.title,
-    unlisted: record.visibility === "unlisted",
-    ...file,
-  }
+  return preview ?? null
 }
 
 // The embed view runs inside other sites' pages, so like the preview card it ignores sessions and
 // unlock cookies: a private, protected or one-time paste never opens there, even for its owner.
 // Unlisted pastes do, since whoever has the link may already read them. No views or burn claims.
 export async function readEmbedPaste(slug: string): Promise<SharedPaste | null> {
-  const record = await findSharedRecord(slug)
-  if (!record || !openToAnyone(record)) return null
-  const db = getDb()
-  const [files, [author]] = await Promise.all([
-    db
-      .select({ name: pasteFile.name, language: pasteFile.language, content: pasteFile.content })
-      .from(pasteFile)
-      .where(and(allowedParent(pasteFile.pasteId), eq(pasteFile.pasteId, record.id)))
-      .orderBy(pasteFile.position, pasteFile.id),
-    db
-      .select({ name: user.name, username: user.username, displayUsername: user.displayUsername })
-      .from(user)
-      .where(eq(user.id, record.ownerId)),
-  ])
+  const rows = await getDb()
+    .select({
+      paste: {
+        slug: pasteTable.slug,
+        title: pasteTable.title,
+        updatedAt: pasteTable.updatedAt,
+        expiresAt: pasteTable.expiresAt,
+        views: pasteTable.views,
+        allowRaw: pasteTable.allowRaw,
+      },
+      file: { name: pasteFile.name, language: pasteFile.language, content: pasteFile.content },
+      author: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        displayUsername: user.displayUsername,
+        image: user.image,
+      },
+    })
+    .from(pasteTable)
+    .leftJoin(pasteFile, eq(pasteFile.pasteId, pasteTable.id))
+    .leftJoin(user, eq(user.id, pasteTable.ownerId))
+    .where(publicPasteWhere(slug))
+    .orderBy(pasteFile.position, pasteFile.id)
+  const [first] = rows
+  if (!first) return null
   return {
-    slug: record.slug,
-    title: record.title,
-    files,
-    author: pasteAuthor(author),
-    updatedAt: ms(record.updatedAt),
-    expiresAt: ms(record.expiresAt),
-    views: record.views,
+    ...first.paste,
+    files: rows.flatMap(({ file }) => (file ? [file] : [])),
+    author: pasteAuthor(first.author ?? undefined),
+    updatedAt: ms(first.paste.updatedAt),
+    expiresAt: ms(first.paste.expiresAt),
     burnAfterRead: false,
-    allowRaw: record.allowRaw,
     encryptionKeyId: null,
   }
 }

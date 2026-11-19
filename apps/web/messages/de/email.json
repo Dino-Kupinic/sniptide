@@ -44,6 +44,13 @@
         "action": "Mit mir geteilt öffnen",
         "event": "geteilte Snippets"
       },
+      "sharedBurn": {
+        "subject": "Ein Snippet wurde mit dir geteilt",
+        "preview": "Melde dich an, um das versiegelte Snippet zu öffnen.",
+        "body": "Jemand hat ein einmal lesbares Snippet mit deinem Sniptide-Konto geteilt. Öffne die versiegelte Seite und entscheide, wann du es lesen möchtest.",
+        "action": "Versiegeltes Snippet öffnen",
+        "event": "geteilte Snippets"
+      },
       "burned": {
         "subject": "Dein Snippet zum einmaligen Lesen wurde gelesen",
         "preview": "Es liegt jetzt im Papierkorb, wo du es 30 Tage lang wiederherstellen kannst.",

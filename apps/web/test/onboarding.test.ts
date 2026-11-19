@@ -150,6 +150,7 @@ describe("onboarding", () => {
       "claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp",
     )
     expect(setup.codex).toBe("codex mcp add sniptide --url https://app.sniptide.com/api/mcp")
+    expect(setup.grokBotLink).toBe("https://grok.com/connectors")
     const link = new URL(setup.cursorLink)
     expect(link.protocol).toBe("cursor:")
     expect(link.searchParams.get("name")).toBe("sniptide")
@@ -162,6 +163,9 @@ describe("onboarding", () => {
     expect(agentClientFromName("Claude Code (sniptide)")).toBe("claude_code")
     expect(agentClientFromName("Codex")).toBe("codex")
     expect(agentClientFromName("Cursor")).toBe("cursor")
+    expect(agentClientFromName("Grok Bot")).toBe("grok_bot")
+    expect(agentClientFromName("xAI Connectors")).toBe("grok_bot")
+    expect(agentClientFromName("Maxai")).toBe("other")
     expect(agentClientFromName("<script>")).toBe("other")
   })
 

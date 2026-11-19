@@ -16,5 +16,27 @@
     "counterBody": "Si se retiró tu paste y crees que fue un error o una identificación equivocada, envía una contranotificación a la misma dirección. Incluye tu firma, el enlace al paste retirado, una declaración bajo pena de perjurio de que se retiró por error o identificación equivocada, tu nombre, dirección postal y teléfono, y tu aceptación de la jurisdicción del tribunal federal de distrito de tu dirección o, si vives fuera de Estados Unidos, de cualquier distrito judicial donde se encuentre el operador. El paste puede restaurarse entre 10 y 14 días hábiles después de que la contranotificación llegue a quien envió el aviso, salvo que esa persona acuda a los tribunales.",
     "repeat": "Las cuentas que infringen derechos de autor de forma reiterada se cierran.",
     "falseClaims": "Quien tergiverse los hechos a sabiendas en un aviso o una contranotificación puede tener que pagar daños según 17 U.S.C. § 512(f)."
+  },
+  "Abuse": {
+    "title": "Denunciar abuso o apelar una decisión",
+    "instructions": "Indica el enlace del paste y explica el motivo. Si sospechas explotación infantil, indica solo su ubicación. No descargues, copies, cites ni subas material sospechoso. Si un menor está en peligro inmediato, contacta con los servicios de emergencia locales.",
+    "privacy": "El enlace, la explicación y el correo opcional se guardan para los revisores autorizados de esta instancia. No incluyas contraseñas, claves de cifrado ni el contenido del paste. Las denuncias no eliminan contenido automáticamente. El correo permite que un revisor te contacte, sin garantizar un plazo de respuesta.",
+    "received": "Tu denuncia se ha recibido para su revisión.",
+    "invalid": "Comprueba el enlace y los campos obligatorios y vuelve a enviar.",
+    "failed": "No se pudo recibir la denuncia. Comprueba los campos e inténtalo de nuevo.",
+    "url": "URL del paste en esta instancia",
+    "category": "Motivo",
+    "explanation": "Explicación (de 10 a 2.000 caracteres)",
+    "contact": "Correo electrónico (opcional)",
+    "submit": "Enviar para revisión",
+    "child_exploitation": "Sospecha de explotación infantil (urgente)",
+    "sexual_content": "Contenido sexual",
+    "graphic_violence": "Violencia explícita",
+    "malware": "Software malicioso",
+    "harassment": "Acoso",
+    "other": "Otro motivo",
+    "appeal": "Apelar una decisión de moderación",
+    "reportLink": "Denunciar abuso",
+    "limited": "Demasiadas denuncias desde esta dirección. Inténtalo de nuevo en una hora."
   }
 }

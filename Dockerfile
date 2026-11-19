@@ -4,7 +4,7 @@
 # Node runs Next (as in development); Bun only installs packages and runs scripts. Next under
 # Bun's own runtime crashes during the build.
 FROM node:24-slim AS build
-COPY --from=oven/bun:1.3.13 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -38,6 +38,7 @@ RUN --mount=type=secret,id=server_actions_key \
 FROM node:24-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production \
+    TELEMETRY_DEPLOYMENT=docker \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \

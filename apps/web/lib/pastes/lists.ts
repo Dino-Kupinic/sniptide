@@ -16,6 +16,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  lte,
   ne,
   or,
   type SQL,
@@ -101,17 +102,18 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
           query.collections.length ||
           query.owner !== "all",
       )
-      const allCount = db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(base)
-      // Materialize the promise once: awaiting a Drizzle builder twice executes it twice.
-      const allResult = Promise.resolve(allCount)
-      const [[all], [matching], facets] = await Promise.all([
-        allResult,
+      const [facets, matching] = await Promise.all([
+        db
+          .select({ language: firstLanguage, count: sql<number>`count(*)::int` })
+          .from(pasteTable)
+          .where(base)
+          .groupBy(firstLanguage),
         filtered
           ? db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(filters)
-          : allResult,
-        db.selectDistinct({ language: firstLanguage }).from(pasteTable).where(base),
+          : [],
       ])
-      const total = matching?.count ?? 0
+      const totalAll = facets.reduce((sum, row) => sum + row.count, 0)
+      const total = matching[0]?.count ?? totalAll
       const pageCount = Math.max(1, Math.ceil(total / PASTE_PAGE_SIZE))
       const page = Math.min(query.page, pageCount)
       // The trash lists by deletion time, and only its title and language columns sort otherwise.
@@ -184,6 +186,12 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
             and(eq(column, cursor.value), id),
             sort === "expires" && before !== nullsLate ? isNull(column) : undefined,
           )
+          // Let the timestamp index start at the cursor. The UUID comparison resolves ties.
+          if (sort === "updated") {
+            const bound =
+              ascending !== before ? gte(column, cursor.value) : lte(column, cursor.value)
+            seek = and(bound, seek)
+          }
         }
       }
       const order = ascending ? asc(column) : desc(column)
@@ -225,7 +233,7 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
           page,
           pageCount,
           total,
-          totalAll: all?.count ?? 0,
+          totalAll,
           nextCursor:
             page < pageCount ? token(visibleRecords.at(-1), "after", page + 1) : undefined,
           previousCursor: page > 1 ? token(visibleRecords[0], "before", page - 1) : undefined,
@@ -319,6 +327,7 @@ export async function listSharedPage(query: SharedListQuery) {
             name: user.name,
             username: user.username,
             displayUsername: user.displayUsername,
+            image: user.image,
           })
           .from(pasteShare)
           .innerJoin(
@@ -384,7 +393,7 @@ export async function listSharedPage(query: SharedListQuery) {
           username: owner.displayUsername ?? owner.username ?? owner.name,
           handle: owner.username,
           initials: initials(owner.name),
-          tone: "foreground" as const,
+          image: owner.image,
         })),
         peopleCount: matching?.people ?? 0,
       }

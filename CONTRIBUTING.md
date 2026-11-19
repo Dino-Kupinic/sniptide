@@ -7,7 +7,7 @@ This page covers commits, pull requests, releases, and database migration rules.
 
 Contributions are licensed under the license of the package they change. The app and UI use
 [AGPL-3.0-only](LICENSE). The client packages and shared contracts use MIT. See
-[Licensing](LICENSING.md) for the package boundaries and hosted services.
+[Licensing](LICENSING.md) for the package list.
 
 ## Conventional Commits
 
@@ -81,16 +81,9 @@ short post for readers above that list, which collapses under **Technical change
 description is the main source, so describe what changes for people who use Sniptide. The model
 fills fixed fields and the script lays them out the same way every time: a title that names the
 change, one short paragraph, a **What's new** or **What's fixed** list, and a **Self-hosting** list
-when operators have something to do. A maintenance release gets one sentence. The post sits
-between `sniptide-notes` markers that [sniptide.com/changelog](https://sniptide.com/changelog)
-reads, with `kind` set to `feature`, `fix` or `internal`.
-
-Only a featured release appears in the announcement bar on sniptide.com. Add the `featured` label
-to a feature PR before it merges, or run **Release notes** manually with the release tag and
-**featured** checked, which marks an existing post without rewriting it. The marker then reads
-`kind="feature" featured="true"`, and a rerun keeps it. To correct a post, edit the release on
-GitHub and keep the markers. To rewrite one release, or every release with the tag `all`, run
-**Release notes** manually.
+when operators have something to do. A maintenance release gets one sentence. To correct a
+post, edit the release on GitHub and keep the `sniptide-notes` markers. To regenerate one
+release, run **Release notes** manually with its tag. Use `all` to regenerate every release.
 
 The workflow needs an `ANTHROPIC_API_KEY` repository secret, which uses `claude-opus-5-5` at medium
 effort, or an `OPENAI_API_KEY` secret, which uses `gpt-6-luna` at medium reasoning effort.
@@ -103,8 +96,7 @@ what to do. Operators read the resulting policy in the docs, under Self-hosting,
 releases (`apps/docs/content/docs/self-hosting/versions.mdx`).
 
 If image publishing fails after the GitHub release was created, re-run the failed jobs or run
-**Publish Docker image** manually with that existing release tag. Coolify continues deploying
-`main` independently; publishing a release does not report a production deployment to GitHub.
+**Publish Docker image** manually with that existing release tag.
 
 The UI, CLI, and MCP npm packages release independently after the same CI gate. Packed contents
 are compared with npm, so unrelated app changes do not release a package. Relevant Conventional
@@ -120,12 +112,16 @@ upgrade and restore databases safely:
 - **Only statements Postgres can roll back.** A failed upgrade must leave the database as it was.
   `CREATE INDEX CONCURRENTLY`, `ALTER TYPE … ADD VALUE`, `VACUUM` and the like can't run in a
   transaction. `apps/web/test/migrations.test.ts` fails if a migration file uses one.
-- **Additive where possible.** The previous version keeps serving while the new one starts. To
-  remove something, stop using it in one release and drop it in a later one.
+- **Expand, then contract.** Start with compatible additions such as nullable columns, tables, and
+  indexes. Deploy code that can work with both schemas. Stop using old schema before a later release
+  removes or renames it, changes its type, or makes a nullable column required. The migration test
+  rejects common destructive statements and rewrites. Put `-- destructive: approved` at the top
+  of the migration after review confirms the previous image can still run, or after operators plan
+  a maintenance window and a verified pre-deploy backup.
 - **Never edit a migration that has been released.** Databases record migrations by name; add a
   new one instead.
-- **Say so when it locks.** Adding an index or backfilling a large table blocks writes while it
-  runs. Mention it in the PR so the release notes can warn operators.
+- **Keep large backfills out of startup.** Run them in small batches and commit between batches so
+  locks release. Call out operations that block writes in the PR and release notes.
 
 Backups, restore and upgrades are covered by `scripts/test-upgrade.sh`, which CI runs against the
 latest release on every pull request. It seeds a stack on that release, backs it up, upgrades it to

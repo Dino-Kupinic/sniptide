@@ -2,7 +2,7 @@
 
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { CollectionsView } from "@/components/collections/collections-view"
 import { Dashboard } from "@/components/dashboard/dashboard"
 import { PasteList } from "@/components/lists/paste-list"
@@ -26,6 +26,24 @@ import {
 import { timeAgo } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
 import type { PageInfo, PasteListQuery } from "@/lib/pastes/list-query"
+
+// Long titles, descriptions and file names, and an entry without artwork, for the Paste templates
+// widget. One promise for the module, so the widget reads it once.
+const STRESS_TEMPLATES = {
+  list: Promise.resolve(
+    Array.from({ length: 6 }, (_, index) => ({
+      name: `stress-${index}`,
+      title: "Benachrichtigungseinstellungen für sehr lange Vorlagennamen",
+      description:
+        "Eine Beschreibung, die länger ist als zwei Zeilen, damit die Zelle zeigt, wo sie abschneidet und wie die Dateinamen darunter stehen.",
+      category: "discovery" as const,
+      department: "engineering" as const,
+      files: [".github/workflows/sehr-langer-workflow-name.yml", "CONTRIBUTING.md", "README.md"],
+      visual: null,
+      preview: null,
+    })),
+  ),
+}
 
 export function UiStress({
   dataset,
@@ -51,29 +69,37 @@ export function UiStress({
   const host = "paste.platform-infrastructure.example.com"
   const origin = `https://${host}`
   const start = (pagination.page - 1) * 10
-  const starred = data.pastes.filter((row) => row.starred)
+  // One promise per dataset, so the shell reads it without suspending again on every render.
+  const shell = useMemo(
+    () =>
+      Promise.resolve({
+        sidebar: {
+          counts: {
+            pastes: data.pastes.length,
+            starred: data.pastes.filter((row) => row.starred).length,
+            shared: data.rows.length,
+          },
+          recent: data.pastes.slice(0, 8).map((row) => ({ ...row, owned: true })),
+          starred: data.pastes
+            .filter((row) => row.starred)
+            .slice(0, 3)
+            .map((row) => ({ ...row, owned: true })),
+        },
+        collections: data.collections,
+        trashCount: data.trash.length,
+      }),
+    [data],
+  )
   return (
     <SiteHostProvider host={host}>
       <div className="pb-48">
-        <AppShell
-          viewer={data.viewer}
-          initialSidebar={defaultSidebarState}
-          collections={data.collections}
-          data={{
-            counts: {
-              pastes: data.pastes.length,
-              starred: starred.length,
-              shared: data.rows.length,
-            },
-            recent: data.pastes.slice(0, 8).map((row) => ({ ...row, owned: true })),
-            starred: starred.slice(0, 3).map((row) => ({ ...row, owned: true })),
-          }}
-        >
+        <AppShell viewer={data.viewer} initialSidebar={defaultSidebarState} data={shell}>
           {screen === "dashboard" ? (
             <Dashboard
               data={data.dashboard}
               layout={[...WIDGETS]}
               agents={data.agents}
+              templates={STRESS_TEMPLATES}
               firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
               origin={origin}
               appOrigin={origin}

@@ -16,5 +16,27 @@
     "counterBody": "If your paste was removed and you believe that was a mistake or a misidentification, send a counter-notice to the same address. It includes your signature, the link to the removed paste, a statement under penalty of perjury that it was removed by mistake or misidentification, your name, postal address and telephone number, and your consent to the jurisdiction of the federal district court for your address, or of any judicial district where the operator can be found if you live outside the United States. The paste can be restored 10 to 14 business days after the counter-notice reaches the person who sent the notice, unless they take the matter to court.",
     "repeat": "Accounts that repeatedly infringe copyright are closed.",
     "falseClaims": "A notice or counter-notice that knowingly misrepresents the facts can make its sender liable for damages under 17 U.S.C. § 512(f)."
+  },
+  "Abuse": {
+    "title": "Report abuse or appeal a decision",
+    "instructions": "Report the paste location and explain your concern. For suspected child exploitation, provide the location only. Do not download, copy, quote or upload suspected material. If a child is in immediate danger, contact local emergency services.",
+    "privacy": "Your location, explanation and optional email are stored for authorized reviewers on this instance. Do not include passwords, encryption keys or paste contents. Reports do not automatically remove content. An email lets a reviewer contact you; it does not guarantee a response time.",
+    "received": "Your report has been received for review.",
+    "invalid": "Check the location and required fields, then submit again.",
+    "failed": "The report could not be received. Check the fields and try again.",
+    "url": "Paste URL on this instance",
+    "category": "Reason",
+    "explanation": "Explanation (10 to 2,000 characters)",
+    "contact": "Email (optional)",
+    "submit": "Send for review",
+    "child_exploitation": "Suspected child exploitation (urgent)",
+    "sexual_content": "Sexual content",
+    "graphic_violence": "Graphic violence",
+    "malware": "Malware",
+    "harassment": "Harassment",
+    "other": "Other concern",
+    "appeal": "Appeal a moderation decision",
+    "reportLink": "Report abuse",
+    "limited": "Too many reports from this address. Please try again in an hour."
   }
 }

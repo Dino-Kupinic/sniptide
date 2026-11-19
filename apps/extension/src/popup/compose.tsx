@@ -14,7 +14,14 @@ import {
 } from "@sniptide/ui/components/select"
 import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { useEffect, useId, useRef, useState } from "react"
-import { fileNameFor, MAX_FILE_NAME, MAX_TITLE, sourceDescription, titleFor } from "../lib/capture"
+import {
+  blockPreview,
+  fileNameFor,
+  MAX_FILE_NAME,
+  MAX_TITLE,
+  sourceDescription,
+  titleFor,
+} from "../lib/capture"
 import { expiryLabels, messages } from "../lib/messages"
 import { type PageText, readCodeBlocks, readSelection } from "../lib/page"
 import { EXPIRIES, type Expiry, type Settings } from "../lib/protocol"
@@ -60,7 +67,7 @@ export function Compose({ settings }: { settings: Settings }) {
   const [collection, setCollection] = useState(NO_COLLECTION)
   const [expiry, setExpiry] = useState<Expiry>("never")
   const [collections, setCollections] = useState<Collection[]>([])
-  const [blocks, setBlocks] = useState<PageText[]>([])
+  const [blocks, setBlocks] = useState<(PageText & ReturnType<typeof blockPreview>)[]>([])
   const [pageUrl, setPageUrl] = useState("")
   const [fromPage, setFromPage] = useState(false)
   const [ready, setReady] = useState(false)
@@ -87,7 +94,7 @@ export function Compose({ settings }: { settings: Settings }) {
     void (async () => {
       const [page, stored] = await Promise.all([readPage(), chrome.storage.session.get("draft")])
       setPageUrl(page.url)
-      setBlocks(page.blocks)
+      setBlocks(page.blocks.map((block) => ({ ...block, ...blockPreview(block.text) })))
       const draft = stored.draft as Draft | undefined
       if (page.selection) fill(page.selection)
       else if (draft) {
@@ -244,10 +251,10 @@ export function Compose({ settings }: { settings: Settings }) {
                   className="flex h-8 w-full items-center gap-3 rounded-md px-2 text-left outline-none hover:bg-muted focus-visible:bg-muted"
                 >
                   <span className="min-w-0 flex-1 truncate font-mono text-[13px]">
-                    {block.text.split("\n").find((line) => line.trim())}
+                    {block.firstLine}
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                    {messages.lines(block.text.split("\n").length)}
+                    {messages.lines(block.lines)}
                   </span>
                 </button>
               </li>

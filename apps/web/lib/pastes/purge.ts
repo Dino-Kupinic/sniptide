@@ -54,6 +54,9 @@ export async function purgeStaleData(now = new Date()) {
         const breakdown = await tx.execute(
           sql`DELETE FROM paste_breakdown_day WHERE (paste_id, day, dimension, key) IN (SELECT paste_id, day, dimension, key FROM paste_breakdown_day WHERE day < ${analyticsDay} ORDER BY day, paste_id LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
         )
+        const activity = await tx.execute(
+          sql`DELETE FROM account_activity_day WHERE (owner_id, day, surface) IN (SELECT owner_id, day, surface FROM account_activity_day WHERE day < ${Math.floor(now.getTime() / DAY) - 90} ORDER BY day LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING day`,
+        )
         const limits = await tx.execute(
           sql`DELETE FROM rate_limit WHERE key IN (SELECT key FROM rate_limit WHERE window_start < ${new Date(now.getTime() - DAY).toISOString()} ORDER BY window_start LIMIT ${batch} FOR UPDATE SKIP LOCKED) RETURNING key`,
         )
@@ -85,13 +88,14 @@ export async function purgeStaleData(now = new Date()) {
         return {
           trashed: trashed.length,
           expired: expired.length,
-          days: days.length + stats.length + breakdown.length,
+          days: days.length + stats.length + breakdown.length + activity.length,
           full: [
             trashed,
             expired,
             days,
             stats,
             breakdown,
+            activity,
             limits,
             auth,
             notices,

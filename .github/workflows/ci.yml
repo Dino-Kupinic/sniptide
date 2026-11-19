@@ -14,62 +14,169 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    name: Lint, typecheck and build
+  plan:
+    name: Select test suites
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 2
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      cli: ${{ steps.select.outputs.cli }}
+      container: ${{ steps.select.outputs.container }}
+      extension: ${{ steps.select.outputs.extension }}
+      raycast: ${{ steps.select.outputs.raycast }}
+      sdk: ${{ steps.select.outputs.sdk }}
+      shards: ${{ steps.select.outputs.shards }}
+      shared: ${{ steps.select.outputs.shared }}
+      vscode: ${{ steps.select.outputs.vscode }}
+      web: ${{ steps.select.outputs.web }}
     steps:
       - uses: actions/checkout@v4
-
-      # scripts/attach-pr-media.sh adds .pr-media in one commit and removes it in the next, so the
-      # screenshots in a pull request description never reach main.
-      - name: Keep pull request media out of the tree
-        run: test ! -e .pr-media || { echo "::error::Remove .pr-media before merging."; exit 1; }
-
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: package.json
-
-      # Next runs on Node; package.json asks for 24+.
+          # Compare the checked-out PR merge commit with its base parent.
+          fetch-depth: 2
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Plan test suites and browser shards
+        id: select
+        env:
+          CI_PR_BASE: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci-plan.mjs
 
-      - run: npm install --global npm@12.2.1
+  lint:
+    name: Lint and check unused code
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - run: bun install --frozen-lockfile
+
+      # scripts/attach-pr-media.sh removes the temporary screenshot files before merging.
+      - name: Keep pull request media out of the tree
+        run: test ! -e .pr-media || { echo "::error::Remove .pr-media before merging."; exit 1; }
+      - run: bun run lint:ci
+      - run: bun run check:unused
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+
+  client-builds:
+    name: Build editor extensions
+    needs: plan
+    if: needs.plan.outputs.extension == 'true' || needs.plan.outputs.vscode == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - if: needs.plan.outputs.extension == 'true'
+        run: bun --filter extension build
+      - if: needs.plan.outputs.vscode == 'true'
+        run: bun --filter sniptide-vscode build
+
+  package-tests:
+    name: Package, documentation and tooling tests
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - run: npm install --global npm@12.2.1
       - run: node --test scripts/test-npm-pack.mjs
       - run: npm pack @sniptide/mcp@0.1.0 --pack-destination "$RUNNER_TEMP"
       - run: node --test scripts/test-release-gates.mjs
         env:
           LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
+      - run: node --test scripts/test-ci-plan.mjs
       - run: bash scripts/test-ci-image-tag.sh
+      - run: bash scripts/test-ci-containers-parallel.sh
+      - run: bash scripts/test-coolify-backup.sh
       - run: node --test scripts/test-deploy-production.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
 
-      - run: bun run check
-      - run: bun run check:unused
-
-      - run: bun run test:contracts
-      - run: bun run test:cli
-      - run: bun run test:mcp
-      - run: bun run test:sdk
-      - run: bun run test:extension
-      - run: bun --filter extension build
-      - run: bun run test:vscode
-      - run: bun --filter sniptide-vscode build
-      - run: npm ci --no-audit --no-fund
-        working-directory: plugins/raycast
-      - run: bun run test:raycast
-      - run: node packages/sdk/scripts/test-npm-release.mjs
-      - run: node packages/mcp/scripts/test-npm-release.mjs
-      - run: node scripts/npm-release.mjs ui "$RUNNER_TEMP/ui-package"
-      - run: node packages/ui/scripts/test-npm-release.mjs "$RUNNER_TEMP/ui-package"
+      - if: needs.plan.outputs.shared == 'true'
+        run: bun run test:contracts
+      - if: needs.plan.outputs.cli == 'true'
+        run: bun run test:cli
+      - if: needs.plan.outputs.shared == 'true'
+        run: bun run test:mcp
+      - if: needs.plan.outputs.sdk == 'true'
+        run: bun run test:sdk
+      - if: needs.plan.outputs.extension == 'true'
+        run: bun run test:extension
+      - if: needs.plan.outputs.vscode == 'true'
+        run: bun run test:vscode
+      - if: needs.plan.outputs.raycast == 'true'
+        run: bun run test:raycast
+      - if: needs.plan.outputs.sdk == 'true'
+        run: node packages/sdk/scripts/test-npm-release.mjs
+      - if: needs.plan.outputs.shared == 'true'
+        run: node packages/mcp/scripts/test-npm-release.mjs
+      - if: needs.plan.outputs.shared == 'true'
+        run: node scripts/npm-release.mjs ui "$RUNNER_TEMP/ui-package"
+      - if: needs.plan.outputs.shared == 'true'
+        run: node packages/ui/scripts/test-npm-release.mjs "$RUNNER_TEMP/ui-package"
       - run: bun run test:docs
+
+  # Branch protection requires this check name.
+  checks:
+    name: Lint, typecheck and build
+    needs: [plan, lint, typecheck, client-builds, package-tests]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require the selected checks to pass
+        env:
+          PLAN: ${{ needs.plan.result }}
+          LINT: ${{ needs.lint.result }}
+          TYPECHECK: ${{ needs.typecheck.result }}
+          BUILDS: ${{ needs.client-builds.result }}
+          TESTS: ${{ needs.package-tests.result }}
+        run: |
+          [[ "$PLAN" == success && "$LINT" == success && "$TYPECHECK" == success &&
+             "$TESTS" == success && ( "$BUILDS" == success || "$BUILDS" == skipped ) ]]
 
   # Build and test in parallel with the other checks; publishing waits for all of them.
   docker:
     name: Docker image, upgrade and compose
+    needs: plan
     outputs:
       build-attempt: ${{ github.run_attempt }}
     runs-on: ubuntu-latest
@@ -91,15 +198,10 @@ jobs:
           cache-from: |
             type=gha,scope=ci-web
             type=gha,scope=docker-amd64
-          cache-to: type=gha,mode=max,scope=ci-web,ignore-error=true
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=ci-web,ignore-error=true,timeout=90s' || '' }}
 
-      - name: Verify the Docker image against a fresh database
-        run: bash scripts/test-docker.sh sniptide:ci
-
-      # What a self-hoster does when they upgrade: seed a stack on the latest published release, back
-      # it up, upgrade it to this image, then restore the backup into the running stack and into a
-      # brand-new one, checking after each step that the data is intact.
       - name: Find the latest release image
+        if: needs.plan.outputs.container == 'true'
         id: previous
         env:
           GH_TOKEN: ${{ github.token }}
@@ -116,19 +218,24 @@ jobs:
           fi
           echo "image=$image" >> "$GITHUB_OUTPUT"
 
-      - name: Verify upgrading, backup and restore
-        if: steps.previous.outputs.image != ''
+      - name: Verify the image and self-hosting setups
         env:
-          EXPECT_MIGRATION_LOG: "1"
+          FULL_CONTAINER_CHECKS: ${{ needs.plan.outputs.container }}
           PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
-        run: bash scripts/test-upgrade.sh "$PREVIOUS_IMAGE" sniptide:ci
+        run: bash scripts/test-ci-containers.sh sniptide:ci "$PREVIOUS_IMAGE"
 
-      # docker-compose.yml and the Coolify template, the two ways self-hosters start Sniptide.
-      - name: Verify docker compose and the Coolify template
-        run: bash scripts/test-compose.sh sniptide:ci
-
-      - name: Test PostgreSQL major upgrade
-        run: bash scripts/test-postgres-upgrade.sh
+      - name: Build and check the Coolify backup image
+        if: needs.plan.outputs.container == 'true'
+        run: |
+          for major in 17 18; do
+            docker build --build-arg "POSTGRES_MAJOR=$major" -t "sniptide-backup:ci-$major" \
+              -f deploy/coolify/backup.Dockerfile deploy/coolify
+            docker run --rm --entrypoint /bin/sh "sniptide-backup:ci-$major" -ec '
+              pg_dump --version && pg_restore --version && age --version && rclone version
+              flock -w 1 /tmp/backup.lock /bin/true
+              date -u "+%G-W%V" | grep -Eq "^[0-9]{4}-W[0-9]{2}$"
+            '
+          done
 
       - name: Select a tag for trusted events
         id: image
@@ -160,7 +267,7 @@ jobs:
 
   publish-ci-image:
     name: Publish tested CI image
-    needs: [docker, checks, tests, e2e-result, docs-image]
+    needs: [docker, checks, tests-result, e2e-result, docs-image]
     if: ${{ github.actor != 'dependabot[bot]' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -268,7 +375,7 @@ jobs:
           load: true
           tags: sniptide-docs:ci
           cache-from: type=gha,scope=ci-docs
-          cache-to: type=gha,mode=max,scope=ci-docs,ignore-error=true
+          cache-to: ${{ github.event_name == 'push' && 'type=gha,mode=max,scope=ci-docs,ignore-error=true,timeout=90s' || '' }}
 
       - name: Verify the docs Docker image
         run: bash scripts/test-docs-image.sh sniptide-docs:ci
@@ -288,7 +395,7 @@ jobs:
 
   publish-docs-image:
     name: Publish tested docs image
-    needs: [docker, checks, tests, e2e-result, docs-image]
+    needs: [docker, checks, tests-result, e2e-result, docs-image]
     if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -336,6 +443,8 @@ jobs:
   # claim live in SQL, so a mock would prove nothing.
   tests:
     name: Tests
+    needs: plan
+    if: needs.plan.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -375,26 +484,32 @@ jobs:
   # Branch protection requires a single result for both Postgres versions.
   tests-result:
     name: Tests
-    needs: tests
+    needs: [plan, tests]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Require every Postgres version to pass
+      - name: Require every selected Postgres version to pass
         env:
+          PLAN: ${{ needs.plan.result }}
+          SELECTED: ${{ needs.plan.outputs.web }}
           RESULT: ${{ needs.tests.result }}
-        run: test "$RESULT" = success
+        run: |
+          [[ "$PLAN" == success &&
+             ( ( "$SELECTED" == false && "$RESULT" == skipped ) ||
+               ( "$SELECTED" == true && "$RESULT" == success ) ) ]]
 
-  # Two shards split the test files between runners. Each has its own Postgres and builds the app,
-  # which the Next build cache keeps cheap.
+  # Each shard has its own Postgres and builds the app with a warm Next cache.
   e2e:
     name: Browser tests shard ${{ matrix.shard }}
+    needs: plan
+    if: needs.plan.outputs.shards != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1]
+        include: ${{ fromJSON(needs.plan.outputs.shards) }}
     services:
       postgres:
         image: postgres:17-alpine
@@ -434,15 +549,16 @@ jobs:
         run: |
           bun --filter web test:e2e:install --with-deps &
           install=$!
-          bun run build
+          bun --filter web build
           wait "$install"
       - name: Run this shard's browser tests
         working-directory: apps/web
         env:
-          SHARD: ${{ matrix.shard }}
+          SHARD_FILES: ${{ toJSON(matrix.files) }}
         run: |
-          files="$(ls tests/*.e2e.ts | sort | awk -v shard="$SHARD" 'NR % 2 == shard')"
-          bun run test:e2e $files
+          mapfile -d '' -t files < <(jq -j '.[] | ., "\u0000"' <<< "$SHARD_FILES")
+          test "${#files[@]}" -gt 0
+          bun run test:e2e "${files[@]}"
       - name: Publish browser test summary
         if: ${{ !cancelled() }}
         run: |
@@ -453,6 +569,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
+          overwrite: true
           name: e2e-results-${{ matrix.shard }}
           path: |
             apps/web/.e2e/report.json
@@ -469,12 +586,17 @@ jobs:
   # both shards.
   e2e-result:
     name: Browser tests
-    needs: e2e
+    needs: [plan, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Require every shard to pass
+      - name: Require every selected shard to pass
         env:
+          PLAN: ${{ needs.plan.result }}
+          SHARDS: ${{ needs.plan.outputs.shards }}
           RESULT: ${{ needs.e2e.result }}
-        run: test "$RESULT" = success
+        run: |
+          [[ "$PLAN" == success &&
+             ( ( "$SHARDS" == '[]' && "$RESULT" == skipped ) ||
+               ( "$SHARDS" != '[]' && "$RESULT" == success ) ) ]]

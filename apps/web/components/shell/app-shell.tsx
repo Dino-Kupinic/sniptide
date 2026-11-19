@@ -9,20 +9,24 @@ import { CommandMenuProvider } from "@/components/command-menu/command-menu"
 import { TourProvider } from "@/components/onboarding/tour"
 import { ShortcutsProvider } from "@/components/shortcuts/shortcuts-help"
 import { matchesCombo, shortcut } from "@/lib/shortcuts"
+import type { ViewerSummary } from "@/lib/viewer"
 import { LiveUpdates } from "./live-updates"
 import { MobileTopBar } from "./mobile-top-bar"
 import { mobileChrome } from "./nav-config"
 import { NotificationsProvider } from "./notifications-menu"
 import { HeaderSlotsProvider } from "./page-header"
+import { type ShellData, ShellDataProvider } from "./shell-data"
 import { Sidebar, type SidebarProps } from "./sidebar"
 import {
   type SectionId,
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MIN_WIDTH,
+  type SidebarShape,
   type SidebarState,
   sidebarMaxWidth,
   writeSidebarState,
 } from "./sidebar-state"
+import { createStore, type Store, useStore } from "./store"
 import { TabBar } from "./tab-bar"
 import { TopBar } from "./top-bar"
 
@@ -38,37 +42,58 @@ export function useSidebarUpdate() {
   return update
 }
 
+const ViewerContext = React.createContext<ViewerSummary | null>(null)
+
+// The signed-in account, for screens that name it before their own data arrives.
+export function useViewer() {
+  const viewer = React.useContext(ViewerContext)
+  if (!viewer) throw new Error("useViewer must be used inside AppShell")
+  return viewer
+}
+
+const SidebarStateContext = React.createContext<Store<SidebarState> | null>(null)
+
+// The sidebar's layout as it stands now, for screens that follow its order.
+export function useSidebarState() {
+  const state = React.useContext(SidebarStateContext)
+  if (!state) throw new Error("useSidebarState must be used inside AppShell")
+  return useStore(state)
+}
+
 export function AppShell({
   children,
   initialSidebar,
   demo = false,
   tour = false,
-  trashCount = 0,
+  data,
   ...sidebarProps
 }: SidebarProps & {
   initialSidebar: SidebarState
   demo?: boolean
   // Whether the tour starts by itself on the dashboard, which it does once for a new account.
   tour?: boolean
-  // For the More sheet; the sidebar's own counts don't cover Trash.
-  trashCount?: number
+  // The lists and counts the shell shows. Still loading when the frame first renders.
+  data: Promise<ShellData>
   children: React.ReactNode
 }) {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
   const router = useRouter()
   const chrome = mobileChrome(pathname)
-  const [layout, setLayout] = React.useState(initialSidebar)
+  const [sidebarState] = React.useState(() => createStore(initialSidebar))
+  const layout = useStore(sidebarState)
   // While the edge is being dragged: the width under the pointer, which can go below the minimum.
   const [dragWidth, setDragWidth] = React.useState<number | null>(null)
 
-  const update = React.useCallback((change: (state: SidebarState) => SidebarState) => {
-    setLayout((state) => {
-      const next = change(state)
+  const update = React.useCallback(
+    (change: (state: SidebarState) => SidebarState) => {
+      const next = change(sidebarState.get())
+      if (next === sidebarState.get()) return
       writeSidebarState(next)
-      return next
-    })
-  }, [])
+      sidebarState.set(next)
+    },
+    [sidebarState],
+  )
 
   const toggleSidebar = React.useCallback(
     () => update((state) => ({ ...state, collapsed: !state.collapsed })),
@@ -83,6 +108,17 @@ export function AppShell({
           ? state.closed.filter((id) => id !== section)
           : [...state.closed, section],
       })),
+    [update],
+  )
+
+  // Kept in the cookie, so the next request can greet by the viewer's time of day.
+  React.useEffect(() => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (timeZone) update((state) => (state.timeZone === timeZone ? state : { ...state, timeZone }))
+  }, [update])
+
+  const setShape = React.useCallback(
+    (shape: SidebarShape) => update((state) => ({ ...state, shape })),
     [update],
   )
 
@@ -126,131 +162,120 @@ export function AppShell({
 
   return (
     <SidebarUpdateContext.Provider value={update}>
-      <TooltipProvider delay={300}>
-        <HeaderSlotsProvider>
-          <NotificationsProvider>
-            <ShortcutsProvider>
-              <CommandMenuProvider
-                recent={sidebarProps.data.recent}
-                collections={sidebarProps.collections}
-              >
-                <TourProvider autoStart={tour} onBeforeStart={showSidebar}>
-                  <a
-                    href="#main-content"
-                    className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:ring-2 focus:ring-ring"
-                  >
-                    {t("skipToMain")}
-                  </a>
-                  <div className="flex min-h-svh bg-background lg:bg-sidebar">
-                    <aside
-                      aria-label={t("sidebar")}
-                      style={{ width }}
-                      className={cn(
-                        "sticky top-0 hidden h-svh shrink-0 lg:block",
-                        layout.collapsed && "lg:hidden",
-                        dragWidth !== null && "select-none",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "h-full overflow-hidden transition-opacity",
-                          releaseToCollapse && "opacity-50",
-                        )}
-                      >
-                        <Sidebar
-                          {...sidebarProps}
-                          closed={layout.closed}
-                          sectionOrder={layout.sectionOrder}
-                          collectionOrder={layout.collectionOrder}
-                          onReorderSections={(sectionOrder) =>
-                            update((state) => ({ ...state, sectionOrder }))
-                          }
-                          onReorderCollections={(collectionOrder) =>
-                            update((state) => ({ ...state, collectionOrder }))
-                          }
-                          onToggleSection={toggleSection}
-                          onToggleSidebar={toggleSidebar}
-                          views={layout.views}
-                          onChangeViews={(views) => {
-                            const refetch =
-                              JSON.stringify(views.pastes) !==
-                                JSON.stringify(layout.views.pastes) ||
-                              JSON.stringify(views.starred) !== JSON.stringify(layout.views.starred)
-                            // Write the cookie before refreshing, so the server lists what the filter
-                            // asks for.
-                            const next = { ...layout, views }
-                            writeSidebarState(next)
-                            setLayout(next)
-                            if (refetch) router.refresh()
-                          }}
-                        />
-                      </div>
-                      <ResizeHandle
-                        width={width}
-                        settledWidth={settledWidth}
-                        maxWidth={maxWidth ?? settledWidth}
-                        onDrag={setDragWidth}
-                        onRelease={(next) => {
-                          setDragWidth(null)
-                          if (next < SIDEBAR_MIN_WIDTH) {
-                            // Collapse like the header button does, and come back at the last good width.
-                            update((state) => ({ ...state, collapsed: true }))
-                          } else {
-                            update((state) => ({ ...state, width: next }))
-                          }
-                        }}
-                      />
-                    </aside>
+      <SidebarStateContext.Provider value={sidebarState}>
+        <ViewerContext.Provider value={sidebarProps.viewer}>
+          <ShellDataProvider data={data}>
+            <TooltipProvider delay={300}>
+              <HeaderSlotsProvider>
+                <NotificationsProvider>
+                  <ShortcutsProvider>
+                    <CommandMenuProvider>
+                      <TourProvider autoStart={tour} onBeforeStart={showSidebar}>
+                        <a
+                          href="#main-content"
+                          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:ring-2 focus:ring-ring"
+                        >
+                          {t("skipToMain")}
+                        </a>
+                        <div className="flex min-h-svh bg-background lg:bg-sidebar">
+                          <aside
+                            aria-label={t("sidebar")}
+                            style={{ width }}
+                            className={cn(
+                              "sticky top-0 hidden h-svh shrink-0 lg:block",
+                              layout.collapsed && "lg:hidden",
+                              dragWidth !== null && "select-none",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "h-full overflow-hidden transition-opacity",
+                                releaseToCollapse && "opacity-50",
+                              )}
+                            >
+                              <Sidebar
+                                {...sidebarProps}
+                                closed={layout.closed}
+                                sectionOrder={layout.sectionOrder}
+                                collectionOrder={layout.collectionOrder}
+                                onReorderSections={(sectionOrder) =>
+                                  update((state) => ({ ...state, sectionOrder }))
+                                }
+                                onReorderCollections={(collectionOrder) =>
+                                  update((state) => ({ ...state, collectionOrder }))
+                                }
+                                onToggleSection={toggleSection}
+                                onToggleSidebar={toggleSidebar}
+                                shape={layout.shape}
+                                onShape={setShape}
+                                views={layout.views}
+                                onChangeViews={(views) => {
+                                  const refetch =
+                                    JSON.stringify(views.pastes) !==
+                                      JSON.stringify(layout.views.pastes) ||
+                                    JSON.stringify(views.starred) !==
+                                      JSON.stringify(layout.views.starred)
+                                  // Write the cookie before refreshing, so the server lists what the filter
+                                  // asks for.
+                                  update((state) => ({ ...state, views }))
+                                  if (refetch) router.refresh()
+                                }}
+                              />
+                            </div>
+                            <ResizeHandle
+                              width={width}
+                              settledWidth={settledWidth}
+                              maxWidth={maxWidth ?? settledWidth}
+                              onDrag={setDragWidth}
+                              onRelease={(next) => {
+                                setDragWidth(null)
+                                if (next < SIDEBAR_MIN_WIDTH) {
+                                  // Collapse like the header button does, and come back at the last good width.
+                                  update((state) => ({ ...state, collapsed: true }))
+                                } else {
+                                  update((state) => ({ ...state, width: next }))
+                                }
+                              }}
+                            />
+                          </aside>
 
-                    <div
-                      className={cn(
-                        "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
-                        layout.collapsed && "lg:ml-2",
-                      )}
-                    >
-                      <TopBar
-                        onToggleSidebar={toggleSidebar}
-                        sidebarOpen={!layout.collapsed}
-                        counts={{
-                          "/pastes": sidebarProps.data.counts.pastes,
-                          "/starred": sidebarProps.data.counts.starred,
-                          "/shared": sidebarProps.data.counts.shared,
-                          "/collections": sidebarProps.collections.length,
-                          "/trash": trashCount,
-                        }}
-                      />
-                      {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
-                      <main
-                        id="main-content"
-                        tabIndex={-1}
-                        className={cn(
-                          "flex-1",
-                          chrome.tabBar && "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
-                        )}
-                      >
-                        {children}
-                      </main>
-                    </div>
+                          <div
+                            className={cn(
+                              "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
+                              layout.collapsed && "lg:ml-2",
+                            )}
+                          >
+                            <TopBar
+                              onToggleSidebar={toggleSidebar}
+                              sidebarOpen={!layout.collapsed}
+                            />
+                            {chrome.topBar ? <MobileTopBar viewer={sidebarProps.viewer} /> : null}
+                            <main
+                              id="main-content"
+                              tabIndex={-1}
+                              className={cn(
+                                "flex-1",
+                                chrome.tabBar &&
+                                  "pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+                              )}
+                            >
+                              {children}
+                            </main>
+                          </div>
 
-                    {chrome.tabBar ? (
-                      <TabBar
-                        viewer={sidebarProps.viewer}
-                        counts={{
-                          collections: sidebarProps.collections.length,
-                          shared: sidebarProps.data.counts.shared,
-                          trash: trashCount,
-                        }}
-                      />
-                    ) : null}
-                  </div>
-                  {/* The demo's visitors share one guest account, so they don't follow its changes. */}
-                  {demo ? null : <LiveUpdates />}
-                </TourProvider>
-              </CommandMenuProvider>
-            </ShortcutsProvider>
-          </NotificationsProvider>
-        </HeaderSlotsProvider>
-      </TooltipProvider>
+                          {chrome.tabBar ? <TabBar viewer={sidebarProps.viewer} /> : null}
+                        </div>
+                        {/* The demo's visitors share one guest account, so they don't follow its changes. */}
+                        {demo ? null : <LiveUpdates />}
+                      </TourProvider>
+                    </CommandMenuProvider>
+                  </ShortcutsProvider>
+                </NotificationsProvider>
+              </HeaderSlotsProvider>
+            </TooltipProvider>
+          </ShellDataProvider>
+        </ViewerContext.Provider>
+      </SidebarStateContext.Provider>
     </SidebarUpdateContext.Provider>
   )
 }

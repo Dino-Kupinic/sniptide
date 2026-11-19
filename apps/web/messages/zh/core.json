@@ -83,6 +83,7 @@
     "someone": "有人",
     "notificationShared": "{name} 与你共享了“{title}”",
     "notificationSharedDetail": "在“与我共享”中打开",
+    "notificationSharedBurnDetail": "打开封存的代码片段",
     "notificationBurned": "“{title}”已被阅读",
     "notificationBurnedDetail": "该片段已在阅读后销毁。如需保留，请从回收站恢复",
     "notificationNeverExpires": "“{title}”现在永不过期",

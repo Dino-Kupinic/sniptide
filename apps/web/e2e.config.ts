@@ -44,6 +44,7 @@ export default {
             COOKIE_DOMAIN: "",
             ALLOWED_EMAILS: "",
             POSTHOG_KEY: "",
+            TELEMETRY: "off",
             GITHUB_CLIENT_ID: "",
             GITHUB_CLIENT_SECRET: "",
             GOOGLE_CLIENT_ID: "",

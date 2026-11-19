@@ -9,9 +9,10 @@ describe("tour steps", () => {
   })
 
   test("desktop points at the sidebar and the dashboard", () => {
-    const desktop = new Set(["new-paste", "search", "collections", "agent"])
+    const desktop = new Set(["new-paste", "templates", "search", "collections", "agent"])
     expect(resolveTourSteps((name) => desktop.has(name))).toEqual([
       { id: "new_paste", target: { name: "new-paste", side: "right" } },
+      { id: "templates", target: { name: "templates", side: "top" } },
       { id: "search", target: { name: "search", side: "right" } },
       { id: "collections", target: { name: "collections", side: "right" } },
       { id: "agent", target: { name: "agent", side: "bottom" } },
@@ -19,9 +20,10 @@ describe("tour steps", () => {
   })
 
   test("a phone points at the tab bar and the top bar, with its own text for More", () => {
-    const phone = new Set(["new-paste-tab", "search-mobile", "more-tab", "agent"])
+    const phone = new Set(["new-paste-tab", "templates", "search-mobile", "more-tab", "agent"])
     expect(resolveTourSteps((name) => phone.has(name))).toEqual([
       { id: "new_paste", target: { name: "new-paste-tab", side: "top" } },
+      { id: "templates", target: { name: "templates", side: "top" } },
       { id: "search", target: { name: "search-mobile", side: "bottom" } },
       { id: "collections", target: { name: "more-tab", side: "top", body: "bodyMore" } },
       { id: "agent", target: { name: "agent", side: "bottom" } },

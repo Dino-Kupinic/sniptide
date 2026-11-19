@@ -1,15 +1,16 @@
-# Early-growth operations guide
+# Operate a Sniptide instance
 
-Target: up to 100,000 stored pastes and tens of reads per second. These are design targets,
-not measured capacity claims. Start with one app process and one PostgreSQL database; measure
-before increasing replicas or introducing a separate analytics service.
+Start with one app process and one PostgreSQL database. Use the instance metrics to decide
+whether to adjust connection limits, provision more storage or add replicas. For installation
+and upgrades, see [Self-hosting](../apps/docs/content/docs/self-hosting/index.mdx).
 
 ## Read paths
 
 Lists return ten summaries without file bodies. Adjacent navigation uses a cursor containing
 sort value and UUID; numbered jumps still use OFFSET. Access filters are applied on every query.
-Malformed or mismatched cursors fall back to numbered pagination. Counts remain exact; unfiltered
-requests reuse the same count query. Counts and language facets still scan the authorized scope,
+Malformed or mismatched cursors fall back to numbered pagination. The list groups the authorized rows by language once to produce both the language options and
+the exact overall total. Filtered lists issue a separate matching count. These aggregates still
+scan the authorized scope,
 while language filtering uses the database-maintained first-language projection. List summaries
 and trash totals use stored byte totals without reading file contents. The file trigger maintains
 both fields for every writer, including older app versions. Substring title/slug search uses ILIKE with literal wildcards
@@ -28,7 +29,7 @@ size and must be monitored. Files over 200,000 UTF-8 bytes or 2,000 lines, and t
 Files of 2 KiB or more also keep their result in the `highlight_cache` table, so a restart or
 another replica doesn't tokenize them again. A row is found by a hash of the grammar and the code
 and holds run lengths and colour numbers, never the code itself. The cleanup run removes rows
-after 30 days, and the next view rebuilds them. On a local run, 1,155 rows took 872 kB.
+after 30 days, and the next view rebuilds them.
 
 ## Storage and write behavior
 
@@ -210,14 +211,9 @@ No separate worker service or additional runtime is required.
 
 ## Migration and rollout
 
-Back up the database. The additive migration installs pg_trgm, adds indexes and byte accounting,
-and backfills existing file sizes. The migration role must be allowed to install pg_trgm; ask your
-database operator to install it first if that permission is restricted. Index creation and backfill
-run in the migration transaction and can block writes. At 100k pastes, schedule a rollout window
-and inspect database activity; this is not an online/concurrent index migration. Migration-only
-statement/lock deadlines are five minutes/sixty seconds. On failure it rolls back and the new
-container does not become ready. Restore database access or increase migration-specific budgets
-through a reviewed change before retrying; do not disable application deadlines globally.
+Back up the database before upgrading. Review the release notes for migrations that can block
+writes. See [Upgrading](../apps/docs/content/docs/self-hosting/upgrading.mdx) for how to check
+the deployment and recover after a failed upgrade.
 
 Build once and deploy the exact image to every replica of a release. Pass the commit SHA as the
 DEPLOYMENT_VERSION build argument (it sets Next deploymentId). For separate builds that must share
@@ -236,17 +232,3 @@ do not change an already-built artifact. Coordinate key rotation as a release; e
 clients to refresh. Without a supplied key, Next generates one per build; replicas of the same
 image still share it. Compose accepts DEPLOYMENT_VERSION as a build argument. Drain old instances,
 retain the previous image for rollback, and verify readiness through /api/health.
-
-## Capacity exercise before increasing traffic
-
-On a representative staging database, seed 100k pastes with realistic file sizes, a large account,
-large trash/history scopes, and a skewed popular-paste distribution. Measure cold and warm reads,
-first/deep/adjacent pages, search (including one-character terms), charts, edits, quota boundaries,
-burn reveals, and purge with concurrent reads. Include a rolling deploy's connection overlap.
-Begin at tens of reads per second and compare request p95/p99, SQL latency, queueing, locks, heap,
-event-loop delay, response bytes, and cleanup throughput. Agree on latency/error budgets before
-running the exercise. The [read-load suite](../apps/web/load/README.md) seeds this workload and records a baseline.
-The same page describes the agent-load suite for the token API and MCP, and the
-[agent-traffic results](load-testing/agent-traffic.md) record what it found.
-The [local baseline](load-testing/baseline.md) is a reproducibility check; staging measurements are required for capacity claims. Counts/facets and hot-paste
-view updates are the next redesign candidates if those measurements show pressure.
