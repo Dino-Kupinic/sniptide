@@ -7,7 +7,6 @@ import {
   BellIcon,
   ChartColumnIcon,
   ChevronLeftIcon,
-  ChevronRightIcon,
   KeyRoundIcon,
   type LucideIcon,
   PlugIcon,
@@ -19,6 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { GroupedLinkRow, GroupedList, groupedRowClass } from "@/components/lists/grouped-list"
 import { navigateTabs } from "@/components/tab-navigation"
 import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
@@ -70,21 +70,20 @@ function StorageMeter({ used, limit }: { used: number; limit: number | null }) {
   const locale = useLocale()
   if (limit === null) return null
   return (
-    <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium">{t("storage")}</span>
-        <span className="text-muted-foreground tabular-nums">
+    <GroupedList label={t("storage")}>
+      <li className="flex flex-col gap-3 px-4 py-3.5">
+        <span className="text-[15px] leading-5 tabular-nums">
           {t("usageOfLimit", {
             used: formatBytes(used, locale),
             limit: formatBytes(limit, locale),
           })}
         </span>
-      </div>
-      <Progress
-        value={limit > 0 ? Math.min(100, (used / limit) * 100) : 100}
-        aria-label={t("storage")}
-      />
-    </div>
+        <Progress
+          value={limit > 0 ? Math.min(100, (used / limit) * 100) : 100}
+          aria-label={t("storage")}
+        />
+      </li>
+    </GroupedList>
   )
 }
 
@@ -160,31 +159,22 @@ function SettingsFrame({
           <h1 className={cn(titleClass, "min-w-0 truncate")}>{current?.label}</h1>
         </div>
       ) : (
-        <div className="flex flex-col gap-5 lg:hidden">
-          <nav
-            aria-label={t("settings")}
-            className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
-          >
+        <div className="flex flex-col gap-6 lg:hidden">
+          <GroupedList>
             {tabs.map((item) => (
-              <a
+              <GroupedLinkRow
                 key={item.value}
                 href={`/settings?tab=${item.value}`}
+                label={item.label}
+                icon={item.icon}
                 onClick={(event) => {
                   if (event.metaKey || event.ctrlKey || event.shiftKey) return
                   event.preventDefault()
                   openSection(item.value)
                 }}
-                className="flex h-12 items-center gap-3 px-4 text-sm font-medium outline-none focus-visible:bg-muted active:bg-muted"
-              >
-                <item.icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                <ChevronRightIcon
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
-              </a>
+              />
             ))}
-          </nav>
+          </GroupedList>
           {mobileFooter}
         </div>
       )}
@@ -234,22 +224,26 @@ function SettingsFrame({
   )
 }
 
-function SignOutButton() {
+// Sign out as the last row of the phone's list, centered like an iOS action row.
+function SignOutRow() {
   const t = useTranslations("Settings")
   const router = useRouter()
   return (
-    <Button
-      variant="outline"
-      size="xl"
-      className="w-full"
-      onClick={async () => {
-        await signOutAccount()
-        router.replace("/sign-in")
-        router.refresh()
-      }}
-    >
-      {t("signOut")}
-    </Button>
+    <GroupedList>
+      <li>
+        <button
+          type="button"
+          className={cn(groupedRowClass, "justify-center pl-0 text-link")}
+          onClick={async () => {
+            await signOutAccount()
+            router.replace("/sign-in")
+            router.refresh()
+          }}
+        >
+          {t("signOut")}
+        </button>
+      </li>
+    </GroupedList>
   )
 }
 
@@ -289,7 +283,7 @@ export function SettingsView({
       mobileFooter={
         <>
           {storage ? <StorageMeter used={storage.used} limit={storage.limit} /> : null}
-          <SignOutButton />
+          <SignOutRow />
         </>
       }
     >

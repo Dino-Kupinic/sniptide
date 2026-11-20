@@ -279,7 +279,8 @@ Six horizontal stripes that taper from a hairline at the top to a full bar at th
 Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.
 
 - Navigation follows iOS patterns: a tab bar, a large page title, and grouped lists with one label, an optional value and a chevron per row.
-- The mobile top bar is 52px tall and holds only trailing controls: notifications, a `--link` plus for New paste and the account avatar. The page's 30px title sits below it.
+- The mobile top bar is 52px tall and holds notifications, a `--link` plus for New paste and the account avatar at its trailing edge. Screens opened from Library (its lists, a collection, Secrets, Analytics and Settings) add a `--link` "‹ Library" back link at the leading edge. The page's 30px title sits below it.
+- Grouped lists come from `components/lists/grouped-list.tsx`: a 13px `--muted-foreground` label, one hairline panel, 48px rows with a 20px `--link` icon, a 15px label, an optional value and a chevron. Library and the phone Settings list use them, and Settings ends with Storage and a centered `--link` Sign out row.
 - The tab bar holds Home, Pastes, Library and Search, each a 24px line icon over an 11px label. The current tab takes `--link`. Search opens the command menu.
 - Library lists Starred, Shared with me, Secrets and Trash, then the collections with a New action, then Analytics, Import gist, Your profile and Settings, and ends with the account and Sign out. Each group is one `rounded-lg` hairline panel with 48px rows divided by inset hairlines. Feedback and Take the tour are in the account menu behind the avatar in the top bar.
 - Page actions that sit in the desktop header render next to the page title on phones.

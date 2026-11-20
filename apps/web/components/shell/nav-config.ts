@@ -28,6 +28,22 @@ export const mobileTabs: (NavItem & { match: string[] })[] = [
   },
 ]
 
+// Phone screens opened from the Library tab, which lead back to it from the top bar like an iOS
+// navigation stack. A collection's own page counts too, since phones reach collections there.
+const libraryScreens = [
+  "/starred",
+  "/shared",
+  "/collections",
+  "/secrets",
+  "/trash",
+  "/analytics",
+  "/settings",
+]
+
+export function backToLibrary(pathname: string) {
+  return libraryScreens.includes(pathname) || /^\/collections\/[^/]+$/.test(pathname)
+}
+
 export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }

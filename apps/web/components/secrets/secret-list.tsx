@@ -125,12 +125,14 @@ export function SecretList({
           ) : (
             sections.map(({ key, title, items }) => (
               <section key={key} className="flex flex-col gap-2">
-                <h2 className="text-sm font-medium">{title}</h2>
+                <h2 className="px-4 text-[13px] leading-[18px] text-muted-foreground lg:px-0 lg:text-sm lg:leading-5 lg:font-medium lg:text-foreground">
+                  {title}
+                </h2>
                 <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                   {items.map((group) => (
                     <li
                       key={group.id}
-                      className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_auto_8rem_8rem]"
+                      className="relative grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_auto_8rem_8rem]"
                     >
                       <span className="flex min-w-0 items-baseline gap-2">
                         <Link
