@@ -90,16 +90,15 @@ export async function deployProduction(
       throw new Error("Set COOLIFY_PRODUCTION_MIGRATIONS_TREE to the running migration tree")
     }
     const dbContents = await github(`/contents/packages/db?ref=${sha}`)
-    if (
-      !Array.isArray(dbContents) ||
-      !dbContents.some(
-        (entry) =>
-          entry.name === "migrations" &&
-          entry.type === "dir" &&
-          entry.sha === approvedMigrationsTree,
+    const tested = Array.isArray(dbContents)
+      ? dbContents.find((entry) => entry.name === "migrations" && entry.type === "dir")?.sha
+      : undefined
+    if (tested !== approvedMigrationsTree) {
+      // Name both trees so the release record shows what to set once the migration is applied.
+      const found = shaPattern.test(tested ?? "") ? tested : "missing"
+      throw new Error(
+        `Migration tree changed from ${approvedMigrationsTree} to ${found}. Follow docs/development.md#release-a-production-migration`,
       )
-    ) {
-      throw new Error("Migration tree changed. Follow the production migration checklist")
     }
   }
   const image = `ghcr.io/${repo.toLowerCase()}${kind === "docs" ? "-docs" : ""}`

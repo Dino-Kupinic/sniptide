@@ -133,6 +133,18 @@ test("production stops before touching Coolify when migration approval is missin
   noWrites(missingTree)
 })
 
+test("production names the approved and tested migration trees when they differ", async () => {
+  const approved = "d".repeat(40)
+  await assert.rejects(
+    run(mock(), { ...config, approvedMigrationsTree: approved }),
+    new RegExp(`from ${approved} to ${migrationsTree}\\.`),
+  )
+  await assert.rejects(
+    run(mock({ dbContents: [] }), { ...config, approvedMigrationsTree: migrationsTree }),
+    new RegExp(`from ${migrationsTree} to missing\\.`),
+  )
+})
+
 test("production accepts the exact migration tree approved for the running database", async () => {
   const m = mock()
   await run(m, { ...config, approvedMigrationsTree: migrationsTree })

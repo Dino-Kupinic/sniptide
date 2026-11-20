@@ -569,7 +569,8 @@ After the first publish, a repository owner must set the `sniptide` package's vi
 CI also publishes the tested amd64 web image after the other CI jobs and the container,
 upgrade, and Compose checks pass. A push to `main` publishes its commit; a pull request from a
 branch in this repository publishes its synthetic merge commit. Fork and Dependabot PRs run the checks without
-publishing. The workflow summary reports the registry digest and image name as
+publishing. Suites that a pull request's changes don't select, such as the editor extension
+builds, are skipped without blocking the publish. The workflow summary reports the registry digest and image name as
 `ghcr.io/<owner>/<repository>:sha-<commit>-<run-id>-<attempt>`. Each build attempt gets a distinct tag. A publish-only rerun uses the original build attempt
 and image; a full rerun builds a new image and tag. The artifact expires after one day; after that,
 rerun the Docker job or the full workflow. Use the registry digest to pin an image independently of
@@ -590,6 +591,34 @@ bash scripts/test-docker.sh sniptide:test
 
 The test creates and removes its own containers and network, without using host ports or an
 existing database.
+
+## Release a production migration
+
+The `Deploy tested production image` workflow deploys each successful main CI image to Coolify
+when the `coolify-production` environment enables it. It compares the migration directory in the
+tested commit with the `COOLIFY_PRODUCTION_MIGRATIONS_TREE` variable in that environment, and stops
+before contacting Coolify when they differ or the variable is unset. The failed run names the
+approved tree and the tested one.
+
+1. Record the currently running digest and the tested replacement digest from main CI. Review the
+   migration for rolling compatibility and schedule a quiet window. For risky migrations, rehearse
+   the new image on a private copy restored from the latest backup.
+2. On the Docker host, run `docker exec sniptide-backup sniptide-backup pre-deploy`. Confirm the
+   logged `pre-deploy/` object is present in the private bucket and record its key with both
+   digests. If either check fails, stop the release.
+3. Apply the tested digest manually in Coolify. Check the deployment log, `/api/health`, sign-in,
+   and the affected flows.
+4. After the migrations are applied and the release is healthy, set
+   `COOLIFY_PRODUCTION_MIGRATIONS_TREE` to the tested tree from the failed run, or run
+   `git rev-parse "$commit:packages/db/migrations"`. Later main pushes then deploy on their own.
+5. For an additive migration, roll back by redeploying the previous digest and keep the approved
+   tree, because the live schema stays expanded. For an incompatible migration, block traffic,
+   stop writers, restore the pre-deploy snapshot and redeploy the previous digest. The restore
+   discards writes made after the snapshot. Set the approved tree to the restored one before
+   resuming automation.
+
+See [Backups and restore](../apps/docs/content/docs/self-hosting/backups.mdx) for setup and
+recovery.
 
 ## Revision comparison performance
 
