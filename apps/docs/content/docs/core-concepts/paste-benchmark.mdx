@@ -1,0 +1,60 @@
+---
+title: Benchmark paste services
+description: Measure how long a signed-out reader waits to open a paste editor or see the same shared snippet on eight hosted services.
+---
+
+Run the benchmark from a checkout of the [Sniptide repository](https://github.com/Dino-Kupinic/sniptide) with Bun, Node.js 24.12 or later and Google Chrome installed.
+
+```sh
+bun install --frozen-lockfile
+bun run benchmark
+```
+
+By default the CLI visits each service's paste entry point in headless Chrome, clicks the editor, inserts the same line of JavaScript and checks its content. It stops before submission. Each attempt uses a fresh browser context with empty cookies and browser cache. On Pastebin the browser accepts the consent prompt when it blocks input.
+
+The table prints one row for every service in the [feature comparison](https://sniptide.com/blog/pastebin-alternatives). **Page median ms** measures navigation through DOMContentLoaded for successful same-host responses, including sign-in and directory pages. **Task median ms** includes navigation and ends when the editor contains the snippet. **Completed** gives the number of successful tasks out of all attempts. A dash means there were no qualifying samples.
+
+The runner visits one service at a time, rotates the first service each round and gives each attempt 15 seconds. Network, CDN, browser and instance conditions affect the numbers. The three default rounds give a snapshot of these deployments. To see the individual measurements or compare runs from another network:
+
+```sh
+bun run benchmark --rounds 8 --json
+```
+
+## Time a shared paste
+
+To measure time until a reader can see the same content, create a single-file paste on each service with this exact line. Use links that a signed-out reader can open repeatedly, with burn after reading turned off.
+
+```js
+export const health = () => ({ status: "ok" })
+```
+
+Put the full browser share links in a local JSON file keyed by the service names in the table. Include the decryption fragment for encrypted links. For example:
+
+```json
+{
+  "PrivateBin": "https://your-privatebin.example/?your-paste-id#your-key"
+}
+```
+
+```sh
+bun run benchmark --fixtures urls.json
+```
+
+The timer ends when Chrome finds the snippet visible on the page. Missing links appear as missing fixtures. Use the same visibility, file type and content across providers. Hosting, delivery and client-side decryption are included in this measurement.
+
+## Hosted editor results, 20 November 2026
+
+Eight rounds ran from one macOS client using Chrome 157.0.8103.80, starting at 12:32 UTC. Each service occupied each position once. The page and editor times below are medians in milliseconds.
+
+| Service | Editor completed | Page ms | Editor ms | What opened |
+| --- | ---: | ---: | ---: | --- |
+| Sniptide | 0/8 | 213.5 | - | Sign-in |
+| PrivateBin | 8/8 | 222.5 | 326 | Editor |
+| Opengist | 0/8 | 369.5 | - | Gist directory |
+| MicroBin | 0/8 | - | - | Demo redirected to szab.eu |
+| GitHub Gist | 0/8 | 316.5 | - | Gist directory |
+| Pastebin | 8/8 | 289.5 | 475 | Editor |
+| Hastebin | 0/8 | - | - | HTTP 403 |
+| Pastes.io | 8/8 | 504 | 707.5 | Editor |
+
+PrivateBin had the lowest median time to verified input on this run. The sign-in and directory rows measure the pages a signed-out visitor reached. The run covers editor entry only. Publishing, retrieval and signed-in editing require separate measurements. [Download the individual samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-editor-2026-11-20.json).

@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "pastes",
+    "paste-benchmark",
     "collections",
     "sharing",
     "burn-after-read",
