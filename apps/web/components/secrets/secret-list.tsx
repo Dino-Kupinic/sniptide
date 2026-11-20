@@ -70,8 +70,31 @@ export function SecretList({
         topBar={!loading}
         description={t("list_description")}
         actions={create}
+        // Phones keep the title on one line, so its actions shrink to icons beside it.
+        mobileActions={
+          <>
+            <Button
+              size="xl"
+              variant="outline"
+              className="w-10 px-0"
+              aria-label={t("audit_title")}
+              render={<Link href="/secrets/activity" />}
+              nativeButton={false}
+            >
+              <HistoryIcon />
+            </Button>
+            <Button
+              size="xl"
+              className="w-10 px-0"
+              aria-label={t("new_group")}
+              render={<Link href="/secrets/new" />}
+              nativeButton={false}
+            >
+              <PlusIcon />
+            </Button>
+          </>
+        }
       />
-      <div className="flex flex-wrap gap-2 lg:hidden">{create}</div>
       {loading ? null : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-border px-4 py-14 text-center text-sm text-muted-foreground">
           {t("empty_list")}
