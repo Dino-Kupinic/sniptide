@@ -32,6 +32,17 @@ export function proxy(request: NextRequest) {
 // (BETTER_AUTH_URL). Without SHARE_URL, or when both are the same domain, nothing changes.
 function route(request: NextRequest) {
   const path = request.nextUrl.pathname
+  // The Next.js client sends page actions with Next-Action, and multipart uploads use API
+  // routes. Reject other multipart page posts before Next tries to decode them.
+  if (
+    request.method === "POST" &&
+    !path.startsWith("/api/") &&
+    !request.headers.has("next-action") &&
+    request.headers.get("content-type")?.startsWith("multipart/form-data")
+  ) {
+    return new NextResponse(null, { status: 400 })
+  }
+
   if (path === "/templates" && !hasFeature("gallery")) {
     return new NextResponse("Not found", { status: 404 })
   }

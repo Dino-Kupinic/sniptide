@@ -307,6 +307,9 @@ project: errors in pages, route handlers, server actions and the proxy, and fail
 maintenance jobs, the visit queue and the demo reset. Without a key no exceptions are sent, and
 exceptions only reach the server log as before. Preview deployments and `localhost` never report.
 
+Multipart POST requests to pages require the `Next-Action` header sent by the browser client.
+Without it, Sniptide returns `400 Bad Request` before the page renderer decodes the body.
+
 Each exception carries the route file (such as `app/[slug]/page`, never the visited path), the
 release from `DEPLOYMENT_VERSION`, the runtime, the request method or the job's name, and Next's
 error digest. Before an exception leaves the server, Sniptide removes:
