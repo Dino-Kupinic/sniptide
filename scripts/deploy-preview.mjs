@@ -22,6 +22,7 @@ export async function managePreview(
     coolifyToken,
     coolifyUrl,
     appId,
+    logUrl,
   } = config
   if (
     !["workflow_run", "workflow_dispatch"].includes(action) ||
@@ -62,7 +63,59 @@ export async function managePreview(
     if (!response.ok) throw new Error(`API request failed (${response.status}): ${path}`)
     return response.json()
   }
-  const github = (path) => api("https://api.github.com", `/repos/${repo}${path}`, githubToken)
+  const github = (path, options) =>
+    api("https://api.github.com", `/repos/${repo}${path}`, githubToken, options)
+  // A GitHub deployment per pull request puts the preview link on the pull request page.
+  const deploymentEnvironment = `preview-pr-${pr}`
+  const previewUrl = (fqdn) => {
+    if (typeof fqdn !== "string") return undefined
+    for (const candidate of fqdn.split(",")) {
+      try {
+        const u = new URL(candidate.trim())
+        if (u.protocol === "https:" && !u.username && !u.password) return u.origin
+      } catch {}
+    }
+    return undefined
+  }
+  const announce = async (preview) => {
+    const deployment = await github("/deployments", {
+      method: "POST",
+      body: JSON.stringify({
+        ref: receipt.head_sha,
+        environment: deploymentEnvironment,
+        description: `Preview of #${pr}`,
+        auto_merge: false,
+        required_contexts: [],
+        transient_environment: true,
+        production_environment: false,
+      }),
+    })
+    if (!Number.isSafeInteger(deployment?.id)) throw new Error("GitHub did not create a deployment")
+    const url = previewUrl(preview.fqdn)
+    await github(`/deployments/${deployment.id}/statuses`, {
+      method: "POST",
+      body: JSON.stringify({
+        state: "success",
+        ...(url ? { environment_url: url } : {}),
+        ...(logUrl ? { log_url: logUrl } : {}),
+        auto_inactive: true,
+      }),
+    })
+    return url
+  }
+  const retire = async () => {
+    const deployments = await github(
+      `/deployments?environment=${deploymentEnvironment}&per_page=100`,
+    )
+    if (!Array.isArray(deployments)) throw new Error("Invalid deployment list")
+    for (const deployment of deployments) {
+      if (!Number.isSafeInteger(deployment?.id)) continue
+      await github(`/deployments/${deployment.id}/statuses`, {
+        method: "POST",
+        body: JSON.stringify({ state: "inactive" }),
+      })
+    }
+  }
   const coolify = (path, options, allow404) =>
     api(previewOrigin, `/api/v1${path}`, coolifyToken, options, allow404)
   const environment = await github("/environments/coolify-preview")
@@ -115,6 +168,7 @@ export async function managePreview(
       { method: "DELETE" },
       true,
     )
+    await retire()
     console.log(
       deleted
         ? "Cleanup requested; verify containers and queued deployments on the server."
@@ -223,8 +277,9 @@ export async function managePreview(
       if (preview.pull_request_id !== Number(pr) || preview.docker_registry_image_tag !== tag)
         throw new Error("Preview image identity mismatch")
       await verifyCurrent()
+      const url = await announce(preview)
       console.log(
-        "Coolify deployment finished with the expected image reference; runtime health is not verified.",
+        `Coolify deployment finished with the expected image reference${url ? ` at ${url}` : ""}; runtime health is not verified.`,
       )
       return
     }
@@ -257,6 +312,10 @@ if (import.meta.main) {
         coolifyToken: e.COOLIFY_TOKEN,
         coolifyUrl: e.COOLIFY_URL,
         appId: e.COOLIFY_APP_ID,
+        logUrl:
+          e.GITHUB_RUN_ID && e.GITHUB_SERVER_URL
+            ? `${e.GITHUB_SERVER_URL}/${e.GITHUB_REPOSITORY}/actions/runs/${e.GITHUB_RUN_ID}`
+            : undefined,
       }),
     )
     .catch((error) => {

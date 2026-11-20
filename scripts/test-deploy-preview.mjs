@@ -37,7 +37,12 @@ function mock(options = {}) {
     calls.push({ url, ...args })
     const path = new URL(url).pathname
     let data
-    if (path.endsWith("/environments/coolify-preview/deployment-branch-policies")) {
+    const github = new URL(url).hostname === "api.github.com"
+    if (github && path.endsWith("/repos/Owner/Repo/deployments")) {
+      data = args?.method === "POST" ? { id: 99 } : (options.githubDeployments ?? [{ id: 98 }])
+    } else if (github && /\/deployments\/9[89]\/statuses$/.test(path)) {
+      data = {}
+    } else if (path.endsWith("/environments/coolify-preview/deployment-branch-policies")) {
       data = options.policies ?? {
         total_count: 1,
         branch_policies: [{ name: "main", type: "branch" }],
@@ -48,7 +53,11 @@ function mock(options = {}) {
       }
     } else if (path.endsWith("/applications/preview-1/previews/7")) {
       if (options.missing) return { ok: false, status: 404 }
-      data = { pull_request_id: 7, docker_registry_image_tag: digest.replace(":", "-") }
+      data = {
+        pull_request_id: 7,
+        docker_registry_image_tag: digest.replace(":", "-"),
+        fqdn: options.fqdn ?? "https://7.preview.example,http://other.example",
+      }
     } else if (path.endsWith("/applications/preview-1/previews"))
       data = { deployment_uuid: "deployment-1" }
     else if (path.endsWith("/deployments/applications/preview-1"))
@@ -169,7 +178,10 @@ test("rejects unprotected environment and malformed receipts before mutation", a
 test("waits for other preview deployments and rechecks PR state", async () => {
   const m = mock({ queues: [[{ application_id: "9", status: "queued" }], []] })
   await run(m)
-  assert.equal(m.calls.filter((call) => call.url.endsWith("/deployments")).length, 2)
+  const queueReads = m.calls.filter(
+    (call) => new URL(call.url).hostname !== "api.github.com" && call.url.endsWith("/deployments"),
+  )
+  assert.equal(queueReads.length, 2)
 })
 
 test("closed preview cleanup is idempotent and checks state again before delete", async () => {
@@ -179,7 +191,7 @@ test("closed preview cleanup is idempotent and checks state again before delete"
   noWrites(missing)
   const closed = mock({ closed: true })
   await run(closed, cleanup)
-  assert.equal(closed.calls.at(-1).method, "DELETE")
+  assert.ok(closed.calls.some((call) => call.method === "DELETE"))
   const reopened = mock({ closed: true, reopen: true })
   await assert.rejects(run(reopened, cleanup))
   noWrites(reopened)
@@ -197,5 +209,57 @@ test("cleans a closed known preview even after retargeting", async () => {
     pull: { base: { ref: "other", sha: base, repo: { full_name: "Owner/Repo" } } },
   })
   await run(m, { ...config, action: "workflow_dispatch" })
-  assert.equal(m.calls.at(-1).method, "DELETE")
+  assert.ok(m.calls.some((call) => call.method === "DELETE"))
+})
+
+test("links the finished preview on the pull request through a GitHub deployment", async () => {
+  const m = mock()
+  await run(m, { ...config, logUrl: "https://github.com/Owner/Repo/actions/runs/50" })
+  const posts = m.calls.filter(
+    (call) => call.method === "POST" && new URL(call.url).hostname === "api.github.com",
+  )
+  assert.equal(posts.length, 2)
+  assert.deepEqual(JSON.parse(posts[0].body), {
+    ref: head,
+    environment: "preview-pr-7",
+    description: "Preview of #7",
+    auto_merge: false,
+    required_contexts: [],
+    transient_environment: true,
+    production_environment: false,
+  })
+  assert.ok(posts[1].url.endsWith("/deployments/99/statuses"))
+  assert.deepEqual(JSON.parse(posts[1].body), {
+    state: "success",
+    environment_url: "https://7.preview.example",
+    log_url: "https://github.com/Owner/Repo/actions/runs/50",
+    auto_inactive: true,
+  })
+  const coolifyPost = m.calls.findIndex((call) => call.url.endsWith("/previews"))
+  const githubPost = m.calls.indexOf(posts[0])
+  assert.ok(coolifyPost < githubPost)
+})
+
+test("omits a link Coolify doesn't report over HTTPS", async () => {
+  const m = mock({ fqdn: "http://7.preview.example" })
+  await run(m)
+  const status = m.calls.find((call) => call.url.endsWith("/deployments/99/statuses"))
+  assert.deepEqual(JSON.parse(status.body), { state: "success", auto_inactive: true })
+})
+
+test("marks the pull request's preview deployments inactive on cleanup", async () => {
+  const m = mock({ closed: true })
+  await run(m, {
+    action: "workflow_dispatch",
+    repo: "Owner/Repo",
+    pr: "7",
+    githubToken: "github",
+    coolifyToken: "preview",
+    coolifyUrl: "https://preview-coolify.example/",
+    appId: "preview-1",
+  })
+  const list = m.calls.find((call) => call.url.includes("/deployments?environment=preview-pr-7"))
+  assert.ok(list)
+  const status = m.calls.find((call) => call.url.endsWith("/deployments/98/statuses"))
+  assert.deepEqual(JSON.parse(status.body), { state: "inactive" })
 })
