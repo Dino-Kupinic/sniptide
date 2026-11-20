@@ -1,179 +1,267 @@
+import { createHash, randomUUID } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { parseArgs } from "node:util"
 import { chromium } from "playwright-core"
 
 export const providers = [
-  { name: "Sniptide", url: "https://app.sniptide.com/new", editor: ".cm-content, textarea" },
-  { name: "PrivateBin", url: "https://privatebin.net/", editor: "#message" },
+  {
+    name: "Sniptide",
+    url: "https://app.sniptide.com/new",
+    editor: 'textarea[aria-label^="Contents of"]',
+    submit: /^Create paste/,
+  },
+  { name: "PrivateBin", url: "https://privatebin.net/", editor: "#message", button: "#sendbutton" },
   {
     name: "Opengist",
     url: "https://demo.opengist.io/",
-    editor: ".cm-content, textarea[name=content]",
+    editor: ".cm-content",
+    submit: /^Create .*gist/i,
   },
-  { name: "MicroBin", url: "https://pub.microbin.eu/", editor: "textarea[name=content]" },
+  {
+    name: "MicroBin",
+    url: "https://pub.microbin.eu/",
+    editor: "#content-input",
+    button: "#submit-button",
+  },
   {
     name: "GitHub Gist",
     url: "https://gist.github.com/",
-    editor: ".cm-content, .CodeMirror textarea",
+    editor: ".cm-content, .CodeMirror textarea, .monaco-editor textarea",
+    submit: /^Create secret gist/i,
   },
-  { name: "Pastebin", url: "https://pastebin.com/", editor: "#postform-text" },
+  {
+    name: "Pastebin",
+    url: "https://pastebin.com/",
+    editor: "#postform-text",
+    submit: /^Create New Paste/i,
+  },
   { name: "Hastebin", url: "https://www.toptal.com/developers/hastebin", editor: "textarea" },
-  { name: "Pastes.io", url: "https://pastes.io/", editor: ".cm-content" },
+  {
+    name: "Pastes.io",
+    url: "https://pastes.io/",
+    editor: ".cm-content",
+    submit: /^Create New Paste/i,
+  },
 ]
-const snippet = 'export const health = () => ({ status: "ok" })'
 const timeout = 15000
 
-export async function runRounds(targets, rounds, measure) {
+function payload(roundId, bytes) {
+  const prefix = `// health-check ${roundId} `
+  const blocks = [prefix]
+  for (let index = 0; prefix.length + 64 * index < bytes; index++) {
+    blocks.push(
+      createHash("sha256")
+        .update(roundId + String(index))
+        .digest("hex"),
+    )
+  }
+  return blocks.join("").slice(0, bytes)
+}
+
+export async function runRounds(targets, rounds, measure, bytes = 1024, pauseMs = 0) {
   const rows = targets.map(({ name }) => ({ name, samples: [] }))
   for (let round = 0; round < rounds; round++) {
+    if (pauseMs) await new Promise((resolve) => setTimeout(resolve, pauseMs))
+    const text = payload(randomUUID(), bytes)
     for (let step = 0; step < targets.length; step++) {
       const index = (round + step) % targets.length
-      rows[index].samples.push(await measure(targets[index]))
+      rows[index].samples.push(await measure(targets[index], text))
     }
   }
   return rows
 }
 
-function median(times) {
-  if (!times.length) return null
-  const sorted = [...times].sort((a, b) => a - b)
-  return (sorted[Math.floor(sorted.length / 2)] + sorted[Math.floor((sorted.length - 1) / 2)]) / 2
-}
-
 export function summarize(samples) {
-  const times = samples.filter((s) => s.outcome === "ok").map((s) => s.ms)
-  const failures = new Map()
-  for (const { outcome } of samples) {
-    if (outcome !== "ok") failures.set(outcome, (failures.get(outcome) ?? 0) + 1)
+  const completed = samples.filter((s) => s.outcome === "verified")
+  const median = (key) => {
+    const times = completed.map((s) => s[key]).sort((a, b) => a - b)
+    return times.length
+      ? (times[Math.floor(times.length / 2)] + times[Math.floor((times.length - 1) / 2)]) / 2
+      : null
   }
   return {
-    success: times.length,
-    median: median(times),
-    failures: Array.from(failures, ([reason, count]) => `${count}x ${reason}`).join(", "),
+    completed: completed.length,
+    createMs: median("createMs"),
+    readMs: median("readMs"),
+    totalMs: median("totalMs"),
   }
 }
 
-async function measure(browser, target, fixtures) {
-  const url = fixtures ? fixtures[target.name] : target.url
-  if (!url) return { outcome: "missing fixture" }
-  const page = await browser.newPage()
-  if (target.name === "Pastebin") {
+async function open(page, url) {
+  const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout })
+  if (!response?.ok()) throw new Error(`HTTP ${response?.status() ?? "unknown"}`)
+  if (new URL(page.url()).host !== new URL(url).host) throw new Error("redirected to another host")
+}
+
+async function prepare(page, provider, text) {
+  await open(page, provider.url)
+  const pathname = new URL(page.url()).pathname
+  if (["/sign-in", "/-/all", "/starred", "/login"].includes(pathname))
+    throw new Error("writer sign-in required")
+  if (provider.name === "Pastebin") {
     const consent = page.getByRole("button", { name: "AGREE", exact: true })
-    await page.addLocatorHandler(consent, () => consent.click({ timeout: 2000 }))
+    await page.addLocatorHandler(consent, () => consent.click())
+    const visibility = page.locator("#postform-status")
+    if (await visibility.count()) await visibility.selectOption("1", { force: true })
   }
-  const start = performance.now()
-  const remaining = () => Math.max(1, timeout - (performance.now() - start))
-  let stage = "navigation"
-  let pageMs
+  if (provider.name === "Sniptide") {
+    await page.getByLabel("Title", { exact: true }).fill("Paste benchmark")
+    await page.getByRole("radio", { name: "Unlisted", exact: true }).check()
+  }
+  const editor = page.locator(provider.editor).filter({ visible: true }).first()
+  await editor.click()
+  await page.keyboard.insertText(text)
+}
+
+async function publish(page, provider) {
+  const entry = page.url()
+  if (provider.name === "Hastebin") await page.keyboard.press("Control+s")
+  else {
+    const button = provider.button
+      ? page.locator(provider.button)
+      : page.getByRole("button", { name: provider.submit })
+    await button.first().click()
+  }
+  await page.waitForURL((url) => url.href !== entry, { waitUntil: "commit", timeout })
+  const link = new URL(page.url())
+  if (provider.name === "Sniptide") {
+    const match = /^\/pastes\/([^/]+)$/.exec(link.pathname)
+    if (!match) throw new Error("share link missing")
+    link.pathname = `/${match[1]}`
+    if (provider.readerOrigin) return new URL(link.pathname, provider.readerOrigin).href
+  }
+  return link.href
+}
+
+async function roundTrip(browser, provider, text) {
+  let writer
+  let reader
+  let stage = "writer session"
   try {
-    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout })
-    if (!response?.ok()) return { outcome: `HTTP ${response?.status() ?? "unknown"}` }
-    const location = new URL(page.url())
-    if (location.host !== new URL(url).host) return { outcome: `redirect to ${location.host}` }
-    pageMs = Math.round(performance.now() - start)
-    if (fixtures) {
-      stage = "visible snippet"
-      await page
-        .getByText(snippet, { exact: true })
-        .filter({ visible: true })
-        .first()
-        .waitFor({ timeout: remaining() })
-    } else {
-      if (location.pathname === "/sign-in") return { outcome: "sign-in", pageMs }
-      if (["/-/all", "/starred"].includes(location.pathname))
-        return { outcome: "gist directory", pageMs }
-      stage = "editor input"
-      const editor = page.locator(target.editor).filter({ visible: true }).first()
-      await editor.click({ timeout: remaining() })
-      await page.keyboard.insertText(snippet)
-      stage = "editor verification"
-      const value = await editor.evaluate((el) => el.value ?? el.textContent, undefined, {
-        timeout: remaining(),
-      })
-      if (value !== snippet) return { outcome: "text mismatch", pageMs }
-    }
-    const ms = performance.now() - start
-    return ms > timeout
-      ? { outcome: `${stage} timeout`, pageMs }
-      : { outcome: "ok", pageMs, ms: Math.round(ms) }
-  } catch (error) {
+    writer = await browser.newContext({ storageState: provider.storageState })
+    reader = await browser.newContext()
+    stage = "prepare"
+    const page = await writer.newPage()
+    const recipient = await reader.newPage()
+    page.setDefaultTimeout(timeout)
+    await prepare(page, provider, text)
+    stage = "publish"
+    const start = performance.now()
+    const link = await publish(page, provider)
+    const shared = performance.now()
+    stage = "read"
+    await open(recipient, link)
+    const content = recipient.getByText(text, { exact: true }).filter({ visible: true }).first()
+    await content.waitFor({ timeout })
+    // Opengist renders an extra newline in each table cell. Its copy source contains the saved file.
+    const recovered =
+      provider.name === "Opengist"
+        ? await recipient.locator('textarea[aria-hidden="true"]').first().inputValue({ timeout })
+        : await content.textContent()
+    if (recovered !== text) throw new Error("content mismatch")
+    const end = performance.now()
     return {
-      pageMs,
-      outcome:
-        error.name === "TimeoutError"
-          ? `${stage} timeout`
-          : (error.message.match(/net::ERR_\w+/)?.[0] ?? `${stage} failed`),
+      outcome: "verified",
+      createMs: Math.round(shared - start),
+      readMs: Math.round(end - shared),
+      totalMs: Math.round(end - start),
     }
+  } catch (error) {
+    const reason = error.name === "TimeoutError" ? "timeout" : error.message.split("\n")[0]
+    // Browser error messages can include a private share URL or its decryption fragment.
+    const known =
+      /^(HTTP [0-9]+|timeout|content mismatch|writer sign-in required|redirected to another host|share link missing)$/
+    return { outcome: `${stage}: ${known.test(reason) ? reason : "browser error"}` }
   } finally {
-    await page.close()
+    await Promise.all([writer?.close(), reader?.close()])
   }
 }
 
 async function main() {
   const { values } = parseArgs({
     options: {
+      config: { type: "string" },
+      hosted: { type: "boolean" },
       rounds: { type: "string", default: "3" },
-      fixtures: { type: "string" },
+      bytes: { type: "string", default: "1024" },
       json: { type: "boolean" },
       help: { type: "boolean" },
     },
   })
-  if (values.help) {
+  if (values.help || (!values.hosted && !values.config)) {
     console.log(
-      "bun run benchmark [--rounds 1..20] [--fixtures urls.json] [--json]\nDefault: enter a snippet in each signed-out editor. With fixtures: open each share link and verify the visible text.\nFixture text: " +
-        snippet,
+      "bun run benchmark (--config instances.json | --hosted) [--rounds 1..20] [--bytes 128..65536] [--json]\nEach attempt publishes a new disposable paste and opens its share link in a fresh reader session. Configure disposable instances or accounts before running.",
     )
+    if (!values.help) process.exitCode = 2
     return
   }
+  if (values.hosted && values.config) throw new Error("Choose either --hosted or --config")
   const rounds = Number(values.rounds)
+  const bytes = Number(values.bytes)
   if (!Number.isInteger(rounds) || rounds < 1 || rounds > 20)
-    throw new Error("--rounds must be an integer from 1 to 20")
-  const fixtures =
-    values.fixtures === undefined ? undefined : JSON.parse(await readFile(values.fixtures, "utf8"))
-  if (values.fixtures !== undefined) {
-    if (!fixtures || typeof fixtures !== "object" || Array.isArray(fixtures))
-      throw new Error("Expected a JSON object mapping service names to share URLs")
-    for (const [name, url] of Object.entries(fixtures)) {
+    throw new Error("Expected 1 to 20 rounds")
+  if (!Number.isInteger(bytes) || bytes < 128 || bytes > 65536)
+    throw new Error("Expected 128 to 65536 bytes")
+  const config = values.config
+    ? JSON.parse(await readFile(values.config, "utf8"))
+    : Object.fromEntries(providers.map((p) => [p.name, {}]))
+  if (!config || Array.isArray(config) || typeof config !== "object" || !Object.keys(config).length)
+    throw new Error("Expected at least one provider")
+  for (const [name, options] of Object.entries(config)) {
+    if (
+      !providers.some((p) => p.name === name) ||
+      !options ||
+      typeof options !== "object" ||
+      Array.isArray(options)
+    )
+      throw new Error("Invalid provider configuration")
+    for (const key of Object.keys(options))
       if (
-        !providers.some((p) => p.name === name) ||
-        typeof url !== "string" ||
-        !["https:", "http:"].includes(new URL(url).protocol)
+        !["url", "storageState", "readerOrigin"].includes(key) ||
+        typeof options[key] !== "string"
       )
-        throw new Error(`Invalid fixture for ${name}`)
-    }
+        throw new Error(`Invalid option for ${name}`)
   }
+  const targets = providers
+    .filter((p) => Object.hasOwn(config, p.name))
+    .map((p) => ({ ...p, ...config[p.name] }))
   const browser = await chromium.launch({ channel: "chrome" })
   try {
-    const metadata = {
-      started: new Date().toISOString(),
+    const started = new Date().toISOString()
+    const rows = await runRounds(
+      targets,
+      rounds,
+      (p, text) => roundTrip(browser, p, text),
+      bytes,
+      11000,
+    )
+    const result = {
+      started,
       browser: browser.version(),
       platform: process.platform,
-      workload: fixtures ? "shared paste visible" : "signed-out editor input",
       rounds,
-      timeoutMs: timeout,
+      bytes,
+      roundPauseMs: 11000,
+      unmeasured: providers.filter((p) => !Object.hasOwn(config, p.name)).map((p) => p.name),
+      instances: targets.map((p) => ({ name: p.name, origin: new URL(p.url).origin })),
+      rows,
     }
-    const rows = await runRounds(providers, rounds, (target) => measure(browser, target, fixtures))
-    if (values.json) console.log(JSON.stringify({ ...metadata, rows }, null, 2))
+    if (values.json) console.log(JSON.stringify(result, null, 2))
     else {
-      console.log(
-        metadata.started,
-        "| Chrome",
-        metadata.browser,
-        "|",
-        metadata.platform,
-        "|",
-        metadata.workload,
-      )
+      console.log(started, "| Chrome", result.browser, "|", bytes, "bytes per paste")
+      if (result.unmeasured.length) console.log("Outside this run:", result.unmeasured.join(", "))
       console.table(
         rows.map(({ name, samples }) => {
-          const { success, median: taskMedian, failures } = summarize(samples)
+          const { completed, createMs, readMs, totalMs } = summarize(samples)
           return {
             Service: name,
-            Completed: `${success}/${rounds}`,
-            "Page median ms":
-              median(samples.flatMap((s) => (s.pageMs === undefined ? [] : [s.pageMs]))) ?? "-",
-            "Task median ms": taskMedian ?? "-",
-            "Other outcomes": failures,
+            Verified: `${completed}/${rounds}`,
+            "Publish ms": createMs ?? "-",
+            "Read ms": readMs ?? "-",
+            "Round trip ms": totalMs ?? "-",
+            Failures: [
+              ...new Set(samples.filter((s) => s.outcome !== "verified").map((s) => s.outcome)),
+            ].join(", "),
           }
         }),
       )
@@ -182,5 +270,4 @@ async function main() {
     await browser.close()
   }
 }
-
 if (import.meta.main) await main()

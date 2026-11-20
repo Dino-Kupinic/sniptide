@@ -122,7 +122,7 @@ jobs:
       - run: node --test scripts/test-release-gates.mjs
         env:
           LEGACY_MCP_TARBALL: ${{ runner.temp }}/sniptide-mcp-0.1.0.tgz
-      - run: node --test scripts/test-paste-benchmark.mjs
+      - run: node --test scripts/test-paste-benchmark.mjs scripts/test-paste-roundtrip.mjs
       - run: node --test scripts/test-ci-plan.mjs
       - run: bash scripts/test-ci-image-tag.sh
       - run: bash scripts/test-ci-containers-parallel.sh

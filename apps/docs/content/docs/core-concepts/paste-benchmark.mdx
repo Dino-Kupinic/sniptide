@@ -1,60 +1,56 @@
 ---
 title: Benchmark paste services
-description: Measure how long a signed-out reader waits to open a paste editor or see the same shared snippet on eight hosted services.
+description: Measure the time to publish a paste and recover its contents in a separate browser session.
 ---
 
-Run the benchmark from a checkout of the [Sniptide repository](https://github.com/Dino-Kupinic/sniptide) with Bun, Node.js 24.12 or later and Google Chrome installed.
+The benchmark submits a new single-file paste, opens its share link in a fresh Chrome context with no writer cookies, and checks that the reader can see and recover the complete payload. It prints publish time, read time, end-to-end time and the number of verified round trips for each service.
 
-```sh
-bun install --frozen-lockfile
-bun run benchmark
-```
+## Run a comparison
 
-By default the CLI visits each service's paste entry point in headless Chrome, clicks the editor, inserts the same line of JavaScript and checks its content. It stops before submission. Each attempt uses a fresh browser context with empty cookies and browser cache. On Pastebin the browser accepts the consent prompt when it blocks input.
+From a checkout of the [Sniptide repository](https://github.com/Dino-Kupinic/sniptide), install Bun, Node.js 24.12 or later, and Google Chrome. Install the locked dependencies with `bun install --frozen-lockfile`.
 
-The table prints one row for every service in the [feature comparison](https://sniptide.com/blog/pastebin-alternatives). **Page median ms** measures navigation through DOMContentLoaded for successful same-host responses, including sign-in and directory pages. **Task median ms** includes navigation and ends when the editor contains the snippet. **Completed** gives the number of successful tasks out of all attempts. A dash means there were no qualifying samples.
-
-The runner visits one service at a time, rotates the first service each round and gives each attempt 15 seconds. Network, CDN, browser and instance conditions affect the numbers. The three default rounds give a snapshot of these deployments. To see the individual measurements or compare runs from another network:
-
-```sh
-bun run benchmark --rounds 8 --json
-```
-
-## Time a shared paste
-
-To measure time until a reader can see the same content, create a single-file paste on each service with this exact line. Use links that a signed-out reader can open repeatedly, with burn after reading turned off.
-
-```js
-export const health = () => ({ status: "ok" })
-```
-
-Put the full browser share links in a local JSON file keyed by the service names in the table. Include the decryption fragment for encrypted links. For example:
+Create an `instances.json` file for the deployments you want to test. Each entry specifies the editor URL. Where creating pastes requires an account, provide a Playwright storage-state file for a disposable writer account. For example, run `bunx playwright-core codegen --channel chrome --save-storage writer.json http://localhost:3000/new`, sign in, then close the browser. Keep the session file outside version control. If Sniptide serves reader links on a second host, set `readerOrigin` to its origin.
 
 ```json
 {
-  "PrivateBin": "https://your-privatebin.example/?your-paste-id#your-key"
+  "Sniptide": {"url": "http://localhost:3000/new", "storageState": "writer.json"},
+  "PrivateBin": {"url": "http://localhost:8081/"},
+  "Opengist": {"url": "http://localhost:6157/", "storageState": "opengist-writer.json"},
+  "MicroBin": {"url": "http://localhost:8080/"}
 }
 ```
 
 ```sh
-bun run benchmark --fixtures urls.json
+bun run benchmark --config instances.json --rounds 8 --bytes 1024
+bun run benchmark --config instances.json --rounds 8 --bytes 32768 --json
 ```
 
-The timer ends when Chrome finds the snippet visible on the page. Missing links appear as missing fixtures. Use the same visibility, file type and content across providers. Hosting, delivery and client-side decryption are included in this measurement.
+The CLI also recognizes **GitHub Gist**, **Pastebin**, **Hastebin** and **Pastes.io**. An empty options object uses the service's hosted editor. Passing `--hosted` in place of `--config` tries the eight hosted entry points without a writer account. A sign-in prompt, denied request, or unusable share link appears as a failed attempt. Each submission creates a real paste under the instance's retention and visibility settings. Use disposable local storage for repeatable runs and remove it afterward.
 
-## Hosted editor results, 20 November 2026
+## Read the results
 
-Eight rounds ran from one macOS client using Chrome 157.0.8103.80, starting at 12:32 UTC. Each service occupied each position once. The page and editor times below are medians in milliseconds.
+- **Publish** runs from invoking the save control until the writer receives a link. Writer sign-in, loading the editor and inserting the payload happen before the timer.
+- **Read** runs from opening that link through verifying the contents. Browser rendering and PrivateBin's client-side decryption are included.
+- **Round trip** measures both stages on the same paste. Each column reports the median of fully verified samples. The median round trip can differ from the sum of the two stage medians.
+- **Verified** counts completed round trips out of all attempts. A failed attempt contributes no latency sample. JSON output records every attempt and its outcome.
 
-| Service | Editor completed | Page ms | Editor ms | What opened |
-| --- | ---: | ---: | ---: | --- |
-| Sniptide | 0/8 | 213.5 | - | Sign-in |
-| PrivateBin | 8/8 | 222.5 | 326 | Editor |
-| Opengist | 0/8 | 369.5 | - | Gist directory |
-| MicroBin | 0/8 | - | - | Demo redirected to szab.eu |
-| GitHub Gist | 0/8 | 316.5 | - | Gist directory |
-| Pastebin | 8/8 | 289.5 | 475 | Editor |
-| Hastebin | 0/8 | - | - | HTTP 403 |
-| Pastes.io | 8/8 | 504 | 707.5 | Editor |
+Each round uses a new single-line ASCII comment with deterministic hash blocks and a unique round ID. Every provider receives exactly the same bytes within a round. The writer and reader each get a fresh browser context per attempt. Services run sequentially, the starting position rotates each round, and the runner waits 11 seconds before each round to accommodate write rate limits. Use a multiple of the provider count for balanced ordering. Compare local deployments together and hosted deployments together. The results measure an individual user's latency at concurrency one.
 
-PrivateBin had the lowest median time to verified input on this run. The sign-in and directory rows measure the pages a signed-out visitor reached. The run covers editor entry only. Publishing, retrieval and signed-in editing require separate measurements. [Download the individual samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-editor-2026-11-20.json).
+## Local results, 20 November 2026
+
+One Apple M1 Pro running macOS 27.2 hosted the browser, four application servers and their storage. Chrome 157.0.8103.80 sent requests over loopback. Sniptide used its production build at commit `044460a` and PostgreSQL 14.20. PrivateBin 2.1.1 used the PHP 8.5.2 built-in server and file storage. Opengist 1.15.3 used SQLite and Git. MicroBin used its 2.1.0 macOS release. Sniptide and Opengist had preauthenticated writers. All readers were signed out.
+
+| Service | Payload | Verified | Publish ms | Read ms | Round trip ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Sniptide | 1 KiB | 8/8 | 127.5 | 150 | 280 |
+| PrivateBin | 1 KiB | 8/8 | 72.5 | 122.5 | 194.5 |
+| Opengist | 1 KiB | 8/8 | 611.5 | 124 | 738.5 |
+| MicroBin | 1 KiB | 8/8 | 72.5 | 60 | 135.5 |
+| Sniptide | 32 KiB | 8/8 | 137.5 | 155 | 297 |
+| PrivateBin | 32 KiB | 8/8 | 73.5 | 126 | 200 |
+| Opengist | 32 KiB | 8/8 | 618 | 167.5 | 788 |
+| MicroBin | 32 KiB | 8/8 | 72 | 72.5 | 145 |
+
+In an earlier 32 KiB series, the first PrivateBin write started four seconds after the previous series, inside its default ten-second rate limit, and the publish timed out. The table uses the complete rerun with an initial cooldown for all four services. [Earlier series](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-32k-pilot-2026-11-20.json). Each service occupied each position twice per size. MicroBin had the lowest median end-to-end time at both sizes on this machine. Most of Opengist's elapsed time was spent publishing. These measurements include browser automation and local application work. Production hosting, network distance, multi-file editing, and concurrent throughput are outside this run.
+
+GitHub Gist, Pastebin, Hastebin and Pastes.io have no results in this local comparison. The hosted adapters have not been validated end to end. [1 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-1k-2026-11-20.json) and [32 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-32k-2026-11-20.json).
