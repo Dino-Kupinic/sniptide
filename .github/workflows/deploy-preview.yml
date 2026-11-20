@@ -51,7 +51,7 @@ jobs:
       actions: read
       contents: read
       deployments: write
-      pull-requests: read
+      pull-requests: write
     concurrency:
       group: coolify-preview-${{ inputs.pr || github.event.workflow_run.pull_requests[0].number }}
       cancel-in-progress: false
@@ -90,4 +90,5 @@ jobs:
           COOLIFY_URL: ${{ vars.COOLIFY_PREVIEW_URL }}
           COOLIFY_APP_ID: ${{ vars.COOLIFY_PREVIEW_APP_ID }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_PREVIEW_TOKEN }}
+          PREVIEW_URL_TEMPLATE: ${{ vars.PREVIEW_URL_TEMPLATE }}
         run: node scripts/deploy-preview.mjs
