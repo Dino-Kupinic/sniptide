@@ -638,6 +638,13 @@ deploys. See [Database migrations](../CONTRIBUTING.md#database-migrations).
 
 To pause automatic deploys, set `COOLIFY_PRODUCTION_DEPLOY` to `false`.
 
+## Preview pull requests
+
+When CI passes on a pull request from a branch in this repository, `Manage image preview`
+deploys the tested image as a Coolify preview. It then creates a GitHub deployment in the
+`preview-pr-<number>` environment, so the pull request shows the preview link under its
+deployments. Closing the pull request removes the preview and marks those deployments inactive.
+
 ## Revision comparison performance
 
 The browser compares at most 250,000 pairs of lines when displaying revision history.
