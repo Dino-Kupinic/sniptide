@@ -592,33 +592,51 @@ bash scripts/test-docker.sh sniptide:test
 The test creates and removes its own containers and network, without using host ports or an
 existing database.
 
-## Release a production migration
+## Deploy production
 
 The `Deploy tested production image` workflow deploys each successful main CI image to Coolify
-when the `coolify-production` environment enables it. It compares the migration directory in the
-tested commit with the `COOLIFY_PRODUCTION_MIGRATIONS_TREE` variable in that environment, and stops
-before contacting Coolify when they differ or the variable is unset. The failed run names the
-approved tree and the tested one.
+when repository variable `COOLIFY_PRODUCTION_DEPLOY` is `true`. Releases with migrations deploy
+the same way as any other release. After its preflight checks pass and before it changes the
+image, the workflow asks the Docker host over SSH for an encrypted pre-deploy snapshot and stops
+if the host doesn't report an upload. The new container then applies its migrations on start.
+The run log records the snapshot key and the previous image tag, which are the restore point for
+that release.
 
-1. Record the currently running digest and the tested replacement digest from main CI. Review the
-   migration for rolling compatibility and schedule a quiet window. For risky migrations, rehearse
-   the new image on a private copy restored from the latest backup.
-2. On the Docker host, run `docker exec sniptide-backup sniptide-backup pre-deploy`. Confirm the
-   logged `pre-deploy/` object is present in the private bucket and record its key with both
-   digests. If either check fails, stop the release.
-3. Apply the tested digest manually in Coolify. Check the deployment log, `/api/health`, sign-in,
-   and the affected flows.
-4. After the migrations are applied and the release is healthy, set
-   `COOLIFY_PRODUCTION_MIGRATIONS_TREE` to the tested tree from the failed run, or run
-   `git rev-parse "$commit:packages/db/migrations"`. Later main pushes then deploy on their own.
-5. For an additive migration, roll back by redeploying the previous digest and keep the approved
-   tree, because the live schema stays expanded. For an incompatible migration, block traffic,
-   stop writers, restore the pre-deploy snapshot and redeploy the previous digest. The restore
-   discards writes made after the snapshot. Set the approved tree to the restored one before
-   resuming automation.
+A migration that fails rolls back its transaction, the new container never turns healthy, and
+Coolify's rolling update keeps the old container serving. The migration test rejects common
+destructive statements unless the file is marked `-- destructive: approved`, so most migrations
+add schema the previous image can still use. An approved destructive migration deploys
+automatically too, so merge it only when the previous image tolerates it or after pausing
+deploys. See [Database migrations](../CONTRIBUTING.md#database-migrations).
 
-See [Backups and restore](../apps/docs/content/docs/self-hosting/backups.mdx) for setup and
-recovery.
+### Set up the pre-deploy snapshot
+
+1. On the Docker host, create a user that can run Docker, such as `sniptide-deploy`. Generate a
+   key pair with `ssh-keygen -t ed25519 -N '' -f pre-deploy`, and add the public key to that user's
+   `~/.ssh/authorized_keys` with a forced command, so the key can run nothing else:
+
+   ```text
+   command="docker exec sniptide-backup sniptide-backup pre-deploy",restrict ssh-ed25519 AAAA… pre-deploy
+   ```
+
+   Use the backup container's real name in the command.
+2. In the `coolify-production` environment, set the secret `PRE_DEPLOY_SSH_KEY` to the private
+   key, and the variables `PRE_DEPLOY_SSH_TARGET` (such as `sniptide-deploy@203.0.113.10`) and
+   `PRE_DEPLOY_SSH_KNOWN_HOSTS` (the output of `ssh-keyscan -t ed25519 <host>`, checked against
+   the host's own key). Set `PRE_DEPLOY_SSH_PORT` when SSH doesn't listen on 22.
+3. GitHub-hosted runners connect from changing addresses, so the SSH port has to accept them.
+   Allow key authentication only.
+
+### Roll back a release
+
+1. In Coolify, set the application's image tag back to the previous tag from the run log and
+   deploy it. The schema stays expanded, which the previous image tolerates.
+2. If the release changed data the previous image can't read, block traffic and stop writers,
+   restore the run's pre-deploy snapshot as described in
+   [Backups and restore](../apps/docs/content/docs/self-hosting/backups.mdx), and deploy the
+   previous tag. The restore discards writes made after the snapshot.
+
+To pause automatic deploys, set `COOLIFY_PRODUCTION_DEPLOY` to `false`.
 
 ## Revision comparison performance
 

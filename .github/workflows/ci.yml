@@ -126,7 +126,7 @@ jobs:
       - run: bash scripts/test-ci-image-tag.sh
       - run: bash scripts/test-ci-containers-parallel.sh
       - run: bash scripts/test-coolify-backup.sh
-      - run: node --test scripts/test-deploy-production.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
+      - run: node --test scripts/test-deploy-production.mjs scripts/test-pre-deploy-backup.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
 
