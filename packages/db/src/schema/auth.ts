@@ -11,6 +11,9 @@ export const user = pgTable(
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").default(false).notNull(),
     pendingInvitation: boolean("pending_invitation").default(false).notNull(),
+    // True from sign-up until the account's first session, which sends the welcome email once.
+    // Accounts created before this column default to false, so they never get one.
+    welcomePending: boolean("welcome_pending").default(false).notNull(),
     image: text("image"),
     // From better-auth's username plugin: the normalized handle behind sniptide.com/@username.
     username: text("username"),

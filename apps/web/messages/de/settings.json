@@ -212,6 +212,10 @@
     "usageChartLabel": "API-Anfragen pro Tag: {values}",
     "profileRowDescription": "Profil, Benutzername und Bild",
     "app": "App",
-    "appearance": "Darstellung"
+    "appearance": "Darstellung",
+    "productEmails": {
+      "label": "Produkt-Updates",
+      "description": "Release Notes und Neuigkeiten zu Sniptide. Jede E-Mail enthält einen Link zum Abbestellen."
+    }
   }
 }

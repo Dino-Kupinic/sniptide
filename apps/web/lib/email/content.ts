@@ -30,10 +30,17 @@ export interface EmailContent {
   // The Sniptide lockup, served by this instance. Without an app URL the email shows the name as
   // text instead.
   logo?: { light: string; dark: string; alt: string }
+  // The folder this instance serves the Archivo and Inter files from, for clients that load web
+  // fonts. The others use the system fonts in the stack.
+  fontsUrl?: string
   heading: string
   body: Paragraph[]
   action: EmailLink
-  buttonFallback: string
+  // The sentence above the action's full URL, for links that carry a token the reader can't find
+  // another way. Emails whose action is a plain page of the app leave it out.
+  buttonFallback?: string
+  // Things to try next, each a linked title over one sentence, after the action.
+  steps?: (EmailLink & { body: string })[]
   // Paragraphs after the action, such as what happens once the reader follows it.
   after?: Paragraph[]
   // Who should ignore the email, in muted text below the action.
@@ -101,6 +108,7 @@ function shared(t: Translator, { appUrl, locale }: Common & { locale: Locale }) 
           alt: t("logoAlt"),
         }
       : undefined,
+    fontsUrl: appUrl ? new URL("/email/fonts/", appUrl).href : undefined,
     buttonFallback: t("buttonFallback"),
   }
 }
@@ -192,6 +200,38 @@ export function notificationEmail(
         { label: t("notification.settings"), href: input.settingsUrl },
         { label: t("notification.unsubscribe"), href: input.unsubscribeUrl },
       ],
+      sender: senderLine(input.operator, locale),
+    },
+  }
+}
+
+// Sent once, when a new account starts its first session. It points to the app's editor and to the
+// MCP and CLI pages of the documentation, which is where most people go next.
+export function welcomeEmail(input: Common & { appUrl: string; docsUrl: string }): EmailContent {
+  const locale = input.locale ?? defaultLocale
+  const t = translator(locale)
+  const common = { ...input, locale }
+  const app = (path: string) => new URL(path, input.appUrl).href
+  const docs = (path: string) => new URL(path, input.docsUrl.replace(/\/?$/, "/")).href
+  return {
+    ...shared(t, common),
+    buttonFallback: undefined,
+    subject: t("welcome.subject"),
+    preview: t("welcome.preview"),
+    heading: t("welcome.heading"),
+    body: [paragraph(t, "welcome.body", { email: input.to }), [t("welcome.next")]],
+    action: { label: t("welcome.action"), href: app("/new") },
+    steps: [
+      { label: t("welcome.agent.label"), body: t("welcome.agent.body"), href: docs("mcp") },
+      { label: t("welcome.cli.label"), body: t("welcome.cli.body"), href: docs("cli") },
+      {
+        label: t("welcome.settings.label"),
+        body: t("welcome.settings.body"),
+        href: app("/settings"),
+      },
+    ],
+    footer: {
+      reason: t("welcome.reason", { email: input.to }),
       sender: senderLine(input.operator, locale),
     },
   }

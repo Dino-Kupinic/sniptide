@@ -26,7 +26,7 @@
         // Declares the app's locales to next-intl through module augmentation.
         "i18n/types.ts",
         // React Email previews, opened by `bun run email`.
-        "emails/*.tsx"
+        "emails/**/*.tsx"
       ],
       // The dither code is vendored from dithercn and keeps the exports it ships with.
       "ignore": ["lib/dither/**"],

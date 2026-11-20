@@ -6,6 +6,7 @@ import {
   resetPassword,
   senderLine,
   verifyEmail,
+  welcomeEmail,
 } from "@/lib/email/content"
 import { requestLocale } from "@/lib/email/locale"
 import { emailText, renderEmail } from "@/lib/email/render"
@@ -23,6 +24,7 @@ function build(locale: (typeof locales)[number]): Record<string, EmailContent> {
     verify: verifyEmail({ ...common, url: link }),
     change: approveEmailChange({ ...common, newEmail: "dana@new.example.com", url: link }),
     reset: resetPassword({ ...common, operator: undefined, url: link }),
+    welcome: welcomeEmail({ ...common, docsUrl: "https://docs.example.com" }),
     ...Object.fromEntries(
       NOTIFICATION_KINDS.map((kind) => [
         kind,
@@ -71,19 +73,21 @@ describe("transactional emails", () => {
           p.map((s) => (typeof s === "string" ? s : s.strong)).join(""),
         ),
         content.action.label,
+        ...(content.steps ?? []).flatMap((step) => [step.label, step.body]),
         content.note,
         content.footer.reason,
         content.footer.sender,
         ...(content.footer.links ?? []).map((l) => l.label),
       ].filter((value): value is string => Boolean(value))
       // The plain text shows the URL itself, so only the HTML needs the line about the button.
-      expect(shown).toContain(content.buttonFallback)
+      if (content.buttonFallback) expect(shown).toContain(content.buttonFallback)
       for (const sentence of sentences) {
         expect(shown).toContain(sentence)
         expect(plain).toContain(sentence)
       }
       for (const href of [
         content.action.href,
+        ...(content.steps ?? []).map((step) => step.href),
         ...(content.footer.links ?? []).map((l) => l.href),
       ]) {
         expect(html).toContain(`href="${href.replace(/&/g, "&amp;")}"`)
@@ -111,6 +115,34 @@ describe("transactional emails", () => {
     expect(html).toContain(`src="${appUrl}/email/sniptide-logo.png"`)
     expect(html).toContain(`src="${appUrl}/email/sniptide-logo-dark.png"`)
     expect(html).toContain('alt="Sniptide"')
+  })
+
+  test("clients that load web fonts get the brand fonts from the instance", async () => {
+    const { html } = await renderEmail(emails.verify as EmailContent)
+    for (const file of ["inter-400", "inter-600", "archivo-700"])
+      expect(html).toContain(`url(${appUrl}/email/fonts/${file}.woff2)`)
+    expect(html).toContain("@media (max-width: 600px)")
+    const bare = await renderEmail(verifyEmail({ to: "dana@example.com", url: link }))
+    expect(bare.html).not.toContain("@font-face")
+  })
+
+  test("the welcome email links to the editor, the docs and Settings", () => {
+    const content = emails.welcome as EmailContent
+    expect(content.action.href).toBe(`${appUrl}/new`)
+    expect(content.steps?.map((step) => step.href)).toEqual([
+      "https://docs.example.com/mcp",
+      "https://docs.example.com/cli",
+      `${appUrl}/settings`,
+    ])
+    // Its action is a plain page, so it carries no copy-this-link line.
+    expect(content.buttonFallback).toBeUndefined()
+    expect(emailText(content)).toContain("Sent by Example GmbH")
+    const nested = welcomeEmail({
+      to: "dana@example.com",
+      appUrl,
+      docsUrl: "https://example.com/docs",
+    })
+    expect(nested.steps?.[0]?.href).toBe("https://example.com/docs/mcp")
   })
 
   test("without an app URL the name stands in for the logo", async () => {

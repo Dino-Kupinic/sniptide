@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { z } from "zod"
 import { getAuth, getSession } from "@/lib/auth"
+import { setProductEmails } from "@/lib/broadcasts/subscription"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { requestLocale } from "@/lib/email/locale"
@@ -182,4 +183,13 @@ export async function sendNotificationVerificationEmail(): Promise<Result> {
   } catch {
     return { ok: false, error: "Couldn't send the verification email. Try again later." }
   }
+}
+
+export async function updateProductEmails(enabled: boolean): Promise<Result> {
+  const session = await getSession()
+  if (!session) return { ok: false, error: "Sign in again to change settings." }
+  if (typeof enabled !== "boolean") return { ok: false, error: "Check your notification settings." }
+  const result = await setProductEmails(session.user.id, enabled)
+  if (result.ok) revalidatePath("/settings")
+  return result
 }

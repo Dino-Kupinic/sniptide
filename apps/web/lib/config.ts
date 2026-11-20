@@ -140,6 +140,10 @@ const schema = z.object({
   SHARE_URL: origin.optional(),
   HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),
   DEMO_MODE: flag.default(false),
+  WELCOME_EMAIL: flag.default(true),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_SEGMENT_ID: z.string().optional(),
+  BROADCAST_FROM: z.string().optional(),
   HOMEPAGE_URL: origin.default(DEFAULT_RESOURCE_LINKS.homepage),
   DOCS_URL: z
     .url({ message: "must be a full URL like https://docs.example.com." })
@@ -262,6 +266,10 @@ function parseConfig(env: Record<string, string | undefined>) {
     throw new Error(
       "Invalid configuration: DATABASE_POOL_SIZE must exceed DATABASE_PROBE_RESERVE + DATABASE_MAINTENANCE_RESERVE.",
     )
+  if (Boolean(value.RESEND_API_KEY) !== Boolean(value.RESEND_SEGMENT_ID))
+    throw new Error(
+      "Invalid configuration: product update emails need both RESEND_API_KEY and RESEND_SEGMENT_ID.",
+    )
   const smtpPresent = [
     "SMTP_HOST",
     "SMTP_PORT",
@@ -328,6 +336,18 @@ function parseConfig(env: Record<string, string | undefined>) {
     shareUrl: shareUrlForEdition(value.SHARE_URL, { edition: value.SNIPTIDE_EDITION }),
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
+    // Whether new accounts get the welcome email. It also needs SMTP.
+    welcomeEmail: value.WELCOME_EMAIL,
+    // Product update emails through Resend Broadcasts. Off unless both are set, so a self-hosted
+    // instance never offers them or talks to Resend.
+    broadcasts:
+      value.RESEND_API_KEY && value.RESEND_SEGMENT_ID
+        ? {
+            apiKey: value.RESEND_API_KEY,
+            segmentId: value.RESEND_SEGMENT_ID,
+            from: value.BROADCAST_FROM,
+          }
+        : undefined,
     templatesUrl: value.TEMPLATES_URL,
     resourceLinks: {
       homepage: value.HOMEPAGE_URL,
