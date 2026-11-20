@@ -126,7 +126,7 @@ jobs:
       - run: bash scripts/test-ci-image-tag.sh
       - run: bash scripts/test-ci-containers-parallel.sh
       - run: bash scripts/test-coolify-backup.sh
-      - run: node --test scripts/test-deploy-production.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
+      - run: node --test scripts/test-deploy-production.mjs scripts/test-pre-deploy-backup.mjs scripts/test-deploy-preview.mjs scripts/test-reconcile-previews.mjs scripts/test-healthcheck.mjs
       - run: node --test scripts/test-package-releases.mjs
       - run: node --test scripts/test-release-notes.mjs
 
@@ -268,7 +268,9 @@ jobs:
   publish-ci-image:
     name: Publish tested CI image
     needs: [docker, checks, tests-result, e2e-result, docs-image]
-    if: ${{ github.actor != 'dependabot[bot]' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
+    # A skipped job anywhere upstream, such as the editor extension build, would skip this job too.
+    # Gate on the direct needs instead; checks, tests-result and e2e-result already judge skipped suites.
+    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.checks.result == 'success' && needs.tests-result.result == 'success' && needs.e2e-result.result == 'success' && needs.docs-image.result == 'success' && github.actor != 'dependabot[bot]' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -396,7 +398,9 @@ jobs:
   publish-docs-image:
     name: Publish tested docs image
     needs: [docker, checks, tests-result, e2e-result, docs-image]
-    if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # A skipped job anywhere upstream, such as the editor extension build, would skip this job too.
+    # Gate on the direct needs instead; checks, tests-result and e2e-result already judge skipped suites.
+    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.checks.result == 'success' && needs.tests-result.result == 'success' && needs.e2e-result.result == 'success' && needs.docs-image.result == 'success' && github.actor != 'dependabot[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

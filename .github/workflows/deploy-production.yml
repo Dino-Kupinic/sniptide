@@ -14,7 +14,7 @@ jobs:
       group: coolify-production
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,7 +42,11 @@ jobs:
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
           SOURCE_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
-          APPROVED_PRODUCTION_MIGRATIONS_TREE: ${{ vars.COOLIFY_PRODUCTION_MIGRATIONS_TREE }}
+          REQUIRE_PRE_DEPLOY_BACKUP: "true"
+          PRE_DEPLOY_SSH_TARGET: ${{ vars.PRE_DEPLOY_SSH_TARGET }}
+          PRE_DEPLOY_SSH_PORT: ${{ vars.PRE_DEPLOY_SSH_PORT }}
+          PRE_DEPLOY_SSH_KNOWN_HOSTS: ${{ vars.PRE_DEPLOY_SSH_KNOWN_HOSTS }}
+          PRE_DEPLOY_SSH_KEY: ${{ secrets.PRE_DEPLOY_SSH_KEY }}
           COOLIFY_URL: ${{ vars.COOLIFY_URL }}
           COOLIFY_APP_ID: ${{ vars.COOLIFY_APP_ID }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}

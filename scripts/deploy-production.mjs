@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises"
+import { sshPreDeployBackup } from "./pre-deploy-backup.mjs"
 
 const shaPattern = /^[a-f0-9]{40}$/
 const digestPattern = /^sha256:[a-f0-9]{64}$/
 const numberPattern = /^[1-9][0-9]*$/
 const appPattern = /^[A-Za-z0-9_-]+$/
 const repoPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
+const snapshotPattern = /^pre-deploy\/[0-9]{8}T[0-9]{6}Z\.[A-Za-z0-9]+\.dump\.age$/
 
 export async function deployProduction(
   config,
@@ -14,6 +16,7 @@ export async function deployProduction(
   const { receipt, repo, runId, runAttempt, sha, githubToken, coolifyToken, coolifyUrl, appId } =
     config
   const kind = config.kind ?? "app"
+  const log = config.log ?? console.log
   if (!["app", "docs"].includes(kind)) throw new Error("Invalid deployment kind")
   if (
     !repoPattern.test(repo ?? "") ||
@@ -84,24 +87,6 @@ export async function deployProduction(
     const main = await github("/branches/main")
     if (main.commit?.sha !== sha) throw new Error("Main has moved since CI")
   }
-  const { approvedMigrationsTree } = config
-  if (approvedMigrationsTree !== undefined) {
-    if (!shaPattern.test(approvedMigrationsTree)) {
-      throw new Error("Set COOLIFY_PRODUCTION_MIGRATIONS_TREE to the running migration tree")
-    }
-    const dbContents = await github(`/contents/packages/db?ref=${sha}`)
-    if (
-      !Array.isArray(dbContents) ||
-      !dbContents.some(
-        (entry) =>
-          entry.name === "migrations" &&
-          entry.type === "dir" &&
-          entry.sha === approvedMigrationsTree,
-      )
-    ) {
-      throw new Error("Migration tree changed. Follow the production migration checklist")
-    }
-  }
   const image = `ghcr.io/${repo.toLowerCase()}${kind === "docs" ? "-docs" : ""}`
   const app = await coolify(`/applications/${appId}`)
   if (
@@ -147,6 +132,18 @@ export async function deployProduction(
     if (item.application_id === applicationId) throw new Error("Another deployment is active")
   }
   await current()
+  // A snapshot taken after every preflight check and before the image changes is the restore
+  // point for this release. The new container applies migrations on start, so it must exist first.
+  if (config.preDeployBackup) {
+    const snapshot = await config.preDeployBackup()
+    if (!snapshotPattern.test(snapshot ?? ""))
+      throw new Error("Pre-deploy backup did not report an uploaded snapshot")
+    log(`Pre-deploy snapshot: ${snapshot}`)
+    await current()
+  } else if (config.requireBackup) {
+    throw new Error("Set the pre-deploy backup SSH target, key and known hosts")
+  }
+  log(`Previous image tag: ${app.docker_registry_image_tag}`)
   const imageTag = receipt.digest.replace(":", "-")
   await coolify(`/applications/${appId}`, {
     method: "PATCH",
@@ -220,7 +217,8 @@ if (import.meta.main) {
         coolifyToken: e.COOLIFY_TOKEN,
         appId: e.COOLIFY_APP_ID,
         kind: e.DEPLOYMENT_KIND || "app",
-        approvedMigrationsTree: e.APPROVED_PRODUCTION_MIGRATIONS_TREE,
+        preDeployBackup: sshPreDeployBackup(e),
+        requireBackup: e.REQUIRE_PRE_DEPLOY_BACKUP === "true",
       })
     })
     .catch((error) => {

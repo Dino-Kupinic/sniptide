@@ -569,7 +569,8 @@ After the first publish, a repository owner must set the `sniptide` package's vi
 CI also publishes the tested amd64 web image after the other CI jobs and the container,
 upgrade, and Compose checks pass. A push to `main` publishes its commit; a pull request from a
 branch in this repository publishes its synthetic merge commit. Fork and Dependabot PRs run the checks without
-publishing. The workflow summary reports the registry digest and image name as
+publishing. Suites that a pull request's changes don't select, such as the editor extension
+builds, are skipped without blocking the publish. The workflow summary reports the registry digest and image name as
 `ghcr.io/<owner>/<repository>:sha-<commit>-<run-id>-<attempt>`. Each build attempt gets a distinct tag. A publish-only rerun uses the original build attempt
 and image; a full rerun builds a new image and tag. The artifact expires after one day; after that,
 rerun the Docker job or the full workflow. Use the registry digest to pin an image independently of
@@ -590,6 +591,52 @@ bash scripts/test-docker.sh sniptide:test
 
 The test creates and removes its own containers and network, without using host ports or an
 existing database.
+
+## Deploy production
+
+The `Deploy tested production image` workflow deploys each successful main CI image to Coolify
+when repository variable `COOLIFY_PRODUCTION_DEPLOY` is `true`. Releases with migrations deploy
+the same way as any other release. After its preflight checks pass and before it changes the
+image, the workflow asks the Docker host over SSH for an encrypted pre-deploy snapshot and stops
+if the host doesn't report an upload. The new container then applies its migrations on start.
+The run log records the snapshot key and the previous image tag, which are the restore point for
+that release.
+
+A migration that fails rolls back its transaction, the new container never turns healthy, and
+Coolify's rolling update keeps the old container serving. The migration test rejects common
+destructive statements unless the file is marked `-- destructive: approved`, so most migrations
+add schema the previous image can still use. An approved destructive migration deploys
+automatically too, so merge it only when the previous image tolerates it or after pausing
+deploys. See [Database migrations](../CONTRIBUTING.md#database-migrations).
+
+### Set up the pre-deploy snapshot
+
+1. On the Docker host, create a user that can run Docker, such as `sniptide-deploy`. Generate a
+   key pair with `ssh-keygen -t ed25519 -N '' -f pre-deploy`, and add the public key to that user's
+   `~/.ssh/authorized_keys` with a forced command, so the key can run nothing else:
+
+   ```text
+   command="docker exec sniptide-backup sniptide-backup pre-deploy",restrict ssh-ed25519 AAAA… pre-deploy
+   ```
+
+   Use the backup container's real name in the command.
+2. In the `coolify-production` environment, set the secret `PRE_DEPLOY_SSH_KEY` to the private
+   key, and the variables `PRE_DEPLOY_SSH_TARGET` (such as `sniptide-deploy@203.0.113.10`) and
+   `PRE_DEPLOY_SSH_KNOWN_HOSTS` (the output of `ssh-keyscan -t ed25519 <host>`, checked against
+   the host's own key). Set `PRE_DEPLOY_SSH_PORT` when SSH doesn't listen on 22.
+3. GitHub-hosted runners connect from changing addresses, so the SSH port has to accept them.
+   Allow key authentication only.
+
+### Roll back a release
+
+1. In Coolify, set the application's image tag back to the previous tag from the run log and
+   deploy it. The schema stays expanded, which the previous image tolerates.
+2. If the release changed data the previous image can't read, block traffic and stop writers,
+   restore the run's pre-deploy snapshot as described in
+   [Backups and restore](../apps/docs/content/docs/self-hosting/backups.mdx), and deploy the
+   previous tag. The restore discards writes made after the snapshot.
+
+To pause automatic deploys, set `COOLIFY_PRODUCTION_DEPLOY` to `false`.
 
 ## Revision comparison performance
 

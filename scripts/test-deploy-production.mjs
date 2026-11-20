@@ -4,7 +4,6 @@ import { deployProduction } from "./deploy-production.mjs"
 
 const sha = "a".repeat(40)
 const digest = `sha256:${"b".repeat(64)}`
-const migrationsTree = "c".repeat(40)
 const receipt = {
   repository: "Owner/Repo",
   sha,
@@ -67,10 +66,7 @@ function mock(overrides = {}) {
         ...overrides.run,
       }
     else if (path.endsWith("/branches/main")) data = { commit: { sha: overrides.main ?? sha } }
-    else if (path.endsWith("/contents/packages/db")) {
-      assert.equal(new URL(url).searchParams.get("ref"), sha)
-      data = overrides.dbContents ?? [{ name: "migrations", type: "dir", sha: migrationsTree }]
-    } else if (path.endsWith("/deployments/applications/app-1"))
+    else if (path.endsWith("/deployments/applications/app-1"))
       data = {
         deployments: [
           {
@@ -106,7 +102,7 @@ function mock(overrides = {}) {
   }
   return { calls, request }
 }
-const run = (m, c = config) => deployProduction(c, m.request, async () => {})
+const run = (m, c = { ...config, log: () => {} }) => deployProduction(c, m.request, async () => {})
 const noWrites = (m) => assert.ok(m.calls.every((call) => !call.method))
 
 test("deploys only the receipt digest, checks queue, identity and health", async () => {
@@ -119,24 +115,71 @@ test("deploys only the receipt digest, checks queue, identity and health", async
   assert.ok(m.calls.every((call) => call.redirect === "error"))
 })
 
-test("production stops before touching Coolify when migration approval is missing or differs", async () => {
-  for (const approval of ["", "d".repeat(40)]) {
-    const m = mock()
-    await assert.rejects(run(m, { ...config, approvedMigrationsTree: approval }), /migration/i)
-    assert.ok(m.calls.every((call) => new URL(call.url).hostname === "api.github.com"))
-  }
-  const missingTree = mock({ dbContents: [] })
-  await assert.rejects(
-    run(missingTree, { ...config, approvedMigrationsTree: migrationsTree }),
-    /migration/i,
-  )
-  noWrites(missingTree)
+test("takes the pre-deploy snapshot after preflight and before changing the image", async () => {
+  const m = mock()
+  const order = []
+  const logs = []
+  await run(m, {
+    ...config,
+    requireBackup: true,
+    log: (line) => logs.push(line),
+    preDeployBackup: async () => {
+      order.push(m.calls.length)
+      noWrites(m)
+      return "pre-deploy/20261120T091500Z.Ab12Cd34.dump.age"
+    },
+  })
+  assert.equal(order.length, 1)
+  assert.ok(m.calls.some((call) => call.method === "PATCH"))
+  assert.ok(logs.includes("Pre-deploy snapshot: pre-deploy/20261120T091500Z.Ab12Cd34.dump.age"))
+  assert.ok(logs.includes(`Previous image tag: ${digest.replace(":", "-")}`))
 })
 
-test("production accepts the exact migration tree approved for the running database", async () => {
+test("stops before changing the image when the snapshot is missing, fails or is unverified", async () => {
+  const cases = [
+    [{ requireBackup: true }, /pre-deploy backup/i],
+    [
+      {
+        preDeployBackup: async () => {
+          throw new Error("ssh failed")
+        },
+      },
+      /ssh failed/,
+    ],
+    [{ preDeployBackup: async () => "daily/2026-11-20.dump.age" }, /snapshot/],
+    [{ preDeployBackup: async () => undefined }, /snapshot/],
+  ]
+  for (const [overrides, error] of cases) {
+    const m = mock()
+    await assert.rejects(run(m, { ...config, log: () => {}, ...overrides }), error)
+    noWrites(m)
+  }
+})
+
+test("stops before changing the image when main moves during the snapshot", async () => {
+  let moved = false
   const m = mock()
-  await run(m, { ...config, approvedMigrationsTree: migrationsTree })
-  assert.ok(m.calls.some((call) => call.method === "PATCH"))
+  const request = async (url, options) => {
+    if (moved && new URL(url).pathname.endsWith("/branches/main"))
+      return { ok: true, json: async () => ({ commit: { sha: "e".repeat(40) } }) }
+    return m.request(url, options)
+  }
+  await assert.rejects(
+    deployProduction(
+      {
+        ...config,
+        log: () => {},
+        preDeployBackup: async () => {
+          moved = true
+          return "pre-deploy/20261120T091500Z.Ab12Cd34.dump.age"
+        },
+      },
+      request,
+      async () => {},
+    ),
+    /Main has moved/,
+  )
+  noWrites(m)
 })
 
 test("uses the target's deployment history when Coolify hides the application ID", async () => {
