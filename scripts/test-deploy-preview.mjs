@@ -42,6 +42,10 @@ function mock(options = {}) {
       data = args?.method === "POST" ? { id: 99 } : (options.githubDeployments ?? [{ id: 98 }])
     } else if (github && /\/deployments\/9[89]\/statuses$/.test(path)) {
       data = {}
+    } else if (github && path.endsWith("/issues/7/comments")) {
+      data = args?.method === "POST" ? { id: 5 } : (options.comments ?? [])
+    } else if (github && path.endsWith("/issues/comments/4")) {
+      data = { id: 4 }
     } else if (path.endsWith("/environments/coolify-preview/deployment-branch-policies")) {
       data = options.policies ?? {
         total_count: 1,
@@ -56,7 +60,9 @@ function mock(options = {}) {
       data = {
         pull_request_id: 7,
         docker_registry_image_tag: digest.replace(":", "-"),
-        fqdn: options.fqdn ?? "https://7.preview.example,http://other.example",
+        ...("fqdn" in options
+          ? { fqdn: options.fqdn }
+          : { fqdn: "https://7.preview.example,http://other.example" }),
       }
     } else if (path.endsWith("/applications/preview-1/previews"))
       data = { deployment_uuid: "deployment-1" }
@@ -218,7 +224,7 @@ test("links the finished preview on the pull request through a GitHub deployment
   const posts = m.calls.filter(
     (call) => call.method === "POST" && new URL(call.url).hostname === "api.github.com",
   )
-  assert.equal(posts.length, 2)
+  assert.equal(posts.length, 3)
   assert.deepEqual(JSON.parse(posts[0].body), {
     ref: head,
     environment: "preview-pr-7",
@@ -240,11 +246,63 @@ test("links the finished preview on the pull request through a GitHub deployment
   assert.ok(coolifyPost < githubPost)
 })
 
-test("omits a link Coolify doesn't report over HTTPS", async () => {
-  const m = mock({ fqdn: "http://7.preview.example" })
+const statusOf = (m) =>
+  JSON.parse(m.calls.find((call) => call.url.endsWith("/deployments/99/statuses")).body)
+
+test("derives the link from the application domain when Coolify omits the preview domain", async () => {
+  const m = mock({ fqdn: undefined, app: { fqdn: "https://app.example,http://x.example" } })
   await run(m)
-  const status = m.calls.find((call) => call.url.endsWith("/deployments/99/statuses"))
-  assert.deepEqual(JSON.parse(status.body), { state: "success", auto_inactive: true })
+  assert.equal(statusOf(m).environment_url, "https://7.app.example")
+  const custom = mock({
+    fqdn: null,
+    app: { fqdn: "https://app.example", preview_url_template: "pr-{{pr_id}}.preview.{{domain}}" },
+  })
+  await run(custom)
+  assert.equal(statusOf(custom).environment_url, "https://pr-7.preview.app.example")
+})
+
+test("prefers the configured template and omits links it can't build over HTTPS", async () => {
+  const configured = mock()
+  await run(configured, { ...config, urlTemplate: "https://{{pr_id}}.previews.example" })
+  assert.equal(statusOf(configured).environment_url, "https://7.previews.example")
+  for (const app of [
+    {},
+    { fqdn: "http://app.example" },
+    { fqdn: "https://app.example", preview_url_template: "{{random}}.{{domain}}" },
+  ]) {
+    const m = mock({ fqdn: "http://7.preview.example", app })
+    await run(m)
+    assert.deepEqual(statusOf(m), { state: "success", auto_inactive: true })
+  }
+})
+
+test("posts one preview comment and updates it on later deploys", async () => {
+  const fresh = mock()
+  await run(fresh, { ...config, logUrl: "https://github.com/Owner/Repo/actions/runs/50" })
+  const created = fresh.calls.find(
+    (call) => call.method === "POST" && call.url.endsWith("/issues/7/comments"),
+  )
+  assert.equal(
+    JSON.parse(created.body).body,
+    "<!-- sniptide-preview -->\nPreview for aaaaaaa is deployed: [7.preview.example](https://7.preview.example) ([run](https://github.com/Owner/Repo/actions/runs/50))",
+  )
+  const existing = mock({
+    comments: [
+      { id: 3, user: { type: "User" }, body: "<!-- sniptide-preview -->\nforged" },
+      { id: 4, user: { type: "Bot" }, body: "<!-- sniptide-preview -->\nold" },
+    ],
+  })
+  await run(existing)
+  assert.ok(
+    existing.calls.some(
+      (call) => call.method === "PATCH" && call.url.endsWith("/issues/comments/4"),
+    ),
+  )
+  assert.ok(
+    !existing.calls.some(
+      (call) => call.method === "POST" && call.url.endsWith("/issues/7/comments"),
+    ),
+  )
 })
 
 test("marks the pull request's preview deployments inactive on cleanup", async () => {
