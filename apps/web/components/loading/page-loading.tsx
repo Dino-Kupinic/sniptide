@@ -5,6 +5,7 @@ import { cn } from "@sniptide/ui/lib/utils"
 import { useParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import { GroupedCanvas, groupedPanelClass } from "@/components/lists/grouped-list"
 import { PageHeader } from "@/components/page-header"
 import { useSettledShellData } from "@/components/shell/shell-data"
 
@@ -55,15 +56,12 @@ function PanelRows({ rows, first, open }: { rows: number; first?: string; open?:
   )
 }
 
-// The phone's bar above a paste or the editor, and the action bar below it.
-function PhoneBars({ sticky = false }: { sticky?: boolean }) {
+// The action bar below a paste on phones.
+function PhoneBars() {
   return (
     <div
       aria-hidden="true"
-      className={cn(
-        "bottom-0 z-20 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden",
-        sticky ? "sticky mt-6" : "fixed inset-x-0",
-      )}
+      className="fixed inset-x-0 bottom-0 z-20 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
     >
       <Skeleton className="h-10 flex-1 rounded-lg" />
       <Skeleton className="h-10 flex-[2] rounded-lg" />
@@ -129,36 +127,82 @@ export function PasteLoading() {
   )
 }
 
-// The editor before the paste or the account's defaults arrive.
+// The editor before the paste or the account's defaults arrive. Phones get the editor's own
+// layout: its bar, the title and code on one card, the settings panel and the action bar.
 export function EditorLoading({ editing = false }: { editing?: boolean }) {
   return (
-    <div className="flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7">
-      <PhoneTopBar />
-      <div aria-hidden="true" className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
-        <div className="flex h-9 items-center lg:h-[38px]">
-          <Skeleton className="h-7 w-64 max-w-full" />
+    <>
+      <PhoneEditorLoading />
+      <div className="flex flex-col max-lg:hidden lg:gap-5 lg:p-7">
+        <div aria-hidden="true" className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex h-[38px] items-center">
+            <Skeleton className="h-7 w-64 max-w-full" />
+          </div>
+          <div className="flex h-5 items-center">
+            <Skeleton className="h-3.5 w-40" />
+          </div>
         </div>
-        <div className="flex h-6 items-center lg:h-5">
-          <Skeleton className="h-3.5 w-40" />
+        <div aria-hidden="true" className="flex flex-1 flex-row items-start gap-5">
+          <div className="flex min-h-[548px] min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border">
+            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-3.5 w-24" />
+            </div>
+            <div className="flex-1 bg-muted p-4 dark:bg-sidebar">
+              <CodeLines lines={6} />
+            </div>
+            <div className="flex h-10 shrink-0 items-center justify-between border-t border-border px-4">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+          <PanelRows rows={4} open={editing ? 226 : 204} />
         </div>
       </div>
-      <div aria-hidden="true" className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
-        <div className="mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border lg:mx-0 lg:min-h-[548px]">
-          <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-4">
-            <Skeleton className="size-4" />
-            <Skeleton className="h-3.5 w-24" />
-          </div>
-          <div className="flex-1 bg-muted p-4 dark:bg-sidebar">
-            <CodeLines lines={6} />
-          </div>
-          <div className="flex h-10 shrink-0 items-center justify-between border-t border-border px-4">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-32" />
-          </div>
-        </div>
-        <PanelRows rows={4} open={editing ? 226 : 204} />
+    </>
+  )
+}
+
+function PhoneEditorLoading() {
+  return (
+    <div aria-hidden="true" className="flex min-h-svh flex-col lg:hidden">
+      <GroupedCanvas />
+      <div className="sticky top-0 z-20 box-content flex h-[52px] items-center justify-between bar-translucent pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
+        <Skeleton className="h-4 w-14" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-14" />
       </div>
-      <PhoneBars sticky />
+      <div className="mx-4 mt-2 flex flex-col gap-2 rounded-t-lg border-b border-border bg-card px-4 py-3.5">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3.5 w-40" />
+      </div>
+      <div className="mx-4 flex min-h-[340px] flex-col overflow-hidden rounded-b-lg bg-card">
+        <div className="flex h-10 items-center gap-2 border-b border-border px-4">
+          <Skeleton className="size-4" />
+          <Skeleton className="h-3.5 w-24" />
+        </div>
+        <div className="flex-1 p-4">
+          <CodeLines lines={3} />
+        </div>
+        <div className="flex h-10 items-center justify-between border-t border-border px-4">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-3 w-28" />
+        </div>
+      </div>
+      <div className={cn(groupedPanelClass, "mx-4 mt-7")}>
+        {["w-20", "w-16", "w-24", "w-20"].map((width) => (
+          <div
+            key={width}
+            className="flex h-[50px] items-center justify-between px-4 not-last:border-b not-last:border-border"
+          >
+            <Skeleton className={cn("h-4", width)} />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="sticky bottom-0 z-20 mt-auto box-content flex h-14 items-center border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))]">
+        <Skeleton className="h-10 flex-1 rounded-lg" />
+      </div>
     </div>
   )
 }
@@ -198,11 +242,13 @@ export function AnalyticsLoading() {
             <Skeleton className="h-9 w-28 rounded-lg max-lg:hidden" />
           </div>
         }
-        className="lg:items-end max-lg:[&>div:last-child]:w-full [&>div:first-child]:after:block [&>div:first-child]:after:h-5 [&>div:first-child]:after:content-['']"
+        className="lg:items-end [&>div:first-child]:lg:after:block [&>div:first-child]:lg:after:h-5 [&>div:first-child]:lg:after:content-['']"
+        phoneTitleOnly
       />
+      <PhoneAnalyticsLoading />
       <div
         aria-hidden="true"
-        className="grid grid-cols-2 overflow-hidden rounded-lg border border-border lg:grid-cols-4"
+        className="grid grid-cols-2 overflow-hidden rounded-lg border border-border max-lg:hidden lg:grid-cols-4"
       >
         {["w-12", "w-24", "w-20", "w-24"].map((width, index) => (
           <div key={index} className="flex h-[92px] flex-col gap-3 px-4 pt-[18px]">
@@ -230,6 +276,34 @@ export function AnalyticsLoading() {
         <AnalyticsPanel className="h-[321px]" />
         <AnalyticsPanel className="h-[321px]" />
         <AnalyticsPanel className="h-[321px]" />
+      </div>
+    </div>
+  )
+}
+
+// The phone's analytics: the range switch, the views card with its chart and the totals.
+function PhoneAnalyticsLoading() {
+  return (
+    <div aria-hidden="true" className="flex flex-col gap-7 lg:hidden">
+      <GroupedCanvas />
+      <Skeleton className="-mt-2 h-[34px] rounded-lg" />
+      <div className={cn(groupedPanelClass, "gap-3 p-4")}>
+        <Skeleton className="h-3.5 w-12" />
+        <div className="flex h-[41px] items-center">
+          <Skeleton className="h-7 w-16" />
+        </div>
+        <Skeleton className="h-28" />
+      </div>
+      <div className={groupedPanelClass}>
+        {["w-32", "w-28", "w-36"].map((width) => (
+          <div
+            key={width}
+            className="flex h-[50px] items-center justify-between pr-4 pl-4 not-last:border-b not-last:border-border"
+          >
+            <Skeleton className={cn("h-4", width)} />
+            <Skeleton className="h-4 w-6" />
+          </div>
+        ))}
       </div>
     </div>
   )

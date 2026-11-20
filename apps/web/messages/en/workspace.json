@@ -407,7 +407,11 @@
     "templates_clear": "Clear filters",
     "templates_use": "Use template",
     "templates_use_label": "Use the {title}",
-    "templates_intro": "Open a template in the editor and save it as your own paste."
+    "templates_intro": "Open a template in the editor and save it as your own paste.",
+    "analytics_delta": "{delta} vs the period before",
+    "analytics_peak": "Peak: {value} on {day}",
+    "clear_search": "Clear search",
+    "new_paste_titled": "New paste named “{title}”"
   },
   "Secrets": {
     "title": "Secrets",

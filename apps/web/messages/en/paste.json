@@ -20,7 +20,6 @@
     "showPassword": "Show password",
     "files": "Files",
     "fileName": "File name",
-    "settingsSummary": "{visibility} · {expiry}",
     "pasteSettings": "Paste settings",
     "rename": "Rename",
     "changeLanguage": "Change language",
@@ -245,6 +244,7 @@
     "sendsDetails": "{kind, select, page {Saves the title, the files and the link as a new page inside the page you pick. Only pages you shared with Sniptide in Notion are listed.} issue {Attaches the title, language and link to the issue. Open issues assigned to you or created by you are listed.} other {Sends the title, language and link. The app can post to public channels and to private ones it was invited to.}}",
     "sendsLinkOnly": "{kind, select, page {Saves the link only, because this paste's title and content are not open to everyone with the link.} issue {Attaches the link only, as “Sniptide paste”, because this paste's title is not open to everyone with the link.} other {Sends the link only, because this paste's title is not open to everyone with the link.}}",
     "sentToDestination": "{kind, select, page {Saved to “{name}”} issue {Attached to {name}} other {Sent to #{name}}}",
-    "couldnTLoadDestinations": "{kind, select, page {Couldn't load your {service} pages. Try again in a minute.} issue {Couldn't load your {service} issues. Try again in a minute.} other {Couldn't load your {service} channels. Try again in a minute.}}"
+    "couldnTLoadDestinations": "{kind, select, page {Couldn't load your {service} pages. Try again in a minute.} issue {Couldn't load your {service} issues. Try again in a minute.} other {Couldn't load your {service} channels. Try again in a minute.}}",
+    "moreOptions": "More options"
   }
 }

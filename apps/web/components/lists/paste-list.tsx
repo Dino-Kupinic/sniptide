@@ -23,6 +23,7 @@ import {
 import type { PasteRow } from "@/lib/pastes/rows"
 import { PasteBulkActions } from "./bulk-actions"
 import { SkeletonCards, SkeletonListFooter, SkeletonMobileRows } from "./list-skeleton"
+import { ListSwitch } from "./list-switch"
 import { PasteCard } from "./paste-card"
 import { PasteMobileList, PasteTable } from "./paste-table"
 import { SelectionBar, useRowSelection } from "./selection"
@@ -31,7 +32,6 @@ import {
   ListHeader,
   MobileFilterSheet,
   Pagination,
-  QuickChips,
   SearchField,
   SortMenu,
   ViewToggle,
@@ -69,7 +69,7 @@ export function PasteList({
   // The collection whose page this is, in collection mode.
   collection?: string
   actions?: React.ReactNode
-  // A compact version of `actions` for the phone's title row.
+  // A compact version of `actions` for the phone's title row, or null for none.
   mobileActions?: React.ReactNode
   query: PasteListQuery
   pagination: PageInfo
@@ -135,6 +135,22 @@ export function PasteList({
           selected: visibility,
           onChange: (visibility) => update({ visibility: visibility as VisibilityFilter[] }),
         },
+        ...(mode === "starred"
+          ? [
+              {
+                id: "owner",
+                label: t("show"),
+                options: [
+                  { value: "mine", label: t("mine") },
+                  { value: "shared", label: t("shared_with_me") },
+                ],
+                selected: owner === "all" ? [] : [owner],
+                // One owner at a time: the newest pick wins, and clearing both shows every paste.
+                onChange: (selected: string[]) =>
+                  update({ owner: (selected.at(-1) as typeof owner | undefined) ?? "all" }),
+              },
+            ]
+          : []),
         {
           id: "collection",
           label: t("collection"),
@@ -147,35 +163,17 @@ export function PasteList({
       total={pagination.total}
       pending={pending}
       onClear={() =>
-        update({ sort: "updated", dir: undefined, languages: [], visibility: [], collections: [] })
+        update({
+          sort: "updated",
+          dir: undefined,
+          languages: [],
+          visibility: [],
+          collections: [],
+          owner: "all",
+        })
       }
     />
   )
-
-  const quick =
-    mode === "starred" ? (
-      <QuickChips
-        label={t("show")}
-        value={owner}
-        onChange={(owner) => update({ owner })}
-        options={[
-          { value: "all", label: t("all") },
-          { value: "mine", label: t("mine") },
-          { value: "shared", label: t("shared_with_me") },
-        ]}
-        trailing={filterSheet}
-      />
-    ) : (
-      <QuickChips
-        label={t("visibility")}
-        value={
-          visibility.length === 0 ? "all" : visibility.length === 1 ? (visibility[0] ?? null) : null
-        }
-        onChange={(next) => update({ visibility: next === "all" ? [] : [next] })}
-        options={[{ value: "all" as const, label: t("all") }, ...visibilityOptions]}
-        trailing={filterSheet}
-      />
-    )
 
   return (
     <div aria-busy={pending} className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
@@ -192,12 +190,17 @@ export function PasteList({
             {actions}
           </>
         }
-        mobileActions={mobileActions ?? actions}
+        mobileActions={
+          <>
+            {mobileActions === undefined ? actions : mobileActions}
+            {filterSheet}
+          </>
+        }
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
         <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
-        {quick}
+        {mode === "collection" ? null : <ListSwitch />}
       </div>
 
       {/* The filters sit above the table on the page, and the table gets its own card. */}
@@ -280,7 +283,7 @@ export function PasteList({
 
           {/* Mobile list */}
           {loading === undefined && pagination.total > 0 ? (
-            <PasteMobileList rows={rows} origin={origin} />
+            <PasteMobileList rows={rows} origin={origin} className="-mx-4 flex lg:hidden" />
           ) : null}
         </div>
 

@@ -10,6 +10,8 @@ import { createStore, type Store, useStore } from "./store"
 interface Slots {
   title: HTMLElement | null
   actions: HTMLElement | null
+  // The leading edge of the phone's top bar, for a page action such as Customize on Home.
+  leading: HTMLElement | null
 }
 
 type ListView = "list" | "grid"
@@ -21,6 +23,7 @@ interface HeaderState {
   view: Store<ListView>
   setTitle: (element: HTMLElement | null) => void
   setActions: (element: HTMLElement | null) => void
+  setLeading: (element: HTMLElement | null) => void
   setView: (view: ListView) => void
 }
 
@@ -39,7 +42,7 @@ export function useListView() {
 
 export function HeaderSlotsProvider({ children }: { children: React.ReactNode }) {
   const [state] = React.useState<HeaderState>(() => {
-    const slots = createStore<Slots>({ title: null, actions: null })
+    const slots = createStore<Slots>({ title: null, actions: null, leading: null })
     const view = createStore<ListView>("list")
     return {
       slots,
@@ -50,6 +53,9 @@ export function HeaderSlotsProvider({ children }: { children: React.ReactNode })
       setActions: (actions) => {
         if (slots.get().actions !== actions) slots.set({ ...slots.get(), actions })
       },
+      setLeading: (leading) => {
+        if (slots.get().leading !== leading) slots.set({ ...slots.get(), leading })
+      },
       setView: view.set,
     }
   })
@@ -57,8 +63,8 @@ export function HeaderSlotsProvider({ children }: { children: React.ReactNode })
 }
 
 export function useHeaderSlotRefs() {
-  const { setTitle, setActions } = useHeader()
-  return { setTitle, setActions }
+  const { setTitle, setActions, setLeading } = useHeader()
+  return { setTitle, setActions, setLeading }
 }
 
 export function HeaderTitle({ children }: { children: React.ReactNode }) {
@@ -81,4 +87,10 @@ export function HeaderActions({ children }: { children: React.ReactNode }) {
     </div>,
     actions,
   )
+}
+
+export function MobileHeaderLeading({ children }: { children: React.ReactNode }) {
+  const { leading } = useStore(useHeader().slots)
+  if (!leading) return null
+  return createPortal(children, leading)
 }

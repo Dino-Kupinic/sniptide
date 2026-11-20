@@ -78,7 +78,7 @@ export function PasteListLoading({
       collections={shell?.collections ?? []}
       collection={collection}
       actions={mode === "collection" ? undefined : <ImportGistButton />}
-      mobileActions={mode === "collection" ? undefined : <ImportGistButton compact />}
+      mobileActions={mode === "collection" ? undefined : null}
       query={query}
       pagination={list.pagination}
       languageOptions={[]}

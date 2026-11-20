@@ -61,6 +61,7 @@ export function FileViewer({
   headerClassName,
   bodyClassName,
   footerClassName,
+  phoneCard = false,
 }: {
   slug: string
   files: ViewerFile[]
@@ -76,6 +77,9 @@ export function FileViewer({
   headerClassName?: string
   bodyClassName?: string
   footerClassName?: string
+  // Below lg, draws the card as a white panel of the grouped canvas: no border, no footer, and no
+  // file bar while the paste has one file, since the page's menu holds Raw and Download.
+  phoneCard?: boolean
 }) {
   const t = useTranslations("Paste")
   const locale = useLocale()
@@ -99,12 +103,14 @@ export function FileViewer({
     <div
       className={cn(
         "overflow-hidden rounded-lg flex min-w-0 flex-col border border-border",
+        phoneCard && "max-lg:border-0 max-lg:bg-card",
         className,
       )}
     >
       <div
         className={cn(
           "flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border bg-sidebar pr-1.5",
+          phoneCard && files.length === 1 && "max-lg:hidden",
           headerClassName,
         )}
       >
@@ -236,7 +242,10 @@ export function FileViewer({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="h-11 border-t border-border text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 lg:hidden"
+          className={cn(
+            "h-11 border-t border-border text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40 lg:hidden",
+            phoneCard && "h-[42px] text-[15px] font-normal text-link",
+          )}
         >
           {t("showFullFile")}
         </button>
@@ -246,6 +255,7 @@ export function FileViewer({
         <div
           className={cn(
             "flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground",
+            phoneCard && "max-lg:hidden",
             footerClassName,
           )}
         >

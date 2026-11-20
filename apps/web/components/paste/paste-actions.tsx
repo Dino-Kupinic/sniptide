@@ -14,10 +14,11 @@ import { cn } from "@sniptide/ui/lib/utils"
 import {
   CopyIcon,
   DownloadIcon,
+  EllipsisIcon,
   FileCodeIcon,
   LinkIcon,
   LogOutIcon,
-  MoreHorizontalIcon,
+  PencilIcon,
   PrinterIcon,
   ShareIcon,
   StarIcon,
@@ -137,12 +138,14 @@ export function ShareButton({
   url: bareUrl,
   encryptionKeyId,
   title,
+  variant = "ghost",
   className,
 }: {
   url: string
   encryptionKeyId?: string | null
   title: string
   expiresAt: number | null
+  variant?: "ghost" | "outline"
   className?: string
 }) {
   const expired = usePasteExpired(expiresAt)
@@ -152,8 +155,8 @@ export function ShareButton({
   return (
     <Button
       type="button"
-      variant="ghost"
-      size="icon-lg"
+      variant={variant}
+      size={variant === "outline" ? "xl" : "icon-lg"}
       aria-label={copied ? t("linkCopied") : t("share")}
       className={className}
       disabled={expired}
@@ -231,6 +234,7 @@ export function PasteOverflowMenu({
   title,
   canTrash,
   canLeave,
+  canEdit = false,
   rawAllowed,
   url,
   encryptionKeyId,
@@ -244,6 +248,8 @@ export function PasteOverflowMenu({
   expiresAt: number | null
   // Shared with the viewer, so they can drop it from Shared with me.
   canLeave?: boolean
+  // Leads to the editor, which the phone's bottom bar leaves to Share and Copy code.
+  canEdit?: boolean
   // View raw and Download, for the file open in the code card.
   rawAllowed?: boolean
   url: string
@@ -267,9 +273,15 @@ export function PasteOverflowMenu({
           className,
         )}
       >
-        <MoreHorizontalIcon className="size-4" />
+        <EllipsisIcon strokeWidth={2} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {canEdit ? (
+          <DropdownMenuItem render={<Link href={`/pastes/${slug}/edit`} />}>
+            <PencilIcon />
+            {t("edit")}
+          </DropdownMenuItem>
+        ) : null}
         {encryptionKeyId ? null : (
           <DropdownMenuItem render={<Link href={`/new?from=${slug}`} />}>
             <CopyIcon />

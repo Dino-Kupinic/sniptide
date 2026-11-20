@@ -35,7 +35,7 @@ export default async function Page({ searchParams }: PageProps<"/starred">) {
       origin={origin}
       collections={collections}
       actions={<ImportGistButton />}
-      mobileActions={<ImportGistButton compact />}
+      mobileActions={null}
       query={data.query}
       pagination={data.pagination}
       languageOptions={data.languageOptions}

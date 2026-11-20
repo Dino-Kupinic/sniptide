@@ -209,6 +209,9 @@
     "usageUnavailable": "使用状況を表示できません。",
     "usageReload": "再読み込み",
     "usageCreateToken": "APIトークンを作成",
-    "usageChartLabel": "1日ごとのAPIリクエスト: {values}"
+    "usageChartLabel": "1日ごとのAPIリクエスト: {values}",
+    "profileRowDescription": "プロフィール、ユーザー名、写真",
+    "app": "アプリ",
+    "appearance": "外観"
   }
 }

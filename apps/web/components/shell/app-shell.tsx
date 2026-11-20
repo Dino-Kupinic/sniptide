@@ -177,7 +177,7 @@ export function AppShell({
                         >
                           {t("skipToMain")}
                         </a>
-                        <div className="flex min-h-svh bg-background lg:bg-sidebar">
+                        <div className="flex min-h-svh bg-background has-data-grouped:max-lg:bg-grouped lg:bg-sidebar">
                           <aside
                             aria-label={t("sidebar")}
                             style={{ width }}
@@ -241,7 +241,7 @@ export function AppShell({
 
                           <div
                             className={cn(
-                              "flex min-w-0 flex-1 flex-col bg-background lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
+                              "flex min-w-0 flex-1 flex-col bg-background has-data-grouped:max-lg:bg-grouped lg:my-2 lg:mr-2 lg:overflow-clip lg:rounded-lg lg:border lg:border-border",
                               layout.collapsed && "lg:ml-2",
                             )}
                           >

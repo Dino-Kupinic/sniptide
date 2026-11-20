@@ -2,12 +2,12 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { Progress } from "@sniptide/ui/components/progress"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   BellIcon,
   ChartColumnIcon,
   ChevronLeftIcon,
-  ChevronRightIcon,
   KeyRoundIcon,
   type LucideIcon,
   PlugIcon,
@@ -17,8 +17,18 @@ import {
 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
+import { useTheme } from "next-themes"
 import * as React from "react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import {
+  GroupedCanvas,
+  GroupedLinkRow,
+  GroupedList,
+  GroupedRowBody,
+  groupedRowClass,
+} from "@/components/lists/grouped-list"
+import { UserAvatar } from "@/components/people/user-avatar"
+import { useViewer } from "@/components/shell/app-shell"
 import { navigateTabs } from "@/components/tab-navigation"
 import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
@@ -26,6 +36,7 @@ import type { SocialProvider } from "@/lib/auth"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import type { EnvGroupSummary } from "@/lib/env/store"
 import { formatBytes } from "@/lib/format"
+import { type Locale, localeNames } from "@/lib/i18n/config"
 import type { IntegrationSummary } from "@/lib/integrations/store"
 import type { Preferences } from "@/lib/preferences"
 import {
@@ -38,7 +49,7 @@ import {
 import { ApiTokensSection, EnvGroupsSection } from "./api-tokens"
 import { IntegrationsSection } from "./integrations-section"
 import { NotificationSection } from "./notification-section"
-import { DefaultsSection, EditorSection } from "./preference-sections"
+import { DefaultsSection, EditorSection, expiryOptions, themeOptions } from "./preference-sections"
 import { ProfileSection, type ProfileState } from "./profile-section"
 import { SettingsSection } from "./section"
 
@@ -69,22 +80,24 @@ function StorageMeter({ used, limit }: { used: number; limit: number | null }) {
   const t = useTranslations("Settings")
   const locale = useLocale()
   if (limit === null) return null
+  const share = limit > 0 ? Math.min(1, used / limit) : 1
   return (
-    <div className="rounded-lg flex flex-col gap-3 border border-border p-4">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium">{t("storage")}</span>
-        <span className="text-muted-foreground tabular-nums">
-          {t("usageOfLimit", {
-            used: formatBytes(used, locale),
-            limit: formatBytes(limit, locale),
-          })}
+    <GroupedList label={t("storage")}>
+      <li className="flex flex-col gap-3 px-4 py-3.5">
+        <span className="flex items-baseline justify-between gap-3 text-[17px] leading-[22px] tabular-nums">
+          <span>
+            {t("usageOfLimit", {
+              used: formatBytes(used, locale),
+              limit: formatBytes(limit, locale),
+            })}
+          </span>
+          <span className="text-muted-foreground">
+            {new Intl.NumberFormat(locale, { style: "percent" }).format(share)}
+          </span>
         </span>
-      </div>
-      <Progress
-        value={limit > 0 ? Math.min(100, (used / limit) * 100) : 100}
-        aria-label={t("storage")}
-      />
-    </div>
+        <Progress value={share * 100} aria-label={t("storage")} />
+      </li>
+    </GroupedList>
   )
 }
 
@@ -93,11 +106,12 @@ function StorageMeter({ used, limit }: { used: number; limit: number | null }) {
 // The settings page around its sections: the title, the tab strip on desktop and the section
 // list on phones. None of it needs account data, so the loading state draws it as it is.
 function SettingsFrame({
-  mobileFooter,
+  phoneList,
   children,
 }: {
-  // Shown under the phone's section list.
-  mobileFooter?: React.ReactNode
+  // The phone's list of settings, given a way to open a section on its own screen. Without
+  // it, as while loading, phones list the sections by name.
+  phoneList: (open: (tab: SettingsTab) => void) => React.ReactNode
   children: (tab: SettingsTab) => React.ReactNode
 }) {
   const t = useTranslations("Settings")
@@ -139,8 +153,16 @@ function SettingsFrame({
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-4 pb-6 lg:gap-6 lg:p-7">
+      <GroupedCanvas />
       <div className={cn("flex flex-col gap-1", opened && "max-lg:hidden")}>
-        <h1 className={cn(titleClass, "lg:text-4xl lg:leading-10")}>{t("settings")}</h1>
+        <h1
+          className={cn(
+            titleClass,
+            "max-lg:text-[34px] max-lg:leading-[41px] lg:text-4xl lg:leading-10",
+          )}
+        >
+          {t("settings")}
+        </h1>
         <p className="hidden text-sm text-muted-foreground lg:block">
           {t("manageYourProfilePasteDefaultsAnd")}
         </p>
@@ -160,33 +182,7 @@ function SettingsFrame({
           <h1 className={cn(titleClass, "min-w-0 truncate")}>{current?.label}</h1>
         </div>
       ) : (
-        <div className="flex flex-col gap-5 lg:hidden">
-          <nav
-            aria-label={t("settings")}
-            className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border"
-          >
-            {tabs.map((item) => (
-              <a
-                key={item.value}
-                href={`/settings?tab=${item.value}`}
-                onClick={(event) => {
-                  if (event.metaKey || event.ctrlKey || event.shiftKey) return
-                  event.preventDefault()
-                  openSection(item.value)
-                }}
-                className="flex h-12 items-center gap-3 px-4 text-sm font-medium outline-none focus-visible:bg-muted active:bg-muted"
-              >
-                <item.icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                <ChevronRightIcon
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
-              </a>
-            ))}
-          </nav>
-          {mobileFooter}
-        </div>
+        <div className="flex flex-col gap-7 lg:hidden">{phoneList(openSection)}</div>
       )}
 
       <div
@@ -234,28 +230,167 @@ function SettingsFrame({
   )
 }
 
-function SignOutButton() {
+// Sign out as the last row of the phone's list, centered like an iOS action row.
+function SignOutRow() {
   const t = useTranslations("Settings")
   const router = useRouter()
   return (
-    <Button
-      variant="outline"
-      size="xl"
-      className="w-full"
-      onClick={async () => {
-        await signOutAccount()
-        router.replace("/sign-in")
-        router.refresh()
+    <GroupedList>
+      <li>
+        <button
+          type="button"
+          className={cn(groupedRowClass, "justify-center pl-0 text-link")}
+          onClick={async () => {
+            await signOutAccount()
+            router.replace("/sign-in")
+            router.refresh()
+          }}
+        >
+          {t("signOut")}
+        </button>
+      </li>
+    </GroupedList>
+  )
+}
+
+// A row of the phone's list that opens one section on its own screen. A modified click keeps
+// the link's usual behavior, such as opening the section in a new tab.
+function SectionRow({
+  tab,
+  open,
+  label,
+  value,
+}: {
+  tab: SettingsTab
+  open: (tab: SettingsTab) => void
+  label: string
+  value?: React.ReactNode
+}) {
+  return (
+    <GroupedLinkRow
+      href={`/settings?tab=${tab}`}
+      label={label}
+      value={value}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey) return
+        event.preventDefault()
+        open(tab)
       }}
-    >
-      {t("signOut")}
-    </Button>
+    />
+  )
+}
+
+// The phone's Settings screen: the profile first, the settings that shape new pastes and the
+// app with their current values, the account and usage, then storage and sign out. Every row
+// opens its section. Before the account's data arrives, the values it holds wait in skeletons.
+function PhoneSettingsList({
+  open,
+  profile,
+  preferences,
+  storage,
+  tokenCount,
+}: {
+  open: (tab: SettingsTab) => void
+  profile: Pick<ProfileState, "id" | "image" | "name"> & { username: string | null }
+  preferences?: Preferences
+  storage?: { used: number; limit: number | null } | null
+  tokenCount?: number
+}) {
+  const t = useTranslations("Settings")
+  const pending = <Skeleton className="h-4 w-16" />
+  const locale = useLocale()
+  const { theme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => setMounted(true), [])
+  const themeLabel = themeOptions.find((option) => option.value === (mounted ? theme : "system"))
+  const expiryLabel = expiryOptions.find((option) => option.value === preferences?.defaultExpiry)
+  return (
+    <>
+      <GroupedList>
+        <li className="group/item">
+          <a
+            href="/settings?tab=general"
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey) return
+              event.preventDefault()
+              open("general")
+            }}
+            className={cn(groupedRowClass, "min-h-[72px]")}
+          >
+            <UserAvatar person={profile} className="size-11 rounded-md" />
+            <GroupedRowBody
+              label={
+                <span className="flex flex-col gap-0.5">
+                  <span className="truncate text-[17px] leading-[22px] font-semibold">
+                    {profile.name || profile.username}
+                  </span>
+                  <span className="truncate text-[13px] leading-4 text-muted-foreground">
+                    {t("profileRowDescription")}
+                  </span>
+                </span>
+              }
+            />
+          </a>
+        </li>
+      </GroupedList>
+
+      <GroupedList label={t("newPastes")}>
+        <SectionRow
+          tab="defaults"
+          open={open}
+          label={t("visibility")}
+          value={preferences ? t(preferences.defaultVisibility) : pending}
+        />
+        <SectionRow
+          tab="defaults"
+          open={open}
+          label={t("expires")}
+          value={preferences ? (expiryLabel ? t(expiryLabel.label) : undefined) : pending}
+        />
+      </GroupedList>
+
+      <GroupedList label={t("app")}>
+        <SectionRow
+          tab="general"
+          open={open}
+          label={t("appearance")}
+          value={themeLabel ? t(themeLabel.label) : undefined}
+        />
+        <SectionRow
+          tab="general"
+          open={open}
+          label={t("language")}
+          value={localeNames[locale as Locale]}
+        />
+        <SectionRow tab="notifications" open={open} label={t("notifications")} />
+        <SectionRow tab="integrations" open={open} label={t("integrations")} />
+        <SectionRow
+          tab="api"
+          open={open}
+          label={t("apiTokens")}
+          value={tokenCount === undefined ? undefined : tokenCount > 0 ? tokenCount : undefined}
+        />
+      </GroupedList>
+
+      <GroupedList>
+        <SectionRow tab="account" open={open} label={t("account")} />
+        <SectionRow tab="usage" open={open} label={t("usage")} />
+      </GroupedList>
+
+      {storage ? <StorageMeter used={storage.used} limit={storage.limit} /> : null}
+      <SignOutRow />
+    </>
   )
 }
 
 // Settings before the account's data arrives. The sections follow under the frame.
 export function SettingsLoading() {
-  return <SettingsFrame>{() => null}</SettingsFrame>
+  const viewer = useViewer()
+  return (
+    <SettingsFrame phoneList={(open) => <PhoneSettingsList open={open} profile={viewer} />}>
+      {() => null}
+    </SettingsFrame>
+  )
 }
 
 export function SettingsView({
@@ -286,12 +421,15 @@ export function SettingsView({
   const t = useTranslations("Settings")
   return (
     <SettingsFrame
-      mobileFooter={
-        <>
-          {storage ? <StorageMeter used={storage.used} limit={storage.limit} /> : null}
-          <SignOutButton />
-        </>
-      }
+      phoneList={(open) => (
+        <PhoneSettingsList
+          open={open}
+          profile={profile}
+          preferences={preferences}
+          storage={storage}
+          tokenCount={api.tokens.length}
+        />
+      )}
     >
       {(tab) => (
         <>

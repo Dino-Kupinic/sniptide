@@ -1,18 +1,11 @@
-// Which results the command menu shows. "all" is the default; the chips on mobile pick one scope,
-// and a leading `>` in the field does the same for commands on desktop.
-export type Scope = "all" | "pastes" | "collections" | "commands"
+// Which results the command menu shows: everything by default, or only commands after a leading
+// `>` in the field.
+export type Scope = "all" | "commands"
 
-export const SCOPES: { id: Scope; label: string }[] = [
-  { id: "all", label: "all" },
-  { id: "pastes", label: "pastes" },
-  { id: "collections", label: "collections" },
-  { id: "commands", label: "commands" },
-]
-
-// The scope a typed value implies and the text to search for: `>` limits results to commands.
-export function parseQuery(value: string, chip: Scope): { scope: Scope; text: string } {
+// The scope a typed value implies and the text to search for.
+export function parseQuery(value: string): { scope: Scope; text: string } {
   if (value.startsWith(">")) return { scope: "commands", text: value.slice(1).trim() }
-  return { scope: chip, text: value.trim() }
+  return { scope: "all", text: value.trim() }
 }
 
 export function matches(label: string, text: string) {

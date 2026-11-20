@@ -407,7 +407,11 @@
     "templates_clear": "Borrar filtros",
     "templates_use": "Usar plantilla",
     "templates_use_label": "Usar {title}",
-    "templates_intro": "Abre una plantilla en el editor y guárdala como tu propio paste."
+    "templates_intro": "Abre una plantilla en el editor y guárdala como tu propio paste.",
+    "analytics_delta": "{delta} frente al periodo anterior",
+    "analytics_peak": "Pico: {value} el {day}",
+    "clear_search": "Borrar búsqueda",
+    "new_paste_titled": "Nuevo paste llamado «{title}»"
   },
   "Secrets": {
     "title": "Secretos",

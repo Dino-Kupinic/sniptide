@@ -209,6 +209,9 @@
     "usageUnavailable": "无法获取使用情况。",
     "usageReload": "重新加载",
     "usageCreateToken": "创建 API 令牌",
-    "usageChartLabel": "每日 API 请求：{values}"
+    "usageChartLabel": "每日 API 请求：{values}",
+    "profileRowDescription": "个人资料、用户名和头像",
+    "app": "应用",
+    "appearance": "外观"
   }
 }

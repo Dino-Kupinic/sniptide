@@ -407,7 +407,11 @@
     "templates_clear": "フィルターをクリア",
     "templates_use": "テンプレートを使う",
     "templates_use_label": "{title}を使う",
-    "templates_intro": "テンプレートをエディターで開き、自分のペーストとして保存できます。"
+    "templates_intro": "テンプレートをエディターで開き、自分のペーストとして保存できます。",
+    "analytics_delta": "前の期間比 {delta}",
+    "analytics_peak": "ピーク: {day} に {value}",
+    "clear_search": "検索をクリア",
+    "new_paste_titled": "「{title}」という名前の新しいペースト"
   },
   "Secrets": {
     "title": "シークレット",

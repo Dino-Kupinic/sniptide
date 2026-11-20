@@ -20,7 +20,6 @@
     "showPassword": "Passwort anzeigen",
     "files": "Dateien",
     "fileName": "Dateiname",
-    "settingsSummary": "{visibility} · {expiry}",
     "pasteSettings": "Paste-Einstellungen",
     "rename": "Umbenennen",
     "changeLanguage": "Sprache ändern",
@@ -245,6 +244,7 @@
     "sendsDetails": "{kind, select, page {Speichert Titel, Dateien und Link als neue Seite in der gewählten Seite. Nur Seiten, die du in Notion mit Sniptide geteilt hast, werden angezeigt.} issue {Hängt Titel, Sprache und Link an das Issue an. Angezeigt werden offene Issues, die dir zugewiesen sind oder die du erstellt hast.} other {Sendet Titel, Sprache und Link. Die App kann in öffentlichen Kanälen posten und in privaten, zu denen sie eingeladen wurde.}}",
     "sendsLinkOnly": "{kind, select, page {Speichert nur den Link, weil Titel und Inhalt dieses Pastes nicht für alle mit dem Link offen sind.} issue {Hängt nur den Link als „Sniptide paste“ an, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.} other {Sendet nur den Link, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.}}",
     "sentToDestination": "{kind, select, page {In „{name}“ gespeichert} issue {An {name} angehängt} other {An #{name} gesendet}}",
-    "couldnTLoadDestinations": "{kind, select, page {Deine {service}-Seiten konnten nicht geladen werden. Versuche es in einer Minute erneut.} issue {Deine {service}-Issues konnten nicht geladen werden. Versuche es in einer Minute erneut.} other {Deine {service}-Kanäle konnten nicht geladen werden. Versuche es in einer Minute erneut.}}"
+    "couldnTLoadDestinations": "{kind, select, page {Deine {service}-Seiten konnten nicht geladen werden. Versuche es in einer Minute erneut.} issue {Deine {service}-Issues konnten nicht geladen werden. Versuche es in einer Minute erneut.} other {Deine {service}-Kanäle konnten nicht geladen werden. Versuche es in einer Minute erneut.}}",
+    "moreOptions": "Weitere Optionen"
   }
 }

@@ -47,7 +47,7 @@ function usePreferences(initial: Preferences) {
 const segmentItemClass = "px-3 max-sm:py-[9px]"
 const selectTriggerClass = "h-10 w-full sm:h-9"
 
-const themeOptions = [
+export const themeOptions = [
   { value: "light", label: "light" },
   { value: "dark", label: "dark" },
   { value: "system", label: "system" },
@@ -144,7 +144,7 @@ export function EditorSection({ initial }: { initial: Preferences }) {
   )
 }
 
-const expiryOptions: { value: Preferences["defaultExpiry"]; label: string }[] = [
+export const expiryOptions: { value: Preferences["defaultExpiry"]; label: string }[] = [
   { value: "1h", label: "1Hour" },
   { value: "1d", label: "1Day" },
   { value: "1w", label: "1Week" },

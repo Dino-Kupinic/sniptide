@@ -8,6 +8,12 @@ import {
   withKeyFragment,
 } from "@sniptide/contracts/encryption"
 import { Button } from "@sniptide/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@sniptide/ui/components/dropdown-menu"
 import { FormError } from "@sniptide/ui/components/form-error"
 import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
@@ -17,12 +23,13 @@ import {
   SheetContent,
   SheetHeader,
 } from "@sniptide/ui/components/sheet"
+import { Switch } from "@sniptide/ui/components/switch"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
-  ChevronUpIcon,
   EyeIcon,
   FolderIcon,
   LinkIcon,
@@ -33,6 +40,12 @@ import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import * as React from "react"
 import { AutosaveStatus, ConflictBanner, DraftNotice } from "@/components/autosave-status"
+import {
+  GroupedCanvas,
+  GroupedChevron,
+  groupedPanelClass,
+  groupedSettingRowClass,
+} from "@/components/lists/grouped-list"
 import { CodeBlock } from "@/components/paste/code-block"
 import {
   CollectionSelect,
@@ -199,6 +212,10 @@ function newFile(name: string, content = ""): EditorFile {
   fileCounter += 1
   return { id: `file-${fileCounter}`, name, content }
 }
+
+// The value and chevron at the end of a phone settings row, which open its menu.
+const phoneValueClass =
+  "-mr-2 flex h-10 min-w-0 items-center gap-1 rounded-lg px-2 text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
 
 export function PasteEditor({
   initial,
@@ -1033,12 +1050,6 @@ export function PasteEditor({
 
   const panelSections = optionSections(false)
   const heading = editing ? t("editPaste") : t("newPaste")
-  // The mobile settings chip names the state: "Unlisted · 1 week".
-  const settingsSummary = t("settingsSummary", {
-    visibility: t("visibilityValue", { value: visibility }),
-    expiry:
-      draftExpiry === "keep" ? (expiryLabel ?? t("keep")) : t("expiryLong", { value: expiry }),
-  })
 
   return (
     <form
@@ -1051,7 +1062,8 @@ export function PasteEditor({
       className="@container/editor flex min-h-svh flex-col lg:min-h-0 lg:gap-5 lg:p-7"
     >
       {/* Mobile header from the Paper "New paste" artboard */}
-      <div className="sticky top-0 z-20 box-content flex min-h-[52px] flex-wrap items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
+      <GroupedCanvas />
+      <div className="sticky top-0 z-20 box-content flex min-h-[52px] flex-wrap items-center gap-1 bar-translucent pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] max-lg:order-first lg:hidden">
         {editing ? (
           <Button
             type="button"
@@ -1069,12 +1081,12 @@ export function PasteEditor({
             size="xl"
             render={<Link href={cancelHref} />}
             nativeButton={false}
-            className="px-2"
+            className="px-2 text-[17px] font-normal text-link"
           >
             {t("cancel")}
           </Button>
         )}
-        <h1 className="order-first min-w-0 flex-1 basis-full truncate text-center font-heading text-xl leading-7 font-bold tracking-[-0.02em] @min-[20rem]/editor:order-none @min-[20rem]/editor:basis-0">
+        <h1 className="order-first min-w-0 flex-1 basis-full truncate text-center text-[17px] leading-[22px] font-semibold @min-[20rem]/editor:order-none @min-[20rem]/editor:basis-0">
           {heading}
         </h1>
         <Button
@@ -1083,7 +1095,7 @@ export function PasteEditor({
           size="xl"
           onClick={() => setPreview((value) => !value)}
           aria-pressed={preview}
-          className={cn("px-2 text-muted-foreground", preview && "text-link")}
+          className={cn("px-2 text-[17px] font-normal text-link", preview && "font-semibold")}
         >
           {preview ? t("edit") : t("preview")}
         </Button>
@@ -1121,7 +1133,8 @@ export function PasteEditor({
         </Button>
       </HeaderActions>
 
-      <div className="flex min-w-0 flex-col gap-1.5 px-4 pb-4 lg:p-0">
+      {/* On phones the title and description open the code card, like the first rows of a panel. */}
+      <div className="mx-4 mt-2 flex min-w-0 flex-col gap-0.5 rounded-t-lg border-b border-border bg-card px-4 py-3 lg:m-0 lg:gap-1.5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
         <textarea
           ref={titleRef}
           aria-label={t("title")}
@@ -1140,7 +1153,7 @@ export function PasteEditor({
           placeholder={t("untitledPaste")}
           maxLength={120}
           required
-          className="block w-full resize-none overflow-hidden bg-transparent font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] caret-highlight outline-none placeholder:text-muted-foreground/50 lg:text-[32px] lg:leading-[38px]"
+          className="block w-full resize-none overflow-hidden bg-transparent text-[17px] leading-[22px] caret-highlight outline-none placeholder:text-muted-foreground lg:font-heading lg:text-[32px] lg:leading-[38px] lg:font-bold lg:tracking-[-0.02em] lg:placeholder:text-muted-foreground/50"
         />
         <input
           data-description=""
@@ -1149,67 +1162,70 @@ export function PasteEditor({
           onChange={(event) => setDescription(event.target.value)}
           placeholder={t("addADescriptionOptional")}
           maxLength={280}
-          className="w-full bg-transparent text-base leading-6 outline-none placeholder:text-muted-foreground lg:text-sm lg:leading-5"
+          className="w-full bg-transparent text-[15px] leading-5 text-muted-foreground outline-none placeholder:text-muted-foreground/70 focus:text-foreground lg:text-sm lg:leading-5 lg:text-foreground lg:placeholder:text-muted-foreground"
         />
       </div>
 
-      {editing ? <AutosaveStatus state={state} className="px-4 lg:hidden" /> : null}
+      {/* Status and notices sit above the phone's title card, so they never split it from the code. */}
+      <div className="flex flex-col gap-3 empty:hidden max-lg:order-first max-lg:pb-2 lg:contents">
+        {editing ? <AutosaveStatus state={state} className="px-4 lg:hidden" /> : null}
 
-      {state.kind === "conflict" ? (
-        <ConflictBanner onLoadLatest={() => void loadLatest()} onKeepMine={keepMine} />
-      ) : changedElsewhere ? (
-        <DraftNotice
-          message={t("thisPasteWasJustSavedIn")}
-          actions={[{ label: t("loadLatest"), onClick: () => void loadLatest(), primary: true }]}
-        />
-      ) : null}
+        {state.kind === "conflict" ? (
+          <ConflictBanner onLoadLatest={() => void loadLatest()} onKeepMine={keepMine} />
+        ) : changedElsewhere ? (
+          <DraftNotice
+            message={t("thisPasteWasJustSavedIn")}
+            actions={[{ label: t("loadLatest"), onClick: () => void loadLatest(), primary: true }]}
+          />
+        ) : null}
 
-      {draftNotice?.kind === "restored" ? (
-        <DraftNotice
-          message={t("restoredTheChangesYouHadnT")}
-          actions={[
-            {
-              label: t("undo"),
-              onClick: () => {
-                applyValue({ ...initialValue, automatic: initialAutomatic })
-                setDraftNotice(null)
+        {draftNotice?.kind === "restored" ? (
+          <DraftNotice
+            message={t("restoredTheChangesYouHadnT")}
+            actions={[
+              {
+                label: t("undo"),
+                onClick: () => {
+                  applyValue({ ...initialValue, automatic: initialAutomatic })
+                  setDraftNotice(null)
+                },
               },
-            },
-            { label: t("dismiss"), onClick: () => setDraftNotice(null), primary: true },
-          ]}
-        />
-      ) : null}
+              { label: t("dismiss"), onClick: () => setDraftNotice(null), primary: true },
+            ]}
+          />
+        ) : null}
 
-      {draftNotice?.kind === "choose" && draft ? (
-        <DraftNotice
-          message={t("draftKept", { savedAt: formatDateTime(draftNotice.savedAt, locale) })}
-          actions={[
-            {
-              label: t("discardDraft"),
-              onClick: () => {
-                void discardDraft()
-                setDraftNotice(null)
-                setDraftReady(true)
+        {draftNotice?.kind === "choose" && draft ? (
+          <DraftNotice
+            message={t("draftKept", { savedAt: formatDateTime(draftNotice.savedAt, locale) })}
+            actions={[
+              {
+                label: t("discardDraft"),
+                onClick: () => {
+                  void discardDraft()
+                  setDraftNotice(null)
+                  setDraftReady(true)
+                },
               },
-            },
-            {
-              label: t("restoreDraft"),
-              primary: true,
-              onClick: () => {
-                applyValue(draft.value)
-                setDraftNotice({ kind: "restored" })
-                setDraftReady(true)
+              {
+                label: t("restoreDraft"),
+                primary: true,
+                onClick: () => {
+                  applyValue(draft.value)
+                  setDraftNotice({ kind: "restored" })
+                  setDraftReady(true)
+                },
               },
-            },
-          ]}
-        />
-      ) : null}
+            ]}
+          />
+        ) : null}
 
-      <FormError message={error} className="mx-4 lg:mx-0" />
+        <FormError message={error} className="mx-4 lg:mx-0" />
+      </div>
 
       <SidePanelProvider>
         <div className="flex flex-1 flex-col gap-5 lg:flex-row lg:items-start">
-          <div className="overflow-hidden rounded-lg mx-4 flex min-h-[340px] min-w-0 flex-1 flex-col border border-border lg:mx-0 lg:min-h-[548px]">
+          <div className="overflow-hidden mx-4 flex min-h-[260px] min-w-0 flex-1 flex-col rounded-b-lg bg-card lg:mx-0 lg:min-h-[548px] lg:rounded-lg lg:border lg:border-border lg:bg-transparent">
             <FileTabs
               files={files}
               panelId={filePanelId}
@@ -1237,10 +1253,10 @@ export function PasteEditor({
                   content={active?.content || " "}
                   highlighted={previewLines}
                   lineNumbers={lineNumbers}
-                  className="flex-1 bg-muted dark:bg-sidebar"
+                  className="flex-1 bg-card lg:bg-muted lg:dark:bg-sidebar"
                 />
               ) : (
-                <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-muted p-4 font-mono dark:bg-sidebar text-[13px] leading-[22px]">
+                <div className="group/code flex flex-1 gap-[18px] overflow-auto bg-card p-4 font-mono text-[13px] leading-[22px] lg:bg-muted lg:dark:bg-sidebar">
                   {lineNumbers && !plainEditor ? (
                     <div
                       aria-hidden="true"
@@ -1337,35 +1353,141 @@ export function PasteEditor({
         </div>
       </SidePanelProvider>
 
-      {/* Mobile bottom bar: the settings chip opens every option in one sheet. It steps aside
-          while the on-screen keyboard is up, so the code being typed stays in view. */}
+      {/* The phone's settings: the common ones as rows, the rest behind More options. */}
+      {sharedEdit ? null : (
+        <div className="mx-4 mt-7 flex flex-col gap-7 lg:hidden">
+          <div className={cn(groupedPanelClass, "pl-4")}>
+            <div className={groupedSettingRowClass}>
+              <span className="flex-1">{t("visibility")}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger aria-label={t("visibility")} className={phoneValueClass}>
+                  <span className="truncate">{t("visibilityValue", { value: visibility })}</span>
+                  <GroupedChevron />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {visibilityOptions
+                    // A public listing would show an encrypted paste without its key.
+                    .filter((option) => !(encrypted && option.value === "public"))
+                    .map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        className="h-10"
+                        onClick={() => {
+                          automatic.current.visibility = false
+                          setVisibility(option.value)
+                        }}
+                      >
+                        {t("visibilityValue", { value: option.value })}
+                        {option.value === visibility ? (
+                          <CheckIcon className="ml-auto text-foreground!" />
+                        ) : null}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className={groupedSettingRowClass}>
+              <span className="flex-1">{t("expires")}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger aria-label={t("expires")} className={phoneValueClass}>
+                  <span className="truncate">
+                    {draftExpiry === "keep"
+                      ? (expiryLabel ?? t("keep"))
+                      : t("expiryLong", { value: expiry })}
+                  </span>
+                  <GroupedChevron />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {[
+                    ...(expiryLabel ? (["keep"] as const) : []),
+                    ...expiryOptions.map((o) => o.value),
+                  ].map((value) => (
+                    <DropdownMenuItem key={value} className="h-10" onClick={() => setExpiry(value)}>
+                      {value === "keep" ? t("keep") : t("expiryLong", { value })}
+                      {value === expiry ? <CheckIcon className="ml-auto text-foreground!" /> : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            {collections.length > 0 ? (
+              <div className={groupedSettingRowClass}>
+                <span className="flex-1">{t("collection")}</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger aria-label={t("collection")} className={phoneValueClass}>
+                    <span className="truncate">
+                      {collections.find((item) => item.slug === collection)?.name ??
+                        t("noCollection")}
+                    </span>
+                    <GroupedChevron />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {[null, ...collections.map((item) => item.slug)].map((value) => (
+                      <DropdownMenuItem
+                        key={value ?? "none"}
+                        className="h-10"
+                        onClick={() => setCollection(value)}
+                      >
+                        {value === null
+                          ? t("noCollection")
+                          : collections.find((item) => item.slug === value)?.name}
+                        {value === collection ? (
+                          <CheckIcon className="ml-auto text-foreground!" />
+                        ) : null}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
+            <div className={groupedSettingRowClass}>
+              <span className="flex-1">{t("password")}</span>
+              <Switch
+                aria-label={t("password")}
+                checked={passwordOn}
+                onCheckedChange={setPasswordOn}
+              />
+            </div>
+            {passwordOn ? (
+              <div className="flex flex-col gap-2 border-b border-border py-3 pr-4 last:border-b-0">
+                <PasswordInput
+                  value={password}
+                  onChange={setPassword}
+                  onCommit={editing ? () => setCommittedPassword(password) : undefined}
+                  placeholder={hasPassword ? t("leaveEmptyToKeepTheCurrent") : t("password")}
+                  large
+                />
+              </div>
+            ) : null}
+          </div>
+          <div className={cn(groupedPanelClass, "pl-4")}>
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => setSettingsOpen(true)}
+              className={cn(groupedSettingRowClass, "w-full text-left active:opacity-60")}
+            >
+              <span className="flex-1">{t("moreOptions")}</span>
+              {burnAfterRead || encrypted ? (
+                <LockIcon aria-hidden className="size-4 text-muted-foreground" />
+              ) : null}
+              <GroupedChevron />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile bottom bar with the one primary action. It steps aside while the on-screen keyboard
+          is up, so the code being typed stays in view. */}
       <div
         hidden={keyboardUp}
-        className="sticky bottom-0 z-20 mt-6 box-content flex min-h-14 flex-wrap items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
+        className="sticky bottom-0 z-20 mt-7 box-content flex min-h-16 flex-wrap items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden"
       >
-        {sharedEdit ? null : (
-          <Button
-            type="button"
-            variant="outline"
-            size="xl"
-            aria-haspopup="dialog"
-            aria-label={`${t("pasteSettings")}: ${settingsSummary}`}
-            onClick={() => setSettingsOpen(true)}
-            className="h-auto min-h-[38px] min-w-0 flex-1 basis-[10rem] justify-start px-3 py-2"
-          >
-            {passwordOn || burnAfterRead || encrypted ? <LockIcon /> : <EyeIcon />}
-            <span className="truncate">{settingsSummary}</span>
-            <ChevronUpIcon className="ml-auto text-muted-foreground" />
-          </Button>
-        )}
         <Button
           type="submit"
           size="xl"
           loading={pending}
-          className={cn(
-            "h-auto min-h-[38px] max-w-full shrink-0 px-4 py-2 whitespace-normal",
-            sharedEdit && "flex-1",
-          )}
+          className="h-auto min-h-[38px] max-w-full flex-1 px-4 py-2 whitespace-normal"
         >
           {editing ? t("done") : pending ? t("saving") : t("createPaste")}
         </Button>

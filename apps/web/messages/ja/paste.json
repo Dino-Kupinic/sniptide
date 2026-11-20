@@ -20,7 +20,6 @@
     "showPassword": "パスワードを表示",
     "files": "ファイル",
     "fileName": "ファイル名",
-    "settingsSummary": "{visibility} · {expiry}",
     "pasteSettings": "ペーストの設定",
     "rename": "名前を変更",
     "changeLanguage": "言語を変更",
@@ -245,6 +244,7 @@
     "sendsDetails": "{kind, select, page {タイトル、ファイル、リンクを、選択したページの中に新しいページとして保存します。Notion で Sniptide と共有したページだけが表示されます。} issue {タイトル、言語、リンクを Issue に添付します。あなたが担当または作成した未完了の Issue が表示されます。} other {タイトル、言語、リンクを送信します。アプリは公開チャンネルと、招待されたプライベートチャンネルに投稿できます。}}",
     "sendsLinkOnly": "{kind, select, page {このペーストのタイトルと内容はリンクを知っている全員に公開されていないため、リンクのみを保存します。} issue {このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを「Sniptide paste」として添付します。} other {このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを送信します。}}",
     "sentToDestination": "{kind, select, page {「{name}」に保存しました} issue {{name} に添付しました} other {#{name} に送信しました}}",
-    "couldnTLoadDestinations": "{kind, select, page {{service} のページを読み込めませんでした。1 分後にもう一度お試しください。} issue {{service} の Issue を読み込めませんでした。1 分後にもう一度お試しください。} other {{service} のチャンネルを読み込めませんでした。1 分後にもう一度お試しください。}}"
+    "couldnTLoadDestinations": "{kind, select, page {{service} のページを読み込めませんでした。1 分後にもう一度お試しください。} issue {{service} の Issue を読み込めませんでした。1 分後にもう一度お試しください。} other {{service} のチャンネルを読み込めませんでした。1 分後にもう一度お試しください。}}",
+    "moreOptions": "その他のオプション"
   }
 }

@@ -7,12 +7,14 @@ import { useTranslations } from "next-intl"
 import * as React from "react"
 import { ImportGistButton } from "@/components/lists/import-gist"
 import { useSidebarState, useViewer } from "@/components/shell/app-shell"
+import { MobileHeaderLeading } from "@/components/shell/page-header"
 import { dayPart } from "@/components/shell/sidebar-state"
 import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
 import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import { firstName } from "@/lib/viewer"
+import { PhoneHomeTiles } from "./phone-home"
 import {
   AddWidgetMenu,
   type DashboardTemplates,
@@ -38,7 +40,7 @@ function Greeting({ firstName }: { firstName: string }) {
     <h1
       // The hour can turn between the server's render and hydration.
       suppressHydrationWarning
-      className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10"
+      className="font-heading text-[34px] leading-[41px] font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10"
     >
       {t(
         part === "morning"
@@ -107,6 +109,8 @@ export function Dashboard({
         }
       />
 
+      {editing ? null : <PhoneHomeTiles />}
+
       <WidgetBoard
         dashboard={dashboard}
         editing={editing}
@@ -151,26 +155,24 @@ function DashboardHeader({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="lg"
-            className="max-lg:h-10"
-            onClick={() => onEditing?.(true)}
-          >
+        // Phones start a paste or import a gist from the tiles above the widgets, and open
+        // Customize from the leading edge of the top bar.
+        <div className="hidden items-center gap-2 lg:flex">
+          <MobileHeaderLeading>
+            <button
+              type="button"
+              onClick={() => onEditing?.(true)}
+              className="-ml-2 flex h-10 items-center rounded-lg px-2 text-[17px] leading-[22px] text-link outline-none focus-visible:ring-2 focus-visible:ring-ring/40 lg:hidden"
+            >
+              {t("customize")}
+            </button>
+          </MobileHeaderLeading>
+          <Button variant="outline" size="lg" onClick={() => onEditing?.(true)}>
             <Settings2Icon />
             {t("customize")}
           </Button>
-          {/* Import gist lives in the More sheet on phones. */}
-          <span className="hidden lg:contents">
-            <ImportGistButton />
-          </span>
-          <Button
-            size="lg"
-            className="max-lg:h-10"
-            render={<Link href="/new" />}
-            nativeButton={false}
-          >
+          <ImportGistButton />
+          <Button size="lg" render={<Link href="/new" />} nativeButton={false}>
             <PlusIcon />
             {t("new_paste")}
           </Button>
@@ -187,18 +189,20 @@ export function DashboardLoading() {
   return (
     <div className="flex flex-col gap-5 p-4 lg:gap-6 lg:p-7">
       <DashboardHeader firstName={firstName(viewer.name)} />
+      <PhoneHomeTiles />
     </div>
   )
 }
 
-// One line under the greeting, shown only when a link expires within 48 hours or already has.
+// One line under the greeting on a wide screen, shown only when a link expires within 48 hours or
+// already has. Phones keep the greeting on its own.
 function AttentionLine({ data: source }: { data: DashboardSource }) {
   const data = useDashboardData(source)
   const t = useTranslations("Workspace")
   const { expiringSoon: expiring, expired } = data
   if (expiring === 0 && expired === 0) return null
   return (
-    <p className="text-[15px] leading-5 text-muted-foreground lg:text-sm">
+    <p className="hidden text-sm text-muted-foreground lg:block">
       {expiring > 0 && expired > 0
         ? t("attention_expiring_and_expired", { expiring, expired })
         : expiring > 0

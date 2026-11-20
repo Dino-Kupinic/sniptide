@@ -407,7 +407,11 @@
     "templates_clear": "清除筛选",
     "templates_use": "使用模板",
     "templates_use_label": "使用{title}",
-    "templates_intro": "在编辑器中打开模板，并保存为你自己的粘贴。"
+    "templates_intro": "在编辑器中打开模板，并保存为你自己的粘贴。",
+    "analytics_delta": "较上一周期 {delta}",
+    "analytics_peak": "峰值：{day} {value}",
+    "clear_search": "清除搜索",
+    "new_paste_titled": "新建名为“{title}”的粘贴"
   },
   "Secrets": {
     "title": "密钥",

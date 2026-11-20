@@ -13,7 +13,13 @@ for (const width of [1280, 390]) {
     await screen.getByLabel("Contents of untitled.txt").fill("original")
     await screen.getByRole("button", /^Create paste/).tap()
     await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
-    await screen.getByRole("button", "Edit", { visible: true }).tap()
+    if (width < 1024) {
+      // Phones keep Edit in the paste's menu in the top bar.
+      await screen.getByRole("button", "More actions", { visible: true }).tap()
+      await screen.getByRole("menuitem", "Edit", { exact: true }).tap()
+    } else {
+      await screen.getByRole("button", "Edit", { visible: true }).tap()
+    }
 
     // Speed up the display clock without waiting minutes or changing server timestamps.
     await browser.evaluate(() => {
