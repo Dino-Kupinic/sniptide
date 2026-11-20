@@ -1,88 +1,65 @@
 "use client"
 
-import { PlusIcon } from "lucide-react"
+import { SearchIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
-import * as React from "react"
-import type { ViewerSummary } from "@/lib/viewer"
-import { type MoreCounts, MoreSheet } from "./more-sheet"
-import { isActivePath, mobileTabs, moreTab } from "./nav-config"
+import { useCommandMenu } from "@/components/command-menu/command-menu"
+import { isActivePath, mobileTabs } from "./nav-config"
 
+// The tour outlines its target 2px outside it, which a tab at the screen edge has no room for, so
+// it sits inside the tab.
 const tabClass =
-  "flex w-15 flex-col items-center justify-center gap-[3px] self-stretch text-[11px] leading-[14px] font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 aria-[current=page]:font-semibold aria-[current=page]:text-foreground"
+  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 self-stretch text-[11px] leading-[14px] font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset data-tour-current:-outline-offset-2 aria-[current=page]:font-semibold aria-[current=page]:text-link"
 
-// Bottom tab bar below lg. "More" opens the More sheet with everything the sidebar holds beyond
-// the three main tabs, and lights up on the pages it leads to.
-export function TabBar({
-  viewer,
-  counts,
-}: {
-  viewer: ViewerSummary
-  // For a page outside the app shell. Inside it the More sheet counts from the shell's data.
-  counts?: MoreCounts
-}) {
+// Bottom tab bar below lg: Home, Pastes and Library as pages, then Search, which opens the
+// command menu. The current tab takes the link color, like a tinted iOS tab bar.
+export function TabBar() {
   const t = useTranslations("Workspace")
   const pathname = usePathname()
-  const [moreOpen, setMoreOpen] = React.useState(false)
-  const moreActive = moreTab.match.some((href) => isActivePath(pathname, href))
+  const { open: openCommandMenu, importGist } = useCommandMenu()
+  // The root 404 renders the tab bar outside the app shell, where no command menu listens, so
+  // Search leads to the pastes list instead.
+  const inShell = importGist !== null
 
   return (
     <nav
       aria-label={t("main")}
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <div className="flex h-14 items-center justify-around pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))]">
-        {mobileTabs.slice(0, 2).map((tab) => (
-          <Tab
+      <div className="flex h-14 items-stretch pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
+        {mobileTabs.map((tab) => (
+          <Link
             key={tab.href}
-            tab={tab}
-            active={tab.match.some((href) => isActivePath(pathname, href))}
-          />
+            href={tab.href}
+            aria-current={
+              tab.match.some((href) => isActivePath(pathname, href)) ? "page" : undefined
+            }
+            data-tour={tab.href === "/library" ? "library-tab" : undefined}
+            className={tabClass}
+          >
+            <tab.icon className="size-6" strokeWidth={1.75} />
+            {t(tab.label)}
+          </Link>
         ))}
-        <Link
-          href="/new"
-          aria-label={t("new_paste")}
-          data-tour="new-paste-tab"
-          className="flex w-15 justify-center outline-none focus-visible:[&>span]:ring-2 focus-visible:[&>span]:ring-ring/40 focus-visible:[&>span]:ring-offset-2"
-        >
-          <span className="flex h-10 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <PlusIcon className="size-[22px]" strokeWidth={2.4} />
-          </span>
-        </Link>
-        {mobileTabs.slice(2).map((tab) => (
-          <Tab
-            key={tab.href}
-            tab={tab}
-            active={tab.match.some((href) => isActivePath(pathname, href))}
-          />
-        ))}
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          aria-expanded={moreOpen}
-          // Marks the button like the current tab while on one of the pages the sheet leads to.
-          aria-current={moreActive ? "page" : undefined}
-          onClick={() => setMoreOpen(true)}
-          data-tour="more-tab"
-          // The tab reaches the screen edge, so the tour's outline sits inside it.
-          className={`${tabClass} data-tour-current:-outline-offset-2`}
-        >
-          <moreTab.icon className="size-[22px]" />
-          {t(moreTab.label)}
-        </button>
+        {inShell ? (
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={openCommandMenu}
+            data-tour="search-tab"
+            className={tabClass}
+          >
+            <SearchIcon className="size-6" strokeWidth={1.75} />
+            {t("search")}
+          </button>
+        ) : (
+          <Link href="/pastes" className={tabClass}>
+            <SearchIcon className="size-6" strokeWidth={1.75} />
+            {t("search")}
+          </Link>
+        )}
       </div>
-      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} viewer={viewer} counts={counts} />
     </nav>
-  )
-}
-
-function Tab({ tab, active }: { tab: (typeof mobileTabs)[number]; active: boolean }) {
-  const t = useTranslations("Workspace")
-  return (
-    <Link href={tab.href} aria-current={active ? "page" : undefined} className={tabClass}>
-      <tab.icon className="size-[22px]" />
-      {t(tab.label)}
-    </Link>
   )
 }

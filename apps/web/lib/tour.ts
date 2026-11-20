@@ -10,8 +10,8 @@ interface TourTarget {
   name: string
   // Where the popover sits relative to the element.
   side: TourSide
-  // A second text for a target that only leads to the feature, such as the More tab.
-  body?: "bodyMore"
+  // A second text for a target that only leads to the feature, such as the Library tab.
+  body?: "bodyLibrary"
 }
 
 export interface TourStep {
@@ -24,7 +24,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     id: "new_paste",
     targets: [
       { name: "new-paste", side: "right" },
-      { name: "new-paste-tab", side: "top" },
+      { name: "new-paste-mobile", side: "bottom" },
     ],
   },
   // The Paste templates widget, right after New paste: the other way to make a first paste.
@@ -33,14 +33,14 @@ export const TOUR_STEPS: readonly TourStep[] = [
     id: "search",
     targets: [
       { name: "search", side: "right" },
-      { name: "search-mobile", side: "bottom" },
+      { name: "search-tab", side: "top" },
     ],
   },
   {
     id: "collections",
     targets: [
       { name: "collections", side: "right" },
-      { name: "more-tab", side: "top", body: "bodyMore" },
+      { name: "library-tab", side: "top", body: "bodyLibrary" },
     ],
   },
   { id: "agent", targets: [{ name: "agent", side: "bottom" }] },

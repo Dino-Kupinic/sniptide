@@ -83,7 +83,7 @@ test("create, edit, reveal and revoke an encrypted env group", async ({ app, bro
   await browser.setCookies(cookies)
   await browser.setViewport({ width: 390, height: 844 })
   await app.open("/dashboard")
-  await screen.getByRole("button", "More", { exact: true, visible: true }).tap()
+  await screen.getByRole("link", "Library", { exact: true, visible: true }).tap()
   await screen.getByRole("link", "Secrets", { exact: true, visible: true }).tap()
   await expect(browser).toHaveURL("/secrets")
   await expect(screen.getByRole("heading", "Browser project", { exact: true })).toBeVisible()

@@ -79,7 +79,7 @@
       "collections": {
         "title": "Agrupa fragmentos en colecciones",
         "body": "Una colección reúne los fragmentos relacionados, y tu agente puede obtenerla entera de una vez.",
-        "bodyMore": "Las colecciones están en Más. Una colección reúne los fragmentos relacionados, y tu agente puede obtenerla entera de una vez."
+        "bodyLibrary": "Las colecciones están en Biblioteca. Una colección reúne los fragmentos relacionados, y tu agente puede obtenerla entera de una vez."
       },
       "agent": {
         "title": "Conecta tu agente",

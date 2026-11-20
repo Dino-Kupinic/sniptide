@@ -79,7 +79,7 @@
       "collections": {
         "title": "Pastes in Sammlungen ordnen",
         "body": "Eine Sammlung hält zusammengehörige Pastes beisammen, und dein Agent kann sie in einem Zug abrufen.",
-        "bodyMore": "Sammlungen findest du unter „Mehr“. Eine Sammlung hält zusammengehörige Pastes beisammen, und dein Agent kann sie in einem Zug abrufen."
+        "bodyLibrary": "Sammlungen findest du in der Bibliothek. Eine Sammlung hält zusammengehörige Pastes beisammen, und dein Agent kann sie in einem Zug abrufen."
       },
       "agent": {
         "title": "Deinen Agenten verbinden",

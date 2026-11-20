@@ -263,7 +263,7 @@ export function AppShell({
                             </main>
                           </div>
 
-                          {chrome.tabBar ? <TabBar viewer={sidebarProps.viewer} /> : null}
+                          {chrome.tabBar ? <TabBar /> : null}
                         </div>
                         {/* The demo's visitors share one guest account, so they don't follow its changes. */}
                         {demo ? null : <LiveUpdates />}

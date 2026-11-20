@@ -79,7 +79,7 @@
       "collections": {
         "title": "Group pastes in collections",
         "body": "A collection keeps related pastes together, and your agent can fetch all of it at once.",
-        "bodyMore": "Collections are under More. A collection keeps related pastes together, and your agent can fetch all of it at once."
+        "bodyLibrary": "Collections are in Library. A collection keeps related pastes together, and your agent can fetch all of it at once."
       },
       "agent": {
         "title": "Connect your agent",

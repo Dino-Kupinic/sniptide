@@ -124,13 +124,16 @@ test("on a phone the tour points at the tab bar and the top bar", async ({
 
   const tour = screen.getByRole("dialog")
   await expect(tour.getByRole("heading", "Save a paste")).toBeVisible()
-  await expect(browser.locator("[data-tour-current]")).toHaveAttribute("data-tour", "new-paste-tab")
+  await expect(browser.locator("[data-tour-current]")).toHaveAttribute(
+    "data-tour",
+    "new-paste-mobile",
+  )
   await tour.getByRole("button", "Next").tap()
-  await expect(browser.locator("[data-tour-current]")).toHaveAttribute("data-tour", "search-mobile")
+  await expect(browser.locator("[data-tour-current]")).toHaveAttribute("data-tour", "search-tab")
   await tour.getByRole("button", "Next").tap()
-  await expect(tour.getByText(/^Collections are under More\./)).toBeVisible()
-  await expect(browser.locator("[data-tour-current]")).toHaveAttribute("data-tour", "more-tab")
-  await app.screenshot("tour-phone-more")
+  await expect(tour.getByText(/^Collections are in Library\./)).toBeVisible()
+  await expect(browser.locator("[data-tour-current]")).toHaveAttribute("data-tour", "library-tab")
+  await app.screenshot("tour-phone-library")
   expect(await browser.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
     390,
   )
