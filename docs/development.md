@@ -642,8 +642,13 @@ To pause automatic deploys, set `COOLIFY_PRODUCTION_DEPLOY` to `false`.
 
 When CI passes on a pull request from a branch in this repository, `Manage image preview`
 deploys the tested image as a Coolify preview. It then creates a GitHub deployment in the
-`preview-pr-<number>` environment, so the pull request shows the preview link under its
-deployments. Closing the pull request removes the preview and marks those deployments inactive.
+`preview-pr-<number>` environment and posts one comment with the preview link, which later
+deploys update. Closing the pull request removes the preview, marks those deployments inactive
+and updates the comment.
+
+The link comes from the `PREVIEW_URL_TEMPLATE` repository variable when it is set, such as
+`https://{{pr_id}}.preview.sniptide.com`. Otherwise it comes from the preview domain Coolify
+reports, or from the preview application's domain and its preview URL template.
 
 ## Revision comparison performance
 

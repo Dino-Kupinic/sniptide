@@ -23,6 +23,7 @@ export async function managePreview(
     coolifyUrl,
     appId,
     logUrl,
+    urlTemplate,
   } = config
   if (
     !["workflow_run", "workflow_dispatch"].includes(action) ||
@@ -67,15 +68,42 @@ export async function managePreview(
     api("https://api.github.com", `/repos/${repo}${path}`, githubToken, options)
   // A GitHub deployment per pull request puts the preview link on the pull request page.
   const deploymentEnvironment = `preview-pr-${pr}`
-  const previewUrl = (fqdn) => {
-    if (typeof fqdn !== "string") return undefined
-    for (const candidate of fqdn.split(",")) {
-      try {
-        const u = new URL(candidate.trim())
-        if (u.protocol === "https:" && !u.username && !u.password) return u.origin
-      } catch {}
+  const httpsOrigin = (value) => {
+    try {
+      const u = new URL(value.trim())
+      if (u.protocol === "https:" && !u.username && !u.password && u.hostname) return u.origin
+    } catch {}
+    return undefined
+  }
+  // Coolify doesn't always return the preview's domain, so fall back to the configured template,
+  // then to Coolify's preview template applied to the application's domain.
+  const previewUrl = (preview) => {
+    if (urlTemplate) return httpsOrigin(urlTemplate.replaceAll("{{pr_id}}", pr))
+    for (const candidate of String(preview?.fqdn ?? "").split(",")) {
+      const url = httpsOrigin(candidate)
+      if (url) return url
+    }
+    const template = app.preview_url_template || "{{pr_id}}.{{domain}}"
+    if (template.includes("{{random}}")) return undefined
+    for (const candidate of String(app.fqdn ?? "").split(",")) {
+      const base = httpsOrigin(candidate)
+      if (!base) continue
+      const host = template.replaceAll("{{pr_id}}", pr).replaceAll("{{domain}}", new URL(base).host)
+      const url = httpsOrigin(`https://${host}`)
+      if (url) return url
     }
     return undefined
+  }
+  const marker = "<!-- sniptide-preview -->"
+  // One comment per pull request, updated on every deploy, so the link sits in the conversation.
+  const comment = async (body) => {
+    const comments = await github(`/issues/${pr}/comments?per_page=100`)
+    if (!Array.isArray(comments)) throw new Error("Invalid comment list")
+    const existing = comments.find(
+      (entry) => entry?.user?.type === "Bot" && entry.body?.startsWith(marker),
+    )
+    const options = { method: existing ? "PATCH" : "POST", body: JSON.stringify({ body }) }
+    await github(existing ? `/issues/comments/${existing.id}` : `/issues/${pr}/comments`, options)
   }
   const announce = async (preview) => {
     const deployment = await github("/deployments", {
@@ -91,7 +119,7 @@ export async function managePreview(
       }),
     })
     if (!Number.isSafeInteger(deployment?.id)) throw new Error("GitHub did not create a deployment")
-    const url = previewUrl(preview.fqdn)
+    const url = previewUrl(preview)
     await github(`/deployments/${deployment.id}/statuses`, {
       method: "POST",
       body: JSON.stringify({
@@ -101,6 +129,11 @@ export async function managePreview(
         auto_inactive: true,
       }),
     })
+    const commit = receipt.head_sha.slice(0, 7)
+    const link = url ? `[${new URL(url).host}](${url})` : "Coolify didn't report a URL"
+    await comment(
+      `${marker}\nPreview for ${commit} is deployed: ${link}${logUrl ? ` ([run](${logUrl}))` : ""}`,
+    )
     return url
   }
   const retire = async () => {
@@ -169,6 +202,7 @@ export async function managePreview(
       true,
     )
     await retire()
+    await comment(`${marker}\nPreview removed because the pull request is closed.`)
     console.log(
       deleted
         ? "Cleanup requested; verify containers and queued deployments on the server."
@@ -312,6 +346,7 @@ if (import.meta.main) {
         coolifyToken: e.COOLIFY_TOKEN,
         coolifyUrl: e.COOLIFY_URL,
         appId: e.COOLIFY_APP_ID,
+        urlTemplate: e.PREVIEW_URL_TEMPLATE || undefined,
         logUrl:
           e.GITHUB_RUN_ID && e.GITHUB_SERVER_URL
             ? `${e.GITHUB_SERVER_URL}/${e.GITHUB_REPOSITORY}/actions/runs/${e.GITHUB_RUN_ID}`
