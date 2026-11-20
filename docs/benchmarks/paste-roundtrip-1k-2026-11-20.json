@@ -1,0 +1,240 @@
+{
+  "started": "2026-11-20T12:46:24.522Z",
+  "browser": "157.0.8103.80",
+  "platform": "darwin",
+  "rounds": 8,
+  "bytes": 1024,
+  "roundPauseMs": 11000,
+  "instances": [
+    {
+      "name": "Sniptide",
+      "origin": "http://127.0.0.1:57115"
+    },
+    {
+      "name": "PrivateBin",
+      "origin": "http://127.0.0.1:57111"
+    },
+    {
+      "name": "Opengist",
+      "origin": "http://127.0.0.1:57112"
+    },
+    {
+      "name": "MicroBin",
+      "origin": "http://127.0.0.1:57113"
+    }
+  ],
+  "rows": [
+    {
+      "name": "Sniptide",
+      "samples": [
+        {
+          "outcome": "verified",
+          "createMs": 125,
+          "readMs": 147,
+          "totalMs": 272
+        },
+        {
+          "outcome": "verified",
+          "createMs": 138,
+          "readMs": 155,
+          "totalMs": 293
+        },
+        {
+          "outcome": "verified",
+          "createMs": 148,
+          "readMs": 137,
+          "totalMs": 285
+        },
+        {
+          "outcome": "verified",
+          "createMs": 119,
+          "readMs": 147,
+          "totalMs": 266
+        },
+        {
+          "outcome": "verified",
+          "createMs": 126,
+          "readMs": 150,
+          "totalMs": 275
+        },
+        {
+          "outcome": "verified",
+          "createMs": 129,
+          "readMs": 169,
+          "totalMs": 298
+        },
+        {
+          "outcome": "verified",
+          "createMs": 115,
+          "readMs": 160,
+          "totalMs": 275
+        },
+        {
+          "outcome": "verified",
+          "createMs": 136,
+          "readMs": 150,
+          "totalMs": 286
+        }
+      ]
+    },
+    {
+      "name": "PrivateBin",
+      "samples": [
+        {
+          "outcome": "verified",
+          "createMs": 73,
+          "readMs": 134,
+          "totalMs": 207
+        },
+        {
+          "outcome": "verified",
+          "createMs": 73,
+          "readMs": 107,
+          "totalMs": 181
+        },
+        {
+          "outcome": "verified",
+          "createMs": 71,
+          "readMs": 134,
+          "totalMs": 205
+        },
+        {
+          "outcome": "verified",
+          "createMs": 77,
+          "readMs": 134,
+          "totalMs": 211
+        },
+        {
+          "outcome": "verified",
+          "createMs": 66,
+          "readMs": 99,
+          "totalMs": 166
+        },
+        {
+          "outcome": "verified",
+          "createMs": 69,
+          "readMs": 101,
+          "totalMs": 170
+        },
+        {
+          "outcome": "verified",
+          "createMs": 73,
+          "readMs": 128,
+          "totalMs": 200
+        },
+        {
+          "outcome": "verified",
+          "createMs": 72,
+          "readMs": 117,
+          "totalMs": 189
+        }
+      ]
+    },
+    {
+      "name": "Opengist",
+      "samples": [
+        {
+          "outcome": "verified",
+          "createMs": 548,
+          "readMs": 133,
+          "totalMs": 682
+        },
+        {
+          "outcome": "verified",
+          "createMs": 651,
+          "readMs": 122,
+          "totalMs": 773
+        },
+        {
+          "outcome": "verified",
+          "createMs": 671,
+          "readMs": 128,
+          "totalMs": 799
+        },
+        {
+          "outcome": "verified",
+          "createMs": 609,
+          "readMs": 128,
+          "totalMs": 737
+        },
+        {
+          "outcome": "verified",
+          "createMs": 625,
+          "readMs": 117,
+          "totalMs": 742
+        },
+        {
+          "outcome": "verified",
+          "createMs": 592,
+          "readMs": 113,
+          "totalMs": 705
+        },
+        {
+          "outcome": "verified",
+          "createMs": 614,
+          "readMs": 126,
+          "totalMs": 740
+        },
+        {
+          "outcome": "verified",
+          "createMs": 582,
+          "readMs": 119,
+          "totalMs": 701
+        }
+      ]
+    },
+    {
+      "name": "MicroBin",
+      "samples": [
+        {
+          "outcome": "verified",
+          "createMs": 73,
+          "readMs": 70,
+          "totalMs": 142
+        },
+        {
+          "outcome": "verified",
+          "createMs": 72,
+          "readMs": 60,
+          "totalMs": 133
+        },
+        {
+          "outcome": "verified",
+          "createMs": 76,
+          "readMs": 92,
+          "totalMs": 168
+        },
+        {
+          "outcome": "verified",
+          "createMs": 68,
+          "readMs": 69,
+          "totalMs": 137
+        },
+        {
+          "outcome": "verified",
+          "createMs": 67,
+          "readMs": 60,
+          "totalMs": 127
+        },
+        {
+          "outcome": "verified",
+          "createMs": 78,
+          "readMs": 60,
+          "totalMs": 138
+        },
+        {
+          "outcome": "verified",
+          "createMs": 73,
+          "readMs": 60,
+          "totalMs": 134
+        },
+        {
+          "outcome": "verified",
+          "createMs": 71,
+          "readMs": 59,
+          "totalMs": 130
+        }
+      ]
+    }
+  ]
+}
