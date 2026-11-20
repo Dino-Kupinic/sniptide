@@ -9,7 +9,7 @@ import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { setLocale } from "@/lib/i18n/actions"
 import { localeCookie } from "@/lib/i18n/config"
-import { sendEmailVerification, sendPasswordReset } from "@/lib/mail"
+import { sendEmailVerification, sendPasswordReset, sendWelcomeEmail } from "@/lib/mail"
 import { deliverNotificationEmails } from "@/lib/notifications/email"
 import { notifyExpiringPastes } from "@/lib/notifications/expiring"
 import { recordNotifications } from "@/lib/notifications/record"
@@ -46,6 +46,7 @@ const envKeys = [
   "BETTER_AUTH_URL",
   "BETTER_AUTH_SECRET",
   "NOTIFICATION_EMAIL_CONCURRENCY",
+  "WELCOME_EMAIL",
 ]
 
 async function smtpSink() {
@@ -627,6 +628,60 @@ describeDb("notification channel delivery", () => {
     expect(account?.emailVerified).toBe(true)
     signInAs(account?.id ?? null)
     await enable()
+  })
+  test("a new account gets one welcome email after its first session", async () => {
+    const config = getConfig()
+    const auth = createAuth({
+      db: getDb(),
+      secret: config.authSecret ?? "",
+      baseURL: config.appUrl,
+      rateLimitEnabled: false,
+      sendWelcomeEmail,
+    })
+    const waitForMessages = async (count: number) => {
+      for (let wait = 0; wait < 50 && sink.messages.length < count; wait++) await Bun.sleep(20)
+      await Bun.sleep(50)
+    }
+    await auth.api.signUpEmail({
+      body: {
+        name: "Newcomer",
+        email: "newcomer@example.com",
+        password: "a-long-password-123",
+        username: "newcomer",
+      },
+      headers: new Headers({ "accept-language": "de" }),
+    })
+    await waitForMessages(1)
+    expect(sink.messages).toHaveLength(1)
+    const message = (sink.messages[0] ?? "").replace(/=\r\n/g, "").replace(/=3D/g, "=")
+    expect(message).toContain("To: newcomer@example.com")
+    expect(message).toContain("http://localhost:3000/new")
+    expect(message).toContain('lang="de"')
+    // Later sign-ins send nothing more.
+    await auth.api.signInEmail({
+      body: { email: "newcomer@example.com", password: "a-long-password-123" },
+    })
+    await waitForMessages(2)
+    expect(sink.messages).toHaveLength(1)
+    // Accounts from before the welcome email have no pending flag and never get one.
+    await seedUser("existing")
+    expect(
+      (await getDb().select().from(user).where(eq(user.id, "existing")))[0]?.welcomePending,
+    ).toBe(false)
+    // WELCOME_EMAIL=false clears the flag without sending.
+    process.env.WELCOME_EMAIL = "false"
+    await auth.api.signUpEmail({
+      body: {
+        name: "Quiet",
+        email: "quiet@example.com",
+        password: "a-long-password-123",
+        username: "quietone",
+      },
+    })
+    await waitForMessages(2)
+    expect(sink.messages).toHaveLength(1)
+    const [quiet] = await getDb().select().from(user).where(eq(user.email, "quiet@example.com"))
+    expect(quiet?.welcomePending).toBe(false)
   })
   test("a forgotten password resets through real auth and local SMTP", async () => {
     const config = getConfig()

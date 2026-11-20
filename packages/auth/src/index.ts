@@ -4,6 +4,7 @@ import * as schema from "@workspace/db/schema"
 import { type BetterAuthOptions, type BetterAuthPlugin, betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { username } from "better-auth/plugins/username"
+import { and, eq } from "drizzle-orm"
 import { assertAllowed, assertSignUpOpen, parseAllowlist, type SignUpMode } from "./allowlist"
 import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_PATHS } from "./demo"
 import { generateUsername } from "./generate-username"
@@ -53,6 +54,12 @@ export interface AuthConfig {
   sendChangeEmailConfirmation?: NonNullable<
     NonNullable<BetterAuthOptions["user"]>["changeEmail"]
   >["sendChangeEmailConfirmation"]
+  // Sends the welcome email. Called once per account, after its first session starts, so an
+  // invited account gets it after verifying its email. Errors are logged and never block sign-in.
+  sendWelcomeEmail?: (
+    user: { id: string; email: string; name: string },
+    request?: Request,
+  ) => Promise<void>
   // Where GitHub and Google sign-in failures land, with the reason as ?error=<code>.
   errorURL?: string
   plugins?: BetterAuthPlugin[]
@@ -75,6 +82,7 @@ export function createAuth({
   emailVerification,
   sendResetPassword,
   sendChangeEmailConfirmation,
+  sendWelcomeEmail,
   errorURL,
   plugins = [],
 }: AuthConfig) {
@@ -128,6 +136,13 @@ export function createAuth({
           input: false,
           returned: false,
         },
+        welcomePending: {
+          type: "boolean",
+          required: false,
+          defaultValue: false,
+          input: false,
+          returned: false,
+        },
       },
       changeEmail: {
         enabled: true,
@@ -175,7 +190,12 @@ export function createAuth({
                     displayUsername: value,
                   }))
             return {
-              data: { ...boundUserFields(user, "create"), ...username, pendingInvitation },
+              data: {
+                ...boundUserFields(user, "create"),
+                ...username,
+                pendingInvitation,
+                welcomePending: true,
+              },
             }
           },
         },
@@ -203,6 +223,37 @@ export function createAuth({
                 code: "EMAIL_NOT_VERIFIED",
                 message: "Verify your email before signing in.",
               })
+          },
+          // The first session of an account claims its welcome email. The update matches only
+          // while the flag is set, so concurrent sign-ins send one email between them. The flag
+          // clears without SMTP too, so turning SMTP on later doesn't greet old accounts.
+          after: async (session, ctx) => {
+            const [welcomed] = await db
+              .update(schema.user)
+              .set({ welcomePending: false })
+              .where(
+                and(
+                  eq(schema.user.id, session.userId),
+                  eq(schema.user.welcomePending, true),
+                  eq(schema.user.pendingInvitation, false),
+                ),
+              )
+              .returning({
+                id: schema.user.id,
+                email: schema.user.email,
+                name: schema.user.name,
+              })
+            if (!welcomed || !sendWelcomeEmail) return
+            // Server-side API calls carry headers without a request; the email's language reads
+            // the locale cookie and Accept-Language from either.
+            const request =
+              ctx?.request ??
+              (ctx?.headers
+                ? new Request("http://localhost/", { headers: ctx.headers })
+                : undefined)
+            void sendWelcomeEmail(welcomed, request).catch((error) =>
+              console.error("Welcome email failed", error),
+            )
           },
         },
       },

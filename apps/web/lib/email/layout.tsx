@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import {
   Button,
   Container,
@@ -13,7 +13,7 @@ import {
   Text,
 } from "react-email"
 import type { EmailContent, Paragraph } from "./content"
-import { darkModeCss, fonts, light } from "./theme"
+import { darkModeCss, fontFaceCss, fonts, light, phoneCss } from "./theme"
 
 const text: CSSProperties = {
   margin: "0 0 16px",
@@ -29,6 +29,21 @@ const small: CSSProperties = {
   fontSize: "13px",
   lineHeight: "18px",
   color: light.muted,
+}
+
+// One block of the card. The class lets phones swap the 24px sides for the 16px gutter.
+function Padded({ padding, children }: { padding: string; children: ReactNode }) {
+  return (
+    <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0}>
+      <tbody>
+        <tr>
+          <td className="st-pad" style={{ padding }}>
+            {children}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  )
 }
 
 function Runs({ paragraph }: { paragraph: Paragraph }) {
@@ -85,14 +100,14 @@ function Brand({ logo }: { logo: EmailContent["logo"] }) {
 }
 
 export function EmailLayout({ content }: { content: EmailContent }) {
-  const { preview, heading, body, action, after, note, footer } = content
+  const { preview, heading, body, action, steps, after, note, footer } = content
   return (
     <Html lang={content.locale} dir="ltr">
       <Head>
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
         <title>{content.subject}</title>
-        <style>{darkModeCss}</style>
+        <style>{`${content.fontsUrl ? fontFaceCss(content.fontsUrl) : ""}${phoneCss}${darkModeCss}`}</style>
       </Head>
       <Preview useTitleTag={false}>{preview}</Preview>
       {/* A plain body instead of React Email's Body, which repeats the background on an inner cell
@@ -108,7 +123,7 @@ export function EmailLayout({ content }: { content: EmailContent }) {
         >
           <tbody>
             <tr>
-              <td style={{ padding: "24px 8px" }}>
+              <td className="st-outer" style={{ padding: "24px 8px" }}>
                 <Container
                   className="st-surface"
                   style={{
@@ -118,10 +133,10 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                     borderRadius: "6px",
                   }}
                 >
-                  <Section style={{ padding: "24px 24px 0" }}>
+                  <Padded padding="24px 24px 0">
                     <Brand logo={content.logo} />
-                  </Section>
-                  <Section style={{ padding: "32px 24px 8px" }}>
+                  </Padded>
+                  <Padded padding="32px 24px 8px">
                     <Heading
                       as="h1"
                       className="st-text"
@@ -162,29 +177,64 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                         {action.label}
                       </Button>
                     </Section>
+                    {steps?.length ? (
+                      <Section>
+                        <Hr
+                          className="st-rule"
+                          style={{
+                            margin: "0 0 20px",
+                            border: 0,
+                            borderTop: `1px solid ${light.border}`,
+                          }}
+                        />
+                        {steps.map((step) => (
+                          <Text key={step.href} style={{ ...text, margin: "0 0 16px" }}>
+                            <Link
+                              className="st-link"
+                              href={step.href}
+                              style={{ color: light.link, fontWeight: 600, textDecoration: "none" }}
+                            >
+                              {step.label}
+                            </Link>
+                            <br />
+                            <span className="st-muted" style={{ color: light.muted }}>
+                              {step.body}
+                            </span>
+                          </Text>
+                        ))}
+                      </Section>
+                    ) : null}
                     {after?.map((paragraph, index) => (
                       <Text key={index} className="st-text" style={text}>
                         <Runs paragraph={paragraph} />
                       </Text>
                     ))}
-                    <Text
-                      className="st-muted"
-                      style={{ ...small, fontSize: "14px", lineHeight: "20px" }}
-                    >
-                      {content.buttonFallback}
-                    </Text>
-                    <Text
-                      style={{
-                        ...small,
-                        margin: "0 0 16px",
-                        fontFamily: fonts.mono,
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      <Link className="st-link" href={action.href} style={{ color: light.link }}>
-                        {action.href}
-                      </Link>
-                    </Text>
+                    {content.buttonFallback ? (
+                      <>
+                        <Text
+                          className="st-muted"
+                          style={{ ...small, fontSize: "14px", lineHeight: "20px" }}
+                        >
+                          {content.buttonFallback}
+                        </Text>
+                        <Text
+                          style={{
+                            ...small,
+                            margin: "0 0 16px",
+                            fontFamily: fonts.mono,
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          <Link
+                            className="st-link"
+                            href={action.href}
+                            style={{ color: light.link }}
+                          >
+                            {action.href}
+                          </Link>
+                        </Text>
+                      </>
+                    ) : null}
                     {note ? (
                       <Text
                         className="st-muted"
@@ -193,8 +243,8 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                         {note}
                       </Text>
                     ) : null}
-                  </Section>
-                  <Section style={{ padding: "0 24px 24px" }}>
+                  </Padded>
+                  <Padded padding="0 24px 24px">
                     <Hr
                       className="st-rule"
                       style={{
@@ -227,7 +277,7 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                         {footer.sender}
                       </Text>
                     ) : null}
-                  </Section>
+                  </Padded>
                 </Container>
               </td>
             </tr>

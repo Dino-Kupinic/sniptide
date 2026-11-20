@@ -72,6 +72,27 @@
         "action": "Statistiken öffnen",
         "event": "Meilensteine bei Aufrufen"
       }
+    },
+    "welcome": {
+      "subject": "Willkommen bei Sniptide",
+      "preview": "Speichere deinen ersten Paste und lass deinen Agenten Sniptide über MCP oder die CLI nutzen.",
+      "heading": "Willkommen bei Sniptide",
+      "body": "Dein Konto für <b>{email}</b> ist bereit.",
+      "next": "Füge Code oder Text ein, wähle, wer ihn sehen darf, und teile den Link. Deine Agenten speichern und lesen Pastes auf dieselbe Weise.",
+      "action": "Paste erstellen",
+      "agent": {
+        "label": "Agenten verbinden",
+        "body": "Füge den MCP-Server hinzu, damit Claude, Cursor oder Codex Snippets für dich speichern und finden."
+      },
+      "cli": {
+        "label": "CLI installieren",
+        "body": "Leite die Ausgabe deines Terminals in einen Paste und erhalte den Link zurück."
+      },
+      "settings": {
+        "label": "Standards festlegen",
+        "body": "Wähle Sichtbarkeit und Ablauf, mit denen neue Pastes beginnen."
+      },
+      "reason": "Wir haben diese E-Mail an {email} gesendet, weil du ein Sniptide-Konto erstellt hast. Es ist die einzige Willkommens-E-Mail, die wir senden."
     }
   }
 }

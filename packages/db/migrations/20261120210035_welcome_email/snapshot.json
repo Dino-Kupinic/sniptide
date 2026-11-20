@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "89ad783f-f219-41c8-8abd-60a7f7693163",
+  "prevIds": [
+    "a8b398c0-9324-4bdc-81d6-f116f0f8aa72"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "user",
+        "welcome_pending"
+      ],
+      "writes": [
+        "s|col|public.user.welcome_pending",
+        "n|col|public.user.welcome_pending",
+        "e|col|public.user.welcome_pending"
+      ],
+      "reads": [
+        "n|tbl|public.user",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user",
+        "name": "welcome_pending",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

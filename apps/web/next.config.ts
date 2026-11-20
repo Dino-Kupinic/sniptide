@@ -71,6 +71,15 @@ const nextConfig: NextConfig = {
         source: embedPath,
         headers: [{ key: "Content-Security-Policy", value: contentSecurityPolicy("*") }],
       },
+      {
+        // Email clients load these fonts from a message, which has no origin of this app, and
+        // browsers refuse cross-origin web fonts without this header.
+        source: "/email/fonts/:file",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
       ...["/secrets/:path*", "/secret-share/:path*"].map((source) => ({
         source,
         headers: [

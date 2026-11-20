@@ -140,6 +140,7 @@ const schema = z.object({
   SHARE_URL: origin.optional(),
   HOME_URL: z.url({ message: "must be a full URL like https://example.com/home." }).optional(),
   DEMO_MODE: flag.default(false),
+  WELCOME_EMAIL: flag.default(true),
   HOMEPAGE_URL: origin.default(DEFAULT_RESOURCE_LINKS.homepage),
   DOCS_URL: z
     .url({ message: "must be a full URL like https://docs.example.com." })
@@ -328,6 +329,8 @@ function parseConfig(env: Record<string, string | undefined>) {
     shareUrl: shareUrlForEdition(value.SHARE_URL, { edition: value.SNIPTIDE_EDITION }),
     homeUrl: value.HOME_URL,
     demoMode: value.DEMO_MODE,
+    // Whether new accounts get the welcome email. It also needs SMTP.
+    welcomeEmail: value.WELCOME_EMAIL,
     templatesUrl: value.TEMPLATES_URL,
     resourceLinks: {
       homepage: value.HOMEPAGE_URL,

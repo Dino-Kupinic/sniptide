@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "welcome_pending" boolean DEFAULT false NOT NULL;

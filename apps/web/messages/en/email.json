@@ -72,6 +72,27 @@
         "action": "Open Analytics",
         "event": "view milestones"
       }
+    },
+    "welcome": {
+      "subject": "Welcome to Sniptide",
+      "preview": "Save your first paste, then let your agent use Sniptide through MCP or the CLI.",
+      "heading": "Welcome to Sniptide",
+      "body": "Your account for <b>{email}</b> is ready.",
+      "next": "Paste code or text, choose who can see it and share the link. Your agents can save and read pastes the same way.",
+      "action": "Create a paste",
+      "agent": {
+        "label": "Connect your agent",
+        "body": "Add the MCP server so Claude, Cursor or Codex can save and find snippets for you."
+      },
+      "cli": {
+        "label": "Install the CLI",
+        "body": "Pipe output from your terminal into a paste and get the link back."
+      },
+      "settings": {
+        "label": "Set your defaults",
+        "body": "Choose the visibility and expiry new pastes start with."
+      },
+      "reason": "We sent this email to {email} because you created a Sniptide account. It's the only welcome email we send."
     }
   }
 }
