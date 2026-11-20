@@ -99,7 +99,7 @@ describe("dashboard widgets", () => {
     expect((await saveDashboardLayout(["agents"])).ok).toBe(false)
   })
 
-  testDb("loads rows only for the widgets on the layout, and recent pastes always", async () => {
+  testDb("loads rows only for the widgets on the layout", async () => {
     await seedPaste({ slug: "mine", owner: "owner" })
     const data = await getDashboardData("en", ["recent_pastes"])
     expect(data.recent?.map((row) => row.slug)).toEqual(["mine"])
@@ -109,9 +109,8 @@ describe("dashboard widgets", () => {
     expect(data.secrets).toBeUndefined()
     expect(data.collections).toBeUndefined()
 
-    // The phone's home screen lists recent pastes whatever the layout holds.
     const empty = await getDashboardData("en", [])
-    expect(empty.recent?.map((row) => row.slug)).toEqual(["mine"])
+    expect(empty.recent).toBeUndefined()
     expect(empty.expiringSoon).toBe(0)
   })
 

@@ -283,7 +283,7 @@ export function PasteList({
 
           {/* Mobile list */}
           {loading === undefined && pagination.total > 0 ? (
-            <PasteMobileList rows={rows} origin={origin} />
+            <PasteMobileList rows={rows} origin={origin} className="-mx-4 flex lg:hidden" />
           ) : null}
         </div>
 

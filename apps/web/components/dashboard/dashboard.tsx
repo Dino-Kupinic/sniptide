@@ -14,7 +14,7 @@ import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
 import type { AnalyticsSeries } from "@/lib/pastes/analytics"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import { firstName } from "@/lib/viewer"
-import { PhoneHome, WeekViewsLine } from "./phone-home"
+import { PhoneHomeTiles, WeekViewsLine } from "./phone-home"
 import {
   AddWidgetMenu,
   type DashboardTemplates,
@@ -70,7 +70,7 @@ export function Dashboard({
   week,
 }: {
   data: DashboardData | Promise<DashboardData>
-  // The last seven days of views, for the phone's home screen.
+  // The last seven days of views, counted under the greeting on phones.
   week: Promise<AnalyticsSeries>
   layout: WidgetId[]
   sizes?: WidgetSizes
@@ -117,19 +117,17 @@ export function Dashboard({
         }
       />
 
-      <PhoneHome data={data} week={week} />
+      {editing ? null : <PhoneHomeTiles />}
 
-      <div className="flex flex-col max-lg:hidden">
-        <WidgetBoard
-          dashboard={dashboard}
-          editing={editing}
-          data={data}
-          agents={agents}
-          templates={templates}
-          origin={origin}
-          appOrigin={appOrigin}
-        />
-      </div>
+      <WidgetBoard
+        dashboard={dashboard}
+        editing={editing}
+        data={data}
+        agents={agents}
+        templates={templates}
+        origin={origin}
+        appOrigin={appOrigin}
+      />
     </div>
   )
 }
@@ -165,14 +163,26 @@ function DashboardHeader({
           </Button>
         </div>
       ) : (
-        // Phones start a paste or import a gist from the home screen's tiles, and keep no widgets.
-        <div className="hidden items-center gap-2 lg:flex">
-          <Button variant="outline" size="lg" onClick={() => onEditing?.(true)}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            className="max-lg:h-10"
+            onClick={() => onEditing?.(true)}
+          >
             <Settings2Icon />
             {t("customize")}
           </Button>
-          <ImportGistButton />
-          <Button size="lg" render={<Link href="/new" />} nativeButton={false}>
+          {/* Phones start a paste or import a gist from the tiles above the widgets. */}
+          <span className="hidden lg:contents">
+            <ImportGistButton />
+          </span>
+          <Button
+            size="lg"
+            className="max-lg:hidden"
+            render={<Link href="/new" />}
+            nativeButton={false}
+          >
             <PlusIcon />
             {t("new_paste")}
           </Button>

@@ -364,7 +364,7 @@ function TableWidget({
         <PasteMobileList
           rows={rows}
           origin={origin}
-          className="flex lg:px-4 lg:[&>li:last-child]:border-b-0 lg:group-data-[widget-size=large]/widget:hidden"
+          className="-mx-4 flex lg:mx-0 lg:group-data-[widget-size=large]/widget:hidden"
         />
       </>
     )

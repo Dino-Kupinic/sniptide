@@ -297,7 +297,7 @@ export function PasteMobileList({
   className?: string
 }) {
   return (
-    <ul className={cn("-mx-4 flex-col", className ?? "flex lg:hidden")}>
+    <ul className={cn("flex-col", className ?? "flex lg:hidden")}>
       {rows.map((row) => (
         <PasteMobileRow key={row.slug} row={row} origin={origin} />
       ))}

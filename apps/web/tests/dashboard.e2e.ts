@@ -99,24 +99,28 @@ test("customizing adds, reorders and clears widgets, and templates fill it again
   await expect.poll(order).toEqual(["recent_pastes", "popular", "expiring"])
 })
 
-test("a phone gets its own home in place of the widgets and fits without scrolling", async ({
+test("the dashboard fits a phone without horizontal scrolling", async ({
   app,
   browser,
   screen,
 }) => {
   await browser.setViewport({ width: 360, height: 780 })
   await app.open("/dashboard")
+  await expect(screen.getByRole("heading", "Connect an agent")).toBeVisible()
   await expect(screen.getByText("Your pastes had 0 views this week.")).toBeVisible()
   await expect(
     screen.getByRole("button", "Import gist", { exact: true, visible: true }),
   ).toBeVisible()
-  // Customizing the widgets is a desktop task, so phones show neither the board nor its button.
-  await expect(screen.getByRole("heading", "Connect an agent", { visible: true })).toHaveCount(0)
-  await expect(screen.getByRole("button", "Customize", { visible: true })).toHaveCount(0)
   expect(
     await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBe(true)
   await app.screenshot("dashboard-phone")
+  await screen.getByRole("button", "Customize").tap()
+  await expect(screen.getByRole("button", "Move Agents")).toBeVisible()
+  expect(
+    await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+  ).toBe(true)
+  await app.screenshot("dashboard-phone-customize")
 })
 
 test("every widget has saved small and large sizes and templates can undo sizes", async ({

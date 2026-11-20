@@ -408,8 +408,6 @@
     "templates_use": "使用模板",
     "templates_use_label": "使用{title}",
     "templates_intro": "在编辑器中打开模板，并保存为你自己的粘贴。",
-    "home_recent": "最近",
-    "home_this_week": "本周",
     "home_views_this_week": "本周你的粘贴共有 {count, number} 次浏览。",
     "analytics_delta": "较上一周期 {delta}",
     "analytics_peak": "峰值：{day} {value}",
