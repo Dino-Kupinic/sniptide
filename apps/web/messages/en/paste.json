@@ -245,6 +245,10 @@
     "sendsLinkOnly": "{kind, select, page {Saves the link only, because this paste's title and content are not open to everyone with the link.} issue {Attaches the link only, as “Sniptide paste”, because this paste's title is not open to everyone with the link.} other {Sends the link only, because this paste's title is not open to everyone with the link.}}",
     "sentToDestination": "{kind, select, page {Saved to “{name}”} issue {Attached to {name}} other {Sent to #{name}}}",
     "couldnTLoadDestinations": "{kind, select, page {Couldn't load your {service} pages. Try again in a minute.} issue {Couldn't load your {service} issues. Try again in a minute.} other {Couldn't load your {service} channels. Try again in a minute.}}",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "signInToShare": "Sign in to share",
+    "signInToShareTitle": "Sign in to share your paste",
+    "continueWithEmail": "Continue with email",
+    "typeThePasswordAgain": "Type the password again to create the paste."
   }
 }

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server"
 import { PasteEditor } from "@/components/paste/paste-editor"
-import { getPreferences, getSession } from "@/lib/auth"
+import { getPreferences, getSession, getSocialProviders, isSignUpClosed } from "@/lib/auth"
+import { GUEST_CLAIM_SCOPE } from "@/lib/auth-redirect"
 import { listCollections } from "@/lib/collections/store"
 import { actionError, translateActionError } from "@/lib/i18n/action-errors"
 import { fetchImport, importSource, importTitle, readImportFiles } from "@/lib/integrations/imports"
@@ -52,8 +53,11 @@ async function gistDraft(
 // `?from=<slug>` starts from a copy of an existing paste (the Duplicate action).
 // `?gist=<id>&file=<name>…` starts from files of a gist (the import sheet).
 // `?template=<name>` starts from a template on the marketing site (Use template on its page).
+// `?claim=1` is where a guest lands after signing in from this editor: it creates the paste they
+// wrote (lib/auth-redirect.ts).
+// Visitors without a session can use this page: the app layout renders it in the guest shell.
 export default async function Page({ searchParams }: PageProps<"/new">) {
-  const { from, gist, file, template, title } = await searchParams
+  const { from, gist, file, template, title, claim } = await searchParams
   const [copied, preferences, collections, imported, templated, session, t] = await Promise.all([
     typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
@@ -66,6 +70,10 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
   // An encrypted paste's files are ciphertext, so there is nothing to start a copy from.
   const source = copied?.encryptionKeyId ? null : copied
   const draft = (imported && "draft" in imported ? imported.draft : null) ?? templated
+  const claiming = Boolean(session) && claim === "1"
+  const guest = session
+    ? undefined
+    : { socialProviders: await getSocialProviders(), signUpClosed: await isSignUpClosed() }
   const files =
     draft?.files ??
     (source
@@ -78,12 +86,19 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
       handle={session?.user.username}
       // A copy, an import or a template starts from other text, so its draft is kept apart from a
       // blank paste.
-      draftScope={[
-        session?.user.id ?? "",
-        source ? `from:${source.slug}` : "",
-        typeof gist === "string" ? `gist:${gist}` : "",
-        templated && typeof template === "string" ? `template:${template}` : "",
-      ].join(":")}
+      // A guest's drafts are kept apart from every account's, until sign-in hands one over.
+      draftScope={
+        claiming
+          ? GUEST_CLAIM_SCOPE
+          : [
+              session?.user.id ?? "guest",
+              source ? `from:${source.slug}` : "",
+              typeof gist === "string" ? `gist:${gist}` : "",
+              templated && typeof template === "string" ? `template:${template}` : "",
+            ].join(":")
+      }
+      guest={guest}
+      claim={claiming}
       indentation={preferences.indentation}
       lineNumbers={preferences.lineNumbers}
       secretDetection={preferences.secretDetection}

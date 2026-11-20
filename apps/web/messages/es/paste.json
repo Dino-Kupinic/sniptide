@@ -245,6 +245,10 @@
     "sendsLinkOnly": "{kind, select, page {Guarda solo el enlace, porque el título y el contenido de este paste no están abiertos a todos los que tienen el enlace.} issue {Adjunta solo el enlace, como «Sniptide paste», porque el título de este paste no está abierto a todos los que tienen el enlace.} other {Envía solo el enlace, porque el título de este paste no está abierto a todos los que tienen el enlace.}}",
     "sentToDestination": "{kind, select, page {Guardado en «{name}»} issue {Adjuntado a {name}} other {Enviado a #{name}}}",
     "couldnTLoadDestinations": "{kind, select, page {No se pudieron cargar tus páginas de {service}. Inténtalo de nuevo en un minuto.} issue {No se pudieron cargar tus incidencias de {service}. Inténtalo de nuevo en un minuto.} other {No se pudieron cargar tus canales de {service}. Inténtalo de nuevo en un minuto.}}",
-    "moreOptions": "Más opciones"
+    "moreOptions": "Más opciones",
+    "signInToShare": "Inicia sesión para compartir",
+    "signInToShareTitle": "Inicia sesión para compartir tu paste",
+    "continueWithEmail": "Continuar con correo",
+    "typeThePasswordAgain": "Escribe la contraseña de nuevo para crear el paste."
   }
 }
