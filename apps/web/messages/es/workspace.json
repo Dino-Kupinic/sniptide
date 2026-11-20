@@ -408,7 +408,6 @@
     "templates_use": "Usar plantilla",
     "templates_use_label": "Usar {title}",
     "templates_intro": "Abre una plantilla en el editor y guárdala como tu propio paste.",
-    "home_views_this_week": "Tus pastes tuvieron {count, plural, one {# visita} other {# visitas}} esta semana.",
     "analytics_delta": "{delta} frente al periodo anterior",
     "analytics_peak": "Pico: {value} el {day}",
     "clear_search": "Borrar búsqueda",

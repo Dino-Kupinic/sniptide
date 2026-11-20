@@ -5,7 +5,6 @@ import { listConnectedAgents } from "@/lib/agents"
 import { requireSession } from "@/lib/auth"
 import { availableLayout, DEFAULT_LAYOUT } from "@/lib/dashboard/widgets"
 import { shouldOnboard } from "@/lib/onboarding-server"
-import { getAnalyticsSeries } from "@/lib/pastes/analytics-report"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { gallerySource, templateCatalog } from "@/lib/pastes/templates"
 import { readPreferences } from "@/lib/preference-store"
@@ -40,7 +39,6 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
     templates: Boolean(templatesUrl),
   })
   const data = getDashboardData(locale, layout)
-  const week = getAnalyticsSeries({ range: "7d" }, Date.now(), locale)
   const [agents, appOrigin] = await Promise.all([
     // Loaded even without the agent widget, since one added later starts from this list.
     listConnectedAgents(session.user.id),
@@ -59,7 +57,6 @@ export default async function Page({ searchParams }: PageProps<"/dashboard">) {
       firstName={firstName(viewerFromUser(session.user).name)}
       origin={origin}
       appOrigin={appOrigin}
-      week={week}
     />
   )
 }

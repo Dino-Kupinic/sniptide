@@ -408,7 +408,6 @@
     "templates_use": "テンプレートを使う",
     "templates_use_label": "{title}を使う",
     "templates_intro": "テンプレートをエディターで開き、自分のペーストとして保存できます。",
-    "home_views_this_week": "今週、あなたのペーストは {count, number} 回閲覧されました。",
     "analytics_delta": "前の期間比 {delta}",
     "analytics_peak": "ピーク: {day} に {value}",
     "clear_search": "検索をクリア",

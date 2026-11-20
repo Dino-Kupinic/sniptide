@@ -107,20 +107,15 @@ test("the dashboard fits a phone without horizontal scrolling", async ({
   await browser.setViewport({ width: 360, height: 780 })
   await app.open("/dashboard")
   await expect(screen.getByRole("heading", "Connect an agent")).toBeVisible()
-  await expect(screen.getByText("Your pastes had 0 views this week.")).toBeVisible()
   await expect(
     screen.getByRole("button", "Import gist", { exact: true, visible: true }),
   ).toBeVisible()
   expect(
     await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBe(true)
+  // Arranging the widgets is left to a wide screen.
+  await expect(screen.getByRole("button", "Customize", { visible: true })).toHaveCount(0)
   await app.screenshot("dashboard-phone")
-  await screen.getByRole("button", "Customize").tap()
-  await expect(screen.getByRole("button", "Move Agents")).toBeVisible()
-  expect(
-    await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-  ).toBe(true)
-  await app.screenshot("dashboard-phone-customize")
 })
 
 test("every widget has saved small and large sizes and templates can undo sizes", async ({

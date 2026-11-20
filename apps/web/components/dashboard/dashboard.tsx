@@ -11,10 +11,9 @@ import { dayPart } from "@/components/shell/sidebar-state"
 import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
 import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
-import type { AnalyticsSeries } from "@/lib/pastes/analytics"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import { firstName } from "@/lib/viewer"
-import { PhoneHomeTiles, WeekViewsLine } from "./phone-home"
+import { PhoneHomeTiles } from "./phone-home"
 import {
   AddWidgetMenu,
   type DashboardTemplates,
@@ -67,11 +66,8 @@ export function Dashboard({
   firstName: name,
   origin,
   appOrigin,
-  week,
 }: {
   data: DashboardData | Promise<DashboardData>
-  // The last seven days of views, counted under the greeting on phones.
-  week: Promise<AnalyticsSeries>
   layout: WidgetId[]
   sizes?: WidgetSizes
   agents: ConnectedAgent[]
@@ -98,14 +94,9 @@ export function Dashboard({
       <DashboardHeader
         firstName={name}
         attention={
-          <>
-            <React.Suspense fallback={null}>
-              <WeekViewsLine week={week} />
-            </React.Suspense>
-            <React.Suspense fallback={null}>
-              <AttentionLine data={data} />
-            </React.Suspense>
-          </>
+          <React.Suspense fallback={null}>
+            <AttentionLine data={data} />
+          </React.Suspense>
         }
         editing={editing}
         onEditing={setEditing}
@@ -163,26 +154,15 @@ function DashboardHeader({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="lg"
-            className="max-lg:h-10"
-            onClick={() => onEditing?.(true)}
-          >
+        // Phones start a paste or import a gist from the tiles above the widgets, and arrange the
+        // widgets on a wide screen.
+        <div className="hidden items-center gap-2 lg:flex">
+          <Button variant="outline" size="lg" onClick={() => onEditing?.(true)}>
             <Settings2Icon />
             {t("customize")}
           </Button>
-          {/* Phones start a paste or import a gist from the tiles above the widgets. */}
-          <span className="hidden lg:contents">
-            <ImportGistButton />
-          </span>
-          <Button
-            size="lg"
-            className="max-lg:hidden"
-            render={<Link href="/new" />}
-            nativeButton={false}
-          >
+          <ImportGistButton />
+          <Button size="lg" render={<Link href="/new" />} nativeButton={false}>
             <PlusIcon />
             {t("new_paste")}
           </Button>
