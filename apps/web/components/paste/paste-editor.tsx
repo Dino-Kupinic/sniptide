@@ -320,6 +320,9 @@ export function PasteEditor({
   const [pending, startTransition] = React.useTransition()
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const [signInOpen, setSignInOpen] = React.useState(false)
+  // True while the sign-in options are open over a handed-over draft, when leaving for sign-in
+  // loses nothing.
+  const handedOver = React.useRef(false)
   // Set when a claimed draft has been restored and should be created without another press.
   const [autoSubmit, setAutoSubmit] = React.useState(false)
   const [languageOpen, setLanguageOpen] = React.useState(false)
@@ -505,6 +508,8 @@ export function PasteEditor({
       return reason ? t(reason) : null
     },
     manual: !editing,
+    // Sign-in leaves the page on purpose once the draft is handed over (handOver below).
+    warnOnUnload: () => !handedOver.current,
   })
   autosaverRef.current = autosaver
   const unsaved = state.kind !== "idle" && state.kind !== "saved"
@@ -935,6 +940,7 @@ export function PasteEditor({
       setError(t("draftSaveUnavailable"))
       return
     }
+    handedOver.current = true
     setSignInOpen(true)
   }
 
@@ -1602,7 +1608,10 @@ export function PasteEditor({
       {guest ? (
         <GuestSignInDialog
           open={signInOpen}
-          onOpenChange={setSignInOpen}
+          onOpenChange={(open) => {
+            handedOver.current = open
+            setSignInOpen(open)
+          }}
           socialProviders={guest.socialProviders}
           signUpClosed={guest.signUpClosed}
           summary={{
