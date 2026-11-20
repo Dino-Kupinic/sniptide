@@ -19,13 +19,13 @@ describe("tour steps", () => {
     ])
   })
 
-  test("a phone points at the tab bar and the top bar, with its own text for More", () => {
-    const phone = new Set(["new-paste-tab", "templates", "search-mobile", "more-tab", "agent"])
+  test("a phone points at the tab bar and the top bar, with its own text for Library", () => {
+    const phone = new Set(["new-paste-mobile", "templates", "search-tab", "library-tab", "agent"])
     expect(resolveTourSteps((name) => phone.has(name))).toEqual([
-      { id: "new_paste", target: { name: "new-paste-tab", side: "top" } },
+      { id: "new_paste", target: { name: "new-paste-mobile", side: "bottom" } },
       { id: "templates", target: { name: "templates", side: "top" } },
-      { id: "search", target: { name: "search-mobile", side: "bottom" } },
-      { id: "collections", target: { name: "more-tab", side: "top", body: "bodyMore" } },
+      { id: "search", target: { name: "search-tab", side: "top" } },
+      { id: "collections", target: { name: "library-tab", side: "top", body: "bodyLibrary" } },
       { id: "agent", target: { name: "agent", side: "bottom" } },
     ])
   })

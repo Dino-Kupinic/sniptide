@@ -1,4 +1,4 @@
-import { LayoutGridIcon, type LucideIcon, MenuIcon, StarIcon, StickyNoteIcon } from "lucide-react"
+import { FileTextIcon, FolderIcon, HouseIcon, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   href: string
@@ -6,20 +6,27 @@ export interface NavItem {
   icon: LucideIcon
 }
 
-// Bottom tabs below lg; the New paste button sits between the second and third tab, and More
-// comes last. `match` lists the routes that light the tab up.
+// Bottom tabs below lg, followed by the Search tab, which opens the command menu instead of a
+// page. `match` lists the routes that light the tab up: Library stays lit on every page it lists.
 export const mobileTabs: (NavItem & { match: string[] })[] = [
-  { href: "/dashboard", label: "home", icon: LayoutGridIcon, match: ["/dashboard"] },
-  { href: "/pastes", label: "pastes", icon: StickyNoteIcon, match: ["/pastes"] },
-  { href: "/starred", label: "starred", icon: StarIcon, match: ["/starred"] },
+  { href: "/dashboard", label: "home", icon: HouseIcon, match: ["/dashboard"] },
+  { href: "/pastes", label: "pastes", icon: FileTextIcon, match: ["/pastes"] },
+  {
+    href: "/library",
+    label: "library",
+    icon: FolderIcon,
+    match: [
+      "/library",
+      "/starred",
+      "/shared",
+      "/collections",
+      "/secrets",
+      "/trash",
+      "/analytics",
+      "/settings",
+    ],
+  },
 ]
-
-// "More" opens the More sheet rather than a page, and stays lit on every page the sheet leads to.
-export const moreTab = {
-  label: "more",
-  icon: MenuIcon,
-  match: ["/analytics", "/collections", "/secrets", "/shared", "/trash", "/settings"],
-}
 
 export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -59,6 +66,7 @@ const pageTitles: Record<string, string> = {
   collections: "collections",
   secrets: "secrets",
   templates: "paste_templates",
+  library: "library",
 }
 
 // The top bar's title for a route. Deeper routes (a paste, a collection) name themselves with

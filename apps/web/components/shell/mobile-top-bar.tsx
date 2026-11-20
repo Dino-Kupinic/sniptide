@@ -1,65 +1,57 @@
 "use client"
 
-import { Button } from "@sniptide/ui/components/button"
+import { buttonVariants } from "@sniptide/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@sniptide/ui/components/dropdown-menu"
-import { Logo } from "@sniptide/ui/components/logo"
-import { SearchIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
-import { useCommandMenu } from "@/components/command-menu/command-menu"
 import { UserAvatar } from "@/components/people/user-avatar"
 import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 import { NotificationsSheet } from "./notifications-menu"
 
-// Top bar below lg: wordmark, search, account, then notifications at the far right.
+// Top bar below lg, above the page's large title: notifications, New paste and the account menu
+// sit at the trailing edge, like the buttons of an iOS navigation bar.
 export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   const t = useTranslations("Workspace")
-  const { open: openCommandMenu } = useCommandMenu()
   return (
-    <header className="sticky top-0 z-30 flex min-h-[52px] shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] box-content lg:hidden">
+    <header className="sticky top-0 z-30 box-content flex h-[52px] shrink-0 items-center justify-end gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
+      <NotificationsSheet />
       <Link
-        href="/dashboard"
-        aria-label={t("sniptide_dashboard")}
-        className="min-w-[calc(29.05px+0.5rem)] flex-1 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        href="/new"
+        aria-label={t("new_paste")}
+        data-tour="new-paste-mobile"
+        className={buttonVariants({
+          variant: "ghost",
+          size: "icon-lg",
+          className: "size-10 text-link [&_svg:not([class*='size-'])]:size-6",
+        })}
       >
-        <Logo className="min-w-0 max-w-full [&>span]:min-w-0 [&>span]:shrink [&>span>svg]:max-w-full" />
+        <PlusIcon strokeWidth={2} />
       </Link>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        <Button
-          variant="outline"
-          size="icon-lg"
-          aria-label={t("search")}
-          onClick={openCommandMenu}
-          data-tour="search-mobile"
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={t("account")}
+          className="ml-1 flex size-10 items-center justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
-          <SearchIcon />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            aria-label={t("account")}
-            className="outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-          >
-            <UserAvatar
-              person={{ id: viewer.id, image: viewer.image }}
-              className="size-9 rounded-lg"
-            />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <AccountMenuItems
-              name={viewer.name}
-              email={viewer.email}
-              username={viewer.username}
-              inlineLanguage
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <NotificationsSheet />
-      </div>
+          <UserAvatar
+            person={{ id: viewer.id, image: viewer.image }}
+            className="size-8 rounded-md"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-60">
+          <AccountMenuItems
+            name={viewer.name}
+            email={viewer.email}
+            username={viewer.username}
+            inlineLanguage
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   )
 }

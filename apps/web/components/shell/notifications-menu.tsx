@@ -274,14 +274,14 @@ export function NotificationsSheet() {
   return (
     <>
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon-lg"
         aria-label={unread > 0 ? t("notifications_unread", { count: unread }) : t("notifications")}
         onClick={() => {
           setOpen(true)
           void load()
         }}
-        className="relative"
+        className="relative size-10 [&_svg:not([class*='size-'])]:size-[22px]"
       >
         <BellIcon />
         <UnreadBadge unread={unread} />

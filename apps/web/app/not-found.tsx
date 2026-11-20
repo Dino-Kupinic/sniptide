@@ -7,27 +7,10 @@ import { currentViewer } from "@/components/not-found/current-viewer"
 import { NotFoundContent } from "@/components/not-found/not-found-content"
 import { UserAvatar } from "@/components/people/user-avatar"
 import { TabBar } from "@/components/shell/tab-bar"
-import { listCollections } from "@/lib/collections/store"
-import { trashTotals } from "@/lib/pastes/lists"
-import { navCounts } from "@/lib/pastes/store"
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("NotFound")
   return { title: t("title") }
-}
-
-// The counts the tab bar's More sheet shows; a 404 still renders when they can't be read.
-async function moreCounts() {
-  try {
-    const [counts, trash, collections] = await Promise.all([
-      navCounts(),
-      trashTotals(),
-      listCollections(),
-    ])
-    return { shared: counts.shared, trash: trash.count, collections: collections.length }
-  } catch {
-    return { shared: 0, trash: 0, collections: 0 }
-  }
 }
 
 // The app's 404, from the Paper "Not found" artboards. Lives at the root so it also answers URLs
@@ -39,7 +22,6 @@ export default async function NotFound() {
     getTranslations("NotFound"),
     getTranslations("Core"),
   ])
-  const counts = viewer ? await moreCounts() : null
 
   return (
     <div
@@ -74,7 +56,7 @@ export default async function NotFound() {
         <NotFoundContent viewer={viewer} />
       </main>
 
-      {viewer && counts ? <TabBar viewer={viewer} counts={counts} /> : null}
+      {viewer ? <TabBar /> : null}
     </div>
   )
 }

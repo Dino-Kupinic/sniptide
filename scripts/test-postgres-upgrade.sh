@@ -35,7 +35,19 @@ YAML
 cp "$root/docker-compose.yml" "$dir/new.yml"
 old=(docker compose -f "$dir/old.yml")
 new=(docker compose -f "$dir/new.yml")
+# On a fresh volume the image's entrypoint runs a temporary server on the Unix socket while it
+# initializes the cluster. The socket healthcheck can pass against that server, which then stops
+# before the real one starts, so wait until the real server accepts TCP connections, which the
+# temporary one never does.
+ready() {
+  for attempt in {1..30}; do
+    if "$@" exec -T db pg_isready -h 127.0.0.1 -U sniptide -d sniptide >/dev/null 2>&1; then return; fi
+    sleep 1
+  done
+  "$@" exec -T db pg_isready -h 127.0.0.1 -U sniptide -d sniptide
+}
 "${old[@]}" up -d --wait db
+ready "${old[@]}"
 "${old[@]}" exec -T db psql -U sniptide -d sniptide -v ON_ERROR_STOP=1 -c "CREATE TABLE probe (value text); INSERT INTO probe VALUES ('retained');"
 "${old[@]}" exec -T db pg_dump -U sniptide -d sniptide --format=custom --no-owner --no-privileges > "$dir/backup.dump"
 "${old[@]}" down
@@ -51,11 +63,14 @@ docker logs "$container" 2>&1 | grep -q 'PostgreSQL 17 data detected'
 # Match the documented switch to a new volume.
 export POSTGRES_VOLUME=postgres18
 "${new[@]}" up -d --wait db
+ready "${new[@]}"
 "${new[@]}" exec -T db pg_restore -U sniptide -d sniptide --no-owner --no-privileges --exit-on-error < "$dir/backup.dump"
 "${new[@]}" restart db
 "${new[@]}" up -d --wait db
+ready "${new[@]}"
 [ "$("${new[@]}" exec -T db psql -U sniptide -d sniptide -Atc 'SELECT value FROM probe')" = retained ]
 "${new[@]}" down
 "${old[@]}" up -d --wait db
+ready "${old[@]}"
 [ "$("${old[@]}" exec -T db psql -U sniptide -d sniptide -Atc 'SELECT value FROM probe')" = retained ]
 echo 'Postgres 17 guard, 18 restore, restart and rollback passed.'
