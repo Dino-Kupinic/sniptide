@@ -48,19 +48,21 @@ export function SkeletonTableRows({
 // The phone list's rows: an icon, a title and one line of details.
 export function SkeletonMobileRows({ rows }: { rows: number }) {
   return (
-    <ul aria-hidden="true" className="flex flex-col lg:hidden">
+    <ul aria-hidden="true" className="-mx-4 flex flex-col lg:hidden">
       {Array.from({ length: rows }, (_, row) => (
-        <li key={row} className="flex items-center gap-3 border-b border-border py-3">
-          <Skeleton className="size-4 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="flex h-[22.5px] items-center">
-              <Skeleton className={cn("h-3.5 max-w-full", titleWidths[row % titleWidths.length])} />
-            </span>
-            <span className="flex h-4 items-center">
-              <Skeleton className="h-3 w-44 max-w-full" />
-            </span>
+        <li key={row} className="group/item flex min-h-[68px] items-center gap-3.5 pl-4">
+          <Skeleton className="size-9 shrink-0 rounded-lg" />
+          <div className="flex min-w-0 flex-1 items-center gap-2 self-stretch border-b border-border pr-4 group-last/item:border-b-0">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-3">
+              <span className="flex h-[22px] items-center">
+                <Skeleton className={cn("h-4 max-w-full", titleWidths[row % titleWidths.length])} />
+              </span>
+              <span className="flex h-5 items-center">
+                <Skeleton className="h-3.5 w-36 max-w-full" />
+              </span>
+            </div>
+            <span className="size-5 shrink-0" />
           </div>
-          <span className="size-10 shrink-0" />
         </li>
       ))}
     </ul>

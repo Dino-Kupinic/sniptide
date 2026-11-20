@@ -17,7 +17,7 @@ import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { ExpiredBadge } from "@/components/paste/expiry-status"
-import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { LanguageLabel } from "@/components/paste/language-icon"
 import { UserAvatar } from "@/components/people/user-avatar"
 import { useListView } from "@/components/shell/page-header"
 import type { HighlightedLines } from "@/lib/highlight/types"
@@ -38,6 +38,8 @@ import {
   SkeletonMobileRows,
   SkeletonTableRows,
 } from "./list-skeleton"
+import { ListSwitch } from "./list-switch"
+import { MobileRow } from "./mobile-row"
 import { PasteCard } from "./paste-card"
 import { RowMenu } from "./row-menu"
 import { SelectAllHead, SelectCell, SelectionBar, useRowSelection } from "./selection"
@@ -46,7 +48,6 @@ import {
   ListHeader,
   MobileFilterSheet,
   Pagination,
-  QuickChips,
   SearchField,
   SortMenu,
 } from "./toolbar"
@@ -118,57 +119,59 @@ export function SharedList({
         title={t("shared_with_me")}
         count={loading === undefined ? pagination.totalAll : undefined}
         topBar={loading === undefined}
-        // The grid view is desktop only.
-        mobileActions={null}
+        // The grid view is desktop only, so the phone's title row holds only the filter sheet.
+        mobileActions={
+          <MobileFilterSheet
+            sort={{
+              value: query.sort,
+              defaultValue: "shared" as SharedListQuery["sort"],
+              options: sortOptions,
+              onChange: (sort) => update({ sort, dir: undefined }),
+            }}
+            filters={[
+              {
+                id: "access",
+                label: t("access"),
+                options: [
+                  { value: "edit", label: t("can_edit") },
+                  { value: "view", label: t("can_view") },
+                ],
+                selected: query.access,
+                onChange: (access) => update({ access: access as SharedListQuery["access"] }),
+              },
+              {
+                id: "language",
+                label: t("language"),
+                options: languageOptions.map((id) => ({
+                  value: id,
+                  label: <LanguageLabel language={id} />,
+                })),
+                selected: query.languages,
+                onChange: (languages) => update({ languages }),
+              },
+              {
+                id: "owner",
+                label: t("shared_by"),
+                options: ownerOptions.map((person) => ({
+                  value: person.id,
+                  label: person.name || person.username,
+                })),
+                selected: query.owners,
+                onChange: (owners) => update({ owners }),
+              },
+            ]}
+            total={pagination.total}
+            pending={pending}
+            onClear={() =>
+              update({ sort: "shared", dir: undefined, access: [], languages: [], owners: [] })
+            }
+          />
+        }
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
         <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
-        <QuickChips
-          label={t("access")}
-          value={query.access.length === 1 ? (query.access[0] ?? "all") : "all"}
-          onChange={(next) => update({ access: next === "all" ? [] : [next] })}
-          options={[
-            { value: "all", label: t("all") },
-            { value: "edit", label: t("can_edit") },
-            { value: "view", label: t("can_view") },
-          ]}
-          trailing={
-            <MobileFilterSheet
-              sort={{
-                value: query.sort,
-                defaultValue: "shared" as SharedListQuery["sort"],
-                options: sortOptions,
-                onChange: (sort) => update({ sort, dir: undefined }),
-              }}
-              filters={[
-                {
-                  id: "language",
-                  label: t("language"),
-                  options: languageOptions.map((id) => ({
-                    value: id,
-                    label: <LanguageLabel language={id} />,
-                  })),
-                  selected: query.languages,
-                  onChange: (languages) => update({ languages }),
-                },
-                {
-                  id: "owner",
-                  label: t("shared_by"),
-                  options: ownerOptions.map((person) => ({
-                    value: person.id,
-                    label: person.name || person.username,
-                  })),
-                  selected: query.owners,
-                  onChange: (owners) => update({ owners }),
-                },
-              ]}
-              total={pagination.total}
-              pending={pending}
-              onClear={() => update({ sort: "shared", dir: undefined, languages: [], owners: [] })}
-            />
-          }
-        />
+        <ListSwitch />
       </div>
 
       {/* The filters sit above the table on the page, and the table gets its own card. */}
@@ -371,38 +374,32 @@ export function SharedList({
           {loading !== undefined && pagination.total > 0 ? (
             <SkeletonMobileRows rows={loading} />
           ) : pagination.total > 0 ? (
-            <ul className="flex flex-col lg:hidden">
+            <ul className="-mx-4 flex flex-col lg:hidden">
               {rows.map((row) => (
-                <li
+                <MobileRow
                   key={row.slug}
-                  className="relative flex items-center gap-3 border-b border-border py-3"
-                >
-                  <LanguageIcon language={row.language} />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="flex items-center gap-2">
-                      <Link
-                        href={`/pastes/${row.slug}`}
-                        title={row.title}
-                        className="min-w-0 truncate text-[15px] font-medium after:absolute after:inset-0"
-                      >
-                        {row.title}
-                      </Link>
+                  href={`/pastes/${row.slug}`}
+                  language={row.language}
+                  title={row.title}
+                  badge={
+                    <>
                       {row.unseen ? (
                         <span className="size-1.5 shrink-0 bg-primary">
                           <span className="sr-only">{t("new")}</span>
                         </span>
                       ) : null}
-                    </span>
-                    <span className="truncate text-[13px] text-muted-foreground">
+                      <ExpiredBadge expiresAt={row.expiresAt} />
+                    </>
+                  }
+                  detail={
+                    <span className="truncate">
                       {row.owner ? `${row.owner.name || row.owner.username} · ` : ""}
                       {row.access === "edit" ? t("can_edit") : t("can_view")}
                       {" · "}
                       {row.sharedLabel}
                     </span>
-                  </div>
-                  <ExpiredBadge expiresAt={row.expiresAt} />
-                  <RowMenu row={row} origin={origin} shared variant="sheet" />
-                </li>
+                  }
+                />
               ))}
             </ul>
           ) : null}

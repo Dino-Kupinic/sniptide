@@ -19,6 +19,7 @@ import * as React from "react"
 import { CollectionIcon } from "@/components/collections/icon"
 import { NewCollectionDialog } from "@/components/collections/new-collection"
 import {
+  GroupedCanvas,
   GroupedLinkRow,
   GroupedList,
   GroupedRowBody,
@@ -72,8 +73,9 @@ export function LibraryView({
 
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-7">
+      <GroupedCanvas />
       <ListHeader title={t("library")} />
-      <div className="flex w-full max-w-[560px] flex-col gap-6">
+      <div className="flex w-full max-w-[560px] flex-col gap-7">
         <GroupedList>
           <GroupedLinkRow
             href="/starred"
@@ -114,7 +116,7 @@ export function LibraryView({
               <li
                 key={index}
                 aria-hidden
-                className="group/item flex min-h-12 items-center gap-3 pl-4"
+                className="group/item flex min-h-[50px] items-center gap-3 pl-4"
               >
                 <Skeleton className="size-4" />
                 <span className={groupedRowBodyClass}>
@@ -126,7 +128,7 @@ export function LibraryView({
             collections.map((collection) => (
               <li key={collection.slug} className="group/item">
                 <Link href={`/collections/${collection.slug}`} className={groupedRowClass}>
-                  <span className="flex size-5 shrink-0 items-center justify-center">
+                  <span className="flex size-[22px] shrink-0 items-center justify-center">
                     <CollectionIcon icon={collection.icon} hue={collection.hue} />
                   </span>
                   <GroupedRowBody label={collection.name} value={count(collection.pasteCount)} />
@@ -134,7 +136,7 @@ export function LibraryView({
               </li>
             ))
           ) : (
-            <li className="flex min-h-12 items-center px-4 text-[15px] text-muted-foreground">
+            <li className="flex min-h-[50px] items-center px-4 text-[17px] text-muted-foreground">
               {t("no_collections_yet")}
             </li>
           )}
@@ -166,7 +168,9 @@ export function LibraryView({
               className="size-10 rounded-md"
             />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[15px] leading-5 font-medium">{viewer.name}</span>
+              <span className="truncate text-[17px] leading-[22px] font-semibold">
+                {viewer.name}
+              </span>
               <span className="truncate text-[13px] leading-[18px] text-muted-foreground">
                 {viewer.email}
               </span>

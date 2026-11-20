@@ -136,25 +136,20 @@ function useRowActions(row: PasteRow, origin: string, shared: boolean): RowActio
   return actions
 }
 
-// A paste row's ⋯ menu. `variant="sheet"` is the touch version for the mobile lists: a 40px
-// trigger that sits above the row's stretched link and opens the actions as a bottom sheet.
+// A paste row's ⋯ menu on desktop. Phone rows open the paste, whose menu holds the same actions.
 export function RowMenu({
   row,
   origin,
   shared = false,
-  variant = "menu",
 }: {
   row: PasteRow
   origin: string
   // A row of Shared with me, which the viewer can drop from their list.
   shared?: boolean
-  variant?: "menu" | "sheet"
 }) {
   const t = useTranslations("Workspace")
   const actions = useRowActions(row, origin, shared)
   const label = t("actions_for", { name: row.title })
-
-  if (variant === "sheet") return <ActionSheet title={row.title} label={label} actions={actions} />
 
   return (
     <DropdownMenu>

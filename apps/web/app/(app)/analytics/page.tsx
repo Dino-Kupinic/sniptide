@@ -1,4 +1,3 @@
-import { cn } from "@sniptide/ui/lib/utils"
 import { ArrowRightIcon } from "lucide-react"
 import Link from "next/link"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -11,6 +10,7 @@ import {
   Referrers,
   TopPastes,
 } from "@/components/analytics-page/panels"
+import { PhoneAnalytics } from "@/components/analytics-page/phone-analytics"
 import { PageHeader } from "@/components/page-header"
 import { requireSession } from "@/lib/auth"
 import { parseRange } from "@/lib/pastes/analytics"
@@ -63,19 +63,28 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
             options={report.pasteOptions}
           />
         }
-        className="lg:items-end max-lg:[&>div:last-child]:w-full"
+        className="lg:items-end"
+        // Phones pick the range in their own switch below the title.
+        phoneTitleOnly
       />
 
-      <Overview
-        kpis={report.kpis}
-        points={report.points}
-        rangeLabel={report.rangeLabel}
-        empty={views === 0}
+      <PhoneAnalytics
+        report={report}
+        paste={report.scope?.type === "paste" ? report.scope.slug : undefined}
       />
+
+      <div className="flex flex-col gap-5 max-lg:hidden lg:gap-6">
+        <Overview
+          kpis={report.kpis}
+          points={report.points}
+          rangeLabel={report.rangeLabel}
+          empty={views === 0}
+        />
+      </div>
 
       {/* With no views at all, phones get one empty state instead of five empty cards. */}
       {views === 0 ? (
-        <div className="rounded-lg flex flex-col items-start gap-2 border border-border p-4 lg:hidden">
+        <div className="rounded-lg flex flex-col items-start gap-2 bg-card p-4 lg:hidden">
           <p className="text-sm text-muted-foreground">{workspace("analytics_empty")}</p>
           <Link
             href="/new"
@@ -87,17 +96,12 @@ export default async function Page({ searchParams }: PageProps<"/analytics">) {
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          "grid gap-5 lg:grid-cols-[705fr_393fr] lg:gap-6",
-          views === 0 && "max-lg:hidden",
-        )}
-      >
+      <div className="grid gap-5 max-lg:hidden lg:grid-cols-[705fr_393fr] lg:gap-6">
         <TopPastes rows={report.topPastes} total={views} host={host} />
         <Referrers rows={report.referrers} />
       </div>
 
-      <div className={cn("grid gap-5 lg:grid-cols-3 lg:gap-6", views === 0 && "max-lg:hidden")}>
+      <div className="grid gap-5 max-lg:hidden lg:grid-cols-3 lg:gap-6">
         <Countries rows={report.countries} total={views} />
         <Devices rows={report.devices} />
         <Languages rows={report.languages} total={views} />

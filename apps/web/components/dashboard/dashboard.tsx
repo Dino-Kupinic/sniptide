@@ -11,8 +11,10 @@ import { dayPart } from "@/components/shell/sidebar-state"
 import type { ConnectedAgent } from "@/lib/agents"
 import { track } from "@/lib/analytics"
 import type { WidgetId, WidgetSizes } from "@/lib/dashboard/widgets"
+import type { AnalyticsSeries } from "@/lib/pastes/analytics"
 import type { DashboardData } from "@/lib/pastes/dashboard"
 import { firstName } from "@/lib/viewer"
+import { PhoneHome, WeekViewsLine } from "./phone-home"
 import {
   AddWidgetMenu,
   type DashboardTemplates,
@@ -38,7 +40,7 @@ function Greeting({ firstName }: { firstName: string }) {
     <h1
       // The hour can turn between the server's render and hydration.
       suppressHydrationWarning
-      className="font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10"
+      className="font-heading text-[34px] leading-[41px] font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10"
     >
       {t(
         part === "morning"
@@ -65,8 +67,11 @@ export function Dashboard({
   firstName: name,
   origin,
   appOrigin,
+  week,
 }: {
   data: DashboardData | Promise<DashboardData>
+  // The last seven days of views, for the phone's home screen.
+  week: Promise<AnalyticsSeries>
   layout: WidgetId[]
   sizes?: WidgetSizes
   agents: ConnectedAgent[]
@@ -93,9 +98,14 @@ export function Dashboard({
       <DashboardHeader
         firstName={name}
         attention={
-          <React.Suspense fallback={null}>
-            <AttentionLine data={data} />
-          </React.Suspense>
+          <>
+            <React.Suspense fallback={null}>
+              <WeekViewsLine week={week} />
+            </React.Suspense>
+            <React.Suspense fallback={null}>
+              <AttentionLine data={data} />
+            </React.Suspense>
+          </>
         }
         editing={editing}
         onEditing={setEditing}
@@ -107,15 +117,19 @@ export function Dashboard({
         }
       />
 
-      <WidgetBoard
-        dashboard={dashboard}
-        editing={editing}
-        data={data}
-        agents={agents}
-        templates={templates}
-        origin={origin}
-        appOrigin={appOrigin}
-      />
+      <PhoneHome data={data} week={week} />
+
+      <div className="flex flex-col max-lg:hidden">
+        <WidgetBoard
+          dashboard={dashboard}
+          editing={editing}
+          data={data}
+          agents={agents}
+          templates={templates}
+          origin={origin}
+          appOrigin={appOrigin}
+        />
+      </div>
     </div>
   )
 }
@@ -151,26 +165,14 @@ function DashboardHeader({
           </Button>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="lg"
-            className="max-lg:h-10"
-            onClick={() => onEditing?.(true)}
-          >
+        // Phones start a paste or import a gist from the home screen's tiles, and keep no widgets.
+        <div className="hidden items-center gap-2 lg:flex">
+          <Button variant="outline" size="lg" onClick={() => onEditing?.(true)}>
             <Settings2Icon />
             {t("customize")}
           </Button>
-          {/* Import gist lives in the More sheet on phones. */}
-          <span className="hidden lg:contents">
-            <ImportGistButton />
-          </span>
-          <Button
-            size="lg"
-            className="max-lg:h-10"
-            render={<Link href="/new" />}
-            nativeButton={false}
-          >
+          <ImportGistButton />
+          <Button size="lg" render={<Link href="/new" />} nativeButton={false}>
             <PlusIcon />
             {t("new_paste")}
           </Button>

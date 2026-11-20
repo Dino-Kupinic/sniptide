@@ -25,10 +25,22 @@ import {
 } from "@/lib/dev/ui-stress-data"
 import { timeAgo } from "@/lib/format"
 import type { HighlightedLines } from "@/lib/highlight/types"
+import type { AnalyticsSeries } from "@/lib/pastes/analytics"
 import type { PageInfo, PasteListQuery } from "@/lib/pastes/list-query"
 
 // Long titles, descriptions and file names, and an entry without artwork, for the Paste templates
 // widget. One promise for the module, so the widget reads it once.
+// A week of views for the phone's home screen, with one busy day.
+const STRESS_WEEK: Promise<AnalyticsSeries> = Promise.resolve({
+  range: "7d",
+  scope: null,
+  points: [3, 12, 7, 48, 22, 9, 31].map((views, day) => ({
+    date: `2026-01-0${day + 1}`,
+    label: `Jan ${day + 1}`,
+    values: { views, unique: views, copies: 0, raw: 0 },
+  })),
+})
+
 const STRESS_TEMPLATES = {
   list: Promise.resolve(
     Array.from({ length: 6 }, (_, index) => ({
@@ -103,6 +115,7 @@ export function UiStress({
               firstName={data.viewer.name.split(/[\s._-]/)[0] || "there"}
               origin={origin}
               appOrigin={origin}
+              week={STRESS_WEEK}
             />
           ) : null}
           {screen === "pastes" ? (

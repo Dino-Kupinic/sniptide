@@ -26,14 +26,16 @@ import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
 import { AgentLogo } from "@/components/onboarding/agent-logos"
 import { usePasteExpired } from "@/components/paste/expiry-status"
-import { LanguageIcon, LanguageLabel } from "@/components/paste/language-icon"
+import { LanguageLabel } from "@/components/paste/language-icon"
 import { showUndo } from "@/components/undo-toast"
 import { formatNumber } from "@/lib/format"
 import { setStarred } from "@/lib/pastes/actions"
+import { getLanguage } from "@/lib/pastes/languages"
 import type { PasteSort, SortDirection } from "@/lib/pastes/list-query"
 import type { PasteRow } from "@/lib/pastes/rows"
 import { profilePath } from "@/lib/profile-path"
 import { SkeletonTableRows } from "./list-skeleton"
+import { MobileRow } from "./mobile-row"
 import { RowMenu } from "./row-menu"
 import { type RowSelection, SelectAllHead, SelectCell } from "./selection"
 
@@ -96,15 +98,11 @@ export function expiryClass(row: Pick<PasteRow, "expiresSoon" | "expiresAt">) {
   return row.expiresSoon ? "text-link" : undefined
 }
 
-export function ExpiryLabel({ row, mobile = false }: { row: PasteRow; mobile?: boolean }) {
+export function ExpiryLabel({ row }: { row: PasteRow }) {
   const expired = usePasteExpired(row.expiresAt)
   const coreT = useTranslations("Core")
-  const t = useTranslations("Workspace")
   if (expired) return <span className="font-medium text-muted-foreground">{coreT("expired")}</span>
-  if (!mobile || row.burnAfterRead) return row.expiresLabel
-  return row.expiresSoon
-    ? t("expires_label", { time: row.expiresLabel })
-    : t("views_count", { count: row.views })
+  return row.expiresLabel
 }
 
 // The logo of the agent that created a paste, or a terminal or plug for the CLI and the API, named
@@ -287,6 +285,8 @@ function UnstarButton({ row }: { row: PasteRow }) {
 }
 
 // The same rows on phones: a language logo, the title and one meta line, ending in a menu button.
+// The phone list: iOS rows with the language logo on a tile, the title, and one line with the
+// language and when the paste changed, or how it runs out when that is what matters.
 export function PasteMobileList({
   rows,
   origin,
@@ -297,48 +297,60 @@ export function PasteMobileList({
   className?: string
 }) {
   return (
-    <ul className={cn("flex-col", className ?? "flex lg:hidden")}>
+    <ul className={cn("-mx-4 flex-col", className ?? "flex lg:hidden")}>
       {rows.map((row) => (
-        <li key={row.slug} className="relative flex items-center gap-3 border-b border-border py-3">
-          <LanguageIcon language={row.language} />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <Link
-              href={`/pastes/${row.slug}`}
-              title={row.title}
-              className="truncate text-[15px] font-medium after:absolute after:inset-0"
-            >
-              {row.title}
-            </Link>
-            <span
-              className={cn(
-                "flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground",
-                expiryClass(row),
-              )}
-            >
-              <VisibilityIcon row={row} />
-              <CreatorMark createdBy={row.createdBy} className="size-3" />
-              {row.owner?.handle ? (
-                // Above the row's stretched link, so it opens the owner's profile.
-                <a
-                  href={`${origin}${profilePath(row.owner.handle)}`}
-                  className="relative z-10 min-w-0 truncate font-mono hover:underline"
-                >
-                  @{row.owner.username}
-                </a>
-              ) : (
-                <span className="min-w-0 truncate font-mono">
-                  {row.owner ? `@${row.owner.username}` : row.slug}
-                </span>
-              )}
-              <span aria-hidden="true">·</span>
-              <span className="shrink-0">
-                <ExpiryLabel row={row} mobile />
-              </span>
-            </span>
-          </div>
-          <RowMenu row={row} origin={origin} variant="sheet" />
-        </li>
+        <PasteMobileRow key={row.slug} row={row} origin={origin} />
       ))}
     </ul>
+  )
+}
+
+function PasteMobileRow({ row, origin }: { row: PasteRow; origin: string }) {
+  const t = useTranslations("Workspace")
+  const coreT = useTranslations("Core")
+  const expired = usePasteExpired(row.expiresAt)
+  const detail = row.burnAfterRead ? (
+    <span className="truncate text-link">{t("burn_after_read")}</span>
+  ) : (
+    <>
+      <span className="shrink-0">{getLanguage(row.language).name}</span>
+      {row.owner ? (
+        <>
+          <span aria-hidden="true">·</span>
+          {row.owner.handle ? (
+            // Above the row's stretched link, so it opens the owner's profile.
+            <a
+              href={`${origin}${profilePath(row.owner.handle)}`}
+              className="relative z-10 min-w-0 truncate hover:underline"
+            >
+              @{row.owner.username}
+            </a>
+          ) : (
+            <span className="min-w-0 truncate">@{row.owner.username}</span>
+          )}
+        </>
+      ) : null}
+      <span aria-hidden="true">·</span>
+      <span className={cn("truncate", expired ? "font-medium" : expiryClass(row))}>
+        {expired
+          ? coreT("expired")
+          : row.expiresSoon
+            ? t("expires_label", { time: row.expiresLabel })
+            : row.updatedLabel}
+      </span>
+    </>
+  )
+  return (
+    <MobileRow
+      href={`/pastes/${row.slug}`}
+      language={row.language}
+      title={row.title}
+      detail={
+        <>
+          <CreatorMark createdBy={row.createdBy} className="mr-0.5 size-3.5 shrink-0" />
+          {detail}
+        </>
+      }
+    />
   )
 }

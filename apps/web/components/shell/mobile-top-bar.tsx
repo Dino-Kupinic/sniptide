@@ -26,7 +26,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   const settingsSection = useSearchParams().has("tab") && pathname === "/settings"
   const back = backToLibrary(pathname) && !settingsSection
   return (
-    <header className="sticky top-0 z-30 box-content flex h-[52px] shrink-0 items-center gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
+    <header className="sticky top-0 z-30 box-content flex h-[52px] shrink-0 items-center gap-1 bg-inherit pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
       {back ? (
         <Link
           href="/library"

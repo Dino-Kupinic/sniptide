@@ -15,7 +15,6 @@ import { cn } from "@sniptide/ui/lib/utils"
 import {
   CheckIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   EyeIcon,
   HistoryIcon,
   LinkIcon,
@@ -24,6 +23,12 @@ import {
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import * as React from "react"
+import {
+  GroupedChevron,
+  groupedLabelClass,
+  groupedPanelClass,
+  groupedSettingRowClass,
+} from "@/components/lists/grouped-list"
 import { LocalDateTime } from "@/components/local-date-time"
 import { track } from "@/lib/analytics"
 import { runAction } from "@/lib/feedback"
@@ -144,6 +149,13 @@ function useSharingControls(state: SharingState, list: boolean) {
     })
   }
 
+  // The phone's settings list picks the visibility from a menu in its row, like the expiry.
+  const visibilityOptions = [
+    { value: "private" as const, label: t("private") },
+    { value: "unlisted" as const, label: t("unlisted") },
+    // A public listing would show an encrypted paste without its key.
+    ...(state.encryptionKeyId ? [] : [{ value: "public" as const, label: t("public") }]),
+  ]
   const visibilityControl = (
     <SegmentedControl
       aria-label={t("visibility")}
@@ -153,14 +165,41 @@ function useSharingControls(state: SharingState, list: boolean) {
         setVisibility(next)
         save({ visibility: next }, () => setVisibility(previous))
       }}
-      options={[
-        { value: "private" as const, label: t("private") },
-        { value: "unlisted" as const, label: t("unlisted") },
-        // A public listing would show an encrypted paste without its key.
-        ...(state.encryptionKeyId ? [] : [{ value: "public" as const, label: t("public") }]),
-      ]}
-      itemClassName={list ? "py-2 text-sm" : undefined}
+      options={visibilityOptions}
     />
+  )
+
+  const visibilityMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t("visibility")}
+        className="-mr-2 flex h-10 items-center gap-1 rounded-lg px-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      >
+        <span className="text-muted-foreground">
+          {visibilityOptions.find((option) => option.value === visibility)?.label}
+        </span>
+        <GroupedChevron />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {visibilityOptions.map((option) => (
+          <DropdownMenuItem
+            key={option.value}
+            className="h-10"
+            onClick={() => {
+              if (option.value === visibility) return
+              const previous = visibility
+              setVisibility(option.value)
+              save({ visibility: option.value }, () => setVisibility(previous))
+            }}
+          >
+            {option.label}
+            {option.value === visibility ? (
+              <CheckIcon className="ml-auto text-foreground!" />
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 
   const expiry = (
@@ -170,13 +209,13 @@ function useSharingControls(state: SharingState, list: boolean) {
         className={cn(
           "flex items-center gap-1.5 rounded-lg outline-none hover:text-link focus-visible:ring-2 focus-visible:ring-ring/40",
           !list && "h-9 w-full justify-between border border-border px-2.5 hover:text-foreground",
-          list && "-mr-2 h-10 px-2",
+          list && "-mr-2 h-10 gap-1 px-2",
         )}
       >
         <span className={cn(list && "text-muted-foreground")}>
           {state.expiresAt === null ? t("never") : <LocalDateTime value={state.expiresAt} />}
         </span>
-        <ChevronDownIcon className="size-3.5 text-muted-foreground" />
+        {list ? <GroupedChevron /> : <ChevronDownIcon className="size-3.5 text-muted-foreground" />}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {expiryChoices.map((choice) => (
@@ -211,7 +250,7 @@ function useSharingControls(state: SharingState, list: boolean) {
       </SettingRow>
       {settingPassword ? (
         <form
-          className={cn("flex gap-2", list && "px-4 py-3")}
+          className={cn("flex gap-2", list && "border-b border-border py-3 pr-4")}
           onSubmit={(event) => {
             event.preventDefault()
             if (!password) return
@@ -242,7 +281,7 @@ function useSharingControls(state: SharingState, list: boolean) {
           onClick={() => setSettingPassword(true)}
           className={cn(
             "self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground",
-            list ? "px-4 py-2 text-left" : "-mt-1",
+            list ? "border-b border-border py-2.5 pr-4 text-left text-[13px]" : "-mt-1",
           )}
         >
           {t("changePassword")}
@@ -282,6 +321,7 @@ function useSharingControls(state: SharingState, list: boolean) {
   return {
     visibility,
     visibilityControl,
+    visibilityMenu,
     expiry,
     protection,
     status,
@@ -377,22 +417,30 @@ export function SharingPanel({
 }) {
   const t = useTranslations("Paste")
   const controls = useSharingControls(state, true)
+  const id = React.useId()
 
   return (
-    <section aria-label={t("sharing")} className="flex flex-col gap-3">
-      {controls.visibilityControl}
-      <p className="-mt-1 text-xs text-muted-foreground">
-        {t("visibilityHelp", { value: controls.visibility })}
-      </p>
-      <div className="overflow-hidden rounded-lg flex flex-col divide-y divide-border border border-border text-sm">
-        <SettingRow label={t("expires")} list>
-          {controls.expiry}
-        </SettingRow>
-        {children}
-        {controls.protection}
-      </div>
-      {controls.status}
-    </section>
+    <div className="flex flex-col gap-7">
+      <section aria-labelledby={id} className="flex flex-col gap-1.5">
+        <h2 id={id} className={groupedLabelClass}>
+          {t("sharing")}
+        </h2>
+        <div className={cn(groupedPanelClass, "pl-4")}>
+          <SettingRow label={t("visibility")} list>
+            {controls.visibilityMenu}
+          </SettingRow>
+          <SettingRow label={t("expires")} list>
+            {controls.expiry}
+          </SettingRow>
+          {controls.protection}
+        </div>
+        <p className="px-4 pt-0.5 text-[13px] leading-[18px] text-muted-foreground">
+          {t("visibilityHelp", { value: controls.visibility })}
+        </p>
+        {controls.status}
+      </section>
+      {children ? <div className={cn(groupedPanelClass, "pl-4")}>{children}</div> : null}
+    </div>
   )
 }
 
@@ -406,8 +454,8 @@ function SettingRow({
   children: React.ReactNode
 }) {
   return (
-    <div className={cn("flex items-center justify-between gap-3", list && "h-12 px-4")}>
-      <span>{label}</span>
+    <div className={list ? groupedSettingRowClass : "flex items-center justify-between gap-3"}>
+      <span className={cn(list && "flex-1")}>{label}</span>
       {children}
     </div>
   )
@@ -433,13 +481,16 @@ export function SheetRow({
         type="button"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="flex h-12 w-full items-center gap-3 px-4 text-left outline-none hover:bg-muted focus-visible:bg-muted active:bg-muted"
+        className={cn(
+          groupedSettingRowClass,
+          "w-full gap-2 text-left outline-none focus-visible:text-link active:opacity-60",
+        )}
       >
         <span className="flex-1">{label}</span>
         {value ? (
           <span className="truncate text-muted-foreground tabular-nums">{value}</span>
         ) : null}
-        <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+        <GroupedChevron />
       </button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="lg:hidden">

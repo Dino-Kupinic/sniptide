@@ -36,6 +36,7 @@ Sniptide has two brand colors. Tide Blue is the color of every action: buttons, 
 | --- | --- | --- | --- |
 | Paper | `#FFFFFF` | `--background`, `--card`, `--popover` | Page canvas and card surfaces |
 | Gallery | `#FAFAFA` | `--sidebar` | Sidebar background |
+| Grouped | `#F4F4F4` | `--grouped` | Phone canvas behind grouped panels |
 | Fill | `#F4F4F4` | `--muted`, `--secondary`, `--accent` | Hover rows, tracks, secondary buttons, code chips |
 | Hairline | `#E8E8E8` | `--border`, `--input` | Borders and dividers |
 | Ink | `#1B1919` | `--foreground` | Text, inverted buttons |
@@ -51,7 +52,7 @@ Sniptide has two brand colors. Tide Blue is the color of every action: buttons, 
 | Name | Value | Token | Role |
 | --- | --- | --- | --- |
 | Night | `#121111` | `--background` | Page canvas |
-| Deep | `#0C0B0B` | `--sidebar` | Sidebar background and landing hero |
+| Deep | `#0C0B0B` | `--sidebar`, `--grouped` | Sidebar background, landing hero and the phone canvas behind grouped panels |
 | Raised | `#1A1919` | `--card`, `--popover` | Cards and floating layers |
 | Fill | `#242222` | `--muted`, `--secondary`, `--accent` | Hover rows, tracks, secondary buttons |
 | Hairline | `#2F2C2C` | `--border`, `--input` | Borders and dividers |
@@ -279,13 +280,16 @@ Six horizontal stripes that taper from a hairline at the top to a full bar at th
 Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.
 
 - Navigation follows iOS patterns: a tab bar, a large page title, and grouped lists with one label, an optional value and a chevron per row.
-- The mobile top bar is 52px tall and holds notifications, a `--link` plus for New paste and the account avatar at its trailing edge. Screens opened from Library (its lists, a collection, Secrets, Analytics and Settings) add a `--link` "‹ Library" back link at the leading edge. The page's 30px title sits below it.
-- Grouped lists come from `components/lists/grouped-list.tsx`: a 13px `--muted-foreground` label, one hairline panel, 48px rows with a 20px `--link` icon, a 15px label, an optional value and a chevron. Library and the phone Settings list use them, and Settings ends with Storage and a centered `--link` Sign out row.
+- The mobile top bar is 52px tall and holds notifications, a `--link` plus for New paste and the account avatar at its trailing edge. Screens opened from Library (its lists, a collection, Secrets, Analytics and Settings) add a `--link` "‹ Library" back link at the leading edge. The page's title sits below it at 34px.
+- Grouped lists come from `components/lists/grouped-list.tsx`: a 13px `--muted-foreground` label, one `--card` panel with no border, 50px rows with an optional 22px `--link` icon, a 17px label, an optional value and a chevron, divided by inset hairlines. A screen built from them renders `GroupedCanvas`, which turns the shell's canvas `--grouped` below lg so the panels stand out. Home, Library, a paste, the editor, Secrets, Analytics, Settings and Search use them.
+- Settings starts with a profile row, then New pastes (Visibility, Expires) and App (Appearance, Language, Notifications, Integrations, API tokens) with their current values, then Account and Usage, Storage with its share in percent, and a centered `--link` Sign out row.
+- Home replaces the widgets with New paste and Import gist as two tiles, the three latest pastes and a card of this week's views, under a line that counts them. Analytics shows a 7, 30 and 90 day switch, one views card with the peak in `--highlight`, the other totals as rows and the top pastes.
+- Search is a full-screen sheet on the grouped canvas: a filled field with a clear button and Cancel, then Pastes, Collections and Actions as panels. Phones set a match in bold, and with text in the field the first action starts a paste with that title.
 - The tab bar holds Home, Pastes, Library and Search, each a 24px line icon over an 11px label. The current tab takes `--link`. Search opens the command menu.
-- Library lists Starred, Shared with me, Secrets and Trash, then the collections with a New action, then Analytics, Import gist, Your profile and Settings, and ends with the account and Sign out. Each group is one `rounded-lg` hairline panel with 48px rows divided by inset hairlines. Feedback and Take the tour are in the account menu behind the avatar in the top bar.
+- Library lists Starred, Shared with me, Secrets and Trash, then the collections with a New action, then Analytics, Import gist, Your profile and Settings, and ends with the account and Sign out. Feedback and Take the tour are in the account menu behind the avatar in the top bar.
 - Page actions that sit in the desktop header render next to the page title on phones.
-- List rows end in a 40px menu button with the same actions as the desktop row menu. Sort and filters open in a bottom sheet next to the search field.
-- Screens with their own primary action (the editor, paste detail, secrets) replace the tab bar with a 56px bottom bar: one `xl` primary button and at most one secondary control. The editor hides this bar while the on-screen keyboard is open.
+- My pastes, Starred and Shared share one switch under the search field. Their rows are 68px: a language tile, a 17px title over a 15px detail and a chevron, and the row opens the paste, where its actions live. Sort and filters open in a bottom sheet from the button next to the title.
+- Screens with their own primary action replace the tab bar with a bottom bar: one `xl` primary button and at most one secondary control. A paste shows Share and Copy code, and the editor shows Create paste. A paste keeps Edit, Star and its other actions in the top bar, and the editor keeps its title, code and the main settings on panels, with the rest behind More options. The editor hides this bar while the on-screen keyboard is open.
 - Touch targets are at least 40px. Keyboard shortcut hints are hidden on devices without hover, and the action they label stays.
 - Fixed bars pad for the safe-area insets on every edge they touch.
 - Every screen fits 360px without horizontal scrolling.

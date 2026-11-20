@@ -30,8 +30,8 @@ export interface DashboardData {
   expiringSoon: number
   // Pastes whose expiry passed and that wait for the purge job (lib/pastes/lifecycle.ts).
   expired: number
-  // The rows of each widget on the layout. A widget that isn't on it is left out.
-  // Recent pastes holds at most five rows for each of its tabs.
+  // The rows of each widget on the layout. A widget that isn't on it is left out, except Recent
+  // pastes, which the phone's home screen lists too. It holds at most five rows for each tab.
   recent?: PasteRow[]
   starred?: PasteRow[]
   // The newest pastes an agent, the CLI or the API created.
@@ -108,7 +108,8 @@ export async function getDashboardData(
       .from(pasteTable)
       .where(own),
     Promise.all([
-      has("recent_pastes") ? recent() : undefined,
+      // Recent pastes also fill the phone's home screen, whatever the layout holds.
+      recent(),
       has("starred") ? starred() : undefined,
       has("expiring")
         ? ownRows(gt(pasteTable.expiresAt, now), [asc(pasteTable.expiresAt)])

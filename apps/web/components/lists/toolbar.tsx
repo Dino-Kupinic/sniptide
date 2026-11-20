@@ -60,13 +60,13 @@ export function SearchField({
     <label
       aria-busy={pending}
       className={cn(
-        "rounded-lg flex h-[46px] items-center gap-2.5 border border-border px-3 focus-within:border-primary lg:h-8 lg:w-65 lg:gap-2 lg:px-2.5",
+        "rounded-lg flex h-10 items-center gap-2 bg-muted px-2.5 focus-within:ring-2 focus-within:ring-ring/40 lg:h-8 lg:w-65 lg:border lg:border-border lg:bg-transparent lg:focus-within:border-primary lg:focus-within:ring-0",
         className,
       )}
     >
       <SearchIcon
         aria-hidden="true"
-        className="size-4 shrink-0 text-muted-foreground lg:size-3.5"
+        className="size-[18px] shrink-0 text-muted-foreground lg:size-3.5"
       />
       <input
         type="search"
@@ -74,7 +74,7 @@ export function SearchField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={searchPlaceholder}
-        className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground lg:text-[13px] [&::-webkit-search-cancel-button]:hidden"
+        className="h-full min-w-0 flex-1 bg-transparent text-[17px] outline-none placeholder:text-muted-foreground lg:text-[13px] [&::-webkit-search-cancel-button]:hidden"
       />
       {pending ? (
         <span role="status" className="loading-feedback shrink-0 text-muted-foreground">
@@ -130,7 +130,7 @@ export function FilterMenu({
         />
         {label}
         {active ? (
-          <span className="rounded-sm bg-foreground px-1.5 text-xs font-medium text-background tabular-nums">
+          <span className="absolute top-0.5 right-0.5 min-w-4 rounded-sm bg-primary px-1 text-[11px] leading-4 font-medium text-primary-foreground tabular-nums">
             {selected.length}
           </span>
         ) : null}
@@ -199,84 +199,6 @@ export function SortMenu<Value extends string>({
   )
 }
 
-// Mobile filter chips ("All · Public · Unlisted …"), a single-choice row that scrolls sideways.
-// The edge that has more chips past it fades out, so a cut-off chip reads as "scroll for more".
-// `trailing` sits after the scrolling row, outside it, such as the Sort and filter button.
-export function QuickChips<Value extends string>({
-  value,
-  options,
-  onChange,
-  label,
-  trailing,
-}: {
-  // Null when the current filter is not one of the chips, such as two visibilities at once.
-  value: Value | null
-  options: { value: Value; label: string }[]
-  onChange: (value: Value) => void
-  label: string
-  trailing?: React.ReactNode
-}) {
-  const scroller = React.useRef<HTMLDivElement>(null)
-  const [fade, setFade] = React.useState({ start: false, end: false })
-
-  React.useEffect(() => {
-    const element = scroller.current
-    if (!element) return
-    const measure = () => {
-      const max = element.scrollWidth - element.clientWidth
-      // Scroll positions are negative in right-to-left layouts.
-      const position = Math.abs(element.scrollLeft)
-      setFade({ start: position > 1, end: max - position > 1 })
-    }
-    measure()
-    element.addEventListener("scroll", measure, { passive: true })
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    return () => {
-      element.removeEventListener("scroll", measure)
-      observer.disconnect()
-    }
-  }, [])
-
-  const mask = `linear-gradient(to right, ${fade.start ? "transparent, black 24px" : "black"}, ${
-    fade.end ? "black calc(100% - 24px), transparent" : "black"
-  })`
-
-  return (
-    <div className={cn("-mx-4 flex items-center gap-2", trailing && "pr-4")}>
-      <div
-        ref={scroller}
-        role="radiogroup"
-        aria-label={label}
-        style={{ maskImage: mask, WebkitMaskImage: mask }}
-        className={cn(
-          "flex min-w-0 flex-1 gap-2 overflow-x-auto pl-4 [scrollbar-width:none]",
-          trailing ? "pr-1" : "pr-4",
-        )}
-      >
-        {options.map((option) => (
-          // biome-ignore lint/a11y/useSemanticElements: styled chips acting as a radio group
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "rounded-md h-[34px] shrink-0 border border-border px-3 text-sm whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-              value === option.value &&
-                "border-foreground bg-foreground font-medium text-background",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-      {trailing}
-    </div>
-  )
-}
-
 export interface FilterGroup {
   id: string
   label: string
@@ -325,16 +247,16 @@ export function MobileFilterSheet<Sort extends string>({
       <SheetTrigger
         render={
           <Button
-            variant="outline"
-            size="xl"
+            variant="ghost"
+            size="icon-lg"
             aria-label={
               active > 0 ? t("sort_and_filter_active", { count: active }) : t("sort_and_filter")
             }
-            className="shrink-0 px-3"
+            className="relative size-10 shrink-0 text-link [&_svg:not([class*='size-'])]:size-[22px]"
           />
         }
       >
-        <ListFilterIcon aria-hidden="true" />
+        <ListFilterIcon aria-hidden="true" strokeWidth={1.9} />
         {active > 0 ? (
           <span className="rounded-sm bg-foreground px-1.5 text-xs font-medium text-background tabular-nums">
             {formatNumber(active, locale)}
@@ -567,17 +489,12 @@ export function ListHeader({
       {headerActions ? <HeaderActions>{headerActions}</HeaderActions> : null}
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-baseline gap-3">
-          <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[30px] leading-9 font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
+          <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[34px] leading-[41px] font-bold tracking-[-0.02em] lg:text-4xl lg:leading-10">
             {title || <Skeleton className="my-1.5 h-6 w-56 lg:my-2" />}
           </h1>
-          {count !== undefined ? (
-            <span className="shrink-0 text-sm text-muted-foreground tabular-nums lg:hidden">
-              {formatNumber(count, locale)}
-            </span>
-          ) : null}
         </div>
         {mobileActions ? (
-          <div className="flex shrink-0 items-center gap-2 lg:hidden">{mobileActions}</div>
+          <div className="-mr-2 flex shrink-0 items-center gap-1 lg:hidden">{mobileActions}</div>
         ) : null}
       </div>
       {description ? (

@@ -1,9 +1,15 @@
 import { Button } from "@sniptide/ui/components/button"
+import { cn } from "@sniptide/ui/lib/utils"
 import { ChevronLeftIcon, ClockIcon, CopyIcon, PencilIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getLocale, getTranslations } from "next-intl/server"
 import { CollectionIcon } from "@/components/collections/icon"
+import {
+  GroupedCanvas,
+  groupedPanelClass,
+  groupedSettingRowClass,
+} from "@/components/lists/grouped-list"
 import { LocalDateTime } from "@/components/local-date-time"
 import { CompareRevisions } from "@/components/paste/compare-revisions"
 import {
@@ -297,17 +303,15 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         </HeaderActions>
 
         {/* Mobile header */}
-        <div className="sticky top-0 z-20 box-content flex h-[52px] items-center justify-between gap-1 bg-background pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
-          <Button
-            variant="ghost"
-            size="xl"
-            render={<Link href={parent.href} />}
-            nativeButton={false}
-            className="min-w-0 gap-1 px-2"
+        <GroupedCanvas />
+        <div className="sticky top-0 z-20 box-content flex h-[52px] items-center justify-between gap-1 bg-inherit pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
+          <Link
+            href={parent.href}
+            className="flex h-10 min-w-0 items-center gap-0.5 rounded-lg pr-2 text-[17px] leading-[22px] text-link outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
-            <ChevronLeftIcon />
+            <ChevronLeftIcon aria-hidden className="size-6 shrink-0" strokeWidth={2} />
             <span className="truncate">{parent.label}</span>
-          </Button>
+          </Link>
           <div className="flex shrink-0 items-center">
             <StarButton slug={slug} starred={starred} variant="ghost" className="size-10" />
             <PasteOverflowMenu
@@ -316,26 +320,19 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               expiresAt={paste.expiresAt}
               canTrash={owned}
               canLeave={Boolean(share)}
+              canEdit={canEdit}
               rawAllowed={paste.allowRaw && !encryptionKeyId}
               url={url}
               encryptionKeyId={encryptionKeyId}
+              className="text-link [&_svg]:size-[22px]"
             />
-            {shareDialog("icon") ?? (
-              <ShareButton
-                url={url}
-                encryptionKeyId={encryptionKeyId}
-                title={paste.title}
-                expiresAt={paste.expiresAt}
-                className="size-10"
-              />
-            )}
           </div>
         </div>
 
         {/* Title, description and code card sit where the editor puts them, so Edit doesn't jump. */}
         <div className="flex min-w-0 flex-col gap-1.5 px-4 lg:px-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">
+            <h1 className="min-w-0 [overflow-wrap:anywhere] font-heading text-[26px] leading-8 font-bold tracking-[-0.02em] lg:text-2xl">
               {paste.title}
             </h1>
             <ExpiredBadge expiresAt={paste.expiresAt} />
@@ -348,16 +345,17 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
           ) : paste.description ? (
             <p className="text-base leading-6 lg:text-sm lg:leading-5">{paste.description}</p>
           ) : null}
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[15px] leading-5 text-muted-foreground lg:mt-1 lg:gap-x-3 lg:text-[13px] lg:leading-normal">
             <a
               href={`/${paste.slug}`}
               className="hidden font-mono text-link hover:underline lg:inline"
             >
               {host}/{paste.slug}
             </a>
+            {/* The link above is desktop only, so on phones the line starts without a dot. */}
             {collection ? (
               <>
-                <MetaDivider />
+                <MetaDivider className="max-lg:hidden" />
                 <Link
                   href={`/collections/${collection.slug}`}
                   className="flex items-center gap-1.5 hover:text-foreground"
@@ -367,9 +365,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                 </Link>
               </>
             ) : null}
-            <MetaDivider />
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <ClockIcon className="size-3.5" />
+            <MetaDivider className={collection ? undefined : "max-lg:hidden"} />
+            <span className="flex items-center gap-1.5 lg:font-medium lg:text-foreground">
+              <ClockIcon className="hidden size-3.5 lg:block" />
               {t("edited", { time: timeAgo(paste.updatedAt, Date.now(), locale) })}
             </span>
             {paste.owner ? (
@@ -396,8 +394,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                 lineNumbers={preferences.lineNumbers}
                 collapseAt={6}
                 panelToggle
+                phoneCard
                 className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
-                bodyClassName="bg-muted dark:bg-sidebar"
+                bodyClassName="bg-card lg:bg-muted lg:dark:bg-sidebar"
                 footer={t("endToEndEncrypted")}
               />
             ) : (
@@ -409,8 +408,9 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
                 collapseAt={6}
                 panelToggle
                 printable
+                phoneCard
                 className="mx-4 lg:mx-0 lg:min-h-[548px] lg:flex-1"
-                bodyClassName="bg-muted dark:bg-sidebar"
+                bodyClassName="bg-card lg:bg-muted lg:dark:bg-sidebar"
                 footer={t("revision", { number: revision, total: revision })}
               />
             )}
@@ -425,7 +425,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         </SidePanelProvider>
 
         {/* Mobile settings list */}
-        <div className="mx-4 pt-4 lg:hidden">
+        <div className="mx-4 pt-7 lg:hidden">
           {owned ? (
             <SharingPanel state={sharingState}>
               <SheetRow label={t("viewsLabel")} value={viewsValue}>
@@ -436,7 +436,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
               </SheetRow>
             </SharingPanel>
           ) : (
-            <div className="overflow-hidden rounded-lg divide-y divide-border border border-border text-sm">
+            <div className={cn(groupedPanelClass, "pl-4")}>
               {share && sharedNote ? (
                 <SheetRow
                   label={t("yourAccess")}
@@ -459,20 +459,18 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
         </div>
 
         {/* Mobile bottom actions */}
-        <div className="fixed inset-x-0 bottom-0 z-20 box-content flex h-14 items-center gap-2 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
-          {canEdit ? (
-            <Button
+        <div className="fixed inset-x-0 bottom-0 z-20 box-content flex h-16 items-center gap-2.5 border-t border-border bg-background pr-[max(1rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
+          {shareDialog("icon") ?? (
+            <ShareButton
+              url={url}
+              encryptionKeyId={encryptionKeyId}
+              title={paste.title}
+              expiresAt={paste.expiresAt}
               variant="outline"
-              size="xl"
-              className="flex-1"
-              render={<Link href={`/pastes/${slug}/edit`} />}
-              nativeButton={false}
-            >
-              <PencilIcon />
-              {t("edit")}
-            </Button>
-          ) : null}
-          <CopyCodeButton slug={slug} className="flex-[2]" />
+              className="size-10 shrink-0"
+            />
+          )}
+          <CopyCodeButton slug={slug} className="flex-1" />
         </div>
       </div>
     </ActiveFileProvider>
@@ -532,13 +530,18 @@ async function SharedWithYou({
 
 function MobileRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex h-12 items-center justify-between px-4">
+    <div className={cn(groupedSettingRowClass, "justify-between")}>
       <dt>{label}</dt>
       <dd className="text-muted-foreground">{value}</dd>
     </div>
   )
 }
 
-function MetaDivider() {
-  return <span aria-hidden="true" className="hidden h-3.5 w-px bg-border lg:block" />
+// A dot between the facts on phones, where they wrap as one line of text, and a hairline on desktop.
+function MetaDivider({ className }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={cn("lg:h-3.5 lg:w-px lg:bg-border", className)}>
+      <span className="lg:hidden">·</span>
+    </span>
+  )
 }

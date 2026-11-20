@@ -53,7 +53,7 @@ async function gistDraft(
 // `?gist=<id>&file=<name>…` starts from files of a gist (the import sheet).
 // `?template=<name>` starts from a template on the marketing site (Use template on its page).
 export default async function Page({ searchParams }: PageProps<"/new">) {
-  const { from, gist, file, template } = await searchParams
+  const { from, gist, file, template, title } = await searchParams
   const [copied, preferences, collections, imported, templated, session, t] = await Promise.all([
     typeof from === "string" ? getPaste(from) : null,
     getPreferences(),
@@ -89,7 +89,14 @@ export default async function Page({ searchParams }: PageProps<"/new">) {
       secretDetection={preferences.secretDetection}
       notice={imported && "error" in imported ? imported.error : undefined}
       initial={{
-        title: draft?.title ?? (source ? t("copyOf", { title: source.title }) : ""),
+        // ?title= names a blank paste, as the command menu's "New paste named" action does.
+        title:
+          draft?.title ??
+          (source
+            ? t("copyOf", { title: source.title })
+            : typeof title === "string"
+              ? title.slice(0, 200)
+              : ""),
         description: draft?.description ?? source?.description ?? "",
         files,
         visibility: suggestedVisibility(files, source?.visibility ?? preferences.defaultVisibility),

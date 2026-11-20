@@ -20,7 +20,6 @@
     "showPassword": "Mostrar contraseña",
     "files": "Archivos",
     "fileName": "Nombre del archivo",
-    "settingsSummary": "{visibility} · {expiry}",
     "pasteSettings": "Ajustes del paste",
     "rename": "Cambiar nombre",
     "changeLanguage": "Cambiar lenguaje",
@@ -245,6 +244,7 @@
     "sendsDetails": "{kind, select, page {Guarda el título, los archivos y el enlace como una página nueva dentro de la página que elijas. Solo aparecen las páginas que compartiste con Sniptide en Notion.} issue {Adjunta el título, el lenguaje y el enlace a la incidencia. Aparecen las incidencias abiertas asignadas a ti o creadas por ti.} other {Envía el título, el lenguaje y el enlace. La app puede publicar en canales públicos y en los privados a los que la invitaron.}}",
     "sendsLinkOnly": "{kind, select, page {Guarda solo el enlace, porque el título y el contenido de este paste no están abiertos a todos los que tienen el enlace.} issue {Adjunta solo el enlace, como «Sniptide paste», porque el título de este paste no está abierto a todos los que tienen el enlace.} other {Envía solo el enlace, porque el título de este paste no está abierto a todos los que tienen el enlace.}}",
     "sentToDestination": "{kind, select, page {Guardado en «{name}»} issue {Adjuntado a {name}} other {Enviado a #{name}}}",
-    "couldnTLoadDestinations": "{kind, select, page {No se pudieron cargar tus páginas de {service}. Inténtalo de nuevo en un minuto.} issue {No se pudieron cargar tus incidencias de {service}. Inténtalo de nuevo en un minuto.} other {No se pudieron cargar tus canales de {service}. Inténtalo de nuevo en un minuto.}}"
+    "couldnTLoadDestinations": "{kind, select, page {No se pudieron cargar tus páginas de {service}. Inténtalo de nuevo en un minuto.} issue {No se pudieron cargar tus incidencias de {service}. Inténtalo de nuevo en un minuto.} other {No se pudieron cargar tus canales de {service}. Inténtalo de nuevo en un minuto.}}",
+    "moreOptions": "Más opciones"
   }
 }

@@ -4,7 +4,15 @@ import { Dialog, DialogClose, DialogContent, DialogTitle } from "@sniptide/ui/co
 import { Input } from "@sniptide/ui/components/input"
 import { Kbd } from "@sniptide/ui/components/kbd"
 import { cn } from "@sniptide/ui/lib/utils"
-import { ArrowRightIcon, CornerDownLeftIcon, SearchIcon } from "lucide-react"
+import {
+  ArrowRightIcon,
+  ChevronRightIcon,
+  CircleXIcon,
+  CornerDownLeftIcon,
+  FileTextIcon,
+  PlusIcon,
+  SearchIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
@@ -17,7 +25,7 @@ import type { Collection } from "@/lib/collections/types"
 import { timeAgo } from "@/lib/format"
 import type { SidebarPaste } from "@/lib/pastes/types"
 import type { Command } from "./commands"
-import { highlight, matches, parseQuery, SCOPES, type Scope } from "./search"
+import { highlight, matches, parseQuery } from "./search"
 import { usePasteSearch } from "./use-paste-search"
 
 type Entry =
@@ -34,6 +42,8 @@ interface Group {
 const RECENT_SHOWN = 3
 const PASTES_SHOWN = 5
 const COLLECTIONS_SHOWN = 4
+// The field's own label sits on the menu's first action, which starts a paste with that title.
+const TITLE_MAX = 200
 // Mobile lists a couple of collections on the empty screen, in place of the desktop's Go to.
 const COLLECTIONS_EMPTY_SHOWN = 2
 
@@ -48,9 +58,9 @@ function hrefOf(entry: Entry) {
   }
 }
 
-// The ⌘K menu. Desktop is a dialog under the header; below lg it is a full-screen sheet with
-// scope chips in place of the `>` prefix. The field keeps focus the whole time and the list is
-// driven by aria-activedescendant, so typing never leaves the input.
+// The ⌘K menu. Desktop is a dialog under the header; below lg it is a full-screen sheet on the
+// grouped canvas, with each group of results on its own panel. The field keeps focus the whole
+// time and the list is driven by aria-activedescendant, so typing never leaves the input.
 export function CommandMenuDialog({
   open,
   onOpenChange,
@@ -71,16 +81,15 @@ export function CommandMenuDialog({
   const canHover = useCanHover()
   const listId = React.useId()
   const [value, setValue] = React.useState("")
-  const [chip, setChip] = React.useState<Scope>("all")
   const [active, setActive] = React.useState(0)
-  const { scope, text } = parseQuery(value, chip)
-  const search = usePasteSearch(text, scope === "all" || scope === "pastes")
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const { scope, text } = parseQuery(value)
+  const search = usePasteSearch(text, scope === "all")
 
   // Every opening starts from an empty field.
   React.useEffect(() => {
     if (open) {
       setValue("")
-      setChip("all")
       setActive(0)
     }
   }, [open])
@@ -111,37 +120,37 @@ export function CommandMenuDialog({
       add("go", t("go_to"), commandEntries("go"))
       add("actions", t("actions"), commandEntries("actions"))
     } else if (text === "") {
-      if (scope === "all" || scope === "pastes") {
-        const shown = scope === "all" ? RECENT_SHOWN : recent.length
-        add("recent", t("recent_pastes"), pasteEntries(recent.slice(0, shown)))
-      }
-      if (scope === "collections")
-        add("collections", t("collections"), collectionEntries(collections))
-      if (scope === "all") {
-        if (desktop) add("go", t("go_to"), commandEntries("go"))
-        else
-          add(
-            "collections",
-            t("collections"),
-            collectionEntries(collections.slice(0, COLLECTIONS_EMPTY_SHOWN)),
-          )
-        add("actions", t("actions"), commandEntries("actions"))
-      }
-    } else {
-      if (scope === "all" || scope === "pastes") {
-        const shown = scope === "all" ? PASTES_SHOWN : search.hits.length
-        add("pastes", t("pastes"), pasteEntries(search.hits.slice(0, shown)))
-      }
-      if (scope === "all" || scope === "collections") {
-        const found = collections.filter(
-          (collection) => matches(collection.name, text) || matches(collection.slug, text),
-        )
+      add("recent", t("recent_pastes"), pasteEntries(recent.slice(0, RECENT_SHOWN)))
+      if (desktop) add("go", t("go_to"), commandEntries("go"))
+      else
         add(
           "collections",
           t("collections"),
-          collectionEntries(scope === "all" ? found.slice(0, COLLECTIONS_SHOWN) : found),
+          collectionEntries(collections.slice(0, COLLECTIONS_EMPTY_SHOWN)),
         )
-      }
+      add("actions", t("actions"), commandEntries("actions"))
+    } else {
+      add("pastes", t("pastes"), pasteEntries(search.hits.slice(0, PASTES_SHOWN)))
+      const found = collections.filter(
+        (collection) => matches(collection.name, text) || matches(collection.slug, text),
+      )
+      add("collections", t("collections"), collectionEntries(found.slice(0, COLLECTIONS_SHOWN)))
+      // With text in the field, the actions offer to start a paste under that title, followed by
+      // the commands whose names match.
+      add("actions", t("actions"), [
+        {
+          id: "new-titled",
+          kind: "command",
+          command: {
+            id: "new-titled",
+            group: "actions",
+            label: t("new_paste_titled", { title: text.slice(0, TITLE_MAX) }),
+            icon: PlusIcon,
+            href: `/new?${new URLSearchParams({ title: text.slice(0, TITLE_MAX) })}`,
+          },
+        },
+        ...commandEntries("actions"),
+      ])
     }
     return result
   }, [scope, text, recent, collections, commands, desktop, canHover, search.hits, t])
@@ -183,7 +192,7 @@ export function CommandMenuDialog({
   const empty = entries.length === 0 && !search.pending
   // Earlier results stay on screen while a new search runs, so this only shows when there are none.
   const searching = entries.length === 0 && search.pending
-  const seeAll = text !== "" && scope !== "collections" && scope !== "commands" && search.total > 0
+  const seeAll = text !== "" && scope === "all" && search.total > 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,8 +200,8 @@ export function CommandMenuDialog({
         className={cn(
           "gap-0 overflow-hidden p-0",
           "lg:top-28 lg:w-160 lg:max-w-160 lg:translate-y-0",
-          // A full-screen sheet below lg.
-          "max-lg:inset-0 max-lg:h-dvh max-lg:bg-background max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:border-0 max-lg:shadow-none",
+          // A full-screen sheet on the grouped canvas below lg.
+          "max-lg:inset-0 max-lg:h-dvh max-lg:bg-grouped max-lg:w-full max-lg:max-w-none max-lg:translate-x-0 max-lg:translate-y-0 max-lg:border-0 max-lg:shadow-none",
         )}
       >
         <DialogTitle className="sr-only">{t("command_menu")}</DialogTitle>
@@ -201,9 +210,10 @@ export function CommandMenuDialog({
           <div className="relative min-w-0 flex-1">
             <SearchIcon
               aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground lg:left-0"
+              className="pointer-events-none absolute top-1/2 left-3 size-[18px] -translate-y-1/2 text-muted-foreground lg:left-0 lg:size-4"
             />
             <Input
+              ref={inputRef}
               role="combobox"
               aria-expanded
               aria-controls={listId}
@@ -224,69 +234,66 @@ export function CommandMenuDialog({
                 setActive(0)
               }}
               onKeyDown={onKeyDown}
-              className="pl-9 focus-visible:pl-[35px] lg:h-14 lg:border-0 lg:bg-transparent lg:pr-0 lg:pl-8 lg:text-[15px] lg:focus-visible:border-0 lg:focus-visible:pl-8"
+              className="pl-9 focus-visible:pl-[35px] max-lg:h-10 max-lg:border-0 max-lg:bg-foreground/[0.06] max-lg:pr-10 max-lg:pl-10 max-lg:text-[17px] max-lg:focus-visible:border-0 max-lg:focus-visible:pl-10 dark:max-lg:bg-muted lg:h-14 lg:border-0 lg:bg-transparent lg:pr-0 lg:pl-8 lg:text-[15px] lg:focus-visible:border-0 lg:focus-visible:pl-8"
             />
+            {value ? (
+              <button
+                type="button"
+                aria-label={t("clear_search")}
+                onClick={() => {
+                  setValue("")
+                  setActive(0)
+                  inputRef.current?.focus()
+                }}
+                className="absolute top-1/2 right-1 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 lg:hidden"
+              >
+                <CircleXIcon
+                  aria-hidden
+                  className="size-[18px] fill-muted-foreground/70 stroke-card"
+                />
+              </button>
+            ) : null}
           </div>
           <ShortcutKeys id="menu-close" className="max-lg:hidden" />
-          <DialogClose className="shrink-0 text-sm font-medium text-link outline-none focus-visible:underline lg:hidden">
+          <DialogClose className="shrink-0 text-[17px] text-link outline-none focus-visible:underline lg:hidden">
             {t("cancel")}
           </DialogClose>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 lg:hidden">
-          {SCOPES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={chip === id}
-              onClick={() => {
-                setChip(id)
-                setActive(0)
-              }}
-              className={cn(
-                "rounded-md h-8 shrink-0 border px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                chip === id
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border text-foreground",
-              )}
-            >
-              {t(label)}
-            </button>
-          ))}
         </div>
 
         <div
           id={listId}
           role="listbox"
           aria-label={t("results")}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 lg:max-h-[min(480px,calc(100dvh-14rem))] lg:flex-none lg:px-2 lg:pt-1.5 lg:pb-2"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 max-lg:flex max-lg:flex-col max-lg:gap-7 max-lg:px-4 max-lg:pt-2 max-lg:pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:max-h-[min(480px,calc(100dvh-14rem))] lg:flex-none lg:px-2 lg:pt-1.5 lg:pb-2"
         >
           {groups.map((group) => (
             // biome-ignore lint/a11y/useSemanticElements: a group inside a listbox is the ARIA pattern; <fieldset> is for form controls.
             <div key={group.id} role="group" aria-labelledby={`${listId}-${group.id}`}>
               <div
                 id={`${listId}-${group.id}`}
-                className="flex h-8 items-center px-4 text-[13px] text-muted-foreground max-lg:mt-2 lg:h-7 lg:px-2.5 lg:text-xs"
+                className="flex h-8 items-center px-4 text-[13px] text-muted-foreground max-lg:h-auto max-lg:pb-1.5 max-lg:leading-4 lg:h-7 lg:px-2.5 lg:text-xs"
               >
                 {group.title}
               </div>
-              {group.entries.map((entry) => (
-                <Option
-                  key={entry.id}
-                  id={optionId(entry)}
-                  active={entry === activeEntry}
-                  onActivate={() => setActive(entries.indexOf(entry))}
-                  onChoose={(newTab) => choose(entry, newTab)}
-                >
-                  <EntryRow
-                    entry={entry}
-                    text={text}
-                    host={host}
+              <div className="max-lg:overflow-hidden max-lg:rounded-lg max-lg:bg-card">
+                {group.entries.map((entry) => (
+                  <Option
+                    key={entry.id}
+                    id={optionId(entry)}
                     active={entry === activeEntry}
-                    desktop={desktop}
-                  />
-                </Option>
-              ))}
+                    onActivate={() => setActive(entries.indexOf(entry))}
+                    onChoose={(newTab) => choose(entry, newTab)}
+                  >
+                    <EntryRow
+                      entry={entry}
+                      text={text}
+                      host={host}
+                      active={entry === activeEntry}
+                      desktop={desktop}
+                    />
+                  </Option>
+                ))}
+              </div>
             </div>
           ))}
           {searching ? (
@@ -352,7 +359,7 @@ function Option({
         if (!active) onActivate()
       }}
       onClick={(event) => onChoose(event.metaKey || event.ctrlKey)}
-      className="relative flex cursor-default items-center gap-2.5 px-4 text-sm max-lg:mx-4 max-lg:px-0 max-lg:not-last:border-b max-lg:not-last:border-border lg:h-9 lg:px-2.5 lg:data-[active=true]:bg-[#efefef] lg:data-[active=true]:before:absolute lg:data-[active=true]:before:inset-y-0 lg:data-[active=true]:before:left-0 lg:data-[active=true]:before:w-0.5 lg:data-[active=true]:before:bg-link dark:lg:data-[active=true]:bg-muted"
+      className="relative flex cursor-default items-center gap-2.5 px-4 text-sm max-lg:min-h-[50px] max-lg:gap-3 max-lg:text-[17px] max-lg:leading-[22px] max-lg:active:bg-muted max-lg:not-last:after:absolute max-lg:not-last:after:right-0 max-lg:not-last:after:bottom-0 max-lg:not-last:after:left-[50px] max-lg:not-last:after:h-px max-lg:not-last:after:bg-border lg:h-9 lg:px-2.5 lg:data-[active=true]:bg-[#efefef] lg:data-[active=true]:before:absolute lg:data-[active=true]:before:inset-y-0 lg:data-[active=true]:before:left-0 lg:data-[active=true]:before:w-0.5 lg:data-[active=true]:before:bg-link dark:lg:data-[active=true]:bg-muted"
     >
       {children}
     </div>
@@ -362,7 +369,11 @@ function Option({
 function Highlight({ value, text }: { value: string; text: string }) {
   return highlight(value, text).map((segment, index) =>
     segment.match ? (
-      <mark key={index} className="bg-pink text-pink-foreground">
+      // Phones set the match in bold, which reads on the small rows without a fill.
+      <mark
+        key={index}
+        className="bg-pink text-pink-foreground max-lg:bg-transparent max-lg:font-semibold max-lg:text-foreground"
+      >
         {segment.text}
       </mark>
     ) : (
@@ -390,11 +401,16 @@ function EntryRow({
     const ago = timeAgo(entry.updatedAt, undefined, locale)
     return (
       <>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5 max-lg:justify-center max-lg:py-3 lg:flex-row lg:items-baseline lg:gap-2.5">
-          <span className="truncate font-medium text-foreground max-lg:text-base lg:shrink-0 lg:max-w-[55%] lg:font-normal">
+        <FileTextIcon
+          aria-hidden="true"
+          className="size-[22px] shrink-0 text-link lg:hidden"
+          strokeWidth={1.75}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5 max-lg:justify-center max-lg:py-2.5 lg:flex-row lg:items-baseline lg:gap-2.5">
+          <span className="truncate text-foreground lg:shrink-0 lg:max-w-[55%]">
             <Highlight value={entry.title} text={text} />
           </span>
-          <span className="truncate font-mono text-xs text-muted-foreground">
+          <span className="truncate font-mono text-xs text-muted-foreground max-lg:text-[13px] max-lg:leading-4">
             {/* The host is the same on every row, so phones keep the room for the slug and age. */}
             <span className="max-lg:hidden">{host}/</span>
             <Highlight value={entry.slug} text={text} />
@@ -421,13 +437,17 @@ function EntryRow({
     const { collection } = entry
     return (
       <>
-        <span className="flex size-4 shrink-0 items-center justify-center">
-          <CollectionIcon icon={collection.icon} hue={collection.hue} className="size-2.5" />
+        <span className="flex size-4 shrink-0 items-center justify-center max-lg:size-[22px]">
+          <CollectionIcon
+            icon={collection.icon}
+            hue={collection.hue}
+            className="size-2.5 max-lg:size-4"
+          />
         </span>
-        <span className="min-w-0 flex-1 truncate max-lg:py-3.5">
+        <span className="min-w-0 flex-1 truncate">
           <Highlight value={collection.name} text={text} />
         </span>
-        <span className="shrink-0 text-[13px] text-muted-foreground">
+        <span className="shrink-0 text-[13px] text-muted-foreground max-lg:hidden">
           {active && desktop ? (
             <span className="flex items-center gap-2">
               {t("open")}
@@ -439,6 +459,15 @@ function EntryRow({
             t("paste_count", { count: collection.pasteCount })
           )}
         </span>
+        <span className="flex shrink-0 items-center gap-2 text-muted-foreground tabular-nums lg:hidden">
+          <span className="sr-only">{t("paste_count", { count: collection.pasteCount })}</span>
+          <span aria-hidden>{collection.pasteCount}</span>
+          <ChevronRightIcon
+            aria-hidden
+            className="-mr-1 size-5 text-muted-foreground/60"
+            strokeWidth={2}
+          />
+        </span>
       </>
     )
   }
@@ -447,8 +476,12 @@ function EntryRow({
   const Icon = command.icon
   return (
     <>
-      <Icon aria-hidden="true" className="size-4 shrink-0 text-foreground/75" />
-      <span className="min-w-0 flex-1 truncate max-lg:py-3.5">
+      <Icon
+        aria-hidden="true"
+        className="size-4 shrink-0 text-foreground/75 max-lg:size-[22px] max-lg:text-link"
+        strokeWidth={1.75}
+      />
+      <span className="min-w-0 flex-1 truncate">
         <Highlight value={command.label} text={text} />
       </span>
       {command.shortcut ? (

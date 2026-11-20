@@ -407,7 +407,14 @@
     "templates_clear": "Clear filters",
     "templates_use": "Use template",
     "templates_use_label": "Use the {title}",
-    "templates_intro": "Open a template in the editor and save it as your own paste."
+    "templates_intro": "Open a template in the editor and save it as your own paste.",
+    "home_recent": "Recent",
+    "home_this_week": "This week",
+    "home_views_this_week": "Your pastes had {count, plural, one {# view} other {# views}} this week.",
+    "analytics_delta": "{delta} vs the period before",
+    "analytics_peak": "Peak: {value} on {day}",
+    "clear_search": "Clear search",
+    "new_paste_titled": "New paste named “{title}”"
   },
   "Secrets": {
     "title": "Secrets",

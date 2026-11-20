@@ -209,6 +209,9 @@
     "usageUnavailable": "Nutzung ist nicht verfügbar.",
     "usageReload": "Neu laden",
     "usageCreateToken": "API-Token erstellen",
-    "usageChartLabel": "API-Anfragen pro Tag: {values}"
+    "usageChartLabel": "API-Anfragen pro Tag: {values}",
+    "profileRowDescription": "Profil, Benutzername und Bild",
+    "app": "App",
+    "appearance": "Darstellung"
   }
 }

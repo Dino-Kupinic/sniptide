@@ -20,7 +20,6 @@
     "showPassword": "显示密码",
     "files": "文件",
     "fileName": "文件名",
-    "settingsSummary": "{visibility} · {expiry}",
     "pasteSettings": "粘贴设置",
     "rename": "重命名",
     "changeLanguage": "更改语言",
@@ -245,6 +244,7 @@
     "sendsDetails": "{kind, select, page {将标题、文件和链接保存为所选页面中的新页面。只会列出你在 Notion 中共享给 Sniptide 的页面。} issue {将标题、语言和链接附加到 Issue。会列出分配给你或由你创建的未完成 Issue。} other {发送标题、语言和链接。应用可以在公开频道以及邀请它加入的私有频道中发帖。}}",
     "sendsLinkOnly": "{kind, select, page {仅保存链接，因为此粘贴的标题和内容并未向所有持有链接的人开放。} issue {仅以“Sniptide paste”附加链接，因为此粘贴的标题并未向所有持有链接的人开放。} other {仅发送链接，因为此粘贴的标题并未向所有持有链接的人开放。}}",
     "sentToDestination": "{kind, select, page {已保存到“{name}”} issue {已附加到 {name}} other {已发送到 #{name}}}",
-    "couldnTLoadDestinations": "{kind, select, page {无法加载你的 {service} 页面。请在一分钟后重试。} issue {无法加载你的 {service} Issue。请在一分钟后重试。} other {无法加载你的 {service} 频道。请在一分钟后重试。}}"
+    "couldnTLoadDestinations": "{kind, select, page {无法加载你的 {service} 页面。请在一分钟后重试。} issue {无法加载你的 {service} Issue。请在一分钟后重试。} other {无法加载你的 {service} 频道。请在一分钟后重试。}}",
+    "moreOptions": "更多选项"
   }
 }

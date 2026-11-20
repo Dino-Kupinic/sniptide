@@ -53,7 +53,8 @@ for (const width of [1280, 390]) {
         return row
       }
 
-      const settings = screen.getByRole("button", /^Paste settings/, { visible: true })
+      // Phones keep the expiry slider in the sheet behind More options.
+      const settings = screen.getByRole("button", "More options", { visible: true })
       const sheet = screen.getByRole("dialog", "Paste settings", { visible: true })
       const slider = screen.getByRole("slider", "Expires after", { visible: true })
       await app.open(`/pastes/${slug}/edit`)
@@ -122,10 +123,13 @@ for (const mobile of [false, true]) {
       ? screen.getByRole("listitem").filter({ hasText: title })
       : screen.getByRole("row").filter({ hasText: title })
     await expect(row.getByText("Expired", { exact: true })).toBeVisible()
-    await row.getByRole("button", `Actions for ${title}`).tap()
-    await expect(
-      screen.getByRole(mobile ? "button" : "menuitem", "Copy link", { exact: true, visible: true }),
-    ).toBeDisabled()
+    // Phone rows open the paste, whose own menu is checked below.
+    if (!mobile) {
+      await row.getByRole("button", `Actions for ${title}`).tap()
+      await expect(
+        screen.getByRole("menuitem", "Copy link", { exact: true, visible: true }),
+      ).toBeDisabled()
+    }
     await app.open("/starred")
     const starredRow = mobile
       ? screen.getByRole("listitem").filter({ hasText: title })

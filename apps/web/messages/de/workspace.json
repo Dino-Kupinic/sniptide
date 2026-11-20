@@ -407,7 +407,14 @@
     "templates_clear": "Filter zurücksetzen",
     "templates_use": "Vorlage verwenden",
     "templates_use_label": "{title} verwenden",
-    "templates_intro": "Öffne eine Vorlage im Editor und speichere sie als deinen eigenen Paste."
+    "templates_intro": "Öffne eine Vorlage im Editor und speichere sie als deinen eigenen Paste.",
+    "home_recent": "Zuletzt",
+    "home_this_week": "Diese Woche",
+    "home_views_this_week": "Deine Pastes hatten diese Woche {count, plural, one {# Aufruf} other {# Aufrufe}}.",
+    "analytics_delta": "{delta} gegenüber dem Zeitraum davor",
+    "analytics_peak": "Spitze: {value} am {day}",
+    "clear_search": "Suche löschen",
+    "new_paste_titled": "Neuer Paste namens „{title}“"
   },
   "Secrets": {
     "title": "Geheimnisse",

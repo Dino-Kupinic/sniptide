@@ -5,15 +5,14 @@ import { highlight, matches, parseQuery } from "@/components/command-menu/search
 
 describe("command menu query", () => {
   test("a leading > limits the menu to commands", () => {
-    expect(parseQuery(">  new", "all")).toEqual({ scope: "commands", text: "new" })
-    expect(parseQuery(">", "pastes")).toEqual({ scope: "commands", text: "" })
+    expect(parseQuery(">  new")).toEqual({ scope: "commands", text: "new" })
+    expect(parseQuery(">")).toEqual({ scope: "commands", text: "" })
   })
 
-  test("otherwise the chip decides the scope and the text is trimmed", () => {
-    expect(parseQuery("  api ", "all")).toEqual({ scope: "all", text: "api" })
-    expect(parseQuery("api", "collections")).toEqual({ scope: "collections", text: "api" })
+  test("otherwise everything is searched and the text is trimmed", () => {
+    expect(parseQuery("  api ")).toEqual({ scope: "all", text: "api" })
     // A > that isn't first is just a character.
-    expect(parseQuery("a > b", "all")).toEqual({ scope: "all", text: "a > b" })
+    expect(parseQuery("a > b")).toEqual({ scope: "all", text: "a > b" })
   })
 
   test("matching ignores case and an empty query matches everything", () => {

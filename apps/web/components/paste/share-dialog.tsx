@@ -177,14 +177,14 @@ export function ShareDialog({
           title={expired ? t("expiredSharingHelp") : undefined}
           render={
             <Button
-              variant="ghost"
-              size="icon-lg"
+              variant="outline"
+              size="xl"
               aria-label={t(managingExpiredAccess ? "manageAccess" : "share")}
-              className="size-10"
+              className="w-10 shrink-0 px-0"
             />
           }
         >
-          <ShareIcon className="size-5" />
+          <ShareIcon />
         </DialogTrigger>
       )}
       <DialogContent
