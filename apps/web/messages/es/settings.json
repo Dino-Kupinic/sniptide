@@ -212,6 +212,10 @@
     "usageChartLabel": "Solicitudes API por día: {values}",
     "profileRowDescription": "Perfil, nombre de usuario y foto",
     "app": "App",
-    "appearance": "Apariencia"
+    "appearance": "Apariencia",
+    "productEmails": {
+      "label": "Novedades del producto",
+      "description": "Notas de versión y noticias sobre Sniptide. Cada correo incluye un enlace para dejar de recibirlos."
+    }
   }
 }

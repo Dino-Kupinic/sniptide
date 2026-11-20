@@ -212,6 +212,10 @@
     "usageChartLabel": "1日ごとのAPIリクエスト: {values}",
     "profileRowDescription": "プロフィール、ユーザー名、写真",
     "app": "アプリ",
-    "appearance": "外観"
+    "appearance": "外観",
+    "productEmails": {
+      "label": "製品アップデート",
+      "description": "Sniptide のリリースノートとお知らせです。すべてのメールに配信停止リンクがあります。"
+    }
   }
 }

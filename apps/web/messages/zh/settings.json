@@ -212,6 +212,10 @@
     "usageChartLabel": "每日 API 请求：{values}",
     "profileRowDescription": "个人资料、用户名和头像",
     "app": "应用",
-    "appearance": "外观"
+    "appearance": "外观",
+    "productEmails": {
+      "label": "产品更新",
+      "description": "Sniptide 的版本说明和新闻。每封邮件都附有退订链接。"
+    }
   }
 }

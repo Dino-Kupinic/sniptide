@@ -15,12 +15,27 @@ import {
 import type { EmailContent, Paragraph } from "./content"
 import { darkModeCss, fontFaceCss, fonts, light, phoneCss } from "./theme"
 
-const text: CSSProperties = {
+export const text: CSSProperties = {
   margin: "0 0 16px",
   fontFamily: fonts.sans,
   fontSize: "16px",
   lineHeight: "26px",
   color: light.foreground,
+}
+
+// The primary action: the raised blue button from the app, with its darker edge.
+export const button: CSSProperties = {
+  display: "inline-block",
+  padding: "12px 20px",
+  borderRadius: "6px",
+  borderBottom: `2px solid ${light.depth}`,
+  backgroundColor: light.primary,
+  color: light.primaryForeground,
+  fontFamily: fonts.sans,
+  fontSize: "16px",
+  lineHeight: "20px",
+  fontWeight: 600,
+  textDecoration: "none",
 }
 
 const small: CSSProperties = {
@@ -32,7 +47,7 @@ const small: CSSProperties = {
 }
 
 // One block of the card. The class lets phones swap the 24px sides for the 16px gutter.
-function Padded({ padding, children }: { padding: string; children: ReactNode }) {
+export function Padded({ padding, children }: { padding: string; children: ReactNode }) {
   return (
     <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0}>
       <tbody>
@@ -99,15 +114,25 @@ function Brand({ logo }: { logo: EmailContent["logo"] }) {
   )
 }
 
-export function EmailLayout({ content }: { content: EmailContent }) {
-  const { preview, heading, body, action, steps, after, note, footer } = content
+// The document, canvas and card every Sniptide email shares, with the logo at the top. The
+// content and footer go inside the card.
+export function EmailFrame({
+  locale,
+  subject,
+  preview,
+  logo,
+  fontsUrl,
+  children,
+}: Pick<EmailContent, "locale" | "subject" | "preview" | "logo" | "fontsUrl"> & {
+  children: ReactNode
+}) {
   return (
-    <Html lang={content.locale} dir="ltr">
+    <Html lang={locale} dir="ltr">
       <Head>
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
-        <title>{content.subject}</title>
-        <style>{`${content.fontsUrl ? fontFaceCss(content.fontsUrl) : ""}${phoneCss}${darkModeCss}`}</style>
+        <title>{subject}</title>
+        <style>{`${fontsUrl ? fontFaceCss(fontsUrl) : ""}${phoneCss}${darkModeCss}`}</style>
       </Head>
       <Preview useTitleTag={false}>{preview}</Preview>
       {/* A plain body instead of React Email's Body, which repeats the background on an inner cell
@@ -134,150 +159,9 @@ export function EmailLayout({ content }: { content: EmailContent }) {
                   }}
                 >
                   <Padded padding="24px 24px 0">
-                    <Brand logo={content.logo} />
+                    <Brand logo={logo} />
                   </Padded>
-                  <Padded padding="32px 24px 8px">
-                    <Heading
-                      as="h1"
-                      className="st-text"
-                      style={{
-                        margin: "0 0 16px",
-                        fontFamily: fonts.heading,
-                        fontSize: "30px",
-                        lineHeight: "36px",
-                        fontWeight: 700,
-                        letterSpacing: "-0.02em",
-                        color: light.foreground,
-                      }}
-                    >
-                      {heading}
-                    </Heading>
-                    {body.map((paragraph, index) => (
-                      <Text key={index} className="st-text" style={text}>
-                        <Runs paragraph={paragraph} />
-                      </Text>
-                    ))}
-                    <Section style={{ margin: "8px 0 24px" }}>
-                      <Button
-                        href={action.href}
-                        style={{
-                          display: "inline-block",
-                          padding: "12px 20px",
-                          borderRadius: "6px",
-                          borderBottom: `2px solid ${light.depth}`,
-                          backgroundColor: light.primary,
-                          color: light.primaryForeground,
-                          fontFamily: fonts.sans,
-                          fontSize: "16px",
-                          lineHeight: "20px",
-                          fontWeight: 600,
-                          textDecoration: "none",
-                        }}
-                      >
-                        {action.label}
-                      </Button>
-                    </Section>
-                    {steps?.length ? (
-                      <Section>
-                        <Hr
-                          className="st-rule"
-                          style={{
-                            margin: "0 0 20px",
-                            border: 0,
-                            borderTop: `1px solid ${light.border}`,
-                          }}
-                        />
-                        {steps.map((step) => (
-                          <Text key={step.href} style={{ ...text, margin: "0 0 16px" }}>
-                            <Link
-                              className="st-link"
-                              href={step.href}
-                              style={{ color: light.link, fontWeight: 600, textDecoration: "none" }}
-                            >
-                              {step.label}
-                            </Link>
-                            <br />
-                            <span className="st-muted" style={{ color: light.muted }}>
-                              {step.body}
-                            </span>
-                          </Text>
-                        ))}
-                      </Section>
-                    ) : null}
-                    {after?.map((paragraph, index) => (
-                      <Text key={index} className="st-text" style={text}>
-                        <Runs paragraph={paragraph} />
-                      </Text>
-                    ))}
-                    {content.buttonFallback ? (
-                      <>
-                        <Text
-                          className="st-muted"
-                          style={{ ...small, fontSize: "14px", lineHeight: "20px" }}
-                        >
-                          {content.buttonFallback}
-                        </Text>
-                        <Text
-                          style={{
-                            ...small,
-                            margin: "0 0 16px",
-                            fontFamily: fonts.mono,
-                            wordBreak: "break-all",
-                          }}
-                        >
-                          <Link
-                            className="st-link"
-                            href={action.href}
-                            style={{ color: light.link }}
-                          >
-                            {action.href}
-                          </Link>
-                        </Text>
-                      </>
-                    ) : null}
-                    {note ? (
-                      <Text
-                        className="st-muted"
-                        style={{ ...small, fontSize: "14px", lineHeight: "20px" }}
-                      >
-                        {note}
-                      </Text>
-                    ) : null}
-                  </Padded>
-                  <Padded padding="0 24px 24px">
-                    <Hr
-                      className="st-rule"
-                      style={{
-                        margin: "16px 0 16px",
-                        border: 0,
-                        borderTop: `1px solid ${light.border}`,
-                      }}
-                    />
-                    <Text className="st-muted" style={small}>
-                      {footer.reason}
-                    </Text>
-                    {footer.links?.length ? (
-                      <Text className="st-muted" style={small}>
-                        {footer.links.map((link, index) => (
-                          <span key={link.href}>
-                            {index > 0 ? " · " : null}
-                            <Link
-                              className="st-link"
-                              href={link.href}
-                              style={{ color: light.link, textDecoration: "underline" }}
-                            >
-                              {link.label}
-                            </Link>
-                          </span>
-                        ))}
-                      </Text>
-                    ) : null}
-                    {footer.sender ? (
-                      <Text className="st-muted" style={{ ...small, margin: 0 }}>
-                        {footer.sender}
-                      </Text>
-                    ) : null}
-                  </Padded>
+                  {children}
                 </Container>
               </td>
             </tr>
@@ -285,5 +169,143 @@ export function EmailLayout({ content }: { content: EmailContent }) {
         </table>
       </body>
     </Html>
+  )
+}
+
+// Why the reader got the email, its links (such as a way out) and who sent it.
+export function EmailFooter({ reason, links, sender }: EmailContent["footer"]) {
+  return (
+    <Padded padding="0 24px 24px">
+      <Hr
+        className="st-rule"
+        style={{
+          margin: "16px 0 16px",
+          border: 0,
+          borderTop: `1px solid ${light.border}`,
+        }}
+      />
+      <Text className="st-muted" style={small}>
+        {reason}
+      </Text>
+      {links?.length ? (
+        <Text className="st-muted" style={small}>
+          {links.map((link, index) => (
+            <span key={link.href}>
+              {index > 0 ? " · " : null}
+              <Link
+                className="st-link"
+                href={link.href}
+                style={{ color: light.link, textDecoration: "underline" }}
+              >
+                {link.label}
+              </Link>
+            </span>
+          ))}
+        </Text>
+      ) : null}
+      {sender ? (
+        <Text className="st-muted" style={{ ...small, margin: 0 }}>
+          {sender}
+        </Text>
+      ) : null}
+    </Padded>
+  )
+}
+
+export function EmailLayout({ content }: { content: EmailContent }) {
+  const { preview, heading, body, action, steps, after, note, footer } = content
+  return (
+    <EmailFrame
+      locale={content.locale}
+      subject={content.subject}
+      preview={preview}
+      logo={content.logo}
+      fontsUrl={content.fontsUrl}
+    >
+      <Padded padding="32px 24px 8px">
+        <Heading
+          as="h1"
+          className="st-text"
+          style={{
+            margin: "0 0 16px",
+            fontFamily: fonts.heading,
+            fontSize: "30px",
+            lineHeight: "36px",
+            fontWeight: 700,
+            letterSpacing: "-0.02em",
+            color: light.foreground,
+          }}
+        >
+          {heading}
+        </Heading>
+        {body.map((paragraph, index) => (
+          <Text key={index} className="st-text" style={text}>
+            <Runs paragraph={paragraph} />
+          </Text>
+        ))}
+        <Section style={{ margin: "8px 0 24px" }}>
+          <Button href={action.href} style={button}>
+            {action.label}
+          </Button>
+        </Section>
+        {steps?.length ? (
+          <Section>
+            <Hr
+              className="st-rule"
+              style={{
+                margin: "0 0 20px",
+                border: 0,
+                borderTop: `1px solid ${light.border}`,
+              }}
+            />
+            {steps.map((step) => (
+              <Text key={step.href} style={{ ...text, margin: "0 0 16px" }}>
+                <Link
+                  className="st-link"
+                  href={step.href}
+                  style={{ color: light.link, fontWeight: 600, textDecoration: "none" }}
+                >
+                  {step.label}
+                </Link>
+                <br />
+                <span className="st-muted" style={{ color: light.muted }}>
+                  {step.body}
+                </span>
+              </Text>
+            ))}
+          </Section>
+        ) : null}
+        {after?.map((paragraph, index) => (
+          <Text key={index} className="st-text" style={text}>
+            <Runs paragraph={paragraph} />
+          </Text>
+        ))}
+        {content.buttonFallback ? (
+          <>
+            <Text className="st-muted" style={{ ...small, fontSize: "14px", lineHeight: "20px" }}>
+              {content.buttonFallback}
+            </Text>
+            <Text
+              style={{
+                ...small,
+                margin: "0 0 16px",
+                fontFamily: fonts.mono,
+                wordBreak: "break-all",
+              }}
+            >
+              <Link className="st-link" href={action.href} style={{ color: light.link }}>
+                {action.href}
+              </Link>
+            </Text>
+          </>
+        ) : null}
+        {note ? (
+          <Text className="st-muted" style={{ ...small, fontSize: "14px", lineHeight: "20px" }}>
+            {note}
+          </Text>
+        ) : null}
+      </Padded>
+      <EmailFooter {...footer} />
+    </EmailFrame>
   )
 }

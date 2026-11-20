@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "next dev",
     "email": "email dev --dir emails --port 3002",
+    "broadcast": "bun scripts/send-broadcast.ts",
     "build": "next build",
     "start": "next start",
     "lint": "biome lint .",

@@ -9,6 +9,7 @@ import type { NotificationChannel, NotificationPreferences } from "@/lib/prefere
 import {
   sendNotificationVerificationEmail,
   updateNotificationPreference,
+  updateProductEmails,
 } from "@/lib/settings-actions"
 import { SaveStatus, SettingsSection } from "./section"
 
@@ -16,15 +17,32 @@ export function NotificationSection({
   initial,
   emailAvailable,
   emailVerified,
+  productEmails,
 }: {
   initial: NotificationPreferences
   emailAvailable: boolean
   emailVerified: boolean
+  productEmails: { available: boolean; enabled: boolean }
 }) {
   const t = useTranslations("Settings")
   const [preferences, setPreferences] = React.useState(initial)
   const [pending, setPending] = React.useState(false)
   const [status, setStatus] = React.useState<{ ok: boolean; message: string } | null>(null)
+  const [updates, setUpdates] = React.useState(productEmails.enabled)
+
+  async function changeUpdates(enabled: boolean) {
+    setUpdates(enabled)
+    setPending(true)
+    setStatus(null)
+    const result = await updateProductEmails(enabled).catch(() => null)
+    if (!result?.ok) setUpdates(!enabled)
+    setStatus(
+      result?.ok
+        ? { ok: true, message: t("saved") }
+        : { ok: false, message: result?.error ?? t("couldnTSaveTryAgain") },
+    )
+    setPending(false)
+  }
 
   async function change(kind: NotificationKind, channel: NotificationChannel, enabled: boolean) {
     const previous = preferences
@@ -122,6 +140,32 @@ export function NotificationSection({
           </div>
         ))}
       </div>
+      {productEmails.available ? (
+        <div className="grid grid-cols-[minmax(0,1fr)_60px] items-center gap-2 rounded-lg border border-border px-3 py-4 sm:grid-cols-[minmax(0,1fr)_90px] sm:px-4">
+          <div className="flex flex-col gap-1">
+            <span id="product-emails-label" className="text-sm font-medium">
+              {t("productEmails.label")}
+            </span>
+            <span
+              id="product-emails-description"
+              className="text-[13px] leading-[18px] text-muted-foreground"
+            >
+              {t("productEmails.description")}
+            </span>
+          </div>
+          <div className="flex justify-center">
+            <Switch
+              aria-labelledby="product-emails-label"
+              aria-describedby={
+                emailVerified ? "product-emails-description" : "notification-email-unverified"
+              }
+              checked={updates}
+              disabled={pending || (!emailVerified && !updates)}
+              onCheckedChange={(enabled) => void changeUpdates(enabled)}
+            />
+          </div>
+        </div>
+      ) : null}
       <SaveStatus status={status} />
     </SettingsSection>
   )

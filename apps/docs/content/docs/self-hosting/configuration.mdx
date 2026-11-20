@@ -203,6 +203,42 @@ using when they turned on an email, and English before either happens.
 | `WELCOME_EMAIL` | `true` | Send new accounts one welcome email after their first sign-in. Needs SMTP. |
 | `NOTIFICATION_EMAIL_CONCURRENCY` | `2` | How many notification emails are sent at once, 1 to 10. |
 
+### Product update emails
+
+An instance can also send release notes and news to people who turn on **Product updates** in
+**Settings** > **Notifications**. These go through [Resend Broadcasts](https://resend.com/features/broadcasts)
+instead of SMTP, because Resend handles each reader's unsubscribe link, bounces and complaints.
+Without the two variables below, Settings doesn't show the switch and the instance never contacts
+Resend.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `RESEND_API_KEY` | unset | A Resend API key with full access. With `RESEND_SEGMENT_ID`, turns on product update emails. |
+| `RESEND_SEGMENT_ID` | unset | The Resend segment that holds the subscribers. |
+| `BROADCAST_FROM` | unset | The sender of broadcasts, such as `Sniptide <updates@news.example.com>`. Only the send command reads it. |
+
+Sniptide keeps the segment in step: turning the switch on subscribes the verified address, turning
+it off unsubscribes it, an email change moves it, and deleting the account deletes the contact.
+Unsubscribing through a broadcast's link is recorded in Resend only, so Settings keeps showing
+the switch as on. Send from a subdomain of
+your own, so a complaint about a broadcast can't affect password reset and notification emails.
+
+Each broadcast is a React Email file in `apps/web/emails/broadcasts` that exports `subject`,
+`preview` and a component built from `apps/web/lib/email/broadcast.tsx`. Preview it with
+`bun run email` in `apps/web`, then send it from there with the variables above, plus
+`BETTER_AUTH_URL` for the logo and links and `OPERATOR_NAME` and `OPERATOR_ADDRESS` for the sender
+line:
+
+```sh
+bun run broadcast emails/broadcasts/2026-11-update.tsx --test you@example.com
+bun run broadcast emails/broadcasts/2026-11-update.tsx
+bun run broadcast emails/broadcasts/2026-11-update.tsx --send --at "tomorrow at 9am CET"
+```
+
+The first sends one test email. The second creates a draft in Resend to review and send from its
+dashboard. The third sends to the whole segment, now or at the given time. Broadcasts are written
+in English.
+
 ### Email delivery
 
 Email runs independently once a minute and uses a durable queue with bounded retries. Events older

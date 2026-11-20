@@ -7,6 +7,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { cache } from "react"
 import { RETURN_TO_HEADER, signInPath } from "@/lib/auth-redirect"
+import { followEmailChange, forgetAccount } from "@/lib/broadcasts/subscription"
 import { RESOLVED_IP_HEADER } from "@/lib/client-ip"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
@@ -48,6 +49,8 @@ export async function getAuth() {
     sendResetPassword: smtp ? sendPasswordReset : undefined,
     sendChangeEmailConfirmation: smtp ? sendEmailChangeConfirmation : undefined,
     sendWelcomeEmail,
+    afterUserUpdate: followEmailChange,
+    beforeUserDelete: forgetAccount,
     // GitHub and Google failures show on the sign-in page instead of Better Auth's error page.
     errorURL: "/sign-in",
   })

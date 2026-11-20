@@ -60,6 +60,10 @@ export interface AuthConfig {
     user: { id: string; email: string; name: string },
     request?: Request,
   ) => Promise<void>
+  // Called after any change to an account and before an account is deleted, so the app can keep
+  // copies of the email address elsewhere, such as an email provider's contact list, in step.
+  afterUserUpdate?: (user: { id: string; email: string }) => Promise<void>
+  beforeUserDelete?: (user: { id: string; email: string }) => Promise<void>
   // Where GitHub and Google sign-in failures land, with the reason as ?error=<code>.
   errorURL?: string
   plugins?: BetterAuthPlugin[]
@@ -83,6 +87,8 @@ export function createAuth({
   sendResetPassword,
   sendChangeEmailConfirmation,
   sendWelcomeEmail,
+  afterUserUpdate,
+  beforeUserDelete,
   errorURL,
   plugins = [],
 }: AuthConfig) {
@@ -206,6 +212,21 @@ export function createAuth({
               ...(user.emailVerified === true ? { pendingInvitation: false } : {}),
             },
           }),
+          after: async (user) => {
+            if (!afterUserUpdate) return
+            await afterUserUpdate(user).catch((error) =>
+              console.error("After user update failed", error),
+            )
+          },
+        },
+        // Failures are logged and never block the deletion the person asked for.
+        delete: {
+          before: async (user) => {
+            if (!beforeUserDelete) return
+            await beforeUserDelete(user).catch((error) =>
+              console.error("Before user delete failed", error),
+            )
+          },
         },
       },
       session: {
