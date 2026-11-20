@@ -1063,7 +1063,7 @@ export function PasteEditor({
     >
       {/* Mobile header from the Paper "New paste" artboard */}
       <GroupedCanvas />
-      <div className="sticky top-0 z-20 box-content flex min-h-[52px] flex-wrap items-center gap-1 bg-inherit pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] max-lg:order-first lg:hidden">
+      <div className="sticky top-0 z-20 box-content flex min-h-[52px] flex-wrap items-center gap-1 bar-translucent pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] max-lg:order-first lg:hidden">
         {editing ? (
           <Button
             type="button"

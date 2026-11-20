@@ -206,7 +206,7 @@ The language's logo at 16px, from Material Icon Theme (MIT), served as static SV
 ### Dropdown menu
 **Role:** Actions and the account menu.
 
-Minimum width 192px with 4px padding on every side. Rows are 32px tall with 12px padding and a 16px icon in `--muted-foreground`. The highlighted row uses `bg-muted`. Checkable items use a 16px square box that fills with the foreground color. Labels are 12px in `--muted-foreground`.
+Minimum width 192px with 4px padding on every side. Rows are 32px tall with 12px padding and a 16px icon in `--muted-foreground`. The highlighted row uses `bg-muted`. Checkable items use a 16px square box that fills with the foreground color. Labels are 12px in `--muted-foreground`. Below 1024px rows grow to 44px with 16px text and the menu to 224px, so every row is an easy tap. The account menu there shows the current language as a row that opens Settings.
 
 ### Dialog and alert dialog
 **Role:** Focused tasks and confirmations.
@@ -280,10 +280,10 @@ Six horizontal stripes that taper from a hairline at the top to a full bar at th
 Below 1024px the app has no sidebar and no desktop top bar, so every feature they hold needs a touch path of at most two taps.
 
 - Navigation follows iOS patterns: a tab bar, a large page title, and grouped lists with one label, an optional value and a chevron per row.
-- The mobile top bar is 52px tall and holds notifications, a `--link` plus for New paste and the account avatar at its trailing edge. Screens opened from Library (its lists, a collection, Secrets, Analytics and Settings) add a `--link` "‹ Library" back link at the leading edge. The page's title sits below it at 34px.
+- The mobile top bar is 52px tall and holds notifications, a `--link` plus for New paste and the account avatar at its trailing edge. It tints the canvas at 80% with a 20px backdrop blur (`bar-translucent`), so content shows through as it scrolls under, and the paste and editor bars do the same. Home puts Customize at its leading edge. Screens opened from Library (its lists, a collection, Secrets, Analytics and Settings) add a `--link` "‹ Library" back link at the leading edge. The page's title sits below it at 34px.
 - Grouped lists come from `components/lists/grouped-list.tsx`: a 13px `--muted-foreground` label, one `--card` panel with no border, 50px rows with an optional 22px `--link` icon, a 17px label, an optional value and a chevron, divided by inset hairlines. A screen built from them renders `GroupedCanvas`, which turns the shell's canvas `--grouped` below lg so the panels stand out. Home, Library, a paste, the editor, Secrets, Analytics, Settings and Search use them.
 - Settings starts with a profile row, then New pastes (Visibility, Expires) and App (Appearance, Language, Notifications, Integrations, API tokens) with their current values, then Account and Usage, Storage with its share in percent, and a centered `--link` Sign out row.
-- Home puts New paste and Import gist as two tiles above the widgets, which stack in one column. Customize stays on desktop. Analytics shows a 7, 30 and 90 day switch, one views card with the peak in `--highlight`, the other totals as rows and the top pastes.
+- Home puts New paste and Import gist as two tiles above the widgets, which stack in one column. Customize sits at the leading edge of the top bar, and the line about expiring links stays on desktop. Analytics shows a 7, 30 and 90 day switch, one views card with the peak in `--highlight`, the other totals as rows and the top pastes.
 - Search is a full-screen sheet on the grouped canvas: a filled field with a clear button and Cancel, then Pastes, Collections and Actions as panels. Phones set a match in bold, and with text in the field the first action starts a paste with that title.
 - The tab bar holds Home, Pastes, Library and Search, each a 24px line icon over an 11px label. The current tab takes `--link`. Search opens the command menu.
 - Library lists Starred, Shared with me, Secrets and Trash, then the collections with a New action, then Analytics, Import gist, Your profile and Settings, and ends with the account and Sign out. Feedback and Take the tour are in the account menu behind the avatar in the top bar.

@@ -2,6 +2,7 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { Progress } from "@sniptide/ui/components/progress"
+import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
   BellIcon,
@@ -27,6 +28,7 @@ import {
   groupedRowClass,
 } from "@/components/lists/grouped-list"
 import { UserAvatar } from "@/components/people/user-avatar"
+import { useViewer } from "@/components/shell/app-shell"
 import { navigateTabs } from "@/components/tab-navigation"
 import type { AccountSecurity } from "@/lib/account/store"
 import type { TokenSummary } from "@/lib/api/tokens"
@@ -109,7 +111,7 @@ function SettingsFrame({
 }: {
   // The phone's list of settings, given a way to open a section on its own screen. Without
   // it, as while loading, phones list the sections by name.
-  phoneList?: (open: (tab: SettingsTab) => void) => React.ReactNode
+  phoneList: (open: (tab: SettingsTab) => void) => React.ReactNode
   children: (tab: SettingsTab) => React.ReactNode
 }) {
   const t = useTranslations("Settings")
@@ -180,21 +182,7 @@ function SettingsFrame({
           <h1 className={cn(titleClass, "min-w-0 truncate")}>{current?.label}</h1>
         </div>
       ) : (
-        <div className="flex flex-col gap-7 lg:hidden">
-          {phoneList ? (
-            phoneList(openSection)
-          ) : (
-            <GroupedList>
-              {tabs.map((item) => (
-                <GroupedLinkRow
-                  key={item.value}
-                  href={`/settings?tab=${item.value}`}
-                  label={item.label}
-                />
-              ))}
-            </GroupedList>
-          )}
-        </div>
+        <div className="flex flex-col gap-7 lg:hidden">{phoneList(openSection)}</div>
       )}
 
       <div
@@ -294,7 +282,7 @@ function SectionRow({
 
 // The phone's Settings screen: the profile first, the settings that shape new pastes and the
 // app with their current values, the account and usage, then storage and sign out. Every row
-// opens its section.
+// opens its section. Before the account's data arrives, the values it holds wait in skeletons.
 function PhoneSettingsList({
   open,
   profile,
@@ -303,18 +291,19 @@ function PhoneSettingsList({
   tokenCount,
 }: {
   open: (tab: SettingsTab) => void
-  profile: ProfileState
-  preferences: Preferences
-  storage: { used: number; limit: number | null } | null
-  tokenCount: number
+  profile: Pick<ProfileState, "id" | "image" | "name"> & { username: string | null }
+  preferences?: Preferences
+  storage?: { used: number; limit: number | null } | null
+  tokenCount?: number
 }) {
   const t = useTranslations("Settings")
+  const pending = <Skeleton className="h-4 w-16" />
   const locale = useLocale()
   const { theme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
   React.useEffect(() => setMounted(true), [])
   const themeLabel = themeOptions.find((option) => option.value === (mounted ? theme : "system"))
-  const expiryLabel = expiryOptions.find((option) => option.value === preferences.defaultExpiry)
+  const expiryLabel = expiryOptions.find((option) => option.value === preferences?.defaultExpiry)
   return (
     <>
       <GroupedList>
@@ -350,13 +339,13 @@ function PhoneSettingsList({
           tab="defaults"
           open={open}
           label={t("visibility")}
-          value={t(preferences.defaultVisibility)}
+          value={preferences ? t(preferences.defaultVisibility) : pending}
         />
         <SectionRow
           tab="defaults"
           open={open}
           label={t("expires")}
-          value={expiryLabel ? t(expiryLabel.label) : undefined}
+          value={preferences ? (expiryLabel ? t(expiryLabel.label) : undefined) : pending}
         />
       </GroupedList>
 
@@ -379,7 +368,7 @@ function PhoneSettingsList({
           tab="api"
           open={open}
           label={t("apiTokens")}
-          value={tokenCount > 0 ? tokenCount : undefined}
+          value={tokenCount === undefined ? undefined : tokenCount > 0 ? tokenCount : undefined}
         />
       </GroupedList>
 
@@ -396,7 +385,12 @@ function PhoneSettingsList({
 
 // Settings before the account's data arrives. The sections follow under the frame.
 export function SettingsLoading() {
-  return <SettingsFrame>{() => null}</SettingsFrame>
+  const viewer = useViewer()
+  return (
+    <SettingsFrame phoneList={(open) => <PhoneSettingsList open={open} profile={viewer} />}>
+      {() => null}
+    </SettingsFrame>
+  )
 }
 
 export function SettingsView({

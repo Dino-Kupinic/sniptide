@@ -675,3 +675,15 @@
     -webkit-text-fill-color: currentColor;
   }
 }
+
+/* The phone's sticky top bars: content scrolling under them shows through a blurred tint of the
+   canvas, like an iOS navigation bar. Grouped screens tint with the grouped canvas. */
+@utility bar-translucent {
+  background-color: color-mix(in oklab, var(--background) 80%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  :root:has([data-grouped]) & {
+    background-color: color-mix(in oklab, var(--grouped) 80%, transparent);
+  }
+}

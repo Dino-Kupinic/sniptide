@@ -12,9 +12,9 @@ import { SuccessCheck } from "@sniptide/ui/components/success-check"
 import { toast } from "@sniptide/ui/components/toast"
 import { cn } from "@sniptide/ui/lib/utils"
 import {
-  CircleEllipsisIcon,
   CopyIcon,
   DownloadIcon,
+  EllipsisIcon,
   FileCodeIcon,
   LinkIcon,
   LogOutIcon,
@@ -273,7 +273,7 @@ export function PasteOverflowMenu({
           className,
         )}
       >
-        <CircleEllipsisIcon strokeWidth={1.75} />
+        <EllipsisIcon strokeWidth={2} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {canEdit ? (

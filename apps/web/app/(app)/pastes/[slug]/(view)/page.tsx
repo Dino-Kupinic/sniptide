@@ -304,7 +304,7 @@ export default async function Page({ params, searchParams }: PageProps<"/pastes/
 
         {/* Mobile header */}
         <GroupedCanvas />
-        <div className="sticky top-0 z-20 box-content flex h-[52px] items-center justify-between gap-1 bg-inherit pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
+        <div className="sticky top-0 z-20 box-content flex h-[52px] items-center justify-between gap-1 bar-translucent pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] lg:hidden">
           <Link
             href={parent.href}
             className="flex h-10 min-w-0 items-center gap-0.5 rounded-lg pr-2 text-[17px] leading-[22px] text-link outline-none focus-visible:ring-2 focus-visible:ring-ring/40"

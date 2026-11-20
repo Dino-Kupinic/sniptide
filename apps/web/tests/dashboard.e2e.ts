@@ -113,8 +113,8 @@ test("the dashboard fits a phone without horizontal scrolling", async ({
   expect(
     await browser.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
   ).toBe(true)
-  // Arranging the widgets is left to a wide screen.
-  await expect(screen.getByRole("button", "Customize", { visible: true })).toHaveCount(0)
+  // Customize sits at the leading edge of the top bar.
+  await expect(screen.getByRole("button", "Customize", { visible: true })).toBeVisible()
   await app.screenshot("dashboard-phone")
 })
 

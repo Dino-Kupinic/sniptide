@@ -15,6 +15,7 @@ import type { ViewerSummary } from "@/lib/viewer"
 import { AccountMenuItems } from "./account-menu"
 import { backToLibrary } from "./nav-config"
 import { NotificationsSheet } from "./notifications-menu"
+import { useHeaderSlotRefs } from "./page-header"
 
 // Top bar below lg, above the page's large title: notifications, New paste and the account menu
 // sit at the trailing edge, like the buttons of an iOS navigation bar. Screens opened from the
@@ -25,8 +26,9 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
   // An open settings section draws its own back button to the section list.
   const settingsSection = useSearchParams().has("tab") && pathname === "/settings"
   const back = backToLibrary(pathname) && !settingsSection
+  const { setLeading } = useHeaderSlotRefs()
   return (
-    <header className="sticky top-0 z-30 box-content flex h-[52px] shrink-0 items-center gap-1 bg-inherit pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
+    <header className="sticky top-0 z-30 box-content flex h-[52px] shrink-0 items-center gap-1 bar-translucent pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] lg:hidden">
       {back ? (
         <Link
           href="/library"
@@ -35,7 +37,9 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
           <ChevronLeftIcon aria-hidden className="size-6 shrink-0" strokeWidth={2} />
           <span className="truncate">{t("library")}</span>
         </Link>
-      ) : null}
+      ) : (
+        <div ref={setLeading} className="contents" />
+      )}
       <span className="flex-1" />
       <NotificationsSheet />
       <Link
@@ -60,7 +64,7 @@ export function MobileTopBar({ viewer }: { viewer: ViewerSummary }) {
             className="size-8 rounded-md"
           />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuContent align="end" className="w-64">
           <AccountMenuItems
             name={viewer.name}
             email={viewer.email}

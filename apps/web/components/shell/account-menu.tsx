@@ -4,7 +4,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -15,6 +14,7 @@ import { SegmentedControl } from "@sniptide/ui/components/segmented-control"
 import {
   ArrowUpRightIcon,
   BookIcon,
+  ChevronRightIcon,
   CircleHelpIcon,
   GlobeIcon,
   HouseIcon,
@@ -41,14 +41,14 @@ import { useShortcutsHelp } from "@/components/shortcuts/shortcuts-help"
 import { useSiteOrigin } from "@/components/site-host"
 import { signOut as signOutAccount } from "@/lib/auth-client"
 import { setLocale } from "@/lib/i18n/actions"
-import { localeNames, locales } from "@/lib/i18n/config"
+import { type Locale, localeNames, locales } from "@/lib/i18n/config"
 import { profilePath } from "@/lib/profile-path"
 
 // Items shared by the sidebar account switcher and the avatar in the mobile top bar, grouped
 // as in the Paper "Account menu open" artboard: account, preferences (with Feedback), resources, log out. The
 // account row opens the public profile, and Usage lives in Settings.
-// A phone has no room for a submenu beside the menu, so `inlineLanguage` lists the languages
-// in the menu itself.
+// A phone has no room for a submenu beside the menu, so `inlineLanguage` links the language to
+// Settings and lists the resources in the menu itself.
 export function AccountMenuItems({
   name,
   email,
@@ -86,12 +86,7 @@ export function AccountMenuItems({
       }}
     >
       {locales.map((language) => (
-        <DropdownMenuRadioItem
-          key={language}
-          value={language}
-          disabled={changingLocale}
-          className={inlineLanguage ? "pl-9" : undefined}
-        >
+        <DropdownMenuRadioItem key={language} value={language} disabled={changingLocale}>
           {localeNames[language]}
         </DropdownMenuRadioItem>
       ))}
@@ -170,16 +165,13 @@ export function AccountMenuItems({
       <DropdownMenuSeparator />
       <ThemeRow />
       {inlineLanguage ? (
-        <DropdownMenuGroup>
-          <DropdownMenuLabel
-            aria-hidden="true"
-            className="flex items-center gap-2 px-3 pt-2 text-sm text-foreground"
-          >
-            <GlobeIcon className="size-4 text-muted-foreground" />
-            {t("language")}
-          </DropdownMenuLabel>
-          {languageChoices}
-        </DropdownMenuGroup>
+        // A phone shows the current language and changes it in Settings, so the menu stays short.
+        <DropdownMenuItem render={<Link href="/settings?tab=general" />}>
+          <GlobeIcon />
+          {t("language")}
+          <span className="ml-auto text-muted-foreground">{localeNames[locale as Locale]}</span>
+          <ChevronRightIcon />
+        </DropdownMenuItem>
       ) : (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
