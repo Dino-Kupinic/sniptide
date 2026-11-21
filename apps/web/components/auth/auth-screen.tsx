@@ -14,12 +14,11 @@ export interface Pitch {
 
 // Split auth layout from the Paper Sign in / Sign up artboards: the form takes three fifths on the
 // left, and the right two fifths hold the pitch card over the Game of Life, always on the dark
-// surface. Below lg the card is gone and the pitch body moves under the subtitle.
+// surface. Below lg the card is gone, so phones show only the heading and the form.
 // `centered` is for short screens (sign-up closed): on phones the content sits mid-screen, centered.
 // Without a subtitle the heading stands alone and centers over the form, as on sign-up.
 // `mark` sits above the heading, such as the client and Sniptide logos on the consent screen, and
-// takes the place of the phone logo. `mobilePitch={false}` keeps the pitch body off phones when the
-// screen already says the same.
+// takes the place of the phone logo.
 export function AuthScreen({
   title,
   subtitle,
@@ -27,14 +26,12 @@ export function AuthScreen({
   legal,
   pitch,
   centered = false,
-  mobilePitch = true,
   children,
 }: {
   title?: string
   subtitle?: string
   mark?: React.ReactNode
   centered?: boolean
-  mobilePitch?: boolean
   legal: React.ReactNode
   pitch: Pitch
   children: React.ReactNode
@@ -72,9 +69,6 @@ export function AuthScreen({
                 >
                   {subtitle}
                 </p>
-                {centered || !mobilePitch ? null : (
-                  <p className="text-sm leading-5 text-muted-foreground lg:hidden">{pitch.body}</p>
-                )}
               </div>
             ) : title ? (
               <h1 className="text-center font-heading text-2xl leading-8 font-bold tracking-[-0.02em]">

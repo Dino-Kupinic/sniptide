@@ -214,7 +214,7 @@ if (scenario === "hydrate") {
   }))
   mock.module("@/lib/config", () => ({ getConfig: () => ({}) }))
   mock.module("next-intl/server", () => ({ getTranslations: async () => () => "translated" }))
-  const { default: Page } = await import("../../app/(app)/settings/page")
+  const { default: Page } = await import("../../app/(app)/(private)/settings/page")
   const pending = Page({ searchParams: Promise.resolve({}), params: Promise.resolve({}) })
   await tick()
   assert(started.has("tokens"))
@@ -261,8 +261,8 @@ if (scenario === "hydrate") {
   }))
   const { default: Page } =
     scenario === "list"
-      ? await import("../../app/(app)/pastes/(index)/page")
-      : await import("../../app/(app)/trash/page")
+      ? await import("../../app/(app)/(private)/pastes/(index)/page")
+      : await import("../../app/(app)/(private)/trash/page")
   const pending = Page({ searchParams: Promise.resolve({}), params: Promise.resolve({}) })
   await tick()
   assert(started.has("list"), "list reads must not wait for the locale")

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { NextRequest } from "next/server"
-import { afterSignIn, RETURN_TO_HEADER, signInPath } from "@/lib/auth-redirect"
+import { afterSignIn, GUEST_CLAIM_PATH, RETURN_TO_HEADER, signInPath } from "@/lib/auth-redirect"
 import { proxy } from "@/proxy"
 
 test("sign-in returns to the editor opened from a template", () => {
@@ -36,5 +36,12 @@ test("sign-in returns to an invitation link without accepting arbitrary paths", 
     `${target}/evil`,
     "/api/notifications/invalid/open",
   ])
+    expect(afterSignIn(bad)).toBe("/dashboard")
+})
+
+test("sign-in returns a guest to the editor that creates their saved paste", () => {
+  expect(afterSignIn(GUEST_CLAIM_PATH)).toBe(GUEST_CLAIM_PATH)
+  expect(signInPath(GUEST_CLAIM_PATH)).toBe(`/sign-in?next=${encodeURIComponent(GUEST_CLAIM_PATH)}`)
+  for (const bad of ["/new?claim=2", "/new?claim=1&gist=1", "/new?claim=1#x"])
     expect(afterSignIn(bad)).toBe("/dashboard")
 })

@@ -3,11 +3,36 @@ import { credentials, expect, secrets } from "e2e"
 import { test } from "./fixtures"
 
 anonymousTest(
-  "anonymous visitors sign in first and keep the template they opened",
+  "anonymous visitors write in the editor and sign in to share, while app pages ask to sign in",
   async ({ app, browser, screen }) => {
     await app.open("/new?template=agents-md")
-    await expect(browser).toHaveURL("/sign-in?next=%2Fnew%3Ftemplate%3Dagents-md")
-    await expect(screen.getByRole("button", "Sign in")).toBeVisible()
+    await expect(browser).toHaveURL("/new?template=agents-md")
+    await expect(screen.getByRole("button", /^Sign in to share/, { visible: true })).toBeVisible()
+    await app.open("/dashboard")
+    await expect(browser).toHaveURL("/sign-in")
+  },
+)
+
+anonymousTest(
+  "a guest's paste is created with its settings after they create an account",
+  async ({ app, browser, screen }) => {
+    await app.open("/new")
+    await screen.getByLabel("Title").fill("Guest paste")
+    await screen.getByLabel("Contents of untitled.txt").fill("console.log('hi')")
+    await screen.getByRole("radio", "Public").tap()
+    await screen
+      .getByRole("button", /^Sign in to share/, { visible: true })
+      .first()
+      .tap()
+    await screen.getByRole("link", "Create an account").tap()
+    await expect(browser).toHaveURL("/sign-up?next=%2Fnew%3Fclaim%3D1")
+    const name = `guest${Date.now() % 1_000_000}`
+    await screen.getByLabel("Username").fill(name)
+    await screen.getByLabel("Email").fill(`${name}@example.test`)
+    await screen.getByLabel("Password").fill(credentials.user("tester").password)
+    await screen.getByRole("button", "Create account").tap()
+    await expect(browser).toHaveURL(/\/pastes\/[A-Za-z0-9]{8}$/)
+    await expect(screen.getByRole("heading", "Guest paste")).toBeVisible()
   },
 )
 

@@ -245,6 +245,13 @@
     "sendsLinkOnly": "{kind, select, page {このペーストのタイトルと内容はリンクを知っている全員に公開されていないため、リンクのみを保存します。} issue {このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを「Sniptide paste」として添付します。} other {このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを送信します。}}",
     "sentToDestination": "{kind, select, page {「{name}」に保存しました} issue {{name} に添付しました} other {#{name} に送信しました}}",
     "couldnTLoadDestinations": "{kind, select, page {{service} のページを読み込めませんでした。1 分後にもう一度お試しください。} issue {{service} の Issue を読み込めませんでした。1 分後にもう一度お試しください。} other {{service} のチャンネルを読み込めませんでした。1 分後にもう一度お試しください。}}",
-    "moreOptions": "その他のオプション"
+    "moreOptions": "その他のオプション",
+    "signInToShare": "サインインして共有",
+    "signInToShareTitle": "サインインして Paste を共有",
+    "continueWithEmail": "メールで続行",
+    "typeThePasswordAgain": "Paste を作成するには、パスワードをもう一度入力してください。",
+    "signInForCustomLink": "カスタムリンクを選ぶにはサインインしてください。",
+    "signInForCollection": "ペーストをコレクションに整理するにはサインインしてください。",
+    "signInToUse": "サインインで利用可能"
   }
 }

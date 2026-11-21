@@ -58,6 +58,7 @@ import {
   visibilityOptions,
 } from "@/components/paste/editor-options"
 import { type EditorFile, FileTabs } from "@/components/paste/file-tabs"
+import { GuestSignInDialog } from "@/components/paste/guest-sign-in"
 import { HighlightedTextarea } from "@/components/paste/highlighted-textarea"
 import { LanguageIcon } from "@/components/paste/language-icon"
 import { LanguagePicker } from "@/components/paste/language-picker"
@@ -73,8 +74,10 @@ import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useSiteHost } from "@/components/site-host"
 import { showUndo } from "@/components/undo-toast"
 import { track } from "@/lib/analytics"
+import type { SocialProvider } from "@/lib/auth"
+import { GUEST_CLAIM_SCOPE } from "@/lib/auth-redirect"
 import type { Autosaver, SaveOutcome } from "@/lib/autosave/autosaver"
-import { draftKey } from "@/lib/autosave/drafts"
+import { draftKey, indexedDbDrafts } from "@/lib/autosave/drafts"
 import {
   type PasteBroadcast,
   useAutosave,
@@ -118,13 +121,16 @@ type EditorDraft = SavePasteInput & {
   automatic?: { title: boolean; visibility: boolean; filenames: boolean[] }
   // The end-to-end encryption switch, so a restored draft is still saved encrypted.
   encrypted?: boolean
+  // In the copy a guest hands over at sign-in: the key of the draft they were writing, which is
+  // removed once the paste exists.
+  guestDraft?: string
 }
 
 type EditSnapshot = { input: SavePasteInput; expirySelection: number }
 
 // What the draft on this device keeps: everything except the password, which never leaves memory.
 function forDraft(value: EditorDraft): SavePasteInput {
-  const { automatic: _automatic, encrypted: _encrypted, ...paste } = value
+  const { automatic: _automatic, encrypted: _encrypted, guestDraft: _guestDraft, ...paste } = value
   return { ...paste, password: value.password === null ? null : "" }
 }
 
@@ -229,6 +235,8 @@ export function PasteEditor({
   notice,
   sharedEdit,
   handle,
+  guest,
+  claim,
 }: {
   initial: EditorInitial
   // Slug of the paste being edited; omitted for a new paste.
@@ -252,6 +260,12 @@ export function PasteEditor({
   // The viewer's username, the namespace of their custom links (<host>/@<handle>/<name>). Null
   // until they pick one in Settings.
   handle?: string | null
+  // A visitor without a session: the paste stays a draft on this device, and the primary action
+  // opens sign-in instead of creating it. Custom links and collections need an account.
+  guest?: { socialProviders: SocialProvider[]; signUpClosed: boolean }
+  // Just signed in from the guest editor: the draft handed over at sign-in is restored and created
+  // at once (draftScope is GUEST_CLAIM_SCOPE).
+  claim?: boolean
 }) {
   const t = useTranslations("Paste")
   const feedbackT = useTranslations("Core")
@@ -305,6 +319,12 @@ export function PasteEditor({
   const [error, setError] = React.useState<string | null>(notice ?? null)
   const [pending, startTransition] = React.useTransition()
   const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [signInOpen, setSignInOpen] = React.useState(false)
+  // True while the sign-in options are open over a handed-over draft, when leaving for sign-in
+  // loses nothing.
+  const handedOver = React.useRef(false)
+  // Set when a claimed draft has been restored and should be created without another press.
+  const [autoSubmit, setAutoSubmit] = React.useState(false)
   const [languageOpen, setLanguageOpen] = React.useState(false)
   const keyboardUp = useSoftKeyboard()
   const titleRef = useAutoHeight(title)
@@ -488,6 +508,8 @@ export function PasteEditor({
       return reason ? t(reason) : null
     },
     manual: !editing,
+    // Sign-in leaves the page on purpose once the draft is handed over (handOver below).
+    warnOnUnload: () => !handedOver.current,
   })
   autosaverRef.current = autosaver
   const unsaved = state.kind !== "idle" && state.kind !== "saved"
@@ -569,9 +591,26 @@ export function PasteEditor({
       return setDraftNotice({ kind: "choose", savedAt: draft.savedAt })
     }
     applyValue(draft.value)
-    setDraftNotice({ kind: "restored" })
     setDraftReady(true)
+    if (!claim) return setDraftNotice({ kind: "restored" })
+    // A draft never keeps the password, so a protected paste waits for it to be typed again.
+    if (draft.value.password !== null) {
+      setError(t("typeThePasswordAgain"))
+      requestAnimationFrame(() => {
+        const fields = formRef.current?.querySelectorAll<HTMLInputElement>('input[type="password"]')
+        Array.from(fields ?? [])
+          .find((field) => field.offsetParent !== null)
+          ?.focus()
+      })
+    } else setAutoSubmit(true)
   }, [draft])
+
+  // Submits once the restored values have rendered, so the form sends what the guest wrote.
+  React.useEffect(() => {
+    if (!autoSubmit) return
+    setAutoSubmit(false)
+    formRef.current?.requestSubmit()
+  }, [autoSubmit])
 
   // Once a restored draft has reached the server there is nothing left to undo.
   React.useEffect(() => {
@@ -818,6 +857,10 @@ export function PasteEditor({
     // A second ⌘S or ⌘↵ while the first is still saving must not create the paste twice.
     if (pending) return
     setError(null)
+    if (guest) {
+      void handOver()
+      return
+    }
     if (slugStatus === "taken") {
       setError(t("linkTaken", { link: `${host}/${slug}` }))
       return
@@ -866,12 +909,39 @@ export function PasteEditor({
       toast.success(t("pasteCreated"))
       autosaver.rebase(snapshot)
       await discardDraft()
+      // The draft the guest was writing before they signed in is done too.
+      const guestDraft = draft?.value.guestDraft
+      if (claim && guestDraft) await indexedDbDrafts.delete(guestDraft).catch(() => {})
       // The paste's page finds the key in this browser's key ring. Where storage is blocked the
       // key rides in the fragment instead, which is never sent to the server.
       const remembered = key ? await rememberKey(key) : true
       const path = `/pastes/${result.slug}`
       router.push(key && !remembered ? withKeyFragment(path, key) : path)
     })
+  }
+
+  // A guest's paste goes through sign-in, which may leave this page for GitHub, Google or an email
+  // link. The paste goes into a draft that /new?claim=1 picks up and creates once they are back.
+  async function handOver() {
+    const reason = unsavable(value)
+    if (reason) {
+      setError(t(reason))
+      return
+    }
+    const handed: EditorDraft = { ...latestDraftValue.current, guestDraft: draftId }
+    const result = await indexedDbDrafts
+      .put(draftKey(GUEST_CLAIM_SCOPE, undefined), {
+        baseVersion: null,
+        savedAt: Date.now(),
+        value: handed,
+      })
+      .catch(() => ({ kind: "unavailable" as const }))
+    if (result.kind === "unavailable") {
+      setError(t("draftSaveUnavailable"))
+      return
+    }
+    handedOver.current = true
+    setSignInOpen(true)
   }
 
   // Latest handlers for the window listener below, which is attached once.
@@ -918,7 +988,7 @@ export function PasteEditor({
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
-  const cancelHref = editing ? `/pastes/${savedSlug}` : "/pastes"
+  const cancelHref = editing ? `/pastes/${savedSlug}` : guest ? "/" : "/pastes"
 
   // The options, laid out for the desktop side panel or (large) for the mobile settings sheet, in
   // the same order.
@@ -1045,7 +1115,17 @@ export function PasteEditor({
         ),
       },
     ]
-    return sections
+    // A custom link and a collection need an account, so a guest sees them without their controls.
+    if (!guest) return sections
+    const needsAccount: Record<string, string> = {
+      slug: t("signInForCustomLink"),
+      collection: t("signInForCollection"),
+    }
+    return sections.map((section) =>
+      needsAccount[section.id]
+        ? { ...section, content: null, disabled: needsAccount[section.id] }
+        : section,
+    )
   }
 
   const panelSections = optionSections(false)
@@ -1107,7 +1187,7 @@ export function PasteEditor({
         {editing ? <AutosaveStatus state={state} className="hidden lg:inline" /> : null}
       </HeaderTitle>
       <HeaderActions>
-        {editing ? null : (
+        {editing || guest ? null : (
           <Button
             variant="destructive"
             size="lg"
@@ -1128,7 +1208,13 @@ export function PasteEditor({
           {preview ? t("edit") : t("preview")}
         </Button>
         <Button type="submit" form={formId} size="lg" loading={pending} className="gap-2">
-          {editing ? t("done") : pending ? t("saving") : t("createPaste")}
+          {editing
+            ? t("done")
+            : guest
+              ? t("signInToShare")
+              : pending
+                ? t("saving")
+                : t("createPaste")}
           <ShortcutKeys id="submit" className="bg-primary-foreground/20 text-primary-foreground" />
         </Button>
       </HeaderActions>
@@ -1348,7 +1434,12 @@ export function PasteEditor({
           </div>
 
           {sharedEdit ? null : (
-            <SidePanel label={t("options")} sections={panelSections} defaultOpen={["access"]} />
+            <SidePanel
+              label={t("options")}
+              sections={panelSections}
+              // A claimed draft with a password opens Protection, where it is typed again.
+              defaultOpen={claim ? ["access", "protection"] : ["access"]}
+            />
           )}
         </div>
       </SidePanelProvider>
@@ -1439,6 +1530,11 @@ export function PasteEditor({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+            ) : guest ? (
+              <div aria-disabled className={groupedSettingRowClass}>
+                <span className="flex-1 text-muted-foreground">{t("collection")}</span>
+                <span className="text-muted-foreground">{t("signInToUse")}</span>
+              </div>
             ) : null}
             <div className={groupedSettingRowClass}>
               <span className="flex-1">{t("password")}</span>
@@ -1489,7 +1585,13 @@ export function PasteEditor({
           loading={pending}
           className="h-auto min-h-[38px] max-w-full flex-1 px-4 py-2 whitespace-normal"
         >
-          {editing ? t("done") : pending ? t("saving") : t("createPaste")}
+          {editing
+            ? t("done")
+            : guest
+              ? t("signInToShare")
+              : pending
+                ? t("saving")
+                : t("createPaste")}
         </Button>
       </div>
 
@@ -1500,11 +1602,20 @@ export function PasteEditor({
             <SheetBody className="flex flex-col divide-y divide-border pb-0 text-sm">
               {optionSections(true).map((section) => (
                 <section key={section.id} className="flex flex-col gap-3 py-4 first:pt-2">
-                  <h2 className="flex items-center gap-2 font-medium">
+                  <h2
+                    className={cn(
+                      "flex items-center gap-2 font-medium",
+                      section.disabled && "text-muted-foreground",
+                    )}
+                  >
                     <section.icon className="size-4 text-muted-foreground" />
                     {section.label}
                   </h2>
-                  {section.content}
+                  {section.disabled ? (
+                    <p className="text-muted-foreground">{section.disabled}</p>
+                  ) : (
+                    section.content
+                  )}
                 </section>
               ))}
             </SheetBody>
@@ -1516,6 +1627,22 @@ export function PasteEditor({
           </SheetContent>
         </Sheet>
       )}
+      {guest ? (
+        <GuestSignInDialog
+          open={signInOpen}
+          onOpenChange={(open) => {
+            handedOver.current = open
+            setSignInOpen(open)
+          }}
+          socialProviders={guest.socialProviders}
+          signUpClosed={guest.signUpClosed}
+          summary={{
+            title,
+            language: language.id,
+            detail: `${t("visibilityValue", { value: visibility })} · ${t("expiryLong", { value: expiry })}`,
+          }}
+        />
+      ) : null}
     </form>
   )
 }

@@ -13,6 +13,7 @@ export function useAutosave<T>({
   save,
   validate,
   manual = false,
+  warnOnUnload,
 }: {
   value: T
   initial: T
@@ -20,12 +21,17 @@ export function useAutosave<T>({
   validate?(value: T): string | null
   // Track unsaved changes without ever saving them (see AutosaverOptions.manual).
   manual?: boolean
+  // Returns false when leaving is expected and the edits are safe elsewhere, so the browser
+  // doesn't ask whether to leave. Read when the page unloads.
+  warnOnUnload?(): boolean
 }) {
   const [state, setState] = React.useState<AutosaveState>({ kind: "idle" })
   const saveRef = React.useRef(save)
   const validateRef = React.useRef(validate)
   saveRef.current = save
   validateRef.current = validate
+  const warnOnUnloadRef = React.useRef(warnOnUnload)
+  warnOnUnloadRef.current = warnOnUnload
 
   const [autosaver] = React.useState(
     () =>
@@ -54,7 +60,7 @@ export function useAutosave<T>({
       autosaver.retryNow()
     }
     function onBeforeUnload(event: BeforeUnloadEvent) {
-      if (!autosaver.hasUnsavedChanges()) return
+      if (!autosaver.hasUnsavedChanges() || warnOnUnloadRef.current?.() === false) return
       // The local draft still has the edits, but the person should know the server doesn't yet.
       event.preventDefault()
       event.returnValue = ""

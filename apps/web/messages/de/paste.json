@@ -245,6 +245,13 @@
     "sendsLinkOnly": "{kind, select, page {Speichert nur den Link, weil Titel und Inhalt dieses Pastes nicht für alle mit dem Link offen sind.} issue {Hängt nur den Link als „Sniptide paste“ an, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.} other {Sendet nur den Link, weil der Titel dieses Pastes nicht für alle mit dem Link offen ist.}}",
     "sentToDestination": "{kind, select, page {In „{name}“ gespeichert} issue {An {name} angehängt} other {An #{name} gesendet}}",
     "couldnTLoadDestinations": "{kind, select, page {Deine {service}-Seiten konnten nicht geladen werden. Versuche es in einer Minute erneut.} issue {Deine {service}-Issues konnten nicht geladen werden. Versuche es in einer Minute erneut.} other {Deine {service}-Kanäle konnten nicht geladen werden. Versuche es in einer Minute erneut.}}",
-    "moreOptions": "Weitere Optionen"
+    "moreOptions": "Weitere Optionen",
+    "signInToShare": "Zum Teilen anmelden",
+    "signInToShareTitle": "Melde dich an, um deinen Paste zu teilen",
+    "continueWithEmail": "Mit E-Mail fortfahren",
+    "typeThePasswordAgain": "Gib das Passwort erneut ein, um den Paste zu erstellen.",
+    "signInForCustomLink": "Melde dich an, um einen eigenen Link zu wählen.",
+    "signInForCollection": "Melde dich an, um Pastes in einer Sammlung abzulegen.",
+    "signInToUse": "Nur mit Anmeldung"
   }
 }

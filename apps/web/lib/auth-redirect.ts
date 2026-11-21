@@ -1,5 +1,13 @@
+// Where a guest who wrote a paste before signing in goes afterwards: the editor, which creates the
+// paste from the draft they handed over (GUEST_CLAIM_SCOPE).
+export const GUEST_CLAIM_PATH = "/new?claim=1"
+
+// The draft scope of the copy a guest hands over at sign-in.
+export const GUEST_CLAIM_SCOPE = "guest-claim"
+
 // Where sign-in and sign-up send the visitor afterwards. ?next= may name only the OAuth consent
-// screen, a template editor, or an invitation email link. The allowlist prevents open redirects.
+// screen, a template editor, the guest editor's claim, or an invitation email link. The allowlist
+// prevents open redirects.
 export function afterSignIn(next: string | string[] | undefined) {
   return typeof next === "string" && isReturnTarget(next) ? next : "/dashboard"
 }
@@ -8,6 +16,7 @@ function isReturnTarget(path: string) {
   return (
     /^\/oauth\/authorize(?:\?[^#\\]*)?$/.test(path) ||
     /^\/new(?:\?template=[a-z0-9-]{1,64})?$/.test(path) ||
+    path === GUEST_CLAIM_PATH ||
     /^\/api\/notifications\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/open$/i.test(
       path,
     )
