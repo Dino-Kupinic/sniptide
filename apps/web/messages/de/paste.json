@@ -249,6 +249,9 @@
     "signInToShare": "Zum Teilen anmelden",
     "signInToShareTitle": "Melde dich an, um deinen Paste zu teilen",
     "continueWithEmail": "Mit E-Mail fortfahren",
-    "typeThePasswordAgain": "Gib das Passwort erneut ein, um den Paste zu erstellen."
+    "typeThePasswordAgain": "Gib das Passwort erneut ein, um den Paste zu erstellen.",
+    "signInForCustomLink": "Melde dich an, um einen eigenen Link zu wählen.",
+    "signInForCollection": "Melde dich an, um Pastes in einer Sammlung abzulegen.",
+    "signInToUse": "Nur mit Anmeldung"
   }
 }

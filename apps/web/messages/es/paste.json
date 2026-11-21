@@ -249,6 +249,9 @@
     "signInToShare": "Inicia sesión para compartir",
     "signInToShareTitle": "Inicia sesión para compartir tu paste",
     "continueWithEmail": "Continuar con correo",
-    "typeThePasswordAgain": "Escribe la contraseña de nuevo para crear el paste."
+    "typeThePasswordAgain": "Escribe la contraseña de nuevo para crear el paste.",
+    "signInForCustomLink": "Inicia sesión para elegir un enlace personalizado.",
+    "signInForCollection": "Inicia sesión para guardar pastes en una colección.",
+    "signInToUse": "Inicia sesión para usarlo"
   }
 }

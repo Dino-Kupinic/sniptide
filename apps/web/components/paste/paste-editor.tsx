@@ -1115,9 +1115,17 @@ export function PasteEditor({
         ),
       },
     ]
-    return guest
-      ? sections.filter((section) => section.id !== "slug" && section.id !== "collection")
-      : sections
+    // A custom link and a collection need an account, so a guest sees them without their controls.
+    if (!guest) return sections
+    const needsAccount: Record<string, string> = {
+      slug: t("signInForCustomLink"),
+      collection: t("signInForCollection"),
+    }
+    return sections.map((section) =>
+      needsAccount[section.id]
+        ? { ...section, content: null, disabled: needsAccount[section.id] }
+        : section,
+    )
   }
 
   const panelSections = optionSections(false)
@@ -1522,6 +1530,11 @@ export function PasteEditor({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+            ) : guest ? (
+              <div aria-disabled className={groupedSettingRowClass}>
+                <span className="flex-1 text-muted-foreground">{t("collection")}</span>
+                <span className="text-muted-foreground">{t("signInToUse")}</span>
+              </div>
             ) : null}
             <div className={groupedSettingRowClass}>
               <span className="flex-1">{t("password")}</span>
@@ -1589,11 +1602,20 @@ export function PasteEditor({
             <SheetBody className="flex flex-col divide-y divide-border pb-0 text-sm">
               {optionSections(true).map((section) => (
                 <section key={section.id} className="flex flex-col gap-3 py-4 first:pt-2">
-                  <h2 className="flex items-center gap-2 font-medium">
+                  <h2
+                    className={cn(
+                      "flex items-center gap-2 font-medium",
+                      section.disabled && "text-muted-foreground",
+                    )}
+                  >
                     <section.icon className="size-4 text-muted-foreground" />
                     {section.label}
                   </h2>
-                  {section.content}
+                  {section.disabled ? (
+                    <p className="text-muted-foreground">{section.disabled}</p>
+                  ) : (
+                    section.content
+                  )}
                 </section>
               ))}
             </SheetBody>

@@ -19,6 +19,9 @@ export interface PanelSection {
   content: React.ReactNode
   // A small dot on the rail icon when the section holds something worth knowing (a password on).
   marked?: boolean
+  // Why the section can't be used right now, such as an option that needs an account. A disabled
+  // section stays in the list so people know it exists, and shows the reason in a tooltip.
+  disabled?: string
 }
 
 const PanelContext = React.createContext<{
@@ -101,20 +104,26 @@ export function SidePanel({
               <TooltipTrigger
                 type="button"
                 aria-label={section.label}
+                aria-disabled={section.disabled ? true : undefined}
                 onClick={() => {
+                  if (section.disabled) return
                   setOpen((current) =>
                     current.includes(section.id) ? current : [...current, section.id],
                   )
                   setRail(false)
                 }}
-                className={cn(panelToolClass, "relative")}
+                className={cn(
+                  panelToolClass,
+                  "relative",
+                  section.disabled && "cursor-default opacity-50 hover:bg-transparent",
+                )}
               >
                 <section.icon />
                 {section.marked ? (
                   <span aria-hidden="true" className="absolute top-1 right-1 size-1.5 bg-link" />
                 ) : null}
               </TooltipTrigger>
-              <TooltipContent side="left">{section.label}</TooltipContent>
+              <TooltipContent side="left">{section.disabled ?? section.label}</TooltipContent>
             </Tooltip>
           ))}
         </div>
@@ -131,6 +140,7 @@ export function SidePanel({
       )}
     >
       {sections.map((section) => {
+        if (section.disabled) return <DisabledSection key={section.id} section={section} />
         const expanded = open.includes(section.id)
         const contentId = `panel-${section.id}`
         return (
@@ -166,5 +176,26 @@ export function SidePanel({
         )
       })}
     </section>
+  )
+}
+
+// A section that can't be opened: its row stays visible, dimmed, and names the reason on hover
+// and focus.
+function DisabledSection({ section }: { section: PanelSection }) {
+  return (
+    <h2>
+      <Tooltip>
+        <TooltipTrigger
+          type="button"
+          aria-disabled
+          aria-description={section.disabled}
+          className="flex h-11 w-full cursor-default items-center gap-2.5 px-3.5 text-left text-[13px] font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset"
+        >
+          <section.icon className="size-3.5 shrink-0" />
+          {section.label}
+        </TooltipTrigger>
+        <TooltipContent side="left">{section.disabled}</TooltipContent>
+      </Tooltip>
+    </h2>
   )
 }

@@ -249,6 +249,9 @@
     "signInToShare": "Sign in to share",
     "signInToShareTitle": "Sign in to share your paste",
     "continueWithEmail": "Continue with email",
-    "typeThePasswordAgain": "Type the password again to create the paste."
+    "typeThePasswordAgain": "Type the password again to create the paste.",
+    "signInForCustomLink": "Sign in to choose a custom link.",
+    "signInForCollection": "Sign in to file pastes in a collection.",
+    "signInToUse": "Sign in to use"
   }
 }

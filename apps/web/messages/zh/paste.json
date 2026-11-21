@@ -249,6 +249,9 @@
     "signInToShare": "登录以分享",
     "signInToShareTitle": "登录以分享你的 Paste",
     "continueWithEmail": "使用邮箱继续",
-    "typeThePasswordAgain": "请再次输入密码以创建 Paste。"
+    "typeThePasswordAgain": "请再次输入密码以创建 Paste。",
+    "signInForCustomLink": "登录后即可选择自定义链接。",
+    "signInForCollection": "登录后即可将粘贴归入集合。",
+    "signInToUse": "登录后可用"
   }
 }

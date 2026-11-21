@@ -100,7 +100,6 @@ export default async function Page({ searchParams }: PageProps<"/oauth/authorize
           </Tile>
         </div>
       }
-      mobilePitch={false}
       legal={<LegalNotice action="continue" />}
       pitch={pitch}
     >

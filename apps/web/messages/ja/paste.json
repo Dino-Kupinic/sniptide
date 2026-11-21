@@ -249,6 +249,9 @@
     "signInToShare": "サインインして共有",
     "signInToShareTitle": "サインインして Paste を共有",
     "continueWithEmail": "メールで続行",
-    "typeThePasswordAgain": "Paste を作成するには、パスワードをもう一度入力してください。"
+    "typeThePasswordAgain": "Paste を作成するには、パスワードをもう一度入力してください。",
+    "signInForCustomLink": "カスタムリンクを選ぶにはサインインしてください。",
+    "signInForCollection": "ペーストをコレクションに整理するにはサインインしてください。",
+    "signInToUse": "サインインで利用可能"
   }
 }
