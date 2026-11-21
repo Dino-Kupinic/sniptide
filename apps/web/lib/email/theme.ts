@@ -49,6 +49,7 @@ export const phoneCss = `
   .st-outer { padding: 0 !important; }
   .st-surface { border: 0 !important; border-radius: 0 !important; }
   .st-pad { padding-left: 16px !important; padding-right: 16px !important; }
+  .st-stack { display: block !important; width: 100% !important; }
 }
 `
 

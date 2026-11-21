@@ -224,7 +224,11 @@ the switch as on. Send from a subdomain of
 your own, so a complaint about a broadcast can't affect password reset and notification emails.
 
 Each broadcast is a React Email file in `apps/web/emails/broadcasts` that exports `subject`,
-`preview` and a component built from `apps/web/lib/email/broadcast.tsx`. Preview it with
+`preview` and a component built from `apps/web/lib/email/broadcast.tsx`. `Broadcast` sets the
+title, the date and an optional **View in browser** link to a public copy, such as a changelog
+entry. `Cover` adds a blue panel with the mark, a label and a large title, and a screenshot beside
+it on wide screens or below it on phones. Put a screenshot in `apps/web/public/email/broadcasts` so
+the instance serves it, at least 700px wide. Preview it with
 `bun run email` in `apps/web`, then send it from there with the variables above, plus
 `BETTER_AUTH_URL` for the logo and links and `OPERATOR_NAME` and `OPERATOR_ADDRESS` for the sender
 line:

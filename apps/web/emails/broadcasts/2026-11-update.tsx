@@ -1,4 +1,4 @@
-import { Action, Broadcast, type BroadcastProps, H2, List, P } from "@/lib/email/broadcast"
+import { Action, Broadcast, type BroadcastProps, Cover, H2, List, P } from "@/lib/email/broadcast"
 
 export const subject = "What's new in Sniptide: phone screens, templates and secret audit logs"
 export const preview =
@@ -7,7 +7,22 @@ export const preview =
 export default function November2026Update(props: BroadcastProps) {
   const app = (path: string) => new URL(path, props.appUrl ?? "https://app.sniptide.com").href
   return (
-    <Broadcast {...props} subject={subject} preview={preview} title="What's new in November">
+    <Broadcast
+      {...props}
+      subject={subject}
+      preview={preview}
+      title="Sniptide product updates"
+      date="November 21, 2026"
+    >
+      <Cover
+        appUrl={props.appUrl}
+        label="November 2026"
+        title="Product updates"
+        image={{
+          src: app("/email/broadcasts/2026-11-editor.png"),
+          alt: "The Sniptide app with the sidebar and the new paste editor",
+        }}
+      />
       <P>
         This month Sniptide got a proper phone layout, a faster way to start a paste and an audit
         log for secrets. Here is what changed and how to try it.

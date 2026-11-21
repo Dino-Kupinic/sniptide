@@ -1,7 +1,9 @@
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { render } from "@react-email/render"
 import { createAuth } from "@workspace/auth"
 import { broadcastSubscription, user } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
+import { createElement } from "react"
 import { createResendClient, type ResendClient, ResendError } from "@/lib/broadcasts/resend"
 import { parseArgs, renderBroadcast, runBroadcast } from "@/lib/broadcasts/send"
 import {
@@ -12,6 +14,7 @@ import {
   setResendClientForTests,
 } from "@/lib/broadcasts/subscription"
 import { getDb } from "@/lib/db"
+import { Broadcast, Cover } from "@/lib/email/broadcast"
 import * as november from "../emails/broadcasts/2026-11-update"
 import { hasDatabase, resetDatabase, seedUser } from "./harness"
 
@@ -101,13 +104,46 @@ describe("broadcast emails", () => {
     const { subject, html, text } = await renderBroadcast(november, props)
     expect(subject).toBe(november.subject)
     expect(html).toContain('href="{{{RESEND_UNSUBSCRIBE_URL}}}"')
-    expect(html).toContain("What&#x27;s new in November")
+    expect(html).toContain("Sniptide product updates")
     expect(html).toContain("https://app.example.com/email/fonts/archivo-700.woff2")
-    expect(text).toContain("What's new in November")
-    expect(text).not.toContain("WHAT'S NEW")
+    expect(text).toContain("Sniptide product updates")
+    expect(text).not.toContain("SNIPTIDE PRODUCT UPDATES")
     expect(text).toContain("{{{RESEND_UNSUBSCRIBE_URL}}}")
     expect(text).toContain("Sent by Example GmbH, Ring 1, 1010 Wien.")
     expect(`${text}${subject}${november.preview}`).not.toMatch(/—|SnipTide|Click here/)
+  })
+
+  test("the header shows the date, a browser link and a cover with the mark and a screenshot", async () => {
+    const element = createElement(Broadcast, {
+      ...props,
+      subject: "Updates",
+      preview: "What changed this month",
+      title: "Sniptide product updates",
+      date: "November 21, 2026",
+      browserUrl: "https://sniptide.com/changelog/2026-11",
+      children: createElement(Cover, {
+        appUrl: props.appUrl,
+        label: "November 2026",
+        title: "Product updates",
+        image: { src: "https://app.example.com/email/shot.png", alt: "The editor" },
+      }),
+    })
+    const html = await render(element)
+    const text = await render(element, { plainText: true })
+    expect(html).toContain("November 21, 2026")
+    expect(html).toContain('href="https://sniptide.com/changelog/2026-11"')
+    expect(html).toContain("View in browser")
+    expect(html).toContain('src="https://app.example.com/email/sniptide-mark-white.png"')
+    expect(html).toContain('src="https://app.example.com/email/shot.png"')
+    expect(html).toContain('alt="The editor"')
+    expect(html).toContain('class="st-stack"')
+    // The cover's words are text, so they show when images are blocked and in the plain text.
+    expect(text).toContain("November 2026")
+    expect(text).toContain("Product updates")
+    // Without a screenshot the panel spans the width and nothing stacks.
+    const bare = await render(createElement(Cover, { title: "Product updates" }))
+    expect(bare).not.toContain("st-stack")
+    expect(bare).not.toContain("<img")
   })
 
   test("the command reads a file and a mode", () => {
