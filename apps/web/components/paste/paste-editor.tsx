@@ -642,6 +642,20 @@ export function PasteEditor({
     autosaver.resolveConflict()
   }
 
+  // Discard and Cancel on a new paste throw the work away, so the draft on this device goes too.
+  // Otherwise a pasted secret would come back the next time the editor opens. The draft only
+  // returns after the page was left some other way, such as a closed tab or a crash. Navigation
+  // waits for the delete, so the editor never unmounts with the draft still stored.
+  function discardAndLeave(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented || event.button !== 0) return
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    setDraftNotice(null)
+    void discardDraft()
+      .catch(() => {})
+      .then(() => router.push(cancelHref))
+  }
+
   // Editing has no save button: this leaves once the last edit is on the server.
   async function finish() {
     const saved = await autosaver.flush()
@@ -1159,7 +1173,7 @@ export function PasteEditor({
           <Button
             variant="ghost"
             size="xl"
-            render={<Link href={cancelHref} />}
+            render={<Link href={cancelHref} onClick={guest ? undefined : discardAndLeave} />}
             nativeButton={false}
             className="px-2 text-[17px] font-normal text-link"
           >
@@ -1191,7 +1205,7 @@ export function PasteEditor({
           <Button
             variant="destructive"
             size="lg"
-            render={<Link href={cancelHref} />}
+            render={<Link href={cancelHref} onClick={discardAndLeave} />}
             nativeButton={false}
           >
             {t("discard")}
@@ -1406,7 +1420,27 @@ export function PasteEditor({
                 role="status"
                 className="border-t border-primary bg-primary/5 px-4 py-2 text-xs text-link"
               >
-                {t("secretWarning", { line: secret.line, file: secret.file, name: secret.name })}
+                {visibility === "private"
+                  ? t.rich("secretWarningPrivate", {
+                      line: secret.line,
+                      file: secret.file,
+                      name: secret.name,
+                      link: (chunks) => (
+                        <a
+                          href="/secrets"
+                          target="_blank"
+                          rel="noopener"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          {chunks}
+                        </a>
+                      ),
+                    })
+                  : t(visibility === "public" ? "secretWarningPublic" : "secretWarningUnlisted", {
+                      line: secret.line,
+                      file: secret.file,
+                      name: secret.name,
+                    })}
               </p>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">

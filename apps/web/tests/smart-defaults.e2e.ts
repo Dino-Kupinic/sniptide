@@ -69,6 +69,21 @@ test("environment content defaults to private and a deliberate override stays se
   await expect(screen.getByRole("radio", "Unlisted", { visible: true })).toBeChecked()
 })
 
+test("the secret warning describes who can read the paste at its visibility", async ({
+  app,
+  screen,
+}) => {
+  await app.open("/new")
+  await screen.getByLabel("Contents of untitled.txt").fill("-----BEGIN PRIVATE KEY-----\nexample")
+  await expect(screen.getByRole("radio", "Private", { visible: true })).toBeChecked()
+  await expect(screen.getByText(/can still read a private paste over MCP/)).toBeVisible()
+  await expect(screen.getByRole("link", "env group")).toHaveAttribute("href", "/secrets")
+  await screen.getByRole("radio", "Unlisted", { visible: true }).check()
+  await expect(screen.getByText(/Anyone with the link can read it/)).toBeVisible()
+  await screen.getByRole("radio", "Public", { visible: true }).check()
+  await expect(screen.getByText(/Anyone can open a public paste/)).toBeVisible()
+})
+
 test("new files keep automatic language when their default name is left unchanged", async ({
   app,
   screen,
