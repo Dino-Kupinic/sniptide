@@ -172,7 +172,9 @@
     "draftKept": "此设备上保留了 {savedAt} 的草稿。恢复后将替换当前内容。",
     "contentsOf": "{name} 的内容",
     "file": "文件",
-    "secretWarning": "{file} 的第 {line} 行疑似包含 {name}。任何持有链接的人都可以读取，请移除或将 Paste 设为私密。",
+    "secretWarningPublic": "{file} 的第 {line} 行疑似包含 {name}。任何人都可以打开公开的 Paste，请移除或将 Paste 设为私密。",
+    "secretWarningUnlisted": "{file} 的第 {line} 行疑似包含 {name}。任何持有链接的人都可以读取，请移除或将 Paste 设为私密。",
+    "secretWarningPrivate": "{file} 的第 {line} 行疑似包含 {name}。你连接的智能体也能通过 MCP 读取私密 Paste，因此请将这类值保存在会保持加密的<link>环境变量组</link>中。",
     "languageName": "语言：{name}",
     "cursorPosition": "行 {line}，列 {column}",
     "fileCount": "{count} 个文件",
@@ -245,6 +247,13 @@
     "sendsLinkOnly": "{kind, select, page {仅保存链接，因为此粘贴的标题和内容并未向所有持有链接的人开放。} issue {仅以“Sniptide paste”附加链接，因为此粘贴的标题并未向所有持有链接的人开放。} other {仅发送链接，因为此粘贴的标题并未向所有持有链接的人开放。}}",
     "sentToDestination": "{kind, select, page {已保存到“{name}”} issue {已附加到 {name}} other {已发送到 #{name}}}",
     "couldnTLoadDestinations": "{kind, select, page {无法加载你的 {service} 页面。请在一分钟后重试。} issue {无法加载你的 {service} Issue。请在一分钟后重试。} other {无法加载你的 {service} 频道。请在一分钟后重试。}}",
-    "moreOptions": "更多选项"
+    "moreOptions": "更多选项",
+    "signInToShare": "登录以分享",
+    "signInToShareTitle": "登录以分享你的 Paste",
+    "continueWithEmail": "使用邮箱继续",
+    "typeThePasswordAgain": "请再次输入密码以创建 Paste。",
+    "signInForCustomLink": "登录后即可选择自定义链接。",
+    "signInForCollection": "登录后即可将粘贴归入集合。",
+    "signInToUse": "登录后可用"
   }
 }

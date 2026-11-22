@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { NextRequest } from "next/server"
-import TemplatesPage from "@/app/(app)/templates/page"
+import TemplatesPage from "@/app/(app)/(private)/templates/page"
 import {
   parseTemplate,
   parseTemplateCatalog,

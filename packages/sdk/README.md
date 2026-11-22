@@ -14,13 +14,13 @@ Requires Node.js 18 or later. The package uses ES modules and includes TypeScrip
 
 Create a token in **Settings** > **API tokens** on your instance. Enable **Write access** if
 your application creates or changes data. Keep the token on the server and out of source
-control. Replace `https://paste.example.com` with your instance address.
-For Sniptide Cloud, omit the second argument to use `https://app.sniptide.com`.
+control. The client calls Sniptide Cloud at `https://app.sniptide.com` by default. For a
+self-hosted instance, pass its address as the second argument.
 
 ```ts
 import { SniptideClient } from "@sniptide/sdk"
 
-const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
+const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!)
 const page = await client.listPastes({ limit: 20 })
 
 const { paste } = await client.createPaste({

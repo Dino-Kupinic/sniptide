@@ -23,15 +23,15 @@ need **Write access**.
 
 The CLI defaults to Sniptide Cloud at `https://app.sniptide.com`.
 
-Pipe the token to `login` to keep it out of the process list. Set `--base-url` to your instance
-address.
+Pipe the token to `login` to keep it out of the process list. On a self-hosted instance, add
+`--base-url` with your instance address.
 
 ```sh
-printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin --base-url https://paste.example.com
+printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin
 ```
 
 ```text
-Logged in to https://paste.example.com.
+Logged in to https://app.sniptide.com.
 ```
 
 `login` checks the token with the instance before it saves it to

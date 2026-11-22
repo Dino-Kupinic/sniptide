@@ -31,7 +31,6 @@ import {
   getTableColumns,
   gt,
   gte,
-  ilike,
   inArray,
   isNull,
   lt,
@@ -56,6 +55,7 @@ import {
   trashPasteRecord,
 } from "@/lib/pastes/mutations"
 import { parsePasteInput } from "@/lib/pastes/schema"
+import { matchesQuery } from "@/lib/pastes/search"
 import { EXPIRIES, type Visibility } from "@/lib/pastes/types"
 import { hit } from "@/lib/rate-limit"
 import { getSiteOrigin } from "@/lib/site"
@@ -480,35 +480,6 @@ export function parseListQuery(params: URLSearchParams) {
     limit: params.get("limit") ?? undefined,
     cursor: params.get("cursor"),
   })
-}
-
-// At most this many words of a query are matched, so a long query can't build a huge filter.
-const MAX_QUERY_WORDS = 8
-
-// A paste matches a query when every word of it appears somewhere in the paste: the title, slug,
-// description, a tag, or the path or code of one of its files. Agents search with phrases such
-// as "retry with backoff", which rarely sit in a title as written.
-//
-// `offset 0` keeps the file check a per-paste index probe. Without it PostgreSQL may run the check
-// once as a scan of every account's files, so a search would cost as much as the whole instance
-// holds instead of what the caller's account holds, and couldn't stop at the first full page.
-export function matchesQuery(q: string): SQL | undefined {
-  const words = [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))].slice(0, MAX_QUERY_WORDS)
-  return and(
-    ...words.map((word) => {
-      const pattern = `%${word.replace(/[\\%_]/g, "\\$&")}%`
-      return or(
-        ilike(pasteTable.title, pattern),
-        ilike(pasteTable.slug, pattern),
-        ilike(pasteTable.description, pattern),
-        sql`array_to_string(${pasteTable.tags}, ' ') ilike ${pattern}`,
-        sql`exists (
-          select 1 from ${pasteFile} f
-          where f.paste_id = ${pasteTable}.id and (f.name ilike ${pattern} or f.content ilike ${pattern})
-          offset 0)`,
-      )
-    }),
-  )
 }
 
 // The owner's pastes, latest edit first, filtered by words anywhere in the paste (matchesQuery),

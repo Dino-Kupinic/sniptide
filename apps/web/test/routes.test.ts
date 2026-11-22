@@ -1,13 +1,13 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import NewPage from "@/app/(app)/new/page"
 import {
   default as DetailPage,
   generateMetadata as detailMetadata,
-} from "@/app/(app)/pastes/[slug]/(view)/page"
+} from "@/app/(app)/(private)/pastes/[slug]/(view)/page"
 import {
   default as EditPage,
   generateMetadata as editMetadata,
-} from "@/app/(app)/pastes/[slug]/edit/page"
+} from "@/app/(app)/(private)/pastes/[slug]/edit/page"
+import NewPage from "@/app/(app)/new/page"
 import { GET as raw } from "@/app/[slug]/raw/route"
 import { hasDatabase, marker, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 

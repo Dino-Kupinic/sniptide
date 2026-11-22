@@ -23,13 +23,21 @@ import { ShortcutKeys } from "@/components/shortcuts/shortcut-keys"
 import { useSiteHost } from "@/components/site-host"
 import type { Collection } from "@/lib/collections/types"
 import { timeAgo } from "@/lib/format"
-import type { SidebarPaste } from "@/lib/pastes/types"
+import type { PasteSearchMatch, SidebarPaste } from "@/lib/pastes/types"
 import type { Command } from "./commands"
-import { highlight, matches, parseQuery } from "./search"
+import { highlight, highlightWords, matches, parseQuery } from "./search"
 import { usePasteSearch } from "./use-paste-search"
 
 type Entry =
-  | { id: string; kind: "paste"; slug: string; title: string; updatedAt: number }
+  | {
+      id: string
+      kind: "paste"
+      slug: string
+      title: string
+      updatedAt: number
+      // Where a search hit matched, when its title and slug don't show it.
+      match?: PasteSearchMatch | null
+    }
   | { id: string; kind: "collection"; collection: Collection }
   | { id: string; kind: "command"; command: Command }
 
@@ -99,8 +107,9 @@ export function CommandMenuDialog({
     const add = (id: string, title: string, entries: Entry[]) => {
       if (entries.length > 0) result.push({ id, title, entries })
     }
-    const pasteEntries = (pastes: { slug: string; title: string; updatedAt: number }[]): Entry[] =>
-      pastes.map((paste) => ({ id: `paste:${paste.slug}`, kind: "paste", ...paste }))
+    const pasteEntries = (
+      pastes: { slug: string; title: string; updatedAt: number; match?: PasteSearchMatch | null }[],
+    ): Entry[] => pastes.map((paste) => ({ id: `paste:${paste.slug}`, kind: "paste", ...paste }))
     const collectionEntries = (items: Collection[]): Entry[] =>
       items.map((collection) => ({
         id: `collection:${collection.slug}`,
@@ -309,7 +318,7 @@ export function CommandMenuDialog({
               <p className="text-[13px] text-muted-foreground">
                 {scope === "commands"
                   ? t("try_another_command")
-                  : t("search_covers_paste_titles_slugs_and_collection_names")}
+                  : t("search_covers_paste_titles_code_and_collection_names")}
               </p>
             </div>
           ) : null}
@@ -366,8 +375,17 @@ function Option({
   )
 }
 
-function Highlight({ value, text }: { value: string; text: string }) {
-  return highlight(value, text).map((segment, index) =>
+function Highlight({
+  value,
+  text,
+  words = false,
+}: {
+  value: string
+  text: string
+  // Marks each word of the text on its own, for pastes, which match every word anywhere.
+  words?: boolean
+}) {
+  return (words ? highlightWords : highlight)(value, text).map((segment, index) =>
     segment.match ? (
       // Phones set the match in bold, which reads on the small rows without a fill.
       <mark
@@ -399,6 +417,7 @@ function EntryRow({
   const t = useTranslations("Workspace")
   if (entry.kind === "paste") {
     const ago = timeAgo(entry.updatedAt, undefined, locale)
+    const match = entry.match
     return (
       <>
         <FileTextIcon
@@ -408,14 +427,28 @@ function EntryRow({
         />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 max-lg:justify-center max-lg:py-2.5 lg:flex-row lg:items-baseline lg:gap-2.5">
           <span className="truncate text-foreground lg:shrink-0 lg:max-w-[55%]">
-            <Highlight value={entry.title} text={text} />
+            <Highlight value={entry.title} text={text} words />
           </span>
-          <span className="truncate font-mono text-xs text-muted-foreground max-lg:text-[13px] max-lg:leading-4">
-            {/* The host is the same on every row, so phones keep the room for the slug and age. */}
-            <span className="max-lg:hidden">{host}/</span>
-            <Highlight value={entry.slug} text={text} />
-            <span className="lg:hidden"> · {ago}</span>
-          </span>
+          {match ? (
+            // The title and slug don't show why this paste matched, so the row shows the file and
+            // the line of code that did.
+            <span className="truncate font-mono text-xs text-muted-foreground max-lg:text-[13px] max-lg:leading-4">
+              <Highlight value={match.file} text={text} words />
+              {match.line ? `:${match.line}` : null}
+              {match.excerpt ? (
+                <span className="ml-2 text-foreground/80">
+                  <Highlight value={match.excerpt} text={text} words />
+                </span>
+              ) : null}
+            </span>
+          ) : (
+            <span className="truncate font-mono text-xs text-muted-foreground max-lg:text-[13px] max-lg:leading-4">
+              {/* The host is the same on every row, so phones keep the room for the slug and age. */}
+              <span className="max-lg:hidden">{host}/</span>
+              <Highlight value={entry.slug} text={text} words />
+              <span className="lg:hidden"> · {ago}</span>
+            </span>
+          )}
         </div>
         <span className="flex shrink-0 items-center gap-2 text-[13px] text-muted-foreground max-lg:hidden">
           {active ? (

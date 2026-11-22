@@ -172,7 +172,9 @@
     "draftKept": "{savedAt} の下書きがこの端末に残っています。復元すると、現在の内容が置き換わります。",
     "contentsOf": "{name} の内容",
     "file": "ファイル",
-    "secretWarning": "{file} の {line} 行目に {name} と思われる内容があります。リンクを知っている人は閲覧できるため、削除するか Paste を非公開にしてください。",
+    "secretWarningPublic": "{file} の {line} 行目に {name} と思われる内容があります。公開の Paste は誰でも開けるため、削除するか Paste を非公開にしてください。",
+    "secretWarningUnlisted": "{file} の {line} 行目に {name} と思われる内容があります。リンクを知っている人は閲覧できるため、削除するか Paste を非公開にしてください。",
+    "secretWarningPrivate": "{file} の {line} 行目に {name} と思われる内容があります。接続したエージェントは非公開の Paste も MCP で読み取れるため、このような値は暗号化される<link>環境変数グループ</link>に保存してください。",
     "languageName": "言語：{name}",
     "cursorPosition": "{line} 行、{column} 列",
     "fileCount": "{count} ファイル",
@@ -245,6 +247,13 @@
     "sendsLinkOnly": "{kind, select, page {このペーストのタイトルと内容はリンクを知っている全員に公開されていないため、リンクのみを保存します。} issue {このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを「Sniptide paste」として添付します。} other {このペーストのタイトルはリンクを知っている全員に公開されていないため、リンクのみを送信します。}}",
     "sentToDestination": "{kind, select, page {「{name}」に保存しました} issue {{name} に添付しました} other {#{name} に送信しました}}",
     "couldnTLoadDestinations": "{kind, select, page {{service} のページを読み込めませんでした。1 分後にもう一度お試しください。} issue {{service} の Issue を読み込めませんでした。1 分後にもう一度お試しください。} other {{service} のチャンネルを読み込めませんでした。1 分後にもう一度お試しください。}}",
-    "moreOptions": "その他のオプション"
+    "moreOptions": "その他のオプション",
+    "signInToShare": "サインインして共有",
+    "signInToShareTitle": "サインインして Paste を共有",
+    "continueWithEmail": "メールで続行",
+    "typeThePasswordAgain": "Paste を作成するには、パスワードをもう一度入力してください。",
+    "signInForCustomLink": "カスタムリンクを選ぶにはサインインしてください。",
+    "signInForCollection": "ペーストをコレクションに整理するにはサインインしてください。",
+    "signInToUse": "サインインで利用可能"
   }
 }

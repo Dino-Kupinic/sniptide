@@ -17,14 +17,14 @@ It needs Python 3.9 or newer. The import name is `sniptide`, the same as the pac
 ## Authenticate
 
 Create a token in **Settings** > **API tokens** with the access your code needs (see
-[API tokens](/api-tokens)), put it in the environment, and pass it with your instance address. Replace
-`https://paste.example.com` below with that address.
+[API tokens](/api-tokens)), put it in the environment, and pass it to the client. The client calls Sniptide Cloud by default.
+For a self-hosted instance, pass its address as `base_url`, such as `https://paste.example.com`.
 
 ```python
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
 account = client.me()
 ```
 

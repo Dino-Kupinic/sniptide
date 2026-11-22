@@ -20,7 +20,6 @@ import {
   exists,
   getTableColumns,
   gte,
-  ilike,
   inArray,
   isNotNull,
   isNull,
@@ -70,6 +69,7 @@ export { PasteBudgetError } from "./budget"
 export { PasteCollectionError } from "./mutations"
 
 import { parsePasteInput } from "./schema"
+import { findMatches, matchesOwnQuery } from "./search"
 import type {
   NavCounts,
   Paste,
@@ -1004,8 +1004,9 @@ export const sidebarData = cache(
   },
 )
 
-// The command menu's paste search: the viewer's own pastes whose title or slug contains the text,
-// latest first. File contents are never searched.
+// The command menu's paste search: the viewer's own pastes that match the text the way
+// search_snippets does (matchesOwnQuery), latest first, each with where it matched when the title
+// and slug don't show it.
 export async function searchOwnPastes(
   text: string,
   limit = PASTE_SEARCH_LIMIT,
@@ -1013,25 +1014,41 @@ export async function searchOwnPastes(
   const viewer = await viewerId()
   const query = text.trim().slice(0, PASTE_SEARCH_MAX_LENGTH)
   if (!viewer || !query) return { hits: [], total: 0 }
-  const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`
   const where = and(
     allowedPaste(),
     eq(pasteTable.ownerId, viewer),
     isNull(pasteTable.deletedAt),
-    or(ilike(pasteTable.title, pattern), ilike(pasteTable.slug, pattern)),
+    matchesOwnQuery(query),
   )
   const db = getDb()
   const [rows, [count]] = await Promise.all([
     db
-      .select({ slug: pasteTable.slug, title: pasteTable.title, updatedAt: pasteTable.updatedAt })
+      .select({
+        id: pasteTable.id,
+        slug: pasteTable.slug,
+        title: pasteTable.title,
+        updatedAt: pasteTable.updatedAt,
+        encrypted: sql<boolean>`${pasteTable.encryptionKeyId} is not null`,
+      })
       .from(pasteTable)
       .where(where)
       .orderBy(desc(pasteTable.updatedAt), pasteTable.id)
       .limit(limit),
     db.select({ count: sql<number>`count(*)::int` }).from(pasteTable).where(where),
   ])
+  // An encrypted paste's files are ciphertext, so it never shows a match from them.
+  const matches = await findMatches(
+    db,
+    rows.filter((row) => !row.encrypted),
+    query,
+  )
   return {
-    hits: rows.map((row) => ({ ...row, updatedAt: row.updatedAt.getTime() })),
+    hits: rows.map((row) => ({
+      slug: row.slug,
+      title: row.title,
+      updatedAt: row.updatedAt.getTime(),
+      match: matches.get(row.id) ?? null,
+    })),
     total: count?.count ?? 0,
   }
 }

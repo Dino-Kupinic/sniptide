@@ -60,16 +60,20 @@ Each file is also available as plain text at `<domain>/<link>/raw?file=<file nam
 
 1. Select **New paste**, or press <Kbd>N</Kbd>, to open the editor.
 2. Type or paste code. Until you create the paste, the editor keeps your work as a draft on this
-   device. Press <Kbd>Ctrl+S</Kbd> (<Kbd>⌘S</Kbd>) to save the draft, and opening the editor again offers to restore
-   it.
+   device. Press <Kbd>Ctrl+S</Kbd> (<Kbd>⌘S</Kbd>) to save the draft. If the tab closes before you
+   create the paste, opening the editor again restores the draft. Select **Discard** (**Cancel** on
+   a phone) to throw the work away, which also deletes the draft.
 3. Press <Kbd>Ctrl+Enter</Kbd> (<Kbd>⌘ Enter</Kbd>) to create the paste.
 
 An existing paste saves as you type, and the header shows when it was last saved. Select **Done**
 to end the editing session. The next edit then starts a new [revision](/core-concepts/revisions).
 
 When the code looks like a secret, such as an API key or `.env` lines, the editor warns you and
-switches a new paste to **Private**, because anyone with the link can read an unlisted or public
-paste. Turn the warning off with **Secret detection** under **Settings** > **General**.
+switches a new paste to **Private**, because anyone with the link can read an unlisted paste and
+anyone can open a public one. The warning follows the visibility you choose. On a private paste it
+reminds you that agents you connected can still read the paste over MCP, and suggests an
+[env group](/core-concepts/secrets), which stays encrypted. Turn the warning off with **Secret
+detection** under **Settings** > **General**.
 
 To keep the files unreadable to the server, turn on **End-to-end encryption** under
 **Protection** before you create the paste. An [encrypted paste](/core-concepts/encrypted-pastes)
@@ -77,14 +81,23 @@ can't be edited afterwards.
 
 Pastes you create in the web editor start with the visibility, expiry and burn setting from
 [your paste defaults](/settings#set-paste-defaults), which are **Unlisted**, **1 week** and off
-until you change them.
+until you change them. If you answer that you want a place for your agents to save and share
+when you sign up, new pastes never expire, because agents can't read expired pastes.
+
+### Write a paste before you sign in
+
+Without an account you can still open the editor at `/new` and write a paste with every setting
+except a custom link and a collection, which stay greyed out until you sign in. The editor keeps the draft on this device. Select
+**Sign in to share** and continue with GitHub, Google or email, or create an account. After you
+sign in, Sniptide creates the paste with the settings you chose and opens it. If you set a
+password, the editor asks you to type it again first, because the draft doesn't store it.
 
 ## Start from a template
 
 On Sniptide Cloud, open **Paste templates** from the dashboard or browse the
 [template gallery](https://sniptide.com/templates). Choose a template to fill the editor with its
-title, description and files. If needed, sign in to open the editor. Edit the draft, then create
-the paste and share it or save it to a collection.
+title, description and files. Edit the draft, then create the paste and share it or save it to a
+collection. Without an account, [sign in to share](#write-a-paste-before-you-sign-in) it.
 
 ### Browse the templates
 
@@ -96,8 +109,13 @@ address to share the current filters.
 
 - **Star** a paste to list it under **Starred**.
 - Press <Kbd>⌘K</Kbd> (<Kbd>Ctrl+K</Kbd>), or select **Search** in the tab bar on a phone, to
-  search your pastes by title or link and your collections by name. Select **New paste named**
-  to start a paste with what you typed as its title.
+  search your pastes and your collections by name. A paste matches when every word you type
+  appears in its title, link, description, tags, file names or code, the same way agents search
+  with `search_snippets`. When the word sits in the code, the result shows the file and the line.
+  End-to-end encrypted pastes match on their title and link only, because the server can't read
+  their files. Select **New paste named** to start a paste with what you typed as its title.
+- The search field in **Pastes** and in a collection matches file names and code the same way.
+  **Starred** filters by title and link.
 - **Duplicate** copies a paste into a new one that you own.
 - In the **Pastes** list, select rows with their checkboxes to star, move, change the visibility
   of or trash several pastes at once. Shift-click selects a range, and `Esc` clears the selection.

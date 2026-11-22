@@ -13,17 +13,17 @@ It runs in two ways with the same tools:
 
 ## Connect a client
 
-For Sniptide Cloud, use `https://app.sniptide.com/api/mcp`. For your own instance, append
-`/api/mcp` to its address.
+The examples use Sniptide Cloud at `https://app.sniptide.com/api/mcp`. For your own instance,
+append `/api/mcp` to its address instead.
 
 ```sh
-claude mcp add --transport http sniptide https://paste.example.com/api/mcp
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
 In Claude Code, adding the server doesn't open the browser. Start Claude Code, type `/mcp`, choose
 `sniptide` and pick **Authenticate**.
 
-Codex uses `codex mcp add sniptide --url https://paste.example.com/api/mcp`. In Cursor, add a
+Codex uses `codex mcp add sniptide --url https://app.sniptide.com/api/mcp`. In Cursor, add a
 remote server with the same URL and no headers. The client receives a `401`, finds the sign-in
 through the app's OAuth metadata and opens Sniptide in your browser, where you allow access.
 [OAuth for agents](https://docs.sniptide.com/oauth) explains the scopes and how to revoke a
@@ -46,7 +46,7 @@ it. Claude Code expands `${SNIPTIDE_TOKEN}` from the environment.
   "mcpServers": {
     "sniptide": {
       "type": "http",
-      "url": "https://paste.example.com/api/mcp",
+      "url": "https://app.sniptide.com/api/mcp",
       "headers": { "Authorization": "Bearer ${SNIPTIDE_TOKEN}" }
     }
   }
@@ -59,8 +59,9 @@ in place of the variable. Keep real tokens out of source control.
 
 ### Run the server locally
 
-The local server needs Node.js 24 or newer and an API token. It calls the token API of the instance
-in `SNIPTIDE_BASE_URL`, using the address of the instance that issued your token.
+The local server needs Node.js 24 or newer and an API token. It calls Sniptide Cloud by default.
+For a self-hosted instance, add `SNIPTIDE_BASE_URL` to `env` with the address of the instance that
+issued your token.
 
 ```json title=".mcp.json"
 {
@@ -70,8 +71,7 @@ in `SNIPTIDE_BASE_URL`, using the address of the instance that issued your token
       "command": "npx",
       "args": ["--yes", "@sniptide/mcp"],
       "env": {
-        "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
-        "SNIPTIDE_BASE_URL": "https://paste.example.com"
+        "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}"
       }
     }
   }

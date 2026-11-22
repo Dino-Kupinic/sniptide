@@ -23,6 +23,26 @@ describeDb("bounded paste reads", () => {
     signInAs("owner")
   })
 
+  test("your own list matches code and file names, and starred matches titles", async () => {
+    await seedPaste({ slug: "mine", owner: "owner", title: "Backoff", content: "retryFetch()" })
+    await seedPaste({ slug: "plain", owner: "owner", title: "Plain", content: "nothing" })
+    const theirs = await seedPaste({
+      slug: "theirs",
+      owner: "other",
+      title: "Theirs",
+      content: "retryFetch()",
+      visibility: "public",
+    })
+    await getDb().insert(pasteStar).values({ userId: "owner", pasteId: theirs.id })
+    const mine = await listPastePage({ mode: "mine" }, query({ q: "retryfetch backoff" }))
+    expect(mine.pastes.map((p) => p.slug)).toEqual(["mine"])
+    expect(mine.pagination.total).toBe(1)
+    // Starred holds other people's pastes, so their code stays out of the filter.
+    const starred = (q: string) => listPastePage({ mode: "starred" }, query({ q }))
+    expect((await starred("retryfetch")).pastes).toEqual([])
+    expect((await starred("theirs")).pastes.map((p) => p.slug)).toEqual(["theirs"])
+  })
+
   test("detail hydration reuses ordered file metadata and preserves UTF-8 sizes", async () => {
     const { id } = await seedPaste({
       slug: "detail",

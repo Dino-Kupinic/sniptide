@@ -7,6 +7,7 @@ import {
   agentClientFromName,
   agentSetup,
   ONBOARDING_WINDOW_DAYS,
+  preferencesForUseCase,
   SIGNUP_SOURCES,
   USE_CASES,
 } from "@/lib/onboarding"
@@ -17,6 +18,8 @@ import {
   saveUseCase,
 } from "@/lib/onboarding-actions"
 import { canOnboard, shouldOnboard, shouldStartTour } from "@/lib/onboarding-server"
+import { changePreferences, readPreferences } from "@/lib/preference-store"
+import { defaultPreferences } from "@/lib/preferences"
 import { DAY } from "@/lib/time"
 import { hasDatabase, resetDatabase, seedUser, signInAs } from "./harness"
 
@@ -51,6 +54,23 @@ describeDb("onboarding answers", () => {
   test("a use case without a source records the source as skipped", async () => {
     await saveUseCase("team")
     expect(await stored()).toEqual({ source: "skipped", useCase: "team" })
+  })
+
+  test("the agents use case makes new pastes never expire, and another answer undoes it", async () => {
+    await saveUseCase("agents")
+    expect((await readPreferences("ada")).defaultExpiry).toBe("never")
+    await saveUseCase("agents")
+    expect((await readPreferences("ada")).defaultExpiry).toBe("never")
+    await saveUseCase("sharing")
+    expect((await readPreferences("ada")).defaultExpiry).toBe("1w")
+  })
+
+  test("the agents use case keeps an expiry chosen in Settings", async () => {
+    await changePreferences("ada", (current) => ({ ...current, defaultExpiry: "1m" }))
+    await saveUseCase("agents")
+    expect((await readPreferences("ada")).defaultExpiry).toBe("1m")
+    await saveUseCase("team")
+    expect((await readPreferences("ada")).defaultExpiry).toBe("1m")
   })
 
   test("answering or skipping the first step ends the redirect", async () => {
@@ -131,6 +151,34 @@ describeDb("onboarding answers", () => {
     await saveSignupSource("x")
     await resetDatabase()
     expect(await stored()).toBeUndefined()
+  })
+})
+
+describe("paste defaults for a use case", () => {
+  const shipped = defaultPreferences
+
+  test("agents turns the shipped expiry into never", () => {
+    expect(preferencesForUseCase(shipped, null, "agents").defaultExpiry).toBe("never")
+    expect(preferencesForUseCase(shipped, "sharing", "agents").defaultExpiry).toBe("never")
+  })
+
+  test("other use cases keep the shipped defaults", () => {
+    for (const useCase of USE_CASES.filter((value) => value !== "agents")) {
+      expect(preferencesForUseCase(shipped, null, useCase)).toBe(shipped)
+    }
+  })
+
+  test("a chosen expiry stays when the answer is agents", () => {
+    const chosen = { ...shipped, defaultExpiry: "1d" as const }
+    expect(preferencesForUseCase(chosen, null, "agents")).toBe(chosen)
+  })
+
+  test("leaving agents puts the shipped expiry back, but only from never", () => {
+    const never = { ...shipped, defaultExpiry: "never" as const }
+    expect(preferencesForUseCase(never, "agents", "team").defaultExpiry).toBe("1w")
+    const chosen = { ...shipped, defaultExpiry: "1y" as const }
+    expect(preferencesForUseCase(chosen, "agents", "team")).toBe(chosen)
+    expect(preferencesForUseCase(never, "sharing", "team")).toBe(never)
   })
 })
 

@@ -255,6 +255,8 @@ Mono 12px on an inverted fill with 8px by 4px padding.
 
 A resizable sidebar beside a content area. The sidebar holds Starred, Pastes and Collections as collapsible sections, with Shared with me and Trash in a "More" menu below the Dashboard link. Take the tour and Feedback sit in the account menu, below Keyboard shortcuts. Feedback opens the support dialog. Dragging below 200px collapses it, like the header button does. Its width and folded sections persist in the `sidebar` cookie, so the server renders it without a jump. Below 1024px the sidebar gives way to a bottom tab bar and the mobile top bar, described under Mobile.
 
+A visitor without an account sees only the editor at `/new`, in a guest frame: a 64px `--sidebar` header with the logo and the editor's actions, and no sidebar. The primary action reads Sign in to share and opens the sign-in options in a dialog on desktop and a bottom sheet on phones, with the paste's title, language and settings at the top. Custom link and Collection stay in the side panel, dimmed, with a tooltip that says to sign in, and on phones their rows say the same in text. Phones keep the editor's own top bar and bottom bar.
+
 ### Loading states
 **Role:** What a screen shows before its data arrives.
 

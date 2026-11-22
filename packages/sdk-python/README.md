@@ -14,14 +14,14 @@ python -m pip install sniptide
 
 Create a token in **Settings** > **API tokens** on your instance. Enable **Write access** if
 your application creates or changes data. Keep the token out of source control and logs.
-Replace `https://paste.example.com` with your instance address.
-For Sniptide Cloud, omit `base_url` to use `https://app.sniptide.com`.
+The client calls Sniptide Cloud at `https://app.sniptide.com` by default. For a self-hosted
+instance, pass its address as `base_url`.
 
 ```python
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
 page = client.list_pastes(limit=20)
 
 created = client.create_paste({
