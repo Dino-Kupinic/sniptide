@@ -29,6 +29,7 @@ import { DAY } from "@/lib/time"
 import { cursorKey, decodeCursor, encodeCursor } from "./cursor"
 import { PASTE_PAGE_SIZE, type PasteListQuery, sortDirection } from "./list-query"
 import { TRASH_DAYS } from "./purge"
+import { matchesOwnQuery } from "./search"
 import { type SharedListQuery, sharedDirection } from "./shared-list-query"
 import { sharedWithWhere } from "./shares"
 import { purgeTrash, readableStarsWhere, summarizePastes } from "./store"
@@ -74,11 +75,15 @@ export async function listPastePage(scope: PasteListScope, query: PasteListQuery
       )
       const filters = and(
         base,
+        // Starred holds other people's pastes too, so it filters by title and slug. The viewer's own
+        // lists match the code and file names as well, like ⌘K, whose See all opens this list.
         query.q
-          ? or(
-              ilike(pasteTable.title, `%${query.q.replace(/[\\%_]/g, "\\$&")}%`),
-              ilike(pasteTable.slug, `%${query.q.replace(/[\\%_]/g, "\\$&")}%`),
-            )
+          ? scope.mode === "starred"
+            ? or(
+                ilike(pasteTable.title, `%${query.q.replace(/[\\%_]/g, "\\$&")}%`),
+                ilike(pasteTable.slug, `%${query.q.replace(/[\\%_]/g, "\\$&")}%`),
+              )
+            : matchesOwnQuery(query.q)
           : undefined,
         query.languages.length ? inArray(firstLanguage, query.languages) : undefined,
         visibility.length ? or(...visibility) : undefined,
