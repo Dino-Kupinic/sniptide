@@ -6,6 +6,7 @@ const targets = ["cli", "container", "extension", "raycast", "sdk", "shared", "v
 
 // These paths have known consumers. Shared code, config and new paths use the full matrix.
 const isolated = [
+  ["apps/admin/", ["web"]],
   ["apps/docs/content/docs/", []],
   ["apps/extension/", ["extension"]],
   ["apps/vscode/", ["vscode"]],

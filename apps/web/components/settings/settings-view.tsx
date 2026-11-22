@@ -397,6 +397,7 @@ export function SettingsView({
   profile,
   preferences,
   emailAvailable,
+  productEmails,
   pasteCount,
   storage,
   api,
@@ -408,6 +409,7 @@ export function SettingsView({
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
+  productEmails: { available: boolean; enabled: boolean }
   security: AccountSecurity & {
     providers: SocialProvider[]
     linkError: string | null
@@ -466,6 +468,7 @@ export function SettingsView({
               initial={preferences.notifications}
               emailAvailable={emailAvailable}
               emailVerified={profile.emailVerified}
+              productEmails={productEmails}
             />
           ) : null}
           {tab === "integrations" ? (

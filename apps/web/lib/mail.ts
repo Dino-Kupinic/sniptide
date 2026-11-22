@@ -6,7 +6,7 @@ import nodemailer from "nodemailer"
 import type Mail from "nodemailer/lib/mailer"
 import type { SMTPPoolOptions } from "nodemailer/lib/smtp-pool"
 import { type Config, getConfig } from "@/lib/config"
-import { approveEmailChange, resetPassword, verifyEmail } from "@/lib/email/content"
+import { approveEmailChange, resetPassword, verifyEmail, welcomeEmail } from "@/lib/email/content"
 import { requestLocale } from "@/lib/email/locale"
 import { renderEmail } from "@/lib/email/render"
 import { hit } from "@/lib/rate-limit"
@@ -200,4 +200,27 @@ export async function sendPasswordReset(
       )),
     })
   })().catch((error) => console.error("Password reset email failed", error))
+}
+
+// The welcome email, once per account after its first session (see sendWelcomeEmail in
+// @workspace/auth). Off without SMTP or an app URL, with WELCOME_EMAIL=false, and on demo instances.
+export async function sendWelcomeEmail(
+  user: { id: string; email: string; name: string },
+  request?: Request,
+) {
+  const { smtp, legal, appUrl, welcomeEmail: enabled, demoMode, resourceLinks } = getConfig()
+  if (!smtp || !appUrl || !enabled || demoMode) return
+  await sendMail(smtp, {
+    from: smtp.from,
+    to: user.email,
+    ...(await renderEmail(
+      welcomeEmail({
+        to: user.email,
+        appUrl,
+        docsUrl: resourceLinks.documentation,
+        operator: legal.operator,
+        locale: await requestLocale(request),
+      }),
+    )),
+  })
 }

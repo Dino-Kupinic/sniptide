@@ -98,8 +98,16 @@ describeDb("invited email ownership", () => {
 
   test("verification proves ownership and creates a session", async () => {
     const sender = mail()
-    const auth = makeAuth(sender)
+    const welcomed: string[] = []
+    const auth = makeAuth({
+      ...sender,
+      sendWelcomeEmail: async ({ email }) => {
+        welcomed.push(email)
+      },
+    })
     await signUp(auth)
+    // The welcome email waits until the invited address is verified.
+    expect(welcomed).toEqual([])
     const link = sender.links[0]
     if (!link) throw new Error("missing verification link")
     const verified = await auth.handler(new Request(link))
@@ -111,7 +119,8 @@ describeDb("invited email ownership", () => {
     expect(update.status).toBeLessThan(500)
     const [account] = await getDb().select().from(user).where(eq(user.email, EMAIL))
     expect(account?.emailVerified).toBe(true)
-    expect(account).toMatchObject({ pendingInvitation: false })
+    expect(account).toMatchObject({ pendingInvitation: false, welcomePending: false })
+    expect(welcomed).toEqual([EMAIL])
   })
 
   test("invite-only password sign-up fails closed without an email sender", async () => {

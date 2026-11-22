@@ -1,0 +1,145 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "8f85b142-3741-43c1-84d4-f3500366e82d",
+  "prevIds": [
+    "89ad783f-f219-41c8-8abd-60a7f7693163"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "broadcast_subscription"
+      ],
+      "writes": [
+        "s|tbl|public.broadcast_subscription",
+        "n|tbl|public.broadcast_subscription",
+        "e|tbl|public.broadcast_subscription",
+        "n|rel|public.broadcast_subscription",
+        "n|type|public.broadcast_subscription",
+        "n|rel|public.broadcast_subscription_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "broadcast_subscription"
+      ],
+      "writes": [
+        "s|fk|public.broadcast_subscription.broadcast_subscription_user_id_user_id_fkey",
+        "n|fk|public.broadcast_subscription.broadcast_subscription_user_id_user_id_fkey",
+        "e|fk|public.broadcast_subscription.broadcast_subscription_user_id_user_id_fkey",
+        "n|con|public.broadcast_subscription.broadcast_subscription_user_id_user_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.broadcast_subscription",
+        "n|sch|public",
+        "n|tbl|public.user",
+        "n|sch|public",
+        "n|col|public.broadcast_subscription.user_id",
+        "n|col|public.user.id",
+        "e|uniqueness|public.user.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "broadcast_subscription",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast_subscription",
+        "name": "user_id",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast_subscription",
+        "name": "email",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast_subscription",
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast_subscription",
+        "name": "broadcast_subscription_user_id_user_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "user_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "user",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast_subscription",
+        "name": "broadcast_subscription_pkey",
+        "columns": [
+          "user_id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

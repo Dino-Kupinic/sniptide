@@ -72,6 +72,27 @@
         "action": "打开统计分析",
         "event": "浏览量里程碑"
       }
+    },
+    "welcome": {
+      "subject": "欢迎使用 Sniptide",
+      "preview": "保存你的第一个粘贴，然后让你的智能体通过 MCP 或 CLI 使用 Sniptide。",
+      "heading": "欢迎使用 Sniptide",
+      "body": "你的 <b>{email}</b> 账户已准备就绪。",
+      "next": "粘贴代码或文本，选择谁可以查看，然后分享链接。你的智能体也能以同样的方式保存和读取粘贴。",
+      "action": "创建粘贴",
+      "agent": {
+        "label": "连接你的智能体",
+        "body": "添加 MCP 服务器，让 Claude、Cursor 或 Codex 为你保存和查找代码片段。"
+      },
+      "cli": {
+        "label": "安装 CLI",
+        "body": "将终端输出直接存为粘贴，并拿回链接。"
+      },
+      "settings": {
+        "label": "设置默认值",
+        "body": "选择新粘贴默认的可见性和过期时间。"
+      },
+      "reason": "我们向 {email} 发送此邮件，是因为你创建了 Sniptide 账户。这是我们发送的唯一一封欢迎邮件。"
     }
   }
 }

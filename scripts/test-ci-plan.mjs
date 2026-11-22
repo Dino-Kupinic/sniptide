@@ -31,6 +31,12 @@ test("isolated changes select their own suites and known downstream tests", () =
   )
   assert.equal(clients.extension && clients.vscode && clients.sdk, true)
   assert.equal(clients.raycast || clients.web, false)
+
+  // The admin app's tests run in the database job, without the browser or container suites.
+  const admin = selectTests(["apps/admin/lib/store.ts"], specs)
+  assert.equal(admin.web, true)
+  assert.equal(admin.container, false)
+  assert.deepEqual(admin.browser, [])
 })
 
 test("web source runs the browser, database, and container coverage", () => {
