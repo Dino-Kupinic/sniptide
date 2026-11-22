@@ -1,3 +1,5 @@
+import { defaultPreferences, type Preferences } from "@/lib/preferences"
+
 // The welcome wizard's answers. Each list is fixed, so stored values stay comparable across
 // accounts and a crafted request can't write anything else.
 
@@ -30,6 +32,25 @@ export function isSignupSourceAnswer(value: unknown): value is SignupSourceAnswe
 
 export function isUseCase(value: unknown): value is UseCase {
   return USE_CASES.some((useCase) => useCase === value)
+}
+
+// The paste defaults that follow a use case answer. An agent library has to stay reachable over
+// MCP, which can't read expired pastes, so "agents" starts new pastes that never expire. Only the
+// shipped default changes: a default the person picked in Settings stays. Answering something
+// else afterwards puts the shipped default back.
+export function preferencesForUseCase(
+  current: Preferences,
+  previous: UseCase | null,
+  next: UseCase,
+): Preferences {
+  const shipped = defaultPreferences.defaultExpiry
+  if (next === "agents" && previous !== "agents" && current.defaultExpiry === shipped) {
+    return { ...current, defaultExpiry: "never" }
+  }
+  if (previous === "agents" && next !== "agents" && current.defaultExpiry === "never") {
+    return { ...current, defaultExpiry: shipped }
+  }
+  return current
 }
 
 // Only recent accounts see the wizard, so a long-standing user is never asked about a sign-up
