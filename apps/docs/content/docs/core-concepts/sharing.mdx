@@ -178,9 +178,10 @@ What the message holds depends on who can open the paste:
 - Sniptide can't post in a private channel until someone invites the app there. The error says
   so.
 
-When the administrator turned on link previews, a link to a public or unlisted paste without a
-password or burn after read gets a preview with its title and language in any workspace that
-connected Sniptide. Links to other pastes get no preview from Sniptide.
+When the administrator turned on link previews (`SLACK_SIGNING_SECRET` on a self-hosted instance),
+a link to a public or unlisted paste without a password or burn after read gets a preview with its
+title and language in any workspace that connected Sniptide. Links to other pastes get no preview
+from Sniptide.
 
 ## Attach to a Linear issue
 
@@ -195,6 +196,9 @@ attachment.
 | Private, password-protected or burn after read | The link, titled "Sniptide paste" |
 | End-to-end encrypted | Not offered, because the link would need its key |
 
+Only the paste's owner can attach it. Sends share the 20-per-hour per-account limit across Slack,
+Linear and Notion.
+
 ## Save to Notion
 
 With Notion connected in [Settings](/settings#connect-integrations), **Share** offers **Save to
@@ -208,8 +212,9 @@ with Sniptide in Notion.
 | Private, password-protected or burn after read | "Sniptide paste" with the link only |
 | End-to-end encrypted | Not offered, because the link would need its key |
 
-The Notion page is a copy. Editing the paste later doesn't change it, and anyone who can open the
-Notion page can read the files.
+Only the paste's owner can save it. Sends share the 20-per-hour per-account limit across Slack,
+Linear and Notion. The Notion page is a copy. Editing the paste later doesn't change it, and anyone
+who can open the Notion page can read the files.
 
 ## Views
 

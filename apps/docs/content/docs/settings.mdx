@@ -14,9 +14,9 @@ and **Sign out**. Select a row to open its section.
 | **Account** | Email, password, connected GitHub and Google accounts, signed-in devices, account deletion |
 | **Paste defaults** | Visibility, expiry and burn after read for new pastes |
 | **Notifications** | In-app and email notifications per event |
-| **Integrations** | Accounts at other services that Sniptide imports from |
-| **API tokens** | Tokens for the CLI, SDKs and agents, and agent connections |
-| **Usage** | Storage, paste count and API requests |
+| **Integrations** | Accounts at other services that Sniptide imports from or sends pastes to |
+| **API tokens** | Tokens for the CLI, SDKs and agents, agent connections, and synced env groups |
+| **Usage** | Storage, paste, collection and file counts, and API requests |
 
 ## Edit your profile and editor
 
@@ -95,7 +95,7 @@ email address moves the subscription to the new address, and deleting your accou
 | Service | With it connected |
 | --- | --- |
 | GitHub | [Import gist](/getting-started/import-gist#pick-from-your-own-gists) lists your own gists, secret ones included. |
-| Slack | **Share** sends a paste to a channel in the workspace you connected, and links to pastes shared there get a preview. See [Send to a Slack channel](/core-concepts/sharing#send-to-a-slack-channel). |
+| Slack | **Share** sends a paste to a channel in the workspace you connected, and links to pastes shared there get a preview when the instance has Slack link previews turned on. See [Send to a Slack channel](/core-concepts/sharing#send-to-a-slack-channel). |
 | Linear | **Share** attaches a paste to one of your open issues. See [Attach to a Linear issue](/core-concepts/sharing#attach-to-a-linear-issue). |
 | Notion | **Share** saves a paste as a page inside a page you shared with Sniptide. See [Save to Notion](/core-concepts/sharing#save-to-notion). |
 
@@ -112,22 +112,24 @@ on GitHub.
 
 On a self-hosted instance, a service shows as not set up until the administrator sets its OAuth
 app: `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` for GitHub, `SLACK_CLIENT_ID` and
-`SLACK_CLIENT_SECRET` for Slack, `LINEAR_CLIENT_ID` and `LINEAR_CLIENT_SECRET` for Linear, and
-`NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET` for Notion. See
-[Configuration](/self-hosting/configuration).
+`SLACK_CLIENT_SECRET` (plus `SLACK_SIGNING_SECRET` for link previews) for Slack, `LINEAR_CLIENT_ID`
+and `LINEAR_CLIENT_SECRET` for Linear, and `NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET` for
+Notion. See [Configuration](/self-hosting/configuration).
 
 ## Create API tokens
 
-**API tokens** creates the tokens that the CLI, the SDKs and agents use, and lists agents you
-connected with OAuth. See [API tokens](/api-tokens) and [OAuth for agents](/oauth).
+**API tokens** creates the tokens that the CLI, the SDKs and agents use, lists agents you
+connected with OAuth, and lists your synced **Env groups** so you can delete them. See
+[API tokens](/api-tokens) and [OAuth for agents](/oauth).
 
 ## Check your usage
 
-**Usage** shows your storage and paste count against the account limits, with a warning when you
-approach them. Small hatched progress bars show the share of each limit in use. Both include pastes in the trash. It also charts the requests your API tokens made
-each day over the last 30 days, in UTC. The token API returns the same data at
+**Usage** shows your **Storage** and **Pastes** against the account limits (with small hatched
+progress bars and a warning when you approach them), plus your **Collections** and **Files**
+counts. Storage, paste and file counts include pastes in the trash. It also charts the requests
+your API tokens made each day over the last 30 days, in UTC. The token API returns the same data at
 [`GET /api/v1/usage`](/api-tokens#endpoints).
 
 Hover a request bar to preview its date and count, or select it to keep the readout visible.
-Use the arrow keys to move between bars, **Home** and **End** to reach the ends, and **Escape**
-to clear the selection. **Daily values** opens the full table.
+Use the arrow keys to move between bars, <Kbd>Home</Kbd> and <Kbd>End</Kbd> to reach the ends, and
+<Kbd>Escape</Kbd> to clear the selection. **View daily values** opens the full table.

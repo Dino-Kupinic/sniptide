@@ -36,6 +36,10 @@ const { user, scopes } = await client.me()
 `me` reads the token's account and access without changing anything, which makes it a good first
 call. `scopes` is `["read"]` for a read-only token and `["read", "write"]` otherwise.
 
+The examples below are excerpts that assume `client` is configured as shown above. When testing
+writes, call `trashPaste` or `deleteEnvGroup` afterward, or use a
+[separate test instance](/agent-sandbox).
+
 ## Save a paste
 
 ```ts
@@ -67,8 +71,8 @@ working tree had changes. To capture part of a file, set `lines` to `{ start, en
 
 ## List and search
 
-`listPastes` returns one page of your pastes, newest first. `nextCursor` is `null` on the last
-page.
+`listPastes` returns one page of your pastes, most recently updated first (`updatedAt` descending).
+`nextCursor` is `null` on the last page.
 
 ```ts
 const results = []
@@ -81,9 +85,9 @@ do {
 } while (cursor)
 ```
 
-`q` matches every word against the title, description, tags, file paths and code. `limit` is 1 to
-100 and defaults to 20. List results are summaries without file contents, so call `readPaste` with
-an id or slug for the code:
+`q` is capped at 120 characters and matches up to the first 8 unique words against the title, slug,
+description, tags, file paths and code. `limit` is 1 to 100 and defaults to 20. List results are
+summaries without file contents, so call `readPaste` with an id or slug for the code:
 
 ```ts
 const { paste } = await client.readPaste("k3j9xq")
@@ -163,7 +167,8 @@ const client = new SniptideClient(token, "https://paste.example.com")
 ```
 
 The third argument replaces `fetch`, which helps in tests or behind a proxy. The fourth sets the
-largest response the client accepts, in bytes, and defaults to 64 MiB.
+largest response the client accepts, in bytes, and defaults to 64 MiB. Each request uses a fixed
+30-second timeout (`AbortSignal.timeout(30_000)`).
 
 ```ts
 const client = new SniptideClient(token, "https://app.sniptide.com", mockFetch, 8 * 1024 * 1024)
@@ -178,7 +183,8 @@ try {
   await client.createPaste(capture, key)
 } catch (error) {
   if (error instanceof SniptideError && error.code === "too_many_requests") {
-    console.warn(`Rate limited. Try again in ${error.retryAfter} seconds.`)
+    const wait = error.retryAfter ? ` Try again in ${error.retryAfter} seconds.` : ""
+    console.warn(`Rate limited.${wait}`)
   }
   throw error
 }
@@ -211,9 +217,9 @@ The largest response body the client accepts, 64 MiB by default.
 </Param>
 </Params>
 
-The constructor throws a `TypeError` for an empty token, a base URL that isn't HTTPS (outside
-loopback) or that has credentials, a query or a fragment, and a size limit that isn't a positive
-integer.
+The constructor throws a `TypeError` for an empty token or a token containing `\r` or `\n`, a base
+URL that isn't HTTPS (outside loopback) or that has credentials, a query or a fragment, and a size
+limit that isn't a positive integer.
 
 ### Methods
 
@@ -225,14 +231,14 @@ integer.
 | `readPaste(id)` | `GET /pastes/{id}` | read | `{ paste: Paste }` |
 | `createPaste(input, idempotencyKey?)` | `POST /pastes` | write | `{ paste: Paste }` |
 | `updatePaste(id, { title, files })` | `PUT /pastes/{id}` | write | `{ paste: Paste }` |
-| `updateSettings(id, input)` | `PATCH /pastes/{id}` | write | `{ paste, settings: Settings }` |
+| `updateSettings(id, input)` | `PATCH /pastes/{id}` | write | `{ paste: Omit<Paste, "files">; settings: Settings }` |
 | `trashPaste(id)` | `DELETE /pastes/{id}` | write | `{ trashed: { id, slug } }` |
 | `listCollections()` | `GET /collections` | read | `{ collections: Collection[] }` |
 | `createCollection(name, idempotencyKey?)` | `POST /collections` | write | `{ collection: Collection }` |
 | `collectionPastes(slug, cursor?)` | `GET /collections/{slug}/pastes` | read | `Page<Paste>` |
 | `listEnvGroups()` | `GET /env` | read | `{ groups: EnvGroupSummary[] }` |
 | `readEnvGroup(group)` | `GET /env/{group}` | read | `{ group: EnvGroup }` |
-| `writeEnvGroup(group, variables, { revision })` | `PUT /env/{group}` | write | `{ group: EnvGroup }` |
+| `writeEnvGroup(group, variables, options?)` | `PUT /env/{group}` | write | `{ group: EnvGroup }` |
 | `deleteEnvGroup(group)` | `DELETE /env/{group}` | write | `{ ok: true }` |
 
 `id` accepts a paste's id or its slug. Identifiers are URL-encoded for you, and an empty value,
@@ -245,14 +251,27 @@ Every type is exported from the package.
 ```ts
 type Visibility = "public" | "unlisted" | "private"
 
+interface Source {
+  repository: string | null
+  commit: string | null
+  dirty: boolean
+}
+
+interface CodeFile {
+  name: string
+  content: string
+  language: string
+  lines?: { start: number; end: number }
+}
+
 interface CaptureInput {
   title: string
-  files: Array<{ name: string; content: string; lines?: { start: number; end: number } }>
+  files: Array<Omit<CodeFile, "language">>
   description?: string
   visibility?: Visibility
   collection?: string | null
   tags?: string[]
-  source?: { repository: string | null; commit: string | null; dirty: boolean } | null
+  source?: Source | null
 }
 
 interface Paste {
@@ -307,11 +326,16 @@ interface Collection {
   pasteCount: number
 }
 
+interface EnvVariable {
+  name: string
+  value: string
+}
+
 interface EnvGroup {
   slug: string
   updatedAt: string
   revision: number
-  variables: Array<{ name: string; value: string }>
+  variables: EnvVariable[]
 }
 
 interface EnvGroupSummary {

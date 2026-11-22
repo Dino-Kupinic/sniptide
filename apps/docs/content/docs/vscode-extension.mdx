@@ -19,7 +19,7 @@ VSCodium. Sign in to your instance using [OAuth](/oauth) or an [API token](/api-
 
 ## Install the extension
 
-1. Package the extension from a checkout of the repository:
+1. From the repository root, package the extension:
 
    ```bash
    bun install
@@ -43,7 +43,7 @@ VSCodium. Sign in to your instance using [OAuth](/oauth) or an [API token](/api-
    | --- | --- |
    | **Sign in with your browser** | Sign in to Sniptide Cloud. |
    | **Use a self-hosted instance** | Enter the address of your instance, such as `paste.example.com`, to sign in through your browser. |
-   | **Paste an API token** | The editor can't open your browser. Create a token with the `read` and `write` scopes in **Settings** > **API tokens**. |
+   | **Paste an API token** | The editor can't open your browser. Prompts for the instance address (pre-filled with `https://app.sniptide.com`), then a token with `read` and `write` scopes from **Settings** > **API tokens**. |
 
 3. For the first two choices, your browser opens Sniptide's consent screen. Check that it names
    **Sniptide for VS Code**, then select **Allow access**. The browser asks to open your editor,
@@ -53,7 +53,8 @@ The connection is listed in **Settings** > **API tokens** as "Sniptide for VS Co
 "Connected with OAuth". The editor keeps the connection in its secret storage, which your
 operating system's keychain protects, and every window of the editor shares it.
 
-The instance address must use `https://`. Plain `http://` works only for `localhost`.
+The instance address must use `https://` (omitting the scheme defaults to `https://`). Plain
+`http://` works only for `localhost`, `127.0.0.1` and `[::1]`.
 
 ## Share a selection as a link
 
@@ -130,6 +131,7 @@ Type to search, then press <kbd>Enter</kbd> on a result to insert it at the curs
 | **Sniptide: Save Selection as Snippet** | Saves the selection as a private snippet in a collection. |
 | **Sniptide: Insert Snippet** | Searches your snippets and inserts the one you choose. |
 | **Sniptide: Search Snippets** | Filters the **Snippets** view. |
+| **Sniptide: Clear Search** | Clears the active filter in the **Snippets** view. |
 | **Sniptide: Refresh** | Reloads the **Snippets** view. |
 | **Sniptide: Sign In** | Connects the editor to your account. |
 | **Sniptide: Sign Out** | Ends the connection on the instance and removes it from the editor. |

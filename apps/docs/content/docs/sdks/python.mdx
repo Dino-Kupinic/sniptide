@@ -24,7 +24,11 @@ For a self-hosted instance, pass its address as `base_url`, such as `https://pas
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
+token = os.environ.get("SNIPTIDE_TOKEN")
+if not token:
+    raise RuntimeError("Set SNIPTIDE_TOKEN in the environment.")
+
+client = SniptideClient(token)
 account = client.me()
 ```
 
@@ -33,6 +37,10 @@ call. `account["scopes"]` is `["read"]` for a read-only token and `["read", "wri
 
 Every method returns the API's JSON envelope as a dictionary, with the API's camelCase keys such
 as `nextCursor` and `createdAt`.
+
+The examples below are excerpts that assume `client` is configured as shown above. When testing
+writes, call `trash_paste` or `delete_env_group` afterward, or use a
+[separate test instance](/agent-sandbox).
 
 ## Save a paste
 
@@ -67,8 +75,8 @@ part of a file, set `lines` to `{"start": 10, "end": 35}`.
 
 ## List and search
 
-`list_pastes` takes the API's query parameters as keyword arguments and returns one page, newest
-first. `nextCursor` is `None` on the last page.
+`list_pastes` takes the API's query parameters as keyword arguments and returns one page, most
+recently updated first (`updatedAt` descending). `nextCursor` is `None` on the last page.
 
 ```python
 results = []
@@ -82,9 +90,10 @@ while True:
         break
 ```
 
-`q` matches every word against the title, description, tags, file paths and code. `tag` takes a
-list, `limit` is 1 to 100 and defaults to 20, and `None` values are left out. List results are
-summaries without file contents, so call `read_paste` with an id or slug for the code:
+`q` is capped at 120 characters and matches up to the first 8 unique words against the title, slug,
+description, tags, file paths and code. `tag` takes a list, `limit` is 1 to 100 and defaults to 20,
+and `None` values are left out. List results are summaries without file contents, so call
+`read_paste` with an id or slug for the code:
 
 ```python
 paste = client.read_paste("k3j9xq")["paste"]
@@ -206,17 +215,17 @@ A personal API token from **Settings** > **API tokens**.
 <Param name="base_url" type="str" default='"https://app.sniptide.com"'>
 The instance's address, including any path prefix it is served under.
 </Param>
-<Param name="timeout" type="float" default="30">
-Seconds to wait for each request before it fails with `network_error`.
+<Param name="timeout" type="float | None" default="30">
+Seconds to wait for each request before it fails with `network_error`. Passing `None` falls back to Python's global socket default timeout.
 </Param>
 <Param name="max_response_bytes" type="int" default="67108864">
 The largest response body the client accepts, 64 MiB by default.
 </Param>
 </Params>
 
-The constructor raises `ValueError` for an empty token, a base URL that isn't HTTPS (outside
-loopback) or that has credentials, a query or a fragment, and a size limit that isn't a positive
-integer.
+The constructor raises `ValueError` for an empty token or a token containing `\r` or `\n`, a base
+URL that isn't HTTPS (outside loopback) or that has credentials, a query or a fragment, and a size
+limit that isn't a positive integer (including `bool`).
 
 ### Methods
 
@@ -224,7 +233,7 @@ integer.
 | --- | --- | --- | --- |
 | `me()` | `GET /me` | read | `user`, `scopes` |
 | `usage()` | `GET /usage` | read | The [`Usage`](/sdks/javascript#types) fields |
-| `list_pastes(**options)` | `GET /pastes` | read | `pastes`, `nextCursor` |
+| `list_pastes(q=None, tag=None, language=None, collection=None, limit=None, cursor=None)` | `GET /pastes` | read | `pastes`, `nextCursor` |
 | `read_paste(identifier)` | `GET /pastes/{id}` | read | `paste` |
 | `create_paste(capture, idempotency_key=None)` | `POST /pastes` | write | `paste` |
 | `update_paste(identifier, capture)` | `PUT /pastes/{id}` | write | `paste` |

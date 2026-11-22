@@ -88,20 +88,26 @@ curl -fsSL https://sniptide.com/install.sh | sh -s -- --domain paste.example.com
 
 ## Upgrade
 
-Run the script again in the same folder. It keeps `.env`, downloads the Compose files of the
-latest release and pulls the newer image. Take a [backup](/self-hosting/backups) first, and read
+Run the script again from the **parent directory** where you originally ran it (or pass
+`--dir <path-to-install-folder>` so it updates your existing `./sniptide` folder instead of
+creating a nested one). It keeps `.env`, downloads the Compose files of the latest release and
+pulls the newer image. After it finishes, confirm `https://<your-domain>/api/health` returns
+`{"ok":true}`. Take a [backup](/self-hosting/backups) first, and read
 [Upgrading](/self-hosting/upgrading) for releases that need a manual step.
 
 ## Add a domain later
 
-If you started without a domain, edit `.env` in the install folder. Remove the `BETTER_AUTH_URL`
-line and add the lines below, then run `docker compose up -d` there:
+Before editing `.env`, point your domain's DNS at the server and open ports 80 and 443. Then edit
+`.env` in the install folder: remove the `BETTER_AUTH_URL` line and add the lines below, and run
+`docker compose up -d` there:
 
 ```dotenv title=".env"
 SNIPTIDE_DOMAIN=paste.example.com
 COMPOSE_PROFILES=proxy
 SNIPTIDE_BIND=127.0.0.1
 ```
+
+Confirm `curl https://paste.example.com/api/health` returns `{"ok":true}`.
 
 ## If something fails
 

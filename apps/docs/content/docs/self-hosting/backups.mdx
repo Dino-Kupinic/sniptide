@@ -64,7 +64,8 @@ docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
 It runs `pg_dump` at start and then every `BACKUP_INTERVAL_HOURS` (default 24), writes the files
 to `./backups` (`BACKUP_DIR`), and deletes the ones older than `BACKUP_KEEP_DAYS` (default 14).
 Set the three in `.env`, or `COMPOSE_FILE=docker-compose.yml:docker-compose.backup.yml` so a plain
-`docker compose up -d` includes it. Check it with `docker compose logs backup`.
+`docker compose up -d` includes it. Check it with `docker compose logs backup` and look for a line
+such as `Backed up to /backups/sniptide-….dump`.
 
 The Compose files stay on the database server. Copy them offsite on a schedule so a disk loss
 doesn't take both copies.
@@ -156,6 +157,9 @@ The script asks you to confirm (`--yes` skips the prompt), then it:
 3. drops and recreates the database, and loads the backup into it;
 4. starts the app, which applies any migrations the backup is missing.
 
+After the restore finishes, confirm `/api/health` returns `{"ok":true}`, sign in, and check a few
+pastes and an env group if you use them.
+
 ### Into a brand-new server
 
 <Steps>
@@ -197,8 +201,9 @@ pg_restore --no-owner --no-privileges --exit-on-error --dbname "$DATABASE_URL" s
 
 The dump contains `CREATE EXTENSION pg_trgm`, which needs a role allowed to create extensions. If
 yours isn't, ask your database operator to create the extension in the empty database first. Start
-the app afterwards. On Coolify, run the same commands inside the Postgres container with
-`docker exec -i`, as the user Coolify generated for the service.
+the app afterwards, then confirm `/api/health` returns `{"ok":true}`, sign in and check your data.
+On Coolify, run the same commands inside the Postgres container with `docker exec -i`, as the user
+Coolify generated for the service.
 
 ### Check a backup in a throwaway copy
 
@@ -211,10 +216,12 @@ from a shell without exported settings for another Compose project.
 COMPOSE_PROJECT_NAME=sniptide-check
 COMPOSE_FILE=docker-compose.yml
 COMPOSE_PROFILES=
+BETTER_AUTH_SECRET=<secret-from-original-instance>
 BETTER_AUTH_URL=http://localhost:3999
 SNIPTIDE_BIND=127.0.0.1
 SNIPTIDE_PORT=3999
 POSTGRES_PORT=55999
+TELEMETRY=off
 ```
 
 From that directory, run `docker compose config --services` and check that it lists only `app`

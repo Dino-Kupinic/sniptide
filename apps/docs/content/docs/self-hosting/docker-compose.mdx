@@ -36,8 +36,9 @@ These settings belong to Compose itself:
 | `SNIPTIDE_PORT` | `3000` | The host port for the app. |
 | `POSTGRES_PASSWORD` | `sniptide` | The password for the bundled Postgres. It takes effect on the first start only, because the database keeps the password it was created with. Use letters and digits, since it goes into a connection URL. |
 | `POSTGRES_PORT` | `5432` | The port Postgres uses on `127.0.0.1`. |
-| `SNIPTIDE_MEMORY` | `0` (no limit) | A memory ceiling for the app container. See [Memory](/self-hosting/memory). |
-| `POSTGRES_MEMORY` | `0` (no limit) | A memory ceiling for Postgres. |
+| `POSTGRES_VOLUME` | `postgres` | Compose database volume key. Set to `postgres18` when migrating a Postgres 17 installation. See [Upgrading](/self-hosting/upgrading#upgrade-postgres-17-to-18). |
+| `SNIPTIDE_MEMORY` | `0` (no limit) | A Docker memory size ceiling for the app container (such as `1g` or `512m`; `0` for no limit). Disables swap when capped. See [Memory](/self-hosting/memory). |
+| `POSTGRES_MEMORY` | `0` (no limit) | A Docker memory size ceiling for Postgres (such as `1g` or `512m`; `0` for no limit). |
 | `SNIPTIDE_DOMAIN` | unset | The public domain. Caddy gets its certificate, and the app defaults `BETTER_AUTH_URL` to `https://<SNIPTIDE_DOMAIN>`, `CLIENT_IP_SOURCE` to `x-forwarded-for` and `TRUSTED_PROXIES` to `private`. A value you set for one of those wins. |
 | `COMPOSE_PROFILES` | unset | Read by Compose itself. `proxy` starts the bundled Caddy proxy with every `docker compose up -d`. |
 
@@ -56,8 +57,9 @@ NOTIFICATION_EMAIL_CONCURRENCY=3
 Compose reads the app's settings from the `.env` file next to `docker-compose.yml`, even when
 you pick another file with `--env-file`. Variables exported in your shell don't reach the app;
 put them in `.env`, or in `docker-compose.override.yml` under `services.app.environment`.
-`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CLIENT_IP_SOURCE` and
-`TRUSTED_PROXIES` are set by `docker-compose.yml` itself, as the table above describes.
+`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CLIENT_IP_SOURCE`, `TRUSTED_PROXIES`,
+`SNIPTIDE_EDITION` (default `selfhost`) and `TELEMETRY` (default `on`) are set by
+`docker-compose.yml` itself.
 
 ## Add HTTPS with the bundled proxy
 
