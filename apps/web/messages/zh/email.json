@@ -75,22 +75,73 @@
     },
     "welcome": {
       "subject": "欢迎使用 Sniptide",
-      "preview": "保存你的第一个粘贴，然后让你的智能体通过 MCP 或 CLI 使用 Sniptide。",
+      "preview": "从会过期的链接到供智能体使用的 MCP 服务器，这里是你的新账户能做的一切。",
       "heading": "欢迎使用 Sniptide",
       "body": "你的 <b>{email}</b> 账户已准备就绪。",
-      "next": "粘贴代码或文本，选择谁可以查看，然后分享链接。你的智能体也能以同样的方式保存和读取粘贴。",
+      "next": "粘贴代码或文本，选择谁可以查看，然后分享链接。你的账户还能做这些事。",
       "action": "创建粘贴",
-      "agent": {
-        "label": "连接你的智能体",
-        "body": "添加 MCP 服务器，让 Claude、Cursor 或 Codex 为你保存和查找代码片段。"
-      },
-      "cli": {
-        "label": "安装 CLI",
-        "body": "将终端输出直接存为粘贴，并拿回链接。"
-      },
-      "settings": {
-        "label": "设置默认值",
-        "body": "选择新粘贴默认的可见性和过期时间。"
+      "features": {
+        "heading": "你可以用 Sniptide 做什么",
+        "share": {
+          "heading": "安全分享",
+          "share": {
+            "label": "可控分享",
+            "body": "选择谁能打开每个链接，添加密码或设置过期时间。"
+          },
+          "burn": {
+            "label": "阅后即焚",
+            "body": "发送一个只能被一个人读取一次的粘贴。"
+          },
+          "encrypt": {
+            "label": "端到端加密",
+            "body": "在浏览器中加密粘贴，服务器只保存密文。"
+          }
+        },
+        "organize": {
+          "heading": "整理代码片段",
+          "collections": {
+            "label": "合集",
+            "body": "将相关粘贴归为一组，并通过 CLI 或智能体一次取回。"
+          },
+          "revisions": {
+            "label": "修订版本",
+            "body": "逐行比较两个版本，并恢复较早的版本。"
+          },
+          "gists": {
+            "label": "导入 Gist",
+            "body": "将 GitHub Gist 的文件复制到新的粘贴中。"
+          }
+        },
+        "build": {
+          "heading": "配合智能体和代码使用",
+          "mcp": {
+            "label": "MCP 服务器",
+            "body": "让 Claude、Cursor 或 Codex 为你保存和查找代码片段。"
+          },
+          "cli": {
+            "label": "CLI",
+            "body": "将终端输出直接存为粘贴，并拿回链接。"
+          },
+          "api": {
+            "label": "SDK 和 API",
+            "body": "通过 TypeScript 或 Python 保存和读取粘贴。"
+          }
+        },
+        "insights": {
+          "heading": "密钥与分析",
+          "secrets": {
+            "label": "加密密钥",
+            "body": "加密保存项目的环境变量，并通过 CLI 同步。"
+          },
+          "analytics": {
+            "label": "分析",
+            "body": "查看浏览量、复制次数和来源，统计不使用 Cookie。"
+          },
+          "extensions": {
+            "label": "扩展",
+            "body": "从 VS Code、Raycast 或浏览器保存代码片段。"
+          }
+        }
       },
       "reason": "我们向 {email} 发送此邮件，是因为你创建了 Sniptide 账户。这是我们发送的唯一一封欢迎邮件。"
     }

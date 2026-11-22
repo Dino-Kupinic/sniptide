@@ -15,14 +15,20 @@ function line(paragraph: Paragraph) {
 }
 
 // The plain-text part, written from the same content as the HTML so both say the same things in
-// the same order: heading, body, the action with its full URL, the steps, the note and the footer.
+// the same order: heading, body, the action with its full URL, the features, the note and the footer.
 export function emailText(content: EmailContent) {
-  const { heading, body, action, steps, after, note, footer } = content
+  const { heading, body, action, features, after, note, footer } = content
   const blocks = [
     heading,
     ...body.map(line),
     `${action.label}:\n${action.href}`,
-    ...(steps ?? []).map((step) => `${step.label}: ${step.body}\n${step.href}`),
+    features?.heading,
+    ...(features?.groups ?? []).map((group) =>
+      [
+        group.heading,
+        ...group.features.map((feature) => `${feature.label}: ${feature.body}\n${feature.href}`),
+      ].join("\n\n"),
+    ),
     ...(after ?? []).map(line),
     note,
     "--",

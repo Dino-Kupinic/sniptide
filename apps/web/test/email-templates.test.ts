@@ -73,7 +73,11 @@ describe("transactional emails", () => {
           p.map((s) => (typeof s === "string" ? s : s.strong)).join(""),
         ),
         content.action.label,
-        ...(content.steps ?? []).flatMap((step) => [step.label, step.body]),
+        content.features?.heading,
+        ...(content.features?.groups ?? []).flatMap((group) => [
+          group.heading,
+          ...group.features.flatMap((feature) => [feature.label, feature.body]),
+        ]),
         content.note,
         content.footer.reason,
         content.footer.sender,
@@ -87,7 +91,7 @@ describe("transactional emails", () => {
       }
       for (const href of [
         content.action.href,
-        ...(content.steps ?? []).map((step) => step.href),
+        ...(content.features?.groups ?? []).flatMap((group) => group.features.map((f) => f.href)),
         ...(content.footer.links ?? []).map((l) => l.href),
       ]) {
         expect(html).toContain(`href="${href.replace(/&/g, "&amp;")}"`)
@@ -126,14 +130,24 @@ describe("transactional emails", () => {
     expect(bare.html).not.toContain("@font-face")
   })
 
-  test("the welcome email links to the editor, the docs and Settings", () => {
+  test("the welcome email shows every feature group with icons and docs links", async () => {
     const content = emails.welcome as EmailContent
     expect(content.action.href).toBe(`${appUrl}/new`)
-    expect(content.steps?.map((step) => step.href)).toEqual([
-      "https://docs.example.com/mcp",
-      "https://docs.example.com/cli",
-      `${appUrl}/settings`,
-    ])
+    const groups = content.features?.groups ?? []
+    expect(groups.map((group) => group.features.length)).toEqual([3, 3, 3, 3])
+    const features = groups.flatMap((group) => group.features)
+    expect(features.map((feature) => feature.href)).toContain("https://docs.example.com/mcp")
+    expect(features.every((f) => f.href.startsWith("https://docs.example.com/"))).toBe(true)
+    // Every icon exists in both versions, so no feature shows a broken image.
+    for (const { icon } of features)
+      for (const src of [icon.light, icon.dark]) {
+        expect(src.startsWith(`${appUrl}/email/icons/`)).toBe(true)
+        const file = new URL(src).pathname
+        expect(await Bun.file(`public${file}`).exists()).toBe(true)
+      }
+    const { html } = await renderEmail(content)
+    expect(html).toContain(`src="${appUrl}/email/icons/mcp.png"`)
+    expect(html).toContain(`src="${appUrl}/email/icons/mcp-dark.png"`)
     // Its action is a plain page, so it carries no copy-this-link line.
     expect(content.buttonFallback).toBeUndefined()
     expect(emailText(content)).toContain("Sent by Example GmbH")
@@ -142,7 +156,7 @@ describe("transactional emails", () => {
       appUrl,
       docsUrl: "https://example.com/docs",
     })
-    expect(nested.steps?.[0]?.href).toBe("https://example.com/docs/mcp")
+    expect(nested.features?.groups[2]?.features[0]?.href).toBe("https://example.com/docs/mcp")
   })
 
   test("without an app URL the name stands in for the logo", async () => {

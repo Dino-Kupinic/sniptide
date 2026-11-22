@@ -75,22 +75,73 @@
     },
     "welcome": {
       "subject": "Welcome to Sniptide",
-      "preview": "Save your first paste, then let your agent use Sniptide through MCP or the CLI.",
+      "preview": "Everything your new account can do, from expiring links to an MCP server for your agent.",
       "heading": "Welcome to Sniptide",
       "body": "Your account for <b>{email}</b> is ready.",
-      "next": "Paste code or text, choose who can see it and share the link. Your agents can save and read pastes the same way.",
+      "next": "Paste code or text, choose who can see it and share the link. Here is what else your account can do.",
       "action": "Create a paste",
-      "agent": {
-        "label": "Connect your agent",
-        "body": "Add the MCP server so Claude, Cursor or Codex can save and find snippets for you."
-      },
-      "cli": {
-        "label": "Install the CLI",
-        "body": "Pipe output from your terminal into a paste and get the link back."
-      },
-      "settings": {
-        "label": "Set your defaults",
-        "body": "Choose the visibility and expiry new pastes start with."
+      "features": {
+        "heading": "What you can do with Sniptide",
+        "share": {
+          "heading": "Share safely",
+          "share": {
+            "label": "Share with control",
+            "body": "Choose who can open each link, add a password or let it expire."
+          },
+          "burn": {
+            "label": "Burn after read",
+            "body": "Send a paste that one person can read once."
+          },
+          "encrypt": {
+            "label": "End-to-end encryption",
+            "body": "Encrypt a paste in your browser, so the server stores only ciphertext."
+          }
+        },
+        "organize": {
+          "heading": "Organize your snippets",
+          "collections": {
+            "label": "Collections",
+            "body": "Group related pastes and fetch them together from the CLI or an agent."
+          },
+          "revisions": {
+            "label": "Revisions",
+            "body": "Compare two versions line by line and restore an earlier one."
+          },
+          "gists": {
+            "label": "Import gists",
+            "body": "Copy the files of a GitHub gist into a new paste."
+          }
+        },
+        "build": {
+          "heading": "Work with agents and code",
+          "mcp": {
+            "label": "MCP server",
+            "body": "Let Claude, Cursor or Codex save and find snippets for you."
+          },
+          "cli": {
+            "label": "CLI",
+            "body": "Pipe terminal output into a paste and get the link back."
+          },
+          "api": {
+            "label": "SDKs and API",
+            "body": "Save and read pastes from TypeScript or Python."
+          }
+        },
+        "insights": {
+          "heading": "Secrets and insights",
+          "secrets": {
+            "label": "Encrypted secrets",
+            "body": "Keep a project's environment variables encrypted and sync them with the CLI."
+          },
+          "analytics": {
+            "label": "Analytics",
+            "body": "See views, copies and referrers, counted without cookies."
+          },
+          "extensions": {
+            "label": "Extensions",
+            "body": "Save snippets from VS Code, Raycast or your browser."
+          }
+        }
       },
       "reason": "We sent this email to {email} because you created a Sniptide account. It's the only welcome email we send."
     }
