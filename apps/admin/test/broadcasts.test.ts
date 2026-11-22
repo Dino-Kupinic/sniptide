@@ -6,15 +6,17 @@ import { broadcast, broadcastSubscription, user } from "@workspace/db/schema"
 import { ResendError } from "@workspace/email/resend"
 import { eq } from "drizzle-orm"
 import { createElement } from "react"
-import { monthLabel, renderBroadcastEmail, safeImageUrl } from "@/lib/compose"
+import { type BroadcastContent, monthLabel, renderBroadcastEmail, safeUrl } from "@/lib/compose"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
-import { Broadcast, Cover } from "@/lib/email"
+import { Broadcast, Cover, ratingLinks } from "@/lib/email"
 import { createSession, passwordMatches, validSession } from "@/lib/session"
 import {
   cleanContent,
+  cleanDetails,
   createDraft,
   getBroadcast,
+  rowContent,
   saveDraft,
   sendTest,
   sendToSubscribers,
@@ -39,7 +41,9 @@ describe("broadcast emails", () => {
     appUrl: "https://app.example.com",
     operator: { name: "Example GmbH", address: "Ring 1\n1010 Wien" },
   }
-  const content = {
+  const content: BroadcastContent = {
+    kind: "update",
+    details: {},
     subject: "Sniptide in November",
     preview: "Collections and a faster editor",
     label: "November 2026",
@@ -75,10 +79,10 @@ describe("broadcast emails", () => {
   })
 
   test("a screenshot loads only over https", async () => {
-    expect(safeImageUrl("https://example.com/a.png")).toBe("https://example.com/a.png")
-    expect(safeImageUrl("http://example.com/a.png")).toBeNull()
-    expect(safeImageUrl("javascript:alert(1)")).toBeNull()
-    expect(safeImageUrl("not a link")).toBeNull()
+    expect(safeUrl("https://example.com/a.png")).toBe("https://example.com/a.png")
+    expect(safeUrl("http://example.com/a.png")).toBeNull()
+    expect(safeUrl("javascript:alert(1)")).toBeNull()
+    expect(safeUrl("not a link")).toBeNull()
     const { html } = await renderBroadcastEmail({
       content: { ...content, imageUrl: "http://example.com/a.png" },
       date,
@@ -98,7 +102,7 @@ describe("broadcast emails", () => {
       subject: "Updates",
       preview: "What changed this month",
       title: "Sniptide product updates",
-      date: "November 21, 2026",
+      meta: "November 21, 2026",
       browserUrl: "https://sniptide.com/changelog/2026-11",
       children: createElement(Cover, {
         appUrl: props.appUrl,
@@ -135,6 +139,71 @@ describe("broadcast emails", () => {
     expect(clean.body).toHaveLength(50_000)
     expect(clean.imageUrl).toBeNull()
     expect(cleanContent({ preview: "p" })).toEqual({ preview: "p" })
+  })
+
+  test("details keep only the fields the templates know, clipped to their limits", () => {
+    expect(
+      cleanDetails({ heading: "h".repeat(300), minutes: 400, extra: "x", url: 5, question: "Q" }),
+    ).toEqual({ heading: "h".repeat(120), question: "Q" })
+    expect(cleanDetails({ minutes: "7" })).toEqual({ minutes: 7 })
+    expect(cleanDetails(null)).toEqual({})
+  })
+
+  test("a survey shows its message, five one-click scores and the survey button", async () => {
+    const survey: BroadcastContent = {
+      kind: "survey",
+      subject: "Two minutes for Sniptide?",
+      preview: "Tell us what to build next",
+      label: "",
+      imageUrl: null,
+      body: "We read every answer.",
+      details: {
+        heading: "Help shape Sniptide",
+        url: "https://tally.so/r/abc?src=email",
+        question: "How likely are you to recommend Sniptide?",
+        minutes: 2,
+      },
+    }
+    const { html, text } = await renderBroadcastEmail({ content: survey, date, ...props })
+    expect(html).toContain("Help shape Sniptide")
+    expect(html).toContain("We read every answer.")
+    expect(html).toContain("How likely are you to recommend Sniptide?")
+    for (const { href } of ratingLinks(survey.details.url ?? ""))
+      expect(html).toContain(`href="${href.replace(/&/g, "&amp;")}"`)
+    expect(ratingLinks("https://tally.so/r/abc?src=email")[4]?.href).toBe(
+      "https://tally.so/r/abc?src=email&rating=5",
+    )
+    expect(html).toContain("Take the survey")
+    expect(html).toContain("It takes about 2 minutes.")
+    // The survey has no product update cover.
+    expect(html).not.toContain("sniptide-mark-white.png")
+    expect(text).toContain("https://tally.so/r/abc?src=email")
+    // Without an https link there is nothing to answer, so no scores or button render.
+    const broken = await renderBroadcastEmail({
+      content: { ...survey, details: { ...survey.details, url: "http://tally.so/r/abc" } },
+      date,
+      ...props,
+    })
+    expect(broken.html).not.toContain("rating=")
+    expect(broken.html).not.toContain("Take the survey")
+  })
+
+  test("a guide shows its title, topic, reading time, code and a link to read more", async () => {
+    const guide: BroadcastContent = {
+      kind: "guide",
+      subject: "Share env files safely",
+      preview: "Three ways to keep secrets out of chat",
+      label: "Secrets",
+      imageUrl: null,
+      body: "Run this:\n\n```sh\nsniptide env pull my-app\n```",
+      details: { url: "https://docs.sniptide.com/core-concepts/secrets", minutes: 4 },
+    }
+    const { html } = await renderBroadcastEmail({ content: guide, date, ...props })
+    expect(html).toContain("Share env files safely")
+    expect(html).toContain("Secrets · 4 min read")
+    expect(html).toContain("sniptide env pull my-app")
+    expect(html).toContain('href="https://docs.sniptide.com/core-concepts/secrets"')
+    expect(html).toContain("Read the full guide")
   })
 })
 
@@ -184,7 +253,7 @@ describe("sessions", () => {
   })
 })
 
-describeDb("writing and sending product updates", () => {
+describeDb("writing and sending emails", () => {
   const keys = [
     "RESEND_API_KEY",
     "RESEND_SEGMENT_ID",
@@ -296,7 +365,29 @@ describeDb("writing and sending product updates", () => {
     expect(await sendToSubscribers(id)).toEqual({ ok: true })
   })
 
-  test("an update won't go out without a named sender", async () => {
+  test("each kind starts with its own words, and its details survive a save", async () => {
+    const id = await createDraft("survey")
+    const created = await getBroadcast(id)
+    expect(created?.kind).toBe("survey")
+    expect(created && rowContent(created).details.heading).toBe("Help shape Sniptide")
+    await saveDraft(id, { details: { url: "https://tally.so/r/abc", minutes: 3 } })
+    const saved = await getBroadcast(id)
+    expect(saved && rowContent(saved).details).toEqual({
+      url: "https://tally.so/r/abc",
+      minutes: 3,
+    })
+    expect((await getBroadcast(await createDraft("guide")))?.label).toBe("Guide")
+  })
+
+  test("a survey can't be sent without a link to answer it", async () => {
+    const id = await createDraft("survey")
+    await saveDraft(id, { subject: "Feedback", body: "Tell us." })
+    expect(await sendTest(id)).toEqual({ ok: false, error: "noUrl" })
+    await saveDraft(id, { details: { url: "https://tally.so/r/abc" } })
+    expect(await sendTest(id)).toEqual({ ok: true })
+  })
+
+  test("an email won't go out without a named sender", async () => {
     const id = await draft()
     delete process.env.OPERATOR_NAME
     expect(await sendToSubscribers(id)).toEqual({ ok: false, error: "noOperator" })

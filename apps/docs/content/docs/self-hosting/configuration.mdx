@@ -176,7 +176,9 @@ The same SMTP settings enable password reset emails. Without SMTP, the forgot-pa
 people to contact the administrator.
 
 With SMTP, each new account also gets one welcome email after its first sign-in. It links to the
-editor, the [MCP server](/mcp), the [CLI](/cli) and Settings. Invited accounts get it after they
+editor and shows the main features in four groups, such as sharing, collections, the
+[MCP server](/mcp) and encrypted secrets, each linked to its page of this documentation. The
+feature icons load from `/email/icons` on your instance. Invited accounts get it after they
 verify their email. Accounts that existed before the welcome email was added never get one, and
 demo instances never send it. Set `WELCOME_EMAIL=false` to turn it off.
 
@@ -205,7 +207,7 @@ using when they turned on an email, and English before either happens.
 
 ### Product update emails
 
-An instance can also send release notes and news to people who turn on **Product updates** in
+An instance can also send release notes, surveys and guides to people who turn on **Product updates** in
 **Settings** > **Notifications**. These go through [Resend Broadcasts](https://resend.com/features/broadcasts)
 instead of SMTP, because Resend handles each reader's unsubscribe link, bounces and complaints.
 Without the two variables below, Settings doesn't show the switch and the instance never contacts

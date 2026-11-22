@@ -1,6 +1,7 @@
 # Sniptide admin
 
-A small app for writing and sending Sniptide's product update emails. It runs next to a hosted
+A small app for running a hosted Sniptide instance: an overview of accounts and pastes, and the
+emails sent to subscribers. It runs next to a hosted
 Sniptide instance, reads the same database and sends through the same Resend segment, and isn't
 part of the self-hosted Docker image. Self-hosted instances don't need it.
 
@@ -11,13 +12,23 @@ app adds and removes them in the Resend segment. This admin app only writes and 
 
 - **Sign in** with one operator password (`ADMIN_PASSWORD`). The session lasts 30 days, and
   changing the password signs everyone out.
-- **Product updates** lists drafts and sent updates with the number of subscribers.
-- **New update** opens the editor: a subject, preview text, cover label, an optional https
-  screenshot link at least 700px wide, and the update in Markdown. The finished email shows beside
-  the form as you type, and drafts save on their own.
+- **Overview** shows the number of accounts, sign-ups in the last 7 and 30 days, pastes, product
+  update subscribers and sent emails, and the newest accounts.
+- **Emails** lists drafts and sent emails with their kind and the number of subscribers.
+- **New email** asks for the kind of email, then opens its editor. Every kind has a subject,
+  preview text and a Markdown body. The finished email shows beside the form as you type, and
+  drafts save on their own.
+  - A **product update** adds a cover label and an optional https screenshot link at least 700px
+    wide.
+  - A **survey or feedback request** adds a heading, the https survey link, a button label, the
+    minutes it takes and an optional rating question. The question shows scores from 1 to 5, and
+    each opens the survey link with `?rating=` and the score. A survey can't be sent without its
+    link.
+  - **Educational content** adds a title, a topic, a reading time and an optional link to the full
+    guide.
 - **Send test** sends one copy, with `[Test]` before the subject, to `BROADCAST_TEST_TO`.
 - **Send to subscribers** asks for confirmation with the subscriber count, then creates the Resend
-  broadcast and sends it at once. A sent update can no longer change, and sending it twice is
+  broadcast and sends it at once. A sent email can no longer change, and sending it twice is
   refused.
 
 ## Run it locally
@@ -48,3 +59,8 @@ TEST_DATABASE_URL=postgres://sniptide:sniptide@localhost:5432/sniptide_test bun 
 ```
 
 Without `TEST_DATABASE_URL` the database tests are skipped.
+
+## Add a section
+
+Each section is a route under `app/(admin)`, which wraps it in the shell, and an entry in
+`lib/sections.ts`, which adds it to the sidebar and the phone navigation.

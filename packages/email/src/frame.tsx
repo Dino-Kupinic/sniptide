@@ -39,6 +39,21 @@ export const small: CSSProperties = {
   color: light.muted,
 }
 
+// The primary action: the raised blue button from the app, with its darker edge.
+export const button: CSSProperties = {
+  display: "inline-block",
+  padding: "12px 20px",
+  borderRadius: "6px",
+  borderBottom: `2px solid ${light.depth}`,
+  backgroundColor: light.primary,
+  color: light.primaryForeground,
+  fontFamily: fonts.sans,
+  fontSize: "16px",
+  lineHeight: "20px",
+  fontWeight: 600,
+  textDecoration: "none",
+}
+
 // One block of the card. The class lets phones swap the 24px sides for the 16px gutter.
 export function Padded({ padding, children }: { padding: string; children: ReactNode }) {
   return (

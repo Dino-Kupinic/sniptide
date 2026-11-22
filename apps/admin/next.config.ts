@@ -33,6 +33,8 @@ const config: NextConfig = {
   // Self-contained server for the Docker image (apps/admin/.next/standalone), traced from the repo
   // root so the workspace packages are included.
   output: "standalone",
+  // The floating dev badge would cover Sign out in the sidebar.
+  devIndicators: false,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   poweredByHeader: false,
   transpilePackages: ["@sniptide/ui", "@workspace/db", "@workspace/email"],

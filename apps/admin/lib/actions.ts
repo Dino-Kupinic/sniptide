@@ -5,6 +5,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import type { BroadcastContent } from "./compose"
 import { getConfig } from "./config"
+import { isEmailKind } from "./kinds"
 import {
   createSession,
   passwordMatches,
@@ -54,10 +55,12 @@ export async function signOut() {
   redirect("/sign-in")
 }
 
-export async function createBroadcastDraft() {
+// The type picker's form names the kind of email to start.
+export async function createBroadcastDraft(form: FormData) {
   if (!(await signedIn())) redirect("/sign-in")
-  const id = await createDraft()
-  redirect(`/${id}`)
+  const kind = form.get("kind")
+  const id = await createDraft(isEmailKind(kind) ? kind : "update")
+  redirect(`/emails/${id}`)
 }
 
 export async function saveBroadcastDraft(
@@ -81,13 +84,13 @@ export async function sendBroadcastTest(id: string): Promise<BroadcastResult> {
 export async function sendBroadcastToSubscribers(id: string): Promise<BroadcastResult> {
   if (!(await signedIn())) return { ok: false, error: "signedOut" }
   const result = await sendToSubscribers(id)
-  revalidatePath("/")
+  revalidatePath("/emails")
   return result
 }
 
 export async function deleteBroadcastDraft(id: string): Promise<BroadcastResult> {
   if (!(await signedIn())) return { ok: false, error: "signedOut" }
   if (!(await deleteDraft(id))) return { ok: false, error: "alreadySent" }
-  revalidatePath("/")
+  revalidatePath("/emails")
   return { ok: true }
 }

@@ -1,23 +1,8 @@
-import { EmailFooter, EmailFrame, Padded, small, text } from "@workspace/email/frame"
+import { button, EmailFooter, EmailFrame, Padded, small, text } from "@workspace/email/frame"
 import { fonts, light } from "@workspace/email/theme"
 import type { CSSProperties } from "react"
 import { Button, Heading, Hr, Img, Link, Section, Text } from "react-email"
 import type { EmailContent, Feature, Paragraph } from "./content"
-
-// The primary action: the raised blue button from the app, with its darker edge.
-const button: CSSProperties = {
-  display: "inline-block",
-  padding: "12px 20px",
-  borderRadius: "6px",
-  borderBottom: `2px solid ${light.depth}`,
-  backgroundColor: light.primary,
-  color: light.primaryForeground,
-  fontFamily: fonts.sans,
-  fontSize: "16px",
-  lineHeight: "20px",
-  fontWeight: 600,
-  textDecoration: "none",
-}
 
 function Runs({ paragraph }: { paragraph: Paragraph }) {
   return paragraph.map((segment, index) =>

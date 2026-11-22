@@ -1,10 +1,10 @@
-import { EmailFooter, EmailFrame, Padded, text } from "@workspace/email/frame"
+import { button, EmailFooter, EmailFrame, Padded, small, text } from "@workspace/email/frame"
 import { fonts, light } from "@workspace/email/theme"
 import type { ReactNode } from "react"
-import { Heading, Img, Link, Markdown, Text } from "react-email"
+import { Button, Heading, Img, Link, Markdown, Section, Text } from "react-email"
 
-// Product update emails (release notes, announcements) sent as Resend Broadcasts, built on the
-// same frame as the app's emails. They are written in English, because one segment holds every
+// Emails to subscribers (product updates, surveys and guides) sent as Resend Broadcasts, built on
+// the same frame as the app's emails. They are written in English, because one segment holds every
 // subscriber.
 
 // Who sends the email: marketing email has to name its sender with a postal address.
@@ -36,7 +36,7 @@ export function Broadcast({
   subject,
   preview,
   title,
-  date,
+  meta,
   browserUrl,
   appUrl,
   operator,
@@ -45,8 +45,8 @@ export function Broadcast({
   subject: string
   preview: string
   title: string
-  // The issue's date as readers should see it, such as "November 21, 2026".
-  date?: string
+  // The muted line under the title, such as an issue's date or a guide's reading time.
+  meta?: string
   // A public copy of the same update, such as a changelog entry, linked as "View in browser".
   browserUrl?: string
   children: ReactNode
@@ -72,7 +72,7 @@ export function Broadcast({
           as="h1"
           className="st-text"
           style={{
-            margin: date || browserUrl ? "0 0 4px" : "0 0 16px",
+            margin: meta || browserUrl ? "0 0 4px" : "0 0 16px",
             fontFamily: fonts.heading,
             fontSize: "30px",
             lineHeight: "36px",
@@ -83,10 +83,10 @@ export function Broadcast({
         >
           {title}
         </Heading>
-        {date || browserUrl ? (
+        {meta || browserUrl ? (
           <Text className="st-muted" style={{ ...text, margin: "0 0 24px", color: light.muted }}>
-            {date}
-            {date && browserUrl ? " · " : null}
+            {meta}
+            {meta && browserUrl ? " · " : null}
             {browserUrl ? (
               <Link
                 className="st-link"
@@ -253,11 +253,105 @@ export function MarkdownBody({ children }: { children: string }) {
             borderRadius: "4px",
             padding: "1px 4px",
           },
+          codeBlock: {
+            margin: "0 0 16px",
+            padding: "12px 16px",
+            fontFamily: fonts.mono,
+            fontSize: "13px",
+            lineHeight: "20px",
+            backgroundColor: light.fill,
+            borderRadius: "6px",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          },
           hr: { border: 0, borderTop: `1px solid ${light.border}`, margin: "24px 0" },
         }}
       >
         {children}
       </Markdown>
     </div>
+  )
+}
+
+// The email's one action, as the raised blue button from the app.
+export function Action({ href, label, note }: { href: string; label: string; note?: string }) {
+  return (
+    <Section style={{ margin: "8px 0 24px" }}>
+      <Button href={href} style={button}>
+        {label}
+      </Button>
+      {note ? (
+        <Text className="st-muted" style={{ ...small, margin: "12px 0 0", fontSize: "14px" }}>
+          {note}
+        </Text>
+      ) : null}
+    </Section>
+  )
+}
+
+// A link to the same survey for each score, so a reader can answer the question in one click. The
+// survey receives the score as ?rating=1 to ?rating=5.
+export function ratingLinks(url: string) {
+  return [1, 2, 3, 4, 5].map((score) => {
+    const link = new URL(url)
+    link.searchParams.set("rating", String(score))
+    return { score, href: link.href }
+  })
+}
+
+// A question with a row of five scores under it, ends labeled. Each score is a linked cell, so it
+// stays a large tap target on phones and shows its number when images are blocked.
+export function Rating({ question, url }: { question: string; url: string }) {
+  const cell = {
+    display: "block",
+    padding: "12px 0",
+    border: `1px solid ${light.border}`,
+    borderRadius: "6px",
+    fontFamily: fonts.sans,
+    fontSize: "16px",
+    lineHeight: "20px",
+    fontWeight: 600,
+    textAlign: "center" as const,
+    textDecoration: "none",
+    color: light.link,
+  }
+  return (
+    <Section style={{ margin: "8px 0 24px" }}>
+      <Text className="st-text" style={{ ...text, margin: "0 0 12px", fontWeight: 600 }}>
+        {question}
+      </Text>
+      <table
+        role="presentation"
+        width="100%"
+        cellPadding={0}
+        cellSpacing={0}
+        border={0}
+        style={{ borderCollapse: "collapse" }}
+      >
+        <tbody>
+          <tr>
+            {ratingLinks(url).map(({ score, href }) => (
+              <td key={score} width="20%" style={{ padding: score === 5 ? 0 : "0 8px 0 0" }}>
+                <Link className="st-link st-rule" href={href} style={cell}>
+                  {score}
+                </Link>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+      <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0}>
+        <tbody>
+          <tr>
+            <td className="st-muted" style={{ ...small, paddingTop: "8px" }}>
+              Not at all
+            </td>
+            <td className="st-muted" align="right" style={{ ...small, paddingTop: "8px" }}>
+              Very much
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </Section>
   )
 }
