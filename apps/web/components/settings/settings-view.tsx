@@ -409,7 +409,7 @@ export function SettingsView({
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
-  productEmails: { available: boolean; enabled: boolean }
+  productEmails: { available: boolean; enabled: boolean; canWrite: boolean }
   security: AccountSecurity & {
     providers: SocialProvider[]
     linkError: string | null

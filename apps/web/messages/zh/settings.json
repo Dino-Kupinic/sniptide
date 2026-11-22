@@ -215,7 +215,57 @@
     "appearance": "外观",
     "productEmails": {
       "label": "产品更新",
-      "description": "Sniptide 的版本说明和新闻。每封邮件都附有退订链接。"
+      "description": "Sniptide 的版本说明和新闻。每封邮件都附有退订链接。",
+      "writeLabel": "撰写产品更新",
+      "writeDescription": "撰写发布说明和新闻，先发给自己测试，再发送给订阅者。",
+      "writeAction": "撰写更新"
+    }
+  },
+  "Broadcasts": {
+    "title": "产品更新",
+    "description": "{count, plural, =0 {还没有人开启产品更新。} other {# 人会收到这些邮件。}}",
+    "newUpdate": "新建更新",
+    "empty": "你还没有撰写任何产品更新。",
+    "untitled": "未命名更新",
+    "draft": "草稿，{time}编辑",
+    "sentTo": "{count, plural, other {{date} 已发送给 # 人}}",
+    "sentOn": "{date} 已发送",
+    "subject": "主题",
+    "preview": "预览文本",
+    "previewHint": "在收件箱中显示在主题旁边。",
+    "label": "封面标签",
+    "image": "截图链接",
+    "imageHint": "指向宽度至少 700px 的图片的 https 链接。留空则封面不带截图。",
+    "body": "更新内容",
+    "bodyHint": "使用 Markdown 撰写：## 表示标题，- 表示列表项，[文字](https://example.com) 表示链接。",
+    "saving": "正在保存…",
+    "saved": "已保存",
+    "saveFailed": "无法保存。你的更改仍在此页面上，请重试。",
+    "previewTitle": "邮件预览",
+    "sendTest": "发送测试给我",
+    "testSent": "测试已发送至 {email}",
+    "send": "发送给订阅者",
+    "confirmTitle": "发送此更新？",
+    "confirmBody": "{count, plural, =0 {还没有人开启产品更新，所以不会发送给任何人。发送后无法编辑。} other {它会立即发送给 # 人，发送后无法编辑。}}",
+    "confirmSend": "立即发送",
+    "cancel": "取消",
+    "sentToast": "更新已发送",
+    "sentNotice": "{count, plural, other {已于 {date} 发送给 # 人。}}",
+    "sentNoticeNoCount": "已于 {date} 发送。",
+    "delete": "删除草稿",
+    "deleteTitle": "删除此草稿？",
+    "deleteBody": "草稿将被永久删除。",
+    "deleted": "草稿已删除",
+    "errors": {
+      "notFound": "此更新已不存在。",
+      "alreadySent": "此更新已发送，无法更改。",
+      "noSubject": "发送前请添加主题。",
+      "noBody": "发送前请撰写更新内容。",
+      "noFrom": "请在服务器上设置 BROADCAST_FROM 以发送产品更新。",
+      "noOperator": "请在服务器上设置 OPERATOR_NAME 和 OPERATOR_ADDRESS，以便邮件注明发件人。",
+      "testFailed": "无法发送测试邮件。请一分钟后重试。",
+      "sendFailed": "无法发送更新。没有发出任何邮件，请一分钟后重试。",
+      "forbidden": "你的账户无法发送产品更新。"
     }
   }
 }

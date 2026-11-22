@@ -24,7 +24,7 @@ export const text: CSSProperties = {
 }
 
 // The primary action: the raised blue button from the app, with its darker edge.
-export const button: CSSProperties = {
+const button: CSSProperties = {
   display: "inline-block",
   padding: "12px 20px",
   borderRadius: "6px",

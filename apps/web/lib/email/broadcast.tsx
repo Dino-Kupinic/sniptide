@@ -1,13 +1,12 @@
 import type { ReactNode } from "react"
-import { Button, Heading, Img, Link, Section, Text } from "react-email"
+import { Heading, Img, Link, Markdown, Text } from "react-email"
 import { type Operator, senderLine } from "./content"
-import { button, EmailFooter, EmailFrame, Padded, text } from "./layout"
+import { EmailFooter, EmailFrame, Padded, text } from "./layout"
 import { fonts, light } from "./theme"
 
-// Product update emails (release notes, announcements) sent as Resend Broadcasts. Each one is a
-// file in emails/broadcasts that exports `subject`, `preview` and a default component built from
-// the blocks below, so it previews in `bun run email` and sends with scripts/send-broadcast.ts.
-// Broadcasts are written in English, because one segment holds every subscriber.
+// Product update emails (release notes, announcements) sent as Resend Broadcasts. They are written
+// in Settings > Product updates and rendered with the layout below. Broadcasts are written in
+// English, because one segment holds every subscriber.
 
 // Resend swaps this for each contact's own unsubscribe link when it sends.
 const UNSUBSCRIBE_URL = "{{{RESEND_UNSUBSCRIBE_URL}}}"
@@ -208,53 +207,43 @@ export function Cover({
   )
 }
 
-export function P({ children }: { children: ReactNode }) {
-  return (
-    <Text className="st-text" style={text}>
-      {children}
-    </Text>
-  )
+const heading = {
+  fontFamily: fonts.heading,
+  fontWeight: 700,
+  letterSpacing: "-0.02em",
+  color: light.foreground,
 }
 
-// A section heading inside the email, in the dialog title size.
-export function H2({ children }: { children: ReactNode }) {
+// The body of a broadcast, written in Markdown. Styles are inlined for clients that drop the
+// stylesheet, and the st-md class lets clients with dark mode recolor them.
+export function MarkdownBody({ children }: { children: string }) {
   return (
-    <Heading
-      as="h2"
-      className="st-text"
-      style={{
-        margin: "32px 0 8px",
-        fontFamily: fonts.heading,
-        fontSize: "20px",
-        lineHeight: "28px",
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        color: light.foreground,
-      }}
-    >
-      {children}
-    </Heading>
-  )
-}
-
-export function List({ items }: { items: ReactNode[] }) {
-  return (
-    <ul style={{ margin: "0 0 16px", paddingLeft: "20px" }}>
-      {items.map((item, index) => (
-        <li key={index} className="st-text" style={{ ...text, margin: "0 0 8px" }}>
-          {item}
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-export function Action({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Section style={{ margin: "8px 0 24px" }}>
-      <Button href={href} style={button}>
+    <div className="st-md">
+      <Markdown
+        markdownContainerStyles={{ padding: 0 }}
+        markdownCustomStyles={{
+          p: text,
+          h1: { ...heading, margin: "32px 0 8px", fontSize: "24px", lineHeight: "32px" },
+          h2: { ...heading, margin: "32px 0 8px", fontSize: "20px", lineHeight: "28px" },
+          h3: { ...heading, margin: "24px 0 8px", fontSize: "16px", lineHeight: "24px" },
+          ul: { margin: "0 0 16px", paddingLeft: "20px" },
+          ol: { margin: "0 0 16px", paddingLeft: "20px" },
+          li: { ...text, margin: "0 0 8px" },
+          link: { color: light.link, textDecoration: "underline" },
+          bold: { fontWeight: 600 },
+          image: { display: "block", maxWidth: "100%", height: "auto", borderRadius: "6px" },
+          codeInline: {
+            fontFamily: fonts.mono,
+            fontSize: "14px",
+            backgroundColor: light.fill,
+            borderRadius: "4px",
+            padding: "1px 4px",
+          },
+          hr: { border: 0, borderTop: `1px solid ${light.border}`, margin: "24px 0" },
+        }}
+      >
         {children}
-      </Button>
-    </Section>
+      </Markdown>
+    </div>
   )
 }

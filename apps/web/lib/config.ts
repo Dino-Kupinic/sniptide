@@ -144,6 +144,7 @@ const schema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_SEGMENT_ID: z.string().optional(),
   BROADCAST_FROM: z.string().optional(),
+  BROADCAST_SENDERS: z.string().optional(),
   HOMEPAGE_URL: origin.default(DEFAULT_RESOURCE_LINKS.homepage),
   DOCS_URL: z
     .url({ message: "must be a full URL like https://docs.example.com." })
@@ -270,6 +271,10 @@ function parseConfig(env: Record<string, string | undefined>) {
     throw new Error(
       "Invalid configuration: product update emails need both RESEND_API_KEY and RESEND_SEGMENT_ID.",
     )
+  if (value.BROADCAST_SENDERS && !(value.RESEND_API_KEY && value.BROADCAST_FROM))
+    throw new Error(
+      "Invalid configuration: BROADCAST_SENDERS needs RESEND_API_KEY, RESEND_SEGMENT_ID and BROADCAST_FROM.",
+    )
   const smtpPresent = [
     "SMTP_HOST",
     "SMTP_PORT",
@@ -346,6 +351,11 @@ function parseConfig(env: Record<string, string | undefined>) {
             apiKey: value.RESEND_API_KEY,
             segmentId: value.RESEND_SEGMENT_ID,
             from: value.BROADCAST_FROM,
+            // Accounts that may write and send product updates in the app, by email address.
+            senders: (value.BROADCAST_SENDERS ?? "")
+              .split(",")
+              .map((email) => email.trim().toLowerCase())
+              .filter(Boolean),
           }
         : undefined,
     templatesUrl: value.TEMPLATES_URL,

@@ -215,7 +215,8 @@ Resend.
 | --- | --- | --- |
 | `RESEND_API_KEY` | unset | A Resend API key with full access. With `RESEND_SEGMENT_ID`, turns on product update emails. |
 | `RESEND_SEGMENT_ID` | unset | The Resend segment that holds the subscribers. |
-| `BROADCAST_FROM` | unset | The sender of broadcasts, such as `Sniptide <updates@news.example.com>`. Only the send command reads it. |
+| `BROADCAST_FROM` | unset | The sender of broadcasts, such as `Sniptide <updates@news.example.com>`. |
+| `BROADCAST_SENDERS` | unset | Comma-separated email addresses of the accounts that may write and send product updates. Needs `RESEND_API_KEY`, `RESEND_SEGMENT_ID` and `BROADCAST_FROM`. |
 
 Sniptide keeps the segment in step: turning the switch on subscribes the verified address, turning
 it off unsubscribes it, an email change moves it, and deleting the account deletes the contact.
@@ -223,25 +224,17 @@ Unsubscribing through a broadcast's link is recorded in Resend only, so Settings
 the switch as on. Send from a subdomain of
 your own, so a complaint about a broadcast can't affect password reset and notification emails.
 
-Each broadcast is a React Email file in `apps/web/emails/broadcasts` that exports `subject`,
-`preview` and a component built from `apps/web/lib/email/broadcast.tsx`. `Broadcast` sets the
-title, the date and an optional **View in browser** link to a public copy, such as a changelog
-entry. `Cover` adds a blue panel with the mark, a label and a large title, and a screenshot beside
-it on wide screens or below it on phones. Put a screenshot in `apps/web/public/email/broadcasts` so
-the instance serves it, at least 700px wide. Preview it with
-`bun run email` in `apps/web`, then send it from there with the variables above, plus
-`BETTER_AUTH_URL` for the logo and links and `OPERATOR_NAME` and `OPERATOR_ADDRESS` for the sender
-line:
+An account listed in `BROADCAST_SENDERS` with a verified address sees **Write update** in
+**Settings** > **Notifications**, which opens **Product updates**. There it writes each update in
+Markdown, with a subject, a preview line, a cover label and an optional screenshot link, and sees
+the finished email beside the form as it types. Drafts save on their own. **Send test to me**
+sends one copy to the writer's address, and **Send to subscribers** asks for confirmation and then
+sends the update to the whole segment at once. A sent update stays in the list as a record and can
+no longer change, and sending the same update twice is refused.
 
-```sh
-bun run broadcast emails/broadcasts/2026-11-update.tsx --test you@example.com
-bun run broadcast emails/broadcasts/2026-11-update.tsx
-bun run broadcast emails/broadcasts/2026-11-update.tsx --send --at "tomorrow at 9am CET"
-```
-
-The first sends one test email. The second creates a draft in Resend to review and send from its
-dashboard. The third sends to the whole segment, now or at the given time. Broadcasts are written
-in English.
+A screenshot link must use https and point to an image at least 700px wide. Sending to subscribers
+also needs `OPERATOR_NAME` and `OPERATOR_ADDRESS`, because the email names its sender, and
+`BETTER_AUTH_URL` for the logo and links. Updates are written and sent in one language.
 
 ### Email delivery
 

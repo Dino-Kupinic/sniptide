@@ -215,7 +215,57 @@
     "appearance": "Appearance",
     "productEmails": {
       "label": "Product updates",
-      "description": "Release notes and news about Sniptide. Every email has a link to stop them."
+      "description": "Release notes and news about Sniptide. Every email has a link to stop them.",
+      "writeLabel": "Write a product update",
+      "writeDescription": "Write release notes and news, test them on yourself and send them to subscribers.",
+      "writeAction": "Write update"
+    }
+  },
+  "Broadcasts": {
+    "title": "Product updates",
+    "description": "{count, plural, =0 {No one has turned on product updates yet.} one {# person gets these emails.} other {# people get these emails.}}",
+    "newUpdate": "New update",
+    "empty": "You haven't written a product update yet.",
+    "untitled": "Untitled update",
+    "draft": "Draft, edited {time}",
+    "sentTo": "{count, plural, one {Sent {date} to # person} other {Sent {date} to # people}}",
+    "sentOn": "Sent {date}",
+    "subject": "Subject",
+    "preview": "Preview text",
+    "previewHint": "Shown next to the subject in the inbox.",
+    "label": "Cover label",
+    "image": "Screenshot link",
+    "imageHint": "An https link to an image at least 700px wide. Leave it empty for a cover without a screenshot.",
+    "body": "Update",
+    "bodyHint": "Write in Markdown: ## for a heading, - for a list item and [text](https://example.com) for a link.",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Couldn't save. Your changes stay on this page, so try again.",
+    "previewTitle": "Email preview",
+    "sendTest": "Send test to me",
+    "testSent": "Test sent to {email}",
+    "send": "Send to subscribers",
+    "confirmTitle": "Send this update?",
+    "confirmBody": "{count, plural, =0 {No one has turned on product updates yet, so it reaches no one. You can't edit it afterwards.} one {It goes to # person right away, and you can't edit it afterwards.} other {It goes to # people right away, and you can't edit it afterwards.}}",
+    "confirmSend": "Send now",
+    "cancel": "Cancel",
+    "sentToast": "Update sent",
+    "sentNotice": "{count, plural, one {Sent on {date} to # person.} other {Sent on {date} to # people.}}",
+    "sentNoticeNoCount": "Sent on {date}.",
+    "delete": "Delete draft",
+    "deleteTitle": "Delete this draft?",
+    "deleteBody": "The draft is deleted for good.",
+    "deleted": "Draft deleted",
+    "errors": {
+      "notFound": "This update no longer exists.",
+      "alreadySent": "This update was already sent, so it can't change.",
+      "noSubject": "Add a subject before sending.",
+      "noBody": "Write the update before sending.",
+      "noFrom": "Set BROADCAST_FROM on the server to send product updates.",
+      "noOperator": "Set OPERATOR_NAME and OPERATOR_ADDRESS on the server so the email names its sender.",
+      "testFailed": "Couldn't send the test email. Try again in a minute.",
+      "sendFailed": "Couldn't send the update. Nothing went out, so try again in a minute.",
+      "forbidden": "Your account can't send product updates."
     }
   }
 }

@@ -4,6 +4,7 @@ export const light = {
   canvas: "#fafafa",
   surface: "#ffffff",
   border: "#e8e8e8",
+  fill: "#f4f4f4",
   foreground: "#1b1919",
   muted: "#6b6b6b",
   link: "#2a26ec",
@@ -65,6 +66,9 @@ export const darkModeCss = `
   .st-muted { color: ${dark.muted} !important; }
   .st-link { color: ${dark.link} !important; }
   .st-rule { border-color: ${dark.border} !important; }
+  .st-md p, .st-md li, .st-md h1, .st-md h2, .st-md h3, .st-md strong { color: ${dark.foreground} !important; }
+  .st-md a { color: ${dark.link} !important; }
+  .st-md code { background-color: ${dark.border} !important; color: ${dark.foreground} !important; }
   .st-logo-light { display: none !important; }
   .st-logo-dark { display: block !important; max-height: none !important; }
 }

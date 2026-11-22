@@ -13,7 +13,7 @@ export function setResendClientForTests(client: ResendClient | undefined) {
   testClient = client
 }
 
-function client() {
+export function resendClient() {
   const broadcasts = getConfig().broadcasts
   if (!broadcasts) return undefined
   return testClient ?? createResendClient(broadcasts)
@@ -40,7 +40,7 @@ export async function setProductEmails(
   userId: string,
   enabled: boolean,
 ): Promise<ProductEmailsResult> {
-  const resend = client()
+  const resend = resendClient()
   if (!resend) return { ok: false, error: "Product update emails aren't available on this server." }
   const db = getDb()
   const [account] = await db
@@ -76,7 +76,7 @@ export async function setProductEmails(
 // After an email change the contact moves to the new address, so updates follow the account and
 // the old address stops getting them.
 export async function followEmailChange(changed: { id: string; email: string }) {
-  const resend = client()
+  const resend = resendClient()
   if (!resend) return
   const db = getDb()
   const [row] = await db
@@ -94,7 +94,7 @@ export async function followEmailChange(changed: { id: string; email: string }) 
 
 // A deleted account's contact is deleted at Resend too. The row goes with the user.
 export async function forgetAccount(deleted: { id: string }) {
-  const resend = client()
+  const resend = resendClient()
   if (!resend) return
   const [row] = await getDb()
     .select()

@@ -7,6 +7,7 @@ import {
   analyticsRollup,
   analyticsSalt,
   authRateLimit,
+  broadcast,
   collection,
   instanceActivity,
   moderationEvent,
@@ -68,6 +69,8 @@ export async function resetDatabase() {
       observedSinceDay: Math.floor(Date.now() / 86400000),
     })
   await getDb().delete(user)
+  // Product updates outlive the account that wrote them.
+  await getDb().delete(broadcast)
   await getDb().delete(rateLimit)
   await getDb().delete(authRateLimit)
   // The rollup state and salts belong to no account. With no state every day is read from the hits.
