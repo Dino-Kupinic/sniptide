@@ -53,4 +53,27 @@ One Apple M1 Pro running macOS 27.2 hosted the browser, four application servers
 
 In an earlier 32 KiB series, the first PrivateBin write started four seconds after the previous series, inside its default ten-second rate limit, and the publish timed out. The table uses the complete rerun with an initial cooldown for all four services. [Earlier series](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-32k-pilot-2026-11-20.json). Each service occupied each position twice per size. MicroBin had the lowest median end-to-end time at both sizes on this machine. Most of Opengist's elapsed time was spent publishing. These measurements include browser automation and local application work. Production hosting, network distance, multi-file editing, and concurrent throughput are outside this run.
 
-GitHub Gist, Pastebin, Hastebin and Pastes.io have no results in this local comparison. The hosted adapters have not been validated end to end. [1 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-1k-2026-11-20.json) and [32 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-32k-2026-11-20.json).
+[1 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-1k-2026-11-20.json) and [32 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/paste-roundtrip-32k-2026-11-20.json).
+
+## Self-hosted Haste community fork, 22 November 2026
+
+The comparison post links to Jakub Jirutka's Haste fork. This follow-up ran its published `haste-server@0.2.1` package on the same Mac, with file storage and anonymous writers and readers. The application served pastes over loopback. Its stock page loads jQuery from Google's CDN, so the reader time includes that external dependency. The four-service series above ran two days earlier. [Fork source and installation](https://github.com/jirutka/haste-server).
+
+| Payload | Verified | Publish ms | Read ms | Round trip ms |
+| --- | ---: | ---: | ---: | ---: |
+| 1 KiB | 8/8 | 63.5 | 191.5 | 258.5 |
+| 32 KiB | 8/8 | 5608 | 1756 | 7385.5 |
+
+[1 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/haste-community-1k-2026-11-22.json) and [32 KiB samples](https://github.com/Dino-Kupinic/sniptide/blob/main/docs/benchmarks/haste-community-32k-2026-11-22.json).
+
+To reproduce, start `haste-server@0.2.1` with its file backend, bind it to loopback and point the CLI's Hastebin adapter at its editor. For example:
+
+```json
+{
+  "Hastebin": {"url": "http://127.0.0.1:7777/"}
+}
+```
+
+## Other deployments
+
+Toptal's hosted Hastebin has no measurement in this series. The post lists Pastebin.com and Pastes.io as hosted products. Gists can also run on GitHub Enterprise Server. This run had no Enterprise Server instance. [Blog comparison](https://sniptide.com/blog/pastebin-alternatives) and [GitHub Enterprise Server gist documentation](https://docs.github.com/en/enterprise-server@3.22/get-started/writing-on-github/editing-and-sharing-content-with-gists/creating-gists).

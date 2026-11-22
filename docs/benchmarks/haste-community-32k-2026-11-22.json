@@ -1,0 +1,79 @@
+{
+  "started": "2026-11-22T13:17:54.447Z",
+  "browser": "157.0.8103.80",
+  "platform": "darwin",
+  "rounds": 8,
+  "bytes": 32768,
+  "roundPauseMs": 11000,
+  "unmeasured": [
+    "Sniptide",
+    "PrivateBin",
+    "Opengist",
+    "MicroBin",
+    "GitHub Gist",
+    "Pastebin",
+    "Pastes.io"
+  ],
+  "instances": [
+    {
+      "name": "Hastebin",
+      "origin": "http://127.0.0.1:57118",
+      "implementation": "jirutka/haste-server@0.2.1"
+    }
+  ],
+  "rows": [
+    {
+      "name": "Hastebin",
+      "samples": [
+        {
+          "outcome": "verified",
+          "createMs": 5502,
+          "readMs": 1760,
+          "totalMs": 7262
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5696,
+          "readMs": 1736,
+          "totalMs": 7431
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5620,
+          "readMs": 2157,
+          "totalMs": 7777
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5596,
+          "readMs": 1722,
+          "totalMs": 7318
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5536,
+          "readMs": 1721,
+          "totalMs": 7257
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5592,
+          "readMs": 1752,
+          "totalMs": 7344
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5622,
+          "readMs": 1878,
+          "totalMs": 7500
+        },
+        {
+          "outcome": "verified",
+          "createMs": 5660,
+          "readMs": 1767,
+          "totalMs": 7427
+        }
+      ]
+    }
+  ]
+}
