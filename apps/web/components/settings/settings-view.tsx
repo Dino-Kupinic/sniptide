@@ -4,6 +4,7 @@ import { Button } from "@sniptide/ui/components/button"
 import { Progress } from "@sniptide/ui/components/progress"
 import { Skeleton } from "@sniptide/ui/components/skeleton"
 import { cn } from "@sniptide/ui/lib/utils"
+import type { EmailTopic } from "@workspace/email/topics"
 import {
   BellIcon,
   ChartColumnIcon,
@@ -409,7 +410,7 @@ export function SettingsView({
   profile: ProfileState
   preferences: Preferences
   emailAvailable: boolean
-  productEmails: { available: boolean; enabled: boolean }
+  productEmails: { kinds: EmailTopic[]; enabled: EmailTopic[] }
   security: AccountSecurity & {
     providers: SocialProvider[]
     linkError: string | null

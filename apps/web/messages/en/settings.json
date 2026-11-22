@@ -214,8 +214,19 @@
     "app": "App",
     "appearance": "Appearance",
     "productEmails": {
-      "label": "Product updates",
-      "description": "Release notes and news about Sniptide. Every email has a link to stop them."
+      "update": {
+        "label": "Product updates",
+        "description": "Release notes and news about Sniptide."
+      },
+      "survey": {
+        "label": "Surveys and feedback",
+        "description": "Short surveys that help decide what Sniptide builds next."
+      },
+      "guide": {
+        "label": "Guides and tips",
+        "description": "Tutorials and tips for getting more out of Sniptide."
+      },
+      "note": "Every email has a link to unsubscribe or change which emails you get."
     }
   }
 }

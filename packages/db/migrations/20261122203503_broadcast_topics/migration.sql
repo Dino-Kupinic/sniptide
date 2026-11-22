@@ -1,0 +1,1 @@
+ALTER TABLE "broadcast_subscription" ADD COLUMN "topics" text[] DEFAULT ARRAY['update']::text[] NOT NULL;

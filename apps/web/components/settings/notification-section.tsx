@@ -2,6 +2,7 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { Switch } from "@sniptide/ui/components/switch"
+import type { EmailTopic } from "@workspace/email/topics"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { NOTIFICATION_KINDS, type NotificationKind } from "@/lib/notifications/types"
@@ -22,20 +23,21 @@ export function NotificationSection({
   initial: NotificationPreferences
   emailAvailable: boolean
   emailVerified: boolean
-  productEmails: { available: boolean; enabled: boolean }
+  productEmails: { kinds: EmailTopic[]; enabled: EmailTopic[] }
 }) {
   const t = useTranslations("Settings")
   const [preferences, setPreferences] = React.useState(initial)
   const [pending, setPending] = React.useState(false)
   const [status, setStatus] = React.useState<{ ok: boolean; message: string } | null>(null)
-  const [updates, setUpdates] = React.useState(productEmails.enabled)
+  const [topics, setTopics] = React.useState(productEmails.enabled)
 
-  async function changeUpdates(enabled: boolean) {
-    setUpdates(enabled)
+  async function changeTopic(topic: EmailTopic, enabled: boolean) {
+    const previous = topics
+    setTopics(enabled ? [...topics, topic] : topics.filter((kind) => kind !== topic))
     setPending(true)
     setStatus(null)
-    const result = await updateProductEmails(enabled).catch(() => null)
-    if (!result?.ok) setUpdates(!enabled)
+    const result = await updateProductEmails(enabled, topic).catch(() => null)
+    if (!result?.ok) setTopics(previous)
     setStatus(
       result?.ok
         ? { ok: true, message: t("saved") }
@@ -140,30 +142,47 @@ export function NotificationSection({
           </div>
         ))}
       </div>
-      {productEmails.available ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_60px] items-center gap-2 rounded-lg border border-border px-3 py-4 sm:grid-cols-[minmax(0,1fr)_90px] sm:px-4">
-          <div className="flex flex-col gap-1">
-            <span id="product-emails-label" className="text-sm font-medium">
-              {t("productEmails.label")}
-            </span>
-            <span
-              id="product-emails-description"
-              className="text-[13px] leading-[18px] text-muted-foreground"
-            >
-              {t("productEmails.description")}
-            </span>
+      {productEmails.kinds.length ? (
+        <div className="flex flex-col gap-2">
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {productEmails.kinds.map((topic) => {
+              const checked = topics.includes(topic)
+              return (
+                <div
+                  key={topic}
+                  className="grid grid-cols-[minmax(0,1fr)_60px] items-center gap-2 px-3 py-4 sm:grid-cols-[minmax(0,1fr)_90px] sm:px-4"
+                >
+                  <div className="flex flex-col gap-1">
+                    <span id={`product-emails-${topic}-label`} className="text-sm font-medium">
+                      {t(`productEmails.${topic}.label`)}
+                    </span>
+                    <span
+                      id={`product-emails-${topic}-description`}
+                      className="text-[13px] leading-[18px] text-muted-foreground"
+                    >
+                      {t(`productEmails.${topic}.description`)}
+                    </span>
+                  </div>
+                  <div className="flex justify-center">
+                    <Switch
+                      aria-labelledby={`product-emails-${topic}-label`}
+                      aria-describedby={
+                        emailVerified
+                          ? `product-emails-${topic}-description`
+                          : "notification-email-unverified"
+                      }
+                      checked={checked}
+                      disabled={pending || (!emailVerified && !checked)}
+                      onCheckedChange={(enabled) => void changeTopic(topic, enabled)}
+                    />
+                  </div>
+                </div>
+              )
+            })}
           </div>
-          <div className="flex justify-center">
-            <Switch
-              aria-labelledby="product-emails-label"
-              aria-describedby={
-                emailVerified ? "product-emails-description" : "notification-email-unverified"
-              }
-              checked={updates}
-              disabled={pending || (!emailVerified && !updates)}
-              onCheckedChange={(enabled) => void changeUpdates(enabled)}
-            />
-          </div>
+          <p className="text-[13px] leading-[18px] text-muted-foreground">
+            {t("productEmails.note")}
+          </p>
         </div>
       ) : null}
       <SaveStatus status={status} />

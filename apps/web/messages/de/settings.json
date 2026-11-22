@@ -214,8 +214,19 @@
     "app": "App",
     "appearance": "Darstellung",
     "productEmails": {
-      "label": "Produkt-Updates",
-      "description": "Release Notes und Neuigkeiten zu Sniptide. Jede E-Mail enthält einen Link zum Abbestellen."
+      "update": {
+        "label": "Produktneuigkeiten",
+        "description": "Versionshinweise und Neuigkeiten zu Sniptide."
+      },
+      "survey": {
+        "label": "Umfragen und Feedback",
+        "description": "Kurze Umfragen, die mitentscheiden, was Sniptide als Nächstes baut."
+      },
+      "guide": {
+        "label": "Anleitungen und Tipps",
+        "description": "Tutorials und Tipps, mit denen du mehr aus Sniptide herausholst."
+      },
+      "note": "Jede E-Mail enthält einen Link, um dich abzumelden oder zu ändern, welche E-Mails du bekommst."
     }
   }
 }

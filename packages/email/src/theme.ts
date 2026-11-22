@@ -68,7 +68,7 @@ export const darkModeCss = `
   .st-rule { border-color: ${dark.border} !important; }
   .st-md p, .st-md li, .st-md h1, .st-md h2, .st-md h3, .st-md strong { color: ${dark.foreground} !important; }
   .st-md a { color: ${dark.link} !important; }
-  .st-md code { background-color: ${dark.border} !important; color: ${dark.foreground} !important; }
+  .st-md code, .st-md pre { background-color: ${dark.border} !important; color: ${dark.foreground} !important; }
   .st-logo-light { display: none !important; }
   .st-logo-dark { display: block !important; max-height: none !important; }
 }

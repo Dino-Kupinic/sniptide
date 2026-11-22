@@ -1,0 +1,81 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "01af2462-8449-49fc-8636-6819ac384e2b",
+  "prevIds": [
+    "65140257-c8ab-4fc2-8627-26ec4539f49e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "broadcast",
+        "kind"
+      ],
+      "writes": [
+        "s|col|public.broadcast.kind",
+        "n|col|public.broadcast.kind",
+        "e|col|public.broadcast.kind"
+      ],
+      "reads": [
+        "n|tbl|public.broadcast",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "broadcast",
+        "details"
+      ],
+      "writes": [
+        "s|col|public.broadcast.details",
+        "n|col|public.broadcast.details",
+        "e|col|public.broadcast.details"
+      ],
+      "reads": [
+        "n|tbl|public.broadcast",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast",
+        "name": "kind",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'update'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast",
+        "name": "details",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

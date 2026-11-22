@@ -22,6 +22,7 @@
   "exports": {
     "./frame": "./src/frame.tsx",
     "./theme": "./src/theme.ts",
-    "./resend": "./src/resend.ts"
+    "./resend": "./src/resend.ts",
+    "./topics": "./src/topics.ts"
   }
 }

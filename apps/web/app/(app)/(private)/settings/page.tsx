@@ -8,7 +8,7 @@ import { readAccountSecurity } from "@/lib/account/store"
 import { getAccountTotals } from "@/lib/account/usage"
 import { listTokens } from "@/lib/api/tokens"
 import { getSocialProviders, isDemoMode, requireSession } from "@/lib/auth"
-import { hasProductEmails, productEmailsAvailable } from "@/lib/broadcasts/subscription"
+import { productEmailKinds, productEmailTopics } from "@/lib/broadcasts/subscription"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { listGroups } from "@/lib/env/store"
@@ -89,11 +89,10 @@ export default async function Page({ searchParams }: PageProps<"/settings">) {
       }}
       preferences={preferences}
       emailAvailable={Boolean(getConfig().smtp)}
-      productEmails={
-        productEmailsAvailable()
-          ? { available: true, enabled: await hasProductEmails(session.user.id) }
-          : { available: false, enabled: false }
-      }
+      productEmails={{
+        kinds: productEmailKinds(),
+        enabled: productEmailKinds().length ? await productEmailTopics(session.user.id) : [],
+      }}
       security={{
         ...security,
         providers,

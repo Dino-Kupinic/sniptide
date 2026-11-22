@@ -75,22 +75,73 @@
     },
     "welcome": {
       "subject": "Willkommen bei Sniptide",
-      "preview": "Speichere deinen ersten Paste und lass deinen Agenten Sniptide über MCP oder die CLI nutzen.",
+      "preview": "Alles, was dein neues Konto kann, von ablaufenden Links bis zum MCP-Server für deinen Agenten.",
       "heading": "Willkommen bei Sniptide",
       "body": "Dein Konto für <b>{email}</b> ist bereit.",
-      "next": "Füge Code oder Text ein, wähle, wer ihn sehen darf, und teile den Link. Deine Agenten speichern und lesen Pastes auf dieselbe Weise.",
+      "next": "Füge Code oder Text ein, wähle, wer ihn sehen darf, und teile den Link. Das kann dein Konto außerdem.",
       "action": "Paste erstellen",
-      "agent": {
-        "label": "Agenten verbinden",
-        "body": "Füge den MCP-Server hinzu, damit Claude, Cursor oder Codex Snippets für dich speichern und finden."
-      },
-      "cli": {
-        "label": "CLI installieren",
-        "body": "Leite die Ausgabe deines Terminals in einen Paste und erhalte den Link zurück."
-      },
-      "settings": {
-        "label": "Standards festlegen",
-        "body": "Wähle Sichtbarkeit und Ablauf, mit denen neue Pastes beginnen."
+      "features": {
+        "heading": "Was du mit Sniptide machen kannst",
+        "share": {
+          "heading": "Sicher teilen",
+          "share": {
+            "label": "Kontrolliert teilen",
+            "body": "Wähle, wer jeden Link öffnen darf, setze ein Passwort oder lass ihn ablaufen."
+          },
+          "burn": {
+            "label": "Nach dem Lesen löschen",
+            "body": "Sende einen Paste, den eine Person genau einmal lesen kann."
+          },
+          "encrypt": {
+            "label": "Ende-zu-Ende-Verschlüsselung",
+            "body": "Verschlüssle einen Paste im Browser, damit der Server nur Chiffretext speichert."
+          }
+        },
+        "organize": {
+          "heading": "Snippets ordnen",
+          "collections": {
+            "label": "Sammlungen",
+            "body": "Fasse zusammengehörige Pastes zusammen und rufe sie gemeinsam über die CLI oder einen Agenten ab."
+          },
+          "revisions": {
+            "label": "Revisionen",
+            "body": "Vergleiche zwei Versionen Zeile für Zeile und stelle eine frühere wieder her."
+          },
+          "gists": {
+            "label": "Gists importieren",
+            "body": "Kopiere die Dateien eines GitHub-Gists in einen neuen Paste."
+          }
+        },
+        "build": {
+          "heading": "Mit Agenten und Code arbeiten",
+          "mcp": {
+            "label": "MCP-Server",
+            "body": "Lass Claude, Cursor oder Codex Snippets für dich speichern und finden."
+          },
+          "cli": {
+            "label": "CLI",
+            "body": "Leite die Ausgabe deines Terminals in einen Paste und erhalte den Link zurück."
+          },
+          "api": {
+            "label": "SDKs und API",
+            "body": "Speichere und lies Pastes aus TypeScript oder Python."
+          }
+        },
+        "insights": {
+          "heading": "Secrets und Statistiken",
+          "secrets": {
+            "label": "Verschlüsselte Secrets",
+            "body": "Bewahre die Umgebungsvariablen eines Projekts verschlüsselt auf und synchronisiere sie mit der CLI."
+          },
+          "analytics": {
+            "label": "Statistiken",
+            "body": "Sieh Aufrufe, Kopien und Verweise, gezählt ohne Cookies."
+          },
+          "extensions": {
+            "label": "Erweiterungen",
+            "body": "Speichere Snippets aus VS Code, Raycast oder deinem Browser."
+          }
+        }
       },
       "reason": "Wir haben diese E-Mail an {email} gesendet, weil du ein Sniptide-Konto erstellt hast. Es ist die einzige Willkommens-E-Mail, die wir senden."
     }

@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9a50cbcb-d104-46e0-98b0-8c25c2d7d600",
+  "prevIds": [
+    "01af2462-8449-49fc-8636-6819ac384e2b"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "broadcast_subscription",
+        "topics"
+      ],
+      "writes": [
+        "s|col|public.broadcast_subscription.topics",
+        "n|col|public.broadcast_subscription.topics",
+        "e|col|public.broadcast_subscription.topics"
+      ],
+      "reads": [
+        "n|tbl|public.broadcast_subscription",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "broadcast_subscription",
+        "name": "topics",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": "ARRAY['update']",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

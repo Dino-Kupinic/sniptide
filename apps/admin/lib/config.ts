@@ -9,6 +9,10 @@ const schema = z.object({
   ADMIN_PASSWORD: z.string().min(16, "must be at least 16 characters."),
   RESEND_API_KEY: z.string().min(1),
   RESEND_SEGMENT_ID: z.string().min(1),
+  // One Resend topic per kind of email, so each send reaches only the people who chose that kind.
+  RESEND_TOPIC_UPDATES: z.string().min(1),
+  RESEND_TOPIC_SURVEYS: z.string().min(1),
+  RESEND_TOPIC_GUIDES: z.string().min(1),
   BROADCAST_FROM: z.string().min(1),
   BROADCAST_TEST_TO: z.email(),
   OPERATOR_NAME: z.string().max(200).optional(),
@@ -31,6 +35,11 @@ export function getConfig(env: Record<string, string | undefined> = process.env)
     appUrl: value.APP_URL,
     password: value.ADMIN_PASSWORD,
     resend: { apiKey: value.RESEND_API_KEY, segmentId: value.RESEND_SEGMENT_ID },
+    topics: {
+      update: value.RESEND_TOPIC_UPDATES,
+      survey: value.RESEND_TOPIC_SURVEYS,
+      guide: value.RESEND_TOPIC_GUIDES,
+    },
     from: value.BROADCAST_FROM,
     testTo: value.BROADCAST_TEST_TO,
     operator: value.OPERATOR_NAME

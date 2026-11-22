@@ -14,10 +14,9 @@ import { Input } from "@sniptide/ui/components/input"
 import { Label } from "@sniptide/ui/components/label"
 import { Textarea } from "@sniptide/ui/components/textarea"
 import { toast } from "@sniptide/ui/components/toast"
-import { ChevronLeftIcon } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useId, useRef, useState, useTransition } from "react"
+import { type ReactNode, useEffect, useId, useRef, useState, useTransition } from "react"
+import { BackLink } from "@/components/back-link"
 import { PageHeader } from "@/components/page-header"
 import {
   deleteBroadcastDraft,
@@ -26,21 +25,51 @@ import {
   sendBroadcastTest,
   sendBroadcastToSubscribers,
 } from "@/lib/actions"
-import type { BroadcastContent } from "@/lib/compose"
+import type { BroadcastContent, EmailDetails } from "@/lib/compose"
 import { formatDate, people } from "@/lib/format"
+import { KINDS } from "@/lib/kinds"
 import type { BroadcastError } from "@/lib/store"
 
 type SaveState = "idle" | "saving" | "saved" | "failed"
 
 const ERRORS: Record<BroadcastError, string> = {
-  notFound: "This update no longer exists.",
-  alreadySent: "This update was already sent, so it can't change.",
+  notFound: "This email no longer exists.",
+  alreadySent: "This email was already sent, so it can't change.",
   noSubject: "Add a subject before sending.",
-  noBody: "Write the update before sending.",
+  noBody: "Write the email before sending.",
+  noUrl: "Add an https link to the survey before sending.",
   noOperator: "Set OPERATOR_NAME and OPERATOR_ADDRESS so the email names its sender.",
   testFailed: "Couldn't send the test email. Try again in a minute.",
-  sendFailed: "Couldn't send the update. Nothing went out, so try again in a minute.",
+  sendFailed: "Couldn't send the email. Nothing went out, so try again in a minute.",
   signedOut: "Your session ended. Sign in again and retry.",
+}
+
+const MARKDOWN_HINT =
+  "Write in Markdown: ## for a heading, - for a list item and [text](https://example.com) for a link."
+
+// One labeled control with an optional hint under it.
+function Field({
+  id,
+  label,
+  hint,
+  children,
+}: {
+  id: string
+  label: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      {children}
+      {hint ? (
+        <p id={`${id}-hint`} className="text-[13px] text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  )
 }
 
 // Saving waits for a pause in typing so a draft is written about once per thought.
@@ -99,6 +128,10 @@ export function BroadcastEditor({
     setContent(next)
   }
 
+  function updateDetails(patch: Partial<EmailDetails>) {
+    update({ details: { ...latest.current.details, ...patch } })
+  }
+
   function errorMessage(code: BroadcastError) {
     return ERRORS[code]
   }
@@ -138,7 +171,7 @@ export function BroadcastEditor({
         toast.error(errorMessage(result ? result.error : "sendFailed"))
         return
       }
-      toast.success("Update sent")
+      toast.success("Email sent")
       router.refresh()
     })
   }
@@ -151,7 +184,7 @@ export function BroadcastEditor({
         return
       }
       toast.success("Draft deleted")
-      router.replace("/")
+      router.replace("/emails")
     })
   }
 
@@ -161,15 +194,9 @@ export function BroadcastEditor({
   return (
     <div className="flex flex-col gap-6 p-4 lg:gap-8 lg:p-7">
       <div className="flex flex-col gap-3">
-        <Link
-          href="/"
-          className="inline-flex w-fit items-center gap-1 text-sm text-link hover:underline"
-        >
-          <ChevronLeftIcon aria-hidden className="size-4" />
-          Product updates
-        </Link>
+        <BackLink href="/emails" label="Emails" />
         <PageHeader
-          title={content.subject || "Untitled update"}
+          title={content.subject || KINDS[content.kind].untitled}
           description={
             readOnly ? undefined : (
               <span aria-live="polite">
@@ -200,17 +227,20 @@ export function BroadcastEditor({
           onSubmit={(event) => event.preventDefault()}
         >
           <fieldset disabled={readOnly} className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={field("subject")}>Subject</Label>
+            <p className="text-sm text-muted-foreground">{KINDS[content.kind].name}</p>
+            <Field id={field("subject")} label="Subject">
               <Input
                 id={field("subject")}
                 value={content.subject}
                 maxLength={200}
                 onChange={(event) => update({ subject: event.target.value })}
               />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={field("preview")}>Preview text</Label>
+            </Field>
+            <Field
+              id={field("preview")}
+              label="Preview text"
+              hint="Shown next to the subject in the inbox."
+            >
               <Input
                 id={field("preview")}
                 value={content.preview}
@@ -218,52 +248,168 @@ export function BroadcastEditor({
                 aria-describedby={field("preview-hint")}
                 onChange={(event) => update({ preview: event.target.value })}
               />
-              <p id={field("preview-hint")} className="text-[13px] text-muted-foreground">
-                Shown next to the subject in the inbox.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={field("label")}>Cover label</Label>
-              <Input
-                id={field("label")}
-                value={content.label}
-                maxLength={60}
-                onChange={(event) => update({ label: event.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={field("image")}>Screenshot link</Label>
-              <Input
-                id={field("image")}
-                type="url"
-                inputMode="url"
-                value={content.imageUrl ?? ""}
-                maxLength={2000}
-                placeholder="https://"
-                aria-describedby={field("image-hint")}
-                onChange={(event) => update({ imageUrl: event.target.value || null })}
-              />
-              <p id={field("image-hint")} className="text-[13px] text-muted-foreground">
-                An https link to an image at least 700px wide. Leave it empty for a cover without a
-                screenshot.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor={field("body")}>Update</Label>
+            </Field>
+            {content.kind === "update" ? (
+              <>
+                <Field id={field("label")} label="Cover label">
+                  <Input
+                    id={field("label")}
+                    value={content.label}
+                    maxLength={60}
+                    onChange={(event) => update({ label: event.target.value })}
+                  />
+                </Field>
+                <Field
+                  id={field("image")}
+                  label="Screenshot link"
+                  hint="An https link to an image at least 700px wide. Leave it empty for a cover without a screenshot."
+                >
+                  <Input
+                    id={field("image")}
+                    type="url"
+                    inputMode="url"
+                    value={content.imageUrl ?? ""}
+                    maxLength={2000}
+                    placeholder="https://"
+                    aria-describedby={field("image-hint")}
+                    onChange={(event) => update({ imageUrl: event.target.value || null })}
+                  />
+                </Field>
+              </>
+            ) : (
+              <Field
+                id={field("heading")}
+                label={content.kind === "guide" ? "Title" : "Heading"}
+                hint={
+                  content.kind === "guide"
+                    ? "The large title at the top. Leave it empty to use the subject."
+                    : "The large title at the top of the email."
+                }
+              >
+                <Input
+                  id={field("heading")}
+                  value={content.details.heading ?? ""}
+                  maxLength={120}
+                  aria-describedby={field("heading-hint")}
+                  onChange={(event) => updateDetails({ heading: event.target.value })}
+                />
+              </Field>
+            )}
+            {content.kind === "guide" ? (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field id={field("label")} label="Topic">
+                  <Input
+                    id={field("label")}
+                    value={content.label}
+                    maxLength={60}
+                    onChange={(event) => update({ label: event.target.value })}
+                  />
+                </Field>
+                <Field id={field("minutes")} label="Reading time in minutes">
+                  <Input
+                    id={field("minutes")}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={120}
+                    value={content.details.minutes ?? ""}
+                    onChange={(event) =>
+                      updateDetails({ minutes: Number(event.target.value) || undefined })
+                    }
+                  />
+                </Field>
+              </div>
+            ) : null}
+            <Field
+              id={field("body")}
+              label={
+                content.kind === "update"
+                  ? "Update"
+                  : content.kind === "guide"
+                    ? "Guide"
+                    : "Message"
+              }
+              hint={MARKDOWN_HINT}
+            >
               <Textarea
                 id={field("body")}
                 value={content.body}
                 maxLength={50000}
-                rows={16}
+                rows={content.kind === "survey" ? 8 : 16}
                 aria-describedby={field("body-hint")}
-                className="min-h-80 font-mono text-[13px] leading-5"
+                className={
+                  content.kind === "survey"
+                    ? "min-h-40 font-mono text-[13px] leading-5"
+                    : "min-h-80 font-mono text-[13px] leading-5"
+                }
                 onChange={(event) => update({ body: event.target.value })}
               />
-              <p id={field("body-hint")} className="text-[13px] text-muted-foreground">
-                Write in Markdown: ## for a heading, - for a list item and
-                [text](https://example.com) for a link.
-              </p>
-            </div>
+            </Field>
+            {content.kind === "survey" ? (
+              <Field
+                id={field("question")}
+                label="Rating question"
+                hint="Optional. Shows scores from 1 to 5 under the question. Each score opens the survey link with the score added as rating."
+              >
+                <Input
+                  id={field("question")}
+                  value={content.details.question ?? ""}
+                  maxLength={200}
+                  placeholder="How likely are you to recommend Sniptide?"
+                  aria-describedby={field("question-hint")}
+                  onChange={(event) => updateDetails({ question: event.target.value })}
+                />
+              </Field>
+            ) : null}
+            {content.kind === "update" ? null : (
+              <>
+                <Field
+                  id={field("url")}
+                  label={content.kind === "survey" ? "Survey link" : "Full guide link"}
+                  hint={
+                    content.kind === "survey"
+                      ? "An https link to the form, such as a Tally or Typeform survey."
+                      : "Optional. An https link to the full guide, shown as a button."
+                  }
+                >
+                  <Input
+                    id={field("url")}
+                    type="url"
+                    inputMode="url"
+                    value={content.details.url ?? ""}
+                    maxLength={2000}
+                    placeholder="https://"
+                    aria-describedby={field("url-hint")}
+                    onChange={(event) => updateDetails({ url: event.target.value })}
+                  />
+                </Field>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field id={field("button")} label="Button label">
+                    <Input
+                      id={field("button")}
+                      value={content.details.buttonLabel ?? ""}
+                      maxLength={40}
+                      onChange={(event) => updateDetails({ buttonLabel: event.target.value })}
+                    />
+                  </Field>
+                  {content.kind === "survey" ? (
+                    <Field id={field("minutes")} label="Minutes to answer">
+                      <Input
+                        id={field("minutes")}
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={120}
+                        value={content.details.minutes ?? ""}
+                        onChange={(event) =>
+                          updateDetails({ minutes: Number(event.target.value) || undefined })
+                        }
+                      />
+                    </Field>
+                  ) : null}
+                </div>
+              </>
+            )}
           </fieldset>
 
           {readOnly ? null : (
@@ -276,11 +422,11 @@ export function BroadcastEditor({
                   Send to subscribers
                 </AlertDialogTrigger>
                 <AlertDialogContent>
-                  <AlertDialogTitle>Send this update?</AlertDialogTitle>
+                  <AlertDialogTitle>Send this email?</AlertDialogTitle>
                   <AlertDialogDescription>
                     {subscribers === 0
-                      ? "No one has turned on product updates yet, so it reaches no one. You can't edit it afterwards."
-                      : `It goes to ${people(subscribers)} right away, and you can't edit it afterwards.`}
+                      ? `No one has turned on ${KINDS[content.kind].audience} yet, so it reaches no one. You can't edit it afterwards.`
+                      : `It goes right away to the ${people(subscribers)} who turned on ${KINDS[content.kind].audience}, and you can't edit it afterwards.`}
                   </AlertDialogDescription>
                   <AlertDialogFooter>
                     <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>

@@ -143,6 +143,9 @@ const schema = z.object({
   WELCOME_EMAIL: flag.default(true),
   RESEND_API_KEY: z.string().optional(),
   RESEND_SEGMENT_ID: z.string().optional(),
+  RESEND_TOPIC_UPDATES: z.string().optional(),
+  RESEND_TOPIC_SURVEYS: z.string().optional(),
+  RESEND_TOPIC_GUIDES: z.string().optional(),
   HOMEPAGE_URL: origin.default(DEFAULT_RESOURCE_LINKS.homepage),
   DOCS_URL: z
     .url({ message: "must be a full URL like https://docs.example.com." })
@@ -269,6 +272,15 @@ function parseConfig(env: Record<string, string | undefined>) {
     throw new Error(
       "Invalid configuration: product update emails need both RESEND_API_KEY and RESEND_SEGMENT_ID.",
     )
+  const topicIds = [
+    value.RESEND_TOPIC_UPDATES,
+    value.RESEND_TOPIC_SURVEYS,
+    value.RESEND_TOPIC_GUIDES,
+  ]
+  if (topicIds.some(Boolean) && !(topicIds.every(Boolean) && value.RESEND_SEGMENT_ID))
+    throw new Error(
+      "Invalid configuration: set RESEND_TOPIC_UPDATES, RESEND_TOPIC_SURVEYS and RESEND_TOPIC_GUIDES together, with RESEND_API_KEY and RESEND_SEGMENT_ID.",
+    )
   const smtpPresent = [
     "SMTP_HOST",
     "SMTP_PORT",
@@ -344,6 +356,16 @@ function parseConfig(env: Record<string, string | undefined>) {
         ? {
             apiKey: value.RESEND_API_KEY,
             segmentId: value.RESEND_SEGMENT_ID,
+            // With the three topics, subscribers choose the kinds of email they get. Without
+            // them, Settings offers product updates only.
+            topics:
+              value.RESEND_TOPIC_UPDATES && value.RESEND_TOPIC_SURVEYS && value.RESEND_TOPIC_GUIDES
+                ? {
+                    update: value.RESEND_TOPIC_UPDATES,
+                    survey: value.RESEND_TOPIC_SURVEYS,
+                    guide: value.RESEND_TOPIC_GUIDES,
+                  }
+                : undefined,
           }
         : undefined,
     templatesUrl: value.TEMPLATES_URL,

@@ -39,8 +39,9 @@ export interface EmailContent {
   // The sentence above the action's full URL, for links that carry a token the reader can't find
   // another way. Emails whose action is a plain page of the app leave it out.
   buttonFallback?: string
-  // Things to try next, each a linked title over one sentence, after the action.
-  steps?: (EmailLink & { body: string })[]
+  // What the product can do, after the action: a heading over groups of features, each a linked
+  // title with an icon over one sentence.
+  features?: { heading: string; groups: FeatureGroup[] }
   // Paragraphs after the action, such as what happens once the reader follows it.
   after?: Paragraph[]
   // Who should ignore the email, in muted text below the action.
@@ -50,6 +51,18 @@ export interface EmailContent {
     links?: EmailLink[]
     sender?: string
   }
+}
+
+export interface Feature extends EmailLink {
+  body: string
+  // A 20px Lucide icon (ISC license) in the link color, served by the instance as PNGs at three
+  // times the size. Clients with dark mode support swap in the lighter version.
+  icon: { light: string; dark: string }
+}
+
+export interface FeatureGroup {
+  heading: string
+  features: Feature[]
 }
 
 export interface Operator {
@@ -205,14 +218,50 @@ export function notificationEmail(
   }
 }
 
-// Sent once, when a new account starts its first session. It points to the app's editor and to the
-// MCP and CLI pages of the documentation, which is where most people go next.
+// The features the welcome email shows, in four groups of three. Each links to the page of the
+// documentation that explains it, and its icon is public/email/icons/<icon>.png.
+const WELCOME_FEATURES = {
+  share: {
+    share: "core-concepts/sharing",
+    burn: "core-concepts/burn-after-read",
+    encrypt: "core-concepts/encrypted-pastes",
+  },
+  organize: {
+    collections: "core-concepts/collections",
+    revisions: "core-concepts/revisions",
+    gists: "getting-started/import-gist",
+  },
+  build: { mcp: "mcp", cli: "cli", api: "sdks" },
+  insights: {
+    secrets: "core-concepts/secrets",
+    analytics: "core-concepts/analytics",
+    extensions: "vscode-extension",
+  },
+} as const
+
+// Sent once, when a new account starts its first session. It points to the editor, then shows
+// every main feature with a link to its documentation, which is where most people go next.
 export function welcomeEmail(input: Common & { appUrl: string; docsUrl: string }): EmailContent {
   const locale = input.locale ?? defaultLocale
   const t = translator(locale)
   const common = { ...input, locale }
   const app = (path: string) => new URL(path, input.appUrl).href
   const docs = (path: string) => new URL(path, input.docsUrl.replace(/\/?$/, "/")).href
+  const groups = Object.entries(WELCOME_FEATURES).map(([group, features]) => ({
+    heading: t(`welcome.features.${group}.heading` as Parameters<Translator>[0]),
+    features: Object.entries(features).map(([name, page]) => {
+      const key = `welcome.features.${group}.${name}`
+      return {
+        label: t(`${key}.label` as Parameters<Translator>[0]),
+        body: t(`${key}.body` as Parameters<Translator>[0]),
+        href: docs(page),
+        icon: {
+          light: app(`/email/icons/${name}.png`),
+          dark: app(`/email/icons/${name}-dark.png`),
+        },
+      }
+    }),
+  }))
   return {
     ...shared(t, common),
     buttonFallback: undefined,
@@ -221,15 +270,7 @@ export function welcomeEmail(input: Common & { appUrl: string; docsUrl: string }
     heading: t("welcome.heading"),
     body: [paragraph(t, "welcome.body", { email: input.to }), [t("welcome.next")]],
     action: { label: t("welcome.action"), href: app("/new") },
-    steps: [
-      { label: t("welcome.agent.label"), body: t("welcome.agent.body"), href: docs("mcp") },
-      { label: t("welcome.cli.label"), body: t("welcome.cli.body"), href: docs("cli") },
-      {
-        label: t("welcome.settings.label"),
-        body: t("welcome.settings.body"),
-        href: app("/settings"),
-      },
-    ],
+    features: { heading: t("welcome.features.heading"), groups },
     footer: {
       reason: t("welcome.reason", { email: input.to }),
       sender: senderLine(input.operator, locale),
