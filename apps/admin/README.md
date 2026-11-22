@@ -14,7 +14,10 @@ app adds and removes them in the Resend segment. This admin app only writes and 
   changing the password signs everyone out.
 - **Overview** shows the number of accounts, sign-ups in the last 7 and 30 days, pastes, product
   update subscribers and sent emails, and the newest accounts.
-- **Emails** lists drafts and sent emails with their kind and the number of subscribers.
+- **Emails** lists drafts and sent emails with their kind and the number of subscribers. Each
+  kind goes only to the subscribers who turned it on in Settings, through its Resend topic
+  (`RESEND_TOPIC_UPDATES`, `RESEND_TOPIC_SURVEYS` and `RESEND_TOPIC_GUIDES`, the same ids as the
+  app's).
 - **New email** asks for the kind of email, then opens its editor. Every kind has a subject,
   preview text and a Markdown body. The finished email shows beside the form as you type, and
   drafts save on their own.

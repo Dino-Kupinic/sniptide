@@ -214,8 +214,19 @@
     "app": "App",
     "appearance": "Apariencia",
     "productEmails": {
-      "label": "Novedades del producto",
-      "description": "Notas de versión y noticias sobre Sniptide. Cada correo incluye un enlace para dejar de recibirlos."
+      "update": {
+        "label": "Novedades del producto",
+        "description": "Notas de versión y novedades de Sniptide."
+      },
+      "survey": {
+        "label": "Encuestas y opiniones",
+        "description": "Encuestas breves que ayudan a decidir qué construye Sniptide a continuación."
+      },
+      "guide": {
+        "label": "Guías y consejos",
+        "description": "Tutoriales y consejos para sacar más partido a Sniptide."
+      },
+      "note": "Cada correo incluye un enlace para darte de baja o cambiar qué correos recibes."
     }
   }
 }

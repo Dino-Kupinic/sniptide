@@ -11,7 +11,10 @@ export default async function Page({ params }: PageProps<"/emails/[id]">) {
   const row = await getBroadcast(id)
   if (!row) notFound()
   const content = rowContent(row)
-  const [subscribers, html] = await Promise.all([subscriberCount(), previewHtml(content)])
+  const [subscribers, html] = await Promise.all([
+    subscriberCount(content.kind),
+    previewHtml(content),
+  ])
   return (
     <BroadcastEditor
       id={row.id}

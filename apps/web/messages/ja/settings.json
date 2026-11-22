@@ -214,8 +214,19 @@
     "app": "アプリ",
     "appearance": "外観",
     "productEmails": {
-      "label": "製品アップデート",
-      "description": "Sniptide のリリースノートとお知らせです。すべてのメールに配信停止リンクがあります。"
+      "update": {
+        "label": "製品アップデート",
+        "description": "Sniptide のリリースノートとお知らせ。"
+      },
+      "survey": {
+        "label": "アンケートとフィードバック",
+        "description": "Sniptide が次に作るものを決める短いアンケート。"
+      },
+      "guide": {
+        "label": "ガイドとヒント",
+        "description": "Sniptide をもっと活用するためのチュートリアルとヒント。"
+      },
+      "note": "すべてのメールに、配信停止や受け取るメールを変更するためのリンクがあります。"
     }
   }
 }

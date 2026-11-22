@@ -1,6 +1,6 @@
 import { render } from "@react-email/render"
 import { Action, Broadcast, Cover, MarkdownBody, type Operator, Rating } from "./email"
-import type { EmailKind } from "./kinds"
+import { type EmailKind, KINDS } from "./kinds"
 
 // The fields only some kinds use. A survey links to its form and can ask one question with a
 // one-click rating; a guide names its full version and how long it takes to read.
@@ -147,6 +147,7 @@ export function BroadcastEmail({
       subject={content.subject}
       preview={content.preview}
       {...header(content, date)}
+      audience={KINDS[content.kind].audience}
       appUrl={appUrl}
       operator={operator}
     >

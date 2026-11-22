@@ -425,8 +425,8 @@ export function BroadcastEditor({
                   <AlertDialogTitle>Send this email?</AlertDialogTitle>
                   <AlertDialogDescription>
                     {subscribers === 0
-                      ? "No one has turned on product updates yet, so it reaches no one. You can't edit it afterwards."
-                      : `It goes to ${people(subscribers)} right away, and you can't edit it afterwards.`}
+                      ? `No one has turned on ${KINDS[content.kind].audience} yet, so it reaches no one. You can't edit it afterwards.`
+                      : `It goes right away to the ${people(subscribers)} who turned on ${KINDS[content.kind].audience}, and you can't edit it afterwards.`}
                   </AlertDialogDescription>
                   <AlertDialogFooter>
                     <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>

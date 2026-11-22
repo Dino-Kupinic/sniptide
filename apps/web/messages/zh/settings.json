@@ -214,8 +214,19 @@
     "app": "应用",
     "appearance": "外观",
     "productEmails": {
-      "label": "产品更新",
-      "description": "Sniptide 的版本说明和新闻。每封邮件都附有退订链接。"
+      "update": {
+        "label": "产品更新",
+        "description": "Sniptide 的版本说明和新闻。"
+      },
+      "survey": {
+        "label": "调查与反馈",
+        "description": "帮助决定 Sniptide 下一步开发方向的简短调查。"
+      },
+      "guide": {
+        "label": "指南与技巧",
+        "description": "帮助你更好地使用 Sniptide 的教程和技巧。"
+      },
+      "note": "每封邮件都附有链接，可用于退订或更改你接收的邮件。"
     }
   }
 }

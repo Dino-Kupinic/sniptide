@@ -40,8 +40,8 @@ export function BroadcastList({
         title="Emails"
         description={
           subscribers === 0
-            ? "No one has turned on product updates yet, so emails reach no one."
-            : `Emails go to the ${people(subscribers)} who turned on product updates.`
+            ? "No one has turned on any of these emails yet."
+            : `${people(subscribers)} turned on at least one kind. Each email goes to those who chose its kind.`
         }
         actions={newEmail}
       />

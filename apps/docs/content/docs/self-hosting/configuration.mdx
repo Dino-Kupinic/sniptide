@@ -207,21 +207,32 @@ using when they turned on an email, and English before either happens.
 
 ### Product update emails
 
-An instance can also send release notes, surveys and guides to people who turn on **Product updates** in
+An instance can also send release notes, surveys and guides to people who turn them on in
 **Settings** > **Notifications**. These go through [Resend Broadcasts](https://resend.com/features/broadcasts)
 instead of SMTP, because Resend handles each reader's unsubscribe link, bounces and complaints.
-Without the two variables below, Settings doesn't show the switch and the instance never contacts
-Resend.
+Without the first two variables below, Settings doesn't show these switches and the instance never
+contacts Resend.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `RESEND_API_KEY` | unset | A Resend API key with full access. With `RESEND_SEGMENT_ID`, turns on product update emails. |
 | `RESEND_SEGMENT_ID` | unset | The Resend segment that holds the subscribers. |
+| `RESEND_TOPIC_UPDATES` | unset | The Resend topic for product updates. Set all three topics or none. |
+| `RESEND_TOPIC_SURVEYS` | unset | The Resend topic for surveys and feedback requests. |
+| `RESEND_TOPIC_GUIDES` | unset | The Resend topic for guides and tips. |
 
-Sniptide keeps the segment in step: turning the switch on subscribes the verified address, turning
-it off unsubscribes it, an email change moves it, and deleting the account deletes the contact.
-Unsubscribing through a broadcast's link is recorded in Resend only, so Settings keeps showing
-the switch as on. Send from a subdomain of
+With the three topics, Settings shows a switch for each kind of email, and each broadcast reaches
+only the people who turned its kind on. Resend's unsubscribe page lists the same topics, so a
+reader can stop one kind there and keep the others. Without the topics, Settings shows only
+**Product updates**. Create the topics in Resend with the visibility set to public. Give the
+product updates topic the default subscription opt-in, so contacts subscribed before the topics
+existed keep getting updates, and give the other two opt-out. Resend can't change a topic's default
+afterwards.
+
+Sniptide keeps the segment in step: turning a switch on subscribes the verified address and opts
+it in to that topic, turning the last one off unsubscribes it, an email change moves it, and
+deleting the account deletes the contact. Choices made on Resend's unsubscribe page are recorded in
+Resend only, so Settings keeps showing the switches as they were. Send from a subdomain of
 your own, so a complaint about a broadcast can't affect password reset and notification emails.
 
 The app only manages who is subscribed. Updates are written and sent from a separate admin app,

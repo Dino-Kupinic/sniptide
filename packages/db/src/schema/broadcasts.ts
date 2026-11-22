@@ -1,6 +1,7 @@
-// Product update emails: who opted in, and the address their contact at the email provider uses.
+// Emails to subscribers: who opted in, to which kinds, and the address their contact at the email provider uses.
 // A row exists exactly while the account wants these emails. Keeping the address lets an email
 // change or account deletion find the contact to move or remove.
+import { sql } from "drizzle-orm"
 import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import { user } from "./auth"
 
@@ -9,6 +10,10 @@ export const broadcastSubscription = pgTable("broadcast_subscription", {
     .primaryKey()
     .references(() => user.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
+  // The kinds of email the account turned on: "update", "survey" and "guide"
+  // (@workspace/email/topics). Rows from before the choice existed hold only "update", the kind
+  // their owners agreed to.
+  topics: text("topics").array().notNull().default(sql`ARRAY['update']::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 })
 

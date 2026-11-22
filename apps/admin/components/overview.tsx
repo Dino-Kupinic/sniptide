@@ -57,7 +57,7 @@ export function Overview({
             <Figure label="New in the last 7 days" value={week} />
             <Figure label="New in the last 30 days" value={month} />
             <Figure label="Pastes" value={pastes} />
-            <Figure label="Product update subscribers" value={subscribers} />
+            <Figure label="Email subscribers" value={subscribers} />
             <Figure label="Emails sent" value={sent} href="/emails" />
           </dl>
         </section>

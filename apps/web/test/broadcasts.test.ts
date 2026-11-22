@@ -7,9 +7,12 @@ import {
   followEmailChange,
   forgetAccount,
   hasProductEmails,
+  productEmailKinds,
+  productEmailTopics,
   setProductEmails,
   setResendClientForTests,
 } from "@/lib/broadcasts/subscription"
+import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
 import { hasDatabase, resetDatabase, seedUser } from "./harness"
 
@@ -87,6 +90,50 @@ describe("Resend client", () => {
     })
     expect(calls[0]?.url).toBe("https://api.resend.com/broadcasts")
   })
+
+  test("a broadcast for a topic names it, and topics update as opt-in or opt-out", async () => {
+    const { calls, fetcher } = fakeFetch()
+    const client = createResendClient(config, fetcher)
+    await client.createBroadcast({
+      name: "n",
+      from: "a@example.com",
+      subject: "s",
+      html: "<p>h</p>",
+      text: "t",
+      topicId: "top_survey",
+    })
+    expect(calls[0]?.body).toMatchObject({ segment_id: "seg_1", topic_id: "top_survey" })
+    expect(calls[0]?.body).not.toHaveProperty("topicId")
+    await client.setTopics("ada@example.com", [
+      { id: "top_update", subscribed: true },
+      { id: "top_survey", subscribed: false },
+    ])
+    expect(calls[1]).toEqual({
+      method: "PATCH",
+      url: "https://api.resend.com/contacts/ada%40example.com/topics",
+      body: [
+        { id: "top_update", subscription: "opt_in" },
+        { id: "top_survey", subscription: "opt_out" },
+      ],
+    })
+  })
+})
+
+describe("topic configuration", () => {
+  const base = { RESEND_API_KEY: "re_test", RESEND_SEGMENT_ID: "seg_1" }
+
+  test("the three topics are set together or not at all", () => {
+    expect(getConfig(base).broadcasts?.topics).toBeUndefined()
+    expect(
+      getConfig({
+        ...base,
+        RESEND_TOPIC_UPDATES: "a",
+        RESEND_TOPIC_SURVEYS: "b",
+        RESEND_TOPIC_GUIDES: "c",
+      }).broadcasts?.topics,
+    ).toEqual({ update: "a", survey: "b", guide: "c" })
+    expect(() => getConfig({ ...base, RESEND_TOPIC_UPDATES: "a" })).toThrow(/RESEND_TOPIC_SURVEYS/)
+  })
 })
 
 const describeDb = hasDatabase ? describe : describe.skip
@@ -96,10 +143,17 @@ describeDb("product update subscriptions", () => {
   let actions: string[]
   beforeEach(async () => {
     await resetDatabase()
-    original = {
-      RESEND_API_KEY: process.env.RESEND_API_KEY,
-      RESEND_SEGMENT_ID: process.env.RESEND_SEGMENT_ID,
-    }
+    original = Object.fromEntries(
+      [
+        "RESEND_API_KEY",
+        "RESEND_SEGMENT_ID",
+        "RESEND_TOPIC_UPDATES",
+        "RESEND_TOPIC_SURVEYS",
+        "RESEND_TOPIC_GUIDES",
+      ].map((key) => [key, process.env[key]]),
+    )
+    for (const key of ["RESEND_TOPIC_UPDATES", "RESEND_TOPIC_SURVEYS", "RESEND_TOPIC_GUIDES"])
+      delete process.env[key]
     process.env.RESEND_API_KEY = "re_test"
     process.env.RESEND_SEGMENT_ID = "seg_1"
     actions = []
@@ -112,6 +166,10 @@ describeDb("product update subscriptions", () => {
       },
       remove: async (email) => {
         actions.push(`remove ${email}`)
+      },
+      setTopics: async (email, topics) => {
+        const on = topics.filter((topic) => topic.subscribed).map((topic) => topic.id)
+        actions.push(`topics ${email} ${on.join(",") || "none"}`)
       },
       createBroadcast: async () => "",
       sendBroadcast: async () => {},
@@ -165,6 +223,42 @@ describeDb("product update subscriptions", () => {
       "remove ada@example.com",
       "remove ada@new.example.com",
     ])
+  })
+
+  test("with topics configured, each kind is its own switch and syncs to Resend", async () => {
+    process.env.RESEND_TOPIC_UPDATES = "top_update"
+    process.env.RESEND_TOPIC_SURVEYS = "top_survey"
+    process.env.RESEND_TOPIC_GUIDES = "top_guide"
+    expect(productEmailKinds()).toEqual(["update", "survey", "guide"])
+    await seedUser("ada")
+    await verify("ada")
+    expect(await setProductEmails("ada", true, "survey")).toEqual({ ok: true })
+    expect(await setProductEmails("ada", true, "guide")).toEqual({ ok: true })
+    expect(await productEmailTopics("ada")).toEqual(["survey", "guide"])
+    expect(await setProductEmails("ada", false, "survey")).toEqual({ ok: true })
+    expect(await productEmailTopics("ada")).toEqual(["guide"])
+    // Turning off the last kind unsubscribes the contact.
+    expect(await setProductEmails("ada", false, "guide")).toEqual({ ok: true })
+    expect(await hasProductEmails("ada")).toBe(false)
+    expect(actions).toEqual([
+      "subscribe ada@example.com",
+      "topics ada@example.com top_survey",
+      "subscribe ada@example.com",
+      "topics ada@example.com top_survey,top_guide",
+      "subscribe ada@example.com",
+      "topics ada@example.com top_guide",
+      "unsubscribe ada@example.com",
+    ])
+  })
+
+  test("without topics only product updates are offered", async () => {
+    expect(productEmailKinds()).toEqual(["update"])
+    await seedUser("ada")
+    await verify("ada")
+    expect(await setProductEmails("ada", true, "survey")).toMatchObject({ ok: false })
+    expect(await setProductEmails("ada", true)).toEqual({ ok: true })
+    expect(await productEmailTopics("ada")).toEqual(["update"])
+    expect(actions).toEqual(["subscribe ada@example.com"])
   })
 
   test("a failed Resend call leaves the switch where it was", async () => {

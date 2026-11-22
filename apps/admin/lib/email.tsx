@@ -38,6 +38,7 @@ export function Broadcast({
   title,
   meta,
   browserUrl,
+  audience = "product updates",
   appUrl,
   operator,
   children,
@@ -49,6 +50,8 @@ export function Broadcast({
   meta?: string
   // A public copy of the same update, such as a changelog entry, linked as "View in browser".
   browserUrl?: string
+  // The kind of email the reader turned on, as the footer names it, such as "guides and tips".
+  audience?: string
   children: ReactNode
 }) {
   return (
@@ -101,7 +104,7 @@ export function Broadcast({
         {children}
       </Padded>
       <EmailFooter
-        reason="You get this email because you turned on product updates in your Sniptide settings."
+        reason={`You get this email because you turned on ${audience} in your Sniptide settings.`}
         links={[
           ...(appUrl
             ? [

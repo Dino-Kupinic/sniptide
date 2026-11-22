@@ -216,6 +216,9 @@ describe("configuration", () => {
     RESEND_SEGMENT_ID: "seg_1",
     BROADCAST_FROM: "Sniptide <updates@example.com>",
     BROADCAST_TEST_TO: "me@example.com",
+    RESEND_TOPIC_UPDATES: "top_update",
+    RESEND_TOPIC_SURVEYS: "top_survey",
+    RESEND_TOPIC_GUIDES: "top_guide",
   }
 
   test("reads the operator's sender line only when a name is set", () => {
@@ -229,6 +232,7 @@ describe("configuration", () => {
   test("refuses a short password and missing Resend settings", () => {
     expect(() => getConfig({ ...base, ADMIN_PASSWORD: "short" })).toThrow(/ADMIN_PASSWORD/)
     expect(() => getConfig({ ...base, RESEND_SEGMENT_ID: "" })).toThrow(/RESEND_SEGMENT_ID/)
+    expect(() => getConfig({ ...base, RESEND_TOPIC_SURVEYS: "" })).toThrow(/RESEND_TOPIC_SURVEYS/)
   })
 })
 
@@ -263,6 +267,9 @@ describeDb("writing and sending emails", () => {
     "ADMIN_PASSWORD",
     "OPERATOR_NAME",
     "OPERATOR_ADDRESS",
+    "RESEND_TOPIC_UPDATES",
+    "RESEND_TOPIC_SURVEYS",
+    "RESEND_TOPIC_GUIDES",
   ] as const
   let original: Record<string, string | undefined>
   let actions: string[]
@@ -277,6 +284,9 @@ describeDb("writing and sending emails", () => {
     ADMIN_PASSWORD: "a-long-operator-password",
     OPERATOR_NAME: "Example GmbH",
     OPERATOR_ADDRESS: "Ring 1",
+    RESEND_TOPIC_UPDATES: "top_update",
+    RESEND_TOPIC_SURVEYS: "top_survey",
+    RESEND_TOPIC_GUIDES: "top_guide",
   }
 
   beforeAll(async () => {
@@ -294,8 +304,9 @@ describeDb("writing and sending emails", () => {
       subscribe: async () => {},
       unsubscribe: async () => {},
       remove: async () => {},
+      setTopics: async () => {},
       createBroadcast: async (input) => {
-        actions.push(`create ${input.subject}`)
+        actions.push(`create ${input.subject} to ${input.topicId}`)
         return "bc_9"
       },
       sendBroadcast: async (id) => {
@@ -347,7 +358,7 @@ describeDb("writing and sending emails", () => {
     const results = await Promise.all([sendToSubscribers(id), sendToSubscribers(id)])
     expect(results).toContainEqual({ ok: true })
     expect(results).toContainEqual({ ok: false, error: "alreadySent" })
-    expect(actions).toEqual(["create November", "send bc_9"])
+    expect(actions).toEqual(["create November to top_update", "send bc_9"])
     const row = await getBroadcast(id)
     expect(row?.sentAt).toBeInstanceOf(Date)
     expect(row?.providerId).toBe("bc_9")
@@ -385,6 +396,38 @@ describeDb("writing and sending emails", () => {
     expect(await sendTest(id)).toEqual({ ok: false, error: "noUrl" })
     await saveDraft(id, { details: { url: "https://tally.so/r/abc" } })
     expect(await sendTest(id)).toEqual({ ok: true })
+  })
+
+  test("each kind goes to its own topic and counts only the people who chose it", async () => {
+    await getDb()
+      .insert(user)
+      .values([
+        { id: "reader", name: "Reader", email: "reader@example.com" },
+        { id: "reader-2", name: "Reader", email: "reader-2@example.com" },
+      ])
+    await getDb()
+      .insert(broadcastSubscription)
+      .values([
+        { userId: "reader", email: "reader@example.com", topics: ["update", "guide"] },
+        { userId: "reader-2", email: "reader-2@example.com", topics: ["update"] },
+      ])
+    const id = await createDraft("guide")
+    await saveDraft(id, { subject: "Env groups", body: "Push them." })
+    expect(await sendToSubscribers(id)).toEqual({ ok: true })
+    expect(actions).toEqual(["create Env groups to top_guide", "send bc_9"])
+    expect((await getBroadcast(id))?.recipients).toBe(1)
+    await getDb().delete(user).where(eq(user.id, "reader-2"))
+  })
+
+  test("the footer names the kind the reader turned on", async () => {
+    const id = await createDraft("survey")
+    const row = await getBroadcast(id)
+    const { html } = await renderBroadcastEmail({
+      content: { ...(row ? rowContent(row) : ({} as BroadcastContent)), subject: "s", body: "b" },
+      date: new Date(),
+      appUrl: "https://app.example.com",
+    })
+    expect(html).toContain("you turned on surveys and feedback in your Sniptide settings")
   })
 
   test("an email won't go out without a named sender", async () => {

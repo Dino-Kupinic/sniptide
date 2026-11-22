@@ -3,7 +3,7 @@ import "server-only"
 import { randomUUID } from "node:crypto"
 import { broadcast, broadcastSubscription } from "@workspace/db/schema"
 import { createResendClient, type ResendClient } from "@workspace/email/resend"
-import { and, count, desc, eq, isNull } from "drizzle-orm"
+import { and, arrayContains, count, desc, eq, isNull } from "drizzle-orm"
 import {
   type BroadcastContent,
   type EmailDetails,
@@ -58,8 +58,12 @@ export async function getBroadcast(id: string) {
   return row
 }
 
-export async function subscriberCount() {
-  const [row] = await getDb().select({ value: count() }).from(broadcastSubscription)
+// Everyone subscribed to any kind, or only those who turned on one kind.
+export async function subscriberCount(kind?: EmailKind) {
+  const [row] = await getDb()
+    .select({ value: count() })
+    .from(broadcastSubscription)
+    .where(kind ? arrayContains(broadcastSubscription.topics, [kind]) : undefined)
   return row?.value ?? 0
 }
 
@@ -193,14 +197,17 @@ export async function sendToSubscribers(id: string): Promise<BroadcastResult> {
     .where(and(eq(broadcast.id, id), isNull(broadcast.sentAt)))
     .returning()
   if (!claimed) return { ok: false, error: "alreadySent" }
-  const recipients = await subscriberCount()
+  const content = rowContent(claimed)
+  const recipients = await subscriberCount(content.kind)
   let providerId: string
   try {
-    const email = await renderBroadcastEmail({
-      content: rowContent(claimed),
-      ...emailOptions(sentAt),
+    const email = await renderBroadcastEmail({ content, ...emailOptions(sentAt) })
+    providerId = await resend.createBroadcast({
+      name: claimed.subject,
+      from,
+      topicId: config.topics[content.kind],
+      ...email,
     })
-    providerId = await resend.createBroadcast({ name: claimed.subject, from, ...email })
     await resend.sendBroadcast(providerId)
   } catch (error) {
     console.error("Broadcast failed", error)

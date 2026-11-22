@@ -1,5 +1,5 @@
 // A small client for the parts of the Resend API that product update emails use: contacts in one
-// segment, broadcasts to that segment, and single test emails. The app uses the contact calls to
+// segment and their topics, broadcasts to that segment, and single test emails. The app uses the contact calls to
 // keep subscribers in step, and the admin app uses the broadcast calls to send. Plain fetch keeps
 // the SDK out of self-hosted builds, which never call it.
 
@@ -23,12 +23,16 @@ export interface ResendClient {
   unsubscribe(email: string): Promise<void>
   // Deletes the contact, for a deleted account or an address that is no longer the account's.
   remove(email: string): Promise<void>
+  // Opts the contact in to or out of each topic, which decides the kinds of email it gets.
+  setTopics(email: string, topics: { id: string; subscribed: boolean }[]): Promise<void>
   createBroadcast(input: {
     name: string
     from: string
     subject: string
     html: string
     text: string
+    // Sends only to contacts in the segment that opted in to this topic.
+    topicId?: string
   }): Promise<string>
   sendBroadcast(id: string, scheduledAt?: string): Promise<void>
   sendEmail(input: {
@@ -89,8 +93,22 @@ export function createResendClient(
     async remove(email) {
       await call("DELETE", contact(email)).catch(ignoreMissing)
     },
-    async createBroadcast(input) {
-      const created = await call("POST", "/broadcasts", { ...input, segment_id: segmentId })
+    async setTopics(email, topics) {
+      await call(
+        "PATCH",
+        `${contact(email)}/topics`,
+        topics.map((topic) => ({
+          id: topic.id,
+          subscription: topic.subscribed ? "opt_in" : "opt_out",
+        })),
+      )
+    },
+    async createBroadcast({ topicId, ...input }) {
+      const created = await call("POST", "/broadcasts", {
+        ...input,
+        segment_id: segmentId,
+        ...(topicId ? { topic_id: topicId } : {}),
+      })
       if (typeof created.id !== "string") throw new Error("Resend returned no broadcast id")
       return created.id
     },

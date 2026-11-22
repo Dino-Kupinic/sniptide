@@ -2,6 +2,7 @@
 
 import { isValidUsername, USERNAME_PATTERN } from "@workspace/auth/username"
 import { user } from "@workspace/db/schema"
+import { type EmailTopic, isEmailTopic } from "@workspace/email/topics"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
@@ -185,11 +186,15 @@ export async function sendNotificationVerificationEmail(): Promise<Result> {
   }
 }
 
-export async function updateProductEmails(enabled: boolean): Promise<Result> {
+export async function updateProductEmails(
+  enabled: boolean,
+  topic: EmailTopic = "update",
+): Promise<Result> {
   const session = await getSession()
   if (!session) return { ok: false, error: "Sign in again to change settings." }
-  if (typeof enabled !== "boolean") return { ok: false, error: "Check your notification settings." }
-  const result = await setProductEmails(session.user.id, enabled)
+  if (typeof enabled !== "boolean" || !isEmailTopic(topic))
+    return { ok: false, error: "Check your notification settings." }
+  const result = await setProductEmails(session.user.id, enabled, topic)
   if (result.ok) revalidatePath("/settings")
   return result
 }
