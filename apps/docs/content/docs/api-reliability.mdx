@@ -41,10 +41,11 @@ IP](/self-hosting/reverse-proxy)) skips this limit and sends no quota headers on
 
 Without a key, retrying a create after a timeout can create a second resource.
 `POST /api/v1/pastes` and `POST /api/v1/collections` accept an optional `Idempotency-Key` header
-that prevents this. Replace `https://paste.example.com` with your instance address.
+that prevents this. For a self-hosted instance,
+replace `https://app.sniptide.com` with your instance address.
 
 ```bash
-curl -X POST https://paste.example.com/api/v1/pastes \
+curl -X POST https://app.sniptide.com/api/v1/pastes \
   -H "Authorization: Bearer $SNIPTIDE_TOKEN" \
   -H "Idempotency-Key: 8f14e45f-ceea-467f-a8f5-1b2c3d4e5f60" \
   -H "Content-Type: application/json" \

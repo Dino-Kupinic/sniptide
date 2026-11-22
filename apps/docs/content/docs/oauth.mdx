@@ -12,15 +12,16 @@ using a personal [API token](/api-tokens).
 
 ## Connect a client
 
-For Sniptide Cloud, use `https://app.sniptide.com`. For a self-hosted instance, use its address
-in place of `https://paste.example.com`. Add the server in your client, then review and allow
-access in the browser tab that opens.
+The examples use Sniptide Cloud at `https://app.sniptide.com`. For a self-hosted instance, put
+its address in place of `https://app.sniptide.com`, as the
+[MCP server setup](/mcp#connect-an-agent) shows. Add the server in your client, then review and
+allow access in the browser tab that opens.
 
 <Tabs items={["Claude Code", "Codex", "Cursor", "Grok Bot", "Other clients"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 ```bash
-claude mcp add --transport http sniptide https://paste.example.com/api/mcp
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
 This command only adds the server, so no browser opens yet. Start Claude Code, type `/mcp`, choose
@@ -30,26 +31,26 @@ This command only adds the server, so no browser opens yet. Start Claude Code, t
 <Tab value="Codex">
 
 ```bash
-codex mcp add sniptide --url https://paste.example.com/api/mcp
+codex mcp add sniptide --url https://app.sniptide.com/api/mcp
 ```
 
 </Tab>
 <Tab value="Cursor">
 
-Add a remote MCP server with the URL `https://paste.example.com/api/mcp` and no headers. The
+Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no headers. The
 welcome setup in the app also offers an **Add to Cursor** button that fills this in.
 
 </Tab>
 <Tab value="Grok Bot">
 
 Open [grok.com/connectors](https://grok.com/connectors), select **New Connector**, choose
-**Custom** and enter `https://paste.example.com/api/mcp`. The instance must be reachable at a
-public `https` address, because Grok connects from xAI's servers.
+**Custom** and enter `https://app.sniptide.com/api/mcp`. A self-hosted instance must be reachable
+at a public `https` address, because Grok connects from xAI's servers.
 
 </Tab>
 <Tab value="Other clients">
 
-Add `https://paste.example.com/api/mcp` as a remote MCP server using Streamable HTTP, without an
+Add `https://app.sniptide.com/api/mcp` as a remote MCP server using Streamable HTTP, without an
 `Authorization` header. The client must support MCP authorization with OAuth.
 
 </Tab>
@@ -91,7 +92,7 @@ The first request without a token gets a `401` with a header that points the cli
 resource metadata:
 
 ```http
-WWW-Authenticate: Bearer resource_metadata="https://paste.example.com/.well-known/oauth-protected-resource/api/mcp"
+WWW-Authenticate: Bearer resource_metadata="https://app.sniptide.com/.well-known/oauth-protected-resource/api/mcp"
 ```
 
 The client reads that metadata, registers itself, sends you to the consent screen, and exchanges

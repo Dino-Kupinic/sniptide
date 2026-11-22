@@ -11,15 +11,15 @@ Sniptide instance at `/api/mcp`.
 
 ## Connect an agent
 
-Use `https://app.sniptide.com/api/mcp` for Sniptide Cloud. For a self-hosted instance, append
-`/api/mcp` to the address you use to open Sniptide. The examples below use `paste.example.com`.
-When your client opens the consent page, review the access it requests and approve the connection.
+Sniptide Cloud serves the MCP server at `https://app.sniptide.com/api/mcp`, and the commands
+below use that address. Pick **Self-hosted** if you run your own instance. When your client opens
+the consent page, review the access it requests and approve the connection.
 
-<Tabs items={["Claude Code", "Codex", "Cursor", "Grok Bot"]} groupId="agent" persist>
+<Tabs items={["Claude Code", "Codex", "Cursor", "Grok Bot", "Self-hosted"]} groupId="agent" persist>
 <Tab value="Claude Code">
 
 ```bash
-claude mcp add --transport http sniptide https://paste.example.com/api/mcp
+claude mcp add --transport http sniptide https://app.sniptide.com/api/mcp
 ```
 
 Then start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**. Adding the server
@@ -29,13 +29,13 @@ doesn't open the browser on its own.
 <Tab value="Codex">
 
 ```bash
-codex mcp add sniptide --url https://paste.example.com/api/mcp
+codex mcp add sniptide --url https://app.sniptide.com/api/mcp
 ```
 
 </Tab>
 <Tab value="Cursor">
 
-Add a remote MCP server with the URL `https://paste.example.com/api/mcp` and no headers, or use
+Add a remote MCP server with the URL `https://app.sniptide.com/api/mcp` and no headers, or use
 **Add to Cursor** in the app's welcome setup or on the dashboard.
 
 </Tab>
@@ -43,18 +43,32 @@ Add a remote MCP server with the URL `https://paste.example.com/api/mcp` and no 
 
 Grok Bot uses the connectors you add in Grok. Open
 [grok.com/connectors](https://grok.com/connectors), select **New Connector**, choose **Custom**
-and enter `https://paste.example.com/api/mcp` as the server URL. Grok then opens the Sniptide
+and enter `https://app.sniptide.com/api/mcp` as the server URL. Grok then opens the Sniptide
 consent screen. On a Grok Business or Enterprise team, an admin adds the same URL in the
 xAI console under **Grok Business** > **Connectors** > **Add Connector** > **Other**.
 
-Grok connects from xAI’s servers and needs a public HTTPS address. Grok rejects `localhost` and
-private network addresses.
+</Tab>
+<Tab value="Self-hosted">
+
+Append `/api/mcp` to the address you use to open your instance. Your dashboard shows each
+command with that address filled in. For an instance at `paste.example.com`, Claude Code and Codex
+connect with these commands, and Cursor and Grok take the same URL:
+
+```bash
+claude mcp add --transport http sniptide https://paste.example.com/api/mcp
+```
+
+```bash
+codex mcp add sniptide --url https://paste.example.com/api/mcp
+```
+
+Grok connects from xAI’s servers, so your instance needs a public HTTPS address. Grok rejects
+`localhost` and private network addresses.
 
 </Tab>
 </Tabs>
 
-The dashboard shows the same commands with your instance's address filled in, until an agent
-connects. After that it lists each connected agent and when it last called Sniptide, to the
+The dashboard shows the same commands until an agent connects. After that it lists each connected agent and when it last called Sniptide, to the
 minute. Select **Connect another agent** below the list to see the setup again, and
 **Manage in Settings** to revoke one. The setup lives in the dashboard's Agents
 widget, and the close button removes that widget from your
@@ -81,7 +95,7 @@ which expands `${SNIPTIDE_TOKEN}`:
   "mcpServers": {
     "sniptide": {
       "type": "http",
-      "url": "https://paste.example.com/api/mcp",
+      "url": "https://app.sniptide.com/api/mcp",
       "headers": { "Authorization": "Bearer ${SNIPTIDE_TOKEN}" }
     }
   }
@@ -98,7 +112,7 @@ ignores, and replace the placeholder with your token:
 {
   "mcpServers": {
     "sniptide": {
-      "url": "https://paste.example.com/api/mcp",
+      "url": "https://app.sniptide.com/api/mcp",
       "headers": { "Authorization": "Bearer YOUR_PERSONAL_API_TOKEN" }
     }
   }
@@ -108,7 +122,8 @@ ignores, and replace the placeholder with your token:
 </Tab>
 </Tabs>
 
-Keep real tokens out of source control. Connect with **Streamable HTTP**, not the older SSE
+On a self-hosted instance, set `url` to your instance's address followed by `/api/mcp`. Keep
+real tokens out of source control. Connect with **Streamable HTTP**, not the older SSE
 transport. Every request is authenticated again, so revoking a token or a connection cuts off
 access at once.
 
@@ -126,16 +141,16 @@ token.
       "command": "npx",
       "args": ["--yes", "@sniptide/mcp"],
       "env": {
-        "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}",
-        "SNIPTIDE_BASE_URL": "https://paste.example.com"
+        "SNIPTIDE_TOKEN": "${SNIPTIDE_TOKEN}"
       }
     }
   }
 }
 ```
 
-Cursor uses the same `command`, `args` and `env` fields without `type`. Keep the token in
-private configuration. The local server reads only `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`, not
+The server calls Sniptide Cloud by default. For a self-hosted instance, add `SNIPTIDE_BASE_URL`
+to `env` with your instance's address, such as `https://paste.example.com`. Cursor uses the same
+`command`, `args` and `env` fields without `type`. Keep the token in private configuration. The local server reads only `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`, not
 the CLI's saved credentials. It requires HTTPS except on `localhost` and refuses redirects.
 
 Contributors can build it from a checkout with `bun install && bun --filter @sniptide/mcp build`,

@@ -19,8 +19,9 @@ loads the page.
 ## Authenticate
 
 Create a token in **Settings** > **API tokens** with the access your code needs (see
-[API tokens](/api-tokens)), put it in your server's environment, and pass it with your instance address. Replace
-`https://paste.example.com` below with that address.
+[API tokens](/api-tokens)), put it in your server's environment, and pass it to the client. The client calls Sniptide Cloud
+by default. For a self-hosted instance, pass its address as the second argument, such as
+`new SniptideClient(token, "https://paste.example.com")`.
 
 ```ts
 import { SniptideClient } from "@sniptide/sdk"
@@ -28,7 +29,7 @@ import { SniptideClient } from "@sniptide/sdk"
 const token = process.env.SNIPTIDE_TOKEN
 if (!token) throw new Error("Set SNIPTIDE_TOKEN in the server environment.")
 
-const client = new SniptideClient(token, "https://paste.example.com")
+const client = new SniptideClient(token)
 const { user, scopes } = await client.me()
 ```
 
@@ -165,7 +166,7 @@ The third argument replaces `fetch`, which helps in tests or behind a proxy. The
 largest response the client accepts, in bytes, and defaults to 64 MiB.
 
 ```ts
-const client = new SniptideClient(token, "https://paste.example.com", mockFetch, 8 * 1024 * 1024)
+const client = new SniptideClient(token, "https://app.sniptide.com", mockFetch, 8 * 1024 * 1024)
 ```
 
 ## Handle errors
