@@ -41,15 +41,15 @@ instance, set `--base-url` or `SNIPTIDE_BASE_URL` to its address.
 <Tabs items={["Save the token", "Environment variables"]}>
 <Tab value="Save the token">
 
-Pipe the token to `login` to keep it out of the process list. Set `--base-url` to the address
-you use to open Sniptide.
+Pipe the token to `login` to keep it out of the process list. On a self-hosted instance, add
+`--base-url` with the address you use to open Sniptide, such as `https://paste.example.com`.
 
 ```bash
-printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin --base-url https://paste.example.com
+printf '%s' "$SNIPTIDE_TOKEN" | sniptide login --token-stdin
 ```
 
 ```text
-Logged in to https://paste.example.com.
+Logged in to https://app.sniptide.com.
 ```
 
 `login` checks the token with the instance before it saves it to
@@ -62,8 +62,9 @@ address it was saved for. `sniptide logout` removes it.
 
 ```bash
 export SNIPTIDE_TOKEN='snpt_…'
-export SNIPTIDE_BASE_URL='https://paste.example.com'
 ```
+
+On a self-hosted instance, also export `SNIPTIDE_BASE_URL` with its address.
 
 </Tab>
 </Tabs>

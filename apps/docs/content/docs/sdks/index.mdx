@@ -15,11 +15,10 @@ cover the same operations, so pick the one that matches your runtime.
 ## Quick start
 
 Create a token in **Settings** > **API tokens** (see [API tokens](/api-tokens)) and export it as
-`SNIPTIDE_TOKEN`. Replace `https://paste.example.com` with your instance address, then call
-`me` to check your account and token scopes.
+`SNIPTIDE_TOKEN`, then call `me` to check your account and token scopes.
 
-The SDKs default to `https://app.sniptide.com` for Sniptide Cloud. You can omit the base URL
-when you use a Cloud token.
+The SDKs call Sniptide Cloud at `https://app.sniptide.com` by default. For a self-hosted
+instance, pass its address as the base URL, such as `https://paste.example.com`.
 
 <Tabs items={["TypeScript", "Python"]} groupId="sdk-language" persist>
 <Tab value="TypeScript">
@@ -31,7 +30,7 @@ npm install @sniptide/sdk
 ```ts
 import { SniptideClient } from "@sniptide/sdk"
 
-const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
+const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!)
 const { user, scopes } = await client.me()
 console.log(user.name, scopes)
 ```
@@ -47,7 +46,7 @@ python -m pip install sniptide
 import os
 from sniptide import SniptideClient
 
-client = SniptideClient(os.environ["SNIPTIDE_TOKEN"], base_url="https://paste.example.com")
+client = SniptideClient(os.environ["SNIPTIDE_TOKEN"])
 account = client.me()
 print(account["user"]["name"], account["scopes"])
 ```
