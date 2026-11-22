@@ -32,6 +32,7 @@
     "@sniptide/ui": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/email": "workspace:*",
     "better-auth": "catalog:runtime",
     "drizzle-orm": "catalog:runtime",
     "flag-icons": "catalog:ui",

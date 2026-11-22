@@ -2,7 +2,6 @@
 
 import { Button } from "@sniptide/ui/components/button"
 import { Switch } from "@sniptide/ui/components/switch"
-import Link from "next/link"
 import { useTranslations } from "next-intl"
 import * as React from "react"
 import { NOTIFICATION_KINDS, type NotificationKind } from "@/lib/notifications/types"
@@ -23,7 +22,7 @@ export function NotificationSection({
   initial: NotificationPreferences
   emailAvailable: boolean
   emailVerified: boolean
-  productEmails: { available: boolean; enabled: boolean; canWrite: boolean }
+  productEmails: { available: boolean; enabled: boolean }
 }) {
   const t = useTranslations("Settings")
   const [preferences, setPreferences] = React.useState(initial)
@@ -165,23 +164,6 @@ export function NotificationSection({
               onCheckedChange={(enabled) => void changeUpdates(enabled)}
             />
           </div>
-        </div>
-      ) : null}
-      {productEmails.canWrite ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-4 sm:px-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-sm font-medium">{t("productEmails.writeLabel")}</span>
-            <span className="text-[13px] leading-[18px] text-muted-foreground">
-              {t("productEmails.writeDescription")}
-            </span>
-          </div>
-          <Button
-            variant="outline"
-            render={<Link href="/settings/product-updates" />}
-            nativeButton={false}
-          >
-            {t("productEmails.writeAction")}
-          </Button>
         </div>
       ) : null}
       <SaveStatus status={status} />

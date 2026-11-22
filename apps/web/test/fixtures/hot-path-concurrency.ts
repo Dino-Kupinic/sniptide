@@ -214,7 +214,7 @@ if (scenario === "hydrate") {
   }))
   mock.module("@/lib/config", () => ({ getConfig: () => ({}) }))
   mock.module("next-intl/server", () => ({ getTranslations: async () => () => "translated" }))
-  const { default: Page } = await import("../../app/(app)/(private)/settings/(index)/page")
+  const { default: Page } = await import("../../app/(app)/(private)/settings/page")
   const pending = Page({ searchParams: Promise.resolve({}), params: Promise.resolve({}) })
   await tick()
   assert(started.has("tokens"))

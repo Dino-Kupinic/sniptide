@@ -215,8 +215,6 @@ Resend.
 | --- | --- | --- |
 | `RESEND_API_KEY` | unset | A Resend API key with full access. With `RESEND_SEGMENT_ID`, turns on product update emails. |
 | `RESEND_SEGMENT_ID` | unset | The Resend segment that holds the subscribers. |
-| `BROADCAST_FROM` | unset | The sender of broadcasts, such as `Sniptide <updates@news.example.com>`. |
-| `BROADCAST_SENDERS` | unset | Comma-separated email addresses of the accounts that may write and send product updates. Needs `RESEND_API_KEY`, `RESEND_SEGMENT_ID` and `BROADCAST_FROM`. |
 
 Sniptide keeps the segment in step: turning the switch on subscribes the verified address, turning
 it off unsubscribes it, an email change moves it, and deleting the account deletes the contact.
@@ -224,17 +222,10 @@ Unsubscribing through a broadcast's link is recorded in Resend only, so Settings
 the switch as on. Send from a subdomain of
 your own, so a complaint about a broadcast can't affect password reset and notification emails.
 
-An account listed in `BROADCAST_SENDERS` with a verified address sees **Write update** in
-**Settings** > **Notifications**, which opens **Product updates**. There it writes each update in
-Markdown, with a subject, a preview line, a cover label and an optional screenshot link, and sees
-the finished email beside the form as it types. Drafts save on their own. **Send test to me**
-sends one copy to the writer's address, and **Send to subscribers** asks for confirmation and then
-sends the update to the whole segment at once. A sent update stays in the list as a record and can
-no longer change, and sending the same update twice is refused.
-
-A screenshot link must use https and point to an image at least 700px wide. Sending to subscribers
-also needs `OPERATOR_NAME` and `OPERATOR_ADDRESS`, because the email names its sender, and
-`BETTER_AUTH_URL` for the logo and links. Updates are written and sent in one language.
+The app only manages who is subscribed. Updates are written and sent from a separate admin app,
+`apps/admin` in the repository, which isn't part of the Docker image. Its
+[README](https://github.com/Dino-Kupinic/sniptide/tree/main/apps/admin) explains how to run it
+against the same database and Resend segment.
 
 ### Email delivery
 

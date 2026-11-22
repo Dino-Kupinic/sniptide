@@ -215,57 +215,7 @@
     "appearance": "外観",
     "productEmails": {
       "label": "製品アップデート",
-      "description": "Sniptide のリリースノートとお知らせです。すべてのメールに配信停止リンクがあります。",
-      "writeLabel": "製品アップデートを書く",
-      "writeDescription": "リリースノートやお知らせを書き、自分宛てにテストしてから購読者に送信します。",
-      "writeAction": "アップデートを書く"
-    }
-  },
-  "Broadcasts": {
-    "title": "製品アップデート",
-    "description": "{count, plural, =0 {まだ誰も製品アップデートをオンにしていません。} other {#人がこのメールを受け取ります。}}",
-    "newUpdate": "新しいアップデート",
-    "empty": "まだ製品アップデートを書いていません。",
-    "untitled": "無題のアップデート",
-    "draft": "下書き、{time}に編集",
-    "sentTo": "{count, plural, other {{date}に#人へ送信}}",
-    "sentOn": "{date}に送信",
-    "subject": "件名",
-    "preview": "プレビューテキスト",
-    "previewHint": "受信トレイで件名の横に表示されます。",
-    "label": "カバーのラベル",
-    "image": "スクリーンショットのリンク",
-    "imageHint": "幅700px以上の画像へのhttpsリンクです。空欄にするとスクリーンショットなしのカバーになります。",
-    "body": "アップデート",
-    "bodyHint": "Markdownで書きます。見出しは ##、リスト項目は -、リンクは [テキスト](https://example.com) です。",
-    "saving": "保存中…",
-    "saved": "保存しました",
-    "saveFailed": "保存できませんでした。変更はこのページに残っているので、もう一度お試しください。",
-    "previewTitle": "メールのプレビュー",
-    "sendTest": "自分にテスト送信",
-    "testSent": "{email}にテストを送信しました",
-    "send": "購読者に送信",
-    "confirmTitle": "このアップデートを送信しますか？",
-    "confirmBody": "{count, plural, =0 {まだ誰も製品アップデートをオンにしていないため、誰にも届きません。送信後は編集できません。} other {すぐに#人へ送信され、送信後は編集できません。}}",
-    "confirmSend": "今すぐ送信",
-    "cancel": "キャンセル",
-    "sentToast": "アップデートを送信しました",
-    "sentNotice": "{count, plural, other {{date}に#人へ送信しました。}}",
-    "sentNoticeNoCount": "{date}に送信しました。",
-    "delete": "下書きを削除",
-    "deleteTitle": "この下書きを削除しますか？",
-    "deleteBody": "下書きは完全に削除されます。",
-    "deleted": "下書きを削除しました",
-    "errors": {
-      "notFound": "このアップデートはもう存在しません。",
-      "alreadySent": "このアップデートは送信済みのため、変更できません。",
-      "noSubject": "送信する前に件名を入力してください。",
-      "noBody": "送信する前にアップデートを書いてください。",
-      "noFrom": "製品アップデートを送信するには、サーバーで BROADCAST_FROM を設定してください。",
-      "noOperator": "メールに送信者を記載するため、サーバーで OPERATOR_NAME と OPERATOR_ADDRESS を設定してください。",
-      "testFailed": "テストメールを送信できませんでした。1分後にもう一度お試しください。",
-      "sendFailed": "アップデートを送信できませんでした。何も送信されていないので、1分後にもう一度お試しください。",
-      "forbidden": "このアカウントでは製品アップデートを送信できません。"
+      "description": "Sniptide のリリースノートとお知らせです。すべてのメールに配信停止リンクがあります。"
     }
   }
 }

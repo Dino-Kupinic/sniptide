@@ -55,7 +55,7 @@ const nextConfig: NextConfig = {
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },
   poweredByHeader: false,
-  transpilePackages: ["@workspace/auth", "@workspace/db", "@sniptide/ui"],
+  transpilePackages: ["@workspace/auth", "@workspace/db", "@workspace/email", "@sniptide/ui"],
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

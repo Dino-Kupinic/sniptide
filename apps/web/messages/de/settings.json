@@ -215,57 +215,7 @@
     "appearance": "Darstellung",
     "productEmails": {
       "label": "Produkt-Updates",
-      "description": "Release Notes und Neuigkeiten zu Sniptide. Jede E-Mail enthält einen Link zum Abbestellen.",
-      "writeLabel": "Produkt-Update schreiben",
-      "writeDescription": "Schreib Release Notes und News, teste sie an dir selbst und sende sie an Abonnenten.",
-      "writeAction": "Update schreiben"
-    }
-  },
-  "Broadcasts": {
-    "title": "Produkt-Updates",
-    "description": "{count, plural, =0 {Noch niemand hat Produkt-Updates aktiviert.} one {# Person bekommt diese E-Mails.} other {# Personen bekommen diese E-Mails.}}",
-    "newUpdate": "Neues Update",
-    "empty": "Du hast noch kein Produkt-Update geschrieben.",
-    "untitled": "Update ohne Titel",
-    "draft": "Entwurf, bearbeitet {time}",
-    "sentTo": "{count, plural, one {Gesendet am {date} an # Person} other {Gesendet am {date} an # Personen}}",
-    "sentOn": "Gesendet am {date}",
-    "subject": "Betreff",
-    "preview": "Vorschautext",
-    "previewHint": "Steht im Posteingang neben dem Betreff.",
-    "label": "Cover-Beschriftung",
-    "image": "Screenshot-Link",
-    "imageHint": "Ein https-Link zu einem Bild mit mindestens 700 px Breite. Leer lassen für ein Cover ohne Screenshot.",
-    "body": "Update",
-    "bodyHint": "Schreib in Markdown: ## für eine Überschrift, - für einen Listenpunkt und [Text](https://example.com) für einen Link.",
-    "saving": "Wird gespeichert…",
-    "saved": "Gespeichert",
-    "saveFailed": "Speichern fehlgeschlagen. Deine Änderungen bleiben auf dieser Seite, versuch es noch einmal.",
-    "previewTitle": "E-Mail-Vorschau",
-    "sendTest": "Test an mich senden",
-    "testSent": "Test an {email} gesendet",
-    "send": "An Abonnenten senden",
-    "confirmTitle": "Dieses Update senden?",
-    "confirmBody": "{count, plural, =0 {Noch niemand hat Produkt-Updates aktiviert, es erreicht also niemanden. Danach kannst du es nicht mehr bearbeiten.} one {Es geht sofort an # Person, und danach kannst du es nicht mehr bearbeiten.} other {Es geht sofort an # Personen, und danach kannst du es nicht mehr bearbeiten.}}",
-    "confirmSend": "Jetzt senden",
-    "cancel": "Abbrechen",
-    "sentToast": "Update gesendet",
-    "sentNotice": "{count, plural, one {Am {date} an # Person gesendet.} other {Am {date} an # Personen gesendet.}}",
-    "sentNoticeNoCount": "Am {date} gesendet.",
-    "delete": "Entwurf löschen",
-    "deleteTitle": "Diesen Entwurf löschen?",
-    "deleteBody": "Der Entwurf wird endgültig gelöscht.",
-    "deleted": "Entwurf gelöscht",
-    "errors": {
-      "notFound": "Dieses Update gibt es nicht mehr.",
-      "alreadySent": "Dieses Update wurde schon gesendet und kann sich nicht mehr ändern.",
-      "noSubject": "Gib vor dem Senden einen Betreff ein.",
-      "noBody": "Schreib das Update vor dem Senden.",
-      "noFrom": "Setz BROADCAST_FROM auf dem Server, um Produkt-Updates zu senden.",
-      "noOperator": "Setz OPERATOR_NAME und OPERATOR_ADDRESS auf dem Server, damit die E-Mail ihren Absender nennt.",
-      "testFailed": "Die Test-E-Mail konnte nicht gesendet werden. Versuch es in einer Minute noch einmal.",
-      "sendFailed": "Das Update konnte nicht gesendet werden. Es ist nichts rausgegangen, versuch es in einer Minute noch einmal.",
-      "forbidden": "Dein Konto kann keine Produkt-Updates senden."
+      "description": "Release Notes und Neuigkeiten zu Sniptide. Jede E-Mail enthält einen Link zum Abbestellen."
     }
   }
 }

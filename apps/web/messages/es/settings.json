@@ -215,57 +215,7 @@
     "appearance": "Apariencia",
     "productEmails": {
       "label": "Novedades del producto",
-      "description": "Notas de versión y noticias sobre Sniptide. Cada correo incluye un enlace para dejar de recibirlos.",
-      "writeLabel": "Escribir una novedad del producto",
-      "writeDescription": "Escribe notas de versión y noticias, pruébalas contigo y envíalas a los suscriptores.",
-      "writeAction": "Escribir novedad"
-    }
-  },
-  "Broadcasts": {
-    "title": "Novedades del producto",
-    "description": "{count, plural, =0 {Nadie ha activado las novedades del producto todavía.} one {# persona recibe estos correos.} other {# personas reciben estos correos.}}",
-    "newUpdate": "Nueva novedad",
-    "empty": "Todavía no has escrito ninguna novedad del producto.",
-    "untitled": "Novedad sin título",
-    "draft": "Borrador, editado {time}",
-    "sentTo": "{count, plural, one {Enviada el {date} a # persona} other {Enviada el {date} a # personas}}",
-    "sentOn": "Enviada el {date}",
-    "subject": "Asunto",
-    "preview": "Texto de vista previa",
-    "previewHint": "Aparece junto al asunto en la bandeja de entrada.",
-    "label": "Etiqueta de la portada",
-    "image": "Enlace de la captura",
-    "imageHint": "Un enlace https a una imagen de al menos 700 px de ancho. Déjalo vacío para una portada sin captura.",
-    "body": "Novedad",
-    "bodyHint": "Escribe en Markdown: ## para un título, - para un elemento de lista y [texto](https://example.com) para un enlace.",
-    "saving": "Guardando…",
-    "saved": "Guardado",
-    "saveFailed": "No se pudo guardar. Tus cambios siguen en esta página, así que vuelve a intentarlo.",
-    "previewTitle": "Vista previa del correo",
-    "sendTest": "Enviarme una prueba",
-    "testSent": "Prueba enviada a {email}",
-    "send": "Enviar a los suscriptores",
-    "confirmTitle": "¿Enviar esta novedad?",
-    "confirmBody": "{count, plural, =0 {Nadie ha activado las novedades del producto todavía, así que no llega a nadie. Después no podrás editarla.} one {Llega a # persona ahora mismo, y después no podrás editarla.} other {Llega a # personas ahora mismo, y después no podrás editarla.}}",
-    "confirmSend": "Enviar ahora",
-    "cancel": "Cancelar",
-    "sentToast": "Novedad enviada",
-    "sentNotice": "{count, plural, one {Enviada el {date} a # persona.} other {Enviada el {date} a # personas.}}",
-    "sentNoticeNoCount": "Enviada el {date}.",
-    "delete": "Eliminar borrador",
-    "deleteTitle": "¿Eliminar este borrador?",
-    "deleteBody": "El borrador se elimina para siempre.",
-    "deleted": "Borrador eliminado",
-    "errors": {
-      "notFound": "Esta novedad ya no existe.",
-      "alreadySent": "Esta novedad ya se envió, así que no puede cambiar.",
-      "noSubject": "Añade un asunto antes de enviarla.",
-      "noBody": "Escribe la novedad antes de enviarla.",
-      "noFrom": "Configura BROADCAST_FROM en el servidor para enviar novedades del producto.",
-      "noOperator": "Configura OPERATOR_NAME y OPERATOR_ADDRESS en el servidor para que el correo indique su remitente.",
-      "testFailed": "No se pudo enviar el correo de prueba. Inténtalo de nuevo en un minuto.",
-      "sendFailed": "No se pudo enviar la novedad. No salió nada, así que inténtalo de nuevo en un minuto.",
-      "forbidden": "Tu cuenta no puede enviar novedades del producto."
+      "description": "Notas de versión y noticias sobre Sniptide. Cada correo incluye un enlace para dejar de recibirlos."
     }
   }
 }

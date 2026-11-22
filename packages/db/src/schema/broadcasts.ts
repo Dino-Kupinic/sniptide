@@ -12,8 +12,9 @@ export const broadcastSubscription = pgTable("broadcast_subscription", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 })
 
-// A product update written in the app: a draft until someone sends it, then a read-only record of
-// what went out. The body is Markdown that the branded broadcast layout renders.
+// A product update written in the admin app (apps/admin): a draft until it is sent, then a
+// read-only record of what went out. The body is Markdown that the branded broadcast layout
+// renders. The app itself never reads this table.
 export const broadcast = pgTable("broadcast", {
   id: text("id").primaryKey(),
   subject: text("subject").notNull().default(""),
@@ -21,7 +22,6 @@ export const broadcast = pgTable("broadcast", {
   label: text("label").notNull().default(""),
   imageUrl: text("image_url"),
   body: text("body").notNull().default(""),
-  createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   // Set once the broadcast is handed to the email provider; a sent broadcast can't be edited.

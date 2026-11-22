@@ -2,38 +2,42 @@ import "server-only"
 
 import { randomUUID } from "node:crypto"
 import { broadcast, broadcastSubscription } from "@workspace/db/schema"
+import { createResendClient, type ResendClient } from "@workspace/email/resend"
 import { and, count, desc, eq, isNull } from "drizzle-orm"
-import { getConfig } from "@/lib/config"
-import { getDb } from "@/lib/db"
 import { type BroadcastContent, monthLabel, renderBroadcastEmail } from "./compose"
-import { resendClient } from "./subscription"
+import { getConfig } from "./config"
+import { getDb } from "./db"
 
-// Product updates written in Settings: drafts that autosave, a test copy to the writer, and one
-// send to every subscriber in the Resend segment. Only accounts listed in BROADCAST_SENDERS, with
-// a verified address, can use any of it.
+// Product updates: drafts that autosave, a test copy to the operator, and one send to every
+// subscriber in the Resend segment.
+
+let testClient: ResendClient | undefined
+
+// Tests swap in a fake so they never reach Resend.
+export function setResendClientForTests(client: ResendClient | undefined) {
+  testClient = client
+}
+
+function resendClient() {
+  return testClient ?? createResendClient(getConfig().resend)
+}
 
 export type BroadcastRow = typeof broadcast.$inferSelect
 
-// Errors are codes, which the editor turns into a sentence in the writer's language.
+// Errors are codes, which the editor turns into a sentence.
 export type BroadcastError =
   | "notFound"
   | "alreadySent"
   | "noSubject"
   | "noBody"
-  | "noFrom"
   | "noOperator"
   | "testFailed"
   | "sendFailed"
-  | "forbidden"
+  | "signedOut"
 
 export type BroadcastResult = { ok: true } | { ok: false; error: BroadcastError }
 
 const LIMITS = { subject: 200, preview: 300, label: 60, imageUrl: 2000, body: 50_000 }
-
-export function broadcastSender(user: { email: string; emailVerified?: boolean | null }) {
-  const senders = getConfig().broadcasts?.senders ?? []
-  return Boolean(user.emailVerified) && senders.includes(user.email.toLowerCase())
-}
 
 export async function listBroadcasts() {
   return getDb().select().from(broadcast).orderBy(desc(broadcast.updatedAt)).limit(200)
@@ -49,11 +53,11 @@ export async function subscriberCount() {
   return row?.value ?? 0
 }
 
-export async function createDraft(userId: string, now = new Date()) {
+export async function createDraft(now = new Date()) {
   const id = randomUUID()
   await getDb()
     .insert(broadcast)
-    .values({ id, createdBy: userId, label: monthLabel(now) })
+    .values({ id, label: monthLabel(now) })
   return id
 }
 
@@ -87,7 +91,7 @@ export async function deleteDraft(id: string) {
 
 function emailOptions(date: Date) {
   const config = getConfig()
-  return { date, appUrl: config.appUrl, operator: config.legal.operator }
+  return { date, appUrl: config.appUrl, operator: config.operator }
 }
 
 function missing(row: BroadcastRow): BroadcastError | null {
@@ -96,10 +100,9 @@ function missing(row: BroadcastRow): BroadcastError | null {
   return null
 }
 
-export async function sendTest(id: string, to: string): Promise<BroadcastResult> {
+export async function sendTest(id: string): Promise<BroadcastResult> {
   const resend = resendClient()
-  const from = getConfig().broadcasts?.from
-  if (!resend || !from) return { ok: false, error: "noFrom" }
+  const { from, testTo: to } = getConfig()
   const row = await getBroadcast(id)
   if (!row) return { ok: false, error: "notFound" }
   const problem = missing(row)
@@ -119,10 +122,9 @@ export async function sendTest(id: string, to: string): Promise<BroadcastResult>
 export async function sendToSubscribers(id: string): Promise<BroadcastResult> {
   const resend = resendClient()
   const config = getConfig()
-  const from = config.broadcasts?.from
-  if (!resend || !from) return { ok: false, error: "noFrom" }
+  const from = config.from
   // Marketing email has to name its sender with a postal address.
-  if (!config.legal.operator) return { ok: false, error: "noOperator" }
+  if (!config.operator) return { ok: false, error: "noOperator" }
   const row = await getBroadcast(id)
   if (!row) return { ok: false, error: "notFound" }
   if (row.sentAt) return { ok: false, error: "alreadySent" }

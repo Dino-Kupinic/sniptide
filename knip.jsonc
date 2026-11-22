@@ -14,6 +14,12 @@
       // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
       "ignoreDependencies": ["@tailwindcss/postcss"]
     },
+    "apps/admin": {
+      // The Docker image's health probe, copied in by apps/admin/Dockerfile.
+      "entry": ["healthcheck.cjs", "test/**/*.test.ts"],
+      // The exported @sniptide/ui PostCSS config loads this plugin in each consumer's build.
+      "ignoreDependencies": ["@tailwindcss/postcss"]
+    },
     "apps/web": {
       "entry": [
         "scripts/**/*.ts",

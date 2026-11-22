@@ -1,7 +1,7 @@
 // A small client for the parts of the Resend API that product update emails use: contacts in one
-// segment, broadcasts to that segment, and single test emails. Plain fetch keeps the SDK out of
-// self-hosted builds, which never call it. No `server-only` here, so scripts/send-broadcast.ts can
-// import it outside Next.
+// segment, broadcasts to that segment, and single test emails. The app uses the contact calls to
+// keep subscribers in step, and the admin app uses the broadcast calls to send. Plain fetch keeps
+// the SDK out of self-hosted builds, which never call it.
 
 const API = "https://api.resend.com"
 

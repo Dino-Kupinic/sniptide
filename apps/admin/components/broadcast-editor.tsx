@@ -17,20 +17,31 @@ import { toast } from "@sniptide/ui/components/toast"
 import { ChevronLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useFormatter, useTranslations } from "next-intl"
 import { useEffect, useId, useRef, useState, useTransition } from "react"
-import { ListHeader } from "@/components/lists/toolbar"
+import { PageHeader } from "@/components/page-header"
 import {
   deleteBroadcastDraft,
   previewBroadcast,
   saveBroadcastDraft,
   sendBroadcastTest,
   sendBroadcastToSubscribers,
-} from "@/lib/broadcasts/actions"
-import type { BroadcastContent } from "@/lib/broadcasts/compose"
-import type { BroadcastError } from "@/lib/broadcasts/store"
+} from "@/lib/actions"
+import type { BroadcastContent } from "@/lib/compose"
+import { formatDate, people } from "@/lib/format"
+import type { BroadcastError } from "@/lib/store"
 
 type SaveState = "idle" | "saving" | "saved" | "failed"
+
+const ERRORS: Record<BroadcastError, string> = {
+  notFound: "This update no longer exists.",
+  alreadySent: "This update was already sent, so it can't change.",
+  noSubject: "Add a subject before sending.",
+  noBody: "Write the update before sending.",
+  noOperator: "Set OPERATOR_NAME and OPERATOR_ADDRESS so the email names its sender.",
+  testFailed: "Couldn't send the test email. Try again in a minute.",
+  sendFailed: "Couldn't send the update. Nothing went out, so try again in a minute.",
+  signedOut: "Your session ended. Sign in again and retry.",
+}
 
 // Saving waits for a pause in typing so a draft is written about once per thought.
 const SAVE_DELAY = 600
@@ -50,8 +61,6 @@ export function BroadcastEditor({
   email: string
   sent: { at: string; recipients: number | null } | null
 }) {
-  const t = useTranslations("Broadcasts")
-  const format = useFormatter()
   const router = useRouter()
   const fieldId = useId()
   const [content, setContent] = useState(initial)
@@ -91,7 +100,7 @@ export function BroadcastEditor({
   }
 
   function errorMessage(code: BroadcastError) {
-    return t(`errors.${code}`)
+    return ERRORS[code]
   }
 
   // Sends read the stored draft, so a pending edit is written first.
@@ -99,7 +108,11 @@ export function BroadcastEditor({
     if (!dirty.current) return true
     const result = await saveBroadcastDraft(id, latest.current).catch(() => null)
     if (!result?.ok) {
-      toast.error(result ? errorMessage(result.error) : t("saveFailed"))
+      toast.error(
+        result
+          ? errorMessage(result.error)
+          : "Couldn't save. Your changes stay on this page, so try again.",
+      )
       return false
     }
     dirty.current = false
@@ -111,7 +124,7 @@ export function BroadcastEditor({
     startTest(async () => {
       if (!(await flush())) return
       const result = await sendBroadcastTest(id).catch(() => null)
-      if (result?.ok) toast.success(t("testSent", { email }))
+      if (result?.ok) toast.success(`Test sent to ${email}`)
       else toast.error(errorMessage(result ? result.error : "testFailed"))
     })
   }
@@ -125,7 +138,7 @@ export function BroadcastEditor({
         toast.error(errorMessage(result ? result.error : "sendFailed"))
         return
       }
-      toast.success(t("sentToast"))
+      toast.success("Update sent")
       router.refresh()
     })
   }
@@ -137,35 +150,35 @@ export function BroadcastEditor({
         toast.error(errorMessage(result ? result.error : "notFound"))
         return
       }
-      toast.success(t("deleted"))
-      router.replace("/settings/product-updates")
+      toast.success("Draft deleted")
+      router.replace("/")
     })
   }
 
   const field = (name: string) => `${fieldId}-${name}`
-  const sentDate = sent ? format.dateTime(new Date(sent.at), { dateStyle: "long" }) : ""
+  const sentDate = sent ? formatDate(new Date(sent.at), "long") : ""
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:gap-8 lg:p-7">
       <div className="flex flex-col gap-3">
         <Link
-          href="/settings/product-updates"
+          href="/"
           className="inline-flex w-fit items-center gap-1 text-sm text-link hover:underline"
         >
           <ChevronLeftIcon aria-hidden className="size-4" />
-          {t("title")}
+          Product updates
         </Link>
-        <ListHeader
-          title={content.subject || t("untitled")}
+        <PageHeader
+          title={content.subject || "Untitled update"}
           description={
             readOnly ? undefined : (
               <span aria-live="polite">
                 {save === "saving"
-                  ? t("saving")
+                  ? "Saving…"
                   : save === "saved"
-                    ? t("saved")
+                    ? "Saved"
                     : save === "failed"
-                      ? t("saveFailed")
+                      ? "Couldn't save. Your changes stay on this page, so try again."
                       : null}
               </span>
             )
@@ -176,8 +189,8 @@ export function BroadcastEditor({
       {sent ? (
         <p className="rounded-lg border border-border bg-muted px-4 py-3 text-sm">
           {sent.recipients === null
-            ? t("sentNoticeNoCount", { date: sentDate })
-            : t("sentNotice", { count: sent.recipients, date: sentDate })}
+            ? `Sent on ${sentDate}.`
+            : `Sent on ${sentDate} to ${people(sent.recipients)}.`}
         </p>
       ) : null}
 
@@ -188,7 +201,7 @@ export function BroadcastEditor({
         >
           <fieldset disabled={readOnly} className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <Label htmlFor={field("subject")}>{t("subject")}</Label>
+              <Label htmlFor={field("subject")}>Subject</Label>
               <Input
                 id={field("subject")}
                 value={content.subject}
@@ -197,7 +210,7 @@ export function BroadcastEditor({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={field("preview")}>{t("preview")}</Label>
+              <Label htmlFor={field("preview")}>Preview text</Label>
               <Input
                 id={field("preview")}
                 value={content.preview}
@@ -206,11 +219,11 @@ export function BroadcastEditor({
                 onChange={(event) => update({ preview: event.target.value })}
               />
               <p id={field("preview-hint")} className="text-[13px] text-muted-foreground">
-                {t("previewHint")}
+                Shown next to the subject in the inbox.
               </p>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={field("label")}>{t("label")}</Label>
+              <Label htmlFor={field("label")}>Cover label</Label>
               <Input
                 id={field("label")}
                 value={content.label}
@@ -219,7 +232,7 @@ export function BroadcastEditor({
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={field("image")}>{t("image")}</Label>
+              <Label htmlFor={field("image")}>Screenshot link</Label>
               <Input
                 id={field("image")}
                 type="url"
@@ -231,11 +244,12 @@ export function BroadcastEditor({
                 onChange={(event) => update({ imageUrl: event.target.value || null })}
               />
               <p id={field("image-hint")} className="text-[13px] text-muted-foreground">
-                {t("imageHint")}
+                An https link to an image at least 700px wide. Leave it empty for a cover without a
+                screenshot.
               </p>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={field("body")}>{t("body")}</Label>
+              <Label htmlFor={field("body")}>Update</Label>
               <Textarea
                 id={field("body")}
                 value={content.body}
@@ -246,7 +260,8 @@ export function BroadcastEditor({
                 onChange={(event) => update({ body: event.target.value })}
               />
               <p id={field("body-hint")} className="text-[13px] text-muted-foreground">
-                {t("bodyHint")}
+                Write in Markdown: ## for a heading, - for a list item and
+                [text](https://example.com) for a link.
               </p>
             </div>
           </fieldset>
@@ -254,23 +269,25 @@ export function BroadcastEditor({
           {readOnly ? null : (
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="outline" loading={testing} onClick={sendTest}>
-                {t("sendTest")}
+                Send test
               </Button>
               <AlertDialog open={confirmSend} onOpenChange={setConfirmSend}>
                 <AlertDialogTrigger render={<Button type="button" />}>
-                  {t("send")}
+                  Send to subscribers
                 </AlertDialogTrigger>
                 <AlertDialogContent>
-                  <AlertDialogTitle>{t("confirmTitle")}</AlertDialogTitle>
+                  <AlertDialogTitle>Send this update?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {t("confirmBody", { count: subscribers })}
+                    {subscribers === 0
+                      ? "No one has turned on product updates yet, so it reaches no one. You can't edit it afterwards."
+                      : `It goes to ${people(subscribers)} right away, and you can't edit it afterwards.`}
                   </AlertDialogDescription>
                   <AlertDialogFooter>
                     <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>
-                      {t("cancel")}
+                      Cancel
                     </AlertDialogClose>
                     <Button type="button" size="lg" loading={sending} onClick={sendToSubscribers}>
-                      {t("confirmSend")}
+                      Send now
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -279,14 +296,14 @@ export function BroadcastEditor({
                 <AlertDialogTrigger
                   render={<Button type="button" variant="ghost" className="text-destructive" />}
                 >
-                  {t("delete")}
+                  Delete draft
                 </AlertDialogTrigger>
                 <AlertDialogContent>
-                  <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
-                  <AlertDialogDescription>{t("deleteBody")}</AlertDialogDescription>
+                  <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+                  <AlertDialogDescription>The draft is deleted for good.</AlertDialogDescription>
                   <AlertDialogFooter>
                     <AlertDialogClose render={<Button type="button" variant="outline" size="lg" />}>
-                      {t("cancel")}
+                      Cancel
                     </AlertDialogClose>
                     <Button
                       type="button"
@@ -295,7 +312,7 @@ export function BroadcastEditor({
                       loading={deleting}
                       onClick={remove}
                     >
-                      {t("delete")}
+                      Delete draft
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -304,12 +321,9 @@ export function BroadcastEditor({
           )}
         </form>
 
-        <section
-          aria-label={t("previewTitle")}
-          className="min-w-0 lg:sticky lg:top-6 lg:self-start"
-        >
+        <section aria-label={"Email preview"} className="min-w-0 lg:sticky lg:top-6 lg:self-start">
           <iframe
-            title={t("previewTitle")}
+            title={"Email preview"}
             srcDoc={html}
             sandbox=""
             className="rounded-lg h-[640px] w-full border border-border bg-white lg:h-[calc(100dvh-8rem)]"

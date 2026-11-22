@@ -484,6 +484,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - run: bun run test:web:integration
+      - run: bun run test:admin
 
   # Branch protection requires a single result for both Postgres versions.
   tests-result:

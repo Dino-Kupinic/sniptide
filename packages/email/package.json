@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/email",
+  "license": "AGPL-3.0-only",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "bun check --no-script"
+  },
+  "dependencies": {
+    "react": "catalog:runtime",
+    "react-email": "6.11.12"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:tooling",
+    "@types/react": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  },
+  "exports": {
+    "./frame": "./src/frame.tsx",
+    "./theme": "./src/theme.ts",
+    "./resend": "./src/resend.ts"
+  }
+}

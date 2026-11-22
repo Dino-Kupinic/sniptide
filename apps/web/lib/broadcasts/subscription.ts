@@ -1,10 +1,10 @@
 import "server-only"
 
 import { broadcastSubscription, user } from "@workspace/db/schema"
+import { createResendClient, type ResendClient } from "@workspace/email/resend"
 import { eq } from "drizzle-orm"
 import { getConfig } from "@/lib/config"
 import { getDb } from "@/lib/db"
-import { createResendClient, type ResendClient } from "./resend"
 
 let testClient: ResendClient | undefined
 
@@ -13,7 +13,7 @@ export function setResendClientForTests(client: ResendClient | undefined) {
   testClient = client
 }
 
-export function resendClient() {
+function resendClient() {
   const broadcasts = getConfig().broadcasts
   if (!broadcasts) return undefined
   return testClient ?? createResendClient(broadcasts)

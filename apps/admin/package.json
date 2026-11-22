@@ -1,0 +1,40 @@
+{
+  "name": "admin",
+  "license": "AGPL-3.0-only",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start --port 3002",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "typecheck": "next typegen && bun check --no-script",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@react-email/render": "2.3.1",
+    "@sniptide/ui": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/email": "workspace:*",
+    "drizzle-orm": "catalog:runtime",
+    "lucide-react": "catalog:ui",
+    "next": "catalog:runtime",
+    "next-themes": "catalog:runtime",
+    "react": "catalog:runtime",
+    "react-dom": "catalog:runtime",
+    "react-email": "6.11.12",
+    "server-only": "catalog:runtime",
+    "zod": "catalog:runtime"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:ui",
+    "@types/bun": "catalog:tooling",
+    "@types/node": "catalog:tooling",
+    "@types/react": "catalog:tooling",
+    "@types/react-dom": "catalog:tooling",
+    "@workspace/typescript": "workspace:*",
+    "typescript": "catalog:tooling"
+  }
+}

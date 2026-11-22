@@ -3,10 +3,10 @@
 import { Button } from "@sniptide/ui/components/button"
 import { ChevronRight, Plus } from "lucide-react"
 import Link from "next/link"
-import { useFormatter, useTranslations } from "next-intl"
 import { useFormStatus } from "react-dom"
-import { ListHeader } from "@/components/lists/toolbar"
-import { createBroadcastDraft } from "@/lib/broadcasts/actions"
+import { PageHeader } from "@/components/page-header"
+import { createBroadcastDraft } from "@/lib/actions"
+import { formatDate, people, relativeTime } from "@/lib/format"
 
 export type BroadcastListRow = {
   id: string
@@ -17,12 +17,11 @@ export type BroadcastListRow = {
 }
 
 function NewUpdateButton() {
-  const t = useTranslations("Broadcasts")
   const { pending } = useFormStatus()
   return (
     <Button type="submit" loading={pending}>
       <Plus aria-hidden />
-      {t("newUpdate")}
+      New update
     </Button>
   )
 }
@@ -37,8 +36,6 @@ export function BroadcastList({
   // The server's clock, so "edited 2 minutes ago" renders the same on the server and the client.
   now: string
 }) {
-  const t = useTranslations("Broadcasts")
-  const format = useFormatter()
   const newUpdate = (
     <form action={createBroadcastDraft}>
       <NewUpdateButton />
@@ -47,34 +44,35 @@ export function BroadcastList({
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:gap-8 lg:p-7">
-      <ListHeader
-        title={t("title")}
-        description={t("description", { count: subscribers })}
+      <PageHeader
+        title="Product updates"
+        description={
+          subscribers === 0
+            ? "No one has turned on product updates yet."
+            : `${people(subscribers)} ${subscribers === 1 ? "gets" : "get"} these emails.`
+        }
         actions={newUpdate}
       />
       {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("empty")}</p>
+        <p className="text-sm text-muted-foreground">You haven't written a product update yet.</p>
       ) : (
         <ul className="rounded-lg divide-y divide-border overflow-hidden border border-border">
           {rows.map((row) => {
             const sentAt = row.sentAt ? new Date(row.sentAt) : null
             const status = sentAt
               ? row.recipients === null
-                ? t("sentOn", { date: format.dateTime(sentAt, { dateStyle: "medium" }) })
-                : t("sentTo", {
-                    count: row.recipients,
-                    date: format.dateTime(sentAt, { dateStyle: "medium" }),
-                  })
-              : t("draft", { time: format.relativeTime(new Date(row.updatedAt), new Date(now)) })
+                ? `Sent ${formatDate(sentAt)}`
+                : `Sent ${formatDate(sentAt)} to ${people(row.recipients)}`
+              : `Draft, edited ${relativeTime(new Date(row.updatedAt), new Date(now))}`
             return (
               <li key={row.id}>
                 <Link
-                  href={`/settings/product-updates/${row.id}`}
+                  href={`/${row.id}`}
                   className="flex min-h-14 items-center gap-3 px-4 py-3 outline-none hover:bg-muted focus-visible:bg-muted"
                 >
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-sm font-medium">
-                      {row.subject || t("untitled")}
+                      {row.subject || "Untitled update"}
                     </span>
                     <span className="truncate text-[13px] text-muted-foreground">{status}</span>
                   </span>

@@ -1,6 +1,5 @@
 import { render } from "@react-email/render"
-import { Broadcast, Cover, MarkdownBody } from "@/lib/email/broadcast"
-import type { Operator } from "@/lib/email/content"
+import { Broadcast, Cover, MarkdownBody, type Operator } from "./email"
 
 // What a writer fills in for one product update. The rest of the email (logo, header, footer,
 // unsubscribe link) comes from the broadcast layout.

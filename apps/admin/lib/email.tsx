@@ -1,12 +1,26 @@
+import { EmailFooter, EmailFrame, Padded, text } from "@workspace/email/frame"
+import { fonts, light } from "@workspace/email/theme"
 import type { ReactNode } from "react"
 import { Heading, Img, Link, Markdown, Text } from "react-email"
-import { type Operator, senderLine } from "./content"
-import { EmailFooter, EmailFrame, Padded, text } from "./layout"
-import { fonts, light } from "./theme"
 
-// Product update emails (release notes, announcements) sent as Resend Broadcasts. They are written
-// in Settings > Product updates and rendered with the layout below. Broadcasts are written in
-// English, because one segment holds every subscriber.
+// Product update emails (release notes, announcements) sent as Resend Broadcasts, built on the
+// same frame as the app's emails. They are written in English, because one segment holds every
+// subscriber.
+
+// Who sends the email: marketing email has to name its sender with a postal address.
+export interface Operator {
+  name: string
+  address?: string
+}
+
+function senderLine(operator: Operator | undefined) {
+  if (!operator) return undefined
+  const address = operator.address
+    ?.split(/\s*\n\s*/)
+    .filter(Boolean)
+    .join(", ")
+  return address ? `Sent by ${operator.name}, ${address}.` : `Sent by ${operator.name}.`
+}
 
 // Resend swaps this for each contact's own unsubscribe link when it sends.
 const UNSUBSCRIBE_URL = "{{{RESEND_UNSUBSCRIBE_URL}}}"

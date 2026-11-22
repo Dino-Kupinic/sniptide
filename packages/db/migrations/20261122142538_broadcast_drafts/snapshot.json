@@ -2,7 +2,7 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "acfb8a79-b725-405b-bd6d-b6b0ea12a1a9",
+  "id": "65140257-c8ab-4fc2-8627-26ec4539f49e",
   "prevIds": [
     "8f85b142-3741-43c1-84d4-f3500366e82d"
   ],
@@ -24,29 +24,6 @@
       ],
       "reads": [
         "n|sch|public"
-      ]
-    },
-    {
-      "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "broadcast"
-      ],
-      "writes": [
-        "s|fk|public.broadcast.broadcast_created_by_user_id_fkey",
-        "n|fk|public.broadcast.broadcast_created_by_user_id_fkey",
-        "e|fk|public.broadcast.broadcast_created_by_user_id_fkey",
-        "n|con|public.broadcast.broadcast_created_by_user_id_fkey"
-      ],
-      "reads": [
-        "n|tbl|public.broadcast",
-        "n|sch|public",
-        "n|tbl|public.user",
-        "n|sch|public",
-        "n|col|public.broadcast.created_by",
-        "n|col|public.user.id",
-        "e|uniqueness|public.user.id"
       ]
     }
   ],
@@ -161,22 +138,6 @@
       "row": {
         "schema": "public",
         "table": "broadcast",
-        "name": "created_by",
-        "type": "text",
-        "typeSchema": null,
-        "notNull": false,
-        "dimensions": 0,
-        "default": null,
-        "generated": null,
-        "identity": null,
-        "entityType": "columns"
-      }
-    },
-    {
-      "op": "create",
-      "row": {
-        "schema": "public",
-        "table": "broadcast",
         "name": "created_at",
         "type": "timestamp with time zone",
         "typeSchema": null,
@@ -250,26 +211,6 @@
         "generated": null,
         "identity": null,
         "entityType": "columns"
-      }
-    },
-    {
-      "op": "create",
-      "row": {
-        "schema": "public",
-        "table": "broadcast",
-        "name": "broadcast_created_by_user_id_fkey",
-        "nameExplicit": false,
-        "columns": [
-          "created_by"
-        ],
-        "schemaTo": "public",
-        "tableTo": "user",
-        "columnsTo": [
-          "id"
-        ],
-        "onUpdate": "NO ACTION",
-        "onDelete": "SET NULL",
-        "entityType": "fks"
       }
     },
     {
