@@ -59,3 +59,19 @@ test("navigation flushes the latest pending local draft", async ({ app, browser,
   await app.open("/new")
   await expect(screen.getByLabel("Contents of untitled.txt")).toHaveValue("newest unsaved text")
 })
+
+test("discard removes the local draft so nothing comes back", async ({ app, browser, screen }) => {
+  await app.open("/new")
+  await screen.getByLabel("Title").fill("Discarded secret")
+  const editor = screen.getByLabel("Contents of untitled.txt")
+  await editor.fill("EXAMPLE_TOKEN=fixture-value")
+  await screen.getByLabel("Contents of untitled.sh").press("Control+s")
+  await expect(screen.getByText("Draft saved on this device")).toBeVisible()
+
+  await screen.getByRole("button", "Discard", { visible: true }).tap()
+  await expect(browser).toHaveURL(/\/pastes$/)
+  await app.open("/new")
+  await expect(screen.getByLabel("Title")).toHaveValue("")
+  await expect(screen.getByLabel("Contents of untitled.txt")).toHaveValue("")
+  await expect(screen.getByText("Unsaved changes restored from this device.")).toHaveCount(0)
+})

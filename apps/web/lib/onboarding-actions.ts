@@ -10,7 +10,9 @@ import {
   agentClientFromName,
   isSignupSourceAnswer,
   isUseCase,
+  preferencesForUseCase,
 } from "@/lib/onboarding"
+import { changePreferences } from "@/lib/preference-store"
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -34,17 +36,26 @@ export async function saveSignupSource(answer: string): Promise<Result> {
 }
 
 // Stores what the account wants to use Sniptide for. Unlike the source, a later answer replaces
-// an earlier one, since going back to change it is a correction.
+// an earlier one, since going back to change it is a correction. The answer also sets the paste
+// defaults that suit it (preferencesForUseCase).
 export async function saveUseCase(answer: string): Promise<Result> {
   const session = await getSession()
   if (!session) return { ok: false, error: await actionError("signInSettings") }
   if (!isUseCase(answer)) return { ok: false, error: await actionError("saveFailed") }
+  const userId = session.user.id
 
   try {
-    await getDb()
+    const db = getDb()
+    const [previous] = await db
+      .select({ useCase: onboarding.useCase })
+      .from(onboarding)
+      .where(eq(onboarding.userId, userId))
+    await db
       .insert(onboarding)
-      .values({ userId: session.user.id, source: "skipped", useCase: answer })
+      .values({ userId, source: "skipped", useCase: answer })
       .onConflictDoUpdate({ target: onboarding.userId, set: { useCase: sql`excluded.use_case` } })
+    const before = isUseCase(previous?.useCase) ? previous.useCase : null
+    await changePreferences(userId, (current) => preferencesForUseCase(current, before, answer))
   } catch {
     return { ok: false, error: await actionError("saveFailed") }
   }

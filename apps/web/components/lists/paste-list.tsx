@@ -91,6 +91,9 @@ export function PasteList({
   ]
 
   const { query, update, pending } = useListQuery(serverQuery, pasteListSearch)
+  // Starred holds other people's pastes and filters by title and slug; your own lists also match
+  // file names and code (lib/pastes/lists.ts).
+  const searchPlaceholder = mode === "starred" ? undefined : t("search_titles_files_and_code")
   const { languages, visibility, collections: inCollections, owner, sort } = query
   const { view, setView } = useListView()
   const filtering = Boolean(
@@ -199,7 +202,12 @@ export function PasteList({
       />
 
       <div className="flex flex-col gap-3 lg:hidden">
-        <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
+        <SearchField
+          pending={pending}
+          value={query.q}
+          onChange={(q) => update({ q }, true)}
+          placeholder={searchPlaceholder}
+        />
         {mode === "collection" ? null : <ListSwitch />}
       </div>
 
@@ -207,7 +215,12 @@ export function PasteList({
       <div className="flex flex-col gap-3">
         <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <SearchField pending={pending} value={query.q} onChange={(q) => update({ q }, true)} />
+            <SearchField
+              pending={pending}
+              value={query.q}
+              onChange={(q) => update({ q }, true)}
+              placeholder={searchPlaceholder}
+            />
             <FilterMenu
               label={t("language")}
               options={languageOptions.map((id) => ({

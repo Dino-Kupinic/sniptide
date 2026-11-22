@@ -101,14 +101,14 @@ test("filtering retains current paste rows while the next result is pending", as
   await expect(browser).toHaveURL(/\/pastes\/[^/]+$/)
   await app.open("/pastes")
   await expect(
-    screen.getByRole("searchbox", "Filter by title or slug", { visible: true }),
+    screen.getByRole("searchbox", "Search titles, file names and code", { visible: true }),
   ).toBeVisible()
   const db = createDb(databaseUrl())
   try {
     await db.$client.begin(async (tx) => {
       await tx.unsafe("LOCK TABLE paste_file IN ACCESS EXCLUSIVE MODE")
       await screen
-        .getByRole("searchbox", "Filter by title or slug", { visible: true })
+        .getByRole("searchbox", "Search titles, file names and code", { visible: true })
         .fill("Retained")
       await expect(browser.locator("main > [aria-busy=true]")).toBeVisible()
       await expect(

@@ -6,9 +6,9 @@ import type { PasteSearchResult } from "@/lib/pastes/types"
 const DELAY = 120
 const EMPTY: PasteSearchResult = { hits: [], total: 0 }
 
-// Searches the viewer's pastes by title and slug as they type. Waits for a pause, drops answers
-// to queries that were already replaced, and keeps the previous results on screen until the new
-// ones arrive so the list doesn't flash empty between keystrokes.
+// Searches the viewer's pastes by title, file name and code as they type. Waits for a pause,
+// drops answers to queries that were already replaced, and keeps the previous results on screen
+// until the new ones arrive so the list doesn't flash empty between keystrokes.
 export function usePasteSearch(text: string, enabled: boolean) {
   const [result, setResult] = React.useState(EMPTY)
   const [settled, setSettled] = React.useState("")
