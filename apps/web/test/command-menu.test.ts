@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { highlight, matches, parseQuery } from "@/components/command-menu/search"
+import { highlight, highlightWords, matches, parseQuery } from "@/components/command-menu/search"
 
 // What the ⌘K menu does with the text before it asks for results.
 
@@ -43,4 +43,14 @@ describe("command menu query", () => {
       { text: "c)", match: false },
     ])
   })
+})
+
+test("highlightWords marks each word of the query on its own", () => {
+  expect(highlightWords("retryFetch with backoff", "backoff  RETRY")).toEqual([
+    { text: "retry", match: true },
+    { text: "Fetch with ", match: false },
+    { text: "backoff", match: true },
+  ])
+  expect(highlightWords("aaa", "aa")).toEqual([{ text: "aaa", match: true }])
+  expect(highlightWords("plain", "")).toEqual([{ text: "plain", match: false }])
 })

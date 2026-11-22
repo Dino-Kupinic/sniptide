@@ -172,11 +172,21 @@ export interface SidebarData {
   starred: SidebarPaste[]
 }
 
-// What the ⌘K command menu finds for a query: the viewer's own pastes by title or slug.
+// Where a paste matched a word its title and slug don't show: a file's path, or a line of its code.
+export interface PasteSearchMatch {
+  file: string
+  // The 1-based line of the excerpt, set when the word is in the code rather than the path.
+  line: number | null
+  excerpt: string | null
+}
+
+// What the ⌘K command menu finds for a query: the viewer's own pastes, matched the way the API
+// and search_snippets match (lib/pastes/search.ts).
 export interface PasteSearchHit {
   slug: string
   title: string
   updatedAt: number
+  match: PasteSearchMatch | null
 }
 
 export interface PasteSearchResult {
