@@ -1,12 +1,13 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
-import { paste } from "@workspace/db/schema"
+import { paste, pasteFile } from "@workspace/db/schema"
 import { eq } from "drizzle-orm"
 import { GET } from "@/app/api/search/route"
 import { getDb } from "@/lib/db"
 import { searchOwnPastes } from "@/lib/pastes/store"
-import { hasDatabase, marker, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
+import { hasDatabase, resetDatabase, seedPaste, seedUser, signInAs } from "./harness"
 
-// The ⌘K menu searches paste titles and slugs, only the viewer's own, and never reads contents.
+// The ⌘K menu searches the viewer's own pastes the way search_snippets does: every word anywhere
+// in the title, slug, description, tags, file names or code.
 
 const describeDb = hasDatabase ? describe : describe.skip
 
@@ -41,6 +42,7 @@ describeDb("command menu search", () => {
       slug: "api-notes",
       title: "Meeting notes",
       updatedAt: Date.UTC(2026, 0, 4),
+      match: null,
     })
   })
 
@@ -58,14 +60,58 @@ describeDb("command menu search", () => {
     expect((await searchOwnPastes("shared")).hits.map((hit) => hit.slug)).toEqual(["mine"])
   })
 
-  test("does not look inside the files", async () => {
-    await seedPaste({ slug: "plain", title: "Plain", owner: "ada" })
-    expect(await searchOwnPastes(marker("plain"))).toEqual({ hits: [], total: 0 })
+  test("finds a function name in the code and shows the line it sits on", async () => {
+    const { id } = await seedPaste({
+      slug: "Bk0ff1",
+      title: "Exponential backoff",
+      owner: "ada",
+      content:
+        "// helpers\n\n    export async function retryFetch(url) {\n  setTimeout(go, 100)\n}",
+    })
+    await getDb().update(pasteFile).set({ name: "retry.ts" }).where(eq(pasteFile.pasteId, id))
+
+    const { hits, total } = await searchOwnPastes("retryFetch")
+    expect(total).toBe(1)
+    expect(hits[0]?.match).toEqual({
+      file: "retry.ts",
+      line: 3,
+      excerpt: "export async function retryFetch(url) {",
+    })
+    // Every word has to match somewhere, and the line shown is for a word the title doesn't hold.
+    expect((await searchOwnPastes("backoff settimeout")).hits[0]?.match).toMatchObject({
+      line: 4,
+      excerpt: "setTimeout(go, 100)",
+    })
+    expect((await searchOwnPastes("backoff missing")).total).toBe(0)
+    // A word the title already shows needs no line.
+    expect((await searchOwnPastes("backoff")).hits[0]?.match).toBeNull()
+  })
+
+  test("finds file names and shows the file without a line", async () => {
+    const { id } = await seedPaste({ slug: "cfg", title: "Config", owner: "ada" })
+    await getDb()
+      .update(pasteFile)
+      .set({ name: "docker-compose.yml" })
+      .where(eq(pasteFile.pasteId, id))
+    expect((await searchOwnPastes("compose")).hits[0]?.match).toEqual({
+      file: "docker-compose.yml",
+      line: null,
+      excerpt: null,
+    })
+  })
+
+  test("matches an encrypted paste by its title only", async () => {
+    await seedPaste({ slug: "sealed", title: "Sealed notes", owner: "ada", content: "ciphertext" })
+    await getDb().update(paste).set({ encryptionKeyId: "key-1" }).where(eq(paste.slug, "sealed"))
+    expect((await searchOwnPastes("ciphertext")).total).toBe(0)
+    expect((await searchOwnPastes("sealed notes")).hits).toMatchObject([
+      { slug: "sealed", match: null },
+    ])
   })
 
   test("treats % and _ literally", async () => {
-    await seedPaste({ slug: "pct", title: "100% done", owner: "ada" })
-    await seedPaste({ slug: "plain", title: "1000 done", owner: "ada" })
+    await seedPaste({ slug: "pct", title: "100% done", owner: "ada", content: "x" })
+    await seedPaste({ slug: "plain", title: "1000 done", owner: "ada", content: "x" })
     expect((await searchOwnPastes("0%")).hits.map((hit) => hit.slug)).toEqual(["pct"])
     expect((await searchOwnPastes("_")).hits).toEqual([])
   })
