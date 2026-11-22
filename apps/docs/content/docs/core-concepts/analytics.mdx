@@ -4,8 +4,8 @@ description: Read views, unique visitors, copies and referrers for your Sniptide
 ---
 
 The **Analytics** page shows how people use your pastes: views, unique visitors, code copies, raw
-reads, referrers, countries, devices and languages. Sniptide counts these in its own database,
-without cookies, and sends them nowhere else.
+and API hits (**Raw & API hits**), referrers, countries, devices and languages. Sniptide counts
+these in its own database, without cookies, and sends them nowhere else.
 
 ## Read the figures
 
@@ -21,8 +21,8 @@ from views. See [MCP server](/mcp#limits-and-errors).
 The charts use hatched fills with a fine grain and a solid top edge. Pink marks the peak in Analytics and the
 dashboard. Select a metric tile in Analytics to change the chart. Hover a bar to preview its
 exact value, or select it to pin the readout. The dashboard and usage charts support the same
-hover, touch and keyboard controls. With the chart focused, use the arrow keys to move between bars, **Home** or **End**
-to reach the first or last bar, and **Escape** to clear the selection. Screen readers can also
+hover, touch and keyboard controls. With the chart focused, use the arrow keys to move between bars, <Kbd>Home</Kbd> or <Kbd>End</Kbd>
+to reach the first or last bar, and <Kbd>Escape</Kbd> to clear the selection. Screen readers can also
 read the values in a table. The 90-day chart groups days into weeks on smaller screens.
 
 ## What counts as a view
@@ -46,9 +46,10 @@ shows no country data.
 ## Read the figures as JSON
 
 `GET /api/stats?range=30d` returns the same figures as JSON for the signed-in account. `range` is
-`24h`, `7d`, `30d` or `90d`, and any other value means `30d`. Add `&paste=<link>` or
-`&collection=<slug>` to narrow it. The endpoint uses your browser session, not an API token, and
-returns `401` when you aren't signed in.
+optional (`24h`, `7d`, `30d` or `90d`), defaulting to `30d` when omitted or unrecognized. Add
+`&paste=<link>` or `&collection=<slug>` to narrow it; when both are supplied, `paste` takes
+precedence. The endpoint uses your browser session, not an API token, and returns `401` when you
+aren't signed in.
 
 ## How long the data is kept
 

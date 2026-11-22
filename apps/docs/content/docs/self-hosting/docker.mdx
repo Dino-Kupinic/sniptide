@@ -8,7 +8,8 @@ database too, use [Docker Compose](/self-hosting/docker-compose).
 
 ## Before you begin
 
-- Postgres 18, which Sniptide is built and tested against, with an empty database for Sniptide.
+- Docker on a Linux AMD64 or ARM64 host.
+- Postgres 18 (with Postgres 17 also tested) and an empty database for Sniptide.
 - A database user that can create tables and the `pg_trgm` extension. The first migration installs
   `pg_trgm` for title and link search. If your provider doesn't allow that, ask the database
   operator to run `CREATE EXTENSION pg_trgm;` in the database first.
@@ -47,6 +48,11 @@ curl http://localhost:3000/api/health
 The response is `{"ok":true}` when the app reaches the database, and `{"ok":false}` with status
 `503` when it doesn't. If the container exits, `docker logs sniptide` names the setting or the
 migration that failed. See [Troubleshooting](/troubleshooting#self-hosted-instances).
+
+## Stop or remove the container
+
+Run `docker stop sniptide && docker rm sniptide` to stop and remove the container. `sniptide.env`
+remains on disk and your data persists in your external Postgres database.
 
 ## Next steps
 

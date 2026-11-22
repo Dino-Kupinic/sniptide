@@ -9,8 +9,9 @@ The operator must enable this feature; it is off by default.
 ## Send a report
 
 1. Open **Report abuse** at the bottom-right of a shared paste page, or open `/abuse` on the instance.
-2. Enter the paste URL, choose a reason, and explain your concern in 10 to 2,000 characters.
-3. Optionally enter an email address so a reviewer can contact you.
+2. Fill in **Paste URL on this instance**, choose a **Reason**, and describe your concern in
+   **Explanation (10 to 2,000 characters)**.
+3. Optionally enter an **Email (optional)** address so a reviewer can contact you.
 4. Select **Send for review**. A confirmation means the report was stored for review.
 
 For suspected child exploitation, provide its location only. Do not download, copy, quote or
@@ -46,8 +47,9 @@ requirements, and establish a restricted case register, notice procedure and ret
 schedule. Test the queue and the incident escalation with harmless synthetic reports.
 
 Set `ABUSE_REPORTS_ENABLED=true`, `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` (at least 32
-characters), then restart every serving replica. Configure `CLIENT_IP_SOURCE` for the trusted
-proxy; otherwise visitors can share a quota. See [Configuration](/self-hosting/configuration).
+characters), then restart every serving replica. Confirm `/abuse` loads in a browser (it returns
+`404` when `ABUSE_REPORTS_ENABLED=false`). Configure `CLIENT_IP_SOURCE` for the trusted proxy;
+otherwise visitors can share a quota. See [Configuration](/self-hosting/configuration).
 
 From an authorized operations checkout with `DATABASE_URL` pointing at the intended database:
 
@@ -56,19 +58,30 @@ bun --filter @workspace/db moderation reports
 bun --filter @workspace/db moderation report <report-uuid>
 ```
 
-The queue lists at most 100 unresolved cases, with suspected child exploitation first and then
-oldest first. It shows only the case UUID, category and receipt time. Opening a case shows its
-location, immutable paste UUID when known, explanation, optional contact and disposition.
-These commands audit the host username, hostname, action, case UUID when applicable, and time.
-They require trusted host and database access; there is no public queue or browser admin endpoint.
+Both commands print JSON to standard output (or exit with status `1` on error). The queue lists at
+most 100 unresolved cases, with suspected child exploitation first and then oldest first. It shows
+only the case UUID, category and receipt time. Opening a case shows its location, immutable paste
+UUID when known, explanation, optional contact and disposition. These commands audit the host
+username, hostname, action, case UUID when applicable, and time. They require trusted host and
+database access; there is no public queue or browser admin endpoint.
 
 ## Record a decision
 
-Use the existing `moderation inspect` and `moderation transition` commands to assess the current
-paste version and apply a restriction or release. Set the transition's `caseReference` to the
-report UUID. Then close the report with the command UUID of that decision:
+Inspect the paste's current content and moderation versions, apply a restriction or release with
+`caseReference` set to the report UUID, and then close the report with the transition's command
+UUID:
 
 ```sh
+bun --filter @workspace/db moderation inspect <paste-uuid>
+bun --filter @workspace/db moderation transition '{
+  "commandId": "22222222-2222-4222-8222-222222222222",
+  "pasteId": "<paste-uuid>",
+  "expectedContentVersion": 1,
+  "expectedModerationVersion": 0,
+  "state": "quarantined",
+  "reasonCode": "abuse",
+  "caseReference": "11111111-1111-4111-8111-111111111111"
+}'
 bun --filter @workspace/db moderation resolve-report '{
   "id": "11111111-1111-4111-8111-111111111111",
   "outcome": "quarantined",
@@ -76,7 +89,9 @@ bun --filter @workspace/db moderation resolve-report '{
 }'
 ```
 
-These are synthetic UUIDs. Replace them with the actual case and moderation command IDs.
+Each command prints the resulting JSON record on success (or exits with status `1` if a version
+check or field validation fails). The UUIDs above are synthetic: replace them with the actual case
+UUID, paste UUID, version numbers from `inspect`, and a fresh command UUID.
 `quarantined`, `removed` and `restored` outcomes require an audit event for that case and the
 same immutable paste, with the matching resulting state. `restored` matches `allowed`.
 `no_action` and `duplicate` close a case without a moderation command. Resolution is audited and
@@ -90,15 +105,15 @@ records do not preserve paste contents.
 ## Retention and limitations
 
 Report records and reviewer audit events survive paste and account deletion. There is no automatic
-report-disposal job in this foundation. Keep intake off until an authorized owner has approved
-the retention and disposal procedure, including backups and review access. The report queue is
-not an evidence repository.
+report-disposal job. Keep intake off until an authorized owner has approved the retention and
+disposal procedure, including backups and review access. The report queue is not an evidence
+repository.
 
-Setting `ABUSE_REPORTS_ENABLED=false` hides the form and report links and rejects new submissions.
-Existing cases remain available through the host commands. Disabling intake does not dispose of
-records or change paste restrictions.
+Setting `ABUSE_REPORTS_ENABLED=false` hides the form and report links and rejects new submissions
+(`/abuse` returns `404`). Existing cases remain available through the host commands. Disabling
+intake does not dispose of records or change paste restrictions.
 
-This workflow provides intake, an audited host queue and manual case resolution. Account
-suspension, automated decision notices, verified preservation, external escalation delivery,
-automated screening and backlog alerts remain separate work. No claim of complete detection or
-legal certification is made.
+This workflow provides intake, an audited host queue and manual case resolution. It does not
+include account suspension, automated decision notices, verified preservation, external escalation
+delivery, automated screening or backlog alerts. No claim of complete detection or legal
+certification is made.

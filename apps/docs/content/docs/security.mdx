@@ -27,9 +27,10 @@ Decrypting env group values also requires the server's key.
 | Data | Application storage | Notes |
 | --- | --- | --- |
 | Ordinary paste titles, descriptions, files and revisions | Plain text in Postgres | Visibility, passwords and burn after read control access through the app. |
-| Browser-encrypted paste descriptions, file names, languages and contents | AES-256-GCM | Your browser encrypts these before upload and keeps the key. Titles, links and other metadata stay readable to the server. |
+| Browser-encrypted paste descriptions, file names and contents | AES-256-GCM | Your browser encrypts these before upload and keeps the key. The server stores the language as `text` and the browser infers syntax highlighting from the decrypted file name. Titles, links and other metadata stay readable to the server. |
 | Env group values | AES-256-GCM | Encrypted with a key the server derives from `ENV_SECRETS_KEY` or `BETTER_AUTH_SECRET`. See [Encrypted secrets](/core-concepts/secrets#how-values-are-encrypted). |
 | Env group names, variable names and labels | Not encrypted | Only values are encrypted. |
+| Connected integration tokens (GitHub, Linear, Notion, Slack) | AES-256-GCM | Encrypted with a key the server derives from `ENV_SECRETS_KEY` or `BETTER_AUTH_SECRET` using HKDF. |
 
 Anyone with the full link to an unlisted encrypted paste has its key. Browser encryption also
 depends on the JavaScript your server delivers and the security of your device. See
@@ -55,12 +56,13 @@ To share a credential once while keeping it from the server, combine
 | Env group share link and its password | Only hashes are stored, and every reveal checks the password, expiry and revocation. |
 | Personal API token (`snpt_…`) | 32 random bytes, shown once. Only a SHA-256 hash and a short prefix are stored. Tokens can expire after a period you choose, or never. |
 | Agent OAuth connection | Codes and tokens are stored as SHA-256 hashes. Codes expire after 10 minutes, access tokens after one hour, and refresh tokens after 30 days without use. Reusing a refresh token ends the connection. See [Token lifetime and revocation](/oauth#token-lifetime-and-revocation). |
-| Browser session | A random token in a signed, HTTP-only cookie. The database keeps the token itself with the device's IP address and user agent, which **Settings** shows under signed-in devices. A session lasts seven days and is extended while you use it. |
+| Browser session | A random token in a signed, HTTP-only cookie. The database keeps the token itself with the device's IP address and user agent, which **Settings** > **Account** shows under **Sessions**. A session lasts seven days and is extended while you use it. |
 | GitHub and Google sign-in tokens | Better Auth stores the access and refresh tokens the provider returns. They are **not encrypted** in the database. Sniptide requests sign-in scopes only. |
+| Connected integration tokens | Access tokens for GitHub, Linear, Notion and Slack integrations are encrypted with AES-256-GCM using a key derived from `ENV_SECRETS_KEY` or `BETTER_AUTH_SECRET`. |
 
 Protect database access and the cookie-signing secret. Rotating `BETTER_AUTH_SECRET` signs
 users out. Follow [Rotate the auth secret](/self-hosting/configuration#rotate-the-auth-secret)
-to keep existing env groups readable.
+to keep existing env groups and connected integrations readable.
 
 A read-only token can retrieve decrypted env group values through the API, even though the MCP
 tool list has no env group tools. Give a token only to clients you trust with your env groups.
@@ -87,14 +89,15 @@ API tokens and agents can move a paste to the trash, but they never delete one f
 
 Deletion removes rows from the live database only. Database backups keep deleted pastes until the
 backups themselves are deleted, and the operator decides how long that is. Moderation records keep
-a removed paste's ID and the reason for the decision, but not its content.
+a removed paste's ID and the reason for the decision, but not its content. Abuse report records and
+reviewer audit events also survive paste and account deletion.
 
 ## What the server records about readers
 
-- **View analytics.** Each view, raw read and copy is stored with the referrer's host, the
-  country the CDN reports and the device type. The visitor is an HMAC of the IP address and user
-  agent under a salt that changes every UTC day. The rollup job deletes old salts from the live
-  database after the following day ends. Backups may retain them.
+- **View analytics.** Each view is stored with the referrer's host, the country the CDN reports and
+  the device type; raw reads and copies store only the device type. All three store a daily visitor
+  HMAC of the IP address and user agent under a salt that changes every UTC day. The rollup job
+  deletes old salts from the live database after the following day ends. Backups may retain them.
 - **Request logs.** [When enabled](/self-hosting/configuration#monitoring), request logs use
   route patterns such as `/[slug]` and record status and duration. A reverse proxy or CDN can
   keep its own logs with full URLs and IP addresses.
@@ -121,7 +124,9 @@ cannot run code or write local files.
 With self-hosting, you control operator access and storage.
 
 - Keep `BETTER_AUTH_SECRET` and `ENV_SECRETS_KEY` secret, and store them apart from database
-  backups. Anyone holding both a backup and the key can read your env groups.
+  backups. Anyone holding both a backup and the key can read your env groups and integration tokens.
+  Rotating the active key without migrating makes existing env group values unreadable and
+  disconnects connected integrations.
 - Restrict who can reach Postgres and its backups. They hold ordinary pastes in plain text.
 - Serve the app over HTTPS only, and consider a [separate share domain](/self-hosting/configuration#separate-share-domain)
   so shared pages run on a different origin than the signed-in app.

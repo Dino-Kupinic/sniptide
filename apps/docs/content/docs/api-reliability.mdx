@@ -41,7 +41,8 @@ IP](/self-hosting/reverse-proxy)) skips this limit and sends no quota headers on
 
 Without a key, retrying a create after a timeout can create a second resource.
 `POST /api/v1/pastes` and `POST /api/v1/collections` accept an optional `Idempotency-Key` header
-that prevents this. Replace `https://paste.example.com` with your instance address.
+that prevents this. Export a write-scoped `SNIPTIDE_TOKEN` and replace
+`https://paste.example.com` with your instance address.
 
 ```bash
 curl -X POST https://paste.example.com/api/v1/pastes \
@@ -49,6 +50,14 @@ curl -X POST https://paste.example.com/api/v1/pastes \
   -H "Idempotency-Key: 8f14e45f-ceea-467f-a8f5-1b2c3d4e5f60" \
   -H "Content-Type: application/json" \
   -d '{"title":"Example","files":[{"name":"example.ts","content":"export const value = 1"}]}'
+```
+
+Expected `201` response:
+
+```json
+{
+  "paste": { "id": "…", "slug": "k3j9xq2m", "title": "Example", "visibility": "private" }
+}
 ```
 
 Send the same request with the same key after a timeout. The response is `201` with the same
@@ -90,6 +99,17 @@ item has its `index`, `key`, `status` and `body`, and a rate-limited item also h
 `retryAfterSeconds`. Check each item's `status`, because the batch as a whole succeeds even when
 an item fails.
 
+Example `207` response:
+
+```json
+{
+  "results": [
+    { "index": 0, "key": "import-collection", "status": 201, "body": { "collection": { "slug": "imported", "name": "Imported" } } },
+    { "index": 1, "key": "import-paste-1", "status": 429, "body": { "ok": false, "code": "too_many_requests", "message": "Rate limit reached." }, "retryAfterSeconds": 42 }
+  ]
+}
+```
+
 - Operations run in order, each in its own transaction. A failed item doesn't undo earlier items
   or stop later ones.
 - An invalid request body or an unknown operation name rejects the whole batch before anything is
@@ -97,8 +117,9 @@ an item fails.
 - The batch request counts as one token request, and each item counts as one more. Each created
   paste also counts toward the paste-create quota. Storage and collection limits apply per item.
 - Item keys share the namespace of the single-create routes, so you can retry an item through
-  `POST /pastes` or `POST /collections` with the same key and payload. Two items with the same key
-  conflict.
+  `POST /pastes` or `POST /collections` with the same key and payload. Reusing a key within a
+  batch with the same route and payload replays the `201` result; reusing it with a different route
+  or payload returns `409`.
 
 After a network failure, send the original batch again with the original keys.
 

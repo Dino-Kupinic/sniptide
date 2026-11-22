@@ -59,7 +59,9 @@ and stop all writers, including external clients, before taking the final backup
    `.env` for future upgrades, including when you rerun the installer.
 3. Run `bash scripts/restore.sh path/to/backup.dump`. It starts the new database, restores the
    dump and starts the application. Check the health endpoint, sign in, and inspect your data.
-   Keep the old Compose file, volume and backup until you have verified the upgrade.
+   Keep the old Compose file, volume and backup until you have verified the upgrade. Once verified,
+   you can permanently remove the old Postgres 17 volume with `docker volume rm <project>_postgres`
+   (this is irreversible).
 4. To roll back, stop the new stack with `docker compose down`, restore the saved Compose file,
    remove `POSTGRES_VOLUME` from `.env`, and run `docker compose up -d`. This returns to the old database as it was at the backup;
    writes made after the upgrade are not included.
@@ -133,6 +135,8 @@ docker pull "$image" &&
 </Tab>
 <Tab value="Coolify">
 
+For a Postgres 17 to 18 upgrade, complete [Upgrade Postgres 17 to 18](#upgrade-postgres-17-to-18) first.
+
 Pin the service to an exact image release or digest. Record the current and replacement references.
 If the upgrade adds migrations, [take an offsite pre-deploy snapshot](/self-hosting/backups#send-coolify-backups-offsite)
 and confirm it appears in your bucket before redeploying. Rehearse risky migrations with the
@@ -159,7 +163,8 @@ empty when the database was already current.
 
 ### Duplicate provider account identities
 
-The ownership integrity migration adds a unique index on `account(provider_id, account_id)` and
+The ownership integrity migration (`20261104204533_ownership_integrity`, relevant when upgrading
+from instances created before it) adds a unique index on `account(provider_id, account_id)` and
 a foreign key that keeps each paste in one of its owner's collections. It locks the account,
 paste and collection tables while it checks existing data and adds the constraints, so schedule
 this upgrade for a quiet time.
@@ -201,6 +206,7 @@ migrations it doesn't know.
 ## Upgrade several replicas
 
 If you run more than one replica, build once and deploy the exact same image to all of them, and
-remember that each process holds its own database pool: replicas × `DATABASE_POOL_SIZE` (twice
-that while two releases overlap) must fit the database's connection budget. Drain old instances
+remember that each process holds its own database pool plus up to one dedicated live-update
+listener: replicas × (`DATABASE_POOL_SIZE` + 1) (twice that while two releases overlap), plus
+migration and admin connections, must fit the database's connection budget. Drain old instances
 before removing the previous image.

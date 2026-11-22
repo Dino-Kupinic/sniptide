@@ -24,14 +24,20 @@ when you use a Cloud token.
 <Tabs items={["TypeScript", "Python"]} groupId="sdk-language" persist>
 <Tab value="TypeScript">
 
+Install the package, save the snippet as an ES module (for example `check.mjs`), and run it with
+`node check.mjs` (Node.js 18 or newer):
+
 ```bash
 npm install @sniptide/sdk
 ```
 
-```ts
+```ts title="check.mjs"
 import { SniptideClient } from "@sniptide/sdk"
 
-const client = new SniptideClient(process.env.SNIPTIDE_TOKEN!, "https://paste.example.com")
+const token = process.env.SNIPTIDE_TOKEN
+if (!token) throw new Error("Set SNIPTIDE_TOKEN in the environment.")
+
+const client = new SniptideClient(token, "https://paste.example.com")
 const { user, scopes } = await client.me()
 console.log(user.name, scopes)
 ```
@@ -39,11 +45,14 @@ console.log(user.name, scopes)
 </Tab>
 <Tab value="Python">
 
+Install the package, save the snippet as `check.py`, and run it with `python check.py` (Python 3.9
+or newer):
+
 ```bash
 python -m pip install sniptide
 ```
 
-```python
+```python title="check.py"
 import os
 from sniptide import SniptideClient
 
@@ -87,8 +96,10 @@ For integration tests that write data, point your SDK at a
 
 ## Errors
 
-Every failure raises `SniptideError` with a message, the HTTP status, a machine-readable code and,
-on `429` and `503`, the `Retry-After` value.
+Every request or API failure raises `SniptideError` with a message, the HTTP status, a
+machine-readable code and, on `429` and `503`, the `Retry-After` value. Invalid constructor
+arguments or identifiers (such as an empty string, `.` or `..`) raise `TypeError` in JavaScript
+and `ValueError` in Python before any request is sent.
 
 | Code | Status | Meaning |
 | --- | --- | --- |
@@ -98,8 +109,8 @@ on `429` and `503`, the `Retry-After` value.
 | `not_found` | 404 | The paste, collection or env group doesn't exist or isn't yours. |
 | `conflict` | 409 | An idempotency key was reused with another payload, a collection with that name exists, or the account has 100 env groups. |
 | `precondition_failed` | 412 | The env group changed after the revision you passed. Read it again before you write. |
-| `unprocessable_entity` | 422 | The account already has 50 collections. |
 | `payload_too_large` | 413 | The paste is too large or the account is out of storage. |
+| `unprocessable_entity` | 422 | The account already has 50 collections. |
 | `too_many_requests` | 429 | The token used its hourly quota. Wait for `Retry-After`. |
 | `service_unavailable` | 503 | The instance is busy. Wait for `Retry-After`. |
 | `internal_error` | 500 | The server failed. Check whether the change happened before retrying. |

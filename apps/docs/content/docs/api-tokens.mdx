@@ -12,7 +12,8 @@ under `/api/v1`. An agent that supports OAuth can connect without a token, as
 
 1. Open **Settings** and select **API tokens**.
 2. Enter a token name you'll recognize, such as "laptop CLI", of up to 60 characters.
-3. Turn on **Write access** if the program must create or change data. Off means read-only.
+3. Leave **Write access** on if the program must create or change data, or turn it off for a
+   read-only token (**Write access** is on by default).
 4. Choose **Expires**: 30 days, 90 days (the default), 1 year or never.
 5. Select **Create token** and copy the token. It is shown only once.
 
@@ -28,12 +29,16 @@ once, and scripts using it start getting `401`.
 
 ## Check the token
 
-Send the token in the `Authorization` header. Use `https://app.sniptide.com` for Sniptide Cloud,
-or replace `https://paste.example.com` with your instance address.
+Export your token as `SNIPTIDE_TOKEN` and send it in the `Authorization` header. Use
+`https://app.sniptide.com` for Sniptide Cloud, or replace `https://paste.example.com` with your
+instance address.
 
 ```bash
+export SNIPTIDE_TOKEN="snpt_…"
 curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" https://paste.example.com/api/v1/me
 ```
+
+Expected response:
 
 ```json
 { "user": { "id": "…", "name": "Ada", "username": "ada" }, "scopes": ["read", "write"] }
@@ -70,7 +75,7 @@ Paths are relative to `/api/v1`. `{id}` accepts a paste's id or its link.
 | Move a paste to the trash | `DELETE /pastes/{id}` | write |
 | List collections | `GET /collections` | read |
 | Create a collection | `POST /collections` | write |
-| A collection's pastes, oldest first | `GET /collections/{slug}/pastes` | read |
+| A collection's pastes, oldest first | `GET /collections/{slug}/pastes?cursor` | read |
 | Create several pastes or collections | `POST /batch` | write |
 | List env groups | `GET /env` | read |
 | Read an env group's values | `GET /env/{group}` | read |
@@ -89,10 +94,12 @@ Behavior to know before you write data:
 - `PUT /env/{group}` replaces every variable in the group.
 - Reading, replacing and deleting an env group each add an entry to its
   [activity log](/core-concepts/secrets#review-who-read-and-changed-a-group) under the token's name.
-- `GET /pastes` returns summaries without file contents, newest first. `limit` is 1 to 100 and
-  defaults to 20. Pass `nextCursor` back as `cursor` for the next page, and stop when it is `null`.
-- `q` matches when every word appears in the title, link, description, tags, a file path or the
-  code.
+- `GET /pastes` returns summaries without file contents, most recently updated first (`updatedAt`
+  descending). `limit` is 1 to 100 and defaults to 20. Pass `nextCursor` back as `cursor` for the
+  next page, and stop when it is `null`. `GET /collections/{slug}/pastes` paginates the same way
+  with a fixed page size of 50.
+- `q` is capped at 120 characters and matches up to the first 8 unique words against the title,
+  link, description, tags, file paths and code. Every matched word must appear.
 - A new paste records that it came from the API. The CLI sends `X-Sniptide-Client: cli` and the
   stdio MCP server sends `X-Sniptide-Client: mcp`, so their pastes are marked as theirs on the
   [dashboard](/getting-started/dashboard#where-a-paste-came-from). Other values count as the API.
@@ -134,8 +141,8 @@ Every error returns JSON with a status code:
 | `404` | `not_found` | The paste, collection or env group doesn't exist or isn't yours. |
 | `409` | `conflict` | An `Idempotency-Key` was reused with another route or payload, a collection with that name exists, or the account has 100 env groups. |
 | `412` | `precondition_failed` | An env group changed after the `revision` the request sent. Read it again before you write. |
-| `422` | `unprocessable_entity` | The account already has 50 collections. |
 | `413` | `payload_too_large` | The request or paste is too large, or the account is out of storage. |
+| `422` | `unprocessable_entity` | The account already has 50 collections. |
 | `429` | `too_many_requests` | A rate limit was reached. Wait for `Retry-After`. |
 | `503` | `service_unavailable` | The instance is busy. Wait for `Retry-After`. |
 | `500` | `internal_error` | The server failed. Check whether the change happened before you retry. |

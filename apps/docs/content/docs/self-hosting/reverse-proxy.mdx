@@ -41,12 +41,17 @@ See [Docker Compose](/self-hosting/docker-compose#add-https-with-the-bundled-pro
 
 ## Set the rest of the proxy configuration
 
+- Forward `Host` (or `X-Forwarded-Host`) and `X-Forwarded-Proto` from your proxy so Sniptide knows
+  the public host and scheme.
 - `BETTER_AUTH_URL` is the public `https://` address.
 - Set the proxy's request and upstream timeouts to suit you: the database deadlines limit SQL
   and lock waits, not the whole HTTP request.
 - If you use a second domain for share links, point it at the same app and set `SHARE_URL`.
   Copied links then use that domain, and the app's own pages on it redirect back to
   `BETTER_AUTH_URL`.
+- Restart the app after changing `CLIENT_IP_SOURCE`, `TRUSTED_PROXIES` or `TRUSTED_PROXY_HOPS`.
+  Confirm `curl https://paste.example.com/api/health` returns `{"ok":true}` and an unauthenticated
+  `curl -i https://paste.example.com/api/v1/me` returns `401` with `RateLimit` headers.
 
 ## Recognize a wrong setting
 

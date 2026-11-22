@@ -18,7 +18,7 @@ Sign in to your instance through the browser using [OAuth](/oauth).
 
 ## Install the extension
 
-1. Build the extension from a checkout of the repository:
+1. From the repository root, build the extension:
 
    ```bash
    bun install
@@ -28,23 +28,25 @@ Sign in to your instance through the browser using [OAuth](/oauth).
    The build writes the unpacked extension to `apps/extension/dist`.
 
 2. Open `chrome://extensions` and turn on **Developer mode**.
-3. Select **Load unpacked** and choose `apps/extension/dist`.
+3. Select **Load unpacked** and choose `apps/extension/dist`. Confirm **Sniptide** appears in the
+   extension list with no errors.
 4. Pin **Sniptide** to the toolbar from the extensions menu.
 
 ## Sign in
 
 1. Select the **Sniptide** button in the toolbar.
 2. For Sniptide Cloud, continue with the default address. For your own server, select
-   **Use a self-hosted instance** and enter its address. Chrome asks you to allow the
-   extension to reach that address.
-3. Select **Sign in to Sniptide**. A window opens with Sniptide's consent screen.
+   **Use a self-hosted instance** and enter its address.
+3. Select **Sign in to Sniptide**. For a self-hosted instance, Chrome first asks you to allow the
+   extension to reach that address; approve it, and a window opens with Sniptide's consent screen.
 4. Check that the screen names **Sniptide for Chrome**, then select **Allow access**.
 
 The popup closes while the consent window is open. Open it again and it shows the **New paste**
 tab. The connection is listed in **Settings** > **API tokens** as "Sniptide for Chrome" with
 "Connected with OAuth".
 
-The instance address must use `https://`. Plain `http://` works only for `localhost`.
+The instance address must use `https://` (omitting the scheme defaults to `https://`). Plain
+`http://` works only for `localhost` and `127.0.0.1`.
 
 ## Save a selection
 
@@ -110,7 +112,7 @@ Select the gear in the popup.
 | The page you act on (`activeTab`, `scripting`) | Reads your selection and the page's code blocks, and shows the toast, only after you use the context menu, the shortcut or the popup on that page. |
 | `contextMenus` | Adds **Save selection to Sniptide**. |
 | `identity` | Opens the sign-in window and receives its answer. |
-| `storage` | Keeps the connection's tokens, your settings and the unsaved draft in Chrome's local extension storage. |
+| `storage` | Keeps the connection's tokens and your settings in `chrome.storage.local`, and the unsaved draft in `chrome.storage.session` (cleared when the browser closes). |
 | `https://app.sniptide.com` | The extension requests permission for this default API origin at install. It asks for your instance address when you sign in to it. |
 
 The extension reads no page until you act on it, sends nothing anywhere but your Sniptide

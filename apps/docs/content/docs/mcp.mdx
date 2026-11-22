@@ -9,6 +9,19 @@ Sniptide instance at `/api/mcp`.
 
 <AgentLoopVisual />
 
+## Before you begin
+
+- A Sniptide account and your instance address (`https://app.sniptide.com` for Sniptide Cloud).
+- An HTTPS address for remote HTTP and OAuth clients (plain HTTP is allowed only on loopback
+  addresses: `localhost`, `127.0.0.1` and `[::1]`).
+- Choose how to connect:
+  - **OAuth (recommended for interactive agents):** Claude Code, Codex, Cursor, Grok Bot and other
+    clients that support MCP OAuth. No token to copy.
+  - **API token over HTTP:** clients without OAuth, or unattended agents.
+  - **Local stdio server (`@sniptide/mcp`):** clients that only support stdio servers (requires
+    Node.js 24 or newer).
+  - **Agent plugin:** installs Sniptide's skills together with a Sniptide Cloud connection.
+
 ## Connect an agent
 
 Use `https://app.sniptide.com/api/mcp` for Sniptide Cloud. For a self-hosted instance, append
@@ -118,6 +131,8 @@ The `@sniptide/mcp` package runs the same tools as a local stdio process that ca
 Use it when your client only supports stdio servers. It needs Node.js 24 or newer and an API
 token.
 
+Put this in `.mcp.json` in your project root:
+
 ```json title=".mcp.json"
 {
   "mcpServers": {
@@ -135,25 +150,26 @@ token.
 ```
 
 Cursor uses the same `command`, `args` and `env` fields without `type`. Keep the token in
-private configuration. The local server reads only `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`, not
-the CLI's saved credentials. It requires HTTPS except on `localhost` and refuses redirects.
+private configuration. The local server reads only `SNIPTIDE_TOKEN` and `SNIPTIDE_BASE_URL`
+(optional, defaults to `https://app.sniptide.com`), not the CLI's saved credentials. It requires
+HTTPS except on loopback hosts (`localhost`, `127.0.0.1` and `[::1]`) and refuses redirects.
 
-Contributors can build it from a checkout with `bun install && bun --filter @sniptide/mcp build`,
+Contributors can build it from the repository root with `bun install && bun --filter @sniptide/mcp build`,
 then run `node` with the absolute path to `packages/mcp/dist/sniptide-mcp.js`.
 
 ## Tools
 
-| Tool | What it does | Access |
+| Tool | Inputs and behavior | Access |
 | --- | --- | --- |
-| `search_snippets` | Returns a page of summaries. `query` matches when every word appears in the title, description, tags, file paths or code. Filters by tags, language and collection. `nextCursor` continues the search. | read |
-| `read_snippet` | Returns one snippet by id or link, with its file paths, code and source metadata. | read |
-| `list_collections` | Lists your collections with their slugs, names and how many live snippets each holds. | read |
-| `fetch_collection` | Returns a page of a collection as numbered steps with the full snippets, oldest capture first. | read |
-| `create_snippet` | Saves a new snippet. It is private unless `visibility` is set. | write |
-| `update_snippet` | Replaces a snippet's title and **all** its files. Marked destructive. | write |
-| `update_snippet_settings` | Changes visibility, expiry, password or burn after read. Marked destructive. The password is never returned. | write |
-| `create_collection` | Creates an empty collection by name and returns its slug. | write |
-| `trash_snippet` | Moves a snippet to the trash, where you can restore it in the app. Marked destructive. Nothing is deleted for good. | write |
+| `search_snippets` | Optional `query` (matches when every word appears in title, description, tags, file paths or code), `tags` (up to 20), `language`, `collection`, `limit` (`1` to `100`, default `20`), `cursor`. Returns a page of summaries and `nextCursor`. | read |
+| `read_snippet` | `id` (paste id or link). Returns one snippet with its file paths, code and source metadata. | read |
+| `list_collections` | No inputs. Lists your collections with their slugs, names and how many live snippets each holds. | read |
+| `fetch_collection` | `collection` (slug), optional `cursor` and `startStep`. Returns a page of up to 50 full snippets as numbered steps, oldest capture first. | read |
+| `create_snippet` | `title` (1 to 120 chars), `files` (1 to 10 files), optional `description` (up to 280 chars), `visibility` (`private`, `unlisted`, `public`; defaults to `private`), `collection`, `tags` (up to 20), `source`. | write |
+| `update_snippet` | `id`, `title`, `files` (replaces **all** files), optional `description`, `visibility`, `collection`, `tags`, `source`. Marked destructive. | write |
+| `update_snippet_settings` | `id`, optional `visibility`, `expiry` (`1h`, `1d`, `1w`, `1m`, `1y`, `never`), `password` (string or `null`), `burnAfterRead`. Marked destructive. The password is never returned. | write |
+| `create_collection` | `name` (up to 40 chars; up to 50 collections per account). Creates an empty collection and returns its slug. | write |
+| `trash_snippet` | `id`. Moves a snippet to the trash, where you can restore it in the app. Marked destructive. Nothing is deleted for good. | write |
 
 The agent only reaches the account owner's **own** live snippets, private ones included. It can't
 reach other people's snippets, snippets shared with you, the trash or expired snippets. The
@@ -187,8 +203,9 @@ A well-behaved agent searches the summaries first and reads only the snippet it 
 - **Collections.** A `fetch_collection` page holds up to 50 snippets. To continue, the agent
   passes `nextCursor` and `nextStep` back as `cursor` and `startStep`. Steps come oldest capture
   first, the same order the [CLI](/cli) uses.
-- **Saving.** `create_snippet` takes a title and the complete `files` list, and optionally tags,
-  source metadata and the slug of an existing collection. The snippet is created private.
+- **Saving.** `create_snippet` takes a title and the complete `files` list, and optionally a
+  description, visibility (`private`, `unlisted` or `public`; defaults to `private`), tags, source
+  metadata and the slug of an existing collection.
 - **Editing.** An update replaces every file, so the agent should read the snippet first and send
   every file it wants to keep. Fields it leaves out (description, visibility, collection, tags
   and source) keep their values. `null` clears a collection or source, and `[]` clears tags.
@@ -251,7 +268,7 @@ agent to list your collections to confirm it is using the account you intend.
 | Response | Meaning | Action |
 | --- | --- | --- |
 | `401` | The token or connection is missing, expired, invalid or revoked. | Sign in again, or replace the token. |
-| Tool error "doesn't have the write scope" | The token or connection is read-only. | Connect again with `write`, or use a token with **Write access**. |
-| `403` | The request came from a browser origin other than the app's. | Call the server from the agent, not from a web page. |
+| Tool error `"This token doesn't have the write scope."` (HTTP) or `"The API token lacks the required scope."` (local stdio) | The token or connection is read-only. | Connect again with `write`, or use a token with **Write access**. |
+| `403` | The request came from a browser origin other than the app's, or the token lacks the required scope. | Call the server from the agent, not from a web page, and verify the token's scopes. |
 | `405` | A plain `GET` or `DELETE` reached the endpoint. The server is stateless and has no sessions. | Connect with Streamable HTTP. |
 | `429` | A rate limit was reached. | Wait for `Retry-After` before retrying. |

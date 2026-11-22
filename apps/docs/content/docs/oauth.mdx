@@ -112,30 +112,38 @@ several servers can check which one answered.
 
 Every client is public and proves itself with PKCE:
 
-- Registration accepts only `token_endpoint_auth_method: "none"`.
+- Registration (`application/json`, up to 16 KiB) accepts only `token_endpoint_auth_method: "none"`
+  and at most 10 redirect URIs.
+- Token (`POST /api/oauth/token`) and revocation (`POST /api/oauth/revoke`) accept
+  `application/x-www-form-urlencoded` bodies up to 8 KiB. Supported grant types are
+  `authorization_code` and `refresh_token`. Revocation returns `200 {}` even for unknown tokens.
 - The code challenge method must be `S256`.
-- Redirect URIs use `https`, `http` on `localhost` or `127.0.0.1` with any port, or an app's own
-  scheme such as `cursor://`.
+- Redirect URIs use `https`, `http` on `localhost`, `127.0.0.1` or `[::1]` with any port, or an
+  app's own scheme such as `cursor://`. Fragments, embedded credentials, and dangerous schemes
+  (`javascript:`, `data:`, `file:`, `vbscript:`, `about:`, `blob:`) are rejected.
 - A `resource` parameter, when sent, must point at the same instance.
 
 ## Limits and errors
 
-Errors follow RFC 6749: a JSON body with `error` and `error_description`.
+Errors follow RFC 6749: a JSON body with `error` and `error_description`. OAuth connections share
+the account's 25-token limit with personal API tokens.
 
 | Symptom | Cause | Action |
 | --- | --- | --- |
 | Claude Code adds the server but no browser opens | `claude mcp add` only saves the server. Sign-in starts from the `/mcp` menu. | Start Claude Code, type `/mcp`, choose `sniptide` and pick **Authenticate**. |
 | Codex reports "Authorization server response missing required issuer" | Sniptide sends `iss` on every redirect. An older Codex version, or one that kept an earlier registration of the server, can still fail this check, while Codex 0.166 signs in. | Update Codex, run `codex mcp remove sniptide`, then add the server again. |
-| `invalid_grant` on the token request | An authorization code works once and for ten minutes, so the client probably retried an exchange. | Start the connection again from the client. |
+| `invalid_grant` on the token request | An authorization code works once and for ten minutes (so the client may have retried an exchange), or the account already has 25 active tokens/connections. | Revoke an unused token or connection in **Settings** > **API tokens** if you hit the 25-token limit, then start the connection again from the client. |
 | `429` from registration | Registration allows 20 requests an hour per client address. | Wait for `Retry-After`. |
-| `429` from the token endpoint | The token endpoint allows 60 requests a minute per client address. | Wait for `Retry-After`. |
+| `429` from the token or revoke endpoint | `POST /api/oauth/token` and `POST /api/oauth/revoke` share a limit of 60 requests a minute per client address. | Wait for `Retry-After`. |
 
-Rate-limited responses carry `RateLimit` headers and `Retry-After`.
+Rate-limited responses carry `RateLimit` headers and `Retry-After`. On self-hosted instances where
+`CLIENT_IP_SOURCE` is unset and the client address can't be determined, per-address OAuth rate
+limits are skipped.
 
 ## Self-hosted instances
 
 Set `BETTER_AUTH_URL` to the address people use to open your instance. Sniptide uses it for
-the issuer and every endpoint above.
+the issuer and every endpoint above, falling back to the request origin when unset.
 
 Sniptide doesn't support OpenID Connect, client secrets, the device flow, or agent identity
 assertions such as ID-JAG.

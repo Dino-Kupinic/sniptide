@@ -5,23 +5,24 @@ description: Look up every environment variable a self-hosted Sniptide instance 
 
 Sniptide reads its configuration from environment variables when the server starts. They aren't
 built into the image, so a change takes effect when you restart the container, for example with
-`docker compose up -d`. The server checks every value at startup and stops with the variable's
-name when one is invalid, instead of falling back to a default. A variable that is set but empty
-counts as unset.
+`docker compose up -d`. The server checks startup-validated settings when it boots and stops with
+the variable's name when one is invalid, instead of falling back to a default. Settings read lazily
+by background jobs, syntax highlighting or visit-queue admission fail the affected job or trigger
+backpressure instead of stopping startup. A variable that is set but empty counts as unset.
 
-Only `DATABASE_URL`, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` need a value, and the Docker
-Compose and Coolify templates fill in all three. Every other variable has a default that suits a
-small instance, so set one only to turn on a feature or change a limit. The repository's
-`apps/web/.env.example` lists the app settings. Docker Compose passes every setting in `.env` to
-the app. The Coolify template lists the common ones; see
-[Coolify](/self-hosting/coolify#change-settings) to add one it doesn't list.
+Only `DATABASE_URL`, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` need a value. The Coolify template
+and the install script fill in all three; Docker Compose sets `DATABASE_URL` and defaults
+`BETTER_AUTH_URL` (from `SNIPTIDE_DOMAIN` or `http://localhost:3000`), while still requiring you to
+set `BETTER_AUTH_SECRET`. Every other variable has a default that suits a small instance, so set
+one only to turn on a feature or change a limit. The repository's `apps/web/.env.example` lists the
+app settings. Docker Compose passes every setting in `.env` to the app. The Coolify template lists
+the common ones; see [Coolify](/self-hosting/coolify#change-settings) to add one it doesn't list.
 
 ## Required
 
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `DATABASE_URL` | none | Postgres connection string, `postgres://user:password@host:5432/sniptide`. Sniptide tests Postgres 17 and 18. Compose runs Postgres 18 and sets this for you. |
-| `POSTGRES_VOLUME` | `postgres` | Compose database volume key. Set to `postgres18` when migrating a Postgres 17 installation. See [Upgrading](/self-hosting/upgrading#upgrade-postgres-17-to-18). |
 | `BETTER_AUTH_SECRET` | none | Signs sessions and supplies the default key for env group values. Generate with `openssl rand -hex 32` and keep it across restarts. Changing it signs everyone out. See [Rotate the auth secret](#rotate-the-auth-secret) if you store env groups. |
 | `BETTER_AUTH_URL` | none | The exact URL people open in the browser (`https://…` behind a proxy). The app boots without it, but sign-in and sign-up are rejected from any other origin ("Invalid origin"), and OAuth callbacks and printed links use it. |
 
@@ -51,7 +52,7 @@ to control who can open a link.
 | `BETTER_AUTH_TRUSTED_ORIGINS` | unset | Extra origins allowed to call the auth API, comma-separated, besides `BETTER_AUTH_URL`. |
 | `COOKIE_DOMAIN` | unset | Share the session cookie with other subdomains. Leave unset on one domain. |
 | `COOKIE_PREFIX` | `better-auth` | Prefix for the auth cookies' names (letters, digits, `-`, `_`). Set a different one on a deployment that shares a parent domain with another one (a preview next to production). Changing it signs everyone out. |
-| `DEMO_MODE` | `false` | A public demo: every visitor is signed in to one shared guest account with example data, reset on a schedule. The workspace uses the regular app layout without a demo banner. The welcome paste explains the shared account and resets. Pastes made in the demo are visible to every visitor and deleted at the next reset. Every page answers with `X-Robots-Tag: noindex, nofollow`, so search engines leave the demo out. Use it with `ALLOW_SIGN_UP=false` so the guest is the only account. |
+| `DEMO_MODE` | `false` | A public demo: every visitor is signed in to one shared guest account with example data, reset on a schedule. The workspace uses the regular app layout without a demo banner. The welcome paste explains the shared account and resets. Pastes made in the demo are visible to every visitor and deleted at the next reset. Self-hosted instances already send `X-Robots-Tag: noindex, nofollow, noarchive`; on `cloud` edition, `DEMO_MODE` adds `X-Robots-Tag: noindex, nofollow`. Use it with `ALLOW_SIGN_UP=false` so the guest is the only account. |
 | `DEMO_RESET_MINUTES` | `60` | With `DEMO_MODE`, minutes between resets (5 to 1440). The guest is also reset at server start. |
 
 Existing email and password accounts keep signing in. Pending invitations remain blocked until
@@ -219,7 +220,11 @@ Pick these to match what sits in front of the app: see [Reverse proxy and client
 
 Each process uses its configured pool and can open one dedicated live-update listener. Budget for
 replicas × (pool size + 1), plus migration and admin connections, within Postgres' connection limit.
-Invalid values stop the server with the allowed range.
+When `DATABASE_POOL_SIZE` is greater than `2`, `DATABASE_PROBE_RESERVE + DATABASE_MAINTENANCE_RESERVE`
+must be strictly less than `DATABASE_POOL_SIZE` (for pool sizes `1` or `2`, lanes share capacity
+without guaranteed reserves). Startup-validated values stop the server with the allowed range;
+invalid values for lazily read job, highlight-cache or visit-queue integers fail the affected job
+or trigger 503 backpressure instead.
 
 | Variable | Default | Range | What it does |
 | --- | --- | --- | --- |
@@ -246,7 +251,7 @@ Invalid values stop the server with the allowed range.
 | `PURGE_BATCH_SIZE` | `500` | 1 to 5000 | Most rows deleted per batch by the hourly cleanup. |
 | `PURGE_TIME_BUDGET_MS` | `2000` | 100 to 60000 | How long one cleanup run may keep starting new batches. |
 | `ANALYTICS_ROLLUP_TIME_BUDGET_MS` | `2000` | 100 to 60000 | How long one analytics rollup run may keep starting new batches. |
-| `HIGHLIGHT_CACHE_BYTES` | `33554432` | 0 to 256 MiB | Syntax-highlight cache per process; `0` turns it off. |
+| `HIGHLIGHT_CACHE_BYTES` | `33554432` | `0` to `268435456` (plain integer bytes, up to 256 MiB; no unit suffix) | Syntax-highlight cache per process; `0` turns it off. |
 | `SLOW_QUERY_MS` | `500` | 1 to 60000 | Threshold for slow-query log events. |
 | `REQUEST_LOG` | `all` | `all`, `errors`, `off` | Which requests get a JSON log line. `errors` logs 5xx and aborted responses only. Metrics count every request. |
 | `MIGRATIONS_DIR` | set by the image | n/a | Where migrations are read from at startup. Leave unset outside the image. |
@@ -258,7 +263,7 @@ removed after 30 days by a cleanup that runs at startup and hourly.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, `email`, and `telemetry`. Without a token both endpoints return 404. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
+| `METRICS_TOKEN` | unset | Operator credential for `GET /api/metrics` and `POST /api/jobs/{name}` maintenance writes. Send `Authorization: Bearer <METRICS_TOKEN>` (returns `401` if invalid, or `404` when unset). Metrics include latency, query counts, memory, event-loop delay, database size, and job success/failure/overdue state. Jobs are `purge`, `analytics`, `usage`, `email`, and `telemetry`. Keep it in an operator secret store, restrict access, and scrape every replica. Job status is per process and resets on restart. |
 | `POSTHOG_KEY`, `POSTHOG_HOST` | unset, `https://us.i.posthog.com` | PostHog product analytics and server [error tracking](#error-tracking), off unless a key is set. Cookieless, no session replay, events never include paste content or links' slugs. Cookieless events carry the visitor's country only when a CDN in front of the app sends one (`CF-IPCountry`, `X-Vercel-IP-Country` or `CloudFront-Viewer-Country`), because PostHog drops the IP of cookieless events before its GeoIP lookup. `POSTHOG_HOST` picks the region (`https://eu.i.posthog.com` for the EU). Preview deployments and local development get no browser key. |
 
 The Analytics page inside the app counts views, copies and referrers in your own database; nothing
