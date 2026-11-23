@@ -22,7 +22,9 @@ Importing a gist sends a request to GitHub even without a GitHub token.
   [Memory and resources](/self-hosting/memory) for what to monitor and how to set limits.
 - An HTTPS domain served at its root, such as `https://paste.example.com`. Serving the app under a
   path such as `/sniptide` isn't supported.
-- Two settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL`. See
+- Required settings: `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL`, plus `DATABASE_URL` when running
+  the single-container Docker route against your own Postgres. The install script and Coolify
+  template generate `BETTER_AUTH_SECRET` for you. See
   [Configuration](/self-hosting/configuration#required).
 
 ## Choose an install

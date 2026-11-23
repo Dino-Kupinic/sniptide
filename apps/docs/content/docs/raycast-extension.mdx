@@ -19,7 +19,7 @@ Connect the extension to your instance with an [API token](/api-tokens).
 
 ## Install the extension
 
-1. Start the extension from a checkout of the repository:
+1. From the repository root, start the extension:
 
    ```bash
    cd plugins/raycast
@@ -34,13 +34,15 @@ Connect the extension to your instance with an [API token](/api-tokens).
 ## Connect your account
 
 1. In Sniptide, open **Settings** and select **API tokens**.
-2. Create a token. **Read** access is enough to search, and the commands that create pastes need
-   **Write** access. [Create a token](/api-tokens#create-a-token) describes each step.
+2. Create a token. A **read-only** token is enough to search; commands that create pastes need
+   **Write access**. [Create a token](/api-tokens#create-a-token) describes each step.
 3. Run any Sniptide command in Raycast. Raycast asks for the **API Token** the first time.
 4. Paste the token and continue.
+5. Run **Search Pastes** to verify the connection; you should see your pastes, or "No pastes yet"
+   on a new account.
 
 **Instance Address** defaults to Sniptide Cloud. If you run your own instance, enter the
-address you open in the browser. Use HTTPS, or plain HTTP on `localhost`.
+address you open in the browser. Use HTTPS, or plain HTTP on `localhost`, `127.0.0.1` or `[::1]`.
 
 ## Search your pastes
 
@@ -100,6 +102,16 @@ The extension fills in the paste:
 Share Clipboard sends whatever text the clipboard holds. Check what you copied last before you run
 it, because an unlisted paste opens for anyone who has its link.
 
+## Commands
+
+| Command | Mode | Access | What it does |
+| --- | --- | --- | --- |
+| **Search Pastes** | View | read | Search your pastes and paste, copy or open them. |
+| **Search Collections** | View | read | Browse collections and search pastes inside them. |
+| **Create Paste** | View | write | Review title, file name, visibility and collection before saving. |
+| **Share Selection** | No-view | write | Save the frontmost selection as a paste and copy its link. |
+| **Share Clipboard** | No-view | write | Save the clipboard text as a paste and copy its link. |
+
 ## Change the preferences
 
 Open Raycast's settings, select **Extensions** and then **Sniptide**.
@@ -108,8 +120,8 @@ Open Raycast's settings, select **Extensions** and then **Sniptide**.
 | --- | --- | --- |
 | **API Token** | None | The token every command signs in with. |
 | **Instance Address** | `https://app.sniptide.com` | The Sniptide instance the extension reaches. |
-| **Visibility for New Pastes** | Unlisted | The visibility Share Selection and Share Clipboard use, and Create Paste's starting choice. |
-| **Primary Action** | Paste | Whether <kbd>Enter</kbd> in **Search Pastes** pastes the code or copies it. Select the **Search Pastes** command to find it. |
+| **Visibility for New Pastes** | **Unlisted (Anyone With the Link)** | The visibility Share Selection and Share Clipboard use, and Create Paste's starting choice. Also supports **Private (Only You)** and **Public**. |
+| **Primary Action** | **Paste Into the Frontmost App** | Whether <kbd>Enter</kbd> in **Search Pastes** pastes the code or uses **Copy to Clipboard**. Select the **Search Pastes** command to find it. |
 
 ## Limits
 
@@ -122,7 +134,8 @@ Open Raycast's settings, select **Extensions** and then **Sniptide**.
 
 | Message | What to do |
 | --- | --- |
-| **Sniptide rejected the API token.** | The token is wrong, expired or revoked. Create a new one and set it in the preferences. |
-| **This API token is read-only.** | Create a token with **Write** access and set it in the preferences. |
-| **Can't reach Sniptide.** | Check your connection. Check that **Instance Address** matches the address you open in the browser. |
-| **Nothing is selected.** | Select text first. Some apps don't share their selection with Raycast, so copy the text and run **Share Clipboard** instead. |
+| **Sniptide rejected the API token. Check it in the extension preferences.** | The token is wrong, expired or revoked. Create a new one and set it in the preferences. |
+| **This API token is read-only. Create one with write access to save pastes.** | Create a token with **Write access** and set it in the preferences. |
+| **Can't reach Sniptide. Check your connection and the instance address.** | Check your connection and confirm **Instance Address** matches the address you open in the browser. |
+| **Nothing is selected. Select text in the frontmost app and try again.** | Select text first. Some apps don't share their selection with Raycast, so copy the text and run **Share Clipboard** instead. |
+| **The clipboard holds no text. Copy some text and try again.** | Copy text to your clipboard before running **Share Clipboard**. |

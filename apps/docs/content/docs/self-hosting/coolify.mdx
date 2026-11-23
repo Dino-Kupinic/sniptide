@@ -7,6 +7,12 @@ description: Deploy Sniptide and Postgres on Coolify from one service template, 
 its Postgres database. Coolify generates the database credentials and the auth secret and assigns
 the domain, so nothing needs filling in before the first deploy.
 
+## Before you begin
+
+- A running Coolify instance with memory sized for Sniptide and Postgres. See
+  [Memory and resources](/self-hosting/memory).
+- A domain whose DNS points at your Coolify server, if you want HTTPS on a custom domain.
+
 ## Deploy the template
 
 1. In a Coolify project, choose **Add Resource**, then **Docker Compose Empty**.
@@ -31,6 +37,8 @@ account at `https://<your-domain>`.
 - `CLIENT_IP_SOURCE=x-forwarded-for` and `TRUSTED_PROXIES=private`, because Coolify's proxy appends
   the visitor's address to `X-Forwarded-For`. See
   [Reverse proxy and client IP](/self-hosting/reverse-proxy).
+- `SNIPTIDE_EDITION=selfhost`, `TELEMETRY=on` and `TELEMETRY_DEPLOYMENT=coolify` (set
+  `TELEMETRY=off` to opt out of daily instance reports).
 - Every other setting keeps the app's default, which suits a small instance.
 - Memory ceilings through `SNIPTIDE_MEMORY` and `POSTGRES_MEMORY`, unset by default. See
   [Memory](/self-hosting/memory).
@@ -39,12 +47,17 @@ account at `https://<your-domain>`.
 
 The template lists the settings most instances change as variables on the resource, all of them
 optional: `ALLOW_SIGN_UP`, `ALLOWED_EMAILS`, GitHub and Google sign-in, the account limits,
-`GITHUB_TOKEN` and SMTP. Set the ones you need from
-[Configuration](/self-hosting/configuration) and redeploy.
+`GITHUB_TOKEN` and basic SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`, `SMTP_PASSWORD`).
+Set the ones you need from [Configuration](/self-hosting/configuration) and redeploy.
 
-Any other setting, such as `MAX_PASTE_SIZE`, `METRICS_TOKEN`, `DEMO_MODE` or the legal links, keeps
+Any other setting, such as `MAX_PASTE_SIZE`, `METRICS_TOKEN`, `DEMO_MODE`, advanced SMTP flags
+(`SMTP_SECURE`, `SMTP_REQUIRE_TLS`, `NOTIFICATION_EMAIL_CONCURRENCY`) or the legal links, keeps
 its default until you add it to the `environment` list of the `sniptide` service in the template,
 for example `- METRICS_TOKEN=${METRICS_TOKEN}`. Then set its value and redeploy.
+
+After redeploying, confirm `https://<your-domain>/api/health` returns `{"ok":true}` and check the
+`sniptide` container logs. If a setting value is invalid and the container fails to become healthy,
+revert the variable in Coolify and redeploy.
 
 Updating the template doesn't change a resource you already deployed: Coolify keeps the Compose
 file and the values you saved. When you paste a newer template over an existing resource, add back

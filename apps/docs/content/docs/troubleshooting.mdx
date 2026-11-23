@@ -3,72 +3,72 @@ title: Troubleshooting
 description: Find the cause of common Sniptide problems with sign-in, sharing, the API, the CLI, MCP clients and self-hosted instances, and fix them.
 ---
 
-Find the symptom you see, run the check, and apply the fix. Each section links to the page with
-the full details.
+Find the symptom you see, run the check, apply the action, and verify the fix. Each section links
+to the page with the full details.
 
 ## Sign-in and accounts
 
-| Symptom | Check | Fix |
-| --- | --- | --- |
-| Sign-in or sign-up fails with "Invalid origin" | Compare the address in the browser with `BETTER_AUTH_URL`. They must match exactly, including `https://` and the port. | Set `BETTER_AUTH_URL` to the address people open and restart the app. See [Configuration](/self-hosting/configuration#required). |
-| Everyone was signed out at once | Check whether `BETTER_AUTH_SECRET` or `COOKIE_PREFIX` changed. | Restore the previous value. If you rotated the secret on purpose, people sign in again. |
-| The forgot-password page says to contact the administrator | The instance has no SMTP settings. | The administrator configures [email](/self-hosting/configuration#email), or sets a new password for you. |
-| You can't turn on notification emails | Check that your email shows as verified in **Settings** > **Account**. | Select **Send verification email** in **Settings** > **Notifications** and open the link. |
+| Symptom | Check | Action | Verification |
+| --- | --- | --- | --- |
+| Sign-in or sign-up fails with "Invalid origin" | Compare the address in the browser with `BETTER_AUTH_URL`; they must match scheme, host and port. | Set `BETTER_AUTH_URL` to the exact address people open and restart the app. See [Configuration](/self-hosting/configuration#required). | Sign in again from that address without an origin error. |
+| Everyone was signed out at once | Check deployment history for changes to `BETTER_AUTH_SECRET` or `COOKIE_PREFIX`. | Restore the previous value if changed by mistake. If you rotated on purpose, users sign in again. | Sign in and reload the page; the session persists. |
+| The forgot-password page says to contact the administrator | Check whether `SMTP_HOST` and `SMTP_FROM` are set on the instance. | The administrator configures [email](/self-hosting/configuration#email), or resets the password manually. | Request a reset link and confirm the email arrives. |
+| You can't turn on notification emails | Check whether your email shows as verified in **Settings** > **Account**. | Select **Send verification email** in **Settings** > **Notifications** and open the link. | Email toggles in **Settings** > **Notifications** become active. |
 
 ## Sharing and reading pastes
 
-| Symptom | Check | Fix |
-| --- | --- | --- |
-| A link shows "not found" | The paste may be private, expired, in the trash, or its link may have changed. | Make it unlisted or public, invite the reader, restore it from **Trash**, or send the new link. See [Sharing](/core-concepts/sharing). |
-| A Markdown paste request returns `429` | Read the `Retry-After` header. | Wait that many seconds. See [Give agents a Markdown copy](/core-concepts/sharing#give-agents-a-markdown-copy). |
-| Sharing says the paste has expired | Check the paste's expiry. **Starred** does not extend it, even if you can still open the paste yourself. | Set a new expiry or choose **Never**, then retry the invitation, access change, or undo. See [Set an expiry](/core-concepts/sharing#set-an-expiry). |
-| You're asked for your own paste's password | You opened the share link, which shows readers' view. | Open the paste from your pastes in the app instead. |
-| Copy buttons or password unlocks don't work | Check whether the address starts with `http://` on something other than `localhost`. | Serve the instance over HTTPS. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). |
-| A paste shows "Key needed" | The paste is end-to-end encrypted and the link has no `#key=` part, or this browser never held the key. | Open or paste the full link. Without the key the paste can't be recovered. See [Where the key is kept](/core-concepts/encrypted-pastes#where-the-key-is-kept). |
-| An encrypted paste has no **Edit**, **Duplicate** or **Public** option, or is missing from the API, CLI or an agent | The server can't read an encrypted paste. | Create a new paste to change the content. See [What an encrypted paste gives up](/core-concepts/encrypted-pastes#what-an-encrypted-paste-gives-up). |
-| **Share via…** or **Embed** isn't offered | The paste must be public or unlisted, without a password, burn after read or end-to-end encryption. Slack and Discord also need a webhook set by the administrator. | Change the paste's settings, or ask the administrator. |
+| Symptom | Check | Action | Verification |
+| --- | --- | --- | --- |
+| A link shows "not found" | Open the paste in the app and check its visibility, expiry, trash state and current link. | Make it unlisted or public, invite the reader, restore it from **Trash**, or send the updated link. See [Sharing](/core-concepts/sharing). | Open the link in a private window (or as an invited user) and confirm the paste loads. |
+| A Markdown paste request returns `429` | Read the `Retry-After` response header. | Wait that many seconds before retrying. See [Give agents a Markdown copy](/core-concepts/sharing#give-agents-a-markdown-copy). | Repeat the request and confirm it returns `200` with Markdown. |
+| Sharing says the paste has expired | Open the paste and check its **Expires after** status (**Starred** does not extend expiry). | Set a new expiry or choose **Never**, then retry the invitation, access change or undo. See [Set an expiry](/core-concepts/sharing#set-an-expiry). | The **Expired** label disappears and **Share** controls are enabled. |
+| You're asked for your own paste's password | Check the address bar: the public share URL shows the reader view. | Open the paste from **My pastes** in the app instead. | The paste opens without a password prompt. |
+| Copy buttons or password unlocks don't work | Check whether the URL starts with `http://` on a host other than `localhost`. | Serve the instance over HTTPS. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). | Open the `https://` URL and confirm copying and unlocking succeed. |
+| A paste shows "Key needed" | Check the URL for `#key=...`; this browser has no stored key for the encrypted paste. | Open or paste the full link with the `#key=` fragment. Without the key the paste can't be recovered. See [Where the key is kept](/core-concepts/encrypted-pastes#where-the-key-is-kept). | The paste decrypts and shows its files. |
+| An encrypted paste has no **Edit**, **Duplicate** or **Public** option, or is missing from the API, CLI or an agent | Check whether the paste is end-to-end encrypted; the server can't read encrypted pastes. | Create a new paste to change content, or use an ordinary paste for API/CLI/agent access. See [What an encrypted paste gives up](/core-concepts/encrypted-pastes#what-an-encrypted-paste-gives-up). | Confirm the new paste appears in the expected interface. |
+| **Share via…** or **Embed** isn't offered | Check that you own the paste, it is live (not expired or trashed), it is public or unlisted, and it has no password, burn after read or encryption. For Slack/Discord webhooks, check that the administrator set `SLACK_WEBHOOK_URL` or `DISCORD_WEBHOOK_URL`. | Adjust the paste's settings, or ask the administrator to configure the webhook. | Reload the paste and confirm **Share via…** or **Embed** appears. |
 
 ## API, SDKs and CLI
 
-| Symptom | Check | Fix |
-| --- | --- | --- |
-| `401` or CLI exit code `3` | Run `curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" <instance>/api/v1/me`. | Create a new token if this fails. Check that `SNIPTIDE_BASE_URL` points at the instance that issued the token. |
-| `403` on a write | `GET /api/v1/me` returns `"scopes": ["read"]`. | Create a token with **Write access**. |
-| `404` for a paste you own | Check that it isn't in the trash or expired, and that you used its current id or link. | Tokens reach only your own live pastes. Restore it, or use the current link. |
-| `409` on a create | The response says whether an `Idempotency-Key` was reused or a collection name exists. | Use a new key for a new resource, or pick another collection name. |
-| `429` | Read `Retry-After` and the `RateLimit` header. | Wait that many seconds. See [API reliability](/api-reliability#read-the-quota-headers). |
-| The CLI refuses an `http://` address | The CLI and SDKs allow HTTP only on `localhost`. | Use the instance's HTTPS address. |
-| `push` stops with a file limit error | A paste holds 10 text files and 1 MiB. | Narrow the paths or globs, or split the capture. |
+| Symptom | Check | Action | Verification |
+| --- | --- | --- | --- |
+| `401`, or CLI exit code `3` | Run `curl -H "Authorization: Bearer $SNIPTIDE_TOKEN" <instance>/api/v1/me` (CLI exit code `3` covers both `401` and `403`). | Create a new token if `401` persists, and check that `SNIPTIDE_BASE_URL` matches the instance that issued it. | `GET /api/v1/me` returns `200` with your user and scopes. |
+| `403` on a write (or CLI exit code `3`) | Check `scopes` in `GET /api/v1/me`; `["read"]` means read-only. | Create a token with **Write access** in **Settings** > **API tokens**. | `GET /api/v1/me` returns `"scopes": ["read", "write"]` and the write succeeds. |
+| `404` for a paste you own | Check in the app that the paste isn't trashed, expired or encrypted, and confirm its current id or link. | Restore the paste or use its current id/link (tokens reach only your own live ordinary pastes). | `GET /api/v1/pastes/{id}` returns `200`. |
+| `409` on a create | Read the error message to see whether an `Idempotency-Key` was reused with another payload, a collection name exists, or you hit the 100-group limit. | Use a fresh `Idempotency-Key` for a new resource, choose another collection name, or delete an unused env group. | The create request returns `201`. |
+| `429` | Read the `Retry-After` and `RateLimit` headers. | Wait `Retry-After` seconds before retrying. See [API reliability](/api-reliability#read-the-quota-headers). | The next request returns `200` or `201`. |
+| The CLI or SDK refuses an `http://` address | Check the base URL host; plain HTTP is allowed only on `localhost`, `127.0.0.1` and `[::1]`. | Switch to the instance's `https://` address. | Run `sniptide list` (or `client.me()`) and confirm it succeeds. |
+| `sniptide push` stops with a file limit error | Run `sniptide push ... --dry-run` to see matched files and total size (limit: 10 text files and 1 MiB). | Narrow the paths or globs, or split the capture into multiple pastes. | `--dry-run` lists at most 10 files under 1 MiB, and `push` succeeds. |
 
 ## MCP clients
 
-| Symptom | Check | Fix |
-| --- | --- | --- |
-| The client keeps asking you to sign in, or gets `401` | Look for the connection in **Settings** > **API tokens**. | Remove the server from the client and add it again, then allow access. See [OAuth for agents](/oauth). |
-| A write tool says the token "doesn't have the write scope" | The connection or token is read-only. | Connect again with write access, or use a token with **Write access**. |
-| `invalid_grant` during sign-in | The client retried an authorization code, which works once. | Start the connection again from the client. |
-| `405` from `/api/mcp` | The client uses the older SSE transport. | Configure the server as Streamable HTTP. |
+| Symptom | Check | Action | Verification |
+| --- | --- | --- | --- |
+| The client keeps asking you to sign in, or gets `401` | Look for the connection in **Settings** > **API tokens**. | Remove the server from the client, add it again and allow access. See [OAuth for agents](/oauth). | Ask the agent to list your collections and confirm it succeeds. |
+| A write tool fails with a scope error | Check whether the OAuth connection or API token is read-only. | Reconnect with `write` scope, or use a token with **Write access**. | Retry the write tool and confirm the change appears in Sniptide. |
+| `invalid_grant` during sign-in | Check whether the client retried an authorization code or whether **Settings** > **API tokens** already lists 25 tokens/connections. | Revoke an unused token if at the 25-token limit, then start sign-in again from the client. | The connection appears under **Settings** > **API tokens**. |
+| `405` from `/api/mcp` | Check the client's MCP transport configuration (older SSE sends `GET` or `DELETE`). | Configure the server as Streamable HTTP. | Ask the agent to call `list_collections` and confirm it returns a result. |
 
 ## Self-hosted instances
 
-| Symptom | Check | Fix |
-| --- | --- | --- |
-| `/api/health` returns `503` with `{"ok":false}` | Run `docker compose logs app` and look for database errors. | Check `DATABASE_URL`, and that Postgres is running and reachable from the container. |
-| The container exits at startup | The log names the invalid setting or the failed migration. | Fix that value. A failed migration rolls back completely, so start again after fixing the cause. See [Upgrading](/self-hosting/upgrading#recover-from-a-failed-upgrade). |
-| A migration fails on `pg_trgm` | The database user can't create extensions. | Have the database operator run `CREATE EXTENSION pg_trgm;` first. |
-| The log warns `migrations_ahead` | The image is older than the database. | Run the newer image, or restore the backup taken before the upgrade. |
-| Env group values are unreadable | `BETTER_AUTH_SECRET` or `ENV_SECRETS_KEY` changed. | Restore the previous key, or push the groups again. |
-| Many visitors are rate-limited together | The app sees the proxy's address for every visitor. | Set `CLIENT_IP_SOURCE` for your proxy. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). |
-| Gist imports fail with a GitHub rate limit | The server shares GitHub's quota of 60 requests an hour. | Set `GITHUB_TOKEN`. |
+| Symptom | Check | Action | Verification |
+| --- | --- | --- | --- |
+| `/api/health` returns `503` with `{"ok":false}` | Run `docker compose logs app` and look for database connection errors. | Fix `DATABASE_URL` and confirm Postgres is running and reachable from the app container. | `curl <instance>/api/health` returns `200` with `{"ok":true}`. |
+| The container exits at startup | Read `docker compose logs app` for the invalid setting name or failed migration. | Fix the invalid value or database error and restart (a failed migration rolls back cleanly). See [Upgrading](/self-hosting/upgrading#recover-from-a-failed-upgrade). | The container stays up and `/api/health` returns `{"ok":true}`. |
+| A migration fails on `pg_trgm` | Check the startup log for a permission error creating `pg_trgm`. | Have the database operator run `CREATE EXTENSION pg_trgm;` in the database, then restart the app. | Startup logs report migrations applied and `/api/health` returns `{"ok":true}`. |
+| The log warns `migrations_ahead` | Compare the running image tag against the last deployed release. | Run the newer image, or restore the backup taken before the upgrade. | Restart and confirm `migrations_ahead` no longer appears in the logs. |
+| Env group values are unreadable or integrations disconnected | Check whether `BETTER_AUTH_SECRET` or `ENV_SECRETS_KEY` changed. | Restore the previous encryption key (see [Rotate the auth secret](/self-hosting/configuration#rotate-the-auth-secret)), or re-push env groups and reconnect integrations in **Settings**. | Reveal a variable in **Secrets** and confirm connected integrations show as active. |
+| Many visitors are rate-limited together | Send an unauthenticated `curl -i <instance>/api/v1/me` from two networks and check whether `RateLimit` counts share one bucket. | Set `CLIENT_IP_SOURCE` and `TRUSTED_PROXIES` for your proxy, then restart the app. See [Reverse proxy and client IP](/self-hosting/reverse-proxy). | Repeat the check and confirm each visitor IP gets its own `RateLimit` bucket. |
+| Gist imports fail with a GitHub rate limit | Check whether `GITHUB_TOKEN` is set (without it, unauthenticated imports share GitHub's 60/hour limit). | Set `GITHUB_TOKEN` to a token with no scopes and restart the app. | Import a public gist and confirm it succeeds. |
 
 ## Help and feedback
 
-| Symptom | Check | Fix |
-| --- | --- | --- |
-| **Couldn't send the report** | Look for `support: filing the report in Linear failed` in the server log. | Check that `LINEAR_API_KEY` can create issues and that `LINEAR_TEAM_ID` names an existing team. See [Configuration](/self-hosting/configuration#support-and-feedback). |
-| **The assistant couldn't answer** | Look for `support: the assistant request failed` in the server log. | Check `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` and `SUPPORT_MODEL`, and that the server can reach `api.anthropic.com` or `api.openai.com`. |
-| **You've sent a lot recently** | Each account can send 10 reports an hour and ask 10 questions a day. | Wait for the limit to reset, or open an issue on GitHub directly. |
-| The **Ask** tab is missing | The instance has neither `ANTHROPIC_API_KEY` nor `OPENAI_API_KEY`. | Use **Report a problem**, or ask the administrator to set the key. |
+| Symptom | Check | Action | Verification |
+| --- | --- | --- | --- |
+| **Couldn't send the report** | Check the server log for `support: filing the report in Linear failed`. | Confirm `LINEAR_API_KEY` can create issues and `LINEAR_TEAM_ID` names an existing team, then restart. See [Configuration](/self-hosting/configuration#support-and-feedback). | Send a test report and confirm **Report sent** appears. |
+| **The assistant couldn't answer** | Check the server log for `support: the assistant request failed`. | Confirm `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` and `SUPPORT_MODEL`, and verify outbound HTTPS to `api.anthropic.com` or `api.openai.com`. | Ask a question in **Ask** and confirm an answer appears. |
+| **You've sent a lot of reports in the last hour. Try again later.** or **You've used your 10 questions for today. Try again tomorrow, or report a problem.** | Confirm whether the account reached 10 reports/hour or 10 questions/24 hours. | Wait for the window to reset, or open an issue on GitHub directly. | Retry after the window resets and confirm the submission succeeds. |
+| The **Ask** tab is missing | Check whether `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is configured on the instance. | Use **Report a problem**, or ask the administrator to set one of the keys and restart. | Reopen **Feedback** and confirm both **Ask** and **Report a problem** tabs appear. |
 
 ## Get help
 
