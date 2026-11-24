@@ -421,11 +421,9 @@ export async function changePasteSharing(
 
 export async function trashPasteRecord(tx: PasteTransaction, actor: PasteActor, key: PasteKey) {
   const record = await lockOwnedPasteRow(tx, actor, key, actor.kind === "session")
-  if (
-    !record ||
-    record.ownerId !== actor.userId ||
-    (actor.kind === "token" && (record.deletedAt || expired(record)))
-  )
+  // A token trashes expired pastes too, so an agent can clean up what the dashboard shows as
+  // expired. Trashing hides nothing more than expiry already does.
+  if (!record || record.ownerId !== actor.userId || (actor.kind === "token" && record.deletedAt))
     return null
   // Trashing again keeps the first trash time, so the paste's 30 days don't start over.
   if (record.deletedAt) return { id: record.id, slug: record.slug }

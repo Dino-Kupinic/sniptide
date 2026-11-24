@@ -21,6 +21,7 @@ const searchSchema = z.object({
   collection: z.string().trim().max(40).optional(),
   limit: z.int().min(1).max(100).optional(),
   cursor,
+  expired: z.enum(["exclude", "include", "only"]).optional(),
 })
 const settingsSchema = z.object({
   visibility: visibilitySchema.optional(),
@@ -100,7 +101,7 @@ export function createSniptideServer(backend: () => SniptideBackend) {
     {
       title: "Search snippets",
       description:
-        "Find your live snippets by words in the title, description, tags, file paths or code (every word must match), plus tag, language and collection filters. Returns summaries and nextCursor; call again with that cursor for the next page. Use read_snippet to fetch code.",
+        "Find your live snippets by words in the title, description, tags, file paths or code (every word must match), plus tag, language and collection filters. Expired snippets are left out unless expired is include or only; they come back as summaries with expiresAt in the past, read_snippet can't open them, and trash_snippet can move them to the trash. Returns summaries and nextCursor; call again with that cursor for the next page. Use read_snippet to fetch code.",
       inputSchema: searchSchema,
       annotations: readOnly("Search snippets"),
     },
@@ -230,7 +231,7 @@ export function createSniptideServer(backend: () => SniptideBackend) {
     {
       title: "Move snippet to trash",
       description:
-        "Move your live snippet to the trash (write scope required). Its link stops working; the owner can restore it from the app until the trash is emptied. This tool never deletes permanently. Confirm with the user first.",
+        "Move your live or expired snippet to the trash (write scope required). Its link stops working; the owner can restore it from the app until the trash is emptied. This tool never deletes permanently. Confirm with the user first.",
       inputSchema: { id: identifier },
       annotations: {
         title: "Move snippet to trash",

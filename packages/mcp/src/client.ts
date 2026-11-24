@@ -79,7 +79,7 @@ export class TokenApiBackend implements SniptideBackend {
     const params = new URLSearchParams()
     if (input.query) params.set("q", input.query)
     for (const tag of input.tags ?? []) params.append("tag", tag)
-    for (const key of ["language", "collection", "limit", "cursor"] as const)
+    for (const key of ["language", "collection", "limit", "cursor", "expired"] as const)
       if (input[key] != null) params.set(key, String(input[key]))
     return this.request(`pastes?${params}`)
   }
