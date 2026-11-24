@@ -82,6 +82,15 @@ describeDb("usernames for accounts created without one", () => {
     expect((await create("three@example.com", "dino kupinic")).username).toBe("dino-kupinic-3")
   })
 
+  test("concurrent sign-ups with one name all succeed with different usernames", async () => {
+    const users = await Promise.all(
+      Array.from({ length: 6 }, (_, index) => create(`same${index}@example.com`, "Dino Kupinic")),
+    )
+    const names = users.map((created) => created.username)
+    expect(new Set(names).size).toBe(6)
+    expect(names).toContain("dino-kupinic")
+  })
+
   test("a name in another script gets a transliterated username", async () => {
     expect((await create("li@example.com", "李小龍")).username).toBe("li-xiao-long")
     expect((await create("li2@example.com", "李小龍")).username).toBe("li-xiao-long-2")
