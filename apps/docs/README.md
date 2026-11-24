@@ -53,6 +53,15 @@ Markdown, and its menu opens the page in ChatGPT or Claude. The Markdown is serv
 `/llms.mdx/<path>`, such as `/llms.mdx/mcp`, by `app/llms.mdx`, with heading ids removed and links
 made absolute.
 
+`/llms.txt` (`app/llms.txt`) lists every English page in sidebar order, under the sidebar's section
+names, with a link to each page's Markdown and its description, so an LLM can find a page without
+crawling the site.
+
+The sitemap dates each page by when its file last changed, from `lib/last-modified.json`. The
+Docker build has no Git history, so `scripts/last-modified.ts` reads the dates from Git and the file
+is committed. After editing a page, run `bun --filter docs last-modified` and commit the file with
+the page. `bun run test:docs` fails when a page has no date.
+
 Every page ends with "Was this helpful?" (`components/feedback.tsx`). The answers post to
 `/api/feedback`, which forwards them to PostHog when `POSTHOG_KEY` is set.
 
