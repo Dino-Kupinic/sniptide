@@ -54,6 +54,7 @@ import {
   isSlugAvailable,
   isStarred,
   navCounts,
+  readEmbedPaste,
   readPublicPreview,
   readRawFile,
   readSharedMeta,
@@ -266,6 +267,7 @@ describeDb("host moderation", () => {
       const target = await fixture()
       const original = await pasteRow(target.slug)
       const revisions = await getDb().select().from(pasteRevision)
+      expect(await readEmbedPaste(target.slug)).not.toBeNull()
       await transition(target.id, state)
       for (const viewer of ["owner", "editor", null]) {
         signInAs(viewer)
@@ -278,6 +280,7 @@ describeDb("host moderation", () => {
         expect(await readRawFile(target.slug, null)).toEqual({ status: "missing" })
         expect(await readSharedMeta(target.slug)).toBeNull()
         expect(await readPublicPreview(target.slug)).toBeNull()
+        expect(await readEmbedPaste(target.slug)).toBeNull()
         expect(await getUnlockHash(target.slug)).toBeNull()
         expect(await getShare(target.slug)).toBeNull()
         if (viewer) {
