@@ -59,9 +59,11 @@ export function SignInForm({
         return
       }
       setError(
-        error.status === 401
-          ? t("errors.credentials")
-          : t(error.status === 0 ? "errors.network" : "errors.signIn"),
+        error.code === "ACCOUNT_SUSPENDED"
+          ? t("errors.suspended")
+          : error.status === 401
+            ? t("errors.credentials")
+            : t(error.status === 0 ? "errors.network" : "errors.signIn"),
       )
       return
     }

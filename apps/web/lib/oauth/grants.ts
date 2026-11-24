@@ -248,6 +248,12 @@ export async function refresh(form: URLSearchParams): Promise<TokenResponse> {
     row.clientId !== clientId
   )
     throw new GrantError("invalid_grant", "The refresh token is invalid, expired or revoked.")
+  const [owner] = await getDb()
+    .select({ suspendedAt: user.suspendedAt })
+    .from(user)
+    .where(eq(user.id, row.ownerId))
+  if (!owner || owner.suspendedAt)
+    throw new GrantError("invalid_grant", "The refresh token is invalid, expired or revoked.")
   const granted = row.scopes.filter((scope): scope is Scope => SCOPES.includes(scope as Scope))
   // A client may ask for less than it was granted (RFC 6749 6), never for more.
   const requested = form.get("scope") ? parseScopes(form.get("scope")) : granted

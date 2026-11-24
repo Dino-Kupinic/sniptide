@@ -485,7 +485,9 @@ export function DeleteAccountSection({
                         ? t("wrongCurrentPassword")
                         : error.code === "SESSION_EXPIRED"
                           ? t("signInAgainToDelete")
-                          : (error.message ?? t("couldnTDeleteYourAccount")),
+                          : error.code === "ACCOUNT_DELETION_UNAVAILABLE"
+                            ? t("accountDeletionUnavailable")
+                            : (error.message ?? t("couldnTDeleteYourAccount")),
                     )
                   router.replace("/sign-up")
                   router.refresh()

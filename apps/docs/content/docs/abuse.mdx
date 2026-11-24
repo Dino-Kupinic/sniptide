@@ -99,8 +99,60 @@ cannot be applied twice. It records a completed decision; it does not itself cha
 
 Use the confirmed incident procedure for urgent allegations. Keep suspected material out of
 ordinary logs, email, chat and issue trackers. Send any permitted decision notice through the
-operator's approved channel. Do not promise evidence preservation: restrictions and report
-records do not preserve paste contents.
+operator's approved channel. A restriction alone does not preserve a paste: expiry, the trash and
+account deletion still delete it. Place a legal hold when the paste must be kept.
+
+## Preserve a paste
+
+A legal hold keeps a quarantined or removed paste, with its files and revisions, until you release
+it. While it is held, the database refuses to delete the paste by any path, including expiry,
+burn after read, the trash, the purge job and account deletion. Its owner sees "This account
+can't be deleted right now" when they try to delete their account. A held paste can't be released
+to `allowed` or `pending`, so neither its owner nor anyone else can open or edit it.
+
+```sh
+bun --filter @workspace/db moderation hold '{
+  "pasteId": "<paste-uuid>",
+  "caseReference": "11111111-1111-4111-8111-111111111111"
+}'
+bun --filter @workspace/db moderation release-hold '{
+  "pasteId": "<paste-uuid>",
+  "caseReference": "11111111-1111-4111-8111-111111111111"
+}'
+```
+
+`hold` refuses a paste that is `allowed` or `pending`, so quarantine or remove it first. Placing
+the same hold twice changes nothing, and a paste can be held for one case at a time.
+`release-hold` needs the case UUID the hold was placed with. After the release, the paste follows
+its normal lifecycle again, so a paste that expired or sat in the trash for 30 days is deleted by
+the next purge. `inspect` shows `legalHoldCase` and `legalHoldAt`.
+
+A hold covers the live database only. Backups still age out on their own schedule.
+
+## Suspend an account
+
+A suspension signs the account out everywhere, refuses new sign-ins and stops its API tokens and
+OAuth grants until you reinstate it. It doesn't change the account's pastes, so restrict them with
+`transition` as well.
+
+```sh
+bun --filter @workspace/db moderation suspend '{
+  "userId": "<account-id>",
+  "caseReference": "11111111-1111-4111-8111-111111111111"
+}'
+bun --filter @workspace/db moderation reinstate '{
+  "userId": "<account-id>",
+  "caseReference": "11111111-1111-4111-8111-111111111111"
+}'
+```
+
+The account's owner sees "This account is suspended" when they sign in with a password. Its tokens
+answer `401` as if they were revoked. Reinstating restores sign-in and every token that hasn't
+expired. Suspending a suspended account changes nothing.
+
+Holds and suspensions are recorded with the host username, hostname, case UUID and time. The
+record holds no paste content, survives the deletion of the paste and the account, and can't be
+edited.
 
 ## Retention and limitations
 

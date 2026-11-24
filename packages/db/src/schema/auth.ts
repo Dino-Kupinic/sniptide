@@ -14,6 +14,9 @@ export const user = pgTable(
     // True from sign-up until the account's first session, which sends the welcome email once.
     // Accounts created before this column default to false, so they never get one.
     welcomePending: boolean("welcome_pending").default(false).notNull(),
+    // Set by the host `suspend` command (packages/db/src/moderation.ts). A suspended account can't
+    // start a session, and its API and OAuth tokens stop working until `reinstate` clears it.
+    suspendedAt: timestamp("suspended_at"),
     image: text("image"),
     // From better-auth's username plugin: the normalized handle behind sniptide.com/@username.
     username: text("username"),

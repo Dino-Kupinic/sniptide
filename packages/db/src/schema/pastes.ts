@@ -62,6 +62,11 @@ export const paste = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     moderationState: moderationState("moderation_state").notNull().default("allowed"),
     moderationVersion: bigint("moderation_version", { mode: "number" }).notNull().default(0),
+    // A legal hold: the case that requires this paste to be preserved, set and cleared only by the
+    // host moderation commands (packages/db/src/moderation.ts). While it is set, a database trigger
+    // refuses to delete the paste, whatever path asks: purge, trash, account deletion or SQL.
+    legalHoldCase: uuid("legal_hold_case"),
+    legalHoldAt: time("legal_hold_at"),
     // The public link (sniptide.com/<slug>). Can change on edit; everything else points at id.
     slug: text("slug").notNull(),
     ownerId: text("owner_id")
@@ -259,4 +264,25 @@ export const moderationEvent = pgTable(
     createdAt: time("created_at").notNull().defaultNow(),
   },
   (table) => [index("moderation_event_paste_idx").on(table.pasteId, table.createdAt)],
+)
+
+// Legal holds and account suspensions, one row per decision, kept apart from the paste and the
+// account so the record survives their deletion. Rows are append-only and carry no paste content.
+export const safetyEvent = pgTable(
+  "safety_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind", {
+      enum: ["hold_placed", "hold_released", "account_suspended", "account_reinstated"],
+    }).notNull(),
+    pasteId: uuid("paste_id"),
+    userId: text("user_id"),
+    actor: text("actor").notNull(),
+    caseReference: uuid("case_reference").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("safety_event_paste_idx").on(table.pasteId, table.createdAt),
+    index("safety_event_user_idx").on(table.userId, table.createdAt),
+  ],
 )

@@ -35,6 +35,7 @@
     "deleteYourAccount": "アカウントを削除しますか？",
     "enterYourPasswordToConfirmYour": "パスワードを入力して確認してください。アカウント、セッション、Paste は完全に削除されます。",
     "couldnTDeleteYourAccount": "アカウントを削除できませんでした。",
+    "accountDeletionUnavailable": "現在このアカウントは削除できません。このインスタンスの運営者に連絡してください。",
     "password": "パスワード",
     "cancel": "キャンセル",
     "deleting": "削除中…",

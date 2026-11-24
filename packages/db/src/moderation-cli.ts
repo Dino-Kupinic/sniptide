@@ -1,18 +1,35 @@
 import { hostname, userInfo } from "node:os"
 import { inspectAbuseReport, listAbuseReports, resolveAbuseReport } from "./abuse"
 import { createDb } from "./index"
-import { inspectModeration, transitionModeration } from "./moderation"
+import {
+  inspectModeration,
+  placeLegalHold,
+  reinstateAccount,
+  releaseLegalHold,
+  suspendAccount,
+  transitionModeration,
+} from "./moderation"
 
 const [operation, value, ...extra] = process.argv.slice(2)
 if (
   extra.length ||
   !operation ||
-  !["inspect", "transition", "reports", "report", "resolve-report"].includes(operation) ||
+  ![
+    "inspect",
+    "transition",
+    "reports",
+    "report",
+    "resolve-report",
+    "hold",
+    "release-hold",
+    "suspend",
+    "reinstate",
+  ].includes(operation) ||
   (operation !== "reports" && !value) ||
   (operation === "reports" && value)
 ) {
   throw new Error(
-    "Usage: moderation inspect <paste UUID> | transition '<command JSON>' | reports | report <report UUID> | resolve-report '<resolution JSON>'",
+    "Usage: moderation inspect <paste UUID> | transition '<command JSON>' | reports | report <report UUID> | resolve-report '<resolution JSON>' | hold '<hold JSON>' | release-hold '<hold JSON>' | suspend '<suspension JSON>' | reinstate '<suspension JSON>'",
   )
 }
 const url = process.env.DATABASE_URL
@@ -20,8 +37,16 @@ if (!url) throw new Error("DATABASE_URL is required.")
 const db = createDb(url)
 try {
   const actor = `${userInfo().username}@${hostname()}`
-  const result =
-    operation === "reports"
+  const commands = {
+    hold: placeLegalHold,
+    "release-hold": releaseLegalHold,
+    suspend: suspendAccount,
+    reinstate: reinstateAccount,
+  } as const
+  const command = commands[operation as keyof typeof commands]
+  const result = command
+    ? await command(db, JSON.parse(value ?? ""), actor)
+    : operation === "reports"
       ? await listAbuseReports(db, actor)
       : operation === "report"
         ? await inspectAbuseReport(db, value, actor)
