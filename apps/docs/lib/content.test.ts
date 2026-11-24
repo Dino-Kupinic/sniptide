@@ -55,6 +55,23 @@ const page = (url: string) => {
   return found.text
 }
 
+describe("sitemap dates", () => {
+  // lib/last-modified.json dates each page for the sitemap. scripts/last-modified.ts writes it from
+  // Git, because the Docker build has no history.
+  test("every page has a date, and every date belongs to a page", () => {
+    const dates: Record<string, string> = JSON.parse(read("apps/docs/lib/last-modified.json"))
+    const files = mdxFiles(contentDir).map((file) => relative(contentDir, file))
+    const today = new Date().toISOString().slice(0, 10)
+    const missing = files.filter((file) => !dates[file])
+    expect(missing, "Run `bun --filter docs last-modified` and commit the result.").toEqual([])
+    expect(Object.keys(dates).filter((file) => !files.includes(file))).toEqual([])
+    for (const date of Object.values(dates)) {
+      expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(date <= today).toBe(true)
+    }
+  })
+})
+
 describe("internal links", () => {
   test("every link points at an existing page and heading", () => {
     const broken: string[] = []

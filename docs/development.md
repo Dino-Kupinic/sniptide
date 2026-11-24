@@ -161,6 +161,8 @@ sidebar order.
 suite:
 
 - Every internal link and heading anchor resolves, and every page is in a sidebar.
+- Every page has a date in `apps/docs/lib/last-modified.json`, which `bun --filter docs
+  last-modified` writes from Git for the sitemap.
 - Every variable in `apps/web/.env.example` appears in the configuration page.
 - Every registered MCP tool and prompt appears in the MCP page.
 - Every CLI command and option appears in the CLI page.
