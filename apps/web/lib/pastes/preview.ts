@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { hasFeature } from "@/lib/edition"
+import { isNewAccount } from "./indexing"
 import { getLanguage } from "./languages"
 
 export interface PastePreview {
@@ -10,6 +11,8 @@ export interface PastePreview {
   content: string
   // Unlisted pastes unfurl like public ones but stay out of search engines.
   unlisted?: boolean
+  // When the owner signed up. Public pastes from new accounts stay out of search engines.
+  ownerCreatedAt: Date
 }
 
 // Bound work before splitting: even a huge single line produces a small card.
@@ -37,7 +40,7 @@ export function previewMetadata(preview: PastePreview, origin: string): Metadata
     description,
     // A public paste also answers on the app's domain when SHARE_URL moves share links elsewhere
     // (app.sniptide.com/k7Qe2x and sniptide.com/k7Qe2x), so search engines index the share link.
-    ...(preview.unlisted || !hasFeature("discovery")
+    ...(preview.unlisted || !hasFeature("discovery") || isNewAccount(preview.ownerCreatedAt)
       ? { robots: { index: false, follow: false } }
       : { alternates: { canonical: url } }),
     openGraph: {

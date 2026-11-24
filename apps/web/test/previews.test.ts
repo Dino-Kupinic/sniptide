@@ -1,8 +1,12 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
+import { user } from "@workspace/db/schema"
+import { eq } from "drizzle-orm"
 import { generateMetadata } from "@/app/[slug]/page"
 import { GET as image } from "@/app/[slug]/preview/route"
+import { getDb } from "@/lib/db"
 import { previewLines, previewMetadata } from "@/lib/pastes/preview"
 import { readPublicPreview } from "@/lib/pastes/store"
+import { DAY } from "@/lib/time"
 import {
   hasDatabase,
   pasteRow,
@@ -28,6 +32,7 @@ describe("preview cards", () => {
         name: "index.ts",
         language: "typescript",
         content: "export {}",
+        ownerCreatedAt: new Date(0),
       },
       "https://sniptide.com",
     )
@@ -95,6 +100,34 @@ describeDb("public preview access", () => {
       robots: { index: false, follow: false },
       openGraph: { images: [{ url: expect.stringContaining("/listed/preview") }] },
     })
+  })
+
+  test("keeps public pastes from accounts under a week old out of search on Cloud", async () => {
+    const edition = process.env.SNIPTIDE_EDITION
+    process.env.SNIPTIDE_EDITION = "cloud"
+    try {
+      await seedUser("veteran")
+      await getDb()
+        .update(user)
+        .set({ createdAt: new Date(Date.now() - 8 * DAY) })
+        .where(eq(user.id, "veteran"))
+      await seedPaste({ slug: "fresh", owner: "owner", visibility: "public" })
+      await seedPaste({ slug: "settled", owner: "veteran", visibility: "public" })
+
+      const fresh = await generateMetadata(params("fresh"))
+      expect(fresh).toMatchObject({ robots: { index: false, follow: false } })
+      expect(fresh).not.toHaveProperty("alternates")
+      expect(fresh).toMatchObject({ openGraph: { url: expect.stringContaining("/fresh") } })
+
+      const settled = await generateMetadata(params("settled"))
+      expect(settled).not.toHaveProperty("robots")
+      expect(settled).toMatchObject({
+        alternates: { canonical: expect.stringContaining("/settled") },
+      })
+    } finally {
+      if (edition === undefined) delete process.env.SNIPTIDE_EDITION
+      else process.env.SNIPTIDE_EDITION = edition
+    }
   })
 
   test("never exposes restricted content, even to its owner or an unlocked visitor", async () => {

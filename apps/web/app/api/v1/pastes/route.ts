@@ -1,6 +1,7 @@
 import { json, readJson, requestOrigin, withToken } from "@/lib/api/http"
 import { parseIdempotencyKey } from "@/lib/api/idempotency"
 import { createCapture, listCaptures, parseListQuery } from "@/lib/api/pastes"
+import { PASTE_REQUEST_BYTES } from "@/lib/request-body"
 
 export const dynamic = "force-dynamic"
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   return withToken(request, "write", async (owner) => {
     const { userId, tokenId } = owner
     // Room for a full-size paste plus its JSON escaping and metadata.
-    const body = await readJson(request, 8 * 1024 * 1024)
+    const body = await readJson(request, PASTE_REQUEST_BYTES)
     const key = parseIdempotencyKey(request.headers.get("idempotency-key"))
     return json(
       {

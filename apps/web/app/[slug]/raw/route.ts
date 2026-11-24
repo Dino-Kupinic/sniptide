@@ -36,6 +36,9 @@ export async function GET(request: Request, { params }: RouteContext<"/[slug]/ra
     "content-type": "text/plain; charset=utf-8",
     "cache-control": "private, no-store",
     "x-content-type-options": "nosniff",
+    // The share page is the copy search engines should index. It carries the paste's title and
+    // follows the indexing rules, such as keeping new accounts' pastes out, which plain text can't.
+    "x-robots-tag": "noindex",
   })
   if (url.searchParams.has("download")) {
     headers.set(
