@@ -25,7 +25,11 @@ describeDb("share page metadata", () => {
 
   test("returns the title and visibility of an openable paste", async () => {
     await seedPaste({ slug: "open", owner: "owner", visibility: "public" })
-    expect(await readSharedMeta("open")).toEqual({ title: "title-of-open", visibility: "public" })
+    expect(await readSharedMeta("open")).toEqual({
+      title: "title-of-open",
+      visibility: "public",
+      ownerCreatedAt: expect.any(Date),
+    })
     expect((await pasteRow("open"))?.views).toBe(0)
   })
 
@@ -41,12 +45,18 @@ describeDb("share page metadata", () => {
     expect((await pasteRow("burn"))?.deletedAt).toBeNull()
 
     await unlock("lock")
-    expect(await readSharedMeta("lock")).toEqual({ title: "title-of-lock", visibility: "unlisted" })
+    expect(await readSharedMeta("lock")).toMatchObject({
+      title: "title-of-lock",
+      visibility: "unlisted",
+    })
   })
 
   test("the owner sees their private paste's title", async () => {
     await seedPaste({ slug: "mine", owner: "owner", visibility: "private" })
     signInAs("owner")
-    expect(await readSharedMeta("mine")).toEqual({ title: "title-of-mine", visibility: "private" })
+    expect(await readSharedMeta("mine")).toMatchObject({
+      title: "title-of-mine",
+      visibility: "private",
+    })
   })
 })

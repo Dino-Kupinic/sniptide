@@ -325,6 +325,7 @@ describeDb("one-time reads", () => {
         signInAs(viewer)
         const response = await rawRequest("raw")
         expect(response.status).toBe(200)
+        expect(response.headers.get("x-robots-tag")).toBe("noindex")
         expect(await response.text()).toBe(marker("raw"))
       }
     })
