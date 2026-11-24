@@ -3,7 +3,8 @@
 Use these commands to restrict or restore access to a paste on an instance you operate.
 See the [reporting guide](../../apps/docs/content/docs/abuse.mdx) to enable intake and review
 reports. Establish your reporting, preservation and escalation procedures before using the
-commands for a real case.
+commands for a real case. Sniptide's own instance follows the
+[suspected child exploitation procedure](incident-procedure.md).
 
 ## Prepare the deployment
 

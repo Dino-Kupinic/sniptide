@@ -78,7 +78,7 @@ A private server can leave all of these unset.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. |
+| `MAX_PASTE_SIZE` | `1MB` | The most one paste can hold, across its files. Plain bytes or a number with a unit (`B`, `KB`, `MB`, `GB`, binary: 1 KB = 1024 bytes): `1MB`, `512KB`, `1.5MB` and `1048576` all work. Requests that carry a paste are capped at 8 MB, which fits a paste of about 4 MB once its text is encoded, so values above `4MB` can refuse pastes below the limit. |
 | `SHARE_URL` | unset | Domain share links use when it differs from the app's. Use a domain you control or leave it unset to serve everything on one domain. |
 | `SHARE_PROXY_SECRET` | unset | Shared with a separate share-domain site that proxies share pages to the app, so it can pass the visitor's IP. |
 | `GITHUB_TOKEN` | unset | A GitHub token (no scopes needed) for gist imports by accounts that haven't connected GitHub. Without it they share GitHub's unauthenticated quota of 60 requests an hour. |

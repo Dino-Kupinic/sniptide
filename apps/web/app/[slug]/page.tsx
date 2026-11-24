@@ -17,6 +17,7 @@ import { getConfig } from "@/lib/config"
 import { hasFeature } from "@/lib/edition"
 import { highlightFiles } from "@/lib/highlight/highlight"
 import { isHumanVisit } from "@/lib/pastes/hit"
+import { isNewAccount } from "@/lib/pastes/indexing"
 import { slugFromRoute } from "@/lib/pastes/links"
 import { previewMetadata } from "@/lib/pastes/preview"
 import { readPublicPreview, readSharedMeta, readSharedPaste } from "@/lib/pastes/store"
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">) {
   return {
     title: `${meta.title} · Sniptide`,
     robots:
-      meta.visibility === "public" && hasFeature("discovery")
+      meta.visibility === "public" && hasFeature("discovery") && !isNewAccount(meta.ownerCreatedAt)
         ? undefined
         : { index: false, follow: false },
   }

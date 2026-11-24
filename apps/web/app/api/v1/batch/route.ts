@@ -5,6 +5,7 @@ import { ApiError, apiLimits, json, readJson, requestOrigin, withToken } from "@
 import { parseIdempotencyKey } from "@/lib/api/idempotency"
 import { createCapture } from "@/lib/api/pastes"
 import { hit } from "@/lib/rate-limit"
+import { PASTE_REQUEST_BYTES } from "@/lib/request-body"
 
 export const dynamic = "force-dynamic"
 const operation = z.discriminatedUnion("operation", [
@@ -17,7 +18,7 @@ const batch = z.object({ operations: z.array(operation).min(1).max(20) }).strict
 
 export async function POST(request: Request) {
   return withToken(request, "write", async (owner) => {
-    const { operations } = batch.parse(await readJson(request, 8 * 1024 * 1024))
+    const { operations } = batch.parse(await readJson(request, PASTE_REQUEST_BYTES))
     const results = []
     for (const [index, item] of operations.entries()) {
       try {

@@ -806,8 +806,13 @@ export async function readSharedMeta(slug: string) {
   const access = await sharedAccess(slug)
   if (access.status !== "ok" || access.record.burnAfterRead) return null
   const [metadata] = await getDb()
-    .select({ title: pasteTable.title, visibility: pasteTable.visibility })
+    .select({
+      title: pasteTable.title,
+      visibility: pasteTable.visibility,
+      ownerCreatedAt: user.createdAt,
+    })
     .from(pasteTable)
+    .innerJoin(user, eq(user.id, pasteTable.ownerId))
     .where(
       and(
         allowedPaste(),
@@ -841,9 +846,11 @@ export async function readPublicPreview(slug: string): Promise<PastePreview | nu
       name: pasteFile.name,
       language: pasteFile.language,
       content: sql<string>`left(${pasteFile.content}, 4000)`,
+      ownerCreatedAt: user.createdAt,
     })
     .from(pasteTable)
     .innerJoin(pasteFile, eq(pasteFile.pasteId, pasteTable.id))
+    .innerJoin(user, eq(user.id, pasteTable.ownerId))
     .where(publicPasteWhere(slug))
     .orderBy(pasteFile.position, pasteFile.id)
     .limit(1)

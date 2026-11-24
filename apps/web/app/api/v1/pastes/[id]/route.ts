@@ -1,5 +1,6 @@
 import { failure, json, readJson, withToken } from "@/lib/api/http"
 import { getCapture, trashCapture, updateCapture, updateSettings } from "@/lib/api/pastes"
+import { PASTE_REQUEST_BYTES } from "@/lib/request-body"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +18,7 @@ export async function PUT(request: Request, { params }: RouteContext<"/api/v1/pa
   const { id } = await params
   return withToken(request, "write", async ({ userId }) => {
     if (id.length > 64) return failure(404, "No paste with that id.")
-    const input = await readJson(request, 8 * 1024 * 1024)
+    const input = await readJson(request, PASTE_REQUEST_BYTES)
     return json({ paste: await updateCapture(userId, id, input) })
   })
 }

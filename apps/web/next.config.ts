@@ -1,6 +1,7 @@
 import path from "node:path"
 import type { NextConfig } from "next"
 import createNextIntlPlugin from "next-intl/plugin"
+import { PASTE_REQUEST_BYTES } from "./lib/request-body"
 
 const isDev = process.env.NODE_ENV === "development"
 
@@ -55,6 +56,12 @@ const nextConfig: NextConfig = {
   // Keeps the dev badge clear of the sidebar's account menu.
   devIndicators: { position: "bottom-right" },
   poweredByHeader: false,
+  experimental: {
+    // The editor saves pastes through Server Actions, which refuse bodies over 1 MB by default.
+    // That is below a full paste at the default MAX_PASTE_SIZE once it is encoded, so actions take
+    // the same ceiling as the REST API, and pasteSchema still enforces MAX_PASTE_SIZE itself.
+    serverActions: { bodySizeLimit: PASTE_REQUEST_BYTES },
+  },
   transpilePackages: ["@workspace/auth", "@workspace/db", "@workspace/email", "@sniptide/ui"],
   async headers() {
     return [

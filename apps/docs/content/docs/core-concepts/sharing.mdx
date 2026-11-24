@@ -12,7 +12,12 @@ the paste's **Sharing** and **Access** rows and its **Share** button.
 | --- | --- | --- | --- |
 | **Private** | You and the accounts you invited. Everyone else gets a "not found" page, as if the link didn't exist. | Not indexed | None |
 | **Unlisted** | Anyone with the link | Told not to index it | Yes, unless it has a password or burns after read |
-| **Public** | Anyone with the link. It can also appear on your public profile. | Eligible pastes may appear in search on Sniptide Cloud. Self-hosted instances request noindex. | Yes, unless it has a password or burns after read |
+| **Public** | Anyone with the link. It can also appear on your public profile. | Eligible pastes may appear in search on Sniptide Cloud, once your account is a week old. Self-hosted instances request noindex. | Yes, unless it has a password or burns after read |
+
+On Sniptide Cloud, public pastes from an account younger than seven days ask search engines not to
+index them. Their links, link previews and your profile work as usual, and the pastes become
+eligible for search when the account turns a week old. Raw file links always ask search engines not
+to index them, so search results point to the share page.
 
 Sniptide Cloud shares pastes at `sniptide.com`. Self-hosted instances use their configured
 domain. Copy the link from the paste to get the right address.

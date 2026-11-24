@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test"
 import { NextRequest } from "next/server"
 import robots from "@/app/robots"
 import { previewMetadata } from "@/lib/pastes/preview"
+import { DAY } from "@/lib/time"
 import { proxy } from "@/proxy"
 
 const demoMode = process.env.DEMO_MODE
@@ -19,12 +20,19 @@ const robotsTag = (path: string) =>
 test("robots.txt keeps the API out and leaves /_next crawlable", () => {
   process.env.SNIPTIDE_EDITION = "cloud"
   const rules = robots().rules
-  expect(rules).toEqual({ userAgent: "*", allow: "/", disallow: "/api/" })
+  expect(rules).toEqual({
+    userAgent: "*",
+    allow: "/",
+    disallow: ["/api/", "/cdn-cgi/l/email-protection"],
+  })
 })
 
 test("self-hosted responses ask crawlers to exclude pages and raw shares", () => {
   delete process.env.SNIPTIDE_EDITION
-  expect(robots().rules).toEqual({ userAgent: "*", disallow: ["/api/", "/_next/"] })
+  expect(robots().rules).toEqual({
+    userAgent: "*",
+    disallow: ["/api/", "/_next/", "/cdn-cgi/l/email-protection"],
+  })
   for (const path of ["/", "/k7Qe2x", "/k7Qe2x/raw", "/@dino"])
     expect(robotsTag(path)).toBe("noindex, nofollow, noarchive")
 })
@@ -48,6 +56,7 @@ test("public pastes point search engines at their share link, unlisted ones stay
     name: "index.ts",
     language: "typescript",
     content: "export {}",
+    ownerCreatedAt: new Date(Date.now() - 30 * DAY),
   }
   const listed = previewMetadata(preview, "https://sniptide.com")
   expect(listed.alternates).toEqual({ canonical: "https://sniptide.com/k7Qe2x" })
@@ -61,4 +70,28 @@ test("public pastes point search engines at their share link, unlisted ones stay
   expect(selfhost).not.toHaveProperty("alternates")
   expect(selfhost.robots).toEqual({ index: false, follow: false })
   expect(selfhost.openGraph?.url).toBe("https://paste.example/k7Qe2x")
+})
+
+test("public pastes from accounts under a week old stay out of search", () => {
+  process.env.SNIPTIDE_EDITION = "cloud"
+  const preview = {
+    slug: "k7Qe2x",
+    title: "Example",
+    name: "index.ts",
+    language: "typescript",
+    content: "export {}",
+  }
+  const fresh = previewMetadata(
+    { ...preview, ownerCreatedAt: new Date(Date.now() - 6 * DAY) },
+    "https://sniptide.com",
+  )
+  expect(fresh.robots).toEqual({ index: false, follow: false })
+  expect(fresh).not.toHaveProperty("alternates")
+  expect(fresh.openGraph?.url).toBe("https://sniptide.com/k7Qe2x")
+
+  const weekOld = previewMetadata(
+    { ...preview, ownerCreatedAt: new Date(Date.now() - 7 * DAY) },
+    "https://sniptide.com",
+  )
+  expect(weekOld).not.toHaveProperty("robots")
 })
