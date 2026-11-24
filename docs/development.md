@@ -640,6 +640,59 @@ deploys. See [Database migrations](../CONTRIBUTING.md#database-migrations).
 
 To pause automatic deploys, set `COOLIFY_PRODUCTION_DEPLOY` to `false`.
 
+## Monitor production
+
+Three services watch production from outside the Docker host, so an outage alerts even when the
+server itself is down. Better Stack checks that the public endpoints answer, Healthchecks.io checks
+that the nightly offsite backup ran, and Coolify reports failed deploys, restarts and disk usage.
+Each one sends a phone push notification and an email.
+
+### Uptime monitors
+
+Better Stack's free plan covers ten monitors at a three-minute interval, which is enough to alert
+within five minutes of an outage. Create one monitor per row, and set each to alert after two
+regions fail so a single slow probe doesn't page anyone.
+
+| Monitor | URL | Passes when |
+| --- | --- | --- |
+| Site | `https://sniptide.com` | Status is 200 |
+| App health | `https://app.sniptide.com/api/health` | The body contains `"ok":true` |
+| Share link | A public paste on `https://app.sniptide.com`, created for this check | The body contains the paste's title |
+| Docs | `https://docs.sniptide.com` | Status is 200 |
+| MCP | `https://app.sniptide.com/api/mcp` | Status is 401 |
+
+`/api/health` returns 503 when the database stops answering, so the keyword check catches a
+database outage that leaves the server up. The share link exercises the page most visitors open.
+Keep that paste public, never expiring and owned by the maintainer account, and don't delete it.
+The MCP endpoint answers 401 without a token, which shows the route and authentication are
+running without storing a token in the monitor.
+
+Turn on push notifications in the Better Stack mobile app and add the maintainer email to the
+on-call policy. Better Stack's free status page reads from the same monitors. Show the site, app
+and docs monitors on it, and link it from the site footer only after it has a custom domain.
+
+To test the alert path without taking production down, add a temporary keyword monitor for
+`https://app.sniptide.com/api/health` that expects the text `drill`. It fails on the first check,
+and an alert should arrive within five minutes. Delete the monitor afterwards.
+
+### Backup heartbeat
+
+The backup container pings Healthchecks.io after each successful daily upload and sends `/fail`
+when a run fails, as described in [Send Coolify backups offsite](../apps/docs/content/docs/self-hosting/backups.mdx#send-coolify-backups-offsite).
+A stopped container sends nothing, so the missed heartbeat alerts after the check's grace period.
+Check that `BACKUP_HEARTBEAT_URL` is set on the production backup service, and connect the
+Healthchecks.io check to the same email and a push channel such as Telegram or Pushover.
+
+### Coolify and deploy alerts
+
+In Coolify's notification settings, connect email or Telegram and enable deployment failures,
+container status changes and server disk usage. Coolify's disk alert covers the backup volume
+filling up, which the heartbeat only reports once a dump fails.
+
+A failed `Deploy tested production image` run leaves the previous image serving, so it shows up
+in no uptime monitor. GitHub emails the person who triggered the run when it fails. Keep failed
+workflow notifications turned on for the account that merges to main.
+
 ## Preview pull requests
 
 When CI passes on a pull request from a branch in this repository, `Manage image preview`
