@@ -81,11 +81,20 @@ export function exceptionEvent(error: unknown, source: ErrorSource, key: string,
   }
 }
 
+// A request refused by admission control (lib/request-admission.ts): the server was at capacity or
+// the client had already gone away. Both are expected, answer 503 with Retry-After, and are counted
+// in /api/metrics, so they aren't exceptions worth an alert. Matched by name so this module doesn't
+// load the admission controller.
+function isAdmissionRefusal(error: unknown) {
+  return error instanceof Error && error.name === "AdmissionError"
+}
+
 // Sends one exception. Never throws, so callers can await it inside their own error handling.
 export async function captureServerError(error: unknown, source: ErrorSource) {
   try {
     const analytics = getConfig().analytics
-    if (!analytics || !canReport(source) || !withinBudget(Date.now())) return
+    if (!analytics || isAdmissionRefusal(error) || !canReport(source) || !withinBudget(Date.now()))
+      return
     await fetch(`${analytics.host}/i/v0/e/`, {
       method: "POST",
       headers: { "content-type": "application/json" },

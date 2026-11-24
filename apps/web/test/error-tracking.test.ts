@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { parseStack, scrubErrorText, toExceptionList } from "@/lib/error-scrub"
 import { captureServerError, type exceptionEvent, resetErrorBudget } from "@/lib/error-tracking"
 import { createJobRunner } from "@/lib/jobs/runner"
+import { AdmissionError } from "@/lib/request-admission"
 
 // Exceptions reach PostHog only with POSTHOG_KEY, and never carry paste content, slugs, tokens or
 // email addresses.
@@ -146,6 +147,14 @@ describe("captureServerError", () => {
   test("sends nothing without POSTHOG_KEY", async () => {
     await captureServerError(new Error("boom"), request)
     expect(sent).toHaveLength(0)
+  })
+
+  test("skips requests refused by admission control", async () => {
+    process.env.POSTHOG_KEY = "phc_x"
+    await captureServerError(new AdmissionError(), request)
+    expect(sent).toHaveLength(0)
+    await captureServerError(new Error("boom"), request)
+    expect(sent).toHaveLength(1)
   })
 
   test("sends a scrubbed $exception tagged with route, release and runtime", async () => {
