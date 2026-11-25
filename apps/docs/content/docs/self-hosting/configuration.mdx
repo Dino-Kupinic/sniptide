@@ -356,6 +356,8 @@ With `POSTHOG_KEY` set, the server also sends its exceptions to PostHog error tr
 project: errors in pages, route handlers, server actions and the proxy, and failures in the
 maintenance jobs, the visit queue and the demo reset. Without a key no exceptions are sent, and
 exceptions only reach the server log as before. Preview deployments and `localhost` never report.
+Requests refused because the server is at capacity, or because the client left before its
+database work started, answer `503` and aren't reported. `/api/metrics` counts them instead.
 
 Multipart POST requests to pages require the `Next-Action` header sent by the browser client.
 Without it, Sniptide returns `400 Bad Request` before the page renderer decodes the body.

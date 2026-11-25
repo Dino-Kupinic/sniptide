@@ -242,6 +242,26 @@ describeDb("token API", () => {
       expect((await body(await listPastes(call("pastes", bob)))).pastes).toEqual([])
     })
 
+    test("list includes expired pastes only when asked", async () => {
+      const ada = await tokenFor("ada")
+      await seedPaste({ slug: "live", owner: "ada" })
+      await seedPaste({ slug: "expired", owner: "ada", expiresAt: new Date(Date.now() - 1000) })
+      await seedPaste({
+        slug: "trashed",
+        owner: "ada",
+        deletedAt: new Date(),
+        expiresAt: new Date(0),
+      })
+      const slugs = async (query: string) =>
+        (await body(await listPastes(call(`pastes${query}`, ada)))).pastes
+          .map((item: { slug: string }) => item.slug)
+          .sort()
+      expect(await slugs("")).toEqual(["live"])
+      expect(await slugs("?expired=include")).toEqual(["expired", "live"])
+      expect(await slugs("?expired=only")).toEqual(["expired"])
+      expect((await listPastes(call("pastes?expired=yes", ada))).status).toBe(400)
+    })
+
     test("list filters by text, tags, language and collection and pages with a cursor", async () => {
       const token = await tokenFor("ada")
       await getDb().insert(collection).values({ ownerId: "ada", slug: "ui", name: "UI" })

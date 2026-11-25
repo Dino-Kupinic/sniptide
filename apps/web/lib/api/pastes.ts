@@ -43,7 +43,7 @@ import { z } from "zod"
 import { getDb } from "@/lib/db"
 import { announceChange } from "@/lib/live/changes"
 import { PasteBudgetError } from "@/lib/pastes/budget"
-import { liveWhere } from "@/lib/pastes/lifecycle"
+import { liveWhere, unexpiredWhere } from "@/lib/pastes/lifecycle"
 import { limits } from "@/lib/pastes/limits"
 import {
   type CaptureReplacement,
@@ -65,7 +65,9 @@ import { meterReads } from "./meter"
 
 // Pastes over the token API: what `sniptide push`, `pull`, `list` and `search` read and write.
 // A token only ever reaches its own account's pastes; trashed and expired ones are left out, as
-// they are everywhere outside the owner's own screens.
+// they are everywhere outside the owner's own screens. The one exception is cleanup: a list can
+// ask for expired pastes, and trash accepts them, so an agent can find and clear what the
+// dashboard shows as expired.
 
 const LIST_LIMIT = 100
 const COLLECTION_PAGE_SIZE = 50
@@ -149,6 +151,26 @@ function liveOwned(owner: string): SQL {
     eq(pasteTable.ownerId, owner),
     liveWhere(),
     isNull(pasteTable.encryptionKeyId),
+  ) as SQL
+}
+
+const EXPIRED_FILTERS = ["exclude", "include", "only"] as const
+type ExpiredFilter = (typeof EXPIRED_FILTERS)[number]
+
+// The owner's pastes outside the trash, with expired ones left out, added or alone. Expired pastes
+// are listed as summaries only: reading one still answers 404, like its link.
+function ownedForList(owner: string, expired: ExpiredFilter): SQL {
+  const now = new Date()
+  return and(
+    allowedPaste(),
+    eq(pasteTable.ownerId, owner),
+    isNull(pasteTable.deletedAt),
+    isNull(pasteTable.encryptionKeyId),
+    expired === "exclude"
+      ? unexpiredWhere(now)
+      : expired === "only"
+        ? lte(pasteTable.expiresAt, now)
+        : undefined,
   ) as SQL
 }
 
@@ -397,8 +419,8 @@ export async function updateSettings(
   return result
 }
 
-// Moves a live paste to the trash, where its owner can restore it until the trash is emptied.
-// Tokens never delete for good.
+// Moves a live or expired paste to the trash, where its owner can restore it until the trash is
+// emptied. Tokens never delete for good.
 export async function trashCapture(
   owner: string,
   idOrSlug: string,
@@ -469,6 +491,7 @@ export const listQuerySchema = z.object({
   collection: z.string().trim().max(40).optional(),
   limit: z.coerce.number().int().min(1).max(LIST_LIMIT).default(20),
   cursor: z.string().nullable().default(null),
+  expired: z.enum(EXPIRED_FILTERS).default("exclude"),
 })
 
 export function parseListQuery(params: URLSearchParams) {
@@ -479,6 +502,7 @@ export function parseListQuery(params: URLSearchParams) {
     collection: params.get("collection") ?? undefined,
     limit: params.get("limit") ?? undefined,
     cursor: params.get("cursor"),
+    expired: params.get("expired") ?? undefined,
   })
 }
 
@@ -492,7 +516,7 @@ export async function listCaptures(
   const db = getDb()
   const cursor = decodeCursor(query.cursor)
   const updatedAt = cursorColumn(pasteTable.updatedAt, cursor)
-  const conditions: (SQL | undefined)[] = [liveOwned(owner)]
+  const conditions: (SQL | undefined)[] = [ownedForList(owner, query.expired)]
   if (query.q) conditions.push(matchesQuery(query.q))
   if (query.tags.length) conditions.push(arrayContains(pasteTable.tags, query.tags))
   if (query.collection) conditions.push(eq(pasteTable.collection, query.collection))

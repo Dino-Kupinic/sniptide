@@ -737,8 +737,9 @@ export const openApiDocument = {
         tags: ["Token API"],
         summary: "List and search your pastes",
         description: [
-          "The token owner's pastes, most recently edited first, without file contents. Trashed and",
-          "expired pastes are left out. Filters combine: every `tag` must be on the paste.",
+          "The token owner's pastes, most recently edited first, without file contents. Trashed",
+          "pastes are left out, and expired ones are too unless `expired` asks for them.",
+          "Filters combine: every `tag` must be on the paste.",
           "Follow `nextCursor` for the next page; it is `null` on the last one.",
         ].join("\n"),
         ...tokenAccess("read"),
@@ -785,6 +786,14 @@ export const openApiDocument = {
             required: false,
             description: "`nextCursor` from the previous page.",
             schema: { type: "string" },
+          },
+          {
+            name: "expired",
+            in: "query",
+            required: false,
+            description:
+              "Whether expired pastes are listed: `exclude` leaves them out, `include` adds them and `only` lists nothing else. An expired paste's `expiresAt` is in the past, and reading it answers 404.",
+            schema: { type: "string", enum: ["exclude", "include", "only"], default: "exclude" },
           },
         ],
         responses: {
@@ -1016,7 +1025,7 @@ export const openApiDocument = {
           "400": tokenJsonError(400, "Invalid or empty settings.", "Check the settings."),
           "404": tokenJsonError(
             404,
-            "No live paste of yours has that id.",
+            "No paste of yours outside the trash has that id.",
             "No paste with that id.",
           ),
           ...tokenErrors,
@@ -1027,7 +1036,7 @@ export const openApiDocument = {
         tags: ["Token API"],
         summary: "Move one of your pastes to the trash",
         description:
-          "The link stops working and the paste can be restored from the app until the trash is emptied. The token API never deletes a paste for good. Requires write scope.",
+          "Works on live and expired pastes. The link stops working and the paste can be restored from the app until the trash is emptied. The token API never deletes a paste for good. Requires write scope.",
         ...tokenAccess("write"),
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
@@ -1052,7 +1061,7 @@ export const openApiDocument = {
           },
           "404": tokenJsonError(
             404,
-            "No live paste of yours has that id.",
+            "No paste of yours outside the trash has that id.",
             "No paste with that id.",
           ),
           ...tokenErrors,

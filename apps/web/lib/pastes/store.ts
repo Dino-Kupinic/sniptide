@@ -330,7 +330,7 @@ function notLive(record: PasteRecord | null): record is null {
 
 export async function purgeTrash(owner: string) {
   await getDb().execute(
-    sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE owner_id = ${owner} AND deleted_at < ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()} ORDER BY deleted_at, id LIMIT 500 FOR UPDATE SKIP LOCKED)`,
+    sql`DELETE FROM paste WHERE id IN (SELECT id FROM paste WHERE owner_id = ${owner} AND legal_hold_case IS NULL AND deleted_at < ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()} ORDER BY deleted_at, id LIMIT 500 FOR UPDATE SKIP LOCKED)`,
   )
 }
 
@@ -1232,12 +1232,21 @@ export async function restorePaste(slug: string) {
 export async function deleteForever(slug: string) {
   const record = await findOwned(slug, true)
   if (!record?.deletedAt) return
-  await getDb().delete(pasteTable).where(eq(pasteTable.id, record.id))
+  // A paste under a legal hold stays; the database would refuse to delete it anyway.
+  await getDb()
+    .delete(pasteTable)
+    .where(and(eq(pasteTable.id, record.id), isNull(pasteTable.legalHoldCase)))
 }
 
 export async function emptyTrash() {
   const viewer = await requireViewerId()
   await getDb()
     .delete(pasteTable)
-    .where(and(eq(pasteTable.ownerId, viewer), isNotNull(pasteTable.deletedAt)))
+    .where(
+      and(
+        eq(pasteTable.ownerId, viewer),
+        isNotNull(pasteTable.deletedAt),
+        isNull(pasteTable.legalHoldCase),
+      ),
+    )
 }

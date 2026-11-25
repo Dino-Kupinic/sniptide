@@ -43,7 +43,7 @@ while the owner is away waits, so the owner checks the queue at least once a day
 | 3. Check reach | Incident owner | Open the share URL, `/raw` and `/embed` signed out. Each returns 404. | No path serves the paste |
 | 4. Report | Incident owner | Report the paste URL and paste UUID to the Bundeskriminalamt and to Stopline, as described under Report to the authorities. Send no material. | Both reports are sent and their references are in the case record |
 | 5. Preserve | Incident owner | Follow the authority's instructions on preservation, as described under Preserve evidence. | The authority has answered, or 90 days have passed without a request |
-| 6. Decide | Incident owner | Move the paste to `removed` with reason `policy_violation`. If the owner uploaded the material on purpose, delete the account once any preservation hold ends, because the app has no account suspension yet. If review finds no violation, release with `allowed` and reason `correction`. | `inspect` shows the final state |
+| 6. Decide | Incident owner | Move the paste to `removed` with reason `policy_violation`. If the owner uploaded the material on purpose, suspend the account with `moderation suspend`, and delete it once any legal hold ends. If review finds no violation, release with `allowed` and reason `correction`. | `inspect` shows the final state |
 | 7. Notify | Incident owner | Send the paste owner a statement of reasons unless the authority asks us to wait, as described under Tell the paste owner. | The notice is sent, or the authority's request to wait is in the case record |
 | 8. Close | Incident owner | Run `moderation resolve-report` with the transition's command UUID. Record the closing date. | `moderation reports` no longer lists the case |
 
@@ -77,12 +77,13 @@ A quarantine is not a legal hold. Expiry cleanup, burn-after-read cleanup, trash
 account deletion can still destroy a quarantined paste, and backups age out after 30 days. When an
 authority asks us to preserve a paste:
 
-1. Stop the paste from expiring by setting its `expires_at` to null in the database, and record
-   the hold in the case record. Do not copy the content anywhere. The app has no legal hold, so
-   the paste owner can still delete their account, which deletes the paste. Tell the authority
-   this when you confirm the hold.
-2. Keep the hold until the authority releases it in writing or 90 days pass without contact,
-   then delete the paste with the account tools and record the date.
+1. Place a legal hold with `moderation hold` and the case UUID, as
+   [Preserve a paste](../../apps/docs/content/docs/abuse.mdx) describes, and record the hold in the
+   case record. Do not copy the content anywhere. While the hold lasts, the database refuses every
+   deletion of the paste, and the owner can't delete their account. Backups still age out after
+   30 days, so tell the authority that the hold covers the live database.
+2. Keep the hold until the authority releases it in writing or 90 days pass without contact, then
+   run `moderation release-hold`. The paste then follows its normal lifecycle. Record the date.
 3. Hand content to an authority only on a written order, and only through the channel it names.
 
 Without a preservation request, the paste stays quarantined until step 6 and is removed under the

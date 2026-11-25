@@ -151,7 +151,7 @@ export function tokenRequestLimit(tokenId: string): Limit {
 const TOKEN_LIMIT_PREFIX = "api:token:"
 
 // The account and scopes behind a request's `Authorization: Bearer <token>`, or null for a
-// missing, malformed, unknown, revoked or expired token. A token whose last-used time is stale
+// missing, malformed, unknown, revoked or expired token, or one whose account is suspended. A token whose last-used time is stale
 // is marked for the next meter flush, so looking a token up writes nothing.
 export async function authenticate(request: Request): Promise<TokenOwner | null> {
   const header = request.headers.get("authorization") ?? ""
@@ -165,11 +165,15 @@ export async function authenticate(request: Request): Promise<TokenOwner | null>
       expiresAt: apiToken.expiresAt,
       lastUsedAt: apiToken.lastUsedAt,
       client: oauthClient.name,
+      suspendedAt: user.suspendedAt,
     })
     .from(apiToken)
+    .innerJoin(user, eq(apiToken.ownerId, user.id))
     .leftJoin(oauthClient, eq(apiToken.clientId, oauthClient.id))
     .where(eq(apiToken.hash, hashToken(match[1])))
-  if (!row || (row.expiresAt && row.expiresAt.getTime() <= Date.now())) return null
+  // A suspended account's tokens answer like revoked ones until it is reinstated.
+  if (!row || row.suspendedAt || (row.expiresAt && row.expiresAt.getTime() <= Date.now()))
+    return null
   if (!row.lastUsedAt || row.lastUsedAt.getTime() < Date.now() - LAST_USED_GRANULARITY_MS)
     meterTokenUse(row.id)
   return {

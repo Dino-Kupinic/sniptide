@@ -1,9 +1,14 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test"
 import path from "node:path"
 import {
+  hasHeldPastes,
   inspectModeration,
   type ModerationState,
   moderationCommandSchema,
+  placeLegalHold,
+  reinstateAccount,
+  releaseLegalHold,
+  suspendAccount,
   transitionModeration,
 } from "@workspace/db/moderation"
 import {
@@ -14,6 +19,8 @@ import {
   pasteRevision,
   pasteShare,
   pasteStar,
+  safetyEvent,
+  session,
   user,
 } from "@workspace/db/schema"
 import { eq, sql } from "drizzle-orm"
@@ -30,7 +37,7 @@ import {
   parseListQuery,
   updateCapture,
 } from "@/lib/api/pastes"
-import { createToken } from "@/lib/api/tokens"
+import { authenticate, createToken } from "@/lib/api/tokens"
 import {
   createCollection,
   deleteCollection,
@@ -44,10 +51,12 @@ import { storageUsage } from "@/lib/pastes/budget"
 import { getDashboardData } from "@/lib/pastes/dashboard"
 import { parsePasteListQuery } from "@/lib/pastes/list-query"
 import { listPastePage, listSharedPage, trashTotals } from "@/lib/pastes/lists"
+import { purgeStaleData } from "@/lib/pastes/purge"
 import { parseSharedListQuery } from "@/lib/pastes/shared-list-query"
 import { getShare, listPasteShares, restoreShare, sharePaste } from "@/lib/pastes/shares"
 import {
   deleteForever,
+  emptyTrash,
   getPaste,
   getPasteMeta,
   getUnlockHash,
@@ -200,6 +209,8 @@ describeDb("host moderation", () => {
     expect(retry).toEqual(first)
     expect(await inspectModeration(getDb(), target.id)).toEqual({
       pasteId: target.id,
+      legalHoldCase: null,
+      legalHoldAt: null,
       state: "quarantined",
       contentVersion: input.expectedContentVersion + 1,
       moderationVersion: 1,
@@ -451,6 +462,87 @@ describeDb("host moderation", () => {
     const events = await getDb().select().from(moderationEvent)
     expect(events).toHaveLength(2)
     expect(JSON.stringify(events)).not.toContain(synthetic)
+  })
+
+  test("a legal hold keeps a restricted paste through every deletion path until it is released", async () => {
+    const target = await fixture()
+    const caseReference = crypto.randomUUID()
+    const hold = { pasteId: target.id, caseReference }
+    await expect(placeLegalHold(getDb(), hold, "operator")).rejects.toThrow("Quarantine or remove")
+    await transition(target.id, "quarantined")
+    await placeLegalHold(getDb(), hold, "operator")
+    await placeLegalHold(getDb(), hold, "operator")
+    await expect(
+      placeLegalHold(getDb(), { ...hold, caseReference: crypto.randomUUID() }, "operator"),
+    ).rejects.toThrow("another case")
+    expect((await inspectModeration(getDb(), target.id))?.legalHoldCase).toBe(caseReference)
+    await expect(transition(target.id, "allowed")).rejects.toThrow("legal hold")
+
+    // Expired, trashed long ago and burned: every lifecycle path would purge it now.
+    const longAgo = new Date(Date.now() - 400 * 86_400_000)
+    await getDb()
+      .update(paste)
+      .set({ expiresAt: longAgo, deletedAt: longAgo, burnedAt: longAgo })
+      .where(eq(paste.id, target.id))
+    await deleteForever(target.slug)
+    await emptyTrash()
+    await purgeStaleData()
+    expect(await pasteRow(target.slug)).toBeDefined()
+    expect(await hasHeldPastes(getDb(), "owner")).toBe(true)
+    await expect(
+      Promise.resolve(getDb().delete(user).where(eq(user.id, "owner"))),
+    ).rejects.toThrow()
+    await expect(
+      Promise.resolve(getDb().delete(paste).where(eq(paste.id, target.id))),
+    ).rejects.toThrow()
+    expect(await getDb().select().from(pasteFile)).not.toHaveLength(0)
+    expect(await getDb().select().from(pasteRevision)).not.toHaveLength(0)
+
+    await expect(
+      releaseLegalHold(getDb(), { ...hold, caseReference: crypto.randomUUID() }, "operator"),
+    ).rejects.toThrow("isn't held")
+    await releaseLegalHold(getDb(), hold, "operator")
+    await purgeStaleData()
+    expect(await pasteRow(target.slug)).toBeUndefined()
+    const events = await getDb().select().from(safetyEvent)
+    expect(events.map((event) => event.kind).sort()).toEqual(["hold_placed", "hold_released"])
+    expect(JSON.stringify(events)).not.toContain(synthetic)
+    await expect(Promise.resolve(getDb().delete(safetyEvent))).rejects.toThrow()
+  })
+
+  test("a suspended account loses its sessions and tokens until it is reinstated", async () => {
+    const created = await createToken("owner", {
+      name: "suspension-test",
+      write: false,
+      expiry: "never",
+    })
+    if (!created.ok) throw new Error(created.error)
+    const request = () =>
+      new Request("http://localhost/api/v1/me", {
+        headers: { authorization: `Bearer ${created.token}` },
+      })
+    await getDb()
+      .insert(session)
+      .values({
+        id: "owner-session",
+        userId: "owner",
+        token: "owner-session-token",
+        expiresAt: new Date(Date.now() + 86_400_000),
+      })
+    expect(await authenticate(request())).not.toBeNull()
+    const suspension = { userId: "owner", caseReference: crypto.randomUUID() }
+    await suspendAccount(getDb(), suspension, "operator")
+    await suspendAccount(getDb(), suspension, "operator")
+    expect(await authenticate(request())).toBeNull()
+    expect(await getDb().select().from(session).where(eq(session.userId, "owner"))).toEqual([])
+    await reinstateAccount(getDb(), suspension, "operator")
+    await expect(reinstateAccount(getDb(), suspension, "operator")).rejects.toThrow("isn't")
+    expect(await authenticate(request())).not.toBeNull()
+    const events = await getDb().select().from(safetyEvent)
+    expect(events.map((event) => event.kind).sort()).toEqual([
+      "account_reinstated",
+      "account_suspended",
+    ])
   })
 
   test("deleting a collection clears restricted associations without exposing them in Undo", async () => {

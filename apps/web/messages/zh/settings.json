@@ -35,6 +35,7 @@
     "deleteYourAccount": "删除你的账户？",
     "enterYourPasswordToConfirmYour": "请输入密码以确认。你的账户、会话和 Paste 将被永久删除。",
     "couldnTDeleteYourAccount": "无法删除你的账户。",
+    "accountDeletionUnavailable": "此账户暂时无法删除。请联系此实例的运营者。",
     "password": "密码",
     "cancel": "取消",
     "deleting": "正在删除…",

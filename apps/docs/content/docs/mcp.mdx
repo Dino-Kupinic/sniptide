@@ -177,7 +177,7 @@ then run `node` with the absolute path to `packages/mcp/dist/sniptide-mcp.js`.
 
 | Tool | Inputs and behavior | Access |
 | --- | --- | --- |
-| `search_snippets` | Optional `query` (matches when every word appears in title, description, tags, file paths or code), `tags` (up to 20), `language`, `collection`, `limit` (`1` to `100`, default `20`), `cursor`. Returns a page of summaries and `nextCursor`. | read |
+| `search_snippets` | Optional `query` (matches when every word appears in title, description, tags, file paths or code), `tags` (up to 20), `language`, `collection`, `limit` (`1` to `100`, default `20`), `cursor`, `expired` (`exclude` by default, `include` or `only`). Returns a page of summaries and `nextCursor`. | read |
 | `read_snippet` | `id` (paste id or link). Returns one snippet with its file paths, code and source metadata. | read |
 | `list_collections` | No inputs. Lists your collections with their slugs, names and how many live snippets each holds. | read |
 | `fetch_collection` | `collection` (slug), optional `cursor` and `startStep`. Returns a page of up to 50 full snippets as numbered steps, oldest capture first. | read |
@@ -185,10 +185,12 @@ then run `node` with the absolute path to `packages/mcp/dist/sniptide-mcp.js`.
 | `update_snippet` | `id`, `title`, `files` (replaces **all** files), optional `description`, `visibility`, `collection`, `tags`, `source`. Marked destructive. | write |
 | `update_snippet_settings` | `id`, optional `visibility`, `expiry` (`1h`, `1d`, `1w`, `1m`, `1y`, `never`), `password` (string or `null`), `burnAfterRead`. Marked destructive. The password is never returned. | write |
 | `create_collection` | `name` (up to 40 chars; up to 50 collections per account). Creates an empty collection and returns its slug. | write |
-| `trash_snippet` | `id`. Moves a snippet to the trash, where you can restore it in the app. Marked destructive. Nothing is deleted for good. | write |
+| `trash_snippet` | `id`. Moves a live or expired snippet to the trash, where you can restore it in the app. Marked destructive. Nothing is deleted for good. | write |
 
 The agent only reaches the account owner's **own** live snippets, private ones included. It can't
-reach other people's snippets, snippets shared with you, the trash or expired snippets. The
+reach other people's snippets, snippets shared with you or the trash. Expired snippets show up
+only when `search_snippets` asks for them with `expired`, as summaries the agent can move to the
+trash but can't read. The
 server doesn't run code, write files to your machine, expose env groups or accept browser
 sessions. Changing a link, renaming or deleting collections, restoring from the trash and
 inviting people stay in the app.

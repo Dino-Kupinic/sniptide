@@ -423,6 +423,22 @@ describeDb("MCP with real token API and Postgres", () => {
     }
     expect((await data(writer, "search_snippets", {})).pastes).toEqual([])
   })
+  test("search finds expired snippets on request and trash clears them", async () => {
+    await seedPaste({ slug: "live", owner: "ada" })
+    await seedPaste({ slug: "expired", owner: "ada", expiresAt: new Date(0) })
+    const writer = await remote(token)
+    const slugs = async (args: Record<string, unknown>) =>
+      ((await data(writer, "search_snippets", args)).pastes as { slug: string }[])
+        .map((item) => item.slug)
+        .sort()
+    expect(await slugs({})).toEqual(["live"])
+    expect(await slugs({ expired: "include" })).toEqual(["expired", "live"])
+    expect(await slugs({ expired: "only" })).toEqual(["expired"])
+    expect(
+      (await writer.callTool({ name: "trash_snippet", arguments: { id: "expired" } })).isError,
+    ).toBeFalsy()
+    expect(await slugs({ expired: "only" })).toEqual([])
+  })
   test("updates preserve protection and metadata; failed validation is atomic", async () => {
     const { id } = await seedPaste({
       slug: "protected",

@@ -1,5 +1,6 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2"
 import type { Database } from "@workspace/db"
+import { hasHeldPastes } from "@workspace/db/moderation"
 import * as schema from "@workspace/db/schema"
 import { type BetterAuthOptions, type BetterAuthPlugin, betterAuth } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
@@ -155,7 +156,19 @@ export function createAuth({
         updateEmailWithoutVerification: !emailVerification?.sendVerificationEmail && !allowlist,
         sendChangeEmailConfirmation,
       },
-      deleteUser: { enabled: true },
+      deleteUser: {
+        enabled: true,
+        // A paste under a legal hold can't be deleted, and deleting the account would delete it,
+        // so the account stays until the hold ends. The message doesn't say why.
+        beforeDelete: async (user) => {
+          if (await hasHeldPastes(db, user.id))
+            throw new APIError("FORBIDDEN", {
+              code: "ACCOUNT_DELETION_UNAVAILABLE",
+              message:
+                "This account can't be deleted right now. Contact the operator of this instance.",
+            })
+        },
+      },
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
@@ -236,9 +249,15 @@ export function createAuth({
               columns: {
                 pendingInvitation: true,
                 emailVerified: true,
+                suspendedAt: true,
               },
               where: { id: session.userId },
             })
+            if (user?.suspendedAt)
+              throw new APIError("FORBIDDEN", {
+                code: "ACCOUNT_SUSPENDED",
+                message: "This account is suspended. Contact the operator of this instance.",
+              })
             if (user?.pendingInvitation && user.emailVerified !== true)
               throw new APIError("FORBIDDEN", {
                 code: "EMAIL_NOT_VERIFIED",

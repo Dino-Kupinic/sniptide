@@ -35,6 +35,7 @@
     "deleteYourAccount": "Delete your account?",
     "enterYourPasswordToConfirmYour": "Enter your password to confirm. Your account, sessions and pastes are deleted for good.",
     "couldnTDeleteYourAccount": "Couldn't delete your account.",
+    "accountDeletionUnavailable": "This account can't be deleted right now. Contact the operator of this instance.",
     "password": "Password",
     "cancel": "Cancel",
     "deleting": "Deleting…",

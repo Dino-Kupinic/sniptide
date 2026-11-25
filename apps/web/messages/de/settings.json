@@ -35,6 +35,7 @@
     "deleteYourAccount": "Dein Konto löschen?",
     "enterYourPasswordToConfirmYour": "Gib zur Bestätigung dein Passwort ein. Dein Konto, deine Sitzungen und Pastes werden endgültig gelöscht.",
     "couldnTDeleteYourAccount": "Dein Konto konnte nicht gelöscht werden.",
+    "accountDeletionUnavailable": "Dieses Konto kann gerade nicht gelöscht werden. Wende dich an den Betreiber dieser Instanz.",
     "password": "Passwort",
     "cancel": "Abbrechen",
     "deleting": "Wird gelöscht…",

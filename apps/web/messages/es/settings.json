@@ -35,6 +35,7 @@
     "deleteYourAccount": "¿Eliminar tu cuenta?",
     "enterYourPasswordToConfirmYour": "Introduce tu contraseña para confirmar. Tu cuenta, sesiones y pastes se eliminarán definitivamente.",
     "couldnTDeleteYourAccount": "No se pudo eliminar tu cuenta.",
+    "accountDeletionUnavailable": "Ahora no se puede eliminar esta cuenta. Contacta con quien opera esta instancia.",
     "password": "Contraseña",
     "cancel": "Cancelar",
     "deleting": "Eliminando…",

@@ -16,9 +16,10 @@ import {
   pasteStar,
   pasteViewDay,
   rateLimit,
+  safetyEvent,
   user,
 } from "@workspace/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { resetMeter } from "@/lib/api/meter"
 import { getDb } from "@/lib/db"
 import { flushAccountReads } from "@/lib/instance-activity"
@@ -59,6 +60,11 @@ export async function resetDatabase() {
   await getDb().delete(abuseReviewEvent)
   await getDb().delete(abuseReport)
   await getDb().delete(moderationEvent)
+  await getDb().update(paste).set({ legalHoldCase: null, legalHoldAt: null })
+  await getDb().transaction(async (tx) => {
+    await tx.execute(sql`select set_config('sniptide.safety_event_purge', 'on', true)`)
+    await tx.delete(safetyEvent)
+  })
   await flushAccountReads()
   await getDb().delete(accountActivityDay)
   await getDb()
