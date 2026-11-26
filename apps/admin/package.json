@@ -24,7 +24,7 @@
     "next-themes": "catalog:runtime",
     "react": "catalog:runtime",
     "react-dom": "catalog:runtime",
-    "react-email": "6.11.12",
+    "react-email": "6.11.16",
     "server-only": "catalog:runtime",
     "zod": "catalog:runtime"
   },
