@@ -187,7 +187,7 @@ describeDb("account usage", () => {
     expect(sent).toHaveLength(1)
     expect(sent[0]).toMatchObject({
       to: "writer@example.com",
-      idempotencyKey: "limits-digest-2026-W49",
+      idempotencyKey: `limits-digest-${isoWeek(monday)}`,
     })
     expect(sent[0]?.text).toContain("heavy@example.com")
     expect(sent[0]?.text).toContain("agent@example.com")

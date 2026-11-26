@@ -29,3 +29,7 @@ a415cf98c208fe866449152e61d06a0569806f18:apps/web/lib/openapi.ts:generic-api-key
 
 # Synthetic auth secret used only to validate abuse-intake configuration in a historical test.
 742e2417f43d5430aadc6980be0e29b3773676a5:apps/web/test/config.test.ts:generic-api-key:34
+
+# Resend idempotency key name ("limits-digest-<week>") in an admin test, not a credential.
+# Historical commit retained by the full-history scan; the current test builds the key.
+9007ce03d4c8310dd715ee057a2bbd45417f9bde:apps/admin/test/accounts.test.ts:generic-api-key:190
