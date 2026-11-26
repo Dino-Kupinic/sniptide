@@ -41,6 +41,8 @@ export interface ResendClient {
     subject: string
     html: string
     text: string
+    // Resend sends one email per key within 24 hours, so a retried send doesn't repeat it.
+    idempotencyKey?: string
   }): Promise<void>
 }
 
@@ -48,12 +50,18 @@ export function createResendClient(
   { apiKey, segmentId }: { apiKey: string; segmentId: string },
   fetcher: typeof fetch = fetch,
 ): ResendClient {
-  async function call(method: string, path: string, body?: unknown) {
+  async function call(
+    method: string,
+    path: string,
+    body?: unknown,
+    extraHeaders: Record<string, string> = {},
+  ) {
     const response = await fetcher(`${API}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...extraHeaders,
       },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(10_000),
@@ -119,8 +127,13 @@ export function createResendClient(
         scheduledAt ? { scheduled_at: scheduledAt } : undefined,
       )
     },
-    async sendEmail(input) {
-      await call("POST", "/emails", input)
+    async sendEmail({ idempotencyKey, ...input }) {
+      await call(
+        "POST",
+        "/emails",
+        input,
+        idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
+      )
     },
   }
 }
