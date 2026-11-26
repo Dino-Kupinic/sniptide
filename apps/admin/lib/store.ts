@@ -26,7 +26,7 @@ export function setResendClientForTests(client: ResendClient | undefined) {
   testClient = client
 }
 
-function resendClient() {
+export function resendClient() {
   return testClient ?? createResendClient(getConfig().resend)
 }
 
