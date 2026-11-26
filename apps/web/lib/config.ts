@@ -127,6 +127,9 @@ const schema = z.object({
 
   BETTER_AUTH_SECRET: z.string().optional(),
   ABUSE_REPORTS_ENABLED: flag.default(false),
+  MODERATION_OPENAI_API_KEY: z.string().optional(),
+  MODERATION_MISTRAL_API_KEY: z.string().optional(),
+  MODERATION_WEB_RISK_API_KEY: z.string().optional(),
   ENV_SECRETS_KEY: z.string().min(32, { message: "must be at least 32 characters." }).optional(),
   BETTER_AUTH_URL: origin.optional(),
   BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
@@ -225,6 +228,14 @@ function supportAssistant(value: z.infer<typeof schema>) {
   if (provider === "openai" && !value.SUPPORT_MODEL)
     throw new Error("Invalid configuration: OPENAI_API_KEY needs SUPPORT_MODEL, the model to use.")
   return { provider, apiKey, model: value.SUPPORT_MODEL ?? "claude-haiku-5-5" }
+}
+
+function moderationConfig(value: z.infer<typeof schema>) {
+  const openai = value.MODERATION_OPENAI_API_KEY
+  const mistral = value.MODERATION_MISTRAL_API_KEY
+  const webRisk = value.MODERATION_WEB_RISK_API_KEY
+  if (!openai && !mistral && !webRisk) return undefined
+  return { openai, mistral, webRisk }
 }
 
 function oauth(clientId?: string, clientSecret?: string) {
@@ -391,6 +402,9 @@ function parseConfig(env: Record<string, string | undefined>) {
     // Who runs this instance and the documents sign-up points to. Each is optional, so a private
     // self-hosted server can leave them all unset.
     abuseReportsEnabled: value.ABUSE_REPORTS_ENABLED,
+    // Automated screening of public and unlisted pastes. Off unless at least one provider key is
+    // set, so a self-hosted instance sends no paste content anywhere by default.
+    moderation: moderationConfig(value),
     legal: {
       termsUrl: value.TERMS_URL,
       privacyUrl: value.PRIVACY_URL,

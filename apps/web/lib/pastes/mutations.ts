@@ -13,6 +13,7 @@ import {
 } from "@workspace/db/schema"
 import { and, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
 import { activitySurface, recordAccountActivity } from "@/lib/instance-activity"
+import { queueScreening } from "@/lib/moderation/queue"
 import type { AgentClient } from "@/lib/onboarding"
 import { enforceBudget, lockAccount, PasteBudgetError } from "./budget"
 import { isLargeEdit } from "./edit-size"
@@ -221,6 +222,7 @@ export async function createPasteRecord(tx: PasteTransaction, request: CreateReq
     request.kind === "editor" ? "web" : (request.origin?.via ?? "api"),
     now,
   )
+  await queueScreening(tx, id)
   return { id, slug, createdAt: now }
 }
 
@@ -337,6 +339,7 @@ export async function replacePaste(
     request.kind === "editor" ? "web" : (activitySurface.getStore() ?? "api"),
     now,
   )
+  await queueScreening(tx, record.id)
   return {
     id: record.id,
     slug,
@@ -416,6 +419,7 @@ export async function changePasteSharing(
     })
     .where(and(allowedPaste(), eq(pasteTable.id, record.id)))
     .returning({ id: pasteTable.id, slug: pasteTable.slug })
+  if (changed) await queueScreening(tx, changed.id)
   return changed ?? null
 }
 
@@ -543,6 +547,7 @@ export async function restorePasteRevision(
     createdAt: stamp,
   })
   await pruneSnapshots(tx, record.id)
+  await queueScreening(tx, record.id)
   return { ok: true, slug: record.slug, version }
 }
 

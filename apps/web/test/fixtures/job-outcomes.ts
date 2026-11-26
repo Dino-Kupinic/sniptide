@@ -27,6 +27,7 @@ mock.module("@/lib/pastes/purge", () => ({
     return null
   },
 }))
+mock.module("@/lib/moderation/queue", () => ({ runScreening: async () => null }))
 mock.module("@/lib/pastes/rollup", () => ({ rollUpAnalytics: async () => null }))
 mock.module("@/lib/request-admission", () => ({
   runMaintenanceWork: (work: () => unknown) => work(),

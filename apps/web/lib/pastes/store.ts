@@ -39,6 +39,7 @@ import {
 import { getDb } from "@/lib/db"
 import { initials } from "@/lib/format"
 import { recordAccountRead } from "@/lib/instance-activity"
+import { queueScreening } from "@/lib/moderation/queue"
 import { recordNotifications } from "@/lib/notifications/record"
 import { agentClientOf } from "@/lib/onboarding"
 import { DAY } from "@/lib/time"
@@ -1215,18 +1216,21 @@ export async function restorePaste(slug: string) {
   const record = await findOwned(slug)
   if (!record) return false
   if (!record.deletedAt) return true
-  const changed = await getDb()
-    .update(pasteTable)
-    .set({ ...restoredFields(record), version: sql`${pasteTable.version} + 1` })
-    .where(
-      and(
-        allowedPaste(),
-        eq(pasteTable.id, record.id),
-        sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()}`,
-      ),
-    )
-    .returning({ id: pasteTable.id })
-  return changed.length > 0
+  return getDb().transaction(async (tx) => {
+    const [changed] = await tx
+      .update(pasteTable)
+      .set({ ...restoredFields(record), version: sql`${pasteTable.version} + 1` })
+      .where(
+        and(
+          allowedPaste(),
+          eq(pasteTable.id, record.id),
+          sql`${pasteTable.deletedAt} >= ${new Date(Date.now() - TRASH_DAYS * DAY).toISOString()}`,
+        ),
+      )
+      .returning({ id: pasteTable.id })
+    if (changed) await queueScreening(tx, changed.id)
+    return Boolean(changed)
+  })
 }
 
 export async function deleteForever(slug: string) {

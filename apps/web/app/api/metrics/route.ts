@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { jobStatus } from "@/lib/jobs"
+import { screeningBacklog } from "@/lib/moderation/queue"
 import { operationsAuthFailure } from "@/lib/operations-auth"
 import { telemetrySnapshot } from "@/lib/telemetry"
 
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   const denied = operationsAuthFailure(request)
   if (denied) return denied
   const db = getDb()
-  const [[database], [backlog]] = await Promise.all([
+  const [[database], [backlog], screening] = await Promise.all([
     db.execute(sql`select pg_database_size(current_database())::float8 as bytes,
     (select count(*)::int from pg_stat_activity where datname=current_database()) as connections,
     (select count(*)::int from pg_stat_activity where datname=current_database() and wait_event_type='Lock') as lock_waiters,
@@ -17,9 +18,16 @@ export async function GET(request: Request) {
     db.execute(
       sql`select count(*)::int as pastes from paste where deleted_at < now() - interval '30 days' or expires_at < now() - interval '30 days'`,
     ),
+    screeningBacklog(db),
   ])
   return Response.json(
-    { ...telemetrySnapshot(), database, purgeBacklog: backlog, maintenanceJobs: jobStatus() },
+    {
+      ...telemetrySnapshot(),
+      database,
+      purgeBacklog: backlog,
+      screening,
+      maintenanceJobs: jobStatus(),
+    },
     { headers: { "cache-control": "private, no-store" } },
   )
 }

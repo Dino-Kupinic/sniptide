@@ -1,6 +1,6 @@
 ---
 title: Report abuse and appeal decisions
-description: Report a paste without an account and operate the restricted manual review queue on your own instance.
+description: Report a paste without an account, operate the restricted review queue and turn on automated screening on your own instance.
 ---
 
 An instance can accept abuse reports and appeals at `/abuse`. No account is required.
@@ -154,6 +154,64 @@ Holds and suspensions are recorded with the host username, hostname, case UUID a
 record holds no paste content, survives the deletion of the paste and the account, and can't be
 edited.
 
+## Automated screening
+
+Set one or more provider keys to screen public and unlisted pastes after every write. Private
+pastes are never screened, and neither are end-to-end encrypted pastes, whose content the server
+can't read.
+
+| Variable | Provider | What it checks |
+| --- | --- | --- |
+| `MODERATION_OPENAI_API_KEY` | OpenAI moderation, `omni-moderation-latest` | Title, description, file names and file contents |
+| `MODERATION_MISTRAL_API_KEY` | Mistral moderation, `mistral-moderation-latest` | The same text, when OpenAI fails or has no key |
+| `MODERATION_WEB_RISK_API_KEY` | Google Web Risk | Up to 25 links per paste, against the malware, social engineering and unwanted software lists |
+
+Creating a paste, editing it, restoring a revision, restoring it from the trash and changing its
+sharing all queue it again, from the web, the API, the CLI and MCP alike. A job screens the queue
+every 30 seconds, and the paste stays readable while it waits. Long text is sent in chunks of
+8,000 characters, so a paste up to `MAX_PASTE_SIZE` is screened in full. Readable text hidden in
+base64 is screened as well, up to 64 KiB per paste.
+
+Images are removed before anything leaves the server: `data:image/...` URIs and base64 that decodes
+to an image are replaced with a placeholder. Screening never sends an image to a provider. Links are
+looked up by URL only and never fetched. Requests carry no account, owner or paste identifier.
+
+### What a result does
+
+| Result | Action |
+| --- | --- |
+| OpenAI `sexual/minors` flagged or scored 0.2 or higher | Quarantines the paste and files a `child_exploitation` report, which the queue lists first |
+| `sexual` scored 0.8 or higher, or OpenAI `violence/graphic` scored 0.8 or higher | Quarantines the paste and files a report |
+| A Web Risk match | Quarantines the paste and files a `malware` report |
+| Any other flagged category | Files a report and leaves the paste readable |
+| A spam score of 5 or more | Files an `other` report and leaves the paste readable |
+
+The spam score adds up link counts, link density, shortened links, repeated lines and gambling or
+SEO spam terms. A quarantine records a moderation event with the actor
+`automated-screening:<provider>` and the report as its case reference. Release a wrong quarantine
+with `transition` and close the report as described in [Record a decision](#record-a-decision).
+Report explanations name the provider, the categories and their scores, and never quote the paste.
+The thresholds are starting values. Adjust them from the decisions reviewers overturn.
+
+### When a provider fails
+
+Screening fails open. A paste stays readable when every text provider fails or Web Risk fails, and
+its screening is retried after 1, 2, 4, 8, 16, 32 and 64 minutes, then every two hours. After 8
+failed attempts it stops retrying and files an `other` report saying the paste was never
+screened. A result for content that changed while it was screened is dropped, and the new content
+is screened instead.
+
+`GET /api/metrics` reports `screening.queued`, `screening.failed` and `screening.oldest`, the time
+the oldest waiting paste was queued. Alert on a growing queue or any failed rows.
+
+### Limitations
+
+A classifier result is a signal for review, not a legal determination. Mistral has no category for
+sexual content involving minors, so only OpenAI can quarantine on it. Links beyond the first 25 in
+a paste are counted but not looked up. Content that was public before the keys were set is not
+screened until it changes. Turning on screening sends public and unlisted paste text to each
+configured provider, so list them as subprocessors in your privacy policy.
+
 ## Retention and limitations
 
 Report records and reviewer audit events survive paste and account deletion. There is no automatic
@@ -166,6 +224,6 @@ Setting `ABUSE_REPORTS_ENABLED=false` hides the form and report links and reject
 intake does not dispose of records or change paste restrictions.
 
 This workflow provides intake, an audited host queue and manual case resolution. It does not
-include account suspension, automated decision notices, verified preservation, external escalation
-delivery, automated screening or backlog alerts. No claim of complete detection or legal
-certification is made.
+include automated decision notices, external escalation delivery or backlog alerts. Automated
+screening is optional and described above. No claim of complete detection or legal certification
+is made.
