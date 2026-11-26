@@ -3,6 +3,7 @@ import "server-only"
 import { reconcileUsageBatch } from "@/lib/account/usage"
 import { getConfig } from "@/lib/config"
 import { captureServerError } from "@/lib/error-tracking"
+import { runScreening } from "@/lib/moderation/queue"
 import { deliverNotificationEmails } from "@/lib/notifications/email"
 import { notifyExpiringPastes } from "@/lib/notifications/expiring"
 import { purgeStaleData } from "@/lib/pastes/purge"
@@ -56,6 +57,17 @@ const definitions = {
       runMaintenanceWork(async (): Promise<JobOutcome> => {
         await reconcileUsageBatch()
         return "completed"
+      }),
+  },
+  // Automated screening of public and unlisted pastes (lib/moderation). Runs only when a
+  // moderation provider key is set.
+  moderation: {
+    intervalMs: MINUTE / 2,
+    enabled: () => Boolean(getConfig().moderation),
+    run: () =>
+      runMaintenanceWork(async (): Promise<JobOutcome> => {
+        const totals = await runScreening()
+        return totals && (totals.retry || totals.failed) ? "failed" : "completed"
       }),
   },
   email: {

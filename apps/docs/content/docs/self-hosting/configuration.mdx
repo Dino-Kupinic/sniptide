@@ -406,10 +406,15 @@ issue. Failures are logged as `support:` lines in the server log.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ABUSE_REPORTS_ENABLED` | `false` | Enables anonymous abuse and appeal intake at `/abuse`, the report link on shared pastes, and `POST /api/abuse`. Requires `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` of at least 32 characters. Assign reviewers and confirm reporting, privacy and retention procedures before enabling. No external screening or email delivery is enabled. |
+| `ABUSE_REPORTS_ENABLED` | `false` | Enables anonymous abuse and appeal intake at `/abuse`, the report link on shared pastes, and `POST /api/abuse`. Requires `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` of at least 32 characters. Assign reviewers and confirm reporting, privacy and retention procedures before enabling. It sends no email and enables no automated screening. |
+| `MODERATION_OPENAI_API_KEY` | unset | Screens the text of public and unlisted pastes with OpenAI's `omni-moderation-latest` model. |
+| `MODERATION_MISTRAL_API_KEY` | unset | Screens text with Mistral's `mistral-moderation-latest` model when OpenAI fails or has no key. |
+| `MODERATION_WEB_RISK_API_KEY` | unset | Looks up the links in public and unlisted pastes in Google Web Risk. |
 
 The restricted queue uses the instance database and authorized host commands. See
 [Report abuse and appeal decisions](/abuse) for activation, review, decisions and retention limits.
+Setting any `MODERATION_` key turns on [automated screening](/abuse#automated-screening), which
+sends paste content to that provider.
 
 ## Build-time settings
 
