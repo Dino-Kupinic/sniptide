@@ -14,6 +14,14 @@ app adds and removes them in the Resend segment. This admin app only writes and 
   changing the password signs everyone out.
 - **Overview** shows the number of accounts, sign-ups in the last 7 and 30 days, pastes, product
   update subscribers and sent emails, and the newest accounts.
+- **Accounts** lists every account with its storage, its pastes and its busiest API token-day in
+  the last 7 days, each as a share of its limit. The table sorts by any column, and opens on the
+  highest share first, so the accounts close to a limit come first. The limits come from
+  `ACCOUNT_STORAGE_BYTES` and `ACCOUNT_PASTE_LIMIT`, the same variables and defaults as the app,
+  and a token allows one request a second, 86,400 a day.
+- **Limits digest** emails the operator every Monday between 08:00 and 09:00 UTC with the accounts at 80% or
+  more of a limit, sent to `DIGEST_TO` or, without it, `BROADCAST_TEST_TO`. A week with no such
+  account sends nothing, and each week's digest goes out once, even after a restart.
 - **Emails** lists drafts and sent emails with their kind and the number of subscribers. Each
   kind goes only to the subscribers who turned it on in Settings, through its Resend topic
   (`RESEND_TOPIC_UPDATES`, `RESEND_TOPIC_SURVEYS` and `RESEND_TOPIC_GUIDES`, the same ids as the
